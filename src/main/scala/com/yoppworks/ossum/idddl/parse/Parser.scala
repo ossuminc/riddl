@@ -23,7 +23,7 @@ object Parser {
   }
 
   def identifier[_: P]: P[String] = {
-    P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_", 3)).!
+    P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_$%@!", 1)).!
   }
 
   def literalTypeExpression[_: P]: P[Type] = {
@@ -38,30 +38,61 @@ object Parser {
         "TimeStamp",
         "URL"
       )
-    ).!.map { value: String ⇒
-      value match {
-        case "Boolean" ⇒ Node.Boolean
-        case "String" ⇒ Node.String
-        case "Number" ⇒ Node.Number
-        case "Id" ⇒ Node.Id
-        case "Date" ⇒ Node.Date
-        case "Time" ⇒ Node.Time
-        case "TimeStamp" ⇒ Node.TimeStamp
-        case "URL" ⇒ Node.URL
-        case _ ⇒ TypeError(s"unknown literal type `$value`")
-      }
+    ).!.map {
+      case "Boolean" ⇒ Node.Boolean
+      case "String" ⇒ Node.String
+      case "Number" ⇒ Node.Number
+      case "Id" ⇒ Node.Id
+      case "Date" ⇒ Node.Date
+      case "Time" ⇒ Node.Time
+      case "TimeStamp" ⇒ Node.TimeStamp
+      case "URL" ⇒ Node.URL
     }
+  }
+
+  def enumerationType[_: P]: P[Enumeration] = {
+    P("any" ~/ "[" ~ identifier.rep ~ "]").map(enums ⇒ Enumeration(enums))
+  }
+
+  def alternationType[_: P]: P[Alternation] = {
+    P("select" ~/ (identifier).rep(2, P("|"))).map(types ⇒ Alternation(types))
+  }
+
+  def aggregationType[_: P]: P[Aggregation] = {
+    P("combine" ~/ P(identifier ~ ":" ~ identifier).rep(2, P(",")))
+      .map(types ⇒ Aggregation(types.toMap[String, String]))
+  }
+
+  def optionalType[_: P]: P[Optional] = {
+    P(typeExpression ~ "?").map(typ ⇒ Optional(typ))
+  }
+
+  def zeroOrMore[_: P]: P[ZeroOrMore] = {
+    P(typeExpression ~ "*").map(typ ⇒ ZeroOrMore(typ))
+  }
+
+  def oneOrMore[_: P]: P[OneOrMore] = {
+    P(typeExpression ~ "+").map(typ ⇒ OneOrMore(typ))
+  }
+
+  def tupleType[_: P]: P[Tuple] = {
+    P("(" ~ typeExpression.rep(2, P(",")) ~ ")").map(types ⇒ Tuple(types))
   }
 
   def typeExpression[_: P]: P[Type] = {
-    P(literalTypeExpression)
+    P(
+      literalTypeExpression | enumerationType | alternationType |
+        aggregationType | optionalType | zeroOrMore | oneOrMore | tupleType
+    )
   }
 
-  def parseTypeDef[_: P]: P[(String, Type)] = {
+  def typeDef[_: P]: P[TypeDef] = {
     P(`type` ~ identifier ~ eq ~ typeExpression).map {
-      case (_, i, _, ty) ⇒ (i → ty)
+      case (_, i, _, ty) ⇒ TypeDef(i, ty)
     }
   }
-  def parse[_: P]: P[Unit] = { P("a") }
 
+  def parse[_: P]: P[Seq[Def]] = {
+    P("{" ~ typeDef.rep(0) ~ "}")
+  }
 }

@@ -16,11 +16,10 @@ class TypeSpec extends WordSpec with MustMatchers {
       Time mustBe Time
       TimeStamp mustBe TimeStamp
       URL mustBe URL
-      Rename(String) mustBe Rename(String)
       Enumeration(Seq.empty[String]) mustBe Enumeration(Seq.empty[String])
-      Alternation(Seq.empty[Type]) mustBe Alternation(Seq.empty[Type])
-      Aggregation(Map.empty[String, Type]) mustBe Aggregation(
-        Map.empty[String, Type]
+      Alternation(Seq.empty[String]) mustBe Alternation(Seq.empty[String])
+      Aggregation(Map.empty[String, String]) mustBe Aggregation(
+        Map.empty[String, String]
       )
       Optional(String) mustBe Optional(String)
       Required(Number) mustBe Required(Number)
