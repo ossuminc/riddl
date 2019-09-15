@@ -7,7 +7,7 @@ class TypeSpec extends WordSpec with MustMatchers {
 
   "Types" should {
     "support all language type constructs" in {
-      import Node._
+      import AST._
       String mustBe String
       Boolean mustBe Boolean
       Number mustBe Number
@@ -17,13 +17,11 @@ class TypeSpec extends WordSpec with MustMatchers {
       TimeStamp mustBe TimeStamp
       URL mustBe URL
       Enumeration(Seq.empty[String]) mustBe Enumeration(Seq.empty[String])
-      Alternation(Seq.empty[String]) mustBe Alternation(Seq.empty[String])
-      Aggregation(Map.empty[String, String]) mustBe Aggregation(
-        Map.empty[String, String]
+      Alternation(Seq.empty[Type]) mustBe Alternation(Seq.empty[Type])
+      Aggregation(Map.empty[String, Type]) mustBe Aggregation(
+        Map.empty[String, Type]
       )
       Optional(String) mustBe Optional(String)
-      Required(Number) mustBe Required(Number)
-      Tuple(Seq.empty[Id.type]) mustBe Tuple(Seq.empty[Id.type])
       ZeroOrMore(Time) mustBe ZeroOrMore(Time)
       OneOrMore(URL) mustBe OneOrMore(URL)
 

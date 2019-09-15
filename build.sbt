@@ -12,8 +12,9 @@ lazy val root = (project in file(".")).
   settings(
     name := "idddl",
     paradoxTheme := Some(builtinParadoxTheme("generic")),
+    scalacOptions += "--illegal-access=warn",
     resolvers ++= Seq(
-      "Artima Maven Repository" at "http://repo.artima.com/releases"
+      "Artima Maven Repository" at "https://repo.artima.com/releases"
     ),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "fastparse" % "2.1.3",

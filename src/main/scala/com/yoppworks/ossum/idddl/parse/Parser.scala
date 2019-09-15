@@ -1,17 +1,17 @@
 package com.yoppworks.ossum.idddl.parse
 
-import com.yoppworks.ossum.idddl.parse.Node._
+import com.yoppworks.ossum.idddl.parse.AST._
 
 object Parser {
   import fastparse._
   import ScriptWhitespace._
 
   def eq[_: P]: P[Terminal] = {
-    P("=").map(_ ⇒ Node.eq)
+    P("=").map(_ ⇒ AST.eq)
   }
 
   def `type`[_: P]: P[Terminal] = {
-    P("type").map(_ ⇒ Node.`type`)
+    P("type").map(_ ⇒ AST.`type`)
   }
 
   def literalString[_: P]: P[String] = {
@@ -37,62 +37,61 @@ object Parser {
         "Time",
         "TimeStamp",
         "URL"
-      )
+      ) /
     ).!.map {
-      case "Boolean" ⇒ Node.Boolean
-      case "String" ⇒ Node.String
-      case "Number" ⇒ Node.Number
-      case "Id" ⇒ Node.Id
-      case "Date" ⇒ Node.Date
-      case "Time" ⇒ Node.Time
-      case "TimeStamp" ⇒ Node.TimeStamp
-      case "URL" ⇒ Node.URL
+      case "Boolean" ⇒ AST.Boolean
+      case "String" ⇒ AST.String
+      case "Number" ⇒ AST.Number
+      case "Id" ⇒ AST.Id
+      case "Date" ⇒ AST.Date
+      case "Time" ⇒ AST.Time
+      case "TimeStamp" ⇒ AST.TimeStamp
+      case "URL" ⇒ AST.URL
     }
   }
 
   def enumerationType[_: P]: P[Enumeration] = {
-    P("any" ~/ "[" ~ identifier.rep ~ "]").map(enums ⇒ Enumeration(enums))
+    P("any" ~/ "[" ~ identifier.rep ~ "]").map { enums ⇒
+      Enumeration(enums)
+    }
   }
 
   def alternationType[_: P]: P[Alternation] = {
-    P("select" ~/ (identifier).rep(2, P("|"))).map(types ⇒ Alternation(types))
+    P("select" ~/ identifier.map(NamedType).rep(2, P("|"))).map { types ⇒
+      Alternation(types)
+    }
   }
 
   def aggregationType[_: P]: P[Aggregation] = {
-    P("combine" ~/ P(identifier ~ ":" ~ identifier).rep(2, P(",")))
-      .map(types ⇒ Aggregation(types.toMap[String, String]))
+    P("combine" ~/ P(identifier ~ ":" ~ typeExpression).rep(1, P(",")))
+      .map(types ⇒ Aggregation(types.toMap[String, Type]))
   }
 
-  def optionalType[_: P]: P[Optional] = {
-    P(typeExpression ~ "?").map(typ ⇒ Optional(typ))
-  }
-
-  def zeroOrMore[_: P]: P[ZeroOrMore] = {
-    P(typeExpression ~ "*").map(typ ⇒ ZeroOrMore(typ))
-  }
-
-  def oneOrMore[_: P]: P[OneOrMore] = {
-    P(typeExpression ~ "+").map(typ ⇒ OneOrMore(typ))
-  }
-
-  def tupleType[_: P]: P[Tuple] = {
-    P("(" ~ typeExpression.rep(2, P(",")) ~ ")").map(types ⇒ Tuple(types))
+  def cardinality[_: P](p: ⇒ P[Type]): P[Type] = {
+    P(p ~ ("?".! | "*".! | "+".! | "")).map {
+      case (typ, "?") ⇒ Optional(typ)
+      case (typ, "+") ⇒ OneOrMore(typ)
+      case (typ, "*") ⇒ ZeroOrMore(typ)
+      case (typ, _) ⇒ typ
+    }
   }
 
   def typeExpression[_: P]: P[Type] = {
     P(
-      literalTypeExpression | enumerationType | alternationType |
-        aggregationType | optionalType | zeroOrMore | oneOrMore | tupleType
+      cardinality(
+        literalTypeExpression | enumerationType | alternationType |
+          aggregationType | identifier.map(NamedType)
+      )
     )
   }
 
   def typeDef[_: P]: P[TypeDef] = {
-    P(`type` ~ identifier ~ eq ~ typeExpression).map {
+    P(`type` ~ identifier ~ eq ~ typeExpression /).map {
       case (_, i, _, ty) ⇒ TypeDef(i, ty)
     }
   }
 
   def parse[_: P]: P[Seq[Def]] = {
-    P("{" ~ typeDef.rep(0) ~ "}")
+    P("{" ~/ typeDef.rep(0) ~ "}")
   }
 }
