@@ -9,6 +9,7 @@ dynverSeparator in ThisBuild := "-"
 lazy val root = (project in file(".")).
   enablePlugins(ParadoxPlugin).
   enablePlugins(ParadoxSitePlugin).
+  enablePlugins(ParadoxMaterialThemePlugin).
   settings(
     name := "idddl",
     paradoxTheme := Some(builtinParadoxTheme("generic")),
