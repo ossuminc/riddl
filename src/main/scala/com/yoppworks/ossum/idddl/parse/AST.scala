@@ -8,7 +8,9 @@ object AST {
   sealed trait Terminal extends AST
   sealed trait Type extends AST
   sealed trait CardinalizedType extends Type
-  sealed trait Def extends AST
+  sealed trait Def extends AST {
+    def children: Seq[Def]
+  }
 
   case object `type` extends Terminal
   case object domain extends Terminal
@@ -37,7 +39,22 @@ object AST {
   case class ZeroOrMore(of: Type) extends CardinalizedType
   case class OneOrMore(of: Type) extends CardinalizedType
 
-  case class TypeDef(name: String, typ: Type) extends Def
+  case class CommandDef(name: String, typ: Type) extends Def {
+    def children = Seq.empty[Def]
+  }
+  case class EventDef(name: String, typ: Type, resultsFrom: String)
+      extends Def { def children = Seq.empty[Def] }
+  case class QueryDef(name: String, typ: Type) extends Def {
+    def children = Seq.empty[Def]
+  }
+  case class ResponseDef(name: String, typ: Type, respondsTo: String)
+      extends Def { def children = Seq.empty[Def] }
+
+  case class DomainPath(path: Seq[String], name: String)
+  case class DomainDef(name_path: DomainPath, children: Seq[Def]) extends Def
+  case class ContextDef(name: String, children: Seq[Def]) extends Def
+  case class TypeDef(name: String, typ: Type) extends Def {
+    def children = Seq.empty[Def]
+  }
 
 }
-

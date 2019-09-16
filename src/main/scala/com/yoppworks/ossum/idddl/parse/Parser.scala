@@ -6,14 +6,6 @@ object Parser {
   import fastparse._
   import ScriptWhitespace._
 
-  def eq[_: P]: P[Terminal] = {
-    P("=").map(_ ⇒ AST.eq)
-  }
-
-  def `type`[_: P]: P[Terminal] = {
-    P("type").map(_ ⇒ AST.`type`)
-  }
-
   def literalString[_: P]: P[String] = {
     P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").!
   }
@@ -86,12 +78,67 @@ object Parser {
   }
 
   def typeDef[_: P]: P[TypeDef] = {
-    P(`type` ~ identifier ~ eq ~ typeExpression /).map {
-      case (_, i, _, ty) ⇒ TypeDef(i, ty)
+    P("type" ~/ identifier ~ "=" ~ typeExpression /).map {
+      case (i, ty) ⇒ TypeDef(i, ty)
     }
   }
 
-  def parse[_: P]: P[Seq[Def]] = {
-    P("{" ~/ typeDef.rep(0) ~ "}")
+  def commandDef[_: P]: P[CommandDef] = {
+    P("command" ~/ identifier ~ "=" ~ typeExpression /).map {
+      case (id, expr) =>
+        CommandDef(id, expr)
+    }
+  }
+
+  def eventDef[_: P]: P[EventDef] = {
+    P("event" ~/ identifier ~ "=" ~ typeExpression ~ "from" ~ identifier).map {
+      case (name, typ, cmd) =>
+        EventDef(name, typ, cmd)
+    }
+  }
+
+  def queryDef[_: P]: P[CommandDef] = {
+    P("query" ~/ identifier ~ "=" ~ typeExpression /).map {
+      case (id, expr) =>
+        CommandDef(id, expr)
+    }
+  }
+
+  def resultDef[_: P]: P[EventDef] = {
+    P("result" ~/ identifier ~ "=" ~ typeExpression ~ "for" ~ identifier).map {
+      case (name, typ, cmd) =>
+        EventDef(name, typ, cmd)
+    }
+  }
+
+  def contextDefinitions[_: P]: P[Def] = {
+    P(typeDef | commandDef | eventDef | queryDef | resultDef)
+  }
+
+  def contextDef[_: P]: P[ContextDef] = {
+    P("context" ~/ identifier ~ "{" ~ contextDefinitions.rep(0) ~ "}").map {
+      case (name, defs) => ContextDef(name, defs)
+    }
+  }
+
+  def domainPath[_: P]: P[DomainPath] = {
+    P(("." ~ identifier).rep(0) ~ identifier).map {
+      case (paths, name) => DomainPath(paths, name)
+    }
+  }
+
+  def domainDefinitions[_: P]: P[Def] = {
+    P(typeDef | contextDef)
+  }
+
+  def domainDef[_: P]: P[DomainDef] = {
+    P("domain " ~ domainPath ~ "{" ~ domainDefinitions.rep(0) ~ "}").map {
+      case (path, defs) =>
+        DomainDef(path, defs)
+    }
+  }
+
+  def parse[_: P]: P[Seq[DomainDef]] = {
+    P(domainDef.rep(0))
   }
 }
