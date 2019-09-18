@@ -200,6 +200,30 @@ class ParserTest extends WordSpec with MustMatchers {
         }
       )
     }
+    "allow entity definitions in contexts" in {
+      val input =
+        """domain foo {
+          |  context bar {
+          |    persistent aggregate entity Hamburger: SomeType
+          |      consumes [ACommand, AQuery]
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          EntityDef(
+            "Hamburger",
+            Seq(EntityPersistent, EntityAggregate),
+            NamedType("SomeType"),
+            Seq("ACommand", "AQuery"),
+            Seq.empty[String]
+          )
+        ), { x: Seq[DomainDef] =>
+          x.head.children.head.children
+        }
+      )
+    }
     "allow all the kinds of type definitions" in {
       val cases: List[(String, TypeDef)] = List(
         "type str = String" → TypeDef("str", String),

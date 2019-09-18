@@ -154,7 +154,7 @@ object Parser {
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      entityOptions.rep(0) ~ "entity" ~/ identifier ~ "=" ~ typeExpression ~
+      entityOptions.rep(0) ~ "entity" ~/ identifier ~ ":" ~ typeExpression ~
         ("consumes" ~/ "[" ~ identifier.rep(1, ",") ~ "]").? ~
         ("produces" ~/ "[" ~ identifier.rep(1, ",") ~ "]").?
     ).map {
