@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.idddl.parse
+package com.yoppworks.ossum.idddl.parser
 
 import org.scalatest._
 

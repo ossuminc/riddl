@@ -6,14 +6,9 @@ scalaVersion := "2.12.10"
 scalafmtOnCompile := true
 dynverSeparator in ThisBuild := "-"
 
-lazy val root = (project in file(".")).
-  enablePlugins(ParadoxPlugin).
-  enablePlugins(ParadoxSitePlugin).
-  enablePlugins(ParadoxMaterialThemePlugin).
+lazy val parser = (project in file("parser")).
   settings(
-    name := "idddl",
-    paradoxTheme := Some(builtinParadoxTheme("generic")),
-    // scalacOptions += "--illegal-access=warn",
+    name := "idddl-parser",
     resolvers ++= Seq(
       "Artima Maven Repository" at "https://repo.artima.com/releases"
     ),
@@ -24,3 +19,14 @@ lazy val root = (project in file(".")).
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
   )
+
+lazy val root = (project in file(".")).
+  enablePlugins(ParadoxPlugin).
+  enablePlugins(ParadoxSitePlugin).
+  enablePlugins(ParadoxMaterialThemePlugin).
+  settings(
+    name := "idddl",
+    paradoxTheme := Some(builtinParadoxTheme("generic"))
+  ).
+  dependsOn(parser).
+  aggregate(parser)

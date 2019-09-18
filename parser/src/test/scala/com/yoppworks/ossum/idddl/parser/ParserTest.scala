@@ -1,6 +1,6 @@
-package com.yoppworks.ossum.idddl.parse
+package com.yoppworks.ossum.idddl.parser
 
-import com.yoppworks.ossum.idddl.parse.AST._
+import AST._
 import fastparse.Parsed._
 import org.scalactic.PrettyMethods._
 import org.scalatest.MustMatchers

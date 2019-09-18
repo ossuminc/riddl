@@ -1,6 +1,6 @@
-package com.yoppworks.ossum.idddl.parse
+package com.yoppworks.ossum.idddl.parser
 
-import com.yoppworks.ossum.idddl.parse.AST._
+import AST._
 
 object Parser {
   import fastparse._
