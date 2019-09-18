@@ -8,9 +8,7 @@ object AST {
   sealed trait Terminal extends AST
   sealed trait Type extends AST
   sealed trait CardinalizedType extends Type
-  sealed trait Def extends AST {
-    def children: Seq[Def]
-  }
+  sealed trait Def extends AST
 
   case object `type` extends Terminal
   case object domain extends Terminal
@@ -39,22 +37,32 @@ object AST {
   case class ZeroOrMore(of: Type) extends CardinalizedType
   case class OneOrMore(of: Type) extends CardinalizedType
 
-  case class CommandDef(name: String, typ: Type) extends Def {
-    def children = Seq.empty[Def]
-  }
-  case class EventDef(name: String, typ: Type, resultsFrom: String)
-      extends Def { def children = Seq.empty[Def] }
-  case class QueryDef(name: String, typ: Type) extends Def {
-    def children = Seq.empty[Def]
-  }
-  case class ResponseDef(name: String, typ: Type, respondsTo: String)
-      extends Def { def children = Seq.empty[Def] }
+  sealed trait MessageDef extends Def
+  case class CommandDef(name: String, typ: Type, events: Seq[String])
+      extends MessageDef
+  case class EventDef(name: String, typ: Type) extends MessageDef
+  case class QueryDef(name: String, typ: Type, results: Seq[String])
+      extends MessageDef
+  case class ResultDef(name: String, typ: Type) extends MessageDef
 
-  case class DomainPath(path: Seq[String], name: String)
-  case class DomainDef(name_path: DomainPath, children: Seq[Def]) extends Def
+  case class ObjectDef(name: String, typ: Type) extends Def
+
+  sealed trait EntityOption
+  case object EntityAggregate extends EntityOption
+  case object EntityPersistent extends EntityOption
+
+  case class EntityDef(
+    name: String,
+    options: Seq[EntityOption],
+    typ: Type,
+    consumes: Seq[String],
+    produces: Seq[String]
+  ) extends Def
+
+  case class DomainPath(path: Seq[String])
+  case class DomainDef(name_path: DomainPath, children: Seq[ContextDef])
+      extends Def
   case class ContextDef(name: String, children: Seq[Def]) extends Def
-  case class TypeDef(name: String, typ: Type) extends Def {
-    def children = Seq.empty[Def]
-  }
+  case class TypeDef(name: String, typ: Type) extends Def
 
 }

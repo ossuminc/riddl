@@ -14,8 +14,19 @@ object Parser {
     P(CharIn("0-9").rep(1).!.map(_.toInt))
   }
 
+  def simpleIdentifier[_: P]: P[String] = {
+    P((CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_").?).!)
+  }
+
   def identifier[_: P]: P[String] = {
-    P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_$%@!", 1)).!
+    P(
+      simpleIdentifier |
+        ("'" ~/ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
+    )
+  }
+
+  def pathIdentifier[_: P]: P[Seq[String]] = {
+    P(identifier.repX(1, P(".")))
   }
 
   def literalTypeExpression[_: P]: P[Type] = {
@@ -29,7 +40,7 @@ object Parser {
         "Time",
         "TimeStamp",
         "URL"
-      ) /
+      )./
     ).!.map {
       case "Boolean" ⇒ AST.Boolean
       case "String" ⇒ AST.String
@@ -42,6 +53,10 @@ object Parser {
     }
   }
 
+  def namedType[_: P]: P[NamedType] = {
+    P(identifier.map(NamedType))
+  }
+
   def enumerationType[_: P]: P[Enumeration] = {
     P("any" ~/ "[" ~ identifier.rep ~ "]").map { enums ⇒
       Enumeration(enums)
@@ -49,70 +64,115 @@ object Parser {
   }
 
   def alternationType[_: P]: P[Alternation] = {
-    P("select" ~/ identifier.map(NamedType).rep(2, P("|"))).map { types ⇒
+    P("select" ~/ namedType.rep(2, P("|"))).map { types ⇒
       Alternation(types)
     }
   }
 
-  def aggregationType[_: P]: P[Aggregation] = {
-    P("combine" ~/ P(identifier ~ ":" ~ typeExpression).rep(1, P(",")))
-      .map(types ⇒ Aggregation(types.toMap[String, Type]))
+  def typeExpression[_: P]: P[Type] = {
+    P(cardinality(literalTypeExpression | namedType))
   }
 
   def cardinality[_: P](p: ⇒ P[Type]): P[Type] = {
-    P(p ~ ("?".! | "*".! | "+".! | "")).map {
-      case (typ, "?") ⇒ Optional(typ)
-      case (typ, "+") ⇒ OneOrMore(typ)
-      case (typ, "*") ⇒ ZeroOrMore(typ)
-      case (typ, _) ⇒ typ
+    P(p ~ ("?".! | "*".! | "+".!).?).map {
+      case (typ, Some("?")) ⇒ Optional(typ)
+      case (typ, Some("+")) ⇒ OneOrMore(typ)
+      case (typ, Some("*")) ⇒ ZeroOrMore(typ)
+      case (typ, Some(_)) => typ
+      case (typ, None) ⇒ typ
     }
   }
 
-  def typeExpression[_: P]: P[Type] = {
+  def field[_: P]: P[(String, Type)] = {
+    P(identifier ~ ":" ~ typeExpression)
+  }
+
+  def fields[_: P]: P[Seq[(String, Type)]] = {
+    P(field.rep(1, P(",")))
+  }
+
+  def aggregationType[_: P]: P[Aggregation] = {
     P(
-      cardinality(
-        literalTypeExpression | enumerationType | alternationType |
-          aggregationType | identifier.map(NamedType)
-      )
+      "combine" ~/ "{" ~ fields ~ "}"
+    ).map(types ⇒ Aggregation(types.toMap[String, Type]))
+  }
+
+  def typeDefKinds[_: P]: P[Type] = {
+    P(
+      enumerationType | alternationType | aggregationType | typeExpression
     )
   }
 
   def typeDef[_: P]: P[TypeDef] = {
-    P("type" ~/ identifier ~ "=" ~ typeExpression /).map {
+    P(
+      "type" ~/ identifier ~ "=" ~ typeDefKinds
+    ).map {
       case (i, ty) ⇒ TypeDef(i, ty)
     }
   }
 
   def commandDef[_: P]: P[CommandDef] = {
-    P("command" ~/ identifier ~ "=" ~ typeExpression /).map {
-      case (id, expr) =>
-        CommandDef(id, expr)
+    P(
+      "command" ~/ identifier ~ ":" ~ namedType ~ "yields" ~
+        identifier.rep(1, P(","))
+    ).map {
+      case (id, expr, yields) =>
+        CommandDef(id, expr, yields)
     }
   }
 
   def eventDef[_: P]: P[EventDef] = {
-    P("event" ~/ identifier ~ "=" ~ typeExpression ~ "from" ~ identifier).map {
-      case (name, typ, cmd) =>
-        EventDef(name, typ, cmd)
+    P("event" ~/ identifier ~ ":" ~ typeExpression).map {
+      case (name, typ) =>
+        EventDef(name, typ)
     }
   }
 
-  def queryDef[_: P]: P[CommandDef] = {
-    P("query" ~/ identifier ~ "=" ~ typeExpression /).map {
-      case (id, expr) =>
-        CommandDef(id, expr)
+  def queryDef[_: P]: P[QueryDef] = {
+    P(
+      "query" ~/ identifier ~ ":" ~ typeExpression ~ "yields" ~ identifier
+        .rep(1, P(","))
+    ).map {
+      case (id, expr, results) =>
+        QueryDef(id, expr, results)
     }
   }
 
-  def resultDef[_: P]: P[EventDef] = {
-    P("result" ~/ identifier ~ "=" ~ typeExpression ~ "for" ~ identifier).map {
-      case (name, typ, cmd) =>
-        EventDef(name, typ, cmd)
+  def resultDef[_: P]: P[ResultDef] = {
+    P("result" ~/ identifier ~ ":" ~ typeExpression).map {
+      case (name, typ) =>
+        ResultDef(name, typ)
+    }
+  }
+
+  def entityOptions[_: P]: P[EntityOption] = {
+    P(
+      "aggregate".!.map(_ => EntityAggregate) |
+        "persistent".!.map(_ => EntityPersistent)
+    )
+  }
+
+  def entityDef[_: P]: P[EntityDef] = {
+    P(
+      entityOptions.rep(0) ~ "entity" ~/ identifier ~ "=" ~ typeExpression ~
+        ("consumes" ~/ "[" ~ identifier.rep(1, ",") ~ "]").? ~
+        ("produces" ~/ "[" ~ identifier.rep(1, ",") ~ "]").?
+    ).map {
+      case (options, name, typ, consumes, produces) =>
+        EntityDef(
+          name,
+          options,
+          typ,
+          consumes.getOrElse(Seq.empty[String]),
+          produces.getOrElse(Seq.empty[String])
+        )
     }
   }
 
   def contextDefinitions[_: P]: P[Def] = {
-    P(typeDef | commandDef | eventDef | queryDef | resultDef)
+    P(
+      typeDef | commandDef | eventDef | queryDef | resultDef | entityDef
+    )
   }
 
   def contextDef[_: P]: P[ContextDef] = {
@@ -122,9 +182,7 @@ object Parser {
   }
 
   def domainPath[_: P]: P[DomainPath] = {
-    P(("." ~ identifier).rep(0) ~ identifier).map {
-      case (paths, name) => DomainPath(paths, name)
-    }
+    P(pathIdentifier).map(DomainPath)
   }
 
   def domainDefinitions[_: P]: P[Def] = {
@@ -132,13 +190,13 @@ object Parser {
   }
 
   def domainDef[_: P]: P[DomainDef] = {
-    P("domain " ~ domainPath ~ "{" ~ domainDefinitions.rep(0) ~ "}").map {
+    P("domain " ~/ domainPath ~ "{" ~/ contextDef.rep(0) ~ "}").map {
       case (path, defs) =>
         DomainDef(path, defs)
     }
   }
 
   def parse[_: P]: P[Seq[DomainDef]] = {
-    P(domainDef.rep(0))
+    P(Start ~ domainDef.rep(0) ~ End)
   }
 }

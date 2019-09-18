@@ -2,9 +2,9 @@ package com.yoppworks.ossum.idddl.parse
 
 import com.yoppworks.ossum.idddl.parse.AST._
 import fastparse.Parsed._
+import org.scalactic.PrettyMethods._
 import org.scalatest.MustMatchers
 import org.scalatest.WordSpec
-import org.scalactic.PrettyMethods._
 
 /** Unit Tests For ParserTest */
 class ParserTest extends WordSpec with MustMatchers {
@@ -18,31 +18,57 @@ class ParserTest extends WordSpec with MustMatchers {
       case Success(content, index) ⇒
         extract(content).toList mustBe expected
         index must be <= input.length
-      case failure @ Failure(_, index, extra) ⇒
-        val stack = extra.stack.toMap.map {
-          case (str: String, int: Int) ⇒ s"  $str : $int"
-        }
+      case failure @ Failure(_, index, _) ⇒
         val annotated_input =
           input.substring(0, index) + "^" + input.substring(index)
+        val trace = failure.trace()
         val msg =
           s"""Parse of '$annotated_input' failed at position $index"
-             |${failure.trace().longAggregateMsg}
+             |${trace.longAggregateMsg}
              |expected: ${expected.pretty}
-              """.stripMargin
+             |              """.stripMargin
         fail(msg)
     }
 
   }
   "Parser" should {
-    "allow multiple domains to be defined" in {
-      val input = """domain foo { }
-                    |domain bar { }
-                    |""".stripMargin
+    "allow an empty funky-name domain" in {
+      val input =
+        """domain 'foo-fah|roo' { }
+          |""".stripMargin
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(DomainPath(Seq.empty[String], "foo"), Seq.empty[Def]),
-          DomainDef(DomainPath(Seq.empty[String], "bar"), Seq.empty[Def])
+          DomainDef(DomainPath(Seq("foo-fah|roo")), Seq.empty[ContextDef])
+        ),
+        identity
+      )
+    }
+    "allow a sub-domain" in {
+      val input =
+        """domain this.is.'a '.sub.domain { }
+          |""".stripMargin
+      runParser(
+        input,
+        Seq[DomainDef](
+          DomainDef(
+            DomainPath(Seq("this", "is", "a ", "sub", "domain")),
+            Seq.empty[ContextDef]
+          )
+        ),
+        identity
+      )
+    }
+    "allow multiple domains" in {
+      val input =
+        """domain foo { }
+          |domain bar { }
+          |""".stripMargin
+      runParser(
+        input,
+        Seq[DomainDef](
+          DomainDef(DomainPath(Seq("foo")), Seq.empty[ContextDef]),
+          DomainDef(DomainPath(Seq("bar")), Seq.empty[ContextDef])
         ),
         identity
       )
@@ -57,7 +83,7 @@ class ParserTest extends WordSpec with MustMatchers {
         input,
         Seq[DomainDef](
           DomainDef(
-            DomainPath(Seq.empty[String], "foo"),
+            DomainPath(Seq("foo")),
             Seq(ContextDef("bar", Seq.empty[Def]))
           )
         ),
@@ -68,7 +94,9 @@ class ParserTest extends WordSpec with MustMatchers {
       val input =
         """domain foo {
           |  context bar {
-          |    type Vikings = any [Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe ]
+          |    type Vikings = any [
+          |      Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
+          |    ]
           |  }
           |}
           |""".stripMargin
@@ -76,7 +104,7 @@ class ParserTest extends WordSpec with MustMatchers {
         input,
         Seq[DomainDef](
           DomainDef(
-            DomainPath(Seq.empty[String], "foo"),
+            DomainPath(Seq("foo")),
             Seq(
               ContextDef(
                 "bar",
@@ -102,6 +130,74 @@ class ParserTest extends WordSpec with MustMatchers {
           )
         ),
         identity
+      )
+    }
+    "allow command definitions in contexts" in {
+      val input =
+        """domain foo {
+          |  context bar {
+          |    command DoThisThing: SomeType yields ThingWasDone
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          CommandDef("DoThisThing", NamedType("SomeType"), Seq("ThingWasDone"))
+        ), { x: Seq[DomainDef] =>
+          x.head.children.head.children
+        }
+      )
+    }
+    "allow event definitions in contexts" in {
+      val input =
+        """domain foo {
+          |  context bar {
+          |    event ThingWasDone: SomeType
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          EventDef("ThingWasDone", NamedType("SomeType"))
+        ), { x: Seq[DomainDef] =>
+          x.head.children.head.children
+        }
+      )
+    }
+    "allow query definitions in contexts" in {
+      val input =
+        """domain foo {
+          |  context bar {
+          |    query FindThisThing: SomeType yields SomeResult
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          QueryDef("FindThisThing", NamedType("SomeType"), Seq("SomeResult"))
+        ), { x: Seq[DomainDef] =>
+          x.head.children.head.children
+        }
+      )
+    }
+    "allow result definitions in contexts" in {
+      val input =
+        """domain foo {
+          |  context bar {
+          |    result ThisQueryResult: SomeType
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          ResultDef("ThisQueryResult", NamedType("SomeType"))
+        ), { x: Seq[DomainDef] =>
+          x.head.children.head.children
+        }
       )
     }
     "allow all the kinds of type definitions" in {
@@ -131,7 +227,12 @@ class ParserTest extends WordSpec with MustMatchers {
               )
             )
           ),
-        "type agg = combine key : Number, id: Id, time: TimeStamp" ->
+        """type agg = combine {
+          |  key: Number,
+          |  id: Id,
+          |  time: TimeStamp
+          |}
+          |""".stripMargin ->
           TypeDef(
             "agg",
             Aggregation(
@@ -151,11 +252,11 @@ class ParserTest extends WordSpec with MustMatchers {
       )
       cases.foreach {
         case (statement, expected) ⇒
-          val input = "domain test { " + statement + " }"
+          val input = "domain test { context foo { " + statement + " } }"
           runParser(
             input,
             List(expected),
-            (x: Seq[DomainDef]) => x.head.children
+            (x: Seq[DomainDef]) => x.head.children.head.children
           )
       }
     }
