@@ -1,4 +1,4 @@
-# Interface to Domain Driven Definition Language (IDDDL)
+# IDDDL
 
 IDDDL, the Interface for Domain Driven Definition Language, is a tool for
 generating code and documentation from a high level definition based on 

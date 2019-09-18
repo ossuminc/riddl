@@ -23,7 +23,9 @@ literal types are:
 ## Named Type Definitions
 In addition to the literal types, IDDDL supports the definition of new 
 types using a name and a type expression with this syntax:
-```type name = <type-expression>```
+```idddl
+type name = <type-expression>
+```
 When defining values, one must use a named type defined with the 
 `type` keyword. This enforces legibility by naming every type expression.
  
@@ -35,7 +37,9 @@ following sections define the kinds of expressions allowed.
 It is possible to simply rename a type as another type name. This is common
 to increase domain applicability of the name of a literal type. For example,
 
-`type FirstName = String`
+```
+type FirstName = String
+```
 
 might be used to make it clear that the intended use of the `String` value 
 is to provide a person's first name. 
@@ -45,13 +49,17 @@ Enumerations define type that may take the value of one identifier from a
 closed set of constant identifiers using the `any` keyword and the set of
 identifiers enclosed in square brackets, like this:
 
-`type Color = any [Red, Orange, Yellow, Green, Blue, Indigo, Violet]`
+```
+type Color = any [Red, Orange, Yellow, Green, Blue, Indigo, Violet]
+```
 
 ### Alternations
 A type can be defined as any one of a set of other type names using the
 `select` keyword followed by type names separated by `|`, like this:
  
-`type References = select String | URL`
+```
+type References = select String | URL
+```
 
 There must be at least two types in an alternation.
 
@@ -61,7 +69,9 @@ Such aggregations can be nested, even recursively. For example, here is
 a type definition for a rectangle located on a Cartesian coordinate system
 at (x,y) with a given height and width:
 
-`type Rectangle = x: Number, y: Number, height: Number, width: Number
+```
+type Rectangle = x: Number, y: Number, height: Number, width: Number
+```
     
 ### Cardinality
 A type expression can be adorned with a symbol (adopted from regular
@@ -71,6 +81,8 @@ expressions) that specifies the cardinality of the type, as follows:
 * `+` - one or more instances
 Without the adornment, the cardinality is "required" (exactly one).
 For example, in this:
-``` type MyType = ids: Id+, name: String?```
+```
+type MyType = ids: Id+, name: String?
+```
 the `MyType` type is an aggregate that contains one or more Id values 
 in the `ids` field and an optional string value in `name`

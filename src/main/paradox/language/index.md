@@ -3,6 +3,8 @@
 ## Overview
 This section defines the IDDD Language syntax. 
 
+@@toc { depth=2 }
+
 @@@ index
 
 * [Quick Start](quickstart.md)
