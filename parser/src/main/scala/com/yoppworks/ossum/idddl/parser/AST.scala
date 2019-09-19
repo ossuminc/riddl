@@ -4,21 +4,12 @@ sealed trait AST
 
 object AST {
 
-  case class Error(message: String) extends AST
-  sealed trait Terminal extends AST
   sealed trait Type extends AST
   sealed trait CardinalizedType extends Type
-  sealed trait Def extends AST
 
-  case object `type` extends Terminal
-  case object domain extends Terminal
-  case object command extends Terminal
-  case object event extends Terminal
-  case object query extends Terminal
-  case object result extends Terminal
-  case object lcb extends Terminal
-  case object rcb extends Terminal
-  case object eq extends Terminal
+  sealed trait Def extends AST {
+    def index: Int
+  }
 
   case object String extends Type
   case object Boolean extends Type
@@ -38,31 +29,42 @@ object AST {
   case class OneOrMore(of: Type) extends CardinalizedType
 
   sealed trait MessageDef extends Def
-  case class CommandDef(name: String, typ: Type, events: Seq[String])
+  case class CommandDef(index: Int,
+                        name: String,
+                        typ: Type,
+                        events: Seq[String])
       extends MessageDef
-  case class EventDef(name: String, typ: Type) extends MessageDef
-  case class QueryDef(name: String, typ: Type, results: Seq[String])
+  case class EventDef(index: Int, name: String, typ: Type)
       extends MessageDef
-  case class ResultDef(name: String, typ: Type) extends MessageDef
+  case class QueryDef(index: Int,
+                      name: String,
+                      typ: Type,
+                      results: Seq[String])
+      extends MessageDef
+  case class ResultDef(index: Int, name: String, typ: Type)
+      extends MessageDef
 
-  case class ObjectDef(name: String, typ: Type) extends Def
+  case class ObjectDef(index: Int, name: String, typ: Type) extends Def
 
   sealed trait EntityOption
   case object EntityAggregate extends EntityOption
   case object EntityPersistent extends EntityOption
 
   case class EntityDef(
-    name: String,
-    options: Seq[EntityOption],
-    typ: Type,
-    consumes: Seq[String],
-    produces: Seq[String]
+                        index: Int,
+                        name: String,
+                        options: Seq[EntityOption],
+                        typ: Type,
+                        consumes: Seq[String],
+                        produces: Seq[String]
   ) extends Def
 
   case class DomainPath(path: Seq[String])
-  case class DomainDef(name_path: DomainPath, children: Seq[ContextDef])
+  case class DomainDef(
+    index: Int, name_path: DomainPath, children: Seq[ContextDef]
+  ) extends Def
+  case class ContextDef(index: Int, name: String, children: Seq[Def])
       extends Def
-  case class ContextDef(name: String, children: Seq[Def]) extends Def
-  case class TypeDef(name: String, typ: Type) extends Def
+  case class TypeDef(index: Int, name: String, typ: Type) extends Def
 
 }

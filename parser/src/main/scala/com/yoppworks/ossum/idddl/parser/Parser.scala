@@ -1,6 +1,11 @@
 package com.yoppworks.ossum.idddl.parser
 
+import java.io.File
+
 import AST._
+import fastparse.Parsed.{Failure, Success}
+
+import scala.io.Source
 
 object Parser {
   import fastparse._
@@ -105,43 +110,44 @@ object Parser {
 
   def typeDef[_: P]: P[TypeDef] = {
     P(
-      "type" ~/ identifier ~ "=" ~ typeDefKinds
+      "type" ~ Index ~/ identifier ~ "=" ~ typeDefKinds
     ).map {
-      case (i, ty) ⇒ TypeDef(i, ty)
+      case (index, i, ty) ⇒ TypeDef(index, i, ty)
     }
   }
 
   def commandDef[_: P]: P[CommandDef] = {
     P(
-      "command" ~/ identifier ~ ":" ~ namedType ~ "yields" ~
+      "command" ~ Index ~/ identifier ~ ":" ~ namedType ~ "yields" ~
         identifier.rep(1, P(","))
     ).map {
-      case (id, expr, yields) =>
-        CommandDef(id, expr, yields)
+      case (index, id, expr, yields) =>
+        CommandDef(index, id, expr, yields)
     }
   }
 
   def eventDef[_: P]: P[EventDef] = {
-    P("event" ~/ identifier ~ ":" ~ typeExpression).map {
-      case (name, typ) =>
-        EventDef(name, typ)
+    P("event" ~ Index ~/ identifier ~ ":" ~ typeExpression).map {
+      case (index, name, typ) =>
+        EventDef(index, name, typ)
     }
   }
 
   def queryDef[_: P]: P[QueryDef] = {
     P(
-      "query" ~/ identifier ~ ":" ~ typeExpression ~ "yields" ~ identifier
+      "query" ~ Index ~/ identifier ~ ":" ~ typeExpression ~ "yields" ~
+        identifier
         .rep(1, P(","))
     ).map {
-      case (id, expr, results) =>
-        QueryDef(id, expr, results)
+      case (index, id, expr, results) =>
+        QueryDef(index, id, expr, results)
     }
   }
 
   def resultDef[_: P]: P[ResultDef] = {
-    P("result" ~/ identifier ~ ":" ~ typeExpression).map {
-      case (name, typ) =>
-        ResultDef(name, typ)
+    P("result" ~ Index ~/ identifier ~ ":" ~ typeExpression).map {
+      case (index, name, typ) =>
+        ResultDef(index, name, typ)
     }
   }
 
@@ -154,12 +160,14 @@ object Parser {
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      entityOptions.rep(0) ~ "entity" ~/ identifier ~ ":" ~ typeExpression ~
+      entityOptions.rep(0) ~ "entity" ~ Index ~/ identifier ~ ":" ~
+        typeExpression ~
         ("consumes" ~/ "[" ~ identifier.rep(1, ",") ~ "]").? ~
         ("produces" ~/ "[" ~ identifier.rep(1, ",") ~ "]").?
     ).map {
-      case (options, name, typ, consumes, produces) =>
+      case (options, index, name, typ, consumes, produces) =>
         EntityDef(
+          index,
           name,
           options,
           typ,
@@ -176,8 +184,9 @@ object Parser {
   }
 
   def contextDef[_: P]: P[ContextDef] = {
-    P("context" ~/ identifier ~ "{" ~ contextDefinitions.rep(0) ~ "}").map {
-      case (name, defs) => ContextDef(name, defs)
+    P("context" ~ Index ~/ identifier ~ "{" ~ contextDefinitions.rep(0) ~
+      "}").map {
+      case (index, name, defs) => ContextDef(index, name, defs)
     }
   }
 
@@ -190,13 +199,52 @@ object Parser {
   }
 
   def domainDef[_: P]: P[DomainDef] = {
-    P("domain " ~/ domainPath ~ "{" ~/ contextDef.rep(0) ~ "}").map {
-      case (path, defs) =>
-        DomainDef(path, defs)
+    P("domain" ~ Index ~/ domainPath ~ "{" ~/ contextDef.rep(0) ~ "}").map {
+      case (index, path, defs) =>
+        DomainDef(index, path, defs)
     }
   }
 
   def parse[_: P]: P[Seq[DomainDef]] = {
     P(Start ~ domainDef.rep(0) ~ End)
+  }
+
+  def parseString(input: String): Either[String,Seq[DomainDef]] = {
+    fastparse.parse(input, parse(_)) match {
+      case Success(content, _) ⇒
+        Right(content)
+      case failure @ Failure(_, index, extra) ⇒
+        val annotated_input =
+          input.substring(0, index) + "^" + input.substring(index)
+        val trace = failure.trace()
+        Left(s"""Parse of '$annotated_input' failed at position $index"
+           |${trace.longAggregateMsg}
+           |""".stripMargin
+        )
+    }
+  }
+
+  def parseFile(file: File): Either[String,Seq[DomainDef]] = {
+    val source = Source.fromFile(file)
+    parseSource(source, file.getPath)
+  }
+
+  def parseSource(source: Source, name: String): Either[String, Seq[DomainDef]]
+  = {
+    val lines = source.getLines()
+    val input = lines.mkString("\n")
+    fastparse.parse(input, parse(_)) match {
+      case Success(content, _) =>
+        Right(content)
+      case failure @ Failure(label, index, extra) ⇒
+        val where = s"at $name:$index"
+        val annotated_input =
+          input.substring(0, index) + "^" + input.substring(index)
+        val trace = failure.trace()
+        Left(s"""Parse of '$annotated_input' failed at position $index"
+                |${trace.longAggregateMsg}
+                |""".stripMargin
+        )
+    }
   }
 }

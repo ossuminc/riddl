@@ -1,8 +1,6 @@
 package com.yoppworks.ossum.idddl.parser
 
 import AST._
-import fastparse.Parsed._
-import org.scalactic.PrettyMethods._
 import org.scalatest.MustMatchers
 import org.scalatest.WordSpec
 
@@ -14,23 +12,14 @@ class ParserTest extends WordSpec with MustMatchers {
     expected: Seq[AST],
     extract: Seq[DomainDef] => Seq[AST]
   ): Unit = {
-    fastparse.parse(input, Parser.parse(_)) match {
-      case Success(content, index) ⇒
+    Parser.parseString(input) match {
+      case Right(content) =>
         extract(content).toList mustBe expected
-        index must be <= input.length
-      case failure @ Failure(_, index, _) ⇒
-        val annotated_input =
-          input.substring(0, index) + "^" + input.substring(index)
-        val trace = failure.trace()
-        val msg =
-          s"""Parse of '$annotated_input' failed at position $index"
-             |${trace.longAggregateMsg}
-             |expected: ${expected.pretty}
-             |              """.stripMargin
+      case Left(msg) =>
         fail(msg)
     }
-
   }
+
   "Parser" should {
     "allow an empty funky-name domain" in {
       val input =
@@ -39,7 +28,7 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(DomainPath(Seq("foo-fah|roo")), Seq.empty[ContextDef])
+          DomainDef(7, DomainPath(Seq("foo-fah|roo")), Seq.empty[ContextDef])
         ),
         identity
       )
@@ -51,7 +40,7 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(
+          DomainDef(7,
             DomainPath(Seq("this", "is", "a ", "sub", "domain")),
             Seq.empty[ContextDef]
           )
@@ -67,8 +56,8 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(DomainPath(Seq("foo")), Seq.empty[ContextDef]),
-          DomainDef(DomainPath(Seq("bar")), Seq.empty[ContextDef])
+          DomainDef(7, DomainPath(Seq("foo")), Seq.empty[ContextDef]),
+          DomainDef(22,DomainPath(Seq("bar")), Seq.empty[ContextDef])
         ),
         identity
       )
@@ -82,9 +71,9 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(
+          DomainDef(7,
             DomainPath(Seq("foo")),
-            Seq(ContextDef("bar", Seq.empty[Def]))
+            Seq(ContextDef(23, "bar", Seq.empty[Def]))
           )
         ),
         identity
@@ -103,13 +92,13 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(
+          DomainDef(7,
             DomainPath(Seq("foo")),
             Seq(
-              ContextDef(
+              ContextDef(23,
                 "bar",
                 Seq[TypeDef](
-                  TypeDef(
+                  TypeDef(38,
                     "Vikings",
                     Enumeration(
                       Seq(
@@ -143,7 +132,8 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          CommandDef("DoThisThing", NamedType("SomeType"), Seq("ThingWasDone"))
+          CommandDef(41, "DoThisThing", NamedType("SomeType"), Seq
+          ("ThingWasDone"))
         ), { x: Seq[DomainDef] =>
           x.head.children.head.children
         }
@@ -160,7 +150,7 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          EventDef("ThingWasDone", NamedType("SomeType"))
+          EventDef(39, "ThingWasDone", NamedType("SomeType"))
         ), { x: Seq[DomainDef] =>
           x.head.children.head.children
         }
@@ -177,7 +167,8 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          QueryDef("FindThisThing", NamedType("SomeType"), Seq("SomeResult"))
+          QueryDef(39, "FindThisThing", NamedType("SomeType"), Seq
+          ("SomeResult"))
         ), { x: Seq[DomainDef] =>
           x.head.children.head.children
         }
@@ -194,7 +185,7 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          ResultDef("ThisQueryResult", NamedType("SomeType"))
+          ResultDef(40, "ThisQueryResult", NamedType("SomeType"))
         ), { x: Seq[DomainDef] =>
           x.head.children.head.children
         }
@@ -212,7 +203,7 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          EntityDef(
+          EntityDef(61,
             "Hamburger",
             Seq(EntityPersistent, EntityAggregate),
             NamedType("SomeType"),
@@ -226,22 +217,22 @@ class ParserTest extends WordSpec with MustMatchers {
     }
     "allow all the kinds of type definitions" in {
       val cases: List[(String, TypeDef)] = List(
-        "type str = String" → TypeDef("str", String),
-        "type num = Number" → TypeDef("num", Number),
-        "type boo = Boolean" → TypeDef("boo", Boolean),
-        "type ident  = Id" -> TypeDef("ident", Id),
-        "type dat = Date" -> TypeDef("dat", Date),
-        "type tim = Time" -> TypeDef("tim", Time),
-        "type stamp = TimeStamp" -> TypeDef("stamp", TimeStamp),
-        "type url = URL" -> TypeDef("url", URL),
-        "type FirstName = String" -> TypeDef("FirstName", String),
+        "type str = String" → TypeDef(33, "str", String),
+        "type num = Number" → TypeDef(33, "num", Number),
+        "type boo = Boolean" → TypeDef(33, "boo", Boolean),
+        "type ident  = Id" -> TypeDef(33, "ident", Id),
+        "type dat = Date" -> TypeDef(33, "dat", Date),
+        "type tim = Time" -> TypeDef(33, "tim", Time),
+        "type stamp = TimeStamp" -> TypeDef(33, "stamp", TimeStamp),
+        "type url = URL" -> TypeDef(33, "url", URL),
+        "type FirstName = String" -> TypeDef(33, "FirstName", String),
         "type enum = any [ Apple Pear Peach Persimmon ]" ->
-          TypeDef(
+          TypeDef(33,
             "enum",
             Enumeration(List("Apple", "Pear", "Peach", "Persimmon"))
           ),
         "type alt = select enum | stamp | url " ->
-          TypeDef(
+          TypeDef(33,
             "alt",
             Alternation(
               List(
@@ -257,7 +248,7 @@ class ParserTest extends WordSpec with MustMatchers {
           |  time: TimeStamp
           |}
           |""".stripMargin ->
-          TypeDef(
+          TypeDef(33,
             "agg",
             Aggregation(
               Map(
@@ -268,11 +259,11 @@ class ParserTest extends WordSpec with MustMatchers {
             )
           ),
         "type oneOrMore = agg+" ->
-          TypeDef("oneOrMore", OneOrMore(NamedType("agg"))),
+          TypeDef(33, "oneOrMore", OneOrMore(NamedType("agg"))),
         "type zeroOrMore = agg*" ->
-          TypeDef("zeroOrMore", ZeroOrMore(NamedType("agg"))),
+          TypeDef(33, "zeroOrMore", ZeroOrMore(NamedType("agg"))),
         "type optional = agg?" ->
-          TypeDef("optional", Optional(NamedType("agg")))
+          TypeDef(33, "optional", Optional(NamedType("agg")))
       )
       cases.foreach {
         case (statement, expected) ⇒
