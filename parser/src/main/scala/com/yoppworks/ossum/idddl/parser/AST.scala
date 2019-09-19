@@ -59,7 +59,15 @@ object AST {
                         produces: Seq[String]
   ) extends Def
 
-  case class DomainPath(path: Seq[String])
+  case class DomainPath(path: Seq[String]) {
+    require(path.nonEmpty, "Too few path name elements")
+    def parent: Seq[String] = path.dropRight(1)
+    def name: String = path.last
+    override def toString: String = {
+      path.mkString(".")
+    }
+  }
+
   case class DomainDef(
     index: Int, name_path: DomainPath, children: Seq[ContextDef]
   ) extends Def
