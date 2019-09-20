@@ -28,7 +28,7 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(7, DomainPath(Seq("foo-fah|roo")), Seq.empty[ContextDef])
+          DomainDef(7, DomainPath(Seq("foo-fah|roo")))
         ),
         identity
       )
@@ -42,7 +42,6 @@ class ParserTest extends WordSpec with MustMatchers {
         Seq[DomainDef](
           DomainDef(7,
             DomainPath(Seq("this", "is", "a ", "sub", "domain")),
-            Seq.empty[ContextDef]
           )
         ),
         identity
@@ -56,8 +55,8 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq[DomainDef](
-          DomainDef(7, DomainPath(Seq("foo")), Seq.empty[ContextDef]),
-          DomainDef(22,DomainPath(Seq("bar")), Seq.empty[ContextDef])
+          DomainDef(7, DomainPath(Seq("foo"))),
+          DomainDef(22,DomainPath(Seq("bar")))
         ),
         identity
       )
@@ -73,7 +72,24 @@ class ParserTest extends WordSpec with MustMatchers {
         Seq[DomainDef](
           DomainDef(7,
             DomainPath(Seq("foo")),
-            Seq(ContextDef(23, "bar", Seq.empty[Def]))
+            contexts = Seq(ContextDef(23, "bar"))
+          )
+        ),
+        identity
+      )
+    }
+    "allow channel definitions in domains" in {
+      val input =
+        """domain foo {
+          |  channel bar flows String
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq[DomainDef](
+          DomainDef(7,
+            DomainPath(Seq("foo")),
+            channels=Seq(ChannelDef(23, "bar", String))
           )
         ),
         identity
@@ -94,10 +110,10 @@ class ParserTest extends WordSpec with MustMatchers {
         Seq[DomainDef](
           DomainDef(7,
             DomainPath(Seq("foo")),
-            Seq(
+            contexts = Seq(
               ContextDef(23,
                 "bar",
-                Seq[TypeDef](
+                types = Seq[TypeDef](
                   TypeDef(38,
                     "Vikings",
                     Enumeration(
@@ -132,10 +148,10 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          CommandDef(41, "DoThisThing", NamedType("SomeType"), Seq
-          ("ThingWasDone"))
+          CommandDef(41, "DoThisThing", NamedType("SomeType"),
+            Seq("ThingWasDone"))
         ), { x: Seq[DomainDef] =>
-          x.head.children.head.children
+          x.head.contexts.head.commands
         }
       )
     }
@@ -152,7 +168,7 @@ class ParserTest extends WordSpec with MustMatchers {
         Seq(
           EventDef(39, "ThingWasDone", NamedType("SomeType"))
         ), { x: Seq[DomainDef] =>
-          x.head.children.head.children
+          x.head.contexts.head.events
         }
       )
     }
@@ -170,7 +186,7 @@ class ParserTest extends WordSpec with MustMatchers {
           QueryDef(39, "FindThisThing", NamedType("SomeType"), Seq
           ("SomeResult"))
         ), { x: Seq[DomainDef] =>
-          x.head.children.head.children
+          x.head.contexts.head.queries
         }
       )
     }
@@ -187,7 +203,7 @@ class ParserTest extends WordSpec with MustMatchers {
         Seq(
           ResultDef(40, "ThisQueryResult", NamedType("SomeType"))
         ), { x: Seq[DomainDef] =>
-          x.head.children.head.children
+          x.head.contexts.head.results
         }
       )
     }
@@ -211,7 +227,7 @@ class ParserTest extends WordSpec with MustMatchers {
             Seq.empty[String]
           )
         ), { x: Seq[DomainDef] =>
-          x.head.children.head.children
+          x.head.contexts.head.entities
         }
       )
     }
@@ -271,7 +287,7 @@ class ParserTest extends WordSpec with MustMatchers {
           runParser(
             input,
             List(expected),
-            (x: Seq[DomainDef]) => x.head.children.head.children
+            (x: Seq[DomainDef]) => x.head.contexts.head.types
           )
       }
     }

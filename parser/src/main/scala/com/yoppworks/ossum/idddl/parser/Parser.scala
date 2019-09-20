@@ -177,16 +177,15 @@ object Parser {
     }
   }
 
-  def contextDefinitions[_: P]: P[Def] = {
-    P(
-      typeDef | commandDef | eventDef | queryDef | resultDef | entityDef
-    )
-  }
-
   def contextDef[_: P]: P[ContextDef] = {
-    P("context" ~ Index ~/ identifier ~ "{" ~ contextDefinitions.rep(0) ~
-      "}").map {
-      case (index, name, defs) => ContextDef(index, name, defs)
+    P("context" ~ Index ~/ identifier ~ "{" ~ typeDef.rep(0) ~
+      commandDef.rep(0) ~ eventDef.rep(0) ~ queryDef.rep(0) ~
+      resultDef.rep(0) ~ entityDef.rep(0) ~ "}"
+    ).map {
+      case (index, name, types, commands, events, queries, results, entities) =>
+        ContextDef(index, name, types, commands, events, queries, results,
+          entities
+        )
     }
   }
 
@@ -194,14 +193,23 @@ object Parser {
     P(pathIdentifier).map(DomainPath)
   }
 
+  def channelDef[_:P]: P[ChannelDef] = {
+    P("channel" ~ Index ~/ identifier ~ "flows" ~ typeExpression ).map {
+      case (index, name, typ) => ChannelDef(index, name, typ)
+    }
+  }
+
   def domainDefinitions[_: P]: P[Def] = {
-    P(typeDef | contextDef)
+    P(typeDef | contextDef | channelDef)
   }
 
   def domainDef[_: P]: P[DomainDef] = {
-    P("domain" ~ Index ~/ domainPath ~ "{" ~/ contextDef.rep(0) ~ "}").map {
-      case (index, path, defs) =>
-        DomainDef(index, path, defs)
+    P("domain" ~ Index ~/ domainPath ~ "{" ~/
+      typeDef.rep(0) ~ channelDef.rep(0) ~
+      contextDef.rep(0) ~ "}"
+    ).map {
+      case (index, path, types, channels, contexts) =>
+        DomainDef(index, path, types, channels, contexts)
     }
   }
 
@@ -213,7 +221,7 @@ object Parser {
     fastparse.parse(input, parse(_)) match {
       case Success(content, _) ⇒
         Right(content)
-      case failure @ Failure(_, index, extra) ⇒
+      case failure @ Failure(_, index, _) ⇒
         val annotated_input =
           input.substring(0, index) + "^" + input.substring(index)
         val trace = failure.trace()
@@ -236,7 +244,7 @@ object Parser {
     fastparse.parse(input, parse(_)) match {
       case Success(content, _) =>
         Right(content)
-      case failure @ Failure(label, index, extra) ⇒
+      case failure @ Failure(label, index, _) ⇒
         val where = s"at $name:$index"
         val annotated_input =
           input.substring(0, index) + "^" + input.substring(index)

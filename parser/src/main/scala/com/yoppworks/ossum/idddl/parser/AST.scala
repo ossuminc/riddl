@@ -59,6 +59,8 @@ object AST {
                         produces: Seq[String]
   ) extends Def
 
+  case class ChannelDef(index: Int, name: String, typ: Type) extends Def
+
   case class DomainPath(path: Seq[String]) {
     require(path.nonEmpty, "Too few path name elements")
     def parent: Seq[String] = path.dropRight(1)
@@ -68,11 +70,25 @@ object AST {
     }
   }
 
-  case class DomainDef(
-    index: Int, name_path: DomainPath, children: Seq[ContextDef]
-  ) extends Def
-  case class ContextDef(index: Int, name: String, children: Seq[Def])
-      extends Def
   case class TypeDef(index: Int, name: String, typ: Type) extends Def
 
+  case class ContextDef(
+    index: Int,
+    name: String,
+    types: Seq[TypeDef] = Seq.empty[TypeDef],
+    commands: Seq[CommandDef] = Seq.empty[CommandDef],
+    events: Seq[EventDef] = Seq.empty[EventDef],
+    queries: Seq[QueryDef] = Seq.empty[QueryDef],
+    results: Seq[ResultDef] = Seq.empty[ResultDef],
+    entities: Seq[EntityDef] = Seq.empty[EntityDef],
+    channels: Seq[ChannelDef] = Seq.empty[ChannelDef]
+  ) extends Def
+
+  case class DomainDef(
+    index: Int,
+    name_path: DomainPath,
+    types: Seq[TypeDef] = Seq.empty[TypeDef],
+    channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
+    contexts: Seq[ContextDef] = Seq.empty[ContextDef]
+  ) extends Def
 }

@@ -5,11 +5,13 @@ import com.yoppworks.ossum.idddl.parser.AST._
 import scala.collection.mutable
 
 /** Validates an AST */
-object Validator {
+object Validation {
 
   case class ValidationError(index: Int, message: String)
   type ValidationErrors = Seq[ValidationError]
   val NoValidationErrors = Seq.empty[ValidationError]
+
+  trait Validator extends (Def => ValidationErrors)
 
   case class ValidationContext(
     symbols: mutable.Map[Seq[String], mutable.Map[String,Def]]
@@ -41,6 +43,12 @@ object Validator {
       case d: DomainDef => validateDomain(d)
       case c: ContextDef => validateContext(c)
       case t: TypeDef => validateType(t)
+      case c: CommandDef => validateCommand(c)
+      case e: EventDef => validateEvent(e)
+      case q: QueryDef => validateQuery(q)
+      case r: ResultDef => validateResult(r)
+      case e: EntityDef => validateEntity(e)
+      case c: ChannelDef => validateChannel(c)
       case _ =>
         Seq(ValidationError(definition.index, "Unknown Definition"))
     }
@@ -68,7 +76,13 @@ object Validator {
   protected def validateContext(d: ContextDef)(
     implicit context: ValidationContext
   ): ValidationErrors = {
-    validate(d.children)
+    validate(d.types)
+    validate(d.channels)
+    validate(d.commands)
+    validate(d.events)
+    validate(d.queries)
+    validate(d.results)
+    validate(d.entities)
   }
 
   protected def validateType(d: TypeDef)(
@@ -77,4 +91,36 @@ object Validator {
     Seq.empty[ValidationError]
   }
 
+  protected def validateCommand(d: CommandDef)(
+    implicit context: ValidationContext
+  ): ValidationErrors = {
+    Seq.empty[ValidationError]
+  }
+
+  protected def validateEvent(d: EventDef)(
+    implicit context: ValidationContext
+  ): ValidationErrors = {
+    Seq.empty[ValidationError]
+  }
+
+  protected def validateQuery(d: QueryDef)(
+    implicit context: ValidationContext
+  ): ValidationErrors = {
+    Seq.empty[ValidationError]
+  }
+  protected def validateResult(d: ResultDef)(
+    implicit context: ValidationContext
+  ): ValidationErrors = {
+    Seq.empty[ValidationError]
+  }
+  protected def validateEntity(d: EntityDef)(
+    implicit context: ValidationContext
+  ): ValidationErrors = {
+    Seq.empty[ValidationError]
+  }
+  protected def validateChannel(d: ChannelDef)(
+    implicit context: ValidationContext
+  ): ValidationErrors = {
+    Seq.empty[ValidationError]
+  }
 }
