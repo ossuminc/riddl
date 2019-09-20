@@ -19,6 +19,7 @@ object AST {
   case object Time extends Type
   case object TimeStamp extends Type
   case object URL extends Type
+
   case class NamedType(typeName: String) extends Type
   case class Enumeration(of: Seq[String]) extends Type
   case class Alternation(of: Seq[Type]) extends Type
@@ -29,20 +30,16 @@ object AST {
   case class OneOrMore(of: Type) extends CardinalizedType
 
   sealed trait MessageDef extends Def
-  case class CommandDef(index: Int,
-                        name: String,
-                        typ: Type,
-                        events: Seq[String])
+  case class CommandDef(
+    index: Int,
+    name: String,
+    typ: Type,
+    events: Seq[String]
+  ) extends MessageDef
+  case class EventDef(index: Int, name: String, typ: Type) extends MessageDef
+  case class QueryDef(index: Int, name: String, typ: Type, results: Seq[String])
       extends MessageDef
-  case class EventDef(index: Int, name: String, typ: Type)
-      extends MessageDef
-  case class QueryDef(index: Int,
-                      name: String,
-                      typ: Type,
-                      results: Seq[String])
-      extends MessageDef
-  case class ResultDef(index: Int, name: String, typ: Type)
-      extends MessageDef
+  case class ResultDef(index: Int, name: String, typ: Type) extends MessageDef
 
   case class ObjectDef(index: Int, name: String, typ: Type) extends Def
 
@@ -51,12 +48,12 @@ object AST {
   case object EntityPersistent extends EntityOption
 
   case class EntityDef(
-                        index: Int,
-                        name: String,
-                        options: Seq[EntityOption],
-                        typ: Type,
-                        consumes: Seq[String],
-                        produces: Seq[String]
+    index: Int,
+    name: String,
+    options: Seq[EntityOption],
+    typ: Type,
+    consumes: Seq[String],
+    produces: Seq[String]
   ) extends Def
 
   case class ChannelDef(index: Int, name: String, typ: Type) extends Def
@@ -65,9 +62,8 @@ object AST {
     require(path.nonEmpty, "Too few path name elements")
     def parent: Seq[String] = path.dropRight(1)
     def name: String = path.last
-    override def toString: String = {
+    override def toString: String =
       path.mkString(".")
-    }
   }
 
   case class TypeDef(index: Int, name: String, typ: Type) extends Def
