@@ -87,7 +87,6 @@ object AST {
   case class DomainDef(
     index: Int,
     name_path: DomainPath,
-    types: Seq[TypeDef] = Seq.empty[TypeDef],
     channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
     contexts: Seq[ContextDef] = Seq.empty[ContextDef]
   ) extends Def

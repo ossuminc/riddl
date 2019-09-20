@@ -205,11 +205,10 @@ object Parser {
 
   def domainDef[_: P]: P[DomainDef] = {
     P("domain" ~ Index ~/ domainPath ~ "{" ~/
-      typeDef.rep(0) ~ channelDef.rep(0) ~
-      contextDef.rep(0) ~ "}"
+       channelDef.rep(0) ~ contextDef.rep(0) ~ "}"
     ).map {
-      case (index, path, types, channels, contexts) =>
-        DomainDef(index, path, types, channels, contexts)
+      case (index, path, channels, contexts) =>
+        DomainDef(index, path, channels, contexts)
     }
   }
 
