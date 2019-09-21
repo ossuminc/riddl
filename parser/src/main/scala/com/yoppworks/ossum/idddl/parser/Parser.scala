@@ -3,13 +3,15 @@ package com.yoppworks.ossum.idddl.parser
 import java.io.File
 
 import AST._
-import fastparse.Parsed.{Failure, Success}
+import fastparse.Parsed.Failure
+import fastparse.Parsed.Success
 
 import scala.io.Source
 
 object Parser {
   import fastparse._
-  import ScriptWhitespace._
+  import ScalaWhitespace._
+  import AST._
 
   def literalString[_: P]: P[String] = {
     P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").!
@@ -58,8 +60,8 @@ object Parser {
     }
   }
 
-  def namedType[_: P]: P[NamedType] = {
-    P(identifier.map(NamedType))
+  def typeRef[_: P]: P[TypeRef] = {
+    P("type" ~/ identifier).map(TypeRef)
   }
 
   def enumerationType[_: P]: P[Enumeration] = {
@@ -69,13 +71,13 @@ object Parser {
   }
 
   def alternationType[_: P]: P[Alternation] = {
-    P("select" ~/ namedType.rep(2, P("|"))).map { types ⇒
-      Alternation(types)
-    }
+    P("select" ~/ identifier.rep(2, P("|")))
+      .map(_.map(TypeRef))
+      .map(Alternation)
   }
 
   def typeExpression[_: P]: P[Type] = {
-    P(cardinality(literalTypeExpression | namedType))
+    P(cardinality(literalTypeExpression | typeRef))
   }
 
   def cardinality[_: P](p: ⇒ P[Type]): P[Type] = {
@@ -118,97 +120,125 @@ object Parser {
 
   def commandDef[_: P]: P[CommandDef] = {
     P(
-      "command" ~ Index ~/ identifier ~ ":" ~ namedType ~ "yields" ~
-        identifier.rep(1, P(","))
-    ).map {
-      case (index, id, expr, yields) =>
-        CommandDef(index, id, expr, yields)
+      "command" ~ Index ~/ identifier ~ "=" ~ typeDefKinds ~ "yields" ~
+        eventRefs
+    ).map { tpl ⇒
+      (CommandDef.apply _).tupled(tpl)
     }
   }
 
+  def eventRefs[_: P]: P[EventRefs] = {
+    P("event" ~~ "s".? ~/ identifier.rep(1, P(","))).map(_.map(EventRef))
+  }
+
   def eventDef[_: P]: P[EventDef] = {
-    P("event" ~ Index ~/ identifier ~ ":" ~ typeExpression).map {
-      case (index, name, typ) =>
-        EventDef(index, name, typ)
+    P(
+      "event" ~ Index ~/ identifier ~ "=" ~ typeDefKinds
+    ).map { tpl ⇒
+      (EventDef.apply _).tupled(tpl)
     }
   }
 
   def queryDef[_: P]: P[QueryDef] = {
     P(
-      "query" ~ Index ~/ identifier ~ ":" ~ typeExpression ~ "yields" ~
-        identifier
-        .rep(1, P(","))
-    ).map {
-      case (index, id, expr, results) =>
-        QueryDef(index, id, expr, results)
+      "query" ~ Index ~/ identifier ~ "=" ~ typeDefKinds ~ "yields" ~
+        resultRefs
+    ).map { tpl ⇒
+      (QueryDef.apply _).tupled(tpl)
     }
+  }
+
+  def resultRefs[_: P]: P[ResultRefs] = {
+    P("result" ~~ "s".? ~/ identifier.rep(1, P(","))).map(_.map(ResultRef))
   }
 
   def resultDef[_: P]: P[ResultDef] = {
-    P("result" ~ Index ~/ identifier ~ ":" ~ typeExpression).map {
-      case (index, name, typ) =>
-        ResultDef(index, name, typ)
+    P(
+      "result" ~ Index ~/ identifier ~ "=" ~ typeDefKinds
+    ).map { tpl ⇒
+      (ResultDef.apply _).tupled(tpl)
     }
   }
 
-  def entityOptions[_: P]: P[EntityOption] = {
-    P(
-      "aggregate".!.map(_ => EntityAggregate) |
-        "persistent".!.map(_ => EntityPersistent)
-    )
+  def entityOption[_: P]: P[EntityOption] = {
+    P(StringIn("aggregate", "persistent", "consistent", "available")).!.map {
+      case "aggregate"  => EntityAggregate
+      case "persistent" => EntityPersistent
+      case "consistent" => EntityConsistent
+      case "available"  => EntityAvailable
+    }
+  }
+
+  def channelRef[_: P]: P[ChannelRef] = {
+    P("channel" ~/ identifier).map(ChannelRef)
   }
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      entityOptions.rep(0) ~ "entity" ~ Index ~/ identifier ~ ":" ~
-        typeExpression ~
-        ("consumes" ~/ "[" ~ identifier.rep(1, ",") ~ "]").? ~
-        ("produces" ~/ "[" ~ identifier.rep(1, ",") ~ "]").?
-    ).map {
-      case (options, index, name, typ, consumes, produces) =>
-        EntityDef(
-          index,
-          name,
-          options,
-          typ,
-          consumes.getOrElse(Seq.empty[String]),
-          produces.getOrElse(Seq.empty[String])
-        )
+      entityOption.rep(0) ~ "entity" ~ Index ~/ identifier ~ "=" ~
+        typeDefKinds ~
+        ("consumes" ~ channelRef).? ~
+        ("produces" ~/ channelRef).?
+    ).map { tpl ⇒
+      (EntityDef.apply _).tupled(tpl)
+    }
+  }
+
+  def domainRef[_: P]: P[DomainRef] = {
+    P(
+      "domain" ~/ pathIdentifier
+    ).map(names ⇒ DomainRef(names.mkString(".")))
+  }
+
+  def contextRef[_: P]: P[ContextRef] = {
+    P("context" ~/ identifier).map(ContextRef)
+  }
+
+  def adaptorDef[_: P]: P[AdaptorDef] = {
+    P(
+      "adaptor" ~/ Index ~ identifier ~ "for" ~/ domainRef.? ~/ contextRef
+    ).map { tpl =>
+      (AdaptorDef.apply _).tupled(tpl)
+    }
+  }
+
+  def contextOptions[_: P]: P[ContextOption] = {
+    P(StringIn("device", "service", "function")).!.map {
+      case "device" ⇒ DeviceOption
+      case "service" ⇒ ServiceOption
+      case "function" ⇒ FunctionOption
     }
   }
 
   def contextDef[_: P]: P[ContextDef] = {
-    P("context" ~ Index ~/ identifier ~ "{" ~ typeDef.rep(0) ~
-      commandDef.rep(0) ~ eventDef.rep(0) ~ queryDef.rep(0) ~
-      resultDef.rep(0) ~ entityDef.rep(0) ~ "}"
-    ).map {
-      case (index, name, types, commands, events, queries, results, entities) =>
-        ContextDef(index, name, types, commands, events, queries, results,
-          entities
-        )
+    P(
+      contextOptions.rep(0) ~ "context" ~ Index ~/ identifier ~ "{" ~
+        typeDef.rep(0) ~ commandDef.rep(0) ~ eventDef.rep(0) ~
+        queryDef.rep(0) ~ resultDef.rep(0) ~
+        entityDef.rep(0) ~ adaptorDef.rep(0) ~ "}"
+    ).map { args =>
+      (ContextDef.apply _).tupled(args)
     }
   }
 
-  def domainPath[_: P]: P[DomainPath] = {
-    P(pathIdentifier).map(DomainPath)
-  }
-
-  def channelDef[_:P]: P[ChannelDef] = {
-    P("channel" ~ Index ~/ identifier ~ "flows" ~ typeExpression ).map {
-      case (index, name, typ) => ChannelDef(index, name, typ)
+  def channelDef[_: P]: P[ChannelDef] = {
+    P("channel" ~ Index ~/ identifier).map {
+      case (index, name) => ChannelDef(index, name)
     }
   }
 
   def domainDefinitions[_: P]: P[Def] = {
-    P(typeDef | contextDef | channelDef)
+    P(typeDef | contextDef)
   }
 
   def domainDef[_: P]: P[DomainDef] = {
-    P("domain" ~ Index ~/ domainPath ~ "{" ~/
-       channelDef.rep(0) ~ contextDef.rep(0) ~ "}"
+    P(
+      "domain" ~ Index ~/ pathIdentifier ~ "{" ~/
+        channelDef.rep(0) ~
+        contextDef.rep(0) ~ "}"
     ).map {
       case (index, path, channels, contexts) =>
-        DomainDef(index, path, channels, contexts)
+        DomainDef(index, path.dropRight(1), path.last, channels, contexts)
     }
   }
 
@@ -216,7 +246,7 @@ object Parser {
     P(Start ~ domainDef.rep(0) ~ End)
   }
 
-  def parseString(input: String): Either[String,Seq[DomainDef]] = {
+  def parseString(input: String): Either[String, Seq[DomainDef]] = {
     fastparse.parse(input, parse(_)) match {
       case Success(content, _) ⇒
         Right(content)
@@ -225,19 +255,20 @@ object Parser {
           input.substring(0, index) + "^" + input.substring(index)
         val trace = failure.trace()
         Left(s"""Parse of '$annotated_input' failed at position $index"
-           |${trace.longAggregateMsg}
-           |""".stripMargin
-        )
+                |${trace.longAggregateMsg}
+                |""".stripMargin)
     }
   }
 
-  def parseFile(file: File): Either[String,Seq[DomainDef]] = {
+  def parseFile(file: File): Either[String, Seq[DomainDef]] = {
     val source = Source.fromFile(file)
     parseSource(source, file.getPath)
   }
 
-  def parseSource(source: Source, name: String): Either[String, Seq[DomainDef]]
-  = {
+  def parseSource(
+    source: Source,
+    name: String
+  ): Either[String, Seq[DomainDef]] = {
     val lines = source.getLines()
     val input = lines.mkString("\n")
     fastparse.parse(input, parse(_)) match {
@@ -250,8 +281,7 @@ object Parser {
         val trace = failure.trace()
         Left(s"""Parse of '$annotated_input' failed at position $index"
                 |${trace.longAggregateMsg}
-                |""".stripMargin
-        )
+                |""".stripMargin)
     }
   }
 }

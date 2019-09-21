@@ -86,21 +86,21 @@ object Validation {
   class DefaultValidator extends Validator {
 
     def validateDomain(d: DomainDef): ValidationErrors = {
-      val parent = d.name_path.parent
+      val parent = d.prefix
       val domainErrors = symbols.get(parent) match {
         case Some(map) =>
-          map.get(d.name_path.name) match {
+          map.get(d.name) match {
             case Some(domainDef) =>
               check(
                 d,
-                s"Domain '${d.name_path}' already defined",
+                s"Domain '${d.name}' already defined",
                 predicate = false
               )
             case None =>
               NoValidationErrors
           }
         case None =>
-          symbols.put(parent, mutable.Map(d.name_path.name -> d))
+          symbols.put(parent, mutable.Map(d.name -> d))
           NoValidationErrors
       }
       domainErrors ++
@@ -139,7 +139,7 @@ object Validation {
               "Enumerators must not start with upper case",
               of.forall(!_.head.isUpper)
             )
-          case NamedType(typeName) =>
+          case TypeRef(typeName) =>
             check(
               typeDef,
               "Referenced type name must start with upper case",

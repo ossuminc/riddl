@@ -27,5 +27,6 @@ awesome software systems based on reactive architecture.
 @@@ index
 
 * [Language](language/index.md)
+* [Examples](examples/index.md)
 
 @@@
