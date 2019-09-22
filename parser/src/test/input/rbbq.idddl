@@ -5,6 +5,10 @@ domain rbbq.operation.restaurant {
   device context Kitchen {
         // TBD
   }
+  context Order {
+  }
+  context Menu {}
+  context
   context Reservations {
     entity Reservation = combine { partyName: String, phoneNumber: String,
      location: Id, time: Time, date: Date
