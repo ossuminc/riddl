@@ -148,6 +148,15 @@ object Parser {
     }
   }
 
+  def messageRef[_: P]: P[MessageRef] = {
+    P(
+      P("command" ~ identifier).map(CommandRef) |
+        P("event" ~ identifier).map(EventRef) |
+        P("query" ~ identifier).map(QueryRef) |
+        P("result" ~ identifier).map(ResultRef)
+    )
+  }
+
   def resultRefs[_: P]: P[ResultRefs] = {
     P("result" ~~ "s".? ~/ identifier.rep(1, P(","))).map(_.map(ResultRef))
   }
@@ -171,6 +180,10 @@ object Parser {
 
   def channelRef[_: P]: P[ChannelRef] = {
     P("channel" ~/ identifier).map(ChannelRef)
+  }
+
+  def entityRef[_: P]: P[EntityRef] = {
+    P("entity" ~/ identifier).map(EntityRef)
   }
 
   def entityDef[_: P]: P[EntityDef] = {
@@ -227,8 +240,57 @@ object Parser {
     }
   }
 
+  def actorRoleRef[_: P]: P[ActorRoleRef] = {
+    P("role" ~ identifier).map(ActorRoleRef)
+  }
+
+  def actorRoleDef[_: P]: P[ActorRoleDef] = {
+    P(
+      "role" ~/ Index ~ identifier ~
+        ("handles" ~/ literalString.rep(1, ",")).?.map(
+          _.getOrElse(Seq.empty[String])
+        ) ~
+        ("requires" ~ literalString.rep(1, ",")).?.map(
+          _.getOrElse(Seq.empty[String])
+        )
+    ).map { tpl ⇒
+      (ActorRoleDef.apply _).tupled(tpl)
+    }
+  }
+
+  def messageInteraction[_: P]: P[MessageInteraction] = {
+    P(
+      "message" ~/ literalString ~ "from" ~/ entityRef ~ "to" ~/ entityRef ~
+        "with" ~ messageRef
+    ).map { tpl ⇒
+      (MessageInteraction.apply _).tupled(tpl)
+    }
+  }
+
+  def actorInteraction[_: P]: P[ActorInteraction] = {
+    P(
+      "external" ~/ literalString ~ "from" ~ actorRoleRef ~ "to" ~ entityRef
+    ).map { tpl ⇒
+      (ActorInteraction.apply _).tupled(tpl)
+    }
+  }
+
+  def interactions[_: P]: P[Interactions] = {
+    P(messageInteraction | actorInteraction).rep(1)
+  }
+
+  def scenarioDef[_: P]: P[ScenarioDef] = {
+    P(
+      "scenario" ~ Index ~/ pathIdentifier ~ "{" ~ actorRoleDef.rep(1) ~
+        interactions ~ "}"
+    ).map {
+      case (index, path, actors, interactions) ⇒
+        ScenarioDef(index, path.dropRight(1), path.last, actors, interactions)
+    }
+  }
+
   def domainDefinitions[_: P]: P[Def] = {
-    P(typeDef | contextDef)
+    P(typeDef | contextDef | actorRoleDef | scenarioDef)
   }
 
   def domainDef[_: P]: P[DomainDef] = {
@@ -243,7 +305,7 @@ object Parser {
   }
 
   def parse[_: P]: P[Seq[DomainDef]] = {
-    P(Start ~ domainDef.rep(0) ~ End)
+    P(Start ~ P(domainDef).rep(0) ~ End)
   }
 
   def parseString(input: String): Either[String, Seq[DomainDef]] = {

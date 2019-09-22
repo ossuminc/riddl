@@ -44,8 +44,6 @@ object AST {
   case class TypeRef(name: String) extends Ref with Type
   case class TypeDef(index: Int, name: String, typ: Type) extends Def
 
-  sealed trait MessageDef extends Def
-
   case class ChannelRef(name: String) extends Ref
   case class ChannelDef(
     index: Int,
@@ -56,7 +54,10 @@ object AST {
     results: Seq[String] = Seq.empty[String]
   ) extends Def
 
-  case class CommandRef(name: String) extends Ref
+  sealed trait MessageRef extends Ref
+  sealed trait MessageDef extends Def
+
+  case class CommandRef(name: String) extends MessageRef
   case class CommandDef(
     index: Int,
     name: String,
@@ -64,11 +65,11 @@ object AST {
     events: EventRefs
   ) extends MessageDef
 
-  case class EventRef(name: String) extends Ref
+  case class EventRef(name: String) extends MessageRef
   type EventRefs = Seq[EventRef]
   case class EventDef(index: Int, name: String, typ: Type) extends MessageDef
 
-  case class QueryRef(name: String) extends Ref
+  case class QueryRef(name: String) extends MessageRef
   case class QueryDef(
     index: Int,
     name: String,
@@ -76,7 +77,7 @@ object AST {
     results: Seq[ResultRef]
   ) extends MessageDef
 
-  case class ResultRef(name: String) extends Ref
+  case class ResultRef(name: String) extends MessageRef
   type ResultRefs = Seq[ResultRef]
   case class ResultDef(index: Int, name: String, typ: Type) extends MessageDef
 
@@ -141,6 +142,7 @@ object AST {
   case object DeviceOption extends ContextOption
   case object ServiceOption extends ContextOption
   case object FunctionOption extends ContextOption
+  case object GatewayOption extends ContextOption
 
   case class ContextRef(name: String) extends Ref
 
@@ -157,12 +159,66 @@ object AST {
     translators: Seq[AdaptorDef] = Seq.empty[AdaptorDef]
   ) extends Def
 
+  /** Definition of a Scenario
+    * Scenarios define an exemplary interaction between the system being designed
+    * and its users. The basic ideas of a Scenario are much like a UML Sequence
+    * Diagram.
+    *
+    * @param index Where in the input the Scenario is defined
+    * @param prefix The path identifier's prefix
+    * @param name The name of the scenario
+    */
+  case class ScenarioDef(
+    index: Int,
+    prefix: Seq[String],
+    name: String,
+    actors: Seq[ActorRoleDef],
+    interactions: Seq[Interaction]
+  ) extends Def
+
+  sealed trait Interaction {
+    def label: String
+  }
+  type Interactions = Seq[Interaction]
+
+  /** An Interaction based on entity messaging
+    *
+    * @param label The displayable text that describes the interaction
+    * @param sender A reference to the entity sending the message
+    * @param receiver A reference to the entity receiving the message
+    * @param message A reference to the kind of message sent & received
+    */
+  case class MessageInteraction(
+    label: String,
+    sender: EntityRef,
+    receiver: EntityRef,
+    message: MessageRef
+  ) extends Interaction
+
+  case class ActorRoleDef(
+    index: Int,
+    name: String,
+    responsibilities: Seq[String] = Seq.empty[String],
+    capacities: Seq[String] = Seq.empty[String]
+  ) extends Def
+
+  case class ActorRoleRef(name: String) extends Ref
+
+  case class ActorInteraction(
+    label: String,
+    actor: ActorRoleRef,
+    entity: EntityRef
+  ) extends Interaction
+
   case class DomainRef(name: String) extends Ref
+
   case class DomainDef(
     index: Int,
     prefix: Seq[String],
     name: String,
     channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
-    contexts: Seq[ContextDef] = Seq.empty[ContextDef]
+    contexts: Seq[ContextDef] = Seq.empty[ContextDef],
+    scenarios: Seq[ScenarioDef] = Seq.empty[ScenarioDef]
   ) extends Def
+
 }
