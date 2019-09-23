@@ -2,17 +2,15 @@ package com.yoppworks.ossum.idddl.parser
 
 import java.io.File
 
-import AST._
-import com.yoppworks.ossum.idddl.parser.Parser.annotated_input
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 
 import scala.io.Source
+import fastparse._
+import ScalaWhitespace._
+import AST._
 
 object Parser {
-  import fastparse._
-  import ScalaWhitespace._
-  import AST._
 
   def literalString[_: P]: P[String] = {
     P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"")
@@ -179,6 +177,60 @@ object Parser {
     }
   }
 
+  def givens[_: P]: P[Seq[Given]] = {
+    P(
+      IgnoreCase("given") ~/ literalString ~
+        P(IgnoreCase("and") ~/ literalString).rep(0)
+    ).map {
+      case (initial, remainder) ⇒ Given(initial) +: remainder.map(Given)
+    }
+  }
+
+  def whens[_: P]: P[Seq[When]] = {
+    P(
+      IgnoreCase("when") ~/ literalString ~
+        P(IgnoreCase("and") ~/ literalString).rep(0)
+    ).map {
+      case (initial, remainder) ⇒ When(initial) +: remainder.map(When)
+    }
+  }
+
+  def thens[_: P]: P[Seq[Then]] = {
+    P(
+      IgnoreCase("then") ~/ literalString ~
+        P(IgnoreCase("and") ~ literalString).rep(0)
+    ).map {
+      case (initial, remainder) ⇒ Then(initial) +: remainder.map(Then)
+    }
+  }
+
+  def example[_: P]: P[Example] = {
+    P(
+      IgnoreCase("example") ~ ":" ~/ literalString ~ givens ~ whens ~ thens
+    ).map { tpl ⇒
+      (Example.apply _).tupled(tpl)
+    }
+  }
+
+  def background[_: P]: P[Background] = {
+    P(IgnoreCase("background") ~ ":" ~/ givens).map(Background)
+  }
+
+  def feature[_: P]: P[Feature] = {
+    P(
+      IgnoreCase("feature") ~ ":" ~/ identifier ~ literalString ~
+        background.? ~ example.rep(1)
+    ).map { tpl ⇒
+      (Feature.apply _).tupled(tpl)
+    }
+  }
+
+  def invariant[_: P]: P[Invariant] = {
+    P(
+      "invariant" ~/ identifier ~ "=" ~ literalString
+    ).map(tpl ⇒ (Invariant.apply _).tupled(tpl))
+  }
+
   def channelRef[_: P]: P[ChannelRef] = {
     P("channel" ~/ identifier).map(ChannelRef)
   }
@@ -193,7 +245,9 @@ object Parser {
         entityOption.rep(0) ~ "entity" ~/ identifier ~ "=" ~
         typeDefKinds ~
         ("consumes" ~ channelRef).? ~
-        ("produces" ~/ channelRef).?
+        ("produces" ~/ channelRef).? ~
+        feature.rep(0) ~
+        invariant.rep(0)
     ).map { tpl ⇒
       (EntityDef.apply _).tupled(tpl)
     }

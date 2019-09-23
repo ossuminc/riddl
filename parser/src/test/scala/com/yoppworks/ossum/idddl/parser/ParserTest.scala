@@ -241,6 +241,14 @@ class ParserTest extends WordSpec with MustMatchers {
           |    persistent aggregate entity Hamburger = type SomeType
           |      consumes channel EntityChannel
           |      produces channel EntityChannel
+          |      feature: AnAspect
+          |        "This is some aspect of the entity"
+          |        BACKGROUND: Given "Nobody loves me"
+          |        EXAMPLE: "My Fate"
+          |        GIVEN "everybody hates me"
+          |        AND "I'm depressed"
+          |        WHEN "I go fishing"
+          |        THEN "I'll just eat worms"
           |  }
           |}
           |""".stripMargin
@@ -253,7 +261,25 @@ class ParserTest extends WordSpec with MustMatchers {
             "Hamburger",
             TypeRef("SomeType"),
             Some(ChannelRef("EntityChannel")),
-            Some(ChannelRef("EntityChannel"))
+            Some(ChannelRef("EntityChannel")),
+            Seq(
+              Feature(
+                "AnAspect",
+                "This is some aspect of the entity",
+                Some(Background(Seq(Given("Nobody loves me")))),
+                Seq(
+                  Example(
+                    "My Fate",
+                    Seq(
+                      Given("everybody hates me"),
+                      Given("I'm depressed")
+                    ),
+                    Seq(When("I go fishing")),
+                    Seq(Then("I'll just eat worms"))
+                  )
+                )
+              )
+            )
           )
         ), { x: Seq[DomainDef] =>
           x.head.contexts.head.entities

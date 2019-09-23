@@ -89,6 +89,25 @@ object AST {
 
   case class EntityRef(name: String) extends Ref
 
+  case class Given(fact: String)
+  case class When(situation: String)
+  case class Then(result: String)
+  case class Background(givens: Seq[Given])
+  case class Example(
+    description: String,
+    givens: Seq[Given],
+    whens: Seq[When],
+    thens: Seq[Then]
+  )
+  case class Feature(
+    name: String,
+    description: String,
+    background: Option[Background],
+    examples: Seq[Example]
+  )
+
+  case class Invariant(name: String, expression: String)
+
   /** Definition of an Entity
     *
     * @param options The options for the entity
@@ -104,8 +123,9 @@ object AST {
     name: String,
     typ: Type,
     consumes: Option[ChannelRef] = None,
-    produces: Option[ChannelRef] = None // reference to the channel to which it
-    // produces
+    produces: Option[ChannelRef] = None,
+    features: Seq[Feature] = Seq.empty[Feature],
+    invariants: Seq[Invariant] = Seq.empty[Invariant]
   ) extends Def
 
   trait TranslationRule {
