@@ -385,7 +385,7 @@ class ParserTest extends WordSpec with MustMatchers {
             "enum",
             Enumeration(List("Apple", "Pear", "Peach", "Persimmon"))
           ),
-        "type alt = select enum | stamp | url " ->
+        "type alt = choose enum or stamp or url " ->
           TypeDef(
             33,
             "alt",

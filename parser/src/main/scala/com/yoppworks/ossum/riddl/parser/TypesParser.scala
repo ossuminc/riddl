@@ -32,10 +32,6 @@ object TypesParser {
     }
   }
 
-  def typeRef[_: P]: P[TypeRef] = {
-    P("type" ~/ identifier).map(TypeRef)
-  }
-
   def enumerationType[_: P]: P[Enumeration] = {
     P("any" ~/ "[" ~ identifier.rep ~ "]").map { enums ⇒
       Enumeration(enums)
@@ -43,9 +39,9 @@ object TypesParser {
   }
 
   def alternationType[_: P]: P[Alternation] = {
-    P("select" ~/ identifier.rep(2, P("|")))
-      .map(_.map(TypeRef))
-      .map(Alternation)
+    P(
+      "choose" ~/ identifier.rep(2, P("or"))
+    ).map(_.map(TypeRef)).map(Alternation)
   }
 
   def typeExpression[_: P]: P[Type] = {

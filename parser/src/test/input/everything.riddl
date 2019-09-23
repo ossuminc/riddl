@@ -24,7 +24,7 @@ domain example.domain {
     type enum = any [ Apple Pear Peach Persimmon ]
 
     // Alternations select one type from a list of types
-    type alt = select enum | stamp | url
+    type alt = choose enum or stamp or url
 
     // Aggregations combine several types and give each a field name identifier
     type agg = combine {

@@ -30,6 +30,10 @@ object CommonParser {
     P(identifier.repX(1, P(".")))
   }
 
+  def typeRef[_: P]: P[TypeRef] = {
+    P("type" ~/ identifier).map(TypeRef)
+  }
+
   def messageRef[_: P]: P[MessageRef] = {
     P(
       P("command" ~ identifier).map(CommandRef) |
