@@ -74,11 +74,10 @@ object AST {
     index: Int,
     name: String,
     typ: Type,
-    results: Seq[ResultRef]
+    result: ResultRef
   ) extends MessageDef
 
   case class ResultRef(name: String) extends MessageRef
-  type ResultRefs = Seq[ResultRef]
   case class ResultDef(index: Int, name: String, typ: Type) extends MessageDef
 
   sealed trait EntityOption
@@ -251,6 +250,18 @@ object AST {
     name: String,
     entity: EntityRef,
     description: String
+  ) extends ActionDef
+
+  case class DeletionActionDef(
+    index: Int,
+    name: String,
+    entity: EntityRef
+  ) extends ActionDef
+
+  case class CreationActionDef(
+    index: Int,
+    name: String,
+    entity: EntityRef
   ) extends ActionDef
 
   case class DomainRef(name: String) extends Ref

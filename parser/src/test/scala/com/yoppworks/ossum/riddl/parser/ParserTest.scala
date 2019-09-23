@@ -210,7 +210,7 @@ class ParserTest extends WordSpec with MustMatchers {
             39,
             "FindThisThing",
             String,
-            Seq(ResultRef("SomeResult"))
+            ResultRef("SomeResult")
           )
         ), { x: Seq[DomainDef] =>
           x.head.contexts.head.queries
@@ -313,7 +313,7 @@ class ParserTest extends WordSpec with MustMatchers {
           |  context bar {
           |    interaction dosomething {
           |      human role SomeActor handles "Doing stuff" requires "Skills"
-          |      asynch directive 'perform command' by role SomeActor to
+          |      asynch directive 'perform command' from role SomeActor to
           |      entity myLittlePony with command DoAThing
           |      processing doSomeProcessing for entity myLittlePony
           |      as "This does some stuff"
@@ -349,14 +349,14 @@ class ParserTest extends WordSpec with MustMatchers {
                 CommandRef("DoAThing")
               ),
               ProcessingActionDef(
-                253,
+                255,
                 "doSomeProcessing",
                 EntityRef("myLittlePony"),
                 "This does some stuff"
               ),
               MessageActionDef(
                 Seq(AsynchOption),
-                347,
+                349,
                 "handle a thing",
                 EntityRef("myLittlePony"),
                 EntityRef("Unicorn"),
