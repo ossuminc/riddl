@@ -3,6 +3,7 @@ package com.yoppworks.ossum.idddl.parser
 import java.io.File
 
 import AST._
+import com.yoppworks.ossum.idddl.parser.Parser.annotated_input
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 
@@ -14,7 +15,7 @@ object Parser {
   import AST._
 
   def literalString[_: P]: P[String] = {
-    P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").!
+    P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"")
   }
 
   def literalInt[_: P]: P[Int] = {
@@ -188,7 +189,8 @@ object Parser {
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      entityOption.rep(0) ~ "entity" ~ Index ~/ identifier ~ "=" ~
+      Index ~
+        entityOption.rep(0) ~ "entity" ~/ identifier ~ "=" ~
         typeDefKinds ~
         ("consumes" ~ channelRef).? ~
         ("produces" ~/ channelRef).?
@@ -216,10 +218,11 @@ object Parser {
   }
 
   def contextOptions[_: P]: P[ContextOption] = {
-    P(StringIn("device", "service", "function")).!.map {
+    P(StringIn("device", "service", "function", "gateway")).!.map {
       case "device" ⇒ DeviceOption
       case "service" ⇒ ServiceOption
       case "function" ⇒ FunctionOption
+      case "gateway" ⇒ GatewayOption
     }
   }
 
@@ -228,7 +231,8 @@ object Parser {
       contextOptions.rep(0) ~ "context" ~ Index ~/ identifier ~ "{" ~
         typeDef.rep(0) ~ commandDef.rep(0) ~ eventDef.rep(0) ~
         queryDef.rep(0) ~ resultDef.rep(0) ~
-        entityDef.rep(0) ~ adaptorDef.rep(0) ~ "}"
+        entityDef.rep(0) ~ adaptorDef.rep(0) ~ scenarioDef.rep(0) ~
+        "}"
     ).map { args =>
       (ContextDef.apply _).tupled(args)
     }
@@ -248,10 +252,10 @@ object Parser {
     P(
       "role" ~/ Index ~ identifier ~
         ("handles" ~/ literalString.rep(1, ",")).?.map(
-          _.getOrElse(Seq.empty[String])
+          _.getOrElse(Seq.empty[String]).toList
         ) ~
         ("requires" ~ literalString.rep(1, ",")).?.map(
-          _.getOrElse(Seq.empty[String])
+          _.getOrElse(Seq.empty[String]).toList
         )
     ).map { tpl ⇒
       (ActorRoleDef.apply _).tupled(tpl)
@@ -269,7 +273,8 @@ object Parser {
 
   def actorInteraction[_: P]: P[ActorInteraction] = {
     P(
-      "external" ~/ literalString ~ "from" ~ actorRoleRef ~ "to" ~ entityRef
+      "external" ~/ literalString ~ "from" ~ actorRoleRef ~ "to" ~ entityRef ~
+        "with" ~ messageRef
     ).map { tpl ⇒
       (ActorInteraction.apply _).tupled(tpl)
     }
@@ -285,7 +290,13 @@ object Parser {
         interactions ~ "}"
     ).map {
       case (index, path, actors, interactions) ⇒
-        ScenarioDef(index, path.dropRight(1), path.last, actors, interactions)
+        ScenarioDef(
+          index,
+          path.dropRight(1).toList,
+          path.last,
+          actors.toList,
+          interactions.toList
+        )
     }
   }
 
@@ -308,15 +319,18 @@ object Parser {
     P(Start ~ P(domainDef).rep(0) ~ End)
   }
 
+  def annotated_input(input: String, index: Int): String = {
+    input.substring(0, index) + "^" + input.substring(index)
+  }
+
   def parseString(input: String): Either[String, Seq[DomainDef]] = {
     fastparse.parse(input, parse(_)) match {
       case Success(content, _) ⇒
         Right(content)
       case failure @ Failure(_, index, _) ⇒
-        val annotated_input =
-          input.substring(0, index) + "^" + input.substring(index)
+        val marked_up = annotated_input(input, index)
         val trace = failure.trace()
-        Left(s"""Parse of '$annotated_input' failed at position $index"
+        Left(s"""Parse of '$marked_up' failed at position $index"
                 |${trace.longAggregateMsg}
                 |""".stripMargin)
     }
@@ -338,10 +352,9 @@ object Parser {
         Right(content)
       case failure @ Failure(label, index, _) ⇒
         val where = s"at $name:$index"
-        val annotated_input =
-          input.substring(0, index) + "^" + input.substring(index)
+        val marked_up = annotated_input(input, index)
         val trace = failure.trace()
-        Left(s"""Parse of '$annotated_input' failed at position $index"
+        Left(s"""Parse of '$marked_up' failed at position $index"
                 |${trace.longAggregateMsg}
                 |""".stripMargin)
     }

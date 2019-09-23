@@ -14,7 +14,7 @@ class ParserTest extends WordSpec with MustMatchers {
   ): Unit =
     Parser.parseString(input) match {
       case Right(content) =>
-        extract(content).toList mustBe expected
+        extract(content) mustBe expected
       case Left(msg) =>
         fail(msg)
     }
@@ -77,25 +77,22 @@ class ParserTest extends WordSpec with MustMatchers {
         identity
       )
     }
-    "allow adaptor definitions in domains" in {
+    "allow options on context definitions" in {
       val input =
-        """domain foo.bar {
-          |  context baz {
-          |   adaptor fuzz for domain foo.fuzz context blogger
-          |  }
+        """domain foo {
+          |  device function service gateway context bar { }
           |}
           |""".stripMargin
       runParser(
         input,
         Seq(
-          AdaptorDef(
-            44,
-            "fuzz",
-            Some(DomainRef("foo.fuzz")),
-            ContextRef("blogger")
+          ContextDef(
+            Seq(DeviceOption, FunctionOption, ServiceOption, GatewayOption),
+            55,
+            "bar"
           )
         ),
-        _.head.contexts.head.translators
+        _.head.contexts
       )
     }
     "allow channel definitions in domains" in {
@@ -251,8 +248,8 @@ class ParserTest extends WordSpec with MustMatchers {
         input,
         Seq(
           EntityDef(
+            33,
             Seq(EntityPersistent, EntityAggregate),
-            61,
             "Hamburger",
             TypeRef("SomeType"),
             Some(ChannelRef("EntityChannel")),
@@ -261,6 +258,75 @@ class ParserTest extends WordSpec with MustMatchers {
         ), { x: Seq[DomainDef] =>
           x.head.contexts.head.entities
         }
+      )
+    }
+    "allow adaptor definitions in contexts" in {
+      val input =
+        """domain foo.bar {
+          |  context baz {
+          |   adaptor fuzz for domain foo.fuzz context blogger
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          AdaptorDef(
+            44,
+            "fuzz",
+            Some(DomainRef("foo.fuzz")),
+            ContextRef("blogger")
+          )
+        ),
+        _.head.contexts.head.translators
+      )
+    }
+    "allow scenario definitions in contexts" in {
+      val input =
+        """domain foo {
+          |  context bar {
+          |    scenario dosomething {
+          |      role SomeActor handles "Doing stuff" requires "Skills"
+          |      external "perform command" from role SomeActor to entity
+          |      myLittlePony with command DoAThing
+          |      message "handle a thing" from entity myLittlePony to
+          |        entity Unicorn with command HandleAThing
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      runParser(
+        input,
+        Seq(
+          ScenarioDef(
+            42,
+            List(),
+            "dosomething",
+            Seq(
+              ActorRoleDef(
+                67,
+                "SomeActor",
+                List("Doing stuff"),
+                List("Skills")
+              )
+            ),
+            Seq(
+              ActorInteraction(
+                "perform command",
+                ActorRoleRef("SomeActor"),
+                EntityRef("myLittlePony"),
+                CommandRef("DoAThing")
+              ),
+              MessageInteraction(
+                "handle a thing",
+                EntityRef("myLittlePony"),
+                EntityRef("Unicorn"),
+                CommandRef("HandleAThing")
+              )
+            )
+          )
+        ),
+        _.head.contexts.head.scenarios
       )
     }
     "allow all the kinds of type definitions" in {

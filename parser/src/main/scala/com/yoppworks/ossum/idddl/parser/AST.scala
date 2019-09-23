@@ -99,8 +99,8 @@ object AST {
     * @param produces A reference to the channel to which the entity produces
     */
   case class EntityDef(
-    options: Seq[EntityOption] = Seq.empty[EntityOption],
     index: Int,
+    options: Seq[EntityOption] = Seq.empty[EntityOption],
     name: String,
     typ: Type,
     consumes: Option[ChannelRef] = None,
@@ -156,7 +156,8 @@ object AST {
     queries: Seq[QueryDef] = Seq.empty[QueryDef],
     results: Seq[ResultDef] = Seq.empty[ResultDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
-    translators: Seq[AdaptorDef] = Seq.empty[AdaptorDef]
+    translators: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
+    scenarios: Seq[ScenarioDef] = Seq.empty[ScenarioDef]
   ) extends Def
 
   /** Definition of a Scenario
@@ -207,7 +208,8 @@ object AST {
   case class ActorInteraction(
     label: String,
     actor: ActorRoleRef,
-    entity: EntityRef
+    entity: EntityRef,
+    message: MessageRef
   ) extends Interaction
 
   case class DomainRef(name: String) extends Ref
