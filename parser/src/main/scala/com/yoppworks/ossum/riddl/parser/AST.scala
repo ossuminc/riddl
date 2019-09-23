@@ -177,7 +177,7 @@ object AST {
     results: Seq[ResultDef] = Seq.empty[ResultDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
     translators: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
-    scenarios: Seq[ScenarioDef] = Seq.empty[ScenarioDef]
+    interactions: Seq[InteractionDef] = Seq.empty[InteractionDef]
   ) extends Def
 
   /** Definition of a Scenario
@@ -189,7 +189,7 @@ object AST {
     * @param prefix The path identifier's prefix
     * @param name The name of the scenario
     */
-  case class ScenarioDef(
+  case class InteractionDef(
     index: Int,
     prefix: Seq[String],
     name: String,
@@ -240,7 +240,7 @@ object AST {
     name: String,
     channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
     contexts: Seq[ContextDef] = Seq.empty[ContextDef],
-    scenarios: Seq[ScenarioDef] = Seq.empty[ScenarioDef]
+    scenarios: Seq[InteractionDef] = Seq.empty[InteractionDef]
   ) extends Def
 
 }

@@ -285,7 +285,7 @@ object Parser {
       contextOptions.rep(0) ~ "context" ~ Index ~/ identifier ~ "{" ~
         typeDef.rep(0) ~ commandDef.rep(0) ~ eventDef.rep(0) ~
         queryDef.rep(0) ~ resultDef.rep(0) ~
-        entityDef.rep(0) ~ adaptorDef.rep(0) ~ scenarioDef.rep(0) ~
+        entityDef.rep(0) ~ adaptorDef.rep(0) ~ interactionDef.rep(0) ~
         "}"
     ).map { args =>
       (ContextDef.apply _).tupled(args)
@@ -338,13 +338,14 @@ object Parser {
     P(messageInteraction | actorInteraction).rep(1)
   }
 
-  def scenarioDef[_: P]: P[ScenarioDef] = {
+  def interactionDef[_: P]: P[InteractionDef] = {
     P(
-      "scenario" ~ Index ~/ pathIdentifier ~ "{" ~ actorRoleDef.rep(1) ~
-        interactions ~ "}"
+      "interaction" ~ Index ~/ pathIdentifier ~ "{" ~
+        actorRoleDef.rep(1) ~ interactions ~
+        "}"
     ).map {
       case (index, path, actors, interactions) ⇒
-        ScenarioDef(
+        InteractionDef(
           index,
           path.dropRight(1).toList,
           path.last,
@@ -355,7 +356,7 @@ object Parser {
   }
 
   def domainDefinitions[_: P]: P[Def] = {
-    P(typeDef | contextDef | actorRoleDef | scenarioDef)
+    P(typeDef | contextDef | actorRoleDef | interactionDef)
   }
 
   def domainDef[_: P]: P[DomainDef] = {

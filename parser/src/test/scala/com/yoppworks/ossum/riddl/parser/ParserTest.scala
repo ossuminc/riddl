@@ -307,11 +307,11 @@ class ParserTest extends WordSpec with MustMatchers {
         _.head.contexts.head.translators
       )
     }
-    "allow scenario definitions in contexts" in {
+    "allow interaction definitions in contexts" in {
       val input =
         """domain foo {
           |  context bar {
-          |    scenario dosomething {
+          |    interaction dosomething {
           |      role SomeActor handles "Doing stuff" requires "Skills"
           |      external "perform command" from role SomeActor to entity
           |      myLittlePony with command DoAThing
@@ -324,13 +324,13 @@ class ParserTest extends WordSpec with MustMatchers {
       runParser(
         input,
         Seq(
-          ScenarioDef(
-            42,
+          InteractionDef(
+            45,
             List(),
             "dosomething",
             Seq(
               ActorRoleDef(
-                67,
+                70,
                 "SomeActor",
                 List("Doing stuff"),
                 List("Skills")
@@ -352,7 +352,7 @@ class ParserTest extends WordSpec with MustMatchers {
             )
           )
         ),
-        _.head.contexts.head.scenarios
+        _.head.contexts.head.interactions
       )
     }
     "allow all the kinds of type definitions" in {
