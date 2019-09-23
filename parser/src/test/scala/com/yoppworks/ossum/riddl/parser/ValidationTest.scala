@@ -1,8 +1,8 @@
-package com.yoppworks.ossum.idddl.parser
+package com.yoppworks.ossum.riddl.parser
 
-import com.yoppworks.ossum.idddl.parser.AST.DomainDef
-import com.yoppworks.ossum.idddl.parser.AST._
-import com.yoppworks.ossum.idddl.parser.Validation._
+import AST.DomainDef
+import AST._
+import Validation._
 import org.scalatest.MustMatchers
 import org.scalatest.WordSpec
 

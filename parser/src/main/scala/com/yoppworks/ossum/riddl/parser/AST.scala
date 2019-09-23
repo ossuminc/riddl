@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.idddl.parser
+package com.yoppworks.ossum.riddl.parser
 
 sealed trait AST
 
@@ -86,6 +86,7 @@ object AST {
   case object EntityPersistent extends EntityOption
   case object EntityConsistent extends EntityOption
   case object EntityAvailable extends EntityOption
+  case object EntityDevice extends EntityOption
 
   case class EntityRef(name: String) extends Ref
 
@@ -159,8 +160,7 @@ object AST {
   ) extends Def
 
   sealed trait ContextOption
-  case object DeviceOption extends ContextOption
-  case object ServiceOption extends ContextOption
+  case object WrapperOption extends ContextOption
   case object FunctionOption extends ContextOption
   case object GatewayOption extends ContextOption
 

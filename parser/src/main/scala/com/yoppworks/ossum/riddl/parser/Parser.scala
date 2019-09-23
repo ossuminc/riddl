@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.idddl.parser
+package com.yoppworks.ossum.riddl.parser
 
 import java.io.File
 
@@ -169,7 +169,8 @@ object Parser {
   }
 
   def entityOption[_: P]: P[EntityOption] = {
-    P(StringIn("aggregate", "persistent", "consistent", "available")).!.map {
+    P(StringIn("device", "aggregate", "persistent", "consistent", "available")).!.map {
+      case "device" ⇒ EntityDevice
       case "aggregate"  => EntityAggregate
       case "persistent" => EntityPersistent
       case "consistent" => EntityConsistent
@@ -272,9 +273,8 @@ object Parser {
   }
 
   def contextOptions[_: P]: P[ContextOption] = {
-    P(StringIn("device", "service", "function", "gateway")).!.map {
-      case "device" ⇒ DeviceOption
-      case "service" ⇒ ServiceOption
+    P(StringIn("wrapper", "function", "gateway")).!.map {
+      case "wrapper" ⇒ WrapperOption
       case "function" ⇒ FunctionOption
       case "gateway" ⇒ GatewayOption
     }

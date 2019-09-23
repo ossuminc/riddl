@@ -1,0 +1,57 @@
+// #everything
+// #domains
+domain rbbq.operation.restaurant {
+// #domains
+
+  // #Kitchen
+  context Kitchen {
+    device entity OrderPrinter = combine {
+      address: type IPAddress
+    }
+  }
+  // #Kitchen
+
+  // #Loyalty
+  context Loyalty {
+  }
+  // #Loyalty
+
+  // #Order
+  context Order {
+    aggregate entity Order = combine {
+      orderId: Id,
+      customerId: Id
+    }
+  }
+  // #Order
+
+  // #Payment
+  context Payment {
+    aggregate entity Payment = combine {
+      orderId: Id,
+      amount: Number,
+      cardToken: String
+    }
+  }
+  // #Payment
+
+  // #Menu
+  context Menu {
+    entity MenuItem=  String
+    aggregate entity Menu = type MenuItem+
+  }
+  // #Menu
+
+  // #Reservation
+  context Reservation {
+    aggregate entity Reservation = combine {
+      partyName: String,
+      phoneNumber: String,
+      location: Id,
+      time: Time,
+      date: Date
+    } consumes channel 'foo' produces channel 'bar'
+  }
+  // #Reservation
+}
+// #everything

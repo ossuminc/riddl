@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.idddl.parser
+package com.yoppworks.ossum.riddl.parser
 
 sealed trait Node
 

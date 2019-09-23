@@ -1,15 +1,16 @@
-# idddl
+# riddl
 
 ## Introduction
-IDDDL, the Interface for Domain Driven Design Language, is a tool for
-eliminating the boilerplate from reactive systems designed with DDD.   
+RIDDL, the Reactive Interface to Domain Definition Language, is a tool for
+eliminating the boilerplate from reactive systems designed with Domain
+Driven Design (DDD).   
 It uses a DDD inspired specification language to allow developers to 
 work at a higher level of specification than they would if they
 were coding directly in a programming language. It aims to relieve developers
 of the burden of maintaining infrastructural code through evolution of the
 domain abstractions.
 
-IDDDL is one of the Ossum tools. Ossum is a collection of tools for making
+RIDDL is one of the Ossum tools. Ossum is a collection of tools for making
 awesome software systems based on reactive architecture.
 
 For more details, please read the paradox documentation:

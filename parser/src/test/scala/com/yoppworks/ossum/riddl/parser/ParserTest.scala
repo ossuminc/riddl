@@ -1,6 +1,6 @@
-package com.yoppworks.ossum.idddl.parser
+package com.yoppworks.ossum.riddl.parser
 
-import com.yoppworks.ossum.idddl.parser.AST._
+import AST._
 import org.scalatest.MustMatchers
 import org.scalatest.WordSpec
 
@@ -80,15 +80,15 @@ class ParserTest extends WordSpec with MustMatchers {
     "allow options on context definitions" in {
       val input =
         """domain foo {
-          |  device function service gateway context bar { }
+          |  function wrapper gateway context bar { }
           |}
           |""".stripMargin
       runParser(
         input,
         Seq(
           ContextDef(
-            Seq(DeviceOption, FunctionOption, ServiceOption, GatewayOption),
-            55,
+            Seq(FunctionOption, WrapperOption, GatewayOption),
+            48,
             "bar"
           )
         ),

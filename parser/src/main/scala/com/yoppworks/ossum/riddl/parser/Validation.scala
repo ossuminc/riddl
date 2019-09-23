@@ -1,6 +1,6 @@
-package com.yoppworks.ossum.idddl.parser
+package com.yoppworks.ossum.riddl.parser
 
-import com.yoppworks.ossum.idddl.parser.AST._
+import AST._
 
 import scala.collection.mutable
 

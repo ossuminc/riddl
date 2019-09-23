@@ -1,13 +1,13 @@
 # Types
 
 ## Introduction
-The IDDD Language allows users to define data types. Definitions of types
-are more limited in IDDDL than in programming languages on purpose. The
+The RIDDL language allows users to define data types. Definitions of types
+are more limited in RIDDL than in programming languages on purpose. The
 type system must be easily understandable by non-programmers as the domain
 engineer or domain expert is likely the most frequent user. 
 
 ## Literal Types
-IDDDL supports several literal types that just "exist" because they are
+RIDDL supports several literal types that just "exist" because they are
 fundamental and well understood in any targeted computing environment. The 
 literal types are:
 
@@ -21,16 +21,16 @@ literal types are:
 * **URL** - a uniform resource locator
 
 ## Named Type Definitions
-In addition to the literal types, IDDDL supports the definition of new 
+In addition to the literal types, RIDDL supports the definition of new 
 types using a name and a type expression with this syntax:
-```idddl
+```
 type name = <type-expression>
 ```
 When defining values, one must use a named type defined with the 
 `type` keyword. This enforces legibility by naming every type expression.
  
 ## Type Expressions
-IDDDL supports a variety of type expressions for defining named types. The
+RIDDL supports a variety of type expressions for defining named types. The
 following sections define the kinds of expressions allowed.
 
 ### Renames

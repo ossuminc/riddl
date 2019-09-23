@@ -1,4 +1,4 @@
-name := "idddl"
+name := "riddl"
 
 // Never set this, handled by sbt-dynver: version := "0.1"
 
@@ -7,7 +7,7 @@ scalafmtOnCompile := true
 dynverSeparator in ThisBuild := "-"
 
 lazy val parser = (project in file("parser")).settings(
-  name := "idddl-parser",
+  name := "riddl-parser",
   resolvers ++= Seq(
     "Artima Maven Repository" at "https://repo.artima.com/releases"
   ),
@@ -24,7 +24,7 @@ lazy val root = (project in file("."))
   .enablePlugins(ParadoxSitePlugin)
   .enablePlugins(ParadoxMaterialThemePlugin)
   .settings(
-    name := "idddl",
+    name := "riddl",
     paradoxTheme := Some(builtinParadoxTheme("generic"))
   )
   .dependsOn(parser)

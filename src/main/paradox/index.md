@@ -1,27 +1,31 @@
-# IDDDL
+# RIDDL
 
-IDDDL, the Interface for Domain Driven Definition Language, is a tool for
+RIDDL, the Reactive Interface to Domain Definition Language, is a tool for
 generating code and documentation from a high level definition based on 
-DDD concepts.
+Domain Driven Design (DDD) concepts.
 
 @@toc { depth=2 }
 
 ## Introduction 
-IDDDL eliminates the boilerplate code from microservices implementations of
-systems designed with Domain Driven Design (DDD). The IDDL uses a DDD 
-inspired specification language to allow developers to 
-work at a higher level of specification than they would if they
+RIDDL eliminates the boilerplate code from micro-services implementations of
+systems designed with Domain Driven Design (DDD). The RIDDL uses a DDD 
+inspired specification language to allow domain experts and developers to work
+at a higher level of specification than they would if they
 were coding directly in a programming language. It aims to relieve developers
 of the burden of maintaining infrastructural code through evolution of the
-domain abstractions.
+domain abstractions. It also aims to aide the domain expert with a rigorous
+but simple language to use for a specification.
 
 For best comprehension of the language, it is best to be familiar with the
 DDD concepts. For a four minute overview, 
 [watch this video](https://elearn.domainlanguage.com/). For a more in depth
-understanding, we recommend reading the Vaughn Vernon's book **Domain
-Driven Design Distilled**.
+understanding, we recommend reading Vaughn Vernon's more concise book **[Domain
+Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon-ebook/dp/B01JJSGE5S/ref=sr_1_1)**
+or Eric Evans' original tome **[Domain Driven Design](
+https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software-ebook/dp/B00794TAUG/ref=pd_sim_351_2/139-5372630-4190805
+)**.
 
-IDDDL is one of the Ossum tools. Ossum is a collection of tools for making
+RIDDL is one of the Ossum tools. Ossum is a collection of tools for making
 awesome software systems based on reactive architecture.
 
 @@@ index

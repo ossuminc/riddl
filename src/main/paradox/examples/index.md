@@ -1,7 +1,7 @@
 # Examples
 
 ## Overview
-This section provides some examples of how the IDDDL can be 
+This section provides some examples of how the RIDDL can be 
 used.  
 
 @@toc { depth=2 }
