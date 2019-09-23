@@ -180,10 +180,10 @@ object AST {
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef]
   ) extends Def
 
-  /** Definition of a Scenario
-    * Scenarios define an exemplary interaction between the system being designed
-    * and its users. The basic ideas of a Scenario are much like a UML Sequence
-    * Diagram.
+  /** Definition of an Interaction
+    * Interactions define an exemplary interaction between the system being
+    * designed and other actors. The basic ideas of an Interaction are much
+    * like UML Sequence Diagram.
     *
     * @param index Where in the input the Scenario is defined
     * @param prefix The path identifier's prefix
@@ -193,44 +193,65 @@ object AST {
     index: Int,
     prefix: Seq[String],
     name: String,
-    actors: Seq[ActorRoleDef],
-    interactions: Seq[Interaction]
+    roles: Seq[RoleDef],
+    actions: Seq[ActionDef]
   ) extends Def
 
-  sealed trait Interaction {
-    def label: String
-  }
-  type Interactions = Seq[Interaction]
+  sealed trait RoleOption
+  case object HumanOption extends RoleOption
+  case object DeviceOption extends RoleOption
 
-  /** An Interaction based on entity messaging
-    *
-    * @param label The displayable text that describes the interaction
-    * @param sender A reference to the entity sending the message
-    * @param receiver A reference to the entity receiving the message
-    * @param message A reference to the kind of message sent & received
-    */
-  case class MessageInteraction(
-    label: String,
-    sender: EntityRef,
-    receiver: EntityRef,
-    message: MessageRef
-  ) extends Interaction
-
-  case class ActorRoleDef(
+  case class RoleDef(
+    options: Seq[RoleOption] = Seq.empty[RoleOption],
     index: Int,
     name: String,
     responsibilities: Seq[String] = Seq.empty[String],
     capacities: Seq[String] = Seq.empty[String]
   ) extends Def
 
-  case class ActorRoleRef(name: String) extends Ref
+  case class RoleRef(name: String) extends Ref
 
-  case class ActorInteraction(
-    label: String,
-    actor: ActorRoleRef,
+  sealed trait ActionDef extends Def
+
+  type Actions = Seq[ActionDef]
+
+  sealed trait MessageOption
+  case object SynchOption extends MessageOption
+  case object AsynchOption extends MessageOption
+  case object ReplyOption extends MessageOption
+
+  /** An Interaction based on entity messaging
+    * @param options Options for the message
+    * @param index Where the message is located in the input
+    * @param name The displayable text that describes the interaction
+    * @param sender A reference to the entity sending the message
+    * @param receiver A reference to the entity receiving the message
+    * @param message A reference to the kind of message sent & received
+    */
+  case class MessageActionDef(
+    options: Seq[MessageOption] = Seq.empty[MessageOption],
+    index: Int,
+    name: String,
+    sender: EntityRef,
+    receiver: EntityRef,
+    message: MessageRef
+  ) extends ActionDef
+
+  case class DirectiveActionDef(
+    options: Seq[MessageOption] = Seq.empty[MessageOption],
+    index: Int,
+    name: String,
+    role: RoleRef,
     entity: EntityRef,
     message: MessageRef
-  ) extends Interaction
+  ) extends ActionDef
+
+  case class ProcessingActionDef(
+    index: Int,
+    name: String,
+    entity: EntityRef,
+    description: String
+  ) extends ActionDef
 
   case class DomainRef(name: String) extends Ref
 

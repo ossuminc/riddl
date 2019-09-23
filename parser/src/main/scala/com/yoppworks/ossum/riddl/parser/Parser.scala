@@ -298,13 +298,21 @@ object Parser {
     }
   }
 
-  def actorRoleRef[_: P]: P[ActorRoleRef] = {
-    P("role" ~ identifier).map(ActorRoleRef)
+  def roleRef[_: P]: P[RoleRef] = {
+    P("role" ~ identifier).map(RoleRef)
   }
 
-  def actorRoleDef[_: P]: P[ActorRoleDef] = {
+  def roleOption[_: P]: P[RoleOption] = {
+    P(StringIn("human", "device")).!.map {
+      case "human" ⇒ HumanOption
+      case "device" ⇒ DeviceOption
+    }
+  }
+
+  def role[_: P]: P[RoleDef] = {
     P(
-      "role" ~/ Index ~ identifier ~
+      roleOption.rep(0) ~
+        "role" ~/ Index ~ identifier ~
         ("handles" ~/ literalString.rep(1, ",")).?.map(
           _.getOrElse(Seq.empty[String]).toList
         ) ~
@@ -312,36 +320,81 @@ object Parser {
           _.getOrElse(Seq.empty[String]).toList
         )
     ).map { tpl ⇒
-      (ActorRoleDef.apply _).tupled(tpl)
+      (RoleDef.apply _).tupled(tpl)
     }
   }
 
-  def messageInteraction[_: P]: P[MessageInteraction] = {
+  def processingActionDef[_: P]: P[ProcessingActionDef] = {
     P(
-      "message" ~/ literalString ~ "from" ~/ entityRef ~ "to" ~/ entityRef ~
+      "processing" ~/ Index ~ identifier ~ "for" ~ entityRef ~ "as" ~
+        literalString
+    ).map(x ⇒ (ProcessingActionDef.apply _).tupled(x))
+  }
+
+  def messageOption[_: P]: P[MessageOption] = {
+    P(
+      StringIn("synch", "asynch", "reply")
+    ).!.map {
+      case "synch" ⇒ SynchOption
+      case "asynch" ⇒ AsynchOption
+      case "reply" ⇒ ReplyOption
+    }
+  }
+  /*
+    Activation boxes, or method-call boxes, are opaque rectangles
+        drawn on top of lifelines to represent that processes are being performed
+        in response to the message (ExecutionSpecifications in UML).
+
+      Objects calling methods on themselves use messages and add
+    new activation boxes on top of any others to indicate a further
+    level of processing. If an object is destroyed (removed from memory),
+    an X is drawn on bottom of the lifeline, and the dashed line ceases to be
+    drawn below it. It should be the result of a message, either from the
+    object itself, or another.
+
+
+    A sequence diagram with asynchronous call
+      A message sent from outside the diagram can be represented by a message
+    originating from a filled-in circle (found message in UML) or from a
+      border of the sequence diagram (gate in UML).
+
+      UML has introduced significant improvements to the capabilities of
+    sequence diagrams. Most of these improvements are based on the idea of
+      interaction fragments[2] which represent smaller pieces of an enclosing
+    interaction. Multiple interaction fragments are combined to create a variety
+    of combined fragments,[3] which are then used to model interactions that
+      include parallelism, conditional branches, optional interactions.
+   */
+
+  def messageActionDef[_: P]: P[MessageActionDef] = {
+    P(
+      messageOption.rep(0) ~
+        "message" ~/ Index ~ identifier ~ "from" ~/ entityRef ~ "to" ~/
+        entityRef ~
         "with" ~ messageRef
     ).map { tpl ⇒
-      (MessageInteraction.apply _).tupled(tpl)
+      (MessageActionDef.apply _).tupled(tpl)
     }
   }
 
-  def actorInteraction[_: P]: P[ActorInteraction] = {
+  def directiveActionDef[_: P]: P[DirectiveActionDef] = {
     P(
-      "external" ~/ literalString ~ "from" ~ actorRoleRef ~ "to" ~ entityRef ~
+      messageOption.rep(0) ~
+        "directive" ~/ Index ~ identifier ~ "by" ~ roleRef ~ "to" ~ entityRef ~
         "with" ~ messageRef
     ).map { tpl ⇒
-      (ActorInteraction.apply _).tupled(tpl)
+      (DirectiveActionDef.apply _).tupled(tpl)
     }
   }
 
-  def interactions[_: P]: P[Interactions] = {
-    P(messageInteraction | actorInteraction).rep(1)
+  def interactions[_: P]: P[Actions] = {
+    P(messageActionDef | directiveActionDef | processingActionDef).rep(1)
   }
 
   def interactionDef[_: P]: P[InteractionDef] = {
     P(
       "interaction" ~ Index ~/ pathIdentifier ~ "{" ~
-        actorRoleDef.rep(1) ~ interactions ~
+        role.rep(1) ~ interactions ~
         "}"
     ).map {
       case (index, path, actors, interactions) ⇒
@@ -356,7 +409,7 @@ object Parser {
   }
 
   def domainDefinitions[_: P]: P[Def] = {
-    P(typeDef | contextDef | actorRoleDef | interactionDef)
+    P(typeDef | contextDef | role | interactionDef)
   }
 
   def domainDef[_: P]: P[DomainDef] = {

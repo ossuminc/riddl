@@ -312,10 +312,12 @@ class ParserTest extends WordSpec with MustMatchers {
         """domain foo {
           |  context bar {
           |    interaction dosomething {
-          |      role SomeActor handles "Doing stuff" requires "Skills"
-          |      external "perform command" from role SomeActor to entity
-          |      myLittlePony with command DoAThing
-          |      message "handle a thing" from entity myLittlePony to
+          |      human role SomeActor handles "Doing stuff" requires "Skills"
+          |      asynch directive 'perform command' by role SomeActor to
+          |      entity myLittlePony with command DoAThing
+          |      processing doSomeProcessing for entity myLittlePony
+          |      as "This does some stuff"
+          |      asynch message 'handle a thing' from entity myLittlePony to
           |        entity Unicorn with command HandleAThing
           |    }
           |  }
@@ -329,21 +331,32 @@ class ParserTest extends WordSpec with MustMatchers {
             List(),
             "dosomething",
             Seq(
-              ActorRoleDef(
-                70,
+              RoleDef(
+                Seq(HumanOption),
+                76,
                 "SomeActor",
                 List("Doing stuff"),
                 List("Skills")
               )
             ),
             Seq(
-              ActorInteraction(
+              DirectiveActionDef(
+                Seq(AsynchOption),
+                149,
                 "perform command",
-                ActorRoleRef("SomeActor"),
+                RoleRef("SomeActor"),
                 EntityRef("myLittlePony"),
                 CommandRef("DoAThing")
               ),
-              MessageInteraction(
+              ProcessingActionDef(
+                253,
+                "doSomeProcessing",
+                EntityRef("myLittlePony"),
+                "This does some stuff"
+              ),
+              MessageActionDef(
+                Seq(AsynchOption),
+                347,
                 "handle a thing",
                 EntityRef("myLittlePony"),
                 EntityRef("Unicorn"),
