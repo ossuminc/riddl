@@ -50,7 +50,7 @@ object FeatureParser {
 
   def feature[_: P]: P[Feature] = {
     P(
-      IgnoreCase("feature") ~ ":" ~/ identifier ~ literalString ~
+      IgnoreCase("feature") ~ ":" ~/ Index ~ identifier ~ literalString ~
         background.? ~ example.rep(1)
     ).map { tpl ⇒
       (Feature.apply _).tupled(tpl)

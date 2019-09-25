@@ -1,6 +1,6 @@
 // #everything
 // RIDDL is about defining domains so ..
-domain example.domain {
+domain Everything {
 
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.

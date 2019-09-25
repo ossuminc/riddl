@@ -13,8 +13,8 @@ class ValidationTest extends WordSpec with MustMatchers {
     "identify duplicate domain definitions" in {
       val errors = validate(
         Seq(
-          DomainDef(0, Seq.empty[String], "foo"),
-          DomainDef(0, Seq.empty[String], "foo")
+          DomainDef(0, Identifier("foo")),
+          DomainDef(0, Identifier("foo"))
         )
       )
       errors.isEmpty mustNot be(true)

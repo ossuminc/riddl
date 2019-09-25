@@ -24,10 +24,10 @@ object InteractionParser {
       roleOption.rep(0) ~
         "role" ~/ Index ~ identifier ~
         ("handles" ~/ literalString.rep(1, ",")).?.map(
-          _.getOrElse(Seq.empty[String]).toList
+          _.getOrElse(Seq.empty[LiteralString]).toList
         ) ~
         ("requires" ~ literalString.rep(1, ",")).?.map(
-          _.getOrElse(Seq.empty[String]).toList
+          _.getOrElse(Seq.empty[LiteralString]).toList
         )
     ).map { tpl ⇒
       (RoleDef.apply _).tupled(tpl)
@@ -79,15 +79,14 @@ object InteractionParser {
 
   def interactionDef[_: P]: P[InteractionDef] = {
     P(
-      "interaction" ~ Index ~/ pathIdentifier ~ "{" ~
+      "interaction" ~ Index ~/ identifier ~ "{" ~
         role.rep(1) ~ interactions ~
         "}"
     ).map {
-      case (index, path, actors, interactions) ⇒
+      case (index, id, actors, interactions) ⇒
         InteractionDef(
           index,
-          path.dropRight(1).toList,
-          path.last,
+          id,
           actors.toList,
           interactions.toList
         )

@@ -2,12 +2,10 @@ package com.yoppworks.ossum.riddl.parser
 
 import java.io.File
 
-import com.yoppworks.ossum.riddl.parser.AST.DomainDef
-import org.scalatest.MustMatchers
-import org.scalatest.WordSpec
+import DomainParser.topLevelDomains
 
 /** Unit Tests For ExamplesTest */
-class ExamplesTest extends WordSpec with MustMatchers {
+class ExamplesTest extends ParsingTest {
 
   val directory = "parser/src/test/input/"
 
@@ -22,8 +20,7 @@ class ExamplesTest extends WordSpec with MustMatchers {
     "all compile" in {
       val results = for ((label, fileName) ← files) yield {
         val file = new File(directory + fileName)
-        val path = file.getCanonicalPath
-        (label, Parser.parseFile(file))
+        (label, DomainParser.parseFile(file, topLevelDomains(_)))
       }
       var failed = false
       println(
@@ -32,7 +29,7 @@ class ExamplesTest extends WordSpec with MustMatchers {
             case (label, Left(error)) ⇒
               failed = true
               s"$label:$error"
-            case (label, Right(domains)) ⇒
+            case (label, Right(_)) ⇒
               s"$label: Succeeded"
           }
           .mkString("\n")

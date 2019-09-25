@@ -1,4 +1,4 @@
-domain store.pet {
+domain PetStore {
   context stock {
   }
   context register {

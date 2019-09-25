@@ -7,31 +7,48 @@ import com.yoppworks.ossum.riddl.parser.AST._
 /** Unit Tests For CommonParser */
 object CommonParser {
 
-  def literalString[_: P]: P[String] = {
-    P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"")
+  def literalString[_: P]: P[LiteralString] = {
+    P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").map(LiteralString)
   }
 
-  def literalInt[_: P]: P[Int] = {
-    P(CharIn("0-9").rep(1).!.map(_.toInt))
+  def literalInteger[_: P]: P[LiteralInteger] = {
+    P(CharIn("0-9").rep(1).!.map(_.toInt)).map(s ⇒ LiteralInteger(BigInt(s)))
+  }
+
+  def literalDecimal[_: P]: P[LiteralDecimal] = {
+    P(
+      CharIn("+\\-").?.! ~ CharIn("0-9").rep(1).! ~
+        ("." ~ CharIn("0-9").rep(0)).?.! ~
+        ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
+    ).map {
+      case (a, b, c, d) ⇒ LiteralDecimal(BigDecimal(a + b + c + d))
+    }
   }
 
   def simpleIdentifier[_: P]: P[String] = {
     P((CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_").?).!)
   }
 
-  def identifier[_: P]: P[String] = {
-    P(
-      simpleIdentifier |
-        ("'" ~/ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
-    )
+  def quotedIdentifier[_: P]: P[String] = {
+    P("'" ~/ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
   }
 
-  def pathIdentifier[_: P]: P[Seq[String]] = {
-    P(identifier.repX(1, P(".")))
+  def anyIdentifier[_: P]: P[String] = {
+    P(simpleIdentifier | quotedIdentifier)
+  }
+
+  def identifier[_: P]: P[Identifier] = {
+    P(anyIdentifier).map(Identifier)
+  }
+
+  def pathIdentifier[_: P]: P[PathIdentifier] = {
+    P(anyIdentifier.repX(1, P("."))).map(PathIdentifier)
   }
 
   def typeRef[_: P]: P[TypeRef] = {
-    P("type" ~/ identifier).map(TypeRef)
+    P("type" ~/ identifier).map { id ⇒
+      TypeRef(id)
+    }
   }
 
   def messageRef[_: P]: P[MessageRef] = {
@@ -57,8 +74,8 @@ object CommonParser {
 
   def domainRef[_: P]: P[DomainRef] = {
     P(
-      "domain" ~/ pathIdentifier
-    ).map(names ⇒ DomainRef(names.mkString(".")))
+      "domain" ~/ identifier
+    ).map(DomainRef)
   }
 
   def contextRef[_: P]: P[ContextRef] = {

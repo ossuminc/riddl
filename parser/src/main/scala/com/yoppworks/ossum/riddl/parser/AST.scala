@@ -13,16 +13,22 @@ sealed trait AST
   */
 object AST {
 
-  sealed trait Type extends AST
+  case class LiteralString(s: String) extends AST
+  case class LiteralInteger(n: BigInt) extends AST
+  case class LiteralDecimal(d: BigDecimal) extends AST
+  case class Identifier(value: String) extends AST
+  case class PathIdentifier(value: Seq[String]) extends AST
 
   sealed trait Def extends AST {
     def index: Int
-    def name: String
+    def id: Identifier
   }
 
   sealed trait Ref extends AST {
-    def name: String
+    def id: Identifier
   }
+
+  sealed trait Type extends AST
 
   case object String extends Type
   case object Boolean extends Type
@@ -33,52 +39,52 @@ object AST {
   case object TimeStamp extends Type
   case object URL extends Type
 
-  case class Enumeration(of: Seq[String]) extends Type
+  case class Enumeration(of: Seq[Identifier]) extends Type
   case class Alternation(of: Seq[Type]) extends Type
-  case class Aggregation(of: Map[String, Type]) extends Type
+  case class Aggregation(of: Map[Identifier, Type]) extends Type
 
   case class Optional(element: Type) extends Type
   case class ZeroOrMore(of: Type) extends Type
   case class OneOrMore(of: Type) extends Type
 
-  case class TypeRef(name: String) extends Ref with Type
-  case class TypeDef(index: Int, name: String, typ: Type) extends Def
+  case class TypeRef(id: Identifier) extends Ref with Type
+  case class TypeDef(index: Int, id: Identifier, typ: Type) extends Def
 
-  case class ChannelRef(name: String) extends Ref
+  case class ChannelRef(id: Identifier) extends Ref
   case class ChannelDef(
     index: Int,
-    name: String,
-    commands: Seq[String] = Seq.empty[String],
-    queries: Seq[String] = Seq.empty[String],
-    events: Seq[String] = Seq.empty[String],
-    results: Seq[String] = Seq.empty[String]
+    id: Identifier,
+    commands: Seq[CommandRef] = Seq.empty[CommandRef],
+    queries: Seq[QueryRef] = Seq.empty[QueryRef],
+    events: Seq[EventRef] = Seq.empty[EventRef],
+    results: Seq[ResultRef] = Seq.empty[ResultRef]
   ) extends Def
 
   sealed trait MessageRef extends Ref
   sealed trait MessageDef extends Def
 
-  case class CommandRef(name: String) extends MessageRef
+  case class CommandRef(id: Identifier) extends MessageRef
   case class CommandDef(
     index: Int,
-    name: String,
+    id: Identifier,
     typ: Type,
     events: EventRefs
   ) extends MessageDef
 
-  case class EventRef(name: String) extends MessageRef
+  case class EventRef(id: Identifier) extends MessageRef
   type EventRefs = Seq[EventRef]
-  case class EventDef(index: Int, name: String, typ: Type) extends MessageDef
+  case class EventDef(index: Int, id: Identifier, typ: Type) extends MessageDef
 
-  case class QueryRef(name: String) extends MessageRef
+  case class QueryRef(id: Identifier) extends MessageRef
   case class QueryDef(
     index: Int,
-    name: String,
+    id: Identifier,
     typ: Type,
     result: ResultRef
   ) extends MessageDef
 
-  case class ResultRef(name: String) extends MessageRef
-  case class ResultDef(index: Int, name: String, typ: Type) extends MessageDef
+  case class ResultRef(id: Identifier) extends MessageRef
+  case class ResultDef(index: Int, id: Identifier, typ: Type) extends MessageDef
 
   sealed trait EntityOption
   case object EntityAggregate extends EntityOption
@@ -87,32 +93,34 @@ object AST {
   case object EntityAvailable extends EntityOption
   case object EntityDevice extends EntityOption
 
-  case class EntityRef(name: String) extends Ref
+  case class EntityRef(id: Identifier) extends Ref
 
-  case class Given(fact: String)
-  case class When(situation: String)
-  case class Then(result: String)
+  case class Given(fact: LiteralString)
+  case class When(situation: LiteralString)
+  case class Then(result: LiteralString)
   case class Background(givens: Seq[Given])
   case class Example(
-    description: String,
+    description: LiteralString,
     givens: Seq[Given],
     whens: Seq[When],
     thens: Seq[Then]
   )
   case class Feature(
-    name: String,
-    description: String,
+    index: Int,
+    id: Identifier,
+    description: LiteralString,
     background: Option[Background],
     examples: Seq[Example]
-  )
+  ) extends Def
 
-  case class Invariant(name: String, expression: String)
+  case class Invariant(index: Int, id: Identifier, expression: LiteralString)
+      extends Def
 
   /** Definition of an Entity
     *
     * @param options The options for the entity
     * @param index The index location in the input
-    * @param name The name of the entity
+    * @param id The name of the entity
     * @param typ The type of the entity's value
     * @param consumes A reference to the channel from which the entity consumes
     * @param produces A reference to the channel to which the entity produces
@@ -120,7 +128,7 @@ object AST {
   case class EntityDef(
     index: Int,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
-    name: String,
+    id: Identifier,
     typ: Type,
     consumes: Option[ChannelRef] = None,
     produces: Option[ChannelRef] = None,
@@ -128,18 +136,18 @@ object AST {
     invariants: Seq[Invariant] = Seq.empty[Invariant]
   ) extends Def
 
-  trait TranslationRule {
-    def name: String
+  trait TranslationRule extends Def {
     def channel: String
   }
 
   case class MessageTranslationRule(
-    name: String,
+    index: Int,
+    id: Identifier,
     channel: String,
     input: String,
     output: String,
     rule: String
-  )
+  ) extends TranslationRule
 
   /** Definition of an Adaptor
     * Adaptors are defined in Contexts to convert messaging from one Context to
@@ -148,11 +156,11 @@ object AST {
     * one Adaptor for each external Context
     *
     * @param index Location in the parsing input
-    * @param name Name of the adaptor
+    * @param id Name of the adaptor
     */
   case class AdaptorDef(
     index: Int,
-    name: String,
+    id: Identifier,
     targetDomain: Option[DomainRef] = None,
     targetContext: ContextRef
     // Details TBD
@@ -163,19 +171,19 @@ object AST {
   case object FunctionOption extends ContextOption
   case object GatewayOption extends ContextOption
 
-  case class ContextRef(name: String) extends Ref
+  case class ContextRef(id: Identifier) extends Ref
 
   case class ContextDef(
     options: Seq[ContextOption] = Seq.empty[ContextOption],
     index: Int,
-    name: String,
+    id: Identifier,
     types: Seq[TypeDef] = Seq.empty[TypeDef],
     commands: Seq[CommandDef] = Seq.empty[CommandDef],
     events: Seq[EventDef] = Seq.empty[EventDef],
     queries: Seq[QueryDef] = Seq.empty[QueryDef],
     results: Seq[ResultDef] = Seq.empty[ResultDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
-    translators: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
+    adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef]
   ) extends Def
 
@@ -185,13 +193,13 @@ object AST {
     * like UML Sequence Diagram.
     *
     * @param index Where in the input the Scenario is defined
-    * @param prefix The path identifier's prefix
-    * @param name The name of the scenario
+    * @param id The name of the scenario
+    * @param roles The roles defined for the interaction
+    * @param actions The actions that constitute the interaction
     */
   case class InteractionDef(
     index: Int,
-    prefix: Seq[String],
-    name: String,
+    id: Identifier,
     roles: Seq[RoleDef],
     actions: Seq[ActionDef]
   ) extends Def
@@ -203,12 +211,12 @@ object AST {
   case class RoleDef(
     options: Seq[RoleOption] = Seq.empty[RoleOption],
     index: Int,
-    name: String,
-    responsibilities: Seq[String] = Seq.empty[String],
-    capacities: Seq[String] = Seq.empty[String]
+    id: Identifier,
+    responsibilities: Seq[LiteralString] = Seq.empty[LiteralString],
+    capacities: Seq[LiteralString] = Seq.empty[LiteralString]
   ) extends Def
 
-  case class RoleRef(name: String) extends Ref
+  case class RoleRef(id: Identifier) extends Ref
 
   sealed trait ActionDef extends Def
 
@@ -222,7 +230,7 @@ object AST {
   /** An Interaction based on entity messaging
     * @param options Options for the message
     * @param index Where the message is located in the input
-    * @param name The displayable text that describes the interaction
+    * @param id The displayable text that describes the interaction
     * @param sender A reference to the entity sending the message
     * @param receiver A reference to the entity receiving the message
     * @param message A reference to the kind of message sent & received
@@ -230,7 +238,7 @@ object AST {
   case class MessageActionDef(
     options: Seq[MessageOption] = Seq.empty[MessageOption],
     index: Int,
-    name: String,
+    id: Identifier,
     sender: EntityRef,
     receiver: EntityRef,
     message: MessageRef
@@ -239,7 +247,7 @@ object AST {
   case class DirectiveActionDef(
     options: Seq[MessageOption] = Seq.empty[MessageOption],
     index: Int,
-    name: String,
+    id: Identifier,
     role: RoleRef,
     entity: EntityRef,
     message: MessageRef
@@ -247,32 +255,33 @@ object AST {
 
   case class ProcessingActionDef(
     index: Int,
-    name: String,
+    id: Identifier,
     entity: EntityRef,
-    description: String
+    description: LiteralString
   ) extends ActionDef
 
   case class DeletionActionDef(
     index: Int,
-    name: String,
+    id: Identifier,
     entity: EntityRef
   ) extends ActionDef
 
   case class CreationActionDef(
     index: Int,
-    name: String,
+    id: Identifier,
     entity: EntityRef
   ) extends ActionDef
 
-  case class DomainRef(name: String) extends Ref
+  case class DomainRef(id: Identifier) extends Ref
 
   case class DomainDef(
     index: Int,
-    prefix: Seq[String],
-    name: String,
+    id: Identifier,
+    subdomain: Option[Identifier] = None,
+    types: Seq[TypeDef] = Seq.empty[TypeDef],
     channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
-    contexts: Seq[ContextDef] = Seq.empty[ContextDef],
-    scenarios: Seq[InteractionDef] = Seq.empty[InteractionDef]
+    interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
+    contexts: Seq[ContextDef] = Seq.empty[ContextDef]
   ) extends Def
 
 }

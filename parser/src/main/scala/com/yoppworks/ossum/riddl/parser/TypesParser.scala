@@ -58,18 +58,18 @@ object TypesParser {
     }
   }
 
-  def field[_: P]: P[(String, Type)] = {
+  def field[_: P]: P[(Identifier, Type)] = {
     P(identifier ~ ":" ~ typeExpression)
   }
 
-  def fields[_: P]: P[Seq[(String, Type)]] = {
+  def fields[_: P]: P[Seq[(Identifier, Type)]] = {
     P(field.rep(1, P(",")))
   }
 
   def aggregationType[_: P]: P[Aggregation] = {
     P(
       "combine" ~/ "{" ~ fields ~ "}"
-    ).map(types ⇒ Aggregation(types.toMap[String, Type]))
+    ).map(types ⇒ Aggregation(types.toMap[Identifier, Type]))
   }
 
   def typeDefKinds[_: P]: P[Type] = {

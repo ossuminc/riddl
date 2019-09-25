@@ -40,8 +40,9 @@ object Validation {
 
     def validateEntity(entity: EntityDef, context: ContextDef): ValidationErrors
 
-    protected val symbols: mutable.Map[Seq[String], mutable.Map[String, Def]] =
-      mutable.Map[Seq[String], mutable.Map[String, Def]]()
+    protected val symbols
+      : mutable.Map[Identifier, mutable.Map[Identifier, Def]] =
+      mutable.Map[Identifier, mutable.Map[Identifier, Def]]()
 
     protected def check(
       what: Def,
@@ -86,21 +87,20 @@ object Validation {
   class DefaultValidator extends Validator {
 
     def validateDomain(d: DomainDef): ValidationErrors = {
-      val parent = d.prefix
-      val domainErrors = symbols.get(parent) match {
+      val domainErrors = symbols.get(d.id) match {
         case Some(map) =>
-          map.get(d.name) match {
-            case Some(domainDef) =>
+          map.get(d.id) match {
+            case Some(_) =>
               check(
                 d,
-                s"Domain '${d.name}' already defined",
+                s"Domain '${d.id}' already defined",
                 predicate = false
               )
             case None =>
               NoValidationErrors
           }
         case None =>
-          symbols.put(parent, mutable.Map(d.name -> d))
+          symbols.put(d.id, mutable.Map(d.id -> d))
           NoValidationErrors
       }
       domainErrors ++
@@ -126,7 +126,7 @@ object Validation {
       check(
         typeDef,
         "Type names must start with a capital letter",
-        typeDef.name.charAt(0).isUpper
+        typeDef.id.value.charAt(0).isUpper
       ) ++ {
         typeDef.typ match {
           case Aggregation(of) =>
@@ -137,13 +137,13 @@ object Validation {
             check(
               typeDef,
               "Enumerators must not start with upper case",
-              of.forall(!_.head.isUpper)
+              of.forall(!_.value.head.isUpper)
             )
           case TypeRef(typeName) =>
             check(
               typeDef,
               "Referenced type name must start with upper case",
-              typeName.charAt(0).isUpper
+              typeName.value.charAt(0).isUpper
             )
           case _ =>
             NoValidationErrors

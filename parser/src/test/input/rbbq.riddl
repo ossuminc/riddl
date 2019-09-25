@@ -1,11 +1,16 @@
 // #everything
 // #domains
-domain rbbq.operation.restaurant {
+domain ReactiveBBQ {
 // #domains
 
+  // Create some types with better names than just "Id"
+  type CustomerId = Id
+  type OrderId = Id
+
   // #Kitchen
+  // The Kitchen context pertains to
   context Kitchen {
-    device entity OrderPrinter = combine {
+    entity OrderView = combine {
       address: type IPAddress
     }
   }
@@ -13,6 +18,24 @@ domain rbbq.operation.restaurant {
 
   // #Loyalty
   context Loyalty {
+    type AccrualEvent = combine {
+      when: TimeStamp,
+      who: type CustomerId,
+      pointsAccrued: Number,
+      fromOrder: type OrderId
+    }
+    type AwardEvent = combine {
+      when: TimeStamp,
+      who: type CustomerId,
+      pointsAwarded: Number,
+      toOrder: type OrderId
+    }
+    type RewardEvent = choose AccrualEvent or AwardEvent
+    entity RewardsAccount = combine {
+      id: type CustomerId,
+      points: Number,
+      events: type RewardEvent*
+    }
   }
   // #Loyalty
 
@@ -37,7 +60,7 @@ domain rbbq.operation.restaurant {
 
   // #Menu
   context Menu {
-    entity MenuItem=  String
+    entity MenuItem =  String
     aggregate entity Menu = type MenuItem+
   }
   // #Menu

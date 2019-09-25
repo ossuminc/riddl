@@ -59,7 +59,7 @@ object EntityParser {
 
   def invariant[_: P]: P[Invariant] = {
     P(
-      "invariant" ~/ identifier ~ "=" ~ literalString
+      "invariant" ~/ Index ~ identifier ~ "=" ~ literalString
     ).map(tpl ⇒ (Invariant.apply _).tupled(tpl))
   }
 

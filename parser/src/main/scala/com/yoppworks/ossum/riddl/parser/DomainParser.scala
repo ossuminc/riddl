@@ -14,7 +14,7 @@ import TypesParser._
 import EntityParser._
 import InteractionParser._
 
-object Parser {
+object DomainParser {
 
   def adaptorDef[_: P]: P[AdaptorDef] = {
     P(
@@ -50,22 +50,21 @@ object Parser {
     }
   }
 
-  def domainDefinitions[_: P]: P[Def] = {
-    P(typeDef | contextDef | role | interactionDef)
-  }
-
   def domainDef[_: P]: P[DomainDef] = {
     P(
-      "domain" ~ Index ~/ pathIdentifier ~ "{" ~/
+      "domain" ~ Index ~/ identifier ~
+        ("is" ~ "subdomain" ~ "of" ~/ identifier).? ~ "{" ~/
+        typeDef.rep(0) ~
         channelDef.rep(0) ~
-        contextDef.rep(0) ~ "}"
-    ).map {
-      case (index, path, channels, contexts) =>
-        DomainDef(index, path.dropRight(1), path.last, channels, contexts)
+        interactionDef.rep(0) ~
+        contextDef.rep(0) ~
+        "}"./
+    ).map { tpl ⇒
+      (DomainDef.apply _).tupled(tpl)
     }
   }
 
-  def parse[_: P]: P[Seq[DomainDef]] = {
+  def topLevelDomains[_: P]: P[Seq[DomainDef]] = {
     P(Start ~ P(domainDef).rep(0) ~ End)
   }
 
@@ -73,8 +72,11 @@ object Parser {
     input.substring(0, index) + "^" + input.substring(index)
   }
 
-  def parseString(input: String): Either[String, Seq[DomainDef]] = {
-    fastparse.parse(input, parse(_)) match {
+  def parseString[T](
+    input: String,
+    parser: P[_] ⇒ P[T]
+  ): Either[String, T] = {
+    fastparse.parse(input, parser(_)) match {
       case Success(content, _) ⇒
         Right(content)
       case failure @ Failure(_, index, _) ⇒
@@ -86,18 +88,19 @@ object Parser {
     }
   }
 
-  def parseFile(file: File): Either[String, Seq[DomainDef]] = {
+  def parseFile[T](file: File, parser: P[_] ⇒ P[T]): Either[String, T] = {
     val source = Source.fromFile(file)
-    parseSource(source, file.getPath)
+    parseSource(source, file.getPath, parser)
   }
 
-  def parseSource(
+  def parseSource[T](
     source: Source,
-    name: String
-  ): Either[String, Seq[DomainDef]] = {
+    name: String,
+    parser: P[_] => P[T]
+  ): Either[String, T] = {
     val lines = source.getLines()
     val input = lines.mkString("\n")
-    fastparse.parse(input, parse(_)) match {
+    fastparse.parse(input, parser(_)) match {
       case Success(content, _) =>
         Right(content)
       case failure @ Failure(label, index, _) ⇒
