@@ -12,7 +12,7 @@ class ASTTest extends WordSpec with MustMatchers {
       DomainDef(0, Identifier("foo"), None, Seq.empty[TypeDef])
     }
     "support all type constructs" in {
-      String mustBe String
+      Strng mustBe Strng
       Boolean mustBe Boolean
       Number mustBe Number
       Id mustBe Id
@@ -22,10 +22,10 @@ class ASTTest extends WordSpec with MustMatchers {
       URL mustBe URL
       Enumeration(Seq.empty[Identifier]) mustBe
         Enumeration(Seq.empty[Identifier])
-      Alternation(Seq.empty[Type]) mustBe Alternation(Seq.empty[Type])
+      Alternation(Seq.empty[TypeRef]) mustBe Alternation(Seq.empty[TypeRef])
       Aggregation(Map.empty[Identifier, Type]) mustBe
         Aggregation(Map.empty[Identifier, Type])
-      Optional(String) mustBe Optional(String)
+      Optional(Strng) mustBe Optional(Strng)
       ZeroOrMore(Time) mustBe ZeroOrMore(Time)
       OneOrMore(URL) mustBe OneOrMore(URL)
     }

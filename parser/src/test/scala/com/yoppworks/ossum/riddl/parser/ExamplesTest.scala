@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl.parser
 
 import java.io.File
 
-import DomainParser.topLevelDomains
+import TopLevelParser.topLevelDomains
 
 /** Unit Tests For ExamplesTest */
 class ExamplesTest extends ParsingTest {
@@ -20,7 +20,7 @@ class ExamplesTest extends ParsingTest {
     "all compile" in {
       val results = for ((label, fileName) ← files) yield {
         val file = new File(directory + fileName)
-        (label, DomainParser.parseFile(file, topLevelDomains(_)))
+        (label, TopLevelParser.parseFile(file, topLevelDomains(_)))
       }
       var failed = false
       println(

@@ -1,7 +1,5 @@
 package com.yoppworks.ossum.riddl.parser
 
-sealed trait AST
-
 /** Abstract Syntax Tree
   * This object defines the model for processing IDDL and producing a
   * raw AST from it. This raw AST has no referential integrity, it just
@@ -12,6 +10,8 @@ sealed trait AST
   * error).
   */
 object AST {
+
+  sealed trait AST
 
   case class LiteralString(s: String) extends AST
   case class LiteralInteger(n: BigInt) extends AST
@@ -29,25 +29,30 @@ object AST {
   }
 
   sealed trait Type extends AST
+  case class TypeRef(id: Identifier) extends Ref with Type
+  class PredefinedType(name: String) extends TypeRef(Identifier(name))
 
-  case object String extends Type
-  case object Boolean extends Type
-  case object Number extends Type
-  case object Id extends Type
-  case object Date extends Type
-  case object Time extends Type
-  case object TimeStamp extends Type
-  case object URL extends Type
+  val Strng = new PredefinedType("String")
+  val Boolean = new PredefinedType("Boolean")
+  val Number = new PredefinedType("Number") /* eventually turn this
+  into:
+  case object Integer extends PredefinedType("Integer")
+  case object Decimal extends PredefinedType("Decimal")
+   */
+  val Id = new PredefinedType("Id")
+  val Date = new PredefinedType("Date")
+  val Time = new PredefinedType("Time")
+  val TimeStamp = new PredefinedType("TimeStamp")
+  val URL = new PredefinedType("URL")
 
   case class Enumeration(of: Seq[Identifier]) extends Type
-  case class Alternation(of: Seq[Type]) extends Type
+  case class Alternation(of: Seq[TypeRef]) extends Type
   case class Aggregation(of: Map[Identifier, Type]) extends Type
 
-  case class Optional(element: Type) extends Type
-  case class ZeroOrMore(of: Type) extends Type
-  case class OneOrMore(of: Type) extends Type
+  case class Optional(element: TypeRef) extends Type
+  case class ZeroOrMore(of: TypeRef) extends Type
+  case class OneOrMore(of: TypeRef) extends Type
 
-  case class TypeRef(id: Identifier) extends Ref with Type
   case class TypeDef(index: Int, id: Identifier, typ: Type) extends Def
 
   case class ChannelRef(id: Identifier) extends Ref
@@ -55,8 +60,8 @@ object AST {
     index: Int,
     id: Identifier,
     commands: Seq[CommandRef] = Seq.empty[CommandRef],
-    queries: Seq[QueryRef] = Seq.empty[QueryRef],
     events: Seq[EventRef] = Seq.empty[EventRef],
+    queries: Seq[QueryRef] = Seq.empty[QueryRef],
     results: Seq[ResultRef] = Seq.empty[ResultRef]
   ) extends Def
 
@@ -105,7 +110,7 @@ object AST {
     whens: Seq[When],
     thens: Seq[Then]
   )
-  case class Feature(
+  case class FeatureDef(
     index: Int,
     id: Identifier,
     description: LiteralString,
@@ -113,7 +118,7 @@ object AST {
     examples: Seq[Example]
   ) extends Def
 
-  case class Invariant(index: Int, id: Identifier, expression: LiteralString)
+  case class InvariantDef(index: Int, id: Identifier, expression: LiteralString)
       extends Def
 
   /** Definition of an Entity
@@ -132,8 +137,8 @@ object AST {
     typ: Type,
     consumes: Option[ChannelRef] = None,
     produces: Option[ChannelRef] = None,
-    features: Seq[Feature] = Seq.empty[Feature],
-    invariants: Seq[Invariant] = Seq.empty[Invariant]
+    features: Seq[FeatureDef] = Seq.empty[FeatureDef],
+    invariants: Seq[InvariantDef] = Seq.empty[InvariantDef]
   ) extends Def
 
   trait TranslationRule extends Def {

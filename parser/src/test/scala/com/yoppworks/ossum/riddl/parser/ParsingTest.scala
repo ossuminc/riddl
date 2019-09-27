@@ -7,7 +7,7 @@ import org.scalatest.WordSpec
 trait ParsingTest extends WordSpec with MustMatchers {
 
   import AST._
-  import DomainParser._
+  import TopLevelParser._
   import fastparse._
 
   def checkParser[T <: AST, U <: AST](
@@ -16,7 +16,7 @@ trait ParsingTest extends WordSpec with MustMatchers {
     parser: P[_] ⇒ P[T],
     extraction: T ⇒ U
   ): Unit = {
-    DomainParser.parseString(input, parser) match {
+    TopLevelParser.parseString(input, parser) match {
       case Right(content) =>
         extraction(content) mustBe expected
       case Left(msg) =>
@@ -45,7 +45,7 @@ trait ParsingTest extends WordSpec with MustMatchers {
     expected: AST,
     extract: Seq[DomainDef] => AST
   ): Unit = {
-    DomainParser.parseString(input, topLevelDomains(_)) match {
+    TopLevelParser.parseString(input, topLevelDomains(_)) match {
       case Right(content) =>
         extract(content) mustBe expected
       case Left(msg) =>
@@ -59,7 +59,7 @@ trait ParsingTest extends WordSpec with MustMatchers {
     parser: P[_] ⇒ P[Seq[T]],
     extraction: T ⇒ U
   ): Unit = {
-    DomainParser.parseString(input, parser(_)) match {
+    TopLevelParser.parseString(input, parser(_)) match {
       case Right(content) =>
         content mustBe expected
       case Left(msg) =>

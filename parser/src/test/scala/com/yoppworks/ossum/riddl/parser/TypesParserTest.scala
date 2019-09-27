@@ -8,7 +8,7 @@ class TypesParserTest extends ParsingTest {
   "TypesParser" should {
     "allow renames of 8 literal types" in {
       val cases = Map[String, TypeDef](
-        "type str = String" → TypeDef(33, Identifier("str"), String),
+        "type str = String" → TypeDef(33, Identifier("str"), Strng),
         "type num = Number" → TypeDef(33, Identifier("num"), Number),
         "type boo = Boolean" → TypeDef(33, Identifier("boo"), Boolean),
         "type ident  = Id" -> TypeDef(33, Identifier("ident"), Id),
@@ -19,7 +19,7 @@ class TypesParserTest extends ParsingTest {
         "type FirstName = String" -> TypeDef(
           33,
           Identifier("FirstName"),
-          String
+          Strng
         )
       )
       checkDef[TypeDef](cases, _.contexts.head.types.head)

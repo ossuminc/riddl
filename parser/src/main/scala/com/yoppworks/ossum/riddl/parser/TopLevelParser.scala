@@ -11,10 +11,10 @@ import fastparse._
 import ScalaWhitespace._
 import CommonParser._
 import TypesParser._
-import EntityParser._
 import InteractionParser._
+import ContextParser._
 
-object DomainParser {
+object TopLevelParser {
 
   def adaptorDef[_: P]: P[AdaptorDef] = {
     P(
@@ -24,29 +24,16 @@ object DomainParser {
     }
   }
 
-  def contextOptions[_: P]: P[ContextOption] = {
-    P(StringIn("wrapper", "function", "gateway")).!.map {
-      case "wrapper" ⇒ WrapperOption
-      case "function" ⇒ FunctionOption
-      case "gateway" ⇒ GatewayOption
-    }
-  }
-
-  def contextDef[_: P]: P[ContextDef] = {
-    P(
-      contextOptions.rep(0) ~ "context" ~ Index ~/ identifier ~ "{" ~
-        typeDef.rep(0) ~ commandDef.rep(0) ~ eventDef.rep(0) ~
-        queryDef.rep(0) ~ resultDef.rep(0) ~
-        entityDef.rep(0) ~ adaptorDef.rep(0) ~ interactionDef.rep(0) ~
-        "}"
-    ).map { args =>
-      (ContextDef.apply _).tupled(args)
-    }
-  }
-
   def channelDef[_: P]: P[ChannelDef] = {
-    P("channel" ~ Index ~/ identifier).map {
-      case (index, name) => ChannelDef(index, name)
+    P(
+      "channel" ~ Index ~/ identifier ~ "{" ~
+        "commands" ~ "{" ~/ identifier.map(CommandRef).rep(0, ",") ~ "}" ~/
+        "events" ~ "{" ~/ identifier.map(EventRef).rep(0, ",") ~ "}" ~/
+        "queries" ~ "{" ~/ identifier.map(QueryRef).rep(0, ",") ~ "}" ~/
+        "results" ~ "{" ~/ identifier.map(ResultRef).rep(0, ",") ~ "}" ~/
+        "}"
+    ).map { tpl ⇒
+      (ChannelDef.apply _).tupled(tpl)
     }
   }
 

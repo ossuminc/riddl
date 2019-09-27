@@ -22,7 +22,7 @@ object TypesParser {
       )./
     ).!.map {
       case "Boolean" ⇒ AST.Boolean
-      case "String" ⇒ AST.String
+      case "String" ⇒ AST.Strng
       case "Number" ⇒ AST.Number
       case "Id" ⇒ AST.Id
       case "Date" ⇒ AST.Date
@@ -45,10 +45,10 @@ object TypesParser {
   }
 
   def typeExpression[_: P]: P[Type] = {
-    P(cardinality(literalTypeExpression | typeRef))
+    P(cardinality(typeRef | identifier.map(TypeRef)))
   }
 
-  def cardinality[_: P](p: ⇒ P[Type]): P[Type] = {
+  def cardinality[_: P](p: ⇒ P[TypeRef]): P[Type] = {
     P(p ~ ("?".! | "*".! | "+".!).?).map {
       case (typ, Some("?")) ⇒ Optional(typ)
       case (typ, Some("+")) ⇒ OneOrMore(typ)

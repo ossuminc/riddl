@@ -19,6 +19,20 @@ lazy val parser = (project in file("parser")).settings(
   )
 )
 
+lazy val translator = (project in file("translator"))
+  .settings(
+    name := "riddl-translator",
+    resolvers ++= Seq(
+      "Artima Maven Repository" at "https://repo.artima.com/releases"
+    ),
+    libraryDependencies ++= Seq(
+      "org.scalactic" %% "scalactic" % "3.0.8",
+      "org.scalatest" %% "scalatest" % "3.0.8" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+    )
+  )
+  .dependsOn(parser)
+
 lazy val root = (project in file("."))
   .enablePlugins(ParadoxPlugin)
   .enablePlugins(ParadoxSitePlugin)

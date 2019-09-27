@@ -7,7 +7,7 @@ import fastparse.Parsed
 class ParserTest extends ParsingTest {
 
   import AST._
-  import DomainParser._
+  import TopLevelParser._
 
   "Parser" should {
     "allow an empty funky-name domain" in {
@@ -85,7 +85,7 @@ class ParserTest extends ParsingTest {
     "allow channel definitions in domains" in {
       val input =
         """domain foo {
-          |  channel bar
+          |  channel bar { commands{} events{} queries{} results{} }
           |}
           |""".stripMargin
       runParser(
@@ -188,7 +188,7 @@ class ParserTest extends ParsingTest {
         QueryDef(
           39,
           Identifier("FindThisThing"),
-          String,
+          Strng,
           ResultRef(Identifier("SomeResult"))
         ),
         _.head.contexts.head.queries.head
@@ -240,7 +240,7 @@ class ParserTest extends ParsingTest {
           Some(ChannelRef(Identifier("EntityChannel"))),
           Some(ChannelRef(Identifier("EntityChannel"))),
           Seq(
-            Feature(
+            FeatureDef(
               176,
               Identifier("AnAspect"),
               LiteralString("This is some aspect of the entity"),

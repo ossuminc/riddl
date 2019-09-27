@@ -48,12 +48,12 @@ object FeatureParser {
     P(IgnoreCase("background") ~ ":" ~/ givens).map(Background)
   }
 
-  def feature[_: P]: P[Feature] = {
+  def feature[_: P]: P[FeatureDef] = {
     P(
       IgnoreCase("feature") ~ ":" ~/ Index ~ identifier ~ literalString ~
         background.? ~ example.rep(1)
     ).map { tpl ⇒
-      (Feature.apply _).tupled(tpl)
+      (FeatureDef.apply _).tupled(tpl)
     }
   }
 }
