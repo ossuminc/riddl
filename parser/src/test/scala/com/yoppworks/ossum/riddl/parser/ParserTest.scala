@@ -219,14 +219,15 @@ class ParserTest extends ParsingTest {
           |    persistent aggregate entity Hamburger = type SomeType
           |      consumes channel EntityChannel
           |      produces channel EntityChannel
-          |      feature: AnAspect
-          |        "This is some aspect of the entity"
+          |      feature AnAspect {
+          |        DESCRIPTION: "This is some aspect of the entity"
           |        BACKGROUND: Given "Nobody loves me"
           |        EXAMPLE: "My Fate"
           |        GIVEN "everybody hates me"
           |        AND "I'm depressed"
           |        WHEN "I go fishing"
           |        THEN "I'll just eat worms"
+          |      }
           |  }
           |}
           |""".stripMargin
@@ -241,7 +242,7 @@ class ParserTest extends ParsingTest {
           Some(ChannelRef(Identifier("EntityChannel"))),
           Seq(
             FeatureDef(
-              176,
+              175,
               Identifier("AnAspect"),
               LiteralString("This is some aspect of the entity"),
               Some(Background(Seq(Given(LiteralString("Nobody loves me"))))),

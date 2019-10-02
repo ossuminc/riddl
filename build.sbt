@@ -8,10 +8,12 @@ dynverSeparator in ThisBuild := "-"
 
 lazy val parser = (project in file("parser")).settings(
   name := "riddl-parser",
+  scalacOptions += "-Ypartial-unification",
   resolvers ++= Seq(
     "Artima Maven Repository" at "https://repo.artima.com/releases"
   ),
   libraryDependencies ++= Seq(
+    "org.typelevel" %% "cats-core" % "2.0.0",
     "com.lihaoyi" %% "fastparse" % "2.1.3",
     "org.scalactic" %% "scalactic" % "3.0.8",
     "org.scalatest" %% "scalatest" % "3.0.8" % "test",

@@ -4,10 +4,10 @@ import java.io.File
 
 import TopLevelParser.topLevelDomains
 
+import scala.io.Source
+
 /** Unit Tests For ExamplesTest */
 class ExamplesTest extends ParsingTest {
-
-  val directory = "parser/src/test/input/"
 
   val files: Map[String, String] = Map(
     "Reactive BBQ" → "rbbq.riddl",
@@ -19,25 +19,8 @@ class ExamplesTest extends ParsingTest {
   "Examples" should {
     "all compile" in {
       val results = for ((label, fileName) ← files) yield {
-        val file = new File(directory + fileName)
-        (label, TopLevelParser.parseFile(file, topLevelDomains(_)))
+        checkFile(label, fileName)
       }
-      var failed = false
-      println(
-        results
-          .map {
-            case (label, Left(error)) ⇒
-              failed = true
-              s"$label:$error"
-            case (label, Right(_)) ⇒
-              s"$label: Succeeded"
-          }
-          .mkString("\n")
-      )
-      if (failed)
-        fail("Not all examples succeeded")
-      else
-        succeed
     }
   }
 }

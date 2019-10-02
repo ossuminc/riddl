@@ -9,7 +9,7 @@ import com.yoppworks.ossum.riddl.parser.TypesParser.typeDef
 import fastparse._
 import ScalaWhitespace._
 
-/** Unit Tests For ContextParser */
+/** Parsing rules for Context definitions */
 object ContextParser {
 
   def contextOptions[_: P]: P[ContextOption] = {
@@ -26,7 +26,7 @@ object ContextParser {
         typeDef.rep(0) ~ commandDef.rep(0) ~ eventDef.rep(0) ~
         queryDef.rep(0) ~ resultDef.rep(0) ~
         entityDef.rep(0) ~ adaptorDef.rep(0) ~ interactionDef.rep(0) ~
-        "}"
+        "}" ~ explanation
     ).map { args =>
       (ContextDef.apply _).tupled(args)
     }

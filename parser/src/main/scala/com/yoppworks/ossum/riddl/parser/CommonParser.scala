@@ -4,8 +4,23 @@ import fastparse._
 import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.parser.AST._
 
-/** Unit Tests For CommonParser */
+/** Common Parsing Rules */
 object CommonParser {
+
+  def link[_: P]: P[Link] = {
+    P("link" ~ "(" ~/ literalString ~ ")"./).map(Link)
+  }
+
+  def explanation[_: P]: P[Option[Explanation]] = {
+    P(
+      "explained" ~ "as" ~ "{" ~ "purpose" ~ ":" ~ literalString ~
+        ("details" ~ ":" ~ literalString).? ~
+        link.rep(0) ~
+        "}"./
+    ).?.map { opt ⇒
+      opt.map(tpl ⇒ { Explanation.apply _ }.tupled(tpl))
+    }
+  }
 
   def literalString[_: P]: P[LiteralString] = {
     P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").map(LiteralString)

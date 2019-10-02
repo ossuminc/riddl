@@ -13,47 +13,68 @@ object AST {
 
   sealed trait AST
 
+  case class Identifier(value: String) extends AST
+
   case class LiteralString(s: String) extends AST
   case class LiteralInteger(n: BigInt) extends AST
   case class LiteralDecimal(d: BigDecimal) extends AST
-  case class Identifier(value: String) extends AST
   case class PathIdentifier(value: Seq[String]) extends AST
 
-  sealed trait Def extends AST {
-    def index: Int
-    def id: Identifier
-  }
+  case class Link(url: LiteralString) extends AST
+
+  case class Explanation(
+    purpose: LiteralString,
+    details: Option[LiteralString] = None,
+    links: Seq[Link] = Seq.empty[Link]
+  ) extends AST
 
   sealed trait Ref extends AST {
     def id: Identifier
   }
 
-  sealed trait Type extends AST
-  case class TypeRef(id: Identifier) extends Ref with Type
-  class PredefinedType(name: String) extends TypeRef(Identifier(name))
+  sealed trait Def extends AST {
+    def index: Int
+    def id: Identifier
+    def explanation: Option[Explanation]
+  }
 
-  val Strng = new PredefinedType("String")
-  val Boolean = new PredefinedType("Boolean")
-  val Number = new PredefinedType("Number") /* eventually turn this
+  sealed trait Type extends AST
+  sealed trait TypeDefinition extends Type
+
+  sealed trait TypeExpression extends Type {
+    def id: Identifier
+  }
+  case class TypeRef(id: Identifier) extends Ref with TypeExpression
+  case class PredefinedType(id: Identifier) extends TypeExpression
+
+  val Strng = PredefinedType(Identifier("String"))
+  val Boolean = PredefinedType(Identifier("Boolean"))
+  val Number = PredefinedType(Identifier("Number")) /* eventually turn this
   into:
   case object Integer extends PredefinedType("Integer")
   case object Decimal extends PredefinedType("Decimal")
    */
-  val Id = new PredefinedType("Id")
-  val Date = new PredefinedType("Date")
-  val Time = new PredefinedType("Time")
-  val TimeStamp = new PredefinedType("TimeStamp")
-  val URL = new PredefinedType("URL")
+  val Id = PredefinedType(Identifier("Id"))
+  val Date = PredefinedType(Identifier("Date"))
+  val Time = PredefinedType(Identifier("Time"))
+  val TimeStamp = PredefinedType(Identifier("TimeStamp"))
+  val URL = PredefinedType(Identifier("URL"))
 
-  case class Enumeration(of: Seq[Identifier]) extends Type
-  case class Alternation(of: Seq[TypeRef]) extends Type
-  case class Aggregation(of: Map[Identifier, Type]) extends Type
+  case class Optional(id: Identifier) extends TypeExpression
+  case class ZeroOrMore(id: Identifier) extends TypeExpression
+  case class OneOrMore(id: Identifier) extends TypeExpression
 
-  case class Optional(element: TypeRef) extends Type
-  case class ZeroOrMore(of: TypeRef) extends Type
-  case class OneOrMore(of: TypeRef) extends Type
+  case class Enumeration(of: Seq[Identifier]) extends TypeDefinition
+  case class Alternation(of: Seq[TypeExpression]) extends TypeDefinition
+  case class Aggregation(of: Map[Identifier, TypeExpression])
+      extends TypeDefinition
 
-  case class TypeDef(index: Int, id: Identifier, typ: Type) extends Def
+  case class TypeDef(
+    index: Int,
+    id: Identifier,
+    typ: Type,
+    explanation: Option[Explanation] = None
+  ) extends Def
 
   case class ChannelRef(id: Identifier) extends Ref
   case class ChannelDef(
@@ -62,7 +83,8 @@ object AST {
     commands: Seq[CommandRef] = Seq.empty[CommandRef],
     events: Seq[EventRef] = Seq.empty[EventRef],
     queries: Seq[QueryRef] = Seq.empty[QueryRef],
-    results: Seq[ResultRef] = Seq.empty[ResultRef]
+    results: Seq[ResultRef] = Seq.empty[ResultRef],
+    explanation: Option[Explanation] = None
   ) extends Def
 
   sealed trait MessageRef extends Ref
@@ -72,24 +94,36 @@ object AST {
   case class CommandDef(
     index: Int,
     id: Identifier,
-    typ: Type,
-    events: EventRefs
+    typ: TypeExpression,
+    events: EventRefs,
+    explanation: Option[Explanation] = None
   ) extends MessageDef
 
   case class EventRef(id: Identifier) extends MessageRef
   type EventRefs = Seq[EventRef]
-  case class EventDef(index: Int, id: Identifier, typ: Type) extends MessageDef
+  case class EventDef(
+    index: Int,
+    id: Identifier,
+    typ: TypeExpression,
+    explanation: Option[Explanation] = None
+  ) extends MessageDef
 
   case class QueryRef(id: Identifier) extends MessageRef
   case class QueryDef(
     index: Int,
     id: Identifier,
-    typ: Type,
-    result: ResultRef
+    typ: TypeExpression,
+    result: ResultRef,
+    explanation: Option[Explanation] = None
   ) extends MessageDef
 
   case class ResultRef(id: Identifier) extends MessageRef
-  case class ResultDef(index: Int, id: Identifier, typ: Type) extends MessageDef
+  case class ResultDef(
+    index: Int,
+    id: Identifier,
+    typ: TypeExpression,
+    explanation: Option[Explanation] = None
+  ) extends MessageDef
 
   sealed trait EntityOption
   case object EntityAggregate extends EntityOption
@@ -103,23 +137,28 @@ object AST {
   case class Given(fact: LiteralString)
   case class When(situation: LiteralString)
   case class Then(result: LiteralString)
-  case class Background(givens: Seq[Given])
+  case class Background(givens: Seq[Given] = Seq.empty[Given])
   case class Example(
     description: LiteralString,
-    givens: Seq[Given],
-    whens: Seq[When],
-    thens: Seq[Then]
+    givens: Seq[Given] = Seq.empty[Given],
+    whens: Seq[When] = Seq.empty[When],
+    thens: Seq[Then] = Seq.empty[Then]
   )
   case class FeatureDef(
     index: Int,
     id: Identifier,
     description: LiteralString,
-    background: Option[Background],
-    examples: Seq[Example]
+    background: Option[Background] = None,
+    examples: Seq[Example] = Seq.empty[Example],
+    explanation: Option[Explanation] = None
   ) extends Def
 
-  case class InvariantDef(index: Int, id: Identifier, expression: LiteralString)
-      extends Def
+  case class InvariantDef(
+    index: Int,
+    id: Identifier,
+    expression: LiteralString,
+    explanation: Option[Explanation] = None
+  ) extends Def
 
   /** Definition of an Entity
     *
@@ -134,11 +173,12 @@ object AST {
     index: Int,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     id: Identifier,
-    typ: Type,
+    typ: TypeExpression,
     consumes: Option[ChannelRef] = None,
     produces: Option[ChannelRef] = None,
     features: Seq[FeatureDef] = Seq.empty[FeatureDef],
-    invariants: Seq[InvariantDef] = Seq.empty[InvariantDef]
+    invariants: Seq[InvariantDef] = Seq.empty[InvariantDef],
+    explanation: Option[Explanation] = None
   ) extends Def
 
   trait TranslationRule extends Def {
@@ -151,7 +191,8 @@ object AST {
     channel: String,
     input: String,
     output: String,
-    rule: String
+    rule: String,
+    explanation: Option[Explanation] = None
   ) extends TranslationRule
 
   /** Definition of an Adaptor
@@ -167,7 +208,8 @@ object AST {
     index: Int,
     id: Identifier,
     targetDomain: Option[DomainRef] = None,
-    targetContext: ContextRef
+    targetContext: ContextRef,
+    explanation: Option[Explanation] = None
     // Details TBD
   ) extends Def
 
@@ -189,7 +231,8 @@ object AST {
     results: Seq[ResultDef] = Seq.empty[ResultDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
     adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
-    interactions: Seq[InteractionDef] = Seq.empty[InteractionDef]
+    interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
+    explanation: Option[Explanation] = None
   ) extends Def
 
   /** Definition of an Interaction
@@ -205,8 +248,9 @@ object AST {
   case class InteractionDef(
     index: Int,
     id: Identifier,
-    roles: Seq[RoleDef],
-    actions: Seq[ActionDef]
+    roles: Seq[RoleDef] = Seq.empty[RoleDef],
+    actions: Seq[ActionDef] = Seq.empty[ActionDef],
+    explanation: Option[Explanation] = None
   ) extends Def
 
   sealed trait RoleOption
@@ -218,7 +262,8 @@ object AST {
     index: Int,
     id: Identifier,
     responsibilities: Seq[LiteralString] = Seq.empty[LiteralString],
-    capacities: Seq[LiteralString] = Seq.empty[LiteralString]
+    capacities: Seq[LiteralString] = Seq.empty[LiteralString],
+    explanation: Option[Explanation] = None
   ) extends Def
 
   case class RoleRef(id: Identifier) extends Ref
@@ -246,7 +291,8 @@ object AST {
     id: Identifier,
     sender: EntityRef,
     receiver: EntityRef,
-    message: MessageRef
+    message: MessageRef,
+    explanation: Option[Explanation] = None
   ) extends ActionDef
 
   case class DirectiveActionDef(
@@ -255,26 +301,30 @@ object AST {
     id: Identifier,
     role: RoleRef,
     entity: EntityRef,
-    message: MessageRef
+    message: MessageRef,
+    explanation: Option[Explanation] = None
   ) extends ActionDef
 
   case class ProcessingActionDef(
     index: Int,
     id: Identifier,
     entity: EntityRef,
-    description: LiteralString
+    description: LiteralString,
+    explanation: Option[Explanation] = None
   ) extends ActionDef
 
   case class DeletionActionDef(
     index: Int,
     id: Identifier,
-    entity: EntityRef
+    entity: EntityRef,
+    explanation: Option[Explanation] = None
   ) extends ActionDef
 
   case class CreationActionDef(
     index: Int,
     id: Identifier,
-    entity: EntityRef
+    entity: EntityRef,
+    explanation: Option[Explanation] = None
   ) extends ActionDef
 
   case class DomainRef(id: Identifier) extends Ref
@@ -286,7 +336,9 @@ object AST {
     types: Seq[TypeDef] = Seq.empty[TypeDef],
     channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
-    contexts: Seq[ContextDef] = Seq.empty[ContextDef]
+    contexts: Seq[ContextDef] = Seq.empty[ContextDef],
+    explanation: Option[Explanation] = None
   ) extends Def
 
+  type Domains = Seq[DomainDef]
 }

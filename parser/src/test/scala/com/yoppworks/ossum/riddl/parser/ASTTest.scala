@@ -12,22 +12,22 @@ class ASTTest extends WordSpec with MustMatchers {
       DomainDef(0, Identifier("foo"), None, Seq.empty[TypeDef])
     }
     "support all type constructs" in {
-      Strng mustBe Strng
-      Boolean mustBe Boolean
-      Number mustBe Number
-      Id mustBe Id
-      Date mustBe Date
-      Time mustBe Time
-      TimeStamp mustBe TimeStamp
-      URL mustBe URL
+      PredefinedType(Identifier("String")) mustBe Strng
+      PredefinedType(Identifier("Boolean")) mustBe Boolean
+      PredefinedType(Identifier("Number")) mustBe Number
+      PredefinedType(Identifier("Id")) mustBe Id
+      PredefinedType(Identifier("Date")) mustBe Date
+      PredefinedType(Identifier("Time")) mustBe Time
+      PredefinedType(Identifier("TimeStamp")) mustBe TimeStamp
+      PredefinedType(Identifier("URL")) mustBe URL
       Enumeration(Seq.empty[Identifier]) mustBe
         Enumeration(Seq.empty[Identifier])
       Alternation(Seq.empty[TypeRef]) mustBe Alternation(Seq.empty[TypeRef])
-      Aggregation(Map.empty[Identifier, Type]) mustBe
-        Aggregation(Map.empty[Identifier, Type])
-      Optional(Strng) mustBe Optional(Strng)
-      ZeroOrMore(Time) mustBe ZeroOrMore(Time)
-      OneOrMore(URL) mustBe OneOrMore(URL)
+      Aggregation(Map.empty[Identifier, TypeExpression]) mustBe
+        Aggregation(Map.empty[Identifier, TypeExpression])
+      Optional(Identifier("String")) mustBe Optional(Strng.id)
+      ZeroOrMore(Identifier("Time")) mustBe ZeroOrMore(Time.id)
+      OneOrMore(Identifier("URL")) mustBe OneOrMore(URL.id)
     }
   }
 }

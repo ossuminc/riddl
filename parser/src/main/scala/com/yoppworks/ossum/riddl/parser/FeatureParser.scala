@@ -6,7 +6,7 @@ import ScalaWhitespace._
 
 import CommonParser._
 
-/** Unit Tests For FeatureParser */
+/** Parsing rules for entity feature definitions */
 object FeatureParser {
 
   def givens[_: P]: P[Seq[Given]] = {
@@ -48,10 +48,15 @@ object FeatureParser {
     P(IgnoreCase("background") ~ ":" ~/ givens).map(Background)
   }
 
+  def description[_: P]: P[LiteralString] = {
+    P(IgnoreCase("description") ~ ":" ~/ literalString)
+  }
+
   def feature[_: P]: P[FeatureDef] = {
     P(
-      IgnoreCase("feature") ~ ":" ~/ Index ~ identifier ~ literalString ~
-        background.? ~ example.rep(1)
+      IgnoreCase("feature") ~/ Index ~ identifier ~ "{" ~
+        description ~ background.? ~ example.rep(1) ~
+        "}" ~ explanation
     ).map { tpl ⇒
       (FeatureDef.apply _).tupled(tpl)
     }

@@ -10,9 +10,10 @@ domain ReactiveBBQ {
   // #Kitchen
   // The Kitchen context pertains to
   context Kitchen {
-    entity OrderView = combine {
-      address: type IPAddress
-    }
+    type OrderViewType = combine {
+                           address: type IPAddress
+                         }
+    entity OrderView = OrderViewType
   }
   // #Kitchen
 
@@ -31,30 +32,33 @@ domain ReactiveBBQ {
       toOrder: type OrderId
     }
     type RewardEvent = choose AccrualEvent or AwardEvent
-    entity RewardsAccount = combine {
-      id: type CustomerId,
-      points: Number,
-      events: type RewardEvent*
-    }
+    type RewardsAccountType = combine {
+                                    id: type CustomerId,
+                                    points: Number,
+                                    events: type RewardEvent*
+                                  }
+    entity RewardsAccount = RewardsAccountType
   }
   // #Loyalty
 
   // #Order
   context Order {
-    aggregate entity Order = combine {
-      orderId: Id,
-      customerId: Id
-    }
+    type OrderType = combine {
+                           orderId: Id,
+                           customerId: Id
+                         }
+    aggregate entity Order = OrderType
   }
   // #Order
 
   // #Payment
   context Payment {
-    aggregate entity Payment = combine {
-      orderId: Id,
-      amount: Number,
-      cardToken: String
-    }
+    type PaymentType = combine {
+                             orderId: Id,
+                             amount: Number,
+                             cardToken: String
+                           }
+    aggregate entity Payment = PaymentType
   }
   // #Payment
 
@@ -67,13 +71,15 @@ domain ReactiveBBQ {
 
   // #Reservation
   context Reservation {
-    aggregate entity Reservation = combine {
-      partyName: String,
-      phoneNumber: String,
-      location: Id,
-      time: Time,
-      date: Date
-    } consumes channel 'foo' produces channel 'bar'
+    type ReservationType = combine {
+                                 partyName: String,
+                                 phoneNumber: String,
+                                 location: Id,
+                                 time: Time,
+                                 date: Date
+                               }
+    aggregate entity Reservation = ReservationType consumes channel 'foo'
+    produces channel 'bar'
   }
   // #Reservation
 }

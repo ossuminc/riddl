@@ -14,11 +14,13 @@ import TypesParser._
 import InteractionParser._
 import ContextParser._
 
+/** Top level parsing rules */
 object TopLevelParser {
 
   def adaptorDef[_: P]: P[AdaptorDef] = {
     P(
-      "adaptor" ~/ Index ~ identifier ~ "for" ~/ domainRef.? ~/ contextRef
+      "adaptor" ~/ Index ~ identifier ~ "for" ~/ domainRef.? ~/ contextRef ~
+        explanation
     ).map { tpl =>
       (AdaptorDef.apply _).tupled(tpl)
     }
@@ -31,7 +33,7 @@ object TopLevelParser {
         "events" ~ "{" ~/ identifier.map(EventRef).rep(0, ",") ~ "}" ~/
         "queries" ~ "{" ~/ identifier.map(QueryRef).rep(0, ",") ~ "}" ~/
         "results" ~ "{" ~/ identifier.map(ResultRef).rep(0, ",") ~ "}" ~/
-        "}"
+        "}" ~ explanation
     ).map { tpl ⇒
       (ChannelDef.apply _).tupled(tpl)
     }
@@ -45,7 +47,7 @@ object TopLevelParser {
         channelDef.rep(0) ~
         interactionDef.rep(0) ~
         contextDef.rep(0) ~
-        "}"./
+        "}" ~ explanation
     ).map { tpl ⇒
       (DomainDef.apply _).tupled(tpl)
     }

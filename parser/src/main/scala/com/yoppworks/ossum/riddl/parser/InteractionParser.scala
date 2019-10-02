@@ -5,7 +5,7 @@ import CommonParser._
 import fastparse._
 import ScalaWhitespace._
 
-/** Unit Tests For InteractionParser */
+/** Parsing rules for context interactions */
 object InteractionParser {
 
   def roleRef[_: P]: P[RoleRef] = {
@@ -28,7 +28,8 @@ object InteractionParser {
         ) ~
         ("requires" ~ literalString.rep(1, ",")).?.map(
           _.getOrElse(Seq.empty[LiteralString]).toList
-        )
+        ) ~
+        explanation
     ).map { tpl ⇒
       (RoleDef.apply _).tupled(tpl)
     }
@@ -37,7 +38,7 @@ object InteractionParser {
   def processingActionDef[_: P]: P[ProcessingActionDef] = {
     P(
       "processing" ~/ Index ~ identifier ~ "for" ~ entityRef ~ "as" ~
-        literalString
+        literalString ~ explanation
     ).map(x ⇒ (ProcessingActionDef.apply _).tupled(x))
   }
 
@@ -56,7 +57,7 @@ object InteractionParser {
       messageOption.rep(0) ~
         "message" ~/ Index ~ identifier ~ "from" ~/ entityRef ~ "to" ~/
         entityRef ~
-        "with" ~ messageRef
+        "with" ~ messageRef ~ explanation
     ).map { tpl ⇒
       (MessageActionDef.apply _).tupled(tpl)
     }
@@ -67,7 +68,7 @@ object InteractionParser {
       messageOption.rep(0) ~
         "directive" ~/ Index ~ identifier ~ "from" ~ roleRef ~ "to" ~
         entityRef ~
-        "with" ~ messageRef
+        "with" ~ messageRef ~ explanation
     ).map { tpl ⇒
       (DirectiveActionDef.apply _).tupled(tpl)
     }
@@ -81,16 +82,9 @@ object InteractionParser {
     P(
       "interaction" ~ Index ~/ identifier ~ "{" ~
         role.rep(1) ~ interactions ~
-        "}"
-    ).map {
-      case (index, id, actors, interactions) ⇒
-        InteractionDef(
-          index,
-          id,
-          actors.toList,
-          interactions.toList
-        )
+        "}" ~ explanation
+    ).map { tpl ⇒
+      (InteractionDef.apply _).tupled(tpl)
     }
   }
-
 }

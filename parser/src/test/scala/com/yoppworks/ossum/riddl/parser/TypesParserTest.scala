@@ -8,18 +8,50 @@ class TypesParserTest extends ParsingTest {
   "TypesParser" should {
     "allow renames of 8 literal types" in {
       val cases = Map[String, TypeDef](
-        "type str = String" → TypeDef(33, Identifier("str"), Strng),
-        "type num = Number" → TypeDef(33, Identifier("num"), Number),
-        "type boo = Boolean" → TypeDef(33, Identifier("boo"), Boolean),
-        "type ident  = Id" -> TypeDef(33, Identifier("ident"), Id),
-        "type dat = Date" -> TypeDef(33, Identifier("dat"), Date),
-        "type tim = Time" -> TypeDef(33, Identifier("tim"), Time),
-        "type stamp = TimeStamp" -> TypeDef(33, Identifier("stamp"), TimeStamp),
-        "type url = URL" -> TypeDef(33, Identifier("url"), URL),
+        "type str = String" → TypeDef(
+          33,
+          Identifier("str"),
+          PredefinedType(Identifier("String"))
+        ),
+        "type num = Number" → TypeDef(
+          33,
+          Identifier("num"),
+          PredefinedType(Identifier("Number"))
+        ),
+        "type boo = Boolean" → TypeDef(
+          33,
+          Identifier("boo"),
+          PredefinedType(Identifier("Boolean"))
+        ),
+        "type ident  = Id" -> TypeDef(
+          33,
+          Identifier("ident"),
+          PredefinedType(Identifier("Id"))
+        ),
+        "type dat = Date" -> TypeDef(
+          33,
+          Identifier("dat"),
+          PredefinedType(Identifier("Date"))
+        ),
+        "type tim = Time" -> TypeDef(
+          33,
+          Identifier("tim"),
+          PredefinedType(Identifier("Time"))
+        ),
+        "type stamp = TimeStamp" -> TypeDef(
+          33,
+          Identifier("stamp"),
+          PredefinedType(Identifier("TimeStamp"))
+        ),
+        "type url = URL" -> TypeDef(
+          33,
+          Identifier("url"),
+          PredefinedType(Identifier("URL"))
+        ),
         "type FirstName = String" -> TypeDef(
           33,
           Identifier("FirstName"),
-          Strng
+          PredefinedType(Identifier("String"))
         )
       )
       checkDef[TypeDef](cases, _.contexts.head.types.head)
@@ -72,19 +104,19 @@ class TypesParserTest extends ParsingTest {
           TypeDef(
             33,
             Identifier("oneOrMore"),
-            OneOrMore(TypeRef(Identifier("agg")))
+            OneOrMore(Identifier("agg"))
           ),
         "type zeroOrMore = type agg*" ->
           TypeDef(
             33,
             Identifier("zeroOrMore"),
-            ZeroOrMore(TypeRef(Identifier("agg")))
+            ZeroOrMore(Identifier("agg"))
           ),
         "type optional = type agg?" ->
           TypeDef(
             33,
             Identifier("optional"),
-            Optional(TypeRef(Identifier("agg")))
+            Optional(Identifier("agg"))
           )
       )
     }

@@ -1,5 +1,5 @@
 // #everything
-// RIDDL is about defining domains so ..
+// RIDDL is about defining domains so ...
 domain Everything {
 
   // Channels are defined to flow messages between entities. They are defined

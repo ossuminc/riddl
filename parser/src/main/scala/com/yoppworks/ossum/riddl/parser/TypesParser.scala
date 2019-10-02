@@ -5,10 +5,10 @@ import fastparse._
 import ScalaWhitespace._
 import CommonParser._
 
-/** Unit Tests For TypesParser */
+/** Parsing rules for Type definitions */
 object TypesParser {
 
-  def literalTypeExpression[_: P]: P[Type] = {
+  def literalTypeExpression[_: P]: P[PredefinedType] = {
     P(
       StringIn(
         "String",
@@ -44,46 +44,49 @@ object TypesParser {
     ).map(_.map(TypeRef)).map(Alternation)
   }
 
-  def typeExpression[_: P]: P[Type] = {
-    P(cardinality(typeRef | identifier.map(TypeRef)))
+  def typeExpression[_: P]: P[TypeExpression] = {
+    P(cardinality(typeRef | literalTypeExpression | identifier.map(TypeRef)))
   }
 
-  def cardinality[_: P](p: ⇒ P[TypeRef]): P[Type] = {
+  def cardinality[_: P](p: ⇒ P[TypeExpression]): P[TypeExpression] = {
     P(p ~ ("?".! | "*".! | "+".!).?).map {
-      case (typ, Some("?")) ⇒ Optional(typ)
-      case (typ, Some("+")) ⇒ OneOrMore(typ)
-      case (typ, Some("*")) ⇒ ZeroOrMore(typ)
+      case (typ, Some("?")) ⇒ Optional(typ.id)
+      case (typ, Some("+")) ⇒ OneOrMore(typ.id)
+      case (typ, Some("*")) ⇒ ZeroOrMore(typ.id)
       case (typ, Some(_)) => typ
       case (typ, None) ⇒ typ
     }
   }
 
-  def field[_: P]: P[(Identifier, Type)] = {
+  def field[_: P]: P[(Identifier, TypeExpression)] = {
     P(identifier ~ ":" ~ typeExpression)
   }
 
-  def fields[_: P]: P[Seq[(Identifier, Type)]] = {
+  def fields[_: P]: P[Seq[(Identifier, TypeExpression)]] = {
     P(field.rep(1, P(",")))
   }
 
   def aggregationType[_: P]: P[Aggregation] = {
     P(
       "combine" ~/ "{" ~ fields ~ "}"
-    ).map(types ⇒ Aggregation(types.toMap[Identifier, Type]))
+    ).map(types ⇒ Aggregation(types.toMap[Identifier, TypeExpression]))
   }
 
-  def typeDefKinds[_: P]: P[Type] = {
+  def typeDefinitions[_: P]: P[TypeDefinition] = {
     P(
-      enumerationType | alternationType | aggregationType | typeExpression
+      enumerationType | alternationType | aggregationType
     )
+  }
+
+  def types[_: P]: P[Type] = {
+    P(typeDefinitions | typeExpression)
   }
 
   def typeDef[_: P]: P[TypeDef] = {
     P(
-      "type" ~ Index ~/ identifier ~ "=" ~ typeDefKinds
-    ).map {
-      case (index, i, ty) ⇒ TypeDef(index, i, ty)
+      "type" ~ Index ~/ identifier ~ "=" ~ types ~ explanation
+    ).map { tpl ⇒
+      (TypeDef.apply _).tupled(tpl)
     }
   }
-
 }

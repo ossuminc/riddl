@@ -1,110 +1,113 @@
 package com.yoppworks.ossum.riddl.parser
 
+import cats.Monoid
 import com.yoppworks.ossum.riddl.parser.AST._
 
-/** Unit Tests For Traversal */
+/** Traversal Module */
 object Traversal {
 
-  trait Visitor[T] {
-    def visitDomain(d: DomainDef): DomainVisitor[T]
-    def visitContext(c: ContextDef): ContextVisitor[T]
-    def visitEntity(e: EntityDef): EntityVisitor[T]
-    def visitInteraction(i: InteractionDef): InteractionVisitor[T]
-    def visitAdaptor(a: AdaptorDef): AdaptorVisitor[T]
+  trait DefTraveler[P, D <: Def] {
+    def traverse: P
+    protected def open(d: D): P
+    protected def close(): P
+    protected def visitExplanation(exp: Option[Explanation]): Unit
   }
 
-  abstract class DefVisitor[T, D <: Def] {
-    def traverse(visitor: Visitor[T]): T
-    def open(d: D): Unit
-    def close: T
-  }
-
-  abstract class EntityVisitor[T](entity: EntityDef)
-      extends DefVisitor[T, EntityDef] {
-    final def traverse(visitor: Visitor[T]): T = {
-      open(entity)
-      entity.invariants.foreach(visit)
-      entity.features.foreach(visit)
-      close
-    }
-
-    def visit(i: InvariantDef): Unit
-    def visit(f: FeatureDef): Unit
-  }
-
-  abstract class AdaptorVisitor[T](adaptor: AdaptorDef)
-      extends DefVisitor[T, AdaptorDef] {
-    final def traverse(visitor: Visitor[T]): T = {
-      open(adaptor)
-      close
-    }
-  }
-
-  abstract class InteractionVisitor[T](interaction: InteractionDef)
-      extends DefVisitor[T, InteractionDef] {
-    final def traverse(visitor: Visitor[T]): T = {
-      open(interaction)
-      interaction.roles.foreach(visit)
-      interaction.actions.foreach(visit)
-      close
-    }
-    def visit(role: RoleDef): Unit
-    def visit(action: ActionDef): Unit
-  }
-
-  abstract class ContextVisitor[T](context: ContextDef)
-      extends DefVisitor[T, ContextDef] {
-    final def traverse(visitor: Visitor[T]): T = {
-      open(context)
-      context.types.foreach(visit)
-      context.commands.foreach(visit)
-      context.events.foreach(visit)
-      context.queries.foreach(visit)
-      context.results.foreach(visit)
-      context.adaptors.foreach(Traversal.traverse(_, visitor))
-      context.interactions.foreach(Traversal.traverse(_, visitor))
-      close
-    }
-    def visit(ty: TypeDef): Unit
-    def visit(command: CommandDef): Unit
-    def visit(event: EventDef): Unit
-    def visit(query: QueryDef): Unit
-    def visit(result: ResultDef): Unit
-  }
-
-  abstract class DomainVisitor[T](domain: DomainDef)
-      extends DefVisitor[T, DomainDef] {
-    final def traverse(visitor: Visitor[T]): T = {
+  abstract class DomainTraveler[P](
+    domain: DomainDef
+  ) extends DefTraveler[P, DomainDef] {
+    final def traverse: P = {
       open(domain)
-      domain.types.foreach(visit)
-      domain.channels.foreach(visit)
-      domain.contexts.foreach(Traversal.traverse(_, visitor))
-      domain.interactions.foreach(Traversal.traverse(_, visitor))
-      close
+      domain.types.foreach(visitType)
+      domain.channels.foreach(visitChannel)
+      domain.interactions.foreach(visitInteraction(_).traverse)
+      domain.contexts.foreach(visitContext(_).traverse)
+      visitExplanation(domain.explanation)
+      close()
     }
 
-    def visit(ty: TypeDef): Unit
-    def visit(ch: ChannelDef): Unit
+    def visitType(typ: TypeDef): Unit
+    def visitChannel(chan: ChannelDef): Unit
+    def visitInteraction(i: InteractionDef): InteractionTraveler[P]
+    def visitContext(context: ContextDef): ContextTraveler[P]
   }
 
-  def traverse[T](input: AST, visitor: Visitor[T]): T = {
-    input match {
-      case domain: DomainDef ⇒
-        val v = visitor.visitDomain(domain)
-        v.traverse(visitor)
-      case context: ContextDef ⇒
-        val v = visitor.visitContext(context)
-        v.traverse(visitor)
-      case entity: EntityDef ⇒
-        val v = visitor.visitEntity(entity)
-        v.traverse(visitor)
-      case interaction: InteractionDef ⇒
-        val v = visitor.visitInteraction(interaction)
-        v.traverse(visitor)
-      case adaptor: AdaptorDef ⇒
-        val v = visitor.visitAdaptor(adaptor)
-        v.traverse(visitor)
-      case other: AST ⇒ ???
+  abstract class ContextTraveler[P](context: ContextDef)
+      extends DefTraveler[P, ContextDef] {
+    final def traverse: P = {
+      open(context)
+      context.types.foreach(visitType)
+      context.commands.foreach(visitCommand)
+      context.events.foreach(visitEvent)
+      context.queries.foreach(visitQuery)
+      context.results.foreach(visitResult)
+      context.adaptors.foreach(visitAdaptor(_).traverse)
+      context.interactions.foreach(visitInteraction(_).traverse)
+      context.entities.foreach(visitEntity(_).traverse)
+      close()
     }
+    def visitType(ty: TypeDef): Unit
+    def visitCommand(command: CommandDef): Unit
+    def visitEvent(event: EventDef): Unit
+    def visitQuery(query: QueryDef): Unit
+    def visitResult(result: ResultDef): Unit
+    def visitAdaptor(a: AdaptorDef): AdaptorTraveler[P]
+    def visitInteraction(i: InteractionDef): InteractionTraveler[P]
+    def visitEntity(e: EntityDef): EntityTraveler[P]
+  }
+
+  abstract class AdaptorTraveler[P](adaptor: AdaptorDef)
+      extends DefTraveler[P, AdaptorDef] {
+    final def traverse: P = {
+      val t = open(adaptor)
+      close()
+    }
+  }
+
+  abstract class EntityTraveler[P](entity: EntityDef)
+      extends DefTraveler[P, EntityDef] {
+    final def traverse: P = {
+      open(entity)
+      entity.invariants.foreach(visitInvariant)
+      entity.features.foreach(visitFeature)
+      visitExplanation(entity.explanation)
+      close()
+    }
+
+    def visitInvariant(i: InvariantDef): Unit
+    def visitFeature(f: FeatureDef): Unit
+  }
+
+  abstract class InteractionTraveler[P](
+    interaction: InteractionDef
+  ) extends DefTraveler[P, InteractionDef] {
+    final def traverse: P = {
+      open(interaction)
+      interaction.roles.foreach(visitRole)
+      interaction.actions.foreach(visitAction)
+      close()
+    }
+    def visitRole(role: RoleDef): Unit
+    def visitAction(action: ActionDef): Unit
+  }
+
+  def traverse[T <: Monoid[_]](
+    domains: Domains
+  )(f: DomainDef ⇒ DomainTraveler[T]): Seq[T] = {
+    domains.map { domain ⇒
+      f(domain).traverse
+    }
+  }
+
+  def traverse[T <: Monoid[_]](
+    context: ContextDef
+  )(f: ContextDef => ContextTraveler[T]): T = {
+    f(context).traverse
+  }
+
+  def traverse[D <: Def, T <: Monoid[_]](
+    ast: AST
+  )(f: AST ⇒ DefTraveler[T, D]): T = {
+    f(ast).traverse
   }
 }

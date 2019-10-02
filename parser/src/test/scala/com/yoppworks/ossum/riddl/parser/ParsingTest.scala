@@ -1,5 +1,8 @@
 package com.yoppworks.ossum.riddl.parser
 
+import java.io.File
+
+import org.scalatest.Assertion
 import org.scalatest.MustMatchers
 import org.scalatest.WordSpec
 
@@ -65,6 +68,24 @@ trait ParsingTest extends WordSpec with MustMatchers {
       case Left(msg) =>
         fail(msg)
     }
+  }
+
+  def checkFile(label: String, fileName: String): Assertion = {
+    val directory = "parser/src/test/input/"
+    val file = new File(directory + fileName)
+    val results = TopLevelParser.parseFile(file, topLevelDomains(_))
+    var failed = false
+    val msg = results match {
+      case Left(error) ⇒
+        failed = true
+        s"$label:$error"
+      case Right(_) ⇒
+        s"$label: Succeeded"
+    }
+    if (failed)
+      fail(msg)
+    else
+      succeed
   }
 
 }
