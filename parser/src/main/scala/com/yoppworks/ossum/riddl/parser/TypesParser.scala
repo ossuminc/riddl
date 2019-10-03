@@ -5,6 +5,8 @@ import fastparse._
 import ScalaWhitespace._
 import CommonParser._
 
+import scala.collection.immutable.ListMap
+
 /** Parsing rules for Type definitions */
 object TypesParser {
 
@@ -40,7 +42,7 @@ object TypesParser {
 
   def alternationType[_: P]: P[Alternation] = {
     P(
-      "choose" ~/ identifier.rep(2, P("or"))
+      "choose" ~/ identifier.rep(2, P("or" | "|"))
     ).map(_.map(TypeRef)).map(Alternation)
   }
 
@@ -59,7 +61,7 @@ object TypesParser {
   }
 
   def field[_: P]: P[(Identifier, TypeExpression)] = {
-    P(identifier ~ ":" ~ typeExpression)
+    P(identifier ~ is ~ typeExpression)
   }
 
   def fields[_: P]: P[Seq[(Identifier, TypeExpression)]] = {
@@ -69,7 +71,7 @@ object TypesParser {
   def aggregationType[_: P]: P[Aggregation] = {
     P(
       "combine" ~/ "{" ~ fields ~ "}"
-    ).map(types ⇒ Aggregation(types.toMap[Identifier, TypeExpression]))
+    ).map(types ⇒ Aggregation(ListMap[Identifier, TypeExpression](types: _*)))
   }
 
   def typeDefinitions[_: P]: P[TypeDefinition] = {
@@ -84,7 +86,7 @@ object TypesParser {
 
   def typeDef[_: P]: P[TypeDef] = {
     P(
-      "type" ~ Index ~/ identifier ~ "=" ~ types ~ explanation
+      "type" ~ Index ~/ identifier ~ is ~ types ~ explanation
     ).map { tpl ⇒
       (TypeDef.apply _).tupled(tpl)
     }

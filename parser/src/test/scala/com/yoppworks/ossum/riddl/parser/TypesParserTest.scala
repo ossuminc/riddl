@@ -2,6 +2,8 @@ package com.yoppworks.ossum.riddl.parser
 
 import com.yoppworks.ossum.riddl.parser.AST._
 
+import scala.collection.immutable.ListMap
+
 /** Unit Tests For TypesParserTest */
 class TypesParserTest extends ParsingTest {
 
@@ -93,7 +95,7 @@ class TypesParserTest extends ParsingTest {
             33,
             Identifier("agg"),
             Aggregation(
-              Map(
+              ListMap(
                 Identifier("key") → Number,
                 Identifier("id") → Id,
                 Identifier("time") → TimeStamp

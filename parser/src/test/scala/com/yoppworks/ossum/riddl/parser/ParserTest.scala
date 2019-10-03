@@ -216,7 +216,9 @@ class ParserTest extends ParsingTest {
       val input =
         """domain foo {
           |  context bar {
-          |    persistent aggregate entity Hamburger = type SomeType
+          |    entity Hamburger {
+          |      type: SomeType
+          |      options: persistent aggregate
           |      consumes channel EntityChannel
           |      produces channel EntityChannel
           |      feature AnAspect {
@@ -228,6 +230,7 @@ class ParserTest extends ParsingTest {
           |        WHEN "I go fishing"
           |        THEN "I'll just eat worms"
           |      }
+          |    }
           |  }
           |}
           |""".stripMargin
@@ -235,16 +238,16 @@ class ParserTest extends ParsingTest {
         input,
         EntityDef(
           33,
-          Seq(EntityPersistent, EntityAggregate),
           Identifier("Hamburger"),
           TypeRef(Identifier("SomeType")),
+          Some(Seq(EntityPersistent, EntityAggregate)),
           Some(ChannelRef(Identifier("EntityChannel"))),
           Some(ChannelRef(Identifier("EntityChannel"))),
           Seq(
             FeatureDef(
-              175,
+              197,
               Identifier("AnAspect"),
-              LiteralString("This is some aspect of the entity"),
+              Seq("This is some aspect of the entity"),
               Some(Background(Seq(Given(LiteralString("Nobody loves me"))))),
               Seq(
                 Example(

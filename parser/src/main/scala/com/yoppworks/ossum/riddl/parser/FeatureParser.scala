@@ -38,18 +38,19 @@ object FeatureParser {
 
   def example[_: P]: P[Example] = {
     P(
-      IgnoreCase("example") ~ ":" ~/ literalString ~ givens ~ whens ~ thens
+      IgnoreCase("example") ~ "{" ~/ literalString ~ givens ~ whens ~ thens ~
+        "}"
     ).map { tpl ⇒
       (Example.apply _).tupled(tpl)
     }
   }
 
   def background[_: P]: P[Background] = {
-    P(IgnoreCase("background") ~ ":" ~/ givens).map(Background)
+    P(IgnoreCase("background") ~ "{" ~/ givens).map(Background) ~ "}"
   }
 
-  def description[_: P]: P[LiteralString] = {
-    P(IgnoreCase("description") ~ ":" ~/ literalString)
+  def description[_: P]: P[Seq[String]] = {
+    P(IgnoreCase("description") ~/ lines)
   }
 
   def feature[_: P]: P[FeatureDef] = {

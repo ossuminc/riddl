@@ -7,16 +7,17 @@ import com.yoppworks.ossum.riddl.parser.AST._
 /** Common Parsing Rules */
 object CommonParser {
 
-  def link[_: P]: P[Link] = {
-    P("link" ~ "(" ~/ literalString ~ ")"./).map(Link)
+  def lines[_: P]: P[Seq[String]] = {
+    P("{" ~ (CharPred(_ != '\n').! ~ "\n".?).rep ~ "}")
+  }
+
+  def links[_: P]: P[Seq[Link]] = {
+    P("links" ~ "(" ~/ literalString.rep(1, sep = ",") ~ ")"./).map(_.map(Link))
   }
 
   def explanation[_: P]: P[Option[Explanation]] = {
     P(
-      "explained" ~ "as" ~ "{" ~ "purpose" ~ ":" ~ literalString ~
-        ("details" ~ ":" ~ literalString).? ~
-        link.rep(0) ~
-        "}"./
+      "explained" ~ "as" ~ lines ~ ("with" ~ links).?
     ).?.map { opt ⇒
       opt.map(tpl ⇒ { Explanation.apply _ }.tupled(tpl))
     }
@@ -58,6 +59,10 @@ object CommonParser {
 
   def pathIdentifier[_: P]: P[PathIdentifier] = {
     P(anyIdentifier.repX(1, P("."))).map(PathIdentifier)
+  }
+
+  def is[_: P]: P[Unit] = {
+    P("is" | ":" | "=")
   }
 
   def typeRef[_: P]: P[TypeRef] = {

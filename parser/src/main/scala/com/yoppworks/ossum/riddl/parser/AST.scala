@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl.parser
 
+import scala.collection.immutable.ListMap
+
 /** Abstract Syntax Tree
   * This object defines the model for processing IDDL and producing a
   * raw AST from it. This raw AST has no referential integrity, it just
@@ -13,7 +15,9 @@ object AST {
 
   sealed trait AST
 
-  case class Identifier(value: String) extends AST
+  case class Identifier(value: String) extends AST {
+    override def toString: String = value
+  }
 
   case class LiteralString(s: String) extends AST
   case class LiteralInteger(n: BigInt) extends AST
@@ -23,9 +27,8 @@ object AST {
   case class Link(url: LiteralString) extends AST
 
   case class Explanation(
-    purpose: LiteralString,
-    details: Option[LiteralString] = None,
-    links: Seq[Link] = Seq.empty[Link]
+    markdown: Seq[String],
+    links: Option[Seq[Link]] = None
   ) extends AST
 
   sealed trait Ref extends AST {
@@ -44,8 +47,12 @@ object AST {
   sealed trait TypeExpression extends Type {
     def id: Identifier
   }
-  case class TypeRef(id: Identifier) extends Ref with TypeExpression
-  case class PredefinedType(id: Identifier) extends TypeExpression
+  case class TypeRef(id: Identifier) extends Ref with TypeExpression {
+    override def toString: String = id.value
+  }
+  case class PredefinedType(id: Identifier) extends TypeExpression {
+    override def toString: String = id.value
+  }
 
   val Strng = PredefinedType(Identifier("String"))
   val Boolean = PredefinedType(Identifier("Boolean"))
@@ -66,7 +73,7 @@ object AST {
 
   case class Enumeration(of: Seq[Identifier]) extends TypeDefinition
   case class Alternation(of: Seq[TypeExpression]) extends TypeDefinition
-  case class Aggregation(of: Map[Identifier, TypeExpression])
+  case class Aggregation(of: ListMap[Identifier, TypeExpression])
       extends TypeDefinition
 
   case class TypeDef(
@@ -126,11 +133,25 @@ object AST {
   ) extends MessageDef
 
   sealed trait EntityOption
-  case object EntityAggregate extends EntityOption
-  case object EntityPersistent extends EntityOption
-  case object EntityConsistent extends EntityOption
-  case object EntityAvailable extends EntityOption
-  case object EntityDevice extends EntityOption
+  case object EntityAggregate extends EntityOption {
+    override def toString: String = "aggregate"
+  }
+
+  case object EntityPersistent extends EntityOption {
+    override def toString: String = "persistent"
+  }
+
+  case object EntityConsistent extends EntityOption {
+    override def toString: String = "consistent"
+  }
+
+  case object EntityAvailable extends EntityOption {
+    override def toString: String = "available"
+  }
+
+  case object EntityDevice extends EntityOption {
+    override def toString: String = "device"
+  }
 
   case class EntityRef(id: Identifier) extends Ref
 
@@ -147,7 +168,7 @@ object AST {
   case class FeatureDef(
     index: Int,
     id: Identifier,
-    description: LiteralString,
+    description: Seq[String],
     background: Option[Background] = None,
     examples: Seq[Example] = Seq.empty[Example],
     explanation: Option[Explanation] = None
@@ -171,9 +192,9 @@ object AST {
     */
   case class EntityDef(
     index: Int,
-    options: Seq[EntityOption] = Seq.empty[EntityOption],
     id: Identifier,
     typ: TypeExpression,
+    options: Option[Seq[EntityOption]] = None,
     consumes: Option[ChannelRef] = None,
     produces: Option[ChannelRef] = None,
     features: Seq[FeatureDef] = Seq.empty[FeatureDef],

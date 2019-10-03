@@ -2,6 +2,8 @@ package com.yoppworks.ossum.riddl.parser
 
 import org.scalatest._
 
+import scala.collection.immutable.ListMap
+
 /** Unit Tests For TypeSpec */
 class ASTTest extends WordSpec with MustMatchers {
   import AST._
@@ -23,8 +25,8 @@ class ASTTest extends WordSpec with MustMatchers {
       Enumeration(Seq.empty[Identifier]) mustBe
         Enumeration(Seq.empty[Identifier])
       Alternation(Seq.empty[TypeRef]) mustBe Alternation(Seq.empty[TypeRef])
-      Aggregation(Map.empty[Identifier, TypeExpression]) mustBe
-        Aggregation(Map.empty[Identifier, TypeExpression])
+      Aggregation(ListMap.empty[Identifier, TypeExpression]) mustBe
+        Aggregation(ListMap.empty[Identifier, TypeExpression])
       Optional(Identifier("String")) mustBe Optional(Strng.id)
       ZeroOrMore(Identifier("Time")) mustBe ZeroOrMore(Time.id)
       OneOrMore(Identifier("URL")) mustBe OneOrMore(URL.id)

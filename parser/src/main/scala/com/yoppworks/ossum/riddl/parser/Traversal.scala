@@ -8,35 +8,62 @@ object Traversal {
 
   trait DefTraveler[P, D <: Def] {
     def traverse: P
-    protected def open(d: D): P
+    protected def open(): P
     protected def close(): P
     protected def visitExplanation(exp: Option[Explanation]): Unit
   }
 
-  abstract class DomainTraveler[P](
-    domain: DomainDef
-  ) extends DefTraveler[P, DomainDef] {
+  trait DomainTraveler[P] extends DefTraveler[P, DomainDef] {
+    def domain: DomainDef
     final def traverse: P = {
-      open(domain)
-      domain.types.foreach(visitType)
-      domain.channels.foreach(visitChannel)
+      open()
+      domain.types.foreach(visitType(_).traverse)
+      domain.channels.foreach(visitChannel(_).traverse)
       domain.interactions.foreach(visitInteraction(_).traverse)
       domain.contexts.foreach(visitContext(_).traverse)
       visitExplanation(domain.explanation)
       close()
     }
 
-    def visitType(typ: TypeDef): Unit
-    def visitChannel(chan: ChannelDef): Unit
+    def visitType(typ: TypeDef): TypeTraveler[P]
+    def visitChannel(chan: ChannelDef): ChannelTraveler[P]
     def visitInteraction(i: InteractionDef): InteractionTraveler[P]
     def visitContext(context: ContextDef): ContextTraveler[P]
   }
 
-  abstract class ContextTraveler[P](context: ContextDef)
-      extends DefTraveler[P, ContextDef] {
+  trait TypeTraveler[P] extends DefTraveler[P, TypeDef] {
+    def typ: TypeDef
+
+    def traverse: P = {
+      open()
+      visitType(typ.typ)
+      close()
+    }
+    def visitType(ty: Type): Unit
+  }
+
+  trait ChannelTraveler[P] extends DefTraveler[P, ChannelDef] {
+    def channel: ChannelDef
+
+    def traverse: P = {
+      open()
+      channel.commands.foreach(visitCommand)
+      channel.events.foreach(visitEvent)
+      channel.queries.foreach(visitQuery)
+      channel.results.foreach(visitResult)
+      close()
+    }
+    def visitCommand(command: CommandRef): Unit
+    def visitEvent(event: EventRef): Unit
+    def visitQuery(query: QueryRef): Unit
+    def visitResult(result: ResultRef): Unit
+  }
+
+  trait ContextTraveler[P] extends DefTraveler[P, ContextDef] {
+    def context: ContextDef
     final def traverse: P = {
-      open(context)
-      context.types.foreach(visitType)
+      open()
+      context.types.foreach(visitType(_).traverse)
       context.commands.foreach(visitCommand)
       context.events.foreach(visitEvent)
       context.queries.foreach(visitQuery)
@@ -46,7 +73,7 @@ object Traversal {
       context.entities.foreach(visitEntity(_).traverse)
       close()
     }
-    def visitType(ty: TypeDef): Unit
+    def visitType(ty: TypeDef): TypeTraveler[P]
     def visitCommand(command: CommandDef): Unit
     def visitEvent(event: EventDef): Unit
     def visitQuery(query: QueryDef): Unit
@@ -56,33 +83,45 @@ object Traversal {
     def visitEntity(e: EntityDef): EntityTraveler[P]
   }
 
-  abstract class AdaptorTraveler[P](adaptor: AdaptorDef)
-      extends DefTraveler[P, AdaptorDef] {
+  trait AdaptorTraveler[P] extends DefTraveler[P, AdaptorDef] {
+    def adaptor: AdaptorDef
     final def traverse: P = {
-      val t = open(adaptor)
+      open()
       close()
     }
   }
 
-  abstract class EntityTraveler[P](entity: EntityDef)
-      extends DefTraveler[P, EntityDef] {
+  trait EntityTraveler[P] extends DefTraveler[P, EntityDef] {
+    def entity: EntityDef
     final def traverse: P = {
-      open(entity)
+      open()
+      entity.consumes.foreach(visitConsumer)
+      entity.produces.foreach(visitProducer)
       entity.invariants.foreach(visitInvariant)
       entity.features.foreach(visitFeature)
       visitExplanation(entity.explanation)
       close()
     }
-
+    def visitProducer(p: ChannelRef): Unit
+    def visitConsumer(c: ChannelRef): Unit
     def visitInvariant(i: InvariantDef): Unit
-    def visitFeature(f: FeatureDef): Unit
+    def visitFeature(f: FeatureDef): FeatureTraveler[P]
   }
 
-  abstract class InteractionTraveler[P](
-    interaction: InteractionDef
-  ) extends DefTraveler[P, InteractionDef] {
+  trait FeatureTraveler[P] extends DefTraveler[P, FeatureDef] {
+    def feature: FeatureDef
     final def traverse: P = {
-      open(interaction)
+      open()
+      feature.examples.foreach(visitExample)
+      close()
+    }
+    def visitExample(example: Example): Unit
+  }
+
+  trait InteractionTraveler[P] extends DefTraveler[P, InteractionDef] {
+    def interaction: InteractionDef
+    final def traverse: P = {
+      open()
       interaction.roles.foreach(visitRole)
       interaction.actions.foreach(visitAction)
       close()

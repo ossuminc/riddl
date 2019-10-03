@@ -4,82 +4,93 @@ domain ReactiveBBQ {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId = Id
-  type OrderId = Id
+  type CustomerId is Id
+  type OrderId is Id
 
   // #Kitchen
   // The Kitchen context pertains to
   context Kitchen {
-    type OrderViewType = combine {
-                           address: type IPAddress
-                         }
-    entity OrderView = OrderViewType
+    type OrderViewType is combine {
+      address is IPAddress
+    }
+    entity OrderView is OrderViewType {
+    }
   }
   // #Kitchen
 
   // #Loyalty
   context Loyalty {
-    type AccrualEvent = combine {
-      when: TimeStamp,
-      who: type CustomerId,
-      pointsAccrued: Number,
-      fromOrder: type OrderId
+    type AccrualEvent is combine {
+      when is TimeStamp,
+      who is CustomerId,
+      pointsAccrued is Number,
+      fromOrder is OrderId
     }
-    type AwardEvent = combine {
-      when: TimeStamp,
-      who: type CustomerId,
-      pointsAwarded: Number,
-      toOrder: type OrderId
+    type AwardEvent is combine {
+      when is TimeStamp,
+      who is CustomerId,
+      pointsAwarded is Number,
+      toOrder is OrderId
     }
-    type RewardEvent = choose AccrualEvent or AwardEvent
-    type RewardsAccountType = combine {
-                                    id: type CustomerId,
-                                    points: Number,
-                                    events: type RewardEvent*
-                                  }
-    entity RewardsAccount = RewardsAccountType
+    type RewardEvent is choose AccrualEvent or AwardEvent
+    type RewardsAccountType is combine {
+      id is CustomerId,
+      points is Number,
+      events is RewardEvent*
+    }
+    entity RewardsAccount is RewardsAccountType {
+    }
   }
   // #Loyalty
 
   // #Order
   context Order {
-    type OrderType = combine {
-                           orderId: Id,
-                           customerId: Id
-                         }
-    aggregate entity Order = OrderType
+    type OrderType is combine {
+      orderId is Id,
+      customerId is Id
+    }
+    entity Order is OrderType {
+      options: aggregate
+    }
   }
   // #Order
 
   // #Payment
   context Payment {
-    type PaymentType = combine {
-                             orderId: Id,
-                             amount: Number,
-                             cardToken: String
-                           }
-    aggregate entity Payment = PaymentType
+    type PaymentType is combine {
+      orderId is Id,
+      amount is Number,
+      cardToken is String
+    }
+    entity Payment is PaymentType {
+      options: aggregate
+    }
   }
   // #Payment
 
   // #Menu
   context Menu {
-    entity MenuItem =  String
-    aggregate entity Menu = type MenuItem+
+    entity MenuItem is String {
+    }
+    entity Menu is MenuItem+ {
+      options: aggregate
+    }
   }
   // #Menu
 
   // #Reservation
   context Reservation {
-    type ReservationType = combine {
-                                 partyName: String,
-                                 phoneNumber: String,
-                                 location: Id,
-                                 time: Time,
-                                 date: Date
-                               }
-    aggregate entity Reservation = ReservationType consumes channel 'foo'
-    produces channel 'bar'
+    type ReservationType is combine {
+      partyName is String,
+      phoneNumber is String,
+      location is Id,
+      time is Time,
+      date is Date
+    }
+    entity Reservation is ReservationType {
+      consumes channel foo
+      produces channel bar
+    }
   }
   // #Reservation
 }
