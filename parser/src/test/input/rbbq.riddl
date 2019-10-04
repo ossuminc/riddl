@@ -4,8 +4,12 @@ domain ReactiveBBQ {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id
-  type OrderId is Id
+  type CustomerId is Id explained as {
+    "Unique identifier for a customer"
+  }
+  type OrderId is Id explained as {
+    "Unique identifier for an customer's order"
+  }
 
   // #Kitchen
   // The Kitchen context pertains to
@@ -13,8 +17,10 @@ domain ReactiveBBQ {
     type OrderViewType is combine {
       address is IPAddress
     }
-    entity OrderView is OrderViewType {
+    entity OrderViewer is OrderViewType {
+      option is device
     }
+  } explained as {
   }
   // #Kitchen
 
@@ -50,7 +56,7 @@ domain ReactiveBBQ {
       customerId is Id
     }
     entity Order is OrderType {
-      options: aggregate
+      option is aggregate
     }
   }
   // #Order
@@ -63,7 +69,7 @@ domain ReactiveBBQ {
       cardToken is String
     }
     entity Payment is PaymentType {
-      options: aggregate
+      option is aggregate
     }
   }
   // #Payment
@@ -73,7 +79,7 @@ domain ReactiveBBQ {
     entity MenuItem is String {
     }
     entity Menu is MenuItem+ {
-      options: aggregate
+      option is aggregate
     }
   }
   // #Menu
@@ -89,10 +95,17 @@ domain ReactiveBBQ {
     }
 
     entity Reservation is ReservationValue {
-      // consumes channel foo
-      // produces channel bar
+      consumes channel foo
+      produces channel bar
     }
   }
   // #Reservation
+} explained as {
+  "# Reactive BBQ Domain Definition"
+  "This domain definition is designed to be instructive in the RIDDL language."
+  "It uses the case study from the Lightbend Reactive Architecture course as"
+  "the basis for defining the domain. The course uses a set of interviews with"
+  "Reactive BBQ employees to define the requirements. This domain specification"
+  "is a possible result of analyzing that domain: the Reactive BBQ restaurant."
 }
 // #everything

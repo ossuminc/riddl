@@ -66,7 +66,7 @@ object CommonParser {
   }
 
   def is[_: P]: P[Unit] = {
-    P("is" | ":" | "=")./
+    P("is" | "are" | ":" | "=")./
   }
 
   def messageRef[_: P]: P[MessageRef] = {

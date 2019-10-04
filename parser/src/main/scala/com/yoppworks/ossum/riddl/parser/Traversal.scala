@@ -21,7 +21,6 @@ object Traversal {
       domain.channels.foreach(visitChannel(_).traverse)
       domain.interactions.foreach(visitInteraction(_).traverse)
       domain.contexts.foreach(visitContext(_).traverse)
-      visitExplanation(domain.explanation)
       close()
     }
 
@@ -32,11 +31,11 @@ object Traversal {
   }
 
   trait TypeTraveler[P] extends DefTraveler[P, TypeDef] {
-    def typ: TypeDef
+    def typeDef: TypeDef
 
     def traverse: P = {
       open()
-      visitType(typ.typ)
+      visitType(typeDef.typ)
       close()
     }
     def visitType(ty: Type): Unit

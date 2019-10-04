@@ -48,8 +48,6 @@ object Generator {
             )
             lines.append("\n" + spc + "}")
           }
-        } else {
-          lines.append("\n")
         }
       }
     }
@@ -65,26 +63,24 @@ object Generator {
     }
 
     def close(): Lines = {
-      lines.append(s"$spc}")
       visitExplanation(definition.explanation)
       lines.append("\n")
     }
-
   }
 
-  case class TypeGenerator(typ: TypeDef, lines: Lines, indent: Int = 2)
-      extends GeneratorBase[TypeDef](typ)
+  case class TypeGenerator(typeDef: TypeDef, lines: Lines, indent: Int = 2)
+      extends GeneratorBase[TypeDef](typeDef)
       with Traversal.TypeTraveler[Lines] {
 
     protected def open(): Lines = {
       lines.append(
-        s"${spc}type ${typ.id} is "
+        s"${spc}type ${typeDef.id} is "
       )
     }
 
     def visitType(ty: Type): Unit = {
       val text = ty match {
-        case exp: TypeExpression ⇒ visitTypeExpression(exp) + "\n"
+        case exp: TypeExpression ⇒ visitTypeExpression(exp)
         case dfn: TypeDefinition ⇒ visitTypeDefinition(dfn)
       }
       lines.append(text)
@@ -95,21 +91,17 @@ object Generator {
     ): String = {
       typeDef match {
         case AST.Enumeration(of) ⇒
-          s"any [ ${of.map(_.value).mkString(" ")} ]\n"
+          s"any [ ${of.map(_.value).mkString(" ")} ]"
         case AST.Alternation(of) ⇒
-          s"choose ${of.map(_.id.toString).mkString(" or ")}\n"
+          s"choose ${of.map(_.id.toString).mkString(" or ")}"
         case AST.Aggregation(of) ⇒
           s"combine {\n${of
             .map {
               case (k, v) ⇒
                 s"$spc  ${k.value} is ${visitTypeExpression(v)}"
             }
-            .mkString(s",\n")}\n$spc}\n"
+            .mkString(s",\n")}\n$spc}"
       }
-    }
-
-    override def close(): Lines = {
-      lines
     }
   }
 
@@ -167,6 +159,11 @@ object Generator {
       lines.append(s"${spc}channel ${channel.id} {\n")
     }
 
+    override def close(): Lines = {
+      lines.append(s"$spc}")
+      super.close()
+    }
+
     def visitCommands(commands: Seq[CommandRef]): Unit = {
       lines.append(s"$spc  commands {")
       lines.append(
@@ -206,6 +203,11 @@ object Generator {
 
     def open(): Lines = {
       lines.append(s"${spc}context ${context.id} {\n")
+    }
+
+    override def close(): Lines = {
+      lines.append(s"$spc}")
+      super.close()
     }
 
     def visitType(t: TypeDef): Traversal.TypeTraveler[Lines] = {
@@ -264,11 +266,19 @@ object Generator {
         s"${spc}entity ${entity.id} is ${visitTypeExpression(entity.typ)} {\n"
       )
       entity.options.foreach { options ⇒
-        lines.append(s"$spc  options: ")
+        if (options.size > 1)
+          lines.append(s"$spc  options are ")
+        else
+          lines.append(s"$spc  option is ")
         lines.append(options.map(_.toString).mkString(" "))
         lines.append("\n")
       }
       lines
+    }
+
+    override def close(): Lines = {
+      lines.append(s"$spc}")
+      super.close()
     }
 
     def visitProducer(c: ChannelRef): Unit = {
@@ -299,6 +309,11 @@ object Generator {
       lines.append(s"$spc}\n")
     }
 
+    override def close(): Lines = {
+      lines.append(s"$spc}")
+      super.close()
+    }
+
     def visitBackground(background: Background): Unit = {}
     def visitExample(example: Example): Unit = {}
   }
@@ -314,6 +329,11 @@ object Generator {
       lines.append(s"${spc}interaction ${interaction.id} {\n")
     }
 
+    override def close(): Lines = {
+      lines.append(s"$spc}")
+      super.close()
+    }
+
     def visitRole(role: RoleDef): Unit = {}
 
     def visitAction(action: ActionDef): Unit = {}
@@ -325,6 +345,11 @@ object Generator {
 
     def open(): Lines = {
       lines.append(s"${spc}adaptor ${adaptor.id} {\n")
+    }
+
+    override def close(): Lines = {
+      lines.append(s"$spc}")
+      super.close()
     }
   }
 }

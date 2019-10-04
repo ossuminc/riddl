@@ -29,16 +29,26 @@ class GeneratorTest extends ParsingTest {
         fail(message)
       case Right(domains) ⇒
         domains.map { domain ⇒
-          val generator = new Generator.DomainGenerator(domain)
-          val lines = generator.traverse
-          val output = lines.mkString
+          val generator = Generator.DomainGenerator(domain)
+          val output = generator.traverse.mkString
           TopLevelParser.parseString(output, DomainParser.topLevelDomains(_)) match {
             case Left(message) ⇒
-              fail(message)
-            case Right(_) ⇒
-              input must equal(output)
-            // println(s"INPUT:\n$input\n")
-            // println(s"OUTPUT:\n$output")
+              fail("On First Generation:\n" + message)
+            case Right(domains2) ⇒
+              input mustEqual output
+              domains2.map { domain2 ⇒
+                val generator = new Generator.DomainGenerator(domain2)
+                val output2 = generator.traverse.mkString
+                TopLevelParser.parseString(
+                  output2,
+                  DomainParser.topLevelDomains(_)
+                ) match {
+                  case Left(message) ⇒
+                    fail("On Second Generation: " + message)
+                  case Right(_) ⇒
+                    output mustEqual output2
+                }
+              }
           }
         }
         succeed
