@@ -139,7 +139,7 @@ class ParserTest extends ParsingTest {
       val input =
         """domain foo {
           |  context bar {
-          |    command DoThisThing = type SomeType yields event ThingWasDone
+          |    command DoThisThing = SomeType yields event ThingWasDone
           |  }
           |}
           |""".stripMargin
@@ -158,7 +158,7 @@ class ParserTest extends ParsingTest {
       val input =
         """domain foo {
           |  context bar {
-          |    event ThingWasDone = type SomeType
+          |    event ThingWasDone = SomeType
           |  }
           |}
           |""".stripMargin
@@ -195,7 +195,7 @@ class ParserTest extends ParsingTest {
       val input =
         """domain foo {
           |  context bar {
-          |    result ThisQueryResult = type SomeType
+          |    result ThisQueryResult = SomeType
           |  }
           |}
           |""".stripMargin
@@ -218,13 +218,17 @@ class ParserTest extends ParsingTest {
           |      consumes channel EntityChannel
           |      produces channel EntityChannel
           |      feature AnAspect {
-          |        DESCRIPTION: "This is some aspect of the entity"
-          |        BACKGROUND: Given "Nobody loves me"
-          |        EXAMPLE: "My Fate"
-          |        GIVEN "everybody hates me"
-          |        AND "I'm depressed"
-          |        WHEN "I go fishing"
-          |        THEN "I'll just eat worms"
+          |        DESCRIPTION { "This is some aspect of the entity" }
+          |        BACKGROUND {
+          |          Given "Nobody loves me"
+          |        }
+          |        EXAMPLE {
+          |          "My Fate"
+          |          GIVEN "everybody hates me"
+          |          AND "I'm depressed"
+          |          WHEN "I go fishing"
+          |          THEN "I'll just eat worms"
+          |        }
           |      }
           |    }
           |  }
@@ -241,7 +245,7 @@ class ParserTest extends ParsingTest {
           Some(ChannelRef(Identifier("EntityChannel"))),
           Seq(
             FeatureDef(
-              197,
+              188,
               Identifier("AnAspect"),
               Seq("This is some aspect of the entity"),
               Some(Background(Seq(Given(LiteralString("Nobody loves me"))))),
