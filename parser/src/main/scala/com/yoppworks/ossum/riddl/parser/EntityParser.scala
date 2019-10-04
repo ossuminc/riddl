@@ -29,15 +29,16 @@ object EntityParser {
   def entityDef[_: P]: P[EntityDef] = {
     P(
       Index ~
-        "entity" ~/ identifier ~ is ~ typeExpression ~ "{" ~
-        ("options" ~ is ~ entityOption.rep(1)).? ~
-        ("consumes" ~ channelRef).? ~
+        "entity" ~/ identifier.log("id") ~
+        is.log("is") ~/ typeExpression.log("type") ~ "{" ~
+        ("options" ~/ is ~ entityOption.rep(1)).? ~
+        ("consumes" ~/ channelRef).? ~
         ("produces" ~/ channelRef).? ~
         feature.rep(0) ~
         invariant.rep(0) ~
-        "}" ~
+        "}" ~/
         explanation
-    ).map { tpl ⇒
+    ).log("entity").map { tpl ⇒
       (EntityDef.apply _).tupled(tpl)
     }
   }

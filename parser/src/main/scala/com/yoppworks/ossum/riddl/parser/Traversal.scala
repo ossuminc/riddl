@@ -47,16 +47,16 @@ object Traversal {
 
     def traverse: P = {
       open()
-      channel.commands.foreach(visitCommand)
-      channel.events.foreach(visitEvent)
-      channel.queries.foreach(visitQuery)
-      channel.results.foreach(visitResult)
+      visitCommands(channel.commands)
+      visitEvents(channel.events)
+      visitQueries(channel.queries)
+      visitResults(channel.results)
       close()
     }
-    def visitCommand(command: CommandRef): Unit
-    def visitEvent(event: EventRef): Unit
-    def visitQuery(query: QueryRef): Unit
-    def visitResult(result: ResultRef): Unit
+    def visitCommands(commands: Seq[CommandRef]): Unit
+    def visitEvents(events: Seq[EventRef]): Unit
+    def visitQueries(queries: Seq[QueryRef]): Unit
+    def visitResults(results: Seq[ResultRef]): Unit
   }
 
   trait ContextTraveler[P] extends DefTraveler[P, ContextDef] {

@@ -1,13 +1,10 @@
 package com.yoppworks.ossum.riddl.parser
 
-import fastparse.P
-import fastparse.Parsed
-
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 
   import AST._
-  import TopLevelParser._
+  import DomainParser._
 
   "Parser" should {
     "allow an empty funky-name domain" in {
@@ -216,8 +213,7 @@ class ParserTest extends ParsingTest {
       val input =
         """domain foo {
           |  context bar {
-          |    entity Hamburger {
-          |      type: SomeType
+          |    entity Hamburger is SomeType {
           |      options: persistent aggregate
           |      consumes channel EntityChannel
           |      produces channel EntityChannel

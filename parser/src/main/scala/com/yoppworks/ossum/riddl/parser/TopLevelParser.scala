@@ -17,46 +17,6 @@ import ContextParser._
 /** Top level parsing rules */
 object TopLevelParser {
 
-  def adaptorDef[_: P]: P[AdaptorDef] = {
-    P(
-      "adaptor" ~/ Index ~ identifier ~ "for" ~/ domainRef.? ~/ contextRef ~
-        explanation
-    ).map { tpl =>
-      (AdaptorDef.apply _).tupled(tpl)
-    }
-  }
-
-  def channelDef[_: P]: P[ChannelDef] = {
-    P(
-      "channel" ~ Index ~/ identifier ~ "{" ~
-        "commands" ~ "{" ~/ identifier.map(CommandRef).rep(0, ",") ~ "}" ~/
-        "events" ~ "{" ~/ identifier.map(EventRef).rep(0, ",") ~ "}" ~/
-        "queries" ~ "{" ~/ identifier.map(QueryRef).rep(0, ",") ~ "}" ~/
-        "results" ~ "{" ~/ identifier.map(ResultRef).rep(0, ",") ~ "}" ~/
-        "}" ~ explanation
-    ).map { tpl ⇒
-      (ChannelDef.apply _).tupled(tpl)
-    }
-  }
-
-  def domainDef[_: P]: P[DomainDef] = {
-    P(
-      "domain" ~ Index ~/ identifier ~
-        ("is" ~ "subdomain" ~ "of" ~/ identifier).? ~ "{" ~/
-        typeDef.rep(0) ~
-        channelDef.rep(0) ~
-        interactionDef.rep(0) ~
-        contextDef.rep(0) ~
-        "}" ~ explanation
-    ).map { tpl ⇒
-      (DomainDef.apply _).tupled(tpl)
-    }
-  }
-
-  def topLevelDomains[_: P]: P[Seq[DomainDef]] = {
-    P(Start ~ P(domainDef).rep(0) ~ End)
-  }
-
   def annotated_input(input: String, index: Int): String = {
     input.substring(0, index) + "^" + input.substring(index)
   }

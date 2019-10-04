@@ -36,7 +36,7 @@ domain ReactiveBBQ {
     type RewardsAccountType is combine {
       id is CustomerId,
       points is Number,
-      events is RewardEvent*
+      rewardEvents is RewardEvent*
     }
     entity RewardsAccount is RewardsAccountType {
     }
@@ -80,16 +80,17 @@ domain ReactiveBBQ {
 
   // #Reservation
   context Reservation {
-    type ReservationType is combine {
+    type ReservationValue is combine {
       partyName is String,
       phoneNumber is String,
       location is Id,
       time is Time,
       date is Date
     }
-    entity Reservation is ReservationType {
-      consumes channel foo
-      produces channel bar
+
+    entity Reservation is ReservationValue {
+      // consumes channel foo
+      // produces channel bar
     }
   }
   // #Reservation

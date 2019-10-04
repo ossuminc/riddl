@@ -7,24 +7,28 @@ import com.yoppworks.ossum.riddl.parser.AST._
 /** Common Parsing Rules */
 object CommonParser {
 
-  def lines[_: P]: P[Seq[String]] = {
-    P("{" ~ (CharPred(_ != '\n').! ~ "\n".?).rep ~ "}")
+  def literalString[_: P]: P[LiteralString] = {
+    P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").map(LiteralString)
   }
 
-  def links[_: P]: P[Seq[Link]] = {
-    P("links" ~ "(" ~/ literalString.rep(1, sep = ",") ~ ")"./).map(_.map(Link))
+  def lines[_: P]: P[Seq[String]] = {
+    P("{" ~ literalString.rep(0) ~ "}").map { lit ⇒
+      lit.map(_.s)
+    }
+  }
+
+  def references[_: P]: P[Seq[Link]] = {
+    P(
+      "referencing" ~ "{" ~/ literalString.rep(1, sep = ",") ~ "}"./
+    ).map(_.map(Link))
   }
 
   def explanation[_: P]: P[Option[Explanation]] = {
     P(
-      "explained" ~ "as" ~ lines ~ ("with" ~ links).?
+      "explained" ~ "as" ~/ lines ~ references.?
     ).?.map { opt ⇒
       opt.map(tpl ⇒ { Explanation.apply _ }.tupled(tpl))
     }
-  }
-
-  def literalString[_: P]: P[LiteralString] = {
-    P("\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\"").map(LiteralString)
   }
 
   def literalInteger[_: P]: P[LiteralInteger] = {
@@ -62,13 +66,7 @@ object CommonParser {
   }
 
   def is[_: P]: P[Unit] = {
-    P("is" | ":" | "=")
-  }
-
-  def typeRef[_: P]: P[TypeRef] = {
-    P("type" ~/ identifier).map { id ⇒
-      TypeRef(id)
-    }
+    P("is" | ":" | "=")./
   }
 
   def messageRef[_: P]: P[MessageRef] = {

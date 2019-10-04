@@ -3,10 +3,10 @@ package com.yoppworks.ossum.riddl.parser
 import com.yoppworks.ossum.riddl.parser.AST._
 import TypesParser._
 import CommonParser._
-import com.yoppworks.ossum.riddl.parser.TopLevelParser.adaptorDef
-import com.yoppworks.ossum.riddl.parser.EntityParser._
-import com.yoppworks.ossum.riddl.parser.InteractionParser.interactionDef
-import com.yoppworks.ossum.riddl.parser.TypesParser.typeDef
+import DomainParser.adaptorDef
+import EntityParser._
+import InteractionParser.interactionDef
+import TypesParser.typeDef
 import fastparse._
 import ScalaWhitespace._
 
@@ -23,7 +23,7 @@ object ContextParser {
 
   def commandDef[_: P]: P[CommandDef] = {
     P(
-      "command" ~ Index ~/ identifier ~ "=" ~ typeExpression ~ "yields" ~
+      "command" ~ Index ~/ identifier ~ is ~ typeExpression ~ "yields" ~
         eventRefs ~ explanation
     ).map { tpl ⇒
       (CommandDef.apply _).tupled(tpl)
@@ -36,7 +36,7 @@ object ContextParser {
 
   def eventDef[_: P]: P[EventDef] = {
     P(
-      "event" ~ Index ~/ identifier ~ "=" ~ typeExpression ~ explanation
+      "event" ~ Index ~/ identifier ~ is ~ typeExpression ~ explanation
     ).map { tpl ⇒
       (EventDef.apply _).tupled(tpl)
     }
@@ -44,7 +44,7 @@ object ContextParser {
 
   def queryDef[_: P]: P[QueryDef] = {
     P(
-      "query" ~ Index ~/ identifier ~ "=" ~ typeExpression ~ "yields" ~
+      "query" ~ Index ~/ identifier ~ is ~ typeExpression ~ "yields" ~
         resultRef ~ explanation
     ).map { tpl ⇒
       (QueryDef.apply _).tupled(tpl)
@@ -53,7 +53,7 @@ object ContextParser {
 
   def resultDef[_: P]: P[ResultDef] = {
     P(
-      "result" ~ Index ~/ identifier ~ "=" ~ typeExpression ~ explanation
+      "result" ~ Index ~/ identifier ~ is ~ typeExpression ~ explanation
     ).map { tpl ⇒
       (ResultDef.apply _).tupled(tpl)
     }

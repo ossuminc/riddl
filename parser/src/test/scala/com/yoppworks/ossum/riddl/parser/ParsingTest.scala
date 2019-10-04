@@ -10,7 +10,7 @@ import org.scalatest.WordSpec
 trait ParsingTest extends WordSpec with MustMatchers {
 
   import AST._
-  import TopLevelParser._
+  import DomainParser._
   import fastparse._
 
   def checkParser[T <: AST, U <: AST](

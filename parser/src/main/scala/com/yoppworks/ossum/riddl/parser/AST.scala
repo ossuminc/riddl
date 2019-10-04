@@ -46,13 +46,10 @@ object AST {
 
   sealed trait TypeExpression extends Type {
     def id: Identifier
-  }
-  case class TypeRef(id: Identifier) extends Ref with TypeExpression {
     override def toString: String = id.value
   }
-  case class PredefinedType(id: Identifier) extends TypeExpression {
-    override def toString: String = id.value
-  }
+  case class TypeRef(id: Identifier) extends Ref with TypeExpression
+  case class PredefinedType(id: Identifier) extends TypeExpression
 
   val Strng = PredefinedType(Identifier("String"))
   val Boolean = PredefinedType(Identifier("Boolean"))

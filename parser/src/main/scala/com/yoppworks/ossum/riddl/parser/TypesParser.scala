@@ -10,7 +10,7 @@ import scala.collection.immutable.ListMap
 /** Parsing rules for Type definitions */
 object TypesParser {
 
-  def literalTypeExpression[_: P]: P[PredefinedType] = {
+  def predefinedType[_: P]: P[PredefinedType] = {
     P(
       StringIn(
         "String",
@@ -35,7 +35,7 @@ object TypesParser {
   }
 
   def enumerationType[_: P]: P[Enumeration] = {
-    P("any" ~/ "[" ~ identifier.rep ~ "]").map { enums ⇒
+    P("any" ~/ "[" ~ identifier.rep(1, sep = ",".?) ~ "]").map { enums ⇒
       Enumeration(enums)
     }
   }
@@ -47,7 +47,7 @@ object TypesParser {
   }
 
   def typeExpression[_: P]: P[TypeExpression] = {
-    P(cardinality(typeRef | literalTypeExpression | identifier.map(TypeRef)))
+    P(cardinality(predefinedType | typeRef))
   }
 
   def cardinality[_: P](p: ⇒ P[TypeExpression]): P[TypeExpression] = {
@@ -89,6 +89,12 @@ object TypesParser {
       "type" ~ Index ~/ identifier ~ is ~ types ~ explanation
     ).map { tpl ⇒
       (TypeDef.apply _).tupled(tpl)
+    }
+  }
+
+  def typeRef[_: P]: P[TypeRef] = {
+    P(identifier).map { id ⇒
+      TypeRef(id)
     }
   }
 }

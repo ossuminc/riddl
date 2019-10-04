@@ -11,7 +11,7 @@ class GeneratorTest extends ParsingTest {
     val everything = s"parser/src/test/input/$fileName"
     val source = Source.fromFile(everything)
     val spacesOnly = "^\\s+$".r
-    val comment = "(.*)//.*".r
+    val comment = "(.*?)\\s*//.*$".r
     val input: String =
       source
         .getLines()
@@ -24,7 +24,7 @@ class GeneratorTest extends ParsingTest {
         }
         .mkString("\n")
     source.close()
-    TopLevelParser.parseString(input, TopLevelParser.topLevelDomains(_)) match {
+    TopLevelParser.parseString(input, DomainParser.topLevelDomains(_)) match {
       case Left(message) ⇒
         fail(message)
       case Right(domains) ⇒
@@ -32,13 +32,13 @@ class GeneratorTest extends ParsingTest {
           val generator = new Generator.DomainGenerator(domain)
           val lines = generator.traverse
           val output = lines.mkString
-          TopLevelParser.parseString(output, TopLevelParser.topLevelDomains(_)) match {
+          TopLevelParser.parseString(output, DomainParser.topLevelDomains(_)) match {
             case Left(message) ⇒
               fail(message)
             case Right(_) ⇒
               input must equal(output)
-              println(s"INPUT:\n$input\n")
-              println(s"OUTPUT:\n$output")
+            // println(s"INPUT:\n$input\n")
+            // println(s"OUTPUT:\n$output")
           }
         }
         succeed
@@ -47,7 +47,7 @@ class GeneratorTest extends ParsingTest {
 
   "Generator" should {
     "reflect everything.riddl" in {
-      pending // runOne("everything.riddl")
+      runOne("everything.riddl")
     }
     "reflect rbbq.riddl" in {
       runOne("rbbq.riddl")
