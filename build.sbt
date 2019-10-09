@@ -1,17 +1,28 @@
+import sbt.Keys.resolvers
+import sbt.Keys.scalaVersion
+
 name := "riddl"
 
-// Never set this, handled by sbt-dynver: version := "0.1"
-
-scalaVersion := "2.12.10"
-scalafmtOnCompile := true
+// NEVER  SET  THIS: version := "0.1"
+// IT IS HANDLED BY: sbt-dynver
 dynverSeparator in ThisBuild := "-"
+scalafmtOnCompile in ThisBuild := true
+scalaVersion in ThisBuild := "2.13.1"
+scalacOptions in ThisBuild ++= Seq(
+  "-encoding",
+  "utf8",
+  "-Xfatal-warnings",
+  "-deprecation",
+  "-unchecked",
+  "-language:implicitConversions",
+  "-language:higherKinds",
+  "-language:existentials",
+  "-language:postfixOps",
+  "-Wdead-code"
+)
 
 lazy val parser = (project in file("parser")).settings(
   name := "riddl-parser",
-  scalacOptions += "-Ypartial-unification",
-  resolvers ++= Seq(
-    "Artima Maven Repository" at "https://repo.artima.com/releases"
-  ),
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % "2.0.0",
     "com.lihaoyi" %% "fastparse" % "2.1.3",
@@ -24,9 +35,6 @@ lazy val parser = (project in file("parser")).settings(
 lazy val translator = (project in file("translator"))
   .settings(
     name := "riddl-translator",
-    resolvers ++= Seq(
-      "Artima Maven Repository" at "https://repo.artima.com/releases"
-    ),
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % "3.0.8",
       "org.scalatest" %% "scalatest" % "3.0.8" % "test",

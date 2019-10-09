@@ -13,7 +13,7 @@ domain Everything {
     "# Description"
     "This channel is aimed at the same kind of functionality as /dev/null."
     "It produces nothing and consumes everything"
-  } referencing {
+  } see also {
     "/dev/null"
   }
 
@@ -60,7 +60,7 @@ domain Everything {
     // Entities are the main objects that contexts define. They can be
     // persistent (long lived) or aggregate (they consume commands and queries)
     entity Something is SomeType {
-      options are aggregate persistent
+      options { aggregate persistent }
       consumes channel AChannel
     }
     entity SomeOtherThing is SomeType {

@@ -4,61 +4,80 @@ import com.yoppworks.ossum.riddl.parser.AST._
 import fastparse._
 import ScalaWhitespace._
 
-import CommonParser._
-
 /** Parsing rules for entity feature definitions */
-object FeatureParser {
+trait FeatureParser extends CommonParser {
 
   def givens[_: P]: P[Seq[Given]] = {
     P(
-      IgnoreCase("given") ~/ literalString ~
-        P(IgnoreCase("and") ~/ literalString).rep(0)
+      (location ~ IgnoreCase("given") ~/ literalString).map(
+        tpl => (Given.apply _).tupled(tpl)
+      ) ~
+        (location ~ IgnoreCase("and") ~/ literalString)
+          .map(
+            tpl => (Given.apply _).tupled(tpl)
+          )
+          .rep(0)
     ).map {
-      case (initial, remainder) ⇒ Given(initial) +: remainder.map(Given)
+      case (initial, remainder) => initial +: remainder
     }
   }
 
   def whens[_: P]: P[Seq[When]] = {
     P(
-      IgnoreCase("when") ~/ literalString ~
-        P(IgnoreCase("and") ~/ literalString).rep(0)
+      (location ~ IgnoreCase("when") ~/ literalString).map(
+        tpl => (When.apply _).tupled(tpl)
+      ) ~
+        (location ~ IgnoreCase("and") ~/ literalString)
+          .map(
+            tpl => (When.apply _).tupled(tpl)
+          )
+          .rep(0)
     ).map {
-      case (initial, remainder) ⇒ When(initial) +: remainder.map(When)
+      case (initial, remainder) => initial +: remainder
     }
   }
 
   def thens[_: P]: P[Seq[Then]] = {
     P(
-      IgnoreCase("then") ~/ literalString ~
-        P(IgnoreCase("and") ~ literalString).rep(0)
+      (location ~ IgnoreCase("then") ~/ literalString).map(
+        tpl => (Then.apply _).tupled(tpl)
+      ) ~
+        (location ~ IgnoreCase("and") ~/ literalString)
+          .map(
+            tpl => (Then.apply _).tupled(tpl)
+          )
+          .rep(0)
     ).map {
-      case (initial, remainder) ⇒ Then(initial) +: remainder.map(Then)
+      case (initial, remainder) => initial +: remainder
     }
   }
 
-  def example[_: P]: P[Example] = {
+  def example[_: P]: P[ExampleDef] = {
     P(
-      IgnoreCase("example") ~/ "{" ~/ literalString ~ givens ~ whens ~ thens ~
-        "}"
-    ).map { tpl ⇒
-      (Example.apply _).tupled(tpl)
+      location ~ IgnoreCase("example") ~/ identifier ~ "{" ~/ literalString ~
+        givens ~
+        whens ~ thens ~
+        "}" ~ addendum
+    ).map { tpl =>
+      (ExampleDef.apply _).tupled(tpl)
     }
   }
 
   def background[_: P]: P[Background] = {
-    P(IgnoreCase("background") ~/ "{" ~/ givens).map(Background) ~ "}"
+    P(location ~ IgnoreCase("background") ~/ "{" ~/ givens)
+      .map(tpl => (Background.apply _).tupled(tpl)) ~ "}"
   }
 
   def description[_: P]: P[Seq[String]] = {
     P(IgnoreCase("description") ~/ lines)
   }
 
-  def feature[_: P]: P[FeatureDef] = {
+  def featureDef[_: P]: P[FeatureDef] = {
     P(
-      IgnoreCase("feature") ~/ Index ~ identifier ~ "{" ~
+      location ~ IgnoreCase("feature") ~/ identifier ~ "{" ~
         description ~ background.? ~ example.rep(1) ~
-        "}" ~/ explanation
-    ).map { tpl ⇒
+        "}" ~/ addendum
+    ).map { tpl =>
       (FeatureDef.apply _).tupled(tpl)
     }
   }

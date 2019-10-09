@@ -3,41 +3,45 @@ package com.yoppworks.ossum.riddl.parser
 import com.yoppworks.ossum.riddl.parser.AST._
 import fastparse._
 import ScalaWhitespace._
-import CommonParser._
-import TypesParser._
-import com.yoppworks.ossum.riddl.parser.FeatureParser.feature
 
 /** Parsing rules for entity definitions  */
-object EntityParser {
+trait EntityParser extends CommonParser with TypesParser with FeatureParser {
 
-  def entityOption[_: P]: P[EntityOption] = {
-    P(StringIn("device", "aggregate", "persistent", "consistent", "available")).!.map {
-      case "device" ⇒ EntityDevice
-      case "aggregate"  => EntityAggregate
-      case "persistent" => EntityPersistent
-      case "consistent" => EntityConsistent
-      case "available"  => EntityAvailable
+  def entityOptions[X: P]: P[Seq[EntityOption]] = {
+    options[X, EntityOption](
+      StringIn(
+        "device",
+        "aggregate",
+        "persistent",
+        "consistent",
+        "available"
+      ).!
+    ) {
+      case (loc, "device")     => EntityDevice(loc)
+      case (loc, "aggregate")  => EntityAggregate(loc)
+      case (loc, "persistent") => EntityPersistent(loc)
+      case (loc, "consistent") => EntityConsistent(loc)
+      case (loc, "available")  => EntityAvailable(loc)
+      case _                   => throw new RuntimeException("Impossible case")
     }
   }
 
   def invariant[_: P]: P[InvariantDef] = {
     P(
-      "invariant" ~/ Index ~ identifier ~ "=" ~ literalString ~ explanation
-    ).map(tpl ⇒ (InvariantDef.apply _).tupled(tpl))
+      "invariant" ~/ location ~ identifier ~ "=" ~ literalString ~ addendum
+    ).map(tpl => (InvariantDef.apply _).tupled(tpl))
   }
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      Index ~
-        "entity" ~/ identifier ~ is ~/ typeExpression ~ "{" ~
-        ("option" ~~ "s".? ~/ is ~ entityOption.rep(1)).? ~
+      location ~ "entity" ~/ identifier ~ is ~/ typeExpression ~ "{" ~
+        entityOptions ~
         ("consumes" ~/ channelRef).? ~
         ("produces" ~/ channelRef).? ~
-        feature.rep(0) ~
+        featureDef.rep(0) ~
         invariant.rep(0) ~
-        "}" ~/
-        explanation
-    ).map { tpl ⇒
+        "}" ~/ addendum
+    ).map { tpl =>
       (EntityDef.apply _).tupled(tpl)
     }
   }

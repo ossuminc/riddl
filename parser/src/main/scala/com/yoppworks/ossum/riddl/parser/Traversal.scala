@@ -6,11 +6,11 @@ import com.yoppworks.ossum.riddl.parser.AST._
 /** Traversal Module */
 object Traversal {
 
-  trait DefTraveler[P, D <: Def] {
+  trait DefTraveler[P, D <: Definition] {
     def traverse: P
     protected def open(): P
     protected def close(): P
-    protected def visitExplanation(exp: Option[Explanation]): Unit
+    protected def visitAddendum(add: Option[Addendum]): Unit
   }
 
   trait DomainTraveler[P] extends DefTraveler[P, DomainDef] {
@@ -98,7 +98,7 @@ object Traversal {
       entity.produces.foreach(visitProducer)
       entity.invariants.foreach(visitInvariant)
       entity.features.foreach(visitFeature)
-      visitExplanation(entity.explanation)
+      visitAddendum(entity.addendum)
       close()
     }
     def visitProducer(p: ChannelRef): Unit
@@ -114,7 +114,7 @@ object Traversal {
       feature.examples.foreach(visitExample)
       close()
     }
-    def visitExample(example: Example): Unit
+    def visitExample(example: ExampleDef): Unit
   }
 
   trait InteractionTraveler[P] extends DefTraveler[P, InteractionDef] {
@@ -131,8 +131,8 @@ object Traversal {
 
   def traverse[T <: Monoid[_]](
     domains: Domains
-  )(f: DomainDef ⇒ DomainTraveler[T]): Seq[T] = {
-    domains.map { domain ⇒
+  )(f: DomainDef => DomainTraveler[T]): Seq[T] = {
+    domains.map { domain =>
       f(domain).traverse
     }
   }
@@ -143,9 +143,9 @@ object Traversal {
     f(context).traverse
   }
 
-  def traverse[D <: Def, T <: Monoid[_]](
-    ast: AST
-  )(f: AST ⇒ DefTraveler[T, D]): T = {
+  def traverse[D <: Definition, T <: Monoid[_]](
+    ast: RiddlNode
+  )(f: RiddlNode => DefTraveler[T, D]): T = {
     f(ast).traverse
   }
 }

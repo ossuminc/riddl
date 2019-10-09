@@ -1,6 +1,5 @@
 package com.yoppworks.ossum.riddl.parser
 
-import AST.DomainDef
 import AST._
 import Validation._
 import org.scalatest.MustMatchers
@@ -13,8 +12,8 @@ class ValidationTest extends WordSpec with MustMatchers {
     "identify duplicate domain definitions" in {
       val errors = validate(
         Seq(
-          DomainDef(0, Identifier("foo")),
-          DomainDef(0, Identifier("foo"))
+          DomainDef((0, 0), Identifier((0, 0), "foo")),
+          DomainDef((0, 0), Identifier((0, 0), "foo"))
         )
       )
       errors.isEmpty mustNot be(true)

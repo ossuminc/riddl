@@ -7,7 +7,7 @@ import scala.collection.mutable
 /** Validates an AST */
 object Validation {
 
-  case class ValidationError(index: Int, message: String)
+  case class ValidationError(loc: Location, message: String)
 
   type ValidationErrors = Seq[ValidationError]
   val NoValidationErrors = Seq.empty[ValidationError]
@@ -25,32 +25,47 @@ object Validation {
       domain: DomainDef
     ): ValidationErrors
 
-    def validateType(typ: TypeDef, context: ContextDef): ValidationErrors
+    def validateType(
+      typ: TypeDef,
+      context: ContextDef
+    ): ValidationErrors
 
     def validateCommand(
       command: CommandDef,
       context: ContextDef
     ): ValidationErrors
 
-    def validateEvent(event: EventDef, context: ContextDef): ValidationErrors
+    def validateEvent(
+      event: EventDef,
+      context: ContextDef
+    ): ValidationErrors
 
-    def validateQuery(query: QueryDef, context: ContextDef): ValidationErrors
+    def validateQuery(
+      query: QueryDef,
+      context: ContextDef
+    ): ValidationErrors
 
-    def validateResult(result: ResultDef, context: ContextDef): ValidationErrors
+    def validateResult(
+      result: ResultDef,
+      context: ContextDef
+    ): ValidationErrors
 
-    def validateEntity(entity: EntityDef, context: ContextDef): ValidationErrors
+    def validateEntity(
+      entity: EntityDef,
+      context: ContextDef
+    ): ValidationErrors
 
     protected val symbols
-      : mutable.Map[Identifier, mutable.Map[Identifier, Def]] =
-      mutable.Map[Identifier, mutable.Map[Identifier, Def]]()
+      : mutable.Map[Identifier, mutable.Map[Identifier, Definition]] =
+      mutable.Map[Identifier, mutable.Map[Identifier, Definition]]()
 
     protected def check(
-      what: Def,
+      what: Definition,
       message: String,
       predicate: Boolean = true
     ): Seq[ValidationError] =
       if (!predicate) {
-        Seq(ValidationError(what.index, message))
+        Seq(ValidationError(what.loc, message))
       } else {
         NoValidationErrors
       }
@@ -108,7 +123,10 @@ object Validation {
         d.contexts.flatMap(c => validateContext(c, d))
     }
 
-    def validateChannel(channel: ChannelDef, d: DomainDef): ValidationErrors =
+    def validateChannel(
+      channel: ChannelDef,
+      d: DomainDef
+    ): ValidationErrors =
       Seq.empty[ValidationError]
 
     def validateContext(
@@ -122,24 +140,27 @@ object Validation {
         context.results.flatMap(result => validateResult(result, context)) ++
         context.entities.flatMap(entity => validateEntity(entity, context))
 
-    def validateType(typeDef: TypeDef, context: ContextDef): ValidationErrors =
+    def validateType(
+      typeDef: TypeDef,
+      context: ContextDef
+    ): ValidationErrors =
       check(
         typeDef,
         "Type names must start with a capital letter",
         typeDef.id.value.charAt(0).isUpper
       ) ++ {
         typeDef.typ match {
-          case Aggregation(of) =>
+          case Aggregation(_, of) =>
             check(typeDef, "") /* TODO: Flush this out */
-          case Alternation(of) =>
+          case Alternation(_, of) =>
             check(typeDef, "") /* TODO: Flush this out */
-          case Enumeration(of) =>
+          case Enumeration(_, of) =>
             check(
               typeDef,
               "Enumerators must not start with upper case",
               of.forall(!_.value.head.isUpper)
             )
-          case TypeRef(typeName) =>
+          case TypeRef(loc, typeName) =>
             check(
               typeDef,
               "Referenced type name must start with upper case",
@@ -150,13 +171,22 @@ object Validation {
         }
       }
 
-    def validateCommand(d: CommandDef, context: ContextDef): ValidationErrors =
+    def validateCommand(
+      d: CommandDef,
+      context: ContextDef
+    ): ValidationErrors =
       Seq.empty[ValidationError]
 
-    def validateEvent(event: EventDef, context: ContextDef): ValidationErrors =
+    def validateEvent(
+      event: EventDef,
+      context: ContextDef
+    ): ValidationErrors =
       Seq.empty[ValidationError]
 
-    def validateQuery(qry: QueryDef, context: ContextDef): ValidationErrors =
+    def validateQuery(
+      qry: QueryDef,
+      context: ContextDef
+    ): ValidationErrors =
       Seq.empty[ValidationError]
 
     def validateResult(

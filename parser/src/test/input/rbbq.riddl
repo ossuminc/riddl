@@ -8,7 +8,7 @@ domain ReactiveBBQ {
     "Unique identifier for a customer"
   }
   type OrderId is Id explained as {
-    "Unique identifier for an customer's order"
+    "Unique identifier for a customer's order"
   }
 
   // #Kitchen
@@ -19,8 +19,22 @@ domain ReactiveBBQ {
     }
     entity OrderViewer is OrderViewType {
       option is device
+
     }
   } explained as {
+    "## Kitchen Bounded Context"
+    "The kitchen bounded context provides the ability for the kitchen staff"
+    "to interact with orders they are preparing. The kitchen is a client of"
+    "the orders bounded context and interacts with that context alone"
+    "the outstanding orders to be prepared. Everything else that happens in"
+    "the kitchen is out of scope for the restaurant automation software. "
+    "Consequently, this bounded context is pretty minimal."
+    "### Subject-Verb-Object Statements"
+    "1. Kitchen displays orders"
+    "1. Order is sent to Kitchen for display"
+    "2. Order sends order status changes to Kitchen"
+    "2. Kitchen ignores drink items on order"
+    "1. "
   }
   // #Kitchen
 
@@ -52,8 +66,8 @@ domain ReactiveBBQ {
   // #Order
   context Order {
     type OrderType is combine {
-      orderId is Id,
-      customerId is Id
+      orderId is OrderId,
+      customerId is CustomerId
     }
     entity Order is OrderType {
       option is aggregate

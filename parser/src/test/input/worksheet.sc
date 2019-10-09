@@ -21,7 +21,7 @@ object foo {
     override def empty: Option[A] = None
 
     override def combine(x: Option[A], y: Option[A]): Option[A] = {
-      x.map(x_ ⇒ y.map(y_ ⇒ ))
+      x.map(x_ => y.map(y_ => ))
     }
   }
 }

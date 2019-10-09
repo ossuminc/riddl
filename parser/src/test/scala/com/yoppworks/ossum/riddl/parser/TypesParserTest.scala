@@ -10,78 +10,80 @@ class TypesParserTest extends ParsingTest {
   "TypesParser" should {
     "allow renames of 8 literal types" in {
       val cases = Map[String, TypeDef](
-        "type str = String" → TypeDef(
-          33,
-          Identifier("str"),
-          PredefinedType(Identifier("String"))
+        "type str = String" -> TypeDef(
+          (1, 1),
+          Identifier((1, 6), "str"),
+          Strng((1, 12))
         ),
-        "type num = Number" → TypeDef(
-          33,
-          Identifier("num"),
-          PredefinedType(Identifier("Number"))
+        "type num = Number" -> TypeDef(
+          (1, 1),
+          Identifier((1, 6), "num"),
+          Number((1, 12))
         ),
-        "type boo = Boolean" → TypeDef(
-          33,
-          Identifier("boo"),
-          PredefinedType(Identifier("Boolean"))
+        "type boo = Boolean" -> TypeDef(
+          (1, 1),
+          Identifier((1, 6), "boo"),
+          Bool((1, 12))
         ),
-        "type ident  = Id" -> TypeDef(
-          33,
-          Identifier("ident"),
-          PredefinedType(Identifier("Id"))
+        "type ident = Id" -> TypeDef(
+          (1, 1),
+          Identifier((1, 6), "ident"),
+          Id((1, 14))
         ),
         "type dat = Date" -> TypeDef(
-          33,
-          Identifier("dat"),
-          PredefinedType(Identifier("Date"))
+          (1, 1),
+          Identifier((1, 6), "dat"),
+          Date((1, 12))
         ),
         "type tim = Time" -> TypeDef(
-          33,
-          Identifier("tim"),
-          PredefinedType(Identifier("Time"))
+          (1, 1),
+          Identifier((1, 6), "tim"),
+          Time((1, 12))
         ),
         "type stamp = TimeStamp" -> TypeDef(
-          33,
-          Identifier("stamp"),
-          PredefinedType(Identifier("TimeStamp"))
+          (1, 1),
+          Identifier((1, 6), "stamp"),
+          TimeStamp((1, 14))
         ),
         "type url = URL" -> TypeDef(
-          33,
-          Identifier("url"),
-          PredefinedType(Identifier("URL"))
+          (1, 1),
+          Identifier((1, 6), "url"),
+          URL((1, 12))
         ),
         "type FirstName = String" -> TypeDef(
-          33,
-          Identifier("FirstName"),
-          PredefinedType(Identifier("String"))
+          (1, 1),
+          Identifier((1, 6), "FirstName"),
+          Strng((1, 18))
         )
       )
-      checkDef[TypeDef](cases, _.contexts.head.types.head)
+      checkDefinitions[TypeDef, TypeDef](cases, identity)
     }
-    "allow enumerations" in {
-      val cases: List[(String, TypeDef)] = List(
+    "allow various type definitions" in {
+      val cases: Map[String, TypeDef] = Map(
         "type enum = any [ Apple Pear Peach Persimmon ]" ->
           TypeDef(
-            33,
-            Identifier("enum"),
+            (1, 1),
+            Identifier((1, 6), "enum"),
             Enumeration(
+              (1, 13),
               List(
-                Identifier("Apple"),
-                Identifier("Pear"),
-                Identifier("Peach"),
-                Identifier("Persimmon")
+                Identifier((1, 19), "Apple"),
+                Identifier((1, 25), "Pear"),
+                Identifier((1, 30), "Peach"),
+                Identifier((1, 36), "Persimmon")
               )
             )
           ),
         "type alt = choose enum or stamp or url " ->
           TypeDef(
-            33,
-            Identifier("alt"),
+            (1, 1),
+            Identifier((1, 6), "alt"),
             Alternation(
+              (1, 12),
               List(
-                TypeRef(Identifier("enum")),
-                TypeRef(Identifier("stamp")),
-                TypeRef(Identifier("url"))
+                TypeRef((1, 19), Identifier((1, 19), "enum")),
+                TypeRef((1, 27), Identifier((1, 27), "stamp")),
+                TypeRef((1, 36), Identifier((1, 36), "url"))
               )
             )
           ),
@@ -92,35 +94,37 @@ class TypesParserTest extends ParsingTest {
           |}
           |""".stripMargin ->
           TypeDef(
-            33,
-            Identifier("agg"),
+            (1, 1),
+            Identifier((1, 6), "agg"),
             Aggregation(
+              (1, 12),
               ListMap(
-                Identifier("key") → Number,
-                Identifier("id") → Id,
-                Identifier("time") → TimeStamp
+                Identifier((2, 3), "key") -> Number(2, 8),
+                Identifier((3, 3), "id") -> Id((3, 7)),
+                Identifier((4, 3), "time") -> TimeStamp((4, 9))
               )
             )
           ),
-        "type oneOrMore = type agg+" ->
+        "type oneOrMore = agg+" ->
           TypeDef(
-            33,
-            Identifier("oneOrMore"),
-            OneOrMore(Identifier("agg"))
+            (1, 1),
+            Identifier((1, 6), "oneOrMore"),
+            OneOrMore((1, 18), Identifier((1, 18), "agg"))
           ),
-        "type zeroOrMore = type agg*" ->
+        "type zeroOrMore = agg*" ->
           TypeDef(
-            33,
-            Identifier("zeroOrMore"),
-            ZeroOrMore(Identifier("agg"))
+            (1, 1),
+            Identifier((1, 6), "zeroOrMore"),
+            ZeroOrMore((1, 19), Identifier((1, 19), "agg"))
           ),
-        "type optional = type agg?" ->
+        "type optional = agg?" ->
           TypeDef(
-            33,
-            Identifier("optional"),
-            Optional(Identifier("agg"))
+            (1, 1),
+            Identifier((1, 6), "optional"),
+            Optional((1, 17), Identifier((1, 17), "agg"))
           )
       )
+      checkDefinitions[TypeDef, TypeDef](cases, identity)
     }
   }
 }
