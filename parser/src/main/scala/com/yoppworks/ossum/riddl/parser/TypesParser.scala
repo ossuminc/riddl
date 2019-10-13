@@ -9,32 +9,6 @@ import scala.collection.immutable.ListMap
 /** Parsing rules for Type definitions */
 trait TypesParser extends CommonParser {
 
-  def predefinedType[_: P]: P[PredefinedType] = {
-    P(
-      location ~
-        StringIn(
-          "String",
-          "Number",
-          "Boolean",
-          "Id",
-          "Date",
-          "Time",
-          "TimeStamp",
-          "URL"
-        ).!
-    ).map {
-      case (loc, "Boolean")   => AST.Bool(loc)
-      case (loc, "String")    => AST.Strng(loc)
-      case (loc, "Number")    => AST.Number(loc)
-      case (loc, "Id")        => AST.Id(loc)
-      case (loc, "Date")      => AST.Date(loc)
-      case (loc, "Time")      => AST.Time(loc)
-      case (loc, "TimeStamp") => AST.TimeStamp(loc)
-      case (loc, "URL")       => AST.URL(loc)
-      case (_, _)             => throw new RuntimeException("Impossible case")
-    }
-  }
-
   def enumerationType[_: P]: P[Enumeration] = {
     P(location ~ "any" ~/ "[" ~ identifier.rep(1, sep = ",".?) ~ "]").map {
       enums =>
@@ -53,7 +27,7 @@ trait TypesParser extends CommonParser {
   }
 
   def typeExpression[_: P]: P[TypeExpression] = {
-    P(cardinality(predefinedType | typeRef))
+    P(cardinality(typeRef))
   }
 
   def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
@@ -84,7 +58,7 @@ trait TypesParser extends CommonParser {
     }
   }
 
-  def typeDefinitions[_: P]: P[TypeDefinition] = {
+  def typeDefinitions[_: P]: P[TypeSpecification] = {
     P(
       enumerationType | alternationType | aggregationType
     )

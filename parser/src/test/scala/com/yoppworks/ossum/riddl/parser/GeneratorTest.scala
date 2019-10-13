@@ -10,19 +10,22 @@ class GeneratorTest extends ParsingTest {
   def runOne(fileName: String): Assertion = {
     val everything = s"parser/src/test/input/$fileName"
     val source = Source.fromFile(everything)
-    val spacesOnly = "^\\s+$".r
+    val spacesOnly = "^[\\s\\t]+\\n$".r
     val comment = "(.*?)\\s*//.*$".r
-    val input: String =
-      source
-        .getLines()
-        .map {
-          case comment(g) => g
-          case x: String  => x
-        }
-        .filter { l =>
-          !(l.isEmpty || spacesOnly.findAllMatchIn(l).hasNext)
-        }
-        .mkString("\n")
+    val lines: Iterator[String] = source.getLines()
+    val lastLine = lines.size - 1
+    val input = lines
+      .map {
+        case comment(g)   => g
+        case spacesOnly() => ""
+        case x: String    => x
+      }
+      .zipWithIndex
+      .filter {
+        case (str, index) =>
+          (index != lastLine) && str.isEmpty
+      }
+      .mkString("\n")
     source.close()
     parseTopLevelDomains(input) match {
       case Left(message) =>

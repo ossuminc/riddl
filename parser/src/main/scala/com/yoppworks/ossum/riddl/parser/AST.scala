@@ -24,6 +24,8 @@ object AST {
   }
 
   object Location {
+    val empty: Location = Location()
+
     implicit def apply(pair: (Int, Int)): Location = {
       Location(pair._1, pair._2)
     }
@@ -76,41 +78,46 @@ object AST {
       extends Reference
       with TypeExpression
 
-  abstract class PredefinedType(name: String) extends TypeExpression {
-    def id: Identifier = Identifier(loc, name)
-  }
-
-  case class Strng(loc: Location) extends PredefinedType("String")
-  case class Bool(loc: Location) extends PredefinedType("Boolean")
-  case class Number(loc: Location) extends PredefinedType("Number") /* eventually turn this
-  into:
-  case object Integer extends PredefinedType("Integer")
-  case object Decimal extends PredefinedType("Decimal")
-   */
-  case class Id(loc: Location) extends PredefinedType("Id")
-  case class Date(loc: Location) extends PredefinedType("Date")
-  case class Time(loc: Location) extends PredefinedType("Time")
-  case class TimeStamp(loc: Location) extends PredefinedType("TimeStamp")
-  case class URL(loc: Location) extends PredefinedType("URL")
-
   case class Optional(loc: Location, id: Identifier) extends TypeExpression
   case class ZeroOrMore(loc: Location, id: Identifier) extends TypeExpression
   case class OneOrMore(loc: Location, id: Identifier) extends TypeExpression
 
-  sealed trait TypeDefinition extends Type
+  sealed trait TypeSpecification extends Type
+
   case class Enumeration(loc: Location, of: Seq[Identifier])
-      extends TypeDefinition
+      extends TypeSpecification
   case class Alternation(loc: Location, of: Seq[TypeExpression])
-      extends TypeDefinition
+      extends TypeSpecification
   case class Aggregation(loc: Location, of: ListMap[Identifier, TypeExpression])
-      extends TypeDefinition
+      extends TypeSpecification
+
+  sealed trait TypeDefinition extends Definition
+
+  class PredefinedType(name: String) extends TypeDefinition {
+    def id: Identifier = Identifier(loc, name)
+    def loc: Location = Location.empty
+    def addendum: Option[Addendum] = None
+  }
+
+  case object Strng extends PredefinedType("String")
+  case object Bool extends PredefinedType("Boolean")
+  case object Number extends PredefinedType("Number")
+  /* eventually include these:
+  case object Integer extends PredefinedType("Integer")
+  case object Decimal extends PredefinedType("Decimal")
+   */
+  case object Id extends PredefinedType("Id")
+  case object Date extends PredefinedType("Date")
+  case object Time extends PredefinedType("Time")
+  case object TimeStamp extends PredefinedType("TimeStamp")
+  case object URL extends PredefinedType("URL")
 
   case class TypeDef(
     loc: Location,
     id: Identifier,
     typ: Type,
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends TypeDefinition
 
   case class ChannelRef(loc: Location, id: Identifier) extends Reference
   case class ChannelDef(

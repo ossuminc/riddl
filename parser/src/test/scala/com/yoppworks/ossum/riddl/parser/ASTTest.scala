@@ -14,14 +14,18 @@ class ASTTest extends WordSpec with MustMatchers {
       DomainDef((0, 0), Identifier((1, 1), "foo"), None, Seq.empty[TypeDef])
     }
     "support all type constructs" in {
-      Strng((0, 0)) mustBe Strng((0, 0))
-      Bool((0, 0)) mustBe Bool((0, 0))
-      Number((0, 0)) mustBe Number((0, 0))
-      Id((0, 0)) mustBe Id((0, 0))
-      Date((0, 0)) mustBe Date((0, 0))
-      Time((0, 0)) mustBe Time((0, 0))
-      TimeStamp((0, 0)) mustBe TimeStamp((0, 0))
-      URL((0, 0)) mustBe URL((0, 0))
+      TypeRef((0, 0), Identifier((0, 0), "Foo")) mustBe TypeRef(
+        (0, 0),
+        Identifier((0, 0), "Foo")
+      )
+      Strng mustBe Strng
+      Bool mustBe Bool
+      Number mustBe Number
+      Id mustBe Id
+      Date mustBe Date
+      Time mustBe Time
+      TimeStamp mustBe TimeStamp
+      URL mustBe URL
       Enumeration((0, 0), Seq.empty[Identifier]) mustBe
         Enumeration((0, 0), Seq.empty[Identifier])
       Alternation((0, 0), Seq.empty[TypeRef]) mustBe

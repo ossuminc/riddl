@@ -13,47 +13,47 @@ class TypesParserTest extends ParsingTest {
         "type str = String" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "str"),
-          Strng((1, 12))
+          TypeRef((1, 12), Identifier((1, 12), "String"))
         ),
         "type num = Number" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "num"),
-          Number((1, 12))
+          TypeRef((1, 12), Identifier((1, 12), "Number"))
         ),
         "type boo = Boolean" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "boo"),
-          Bool((1, 12))
+          TypeRef((1, 12), Identifier((1, 12), "Boolean"))
         ),
         "type ident = Id" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "ident"),
-          Id((1, 14))
+          TypeRef((1, 14), Identifier((1, 14), "Id"))
         ),
         "type dat = Date" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "dat"),
-          Date((1, 12))
+          TypeRef((1, 12), Identifier((1, 12), "Date"))
         ),
         "type tim = Time" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "tim"),
-          Time((1, 12))
+          TypeRef((1, 12), Identifier((1, 12), "Time"))
         ),
         "type stamp = TimeStamp" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "stamp"),
-          TimeStamp((1, 14))
+          TypeRef((1, 14), Identifier((1, 14), "TimeStamp"))
         ),
         "type url = URL" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "url"),
-          URL((1, 12))
+          TypeRef((1, 12), Identifier((1, 12), "URL"))
         ),
         "type FirstName = String" -> TypeDef(
           (1, 1),
           Identifier((1, 6), "FirstName"),
-          Strng((1, 18))
+          TypeRef((1, 18), Identifier((1, 18), "String"))
         )
       )
       checkDefinitions[TypeDef, TypeDef](cases, identity)
@@ -99,9 +99,12 @@ class TypesParserTest extends ParsingTest {
             Aggregation(
               (1, 12),
               ListMap(
-                Identifier((2, 3), "key") -> Number(2, 8),
-                Identifier((3, 3), "id") -> Id((3, 7)),
-                Identifier((4, 3), "time") -> TimeStamp((4, 9))
+                Identifier((2, 3), "key") ->
+                  TypeRef((2, 8), Identifier((2, 8), "Number")),
+                Identifier((3, 3), "id") ->
+                  TypeRef((3, 7), Identifier((3, 7), "Id")),
+                Identifier((4, 3), "time") ->
+                  TypeRef((4, 9), Identifier((4, 9), "TimeStamp"))
               )
             )
           ),

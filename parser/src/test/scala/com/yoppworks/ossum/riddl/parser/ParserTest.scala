@@ -148,7 +148,7 @@ class ParserTest extends ParsingTest {
             QueryDef(
               (2, 1),
               Identifier((2, 7), "FindThisThing"),
-              Strng((2, 23)),
+              TypeRef((2, 23), Identifier((2, 23), "String")),
               ResultRef((2, 37), Identifier((2, 44), "SomeResult"))
             )
       }

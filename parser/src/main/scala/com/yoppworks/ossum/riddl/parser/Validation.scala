@@ -1,204 +1,370 @@
 package com.yoppworks.ossum.riddl.parser
 
 import AST._
+import com.yoppworks.ossum.riddl.parser.Traversal.DefTraveler
+import com.yoppworks.ossum.riddl.parser.Traversal.FeatureTraveler
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
+import scala.reflect._
 
 /** Validates an AST */
 object Validation {
 
-  case class ValidationError(loc: Location, message: String)
+  sealed trait ValidationMessageKind
+  case object Warning extends ValidationMessageKind
+  case object Error extends ValidationMessageKind
 
-  type ValidationErrors = Seq[ValidationError]
-  val NoValidationErrors = Seq.empty[ValidationError]
+  case class ValidationMessage(
+    loc: Location,
+    message: String,
+    kind: ValidationMessageKind
+  )
 
-  trait Validator {
-    def validateDomain(d: DomainDef): ValidationErrors
+  type ValidationMessages = mutable.ListBuffer[ValidationMessage]
 
-    def validateContext(
-      context: ContextDef,
-      domain: DomainDef
-    ): ValidationErrors
+  val NoValidationState: mutable.ListBuffer[ValidationMessage] =
+    mutable.ListBuffer.empty[ValidationMessage]
 
-    def validateChannel(
-      channel: ChannelDef,
-      domain: DomainDef
-    ): ValidationErrors
+  object ValidationMessages {
 
-    def validateType(
-      typ: TypeDef,
-      context: ContextDef
-    ): ValidationErrors
+    def apply(): ValidationMessages = {
+      new mutable.ListBuffer[ValidationMessage]
+    }
 
-    def validateCommand(
-      command: CommandDef,
-      context: ContextDef
-    ): ValidationErrors
+    def apply(msg: ValidationMessage): ValidationMessages = {
+      apply().append(msg)
+    }
 
-    def validateEvent(
-      event: EventDef,
-      context: ContextDef
-    ): ValidationErrors
-
-    def validateQuery(
-      query: QueryDef,
-      context: ContextDef
-    ): ValidationErrors
-
-    def validateResult(
-      result: ResultDef,
-      context: ContextDef
-    ): ValidationErrors
-
-    def validateEntity(
-      entity: EntityDef,
-      context: ContextDef
-    ): ValidationErrors
-
-    protected val symbols
-      : mutable.Map[Identifier, mutable.Map[Identifier, Definition]] =
-      mutable.Map[Identifier, mutable.Map[Identifier, Definition]]()
-
-    protected def check(
-      what: Definition,
-      message: String,
-      predicate: Boolean = true
-    ): Seq[ValidationError] =
-      if (!predicate) {
-        Seq(ValidationError(what.loc, message))
-      } else {
-        NoValidationErrors
-      }
+    def apply(msg: ValidationMessage*): ValidationMessages = {
+      apply().appendAll(msg)
+    }
   }
+
+  sealed trait ValidationOptions
+
+  /** Warn when recommended features are left unused */
+  case object WarnOnMissing extends ValidationOptions
+
+  /** Warn when recommended stylistic violations occur */
+  case object WarnOnStyle extends ValidationOptions
+
+  val defaultOptions: Seq[ValidationOptions] = Seq(
+    WarnOnMissing,
+    WarnOnStyle
+  )
 
   def validate(
     domains: Seq[DomainDef],
-    validator: DefaultValidator = new DefaultValidator
-  ): ValidationErrors =
+    options: Seq[ValidationOptions] = defaultOptions
+  ): Seq[ValidationMessage] = {
+    val state = ValidationState(options)
     domains.flatMap { domain =>
-      validator.validateDomain(domain) ++
-        domain.channels.flatMap { chan =>
-          validator.validateChannel(chan, domain)
-        } ++
-        domain.contexts.flatMap { context =>
-          validator.validateContext(context, domain) ++
-            context.types.flatMap(typ => validator.validateType(typ, context)) ++
-            context.commands.flatMap(
-              command => validator.validateCommand(command, context)
-            )
-          context.events.flatMap(
-            event => validator.validateEvent(event, context)
-          )
-          context.queries.flatMap(qry => validator.validateQuery(qry, context))
-          context.results.flatMap(
-            result => validator.validateResult(result, context)
-          )
-          context.entities.flatMap(
-            entity => validator.validateEntity(entity, context)
-          )
-        }
+      DomainValidator(domain, state).payload.msgs
+    }
+  }
+
+  case class ValidationState(
+    options: Seq[ValidationOptions] = defaultOptions,
+    msgs: ValidationMessages = NoValidationState,
+    symbols: mutable.Map[(Identifier, Class[_]), Definition] =
+      mutable.Map.empty[(Identifier, Class[_]), Definition]
+  ) {
+
+    def ++(msg: ValidationMessage): ValidationState = {
+      msgs.append(msg)
+      this
+    }
+    symbols.put((Strng.id, classOf[TypeDefinition]), Strng)
+    symbols.put((Number.id, classOf[TypeDefinition]), Number)
+    symbols.put((Id.id, classOf[TypeDefinition]), Id)
+    symbols.put((Bool.id, classOf[TypeDefinition]), Bool)
+    symbols.put((Time.id, classOf[TypeDefinition]), Time)
+    symbols.put((Date.id, classOf[TypeDefinition]), Date)
+    symbols.put((TimeStamp.id, classOf[TypeDefinition]), TimeStamp)
+    symbols.put((URL.id, classOf[TypeDefinition]), URL)
+  }
+
+  abstract class ValidatorBase[D <: Definition](definition: D)
+      extends DefTraveler[ValidationState, D] {
+    def payload: ValidationState
+
+    payload.symbols.get(definition.id -> classOf[TypeDefinition]) match {
+      case Some(definition) =>
+        payload ++ ValidationMessage(
+          definition.id.loc,
+          s"Attempt to define type '${definition.id.value}' twice; previous " +
+            s"definition at ${definition.loc}",
+          Error
+        )
+      case None =>
+        payload.symbols.put(
+          definition.id -> classOf[TypeDefinition],
+          definition
+        )
     }
 
-  class DefaultValidator extends Validator {
+    def get[T <: Definition: ClassTag](
+      id: Identifier
+    ): Option[T] = {
+      payload.symbols.get(id -> classTag[T].runtimeClass).map(_.asInstanceOf[T])
+    }
 
-    def validateDomain(d: DomainDef): ValidationErrors = {
-      val domainErrors = symbols.get(d.id) match {
-        case Some(map) =>
-          map.get(d.id) match {
-            case Some(_) =>
-              check(
-                d,
-                s"Domain '${d.id}' already defined",
-                predicate = false
-              )
-            case None =>
-              NoValidationErrors
-          }
-        case None =>
-          symbols.put(d.id, mutable.Map(d.id -> d))
-          NoValidationErrors
+    protected def check(
+      predicate: Boolean = true,
+      message: String,
+      kind: ValidationMessageKind,
+      loc: Location = definition.loc
+    ): Option[ValidationMessage] = {
+      if (!predicate) {
+        Some(ValidationMessage(loc, message, kind))
+      } else {
+        None
       }
-      domainErrors ++
-        d.channels.flatMap(chan => validateChannel(chan, d)) ++
-        d.contexts.flatMap(c => validateContext(c, d))
     }
 
-    def validateChannel(
-      channel: ChannelDef,
-      d: DomainDef
-    ): ValidationErrors =
-      Seq.empty[ValidationError]
+    def isWarnOnMissing: Boolean = payload.options.contains(WarnOnMissing)
 
-    def validateContext(
-      context: ContextDef,
-      domain: DomainDef
-    ): ValidationErrors =
-      context.types.flatMap(typ => validateType(typ, context)) ++
-        context.commands.flatMap(command => validateCommand(command, context)) ++
-        context.events.flatMap(event => validateEvent(event, context)) ++
-        context.queries.flatMap(qry => validateQuery(qry, context)) ++
-        context.results.flatMap(result => validateResult(result, context)) ++
-        context.entities.flatMap(entity => validateEntity(entity, context))
+    def isWarnOnStyle: Boolean = payload.options.contains(WarnOnStyle)
 
-    def validateType(
-      typeDef: TypeDef,
-      context: ContextDef
-    ): ValidationErrors =
+    protected def visitExplanation(
+      maybeExplanation: Option[Explanation]
+    ): Unit = {
       check(
-        typeDef,
-        "Type names must start with a capital letter",
-        typeDef.id.value.charAt(0).isUpper
-      ) ++ {
-        typeDef.typ match {
-          case Aggregation(_, of) =>
-            check(typeDef, "") /* TODO: Flush this out */
-          case Alternation(_, of) =>
-            check(typeDef, "") /* TODO: Flush this out */
-          case Enumeration(_, of) =>
-            check(
-              typeDef,
-              "Enumerators must not start with upper case",
-              of.forall(!_.value.head.isUpper)
-            )
-          case TypeRef(loc, typeName) =>
-            check(
-              typeDef,
-              "Referenced type name must start with upper case",
-              typeName.value.charAt(0).isUpper
-            )
-          case _ =>
-            NoValidationErrors
-        }
+        maybeExplanation.isEmpty && isWarnOnMissing,
+        "Definitions should have explanations",
+        Warning
+      )
+    }
+
+    protected def visitSeeAlso(
+      maybeSeeAlso: Option[SeeAlso]
+    ): Unit = {
+      maybeSeeAlso.foreach { _ =>
       }
+    }
 
-    def validateCommand(
-      d: CommandDef,
-      context: ContextDef
-    ): ValidationErrors =
-      Seq.empty[ValidationError]
+    def close(): Unit = {}
 
-    def validateEvent(
-      event: EventDef,
-      context: ContextDef
-    ): ValidationErrors =
-      Seq.empty[ValidationError]
+    protected def terminus(): ValidationState = {
+      payload
+    }
 
-    def validateQuery(
-      qry: QueryDef,
-      context: ContextDef
-    ): ValidationErrors =
-      Seq.empty[ValidationError]
+    def checkRef[T <: Definition: ClassTag](id: Identifier): Unit = {
+      get[T](id) match {
+        case Some(d) =>
+          val tc = classTag[T].runtimeClass
+          check(
+            d.getClass == tc,
+            s"Identifier ${id.value} was expected to be ${tc.getName}" +
+              s" but is ${d.getClass.getName}",
+            Error,
+            id.loc
+          )
+        case None =>
+          payload ++ ValidationMessage(
+            id.loc,
+            s"Type ${id.value} is not defined. " +
+              "Types must be defined before they are used.",
+            Error
+          )
 
-    def validateResult(
-      result: ResultDef,
-      context: ContextDef
-    ): ValidationErrors =
-      Seq.empty[ValidationError]
+      }
+    }
+  }
 
-    def validateEntity(
-      entity: EntityDef,
+  case class TypeValidator(
+    typeDef: TypeDef,
+    payload: ValidationState
+  ) extends ValidatorBase[TypeDef](typeDef)
+      with Traversal.TypeTraveler[ValidationState] {
+
+    protected def open(): Unit = {
+      check(
+        typeDef.id.value.charAt(0).isUpper && isWarnOnStyle,
+        "Type names must start with a capital letter",
+        Warning
+      )
+    }
+
+    def visitType(ty: Type): Unit = {
+      ty match {
+        case _: PredefinedType =>
+        case Optional(_: Location, typeName: Identifier) =>
+          checkRef[TypeDefinition](typeName)
+        case ZeroOrMore(_: Location, typeName: Identifier) =>
+          checkRef[TypeDefinition](typeName)
+        case OneOrMore(_: Location, typeName: Identifier) =>
+          checkRef[TypeDefinition](typeName)
+        case TypeRef(_, typeName) =>
+          checkRef[TypeDefinition](typeName)
+        case Aggregation(_, of) =>
+          of.foreach {
+            case (id: Identifier, typEx: TypeExpression) =>
+              checkRef[TypeDefinition](typEx.id)
+              check(
+                isWarnOnStyle && id.value.forall(_.isLower),
+                "Field name should be all lowercase",
+                Warning,
+                typEx.loc
+              )
+          }
+        case Alternation(_, of) =>
+          of.foreach { typEx: TypeExpression =>
+            checkRef[TypeDefinition](typEx.id)
+          }
+        case Enumeration(_, of) =>
+          if (isWarnOnStyle) {
+            of.foreach { id =>
+              check(
+                id.value.head.isUpper,
+                s"Enumerator '${id.value}' must start with lower case",
+                Warning
+              )
+            }
+          }
+      }
+    }
+  }
+
+  case class DomainValidator(
+    domain: DomainDef,
+    payload: ValidationState = ValidationState()
+  ) extends ValidatorBase[DomainDef](domain)
+      with Traversal.DomainTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
+    def visitType(
+      typ: TypeDef
+    ): Traversal.TypeTraveler[ValidationState] = {
+      TypeValidator(typ, payload)
+    }
+
+    def visitChannel(
+      channel: ChannelDef
+    ): Traversal.ChannelTraveler[ValidationState] = {
+      ChannelValidator(channel, payload)
+    }
+
+    def visitInteraction(
+      i: InteractionDef
+    ): Traversal.InteractionTraveler[ValidationState] = {
+      InteractionValidator(i, payload)
+    }
+
+    def visitContext(
       context: ContextDef
-    ): ValidationErrors =
-      Seq.empty[ValidationError]
+    ): Traversal.ContextTraveler[ValidationState] = {
+      ContextValidator(context, payload)
+    }
+  }
+
+  case class ChannelValidator(
+    channel: ChannelDef,
+    payload: ValidationState
+  ) extends ValidatorBase[ChannelDef](channel)
+      with Traversal.ChannelTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
+    def visitCommands(commands: Seq[CommandRef]): Unit = {}
+
+    def visitEvents(events: Seq[EventRef]): Unit = {}
+
+    def visitQueries(queries: Seq[QueryRef]): Unit = {}
+
+    def visitResults(results: Seq[ResultRef]): Unit = {}
+  }
+
+  case class ContextValidator(
+    context: ContextDef,
+    payload: ValidationState
+  ) extends ValidatorBase[ContextDef](context)
+      with Traversal.ContextTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
+    def visitType(t: TypeDef): Traversal.TypeTraveler[ValidationState] = {
+      TypeValidator(t, payload)
+    }
+
+    def visitCommand(command: CommandDef): Unit = {}
+
+    def visitEvent(event: EventDef): Unit = {}
+
+    def visitQuery(query: QueryDef): Unit = {}
+
+    def visitResult(result: ResultDef): Unit = {}
+
+    def visitAdaptor(
+      a: AdaptorDef
+    ): Traversal.AdaptorTraveler[ValidationState] =
+      AdaptorValidator(a, payload)
+
+    def visitInteraction(
+      i: InteractionDef
+    ): Traversal.InteractionTraveler[ValidationState] =
+      InteractionValidator(i, payload)
+
+    def visitEntity(
+      e: EntityDef
+    ): Traversal.EntityTraveler[ValidationState] = {
+      EntityValidator(e, payload)
+    }
+  }
+
+  case class EntityValidator(
+    entity: EntityDef,
+    payload: ValidationState
+  ) extends ValidatorBase[EntityDef](entity)
+      with Traversal.EntityTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
+    def visitProducer(c: ChannelRef): Unit = {}
+
+    def visitConsumer(c: ChannelRef): Unit = {}
+
+    def visitInvariant(i: InvariantDef): Unit = {}
+
+    def visitFeature(f: FeatureDef): FeatureTraveler[ValidationState] = {
+      FeatureValidator(f, payload)
+    }
+  }
+
+  case class FeatureValidator(
+    feature: FeatureDef,
+    payload: ValidationState
+  ) extends ValidatorBase[FeatureDef](feature)
+      with Traversal.FeatureTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
+    def visitBackground(background: Background): Unit = {}
+    def visitExample(example: ExampleDef): Unit = {}
+  }
+
+  case class InteractionValidator(
+    interaction: InteractionDef,
+    payload: ValidationState
+  ) extends ValidatorBase[InteractionDef](interaction)
+      with Traversal.InteractionTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
+    def visitRole(role: RoleDef): Unit = {}
+
+    def visitAction(action: ActionDef): Unit = {}
+  }
+
+  case class AdaptorValidator(
+    adaptor: AdaptorDef,
+    payload: ValidationState
+  ) extends ValidatorBase[AdaptorDef](adaptor)
+      with Traversal.AdaptorTraveler[ValidationState] {
+
+    def open(): Unit = {}
+
   }
 }
