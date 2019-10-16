@@ -21,8 +21,8 @@ scalacOptions in ThisBuild ++= Seq(
   "-Wdead-code"
 )
 
-lazy val parser = (project in file("parser")).settings(
-  name := "riddl-parser",
+lazy val language = (project in file("language")).settings(
+  name := "riddl-languge",
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % "2.0.0",
     "com.lihaoyi" %% "fastparse" % "2.1.3",
@@ -41,7 +41,7 @@ lazy val translator = (project in file("translator"))
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
   )
-  .dependsOn(parser)
+  .dependsOn(language)
 
 lazy val root = (project in file("."))
   .enablePlugins(ParadoxPlugin)
@@ -51,5 +51,5 @@ lazy val root = (project in file("."))
     name := "riddl",
     paradoxTheme := Some(builtinParadoxTheme("generic"))
   )
-  .dependsOn(parser)
-  .aggregate(parser)
+  .dependsOn(language)
+  .aggregate(language)
