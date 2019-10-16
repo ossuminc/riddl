@@ -12,18 +12,20 @@ import scala.reflect._
 object Validation {
 
   sealed trait ValidationMessageKind
+  case object MissingWarning extends ValidationMessageKind
+  case object StyleWarning extends ValidationMessageKind
   case object Warning extends ValidationMessageKind
   case object Error extends ValidationMessageKind
 
   case class ValidationMessage(
     loc: Location,
     message: String,
-    kind: ValidationMessageKind
+    kind: ValidationMessageKind = Error
   )
 
   type ValidationMessages = mutable.ListBuffer[ValidationMessage]
 
-  val NoValidationState: mutable.ListBuffer[ValidationMessage] =
+  def NoValidationState: mutable.ListBuffer[ValidationMessage] =
     mutable.ListBuffer.empty[ValidationMessage]
 
   object ValidationMessages {
@@ -44,14 +46,14 @@ object Validation {
   sealed trait ValidationOptions
 
   /** Warn when recommended features are left unused */
-  case object WarnOnMissing extends ValidationOptions
+  case object ReportMissingWarnings extends ValidationOptions
 
   /** Warn when recommended stylistic violations occur */
-  case object WarnOnStyle extends ValidationOptions
+  case object ReportStyleWarnings extends ValidationOptions
 
   val defaultOptions: Seq[ValidationOptions] = Seq(
-    WarnOnMissing,
-    WarnOnStyle
+    ReportMissingWarnings,
+    ReportStyleWarnings
   )
 
   def validate(
@@ -60,80 +62,104 @@ object Validation {
   ): Seq[ValidationMessage] = {
     val state = ValidationState(options)
     domains.flatMap { domain =>
-      DomainValidator(domain, state).payload.msgs
+      DomainValidator(domain, state).traverse.msgs
     }
   }
 
   case class ValidationState(
     options: Seq[ValidationOptions] = defaultOptions,
     msgs: ValidationMessages = NoValidationState,
-    symbols: mutable.Map[(Identifier, Class[_]), Definition] =
-      mutable.Map.empty[(Identifier, Class[_]), Definition]
+    symbols: mutable.Map[String, mutable.ListBuffer[Definition]] =
+      mutable.Map.empty[String, mutable.ListBuffer[Definition]]
   ) {
 
-    def ++(msg: ValidationMessage): ValidationState = {
-      msgs.append(msg)
-      this
+    def isReportMissingWarnings: Boolean =
+      options.contains(ReportMissingWarnings)
+
+    def isReportStyleWarnings: Boolean =
+      options.contains(ReportStyleWarnings)
+
+    def add(msg: ValidationMessage): Unit = {
+      msg.kind match {
+        case StyleWarning if isReportStyleWarnings =>
+          msgs.append(msg)
+        case MissingWarning if isReportMissingWarnings =>
+          msgs.append(msg)
+        case _ =>
+          msgs.append(msg)
+      }
     }
-    symbols.put((Strng.id, classOf[TypeDefinition]), Strng)
-    symbols.put((Number.id, classOf[TypeDefinition]), Number)
-    symbols.put((Id.id, classOf[TypeDefinition]), Id)
-    symbols.put((Bool.id, classOf[TypeDefinition]), Bool)
-    symbols.put((Time.id, classOf[TypeDefinition]), Time)
-    symbols.put((Date.id, classOf[TypeDefinition]), Date)
-    symbols.put((TimeStamp.id, classOf[TypeDefinition]), TimeStamp)
-    symbols.put((URL.id, classOf[TypeDefinition]), URL)
+
+    def put(dfntn: Definition): Unit = {
+      symbols.get(dfntn.id.value) match {
+        case Some(list) =>
+          symbols.update(dfntn.id.value, list :+ dfntn)
+        case None =>
+          symbols.put(dfntn.id.value, mutable.ListBuffer(dfntn))
+
+      }
+    }
+
+    def get[D <: Definition: ClassTag](id: Identifier): Option[D] = {
+      val clazz = classTag[D].runtimeClass
+      symbols.get(id.value) match {
+        case Some(list) =>
+          list
+            .find { d =>
+              clazz.isAssignableFrom(d.getClass)
+            }
+            .map(_.asInstanceOf[D])
+        case None =>
+          None
+      }
+    }
+
+    put(Strng)
+    put(Number)
+    put(Id)
+    put(Bool)
+    put(Time)
+    put(Date)
+    put(TimeStamp)
+    put(URL)
+
   }
 
-  abstract class ValidatorBase[D <: Definition](definition: D)
+  abstract class ValidatorBase[D <: Definition: ClassTag](definition: D)
       extends DefTraveler[ValidationState, D] {
     def payload: ValidationState
 
-    payload.symbols.get(definition.id -> classOf[TypeDefinition]) match {
-      case Some(definition) =>
-        payload ++ ValidationMessage(
-          definition.id.loc,
-          s"Attempt to define type '${definition.id.value}' twice; previous " +
-            s"definition at ${definition.loc}",
-          Error
+    get[D](definition.id) match {
+      case Some(dfntn) =>
+        payload.add(
+          ValidationMessage(
+            dfntn.id.loc,
+            s"Attempt to define '${dfntn.id.value}' twice; previous " +
+              s"definition at ${dfntn.loc}",
+            Error
+          )
         )
       case None =>
-        payload.symbols.put(
-          definition.id -> classOf[TypeDefinition],
-          definition
-        )
+        put(definition)
+    }
+
+    def put(dfntn: Definition): Unit = {
+      payload.put(dfntn)
     }
 
     def get[T <: Definition: ClassTag](
       id: Identifier
     ): Option[T] = {
-      payload.symbols.get(id -> classTag[T].runtimeClass).map(_.asInstanceOf[T])
+      payload.get[T](id)
     }
-
-    protected def check(
-      predicate: Boolean = true,
-      message: String,
-      kind: ValidationMessageKind,
-      loc: Location = definition.loc
-    ): Option[ValidationMessage] = {
-      if (!predicate) {
-        Some(ValidationMessage(loc, message, kind))
-      } else {
-        None
-      }
-    }
-
-    def isWarnOnMissing: Boolean = payload.options.contains(WarnOnMissing)
-
-    def isWarnOnStyle: Boolean = payload.options.contains(WarnOnStyle)
 
     protected def visitExplanation(
       maybeExplanation: Option[Explanation]
     ): Unit = {
       check(
-        maybeExplanation.isEmpty && isWarnOnMissing,
+        maybeExplanation.isEmpty,
         "Definitions should have explanations",
-        Warning
+        MissingWarning
       )
     }
 
@@ -150,23 +176,36 @@ object Validation {
       payload
     }
 
+    protected def check(
+      predicate: Boolean = true,
+      message: String,
+      kind: ValidationMessageKind,
+      loc: Location = definition.loc
+    ): Unit = {
+      if (!predicate) {
+        payload.add(ValidationMessage(loc, message, kind))
+      }
+    }
+
     def checkRef[T <: Definition: ClassTag](id: Identifier): Unit = {
       get[T](id) match {
         case Some(d) =>
           val tc = classTag[T].runtimeClass
           check(
-            d.getClass == tc,
+            tc.isAssignableFrom(d.getClass),
             s"Identifier ${id.value} was expected to be ${tc.getName}" +
               s" but is ${d.getClass.getName}",
             Error,
             id.loc
           )
         case None =>
-          payload ++ ValidationMessage(
-            id.loc,
-            s"Type ${id.value} is not defined. " +
-              "Types must be defined before they are used.",
-            Error
+          payload.add(
+            ValidationMessage(
+              id.loc,
+              s"Type ${id.value} is not defined. " +
+                "Types must be defined before they are used.",
+              Error
+            )
           )
 
       }
@@ -181,9 +220,9 @@ object Validation {
 
     protected def open(): Unit = {
       check(
-        typeDef.id.value.charAt(0).isUpper && isWarnOnStyle,
-        "Type names must start with a capital letter",
-        Warning
+        typeDef.id.value.head.isUpper,
+        s"Type name ${typeDef.id.value} must start with a capital letter",
+        StyleWarning
       )
     }
 
@@ -203,9 +242,9 @@ object Validation {
             case (id: Identifier, typEx: TypeExpression) =>
               checkRef[TypeDefinition](typEx.id)
               check(
-                isWarnOnStyle && id.value.forall(_.isLower),
+                id.value.forall(_.isLower),
                 "Field name should be all lowercase",
-                Warning,
+                StyleWarning,
                 typEx.loc
               )
           }
@@ -214,12 +253,12 @@ object Validation {
             checkRef[TypeDefinition](typEx.id)
           }
         case Enumeration(_, of) =>
-          if (isWarnOnStyle) {
+          if (payload.isReportStyleWarnings) {
             of.foreach { id =>
               check(
                 id.value.head.isUpper,
                 s"Enumerator '${id.value}' must start with lower case",
-                Warning
+                StyleWarning
               )
             }
           }

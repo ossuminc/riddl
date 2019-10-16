@@ -94,8 +94,8 @@ object AST {
   sealed trait TypeDefinition extends Definition
 
   class PredefinedType(name: String) extends TypeDefinition {
-    def id: Identifier = Identifier(loc, name)
     def loc: Location = Location.empty
+    def id: Identifier = Identifier(loc, name)
     def addendum: Option[Addendum] = None
   }
 
