@@ -57,7 +57,7 @@ object AST {
   case class Addendum(
     loc: Location,
     explanation: Option[Explanation],
-    seeALso: Option[SeeAlso]
+    seeAlso: Option[SeeAlso]
   ) extends RiddlValue
 
   sealed trait Reference extends RiddlValue {
@@ -283,6 +283,7 @@ object AST {
     events: Seq[EventDef] = Seq.empty[EventDef],
     queries: Seq[QueryDef] = Seq.empty[QueryDef],
     results: Seq[ResultDef] = Seq.empty[ResultDef],
+    channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
     adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
@@ -388,7 +389,6 @@ object AST {
     id: Identifier,
     subdomain: Option[Identifier] = None,
     types: Seq[TypeDef] = Seq.empty[TypeDef],
-    channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
     contexts: Seq[ContextDef] = Seq.empty[ContextDef],
     addendum: Option[Addendum] = None

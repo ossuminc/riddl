@@ -12,13 +12,13 @@ object Traversal {
     protected def open(): Unit
     protected def close(): Unit
     protected def terminus(): P
-    protected def visitExplanation(exp: Option[Explanation]): Unit
-    protected def visitSeeAlso(exp: Option[SeeAlso]): Unit
+    protected def visitExplanation(exp: Explanation): Unit
+    protected def visitSeeAlso(exp: SeeAlso): Unit
 
     def visitAddendum(add: Option[Addendum]): Unit = {
       definition.addendum.foreach { x =>
-        visitExplanation(x.explanation)
-        visitSeeAlso(x.seeALso)
+        x.explanation.foreach(visitExplanation)
+        x.seeAlso.foreach(visitSeeAlso)
       }
     }
   }
@@ -29,7 +29,6 @@ object Traversal {
     final def traverse: P = {
       open()
       domain.types.foreach(visitType(_).traverse)
-      domain.channels.foreach(visitChannel(_).traverse)
       domain.interactions.foreach(visitInteraction(_).traverse)
       domain.contexts.foreach(visitContext(_).traverse)
       close()
@@ -38,7 +37,6 @@ object Traversal {
     }
 
     def visitType(typ: AST.TypeDef): TypeTraveler[P]
-    def visitChannel(chan: ChannelDef): ChannelTraveler[P]
     def visitInteraction(i: InteractionDef): InteractionTraveler[P]
     def visitContext(context: ContextDef): ContextTraveler[P]
   }
@@ -86,6 +84,7 @@ object Traversal {
       context.events.foreach(visitEvent)
       context.queries.foreach(visitQuery)
       context.results.foreach(visitResult)
+      context.channels.foreach(visitChannel(_).traverse)
       context.adaptors.foreach(visitAdaptor(_).traverse)
       context.interactions.foreach(visitInteraction(_).traverse)
       context.entities.foreach(visitEntity(_).traverse)
@@ -98,6 +97,7 @@ object Traversal {
     def visitEvent(event: EventDef): Unit
     def visitQuery(query: QueryDef): Unit
     def visitResult(result: ResultDef): Unit
+    def visitChannel(chan: ChannelDef): ChannelTraveler[P]
     def visitAdaptor(a: AdaptorDef): AdaptorTraveler[P]
     def visitInteraction(i: InteractionDef): InteractionTraveler[P]
     def visitEntity(e: EntityDef): EntityTraveler[P]

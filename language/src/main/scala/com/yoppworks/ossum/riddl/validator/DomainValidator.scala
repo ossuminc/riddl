@@ -11,7 +11,12 @@ case class DomainValidator(
 ) extends ValidatorBase[DomainDef](domain)
     with Traversal.DomainTraveler[ValidationState] {
 
-  def open(): Unit = {}
+  override def open(): Unit = {
+    domain.subdomain.foreach { id =>
+      checkRef[DomainDef](id)
+    }
+    super.open()
+  }
 
   def visitType(
     typ: TypeDef
@@ -35,5 +40,9 @@ case class DomainValidator(
     context: ContextDef
   ): Traversal.ContextTraveler[ValidationState] = {
     ContextValidator(context, payload)
+  }
+
+  override def close: Unit = {
+    // defines
   }
 }

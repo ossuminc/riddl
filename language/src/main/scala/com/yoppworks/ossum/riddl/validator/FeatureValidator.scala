@@ -11,8 +11,6 @@ case class FeatureValidator(
 ) extends ValidatorBase[FeatureDef](feature)
     with Traversal.FeatureTraveler[ValidationState] {
 
-  def open(): Unit = {}
-
   def visitBackground(background: Background): Unit = {}
   def visitExample(example: ExampleDef): Unit = {}
 }

@@ -21,7 +21,6 @@ trait DomainParser
       location ~ "domain" ~/ identifier ~
         ("is" ~ "subdomain" ~ "of" ~/ identifier).? ~ "{" ~/
         typeDef.rep(0) ~
-        channelDef.rep(0) ~
         interactionDef.rep(0) ~
         contextDef.rep(0) ~
         "}" ~ addendum

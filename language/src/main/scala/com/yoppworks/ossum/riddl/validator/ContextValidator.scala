@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.validator
 
 import com.yoppworks.ossum.riddl.parser.AST._
-import com.yoppworks.ossum.riddl.parser.Traversal
+import com.yoppworks.ossum.riddl.parser.Traversal._
 import Validation._
 
 /** Unit Tests For ContextValidator */
@@ -9,15 +9,14 @@ case class ContextValidator(
   context: ContextDef,
   payload: ValidationState
 ) extends ValidatorBase[ContextDef](context)
-    with Traversal.ContextTraveler[ValidationState] {
+    with ContextTraveler[ValidationState] {
 
-  def open(): Unit = {}
-
-  def visitType(t: TypeDef): Traversal.TypeTraveler[ValidationState] = {
+  def visitType(t: TypeDef): TypeTraveler[ValidationState] = {
     TypeValidator(t, payload)
   }
 
   def visitCommand(command: CommandDef): Unit = {
+    checkTypeExpression(command.typ)
     if (command.events.isEmpty) {
       payload.add(
         ValidationMessage(
@@ -25,28 +24,45 @@ case class ContextValidator(
           "Commands must always yield at least one event"
         )
       )
+    } else {
+      command.events.foreach { eventRef =>
+        checkRef[EventDef](eventRef.id)
+      }
     }
   }
 
-  def visitEvent(event: EventDef): Unit = {}
+  def visitEvent(event: EventDef): Unit = {
+    checkTypeExpression(event.typ)
+  }
 
-  def visitQuery(query: QueryDef): Unit = {}
+  def visitQuery(query: QueryDef): Unit = {
+    checkTypeExpression(query.typ)
+    checkRef[ResultDef](query.result.id)
+  }
 
-  def visitResult(result: ResultDef): Unit = {}
+  def visitResult(result: ResultDef): Unit = {
+    checkTypeExpression(result.typ)
+  }
+
+  override def visitChannel(
+    chan: ChannelDef
+  ): ChannelTraveler[ValidationState] = {
+    ChannelValidator(chan, payload)
+  }
 
   def visitAdaptor(
     a: AdaptorDef
-  ): Traversal.AdaptorTraveler[ValidationState] =
+  ): AdaptorTraveler[ValidationState] =
     AdaptorValidator(a, payload)
 
   def visitInteraction(
     i: InteractionDef
-  ): Traversal.InteractionTraveler[ValidationState] =
+  ): InteractionTraveler[ValidationState] =
     InteractionValidator(i, payload)
 
   def visitEntity(
     e: EntityDef
-  ): Traversal.EntityTraveler[ValidationState] = {
+  ): EntityTraveler[ValidationState] = {
     EntityValidator(e, payload)
   }
 

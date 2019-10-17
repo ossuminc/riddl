@@ -11,8 +11,6 @@ case class InteractionValidator(
 ) extends ValidatorBase[InteractionDef](interaction)
     with Traversal.InteractionTraveler[ValidationState] {
 
-  def open(): Unit = {}
-
   def visitRole(role: RoleDef): Unit = {}
 
   def visitAction(action: ActionDef): Unit = {}

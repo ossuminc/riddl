@@ -1,6 +1,6 @@
-!.idea/runConfigurations
-!.idea/dictionaries
 .idea
+!.idea/runConfigurations/
+!.idea/dictionaries
 project/target
 target
 **/target

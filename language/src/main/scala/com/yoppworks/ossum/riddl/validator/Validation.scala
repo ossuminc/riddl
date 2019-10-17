@@ -1,54 +1,7 @@
 package com.yoppworks.ossum.riddl.validator
 
-import com.yoppworks.ossum.riddl.parser.AST.ActionDef
-import com.yoppworks.ossum.riddl.parser.AST.AdaptorDef
-import com.yoppworks.ossum.riddl.parser.AST.Aggregation
-import com.yoppworks.ossum.riddl.parser.AST.Alternation
-import com.yoppworks.ossum.riddl.parser.AST.Background
-import com.yoppworks.ossum.riddl.parser.AST.Bool
-import com.yoppworks.ossum.riddl.parser.AST.ChannelDef
-import com.yoppworks.ossum.riddl.parser.AST.ChannelRef
-import com.yoppworks.ossum.riddl.parser.AST.CommandDef
-import com.yoppworks.ossum.riddl.parser.AST.CommandRef
-import com.yoppworks.ossum.riddl.parser.AST.ContextDef
-import com.yoppworks.ossum.riddl.parser.AST.Date
-import com.yoppworks.ossum.riddl.parser.AST.Definition
-import com.yoppworks.ossum.riddl.parser.AST.DomainDef
-import com.yoppworks.ossum.riddl.parser.AST.EntityDef
-import com.yoppworks.ossum.riddl.parser.AST.Enumeration
-import com.yoppworks.ossum.riddl.parser.AST.EventDef
-import com.yoppworks.ossum.riddl.parser.AST.EventRef
-import com.yoppworks.ossum.riddl.parser.AST.ExampleDef
-import com.yoppworks.ossum.riddl.parser.AST.Explanation
-import com.yoppworks.ossum.riddl.parser.AST.FeatureDef
-import com.yoppworks.ossum.riddl.parser.AST.Id
-import com.yoppworks.ossum.riddl.parser.AST.Identifier
-import com.yoppworks.ossum.riddl.parser.AST.InteractionDef
-import com.yoppworks.ossum.riddl.parser.AST.InvariantDef
-import com.yoppworks.ossum.riddl.parser.AST.Location
-import com.yoppworks.ossum.riddl.parser.AST.Number
-import com.yoppworks.ossum.riddl.parser.AST.OneOrMore
-import com.yoppworks.ossum.riddl.parser.AST.Optional
-import com.yoppworks.ossum.riddl.parser.AST.PredefinedType
-import com.yoppworks.ossum.riddl.parser.AST.QueryDef
-import com.yoppworks.ossum.riddl.parser.AST.QueryRef
-import com.yoppworks.ossum.riddl.parser.AST.ResultDef
-import com.yoppworks.ossum.riddl.parser.AST.ResultRef
-import com.yoppworks.ossum.riddl.parser.AST.RoleDef
-import com.yoppworks.ossum.riddl.parser.AST.SeeAlso
-import com.yoppworks.ossum.riddl.parser.AST.Strng
-import com.yoppworks.ossum.riddl.parser.AST.Time
-import com.yoppworks.ossum.riddl.parser.AST.TimeStamp
-import com.yoppworks.ossum.riddl.parser.AST.Type
-import com.yoppworks.ossum.riddl.parser.AST.TypeDef
-import com.yoppworks.ossum.riddl.parser.AST.TypeDefinition
-import com.yoppworks.ossum.riddl.parser.AST.TypeExpression
-import com.yoppworks.ossum.riddl.parser.AST.TypeRef
-import com.yoppworks.ossum.riddl.parser.AST.URL
-import com.yoppworks.ossum.riddl.parser.AST.ZeroOrMore
-import com.yoppworks.ossum.riddl.parser.Traversal
+import com.yoppworks.ossum.riddl.parser.AST._
 import com.yoppworks.ossum.riddl.parser.Traversal.DefTraveler
-import com.yoppworks.ossum.riddl.parser.Traversal.FeatureTraveler
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -112,6 +65,30 @@ object Validation {
     }
   }
 
+  def validateDomain(
+    domain: DomainDef,
+    options: Seq[ValidationOptions] = defaultOptions
+  ): Seq[ValidationMessage] = {
+    val state = ValidationState(options)
+    DomainValidator(domain, state).traverse.msgs.toSeq
+  }
+
+  def validateContext(
+    domain: ContextDef,
+    options: Seq[ValidationOptions] = defaultOptions
+  ): Seq[ValidationMessage] = {
+    val state = ValidationState(options)
+    ContextValidator(domain, state).traverse.msgs.toSeq
+  }
+
+  def validateEntity(
+    entity: EntityDef,
+    options: Seq[ValidationOptions] = defaultOptions
+  ): Seq[ValidationMessage] = {
+    val state = ValidationState(options)
+    EntityValidator(entity, state).traverse.msgs.toSeq
+  }
+
   case class ValidationState(
     options: Seq[ValidationOptions] = defaultOptions,
     msgs: ValidationMessages = NoValidationState,
@@ -127,10 +104,10 @@ object Validation {
 
     def add(msg: ValidationMessage): Unit = {
       msg.kind match {
-        case StyleWarning if isReportStyleWarnings =>
-          msgs.append(msg)
-        case MissingWarning if isReportMissingWarnings =>
-          msgs.append(msg)
+        case StyleWarning =>
+          if (isReportStyleWarnings) msgs.append(msg)
+        case MissingWarning =>
+          if (isReportMissingWarnings) msgs.append(msg)
         case _ =>
           msgs.append(msg)
       }
@@ -175,20 +152,6 @@ object Validation {
       extends DefTraveler[ValidationState, D] {
     def payload: ValidationState
 
-    get[D](definition.id) match {
-      case Some(dfntn) =>
-        payload.add(
-          ValidationMessage(
-            dfntn.id.loc,
-            s"Attempt to define '${dfntn.id.value}' twice; previous " +
-              s"definition at ${dfntn.loc}",
-            Error
-          )
-        )
-      case None =>
-        put(definition)
-    }
-
     def put(dfntn: Definition): Unit = {
       payload.put(dfntn)
     }
@@ -199,24 +162,56 @@ object Validation {
       payload.get[T](id)
     }
 
+    def open(): Unit = {
+      get[D](definition.id) match {
+        case Some(dfntn) =>
+          payload.add(
+            ValidationMessage(
+              dfntn.id.loc,
+              s"Attempt to define '${dfntn.id.value}' twice; previous " +
+                s"definition at ${dfntn.loc}",
+              Error
+            )
+          )
+        case None =>
+          put(definition)
+      }
+    }
+
+    def close(): Unit = {}
+
+    override def visitAddendum(add: Option[Addendum]): Unit = {
+      if (add.isEmpty) {
+        check(
+          predicate = false,
+          s"Definition '${definition.id.value}' " +
+            "should have explanations or references",
+          MissingWarning
+        )
+      } else {
+        super.visitAddendum(add)
+      }
+    }
+
     protected def visitExplanation(
-      maybeExplanation: Option[Explanation]
+      exp: Explanation
     ): Unit = {
       check(
-        maybeExplanation.isEmpty,
-        "Definitions should have explanations",
+        exp.markdown.nonEmpty,
+        "Explanations should not be empty",
         MissingWarning
       )
     }
 
     protected def visitSeeAlso(
-      maybeSeeAlso: Option[SeeAlso]
+      seeAlso: SeeAlso
     ): Unit = {
-      maybeSeeAlso.foreach { _ =>
-      }
+      check(
+        seeAlso.citations.nonEmpty,
+        "SeeAlso references should not be empty",
+        MissingWarning
+      )
     }
-
-    def close(): Unit = {}
 
     protected def terminus(): ValidationState = {
       payload
@@ -233,7 +228,20 @@ object Validation {
       }
     }
 
-    def checkRef[T <: Definition: ClassTag](id: Identifier): Unit = {
+    protected def checkTypeExpression(typ: TypeExpression): Unit = {
+      typ match {
+        case Optional(_, id) =>
+          checkRef[TypeDef](id)
+        case OneOrMore(_, id) =>
+          checkRef[TypeDef](id)
+        case ZeroOrMore(_, id) =>
+          checkRef[TypeDef](id)
+        case TypeRef(_, id) =>
+          checkRef[TypeDef](id)
+      }
+    }
+
+    protected def checkRef[T <: Definition: ClassTag](id: Identifier): Unit = {
       get[T](id) match {
         case Some(d) =>
           val tc = classTag[T].runtimeClass
@@ -253,9 +261,7 @@ object Validation {
               Error
             )
           )
-
       }
     }
   }
-
 }

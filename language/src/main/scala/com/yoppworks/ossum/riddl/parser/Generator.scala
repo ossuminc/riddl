@@ -32,27 +32,23 @@ object Generator {
     val spc: String = " ".repeat(indent)
 
     protected def visitExplanation(
-      maybeExplanation: Option[Explanation]
+      exp: Explanation
     ): Unit = {
-      maybeExplanation.foreach { explanation =>
-        payload.append(" explained as {\n")
-        explanation.markdown.foreach { line =>
-          payload.append(spc + "  \"" + line + "\"\n")
-        }
-        payload.append(spc + "}")
+      payload.append(" explained as {\n")
+      exp.markdown.foreach { line =>
+        payload.append(spc + "  \"" + line + "\"\n")
       }
+      payload.append(spc + "}")
     }
 
     protected def visitSeeAlso(
-      maybeSeeAlso: Option[SeeAlso]
+      sa: SeeAlso
     ): Unit = {
-      maybeSeeAlso.foreach { links =>
-        payload.append(s" see also {\n")
-        links.citations.foreach { line =>
-          payload.append(spc + "  \"" + line + "\"\n")
-        }
-        payload.append(spc + "}")
+      payload.append(s" see also {\n")
+      sa.citations.foreach { line =>
+        payload.append(spc + "  \"" + line + "\"\n")
       }
+      payload.append(spc + "}")
     }
 
     protected def visitTypeExpression(typEx: AST.TypeExpression): String = {
@@ -240,6 +236,10 @@ object Generator {
       )
     }
 
+    override def visitChannel(chan: ChannelDef): ChannelTraveler[Lines] = {
+      ChannelGenerator(chan, payload, indent + 2)
+    }
+
     def visitAdaptor(
       a: AdaptorDef
     ): Traversal.AdaptorTraveler[Lines] =
@@ -253,6 +253,7 @@ object Generator {
     def visitEntity(e: EntityDef): Traversal.EntityTraveler[Lines] = {
       EntityGenerator(e, payload, indent + 2)
     }
+
   }
 
   case class EntityGenerator(entity: EntityDef, payload: Lines, indent: Int)

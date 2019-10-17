@@ -7,6 +7,7 @@ import ScalaWhitespace._
 /** Parsing rules for Context definitions */
 trait ContextParser
     extends AdaptorParser
+    with ChannelParser
     with EntityParser
     with InteractionParser
     with MessageParser
@@ -17,7 +18,7 @@ trait ContextParser
       case (loc, "wrapper")  => WrapperOption(loc)
       case (loc, "function") => FunctionOption(loc)
       case (loc, "gateway")  => GatewayOption(loc)
-      case (loc, _)          => throw new RuntimeException("Impossible case")
+      case (_, _)            => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -30,6 +31,7 @@ trait ContextParser
         eventDef.rep(0) ~
         queryDef.rep(0) ~
         resultDef.rep(0) ~
+        channelDef.rep(0) ~
         entityDef.rep(0) ~
         adaptorDef.rep(0) ~
         interactionDef.rep(0) ~

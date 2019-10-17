@@ -72,14 +72,20 @@ class ParserTest extends ParsingTest {
             )
       }
     }
-    "allow channel definitions in domains" in {
+    "allow channel definitions in contexts" in {
       val input =
-        "domain foo { channel bar { commands{} events{} queries{} results{} } }"
-      parseDomainDefinition[ChannelDef](input, _.channels.head) match {
+        """
+          |domain foo {
+          |  context fum {
+          |    channel bar { commands{} events{} queries{} results{} }
+          |  }
+          |}
+          |""".stripMargin
+      parseDomainDefinition[ChannelDef](input, _.contexts.head.channels.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ChannelDef((1, 14), Identifier((1, 22), "bar"))
+            ChannelDef((4, 5), Identifier((4, 13), "bar"))
       }
     }
     "allow type definitions in contexts" in {

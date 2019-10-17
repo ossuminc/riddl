@@ -9,8 +9,4 @@ case class AdaptorValidator(
   adaptor: AdaptorDef,
   payload: ValidationState
 ) extends ValidatorBase[AdaptorDef](adaptor)
-    with Traversal.AdaptorTraveler[ValidationState] {
-
-  def open(): Unit = {}
-
-}
+    with Traversal.AdaptorTraveler[ValidationState] {}

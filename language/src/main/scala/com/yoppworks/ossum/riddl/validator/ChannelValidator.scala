@@ -11,13 +11,28 @@ case class ChannelValidator(
 ) extends ValidatorBase[ChannelDef](channel)
     with Traversal.ChannelTraveler[ValidationState] {
 
-  def open(): Unit = {}
+  def visitCommands(commands: Seq[CommandRef]): Unit = {
+    commands.foreach { ref =>
+      checkRef[CommandDef](ref.id)
+    }
+  }
 
-  def visitCommands(commands: Seq[CommandRef]): Unit = {}
+  def visitEvents(events: Seq[EventRef]): Unit = {
+    events.foreach { ref =>
+      checkRef[CommandDef](ref.id)
+    }
+  }
 
-  def visitEvents(events: Seq[EventRef]): Unit = {}
+  def visitQueries(queries: Seq[QueryRef]): Unit = {
+    queries.foreach { ref =>
+      checkRef[CommandDef](ref.id)
+    }
+  }
 
-  def visitQueries(queries: Seq[QueryRef]): Unit = {}
+  def visitResults(results: Seq[ResultRef]): Unit = {
+    results.foreach { ref =>
+      checkRef[CommandDef](ref.id)
+    }
 
-  def visitResults(results: Seq[ResultRef]): Unit = {}
+  }
 }

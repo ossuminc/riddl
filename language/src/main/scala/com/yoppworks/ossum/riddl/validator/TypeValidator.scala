@@ -10,7 +10,8 @@ case class TypeValidator(
 ) extends ValidatorBase[TypeDef](typeDef)
     with Traversal.TypeTraveler[ValidationState] {
 
-  protected def open(): Unit = {
+  override def open(): Unit = {
+    super.open()
     check(
       typeDef.id.value.head.isUpper,
       s"Type name ${typeDef.id.value} must start with a capital letter",
