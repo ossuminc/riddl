@@ -1,15 +1,17 @@
 package com.yoppworks.ossum.riddl.validator
 
+import java.io.File
+
 import com.yoppworks.ossum.riddl.parser.AST.Definition
 import com.yoppworks.ossum.riddl.parser.AST
 import com.yoppworks.ossum.riddl.parser.ParsingTest
+import com.yoppworks.ossum.riddl.parser.TopLevelParser
 import com.yoppworks.ossum.riddl.validator.Validation.ValidationMessage
 import com.yoppworks.ossum.riddl.validator.Validation.ValidationOptions
 import com.yoppworks.ossum.riddl.validator.Validation.ValidationState
 import com.yoppworks.ossum.riddl.validator.Validation.defaultOptions
 import org.scalatest.Assertion
 
-import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
 /** Convenience functions for tests that do validation*/
@@ -48,6 +50,20 @@ class ValidatingTest extends ParsingTest {
       case Right(model: D @unchecked) =>
         val msgs = validateFor[D](model)
         validation(model, msgs)
+    }
+  }
+
+  def validateFile(label: String, fileName: String)(
+    validation: (Seq[AST.DomainDef], Seq[ValidationMessage]) => Assertion
+  ): Assertion = {
+    val directory = "language/src/test/input/"
+    val file = new File(directory + fileName)
+    TopLevelParser.parse(file) match {
+      case Left(error) =>
+        fail(s"$label:$error")
+      case Right(domains) =>
+        val messages = Validation.validate(domains)
+        validation(domains, messages)
     }
   }
 }

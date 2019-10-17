@@ -14,15 +14,17 @@ domain ReactiveBBQ {
   // #Kitchen
   // The Kitchen context pertains to
   context Kitchen {
+    type IP4Address is combine { a: Number, b: Number, c: Number, d: Number}
     type OrderViewType is combine {
-      address is IPAddress
+      address is IP4Address
     }
     entity OrderViewer is OrderViewType {
       option is device
-
+    } explained as {
+      "The OrderViewer is the device in the kitchen, probably a touch screen,"
+      "that the cooks use to view the sequence of orders to cook"
     }
   } explained as {
-    "## Kitchen Bounded Context"
     "The kitchen bounded context provides the ability for the kitchen staff"
     "to interact with orders they are preparing. The kitchen is a client of"
     "the orders bounded context and interacts with that context alone"

@@ -20,7 +20,12 @@ object Validation {
     loc: Location,
     message: String,
     kind: ValidationMessageKind = Error
-  )
+  ) {
+
+    def format(source: String): String = {
+      source + s" ${loc}: $message"
+    }
+  }
 
   type ValidationMessages = mutable.ListBuffer[ValidationMessage]
 

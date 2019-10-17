@@ -12,9 +12,10 @@ class ExamplesTest extends ParsingTest {
 
   "Examples" should {
     "all compile" in {
-      val results = for ((label, fileName) <- files) yield {
+      for ((label, fileName) <- files) yield {
         checkFile(label, fileName)
       }
+      succeed
     }
   }
 }

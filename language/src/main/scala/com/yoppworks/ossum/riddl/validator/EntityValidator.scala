@@ -38,7 +38,7 @@ case class EntityValidator(
       )
     }
     if (entity.produces.isEmpty &&
-        entity.options.exists { case EntityPersistent(_) => true }) {
+        entity.options.exists(_.getClass == classOf[EntityPersistent])) {
       payload.add(
         ValidationMessage(
           entity.loc,

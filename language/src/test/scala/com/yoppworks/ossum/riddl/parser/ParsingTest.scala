@@ -198,14 +198,14 @@ class ParsingTest extends WordSpec with MustMatchers {
     }
   }
 
-  def checkFile(label: String, fileName: String): Assertion = {
+  def checkFile(label: String, fileName: String): Seq[DomainDef] = {
     val directory = "language/src/test/input/"
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
       case Left(error) =>
         fail(s"$label:$error")
-      case Right(_) =>
-        succeed // ( s"$label: Succeeded" )
+      case Right(model) =>
+        model
     }
   }
 }
