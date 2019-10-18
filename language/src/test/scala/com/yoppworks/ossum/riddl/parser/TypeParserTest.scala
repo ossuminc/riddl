@@ -74,16 +74,16 @@ class TypeParserTest extends ParsingTest {
               )
             )
           ),
-        "type alt = choose enum or stamp or url " ->
+        "type alt = choose { enum or stamp or url } " ->
           TypeDef(
             (1, 1),
             Identifier((1, 6), "alt"),
             Alternation(
               (1, 12),
               List(
-                TypeRef((1, 19), Identifier((1, 19), "enum")),
-                TypeRef((1, 27), Identifier((1, 27), "stamp")),
-                TypeRef((1, 36), Identifier((1, 36), "url"))
+                TypeRef((1, 21), Identifier((1, 21), "enum")),
+                TypeRef((1, 29), Identifier((1, 29), "stamp")),
+                TypeRef((1, 38), Identifier((1, 38), "url"))
               )
             )
           ),
@@ -138,7 +138,7 @@ class TypeParserTest extends ParsingTest {
           |    s: Simple,
           |    ns: Number+
           |  }
-          |  type Choices is choose Number or Id
+          |  type Choices is choose { Number or Id }
           |  type Complex is combine {
           |    a: Simple,
           |    b: TimeStamp,

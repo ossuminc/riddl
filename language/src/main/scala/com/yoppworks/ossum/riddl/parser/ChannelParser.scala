@@ -9,53 +9,53 @@ trait ChannelParser extends CommonParser {
 
   def commandRefs[_: P]: P[Seq[CommandRef]] = {
     P(
-      "command" ~~ "s".? ~ "{" ~/
+      "command" ~~ "s".? ~ open ~/
         (location ~ identifier)
           .map(
             tpl => (CommandRef.apply _).tupled(tpl)
           )
-          .rep(0, ",") ~ "}"./
+          .rep(0, ",") ~ close
     )
   }
 
   def eventRefs[_: P]: P[Seq[EventRef]] = {
     P(
-      "event" ~~ "s".? ~ "{" ~/
+      "event" ~~ "s".? ~ open ~/
         (location ~ identifier)
           .map(
             tpl => (EventRef.apply _).tupled(tpl)
           )
-          .rep(0, ",") ~ "}"./
+          .rep(0, ",") ~ close
     )
   }
 
   def queryRefs[_: P]: P[Seq[QueryRef]] = {
     P(
-      ("query" | "queries") ~ "{" ~/
+      ("query" | "queries") ~ open ~
         (location ~ identifier)
           .map(
             tpl => (QueryRef.apply _).tupled(tpl)
           )
-          .rep(0, ",") ~ "}"./
+          .rep(0, ",") ~ close
     )
   }
 
   def resultRefs[_: P]: P[Seq[ResultRef]] = {
     P(
-      "result" ~~ "s".? ~ "{" ~/
+      "result" ~~ "s".? ~ open ~
         (location ~ identifier)
           .map(
             tpl => (ResultRef.apply _).tupled(tpl)
           )
-          .rep(0, ",") ~ "}"./
+          .rep(0, ",") ~ close
     )
   }
 
   def channelDef[_: P]: P[ChannelDef] = {
     P(
-      location ~ "channel" ~/ identifier ~ "{" ~
+      location ~ "channel" ~/ identifier ~ open ~
         commandRefs ~ eventRefs ~ queryRefs ~ resultRefs ~
-        "}" ~/ addendum
+        close ~/ addendum
     ).map { tpl =>
       (ChannelDef.apply _).tupled(tpl)
     }

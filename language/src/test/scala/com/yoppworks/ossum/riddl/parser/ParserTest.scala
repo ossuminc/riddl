@@ -127,7 +127,7 @@ class ParserTest extends ParsingTest {
               (2, 1),
               Identifier((2, 9), "DoThisThing"),
               TypeRef((2, 23), Identifier((2, 23), "SomeType")),
-              Seq(EventRef((2, 45), Identifier((2, 45), "ThingWasDone")))
+              Seq(EventRef((2, 39), Identifier((2, 45), "ThingWasDone")))
             )
       }
     }
@@ -175,7 +175,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow entity definitions in contexts" in {
-      val input =
+      val input: String =
         """entity Hamburger is SomeType {
           |  options { persistent aggregate }
           |  consumes channel EntityChannel
@@ -195,29 +195,34 @@ class ParserTest extends ParsingTest {
           |  }
           |}
           |""".stripMargin
-      parseInContext(input, _.entities.head) match {
+      parseDefinition[EntityDef](input) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe EntityDef(
-            (2, 1),
-            Identifier((2, 8), "Hamburger"),
-            TypeRef((2, 21), Identifier((2, 21), "SomeType")),
-            Seq(EntityPersistent(3, 13), EntityAggregate(3, 24)),
+            (1, 1),
+            Identifier((1, 8), "Hamburger"),
+            TypeRef((1, 21), Identifier((1, 21), "SomeType")),
+            Seq(EntityPersistent(2, 13), EntityAggregate(2, 24)),
+            Some(ChannelRef((3, 12), Identifier((3, 20), "EntityChannel"))),
             Some(ChannelRef((4, 12), Identifier((4, 20), "EntityChannel"))),
-            Some(ChannelRef((5, 12), Identifier((5, 20), "EntityChannel"))),
             Seq(
               FeatureDef(
-                (6, 3),
-                Identifier((6, 11), "AnAspect"),
-                Seq("This is some aspect of the entity"),
+                (5, 3),
+                Identifier((5, 11), "AnAspect"),
+                Seq(
+                  LiteralString(
+                    (6, 19),
+                    "This is some aspect of the entity"
+                  )
+                ),
                 Some(
                   Background(
-                    (8, 5),
+                    (7, 5),
                     Seq(
                       Given(
-                        (9, 7),
+                        (8, 7),
                         LiteralString(
-                          (9, 13),
+                          (8, 13),
                           "Nobody loves me"
                         )
                       )
@@ -226,21 +231,21 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(
                   ExampleDef(
-                    (11, 5),
-                    Identifier((11, 13), "foo"),
-                    LiteralString((12, 7), "My Fate"),
+                    (10, 5),
+                    Identifier((10, 13), "foo"),
+                    LiteralString((11, 7), "My Fate"),
                     Seq(
                       Given(
-                        (13, 7),
-                        LiteralString((13, 13), "everybody hates me")
+                        (12, 7),
+                        LiteralString((12, 13), "everybody hates me")
                       ),
-                      Given((14, 7), LiteralString((14, 11), "I'm depressed"))
+                      Given((13, 7), LiteralString((13, 11), "I'm depressed"))
                     ),
-                    Seq(When((15, 7), LiteralString((15, 12), "I go fishing"))),
+                    Seq(When((14, 7), LiteralString((14, 12), "I go fishing"))),
                     Seq(
                       Then(
-                        (16, 7),
-                        LiteralString((16, 12), "I'll just eat worms")
+                        (15, 7),
+                        LiteralString((15, 12), "I'll just eat worms")
                       )
                     )
                   )
@@ -250,34 +255,36 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow adaptor definitions in contexts" in {
+    "allow adaptor definitions" in {
       val input =
-        "adaptor fuzz for domain fuzzy context blogger"
-      parseInContext[AdaptorDef](input, _.adaptors.head) match {
+        "adaptor fuzz for domain fuzzy context blogger {}"
+      parseDefinition[AdaptorDef](input) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
             AdaptorDef(
-              (2, 1),
-              Identifier((2, 9), "fuzz"),
-              Some(DomainRef((2, 18), Identifier((2, 25), "fuzzy"))),
-              ContextRef((2, 31), Identifier((2, 39), "blogger"))
+              (1, 1),
+              Identifier((1, 9), "fuzz"),
+              Some(DomainRef((1, 18), Identifier((1, 25), "fuzzy"))),
+              ContextRef((1, 31), Identifier((1, 39), "blogger"))
             )
       }
     }
-    "allow interaction definitions in contexts" in {
+    "allow interaction definitions" in {
       val input =
         """interaction dosomething {
           |  role SomeActor {
           |    option is human
-          |    handles "Doing stuff"
-          |    requires "Skills" }
-          |  directive 'perform command' option is asynch from role SomeActor to
-          |  entity myLittlePony with command DoAThing
-          |  processing doSomeProcessing for entity myLittlePony
-          |  as "This does some stuff"
-          |  message 'handle a thing' option is asynch from entity myLittlePony to
-          |    entity Unicorn with command HandleAThing
+          |    handles { "Doing stuff" }
+          |    requires { "Skills" }
+          |  }
+          |  directive 'perform a command' option is asynch
+          |    from role SomeActor
+          |    to entity myLittlePony as command DoAThing
+          |
+          |  message 'handle a thing' option is asynch
+          |    from entity myLittlePony
+          |    to entity Unicorn as command HandleAThing
           |}
           |""".stripMargin
       parseDefinition[InteractionDef](input) match {
@@ -292,32 +299,28 @@ class ParserTest extends ParsingTest {
                   (2, 3),
                   Identifier((2, 8), "SomeActor"),
                   Seq(HumanOption((3, 15))),
-                  List(LiteralString((4, 13), "Doing stuff")),
-                  List(LiteralString((5, 14), "Skills"))
+                  List(LiteralString((4, 15), "Doing stuff")),
+                  List(LiteralString((5, 16), "Skills"))
                 )
               ),
               Seq(
                 DirectiveActionDef(
-                  (6, 3),
-                  Identifier((6, 13), "perform command"),
-                  Seq(AsynchOption((6, 41))),
-                  RoleRef((6, 53), Identifier((6, 58), "SomeActor")),
-                  EntityRef((7, 3), Identifier((7, 10), "myLittlePony")),
-                  CommandRef((7, 28), Identifier((7, 36), "DoAThing"))
-                ),
-                ProcessingActionDef(
-                  (8, 3),
-                  Identifier((8, 14), "doSomeProcessing"),
-                  EntityRef((8, 35), Identifier((8, 42), "myLittlePony")),
-                  LiteralString((9, 6), "This does some stuff")
+                  (7, 3),
+                  Identifier((7, 13), "perform a command"),
+                  Seq(AsynchOption((7, 43))),
+                  RoleRef((8, 10), Identifier((8, 15), "SomeActor")),
+                  EntityRef((9, 8), Identifier((9, 15), "myLittlePony")),
+                  CommandRef((9, 31), Identifier((9, 39), "DoAThing")),
+                  Seq.empty[Reaction]
                 ),
                 MessageActionDef(
-                  (10, 3),
-                  Identifier((10, 11), "handle a thing"),
-                  Seq(AsynchOption((10, 38))),
-                  EntityRef((10, 50), Identifier((10, 57), "myLittlePony")),
-                  EntityRef((11, 5), Identifier((11, 12), "Unicorn")),
-                  CommandRef((11, 25), Identifier((11, 33), "HandleAThing"))
+                  (11, 3),
+                  Identifier((11, 11), "handle a thing"),
+                  Seq(AsynchOption((11, 38))),
+                  EntityRef((12, 10), Identifier((12, 17), "myLittlePony")),
+                  EntityRef((13, 8), Identifier((13, 15), "Unicorn")),
+                  CommandRef((13, 26), Identifier((13, 34), "HandleAThing")),
+                  Seq.empty[Reaction]
                 )
               )
             )

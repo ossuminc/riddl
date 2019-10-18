@@ -24,7 +24,7 @@ trait ContextParser
 
   def contextDef[_: P]: P[ContextDef] = {
     P(
-      location ~ "context" ~/ identifier ~ "{" ~
+      location ~ "context" ~/ identifier ~ open ~
         contextOptions ~
         typeDef.rep(0) ~
         commandDef.rep(0) ~
@@ -35,7 +35,7 @@ trait ContextParser
         entityDef.rep(0) ~
         adaptorDef.rep(0) ~
         interactionDef.rep(0) ~
-        "}" ~ addendum
+        close ~ addendum
     ).map { args =>
       (ContextDef.apply _).tupled(args)
     }

@@ -5,7 +5,11 @@ import fastparse._
 import ScalaWhitespace._
 
 /** Parsing rules for entity definitions  */
-trait EntityParser extends CommonParser with TypeParser with FeatureParser {
+trait EntityParser
+    extends CommonParser
+    with TypeParser
+    with FeatureParser
+    with FunctionParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -28,22 +32,22 @@ trait EntityParser extends CommonParser with TypeParser with FeatureParser {
 
   def invariant[_: P]: P[InvariantDef] = {
     P(
-      "invariant" ~/ location ~ identifier ~ "=" ~ literalString ~ addendum
+      "invariant" ~/ location ~ identifier ~ literalStrings("") ~ addendum
     ).map(tpl => (InvariantDef.apply _).tupled(tpl))
   }
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      location ~ "entity" ~/ identifier ~ is ~/ typeExpression ~ "{" ~
+      location ~ "entity" ~/ identifier ~ is ~/ typeExpression ~ open ~
         entityOptions ~
         ("consumes" ~/ channelRef).? ~
         ("produces" ~/ channelRef).? ~
         featureDef.rep(0) ~
+        functionDef.rep(0) ~
         invariant.rep(0) ~
-        "}" ~/ addendum
+        close ~/ addendum
     ).map { tpl =>
       (EntityDef.apply _).tupled(tpl)
     }
   }
-
 }

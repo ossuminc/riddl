@@ -19,7 +19,7 @@ object AST {
   /** A location of an item in the input  */
   case class Location(line: Int = 0, col: Int = 0) {
     override def toString: String = {
-      s"(${line}:${col})"
+      s"($line:$col)"
     }
   }
 
@@ -198,19 +198,31 @@ object AST {
     addendum: Option[Addendum] = None
   ) extends Definition
 
+  case class FeatureRef(loc: Location, id: Identifier) extends Reference
   case class FeatureDef(
     loc: Location,
     id: Identifier,
-    description: Seq[String],
+    description: Seq[LiteralString],
     background: Option[Background] = None,
     examples: Seq[ExampleDef] = Seq.empty[ExampleDef],
     addendum: Option[Addendum] = None
   ) extends Definition
 
+  case class FunctionRef(loc: Location, id: Identifier) extends Reference
+  case class FunctionDef(
+    loc: Location,
+    id: Identifier,
+    inputs: Seq[TypeExpression] = Seq.empty[TypeRef],
+    outputs: Seq[TypeExpression] = Seq.empty[TypeRef],
+    description: Seq[String] = Seq.empty[String],
+    addendum: Option[Addendum] = None
+  ) extends Definition
+
+  case class InvariantRef(loc: Location, id: Identifier) extends Reference
   case class InvariantDef(
     loc: Location,
     id: Identifier,
-    expression: LiteralString,
+    expression: Seq[LiteralString],
     addendum: Option[Addendum] = None
   ) extends Definition
 
@@ -231,6 +243,7 @@ object AST {
     consumes: Option[ChannelRef] = None,
     produces: Option[ChannelRef] = None,
     features: Seq[FeatureDef] = Seq.empty[FeatureDef],
+    functions: Seq[FunctionDef] = Seq.empty[FunctionDef],
     invariants: Seq[InvariantDef] = Seq.empty[InvariantDef],
     addendum: Option[Addendum] = None
   ) extends Definition
@@ -323,7 +336,21 @@ object AST {
 
   case class RoleRef(loc: Location, id: Identifier) extends Reference
 
-  sealed trait ActionDef extends Definition
+  sealed trait ActionDef extends Definition {
+    def reactions: Seq[Reaction]
+  }
+
+  /** Used to capture reactions to actions. Actions include reactions in
+    * their definition to model the precipitating reactions to the action.
+    */
+  case class Reaction(
+    loc: Location,
+    id: Identifier,
+    entity: EntityRef,
+    function: FunctionRef,
+    arguments: Seq[LiteralString],
+    addendum: Option[Addendum] = None
+  )
 
   type Actions = Seq[ActionDef]
 
@@ -332,7 +359,8 @@ object AST {
   case class AsynchOption(loc: Location) extends MessageOption
   case class ReplyOption(loc: Location) extends MessageOption
 
-  /** An Interaction based on entity messaging
+  /** An Interaction based on entity messaging between two entities in the
+    * system.
     * @param options Options for the message
     * @param loc Where the message is located in the input
     * @param id The displayable text that describes the interaction
@@ -347,9 +375,13 @@ object AST {
     sender: EntityRef,
     receiver: EntityRef,
     message: MessageReference,
+    reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
   ) extends ActionDef
 
+  /** A directive from an actor (Role) towards some entity. You can think of
+    * this like external input, coming from outside the system.
+    */
   case class DirectiveActionDef(
     loc: Location,
     id: Identifier,
@@ -357,21 +389,17 @@ object AST {
     role: RoleRef,
     entity: EntityRef,
     message: MessageReference,
+    reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
   ) extends ActionDef
 
-  case class ProcessingActionDef(
-    loc: Location,
-    id: Identifier,
-    entity: EntityRef,
-    description: LiteralString,
-    addendum: Option[Addendum] = None
-  ) extends ActionDef
+  case class ReactionRef(loc: Location, id: Identifier) extends Reference
 
   case class DeletionActionDef(
     loc: Location,
     id: Identifier,
     entity: EntityRef,
+    reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
   ) extends ActionDef
 
@@ -379,6 +407,7 @@ object AST {
     loc: Location,
     id: Identifier,
     entity: EntityRef,
+    reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
   ) extends ActionDef
 

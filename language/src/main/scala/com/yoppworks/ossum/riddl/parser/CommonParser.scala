@@ -19,10 +19,12 @@ trait CommonParser extends ParsingContext {
     }
   }
 
+  def literalStrings[_: P](sep: String = ","): P[Seq[LiteralString]] = {
+    P(open ~ literalString.rep(0, sep) ~ close)
+  }
+
   def lines[_: P]: P[Seq[String]] = {
-    P("{" ~ literalString.rep(0) ~ "}").map { lit =>
-      lit.map(_.s)
-    }
+    P(literalStrings("").map(_.map(_.s)))
   }
 
   def seeAlso[_: P]: P[SeeAlso] = {
@@ -40,7 +42,7 @@ trait CommonParser extends ParsingContext {
 
   def addendum[_: P]: P[Option[Addendum]] = {
     P(location ~ explanation.? ~ seeAlso.?).map[Option[Addendum]] {
-      case (loc, None, None)                  => None
+      case (_, None, None)                    => None
       case (loc, exp @ Some(_), None)         => Some(Addendum(loc, exp, None))
       case (loc, exp @ Some(_), sa @ Some(_)) => Some(Addendum(loc, exp, sa))
       case (loc, None, sa @ Some(_))          => Some(Addendum(loc, None, sa))
@@ -84,6 +86,14 @@ trait CommonParser extends ParsingContext {
       .map(tpl => (PathIdentifier.apply _).tupled(tpl))
   }
 
+  def open[_: P]: P[Unit] = {
+    P("{" | "[" | "(")./
+  }
+
+  def close[_: P]: P[Unit] = {
+    P("}" | "]" | ")")./
+  }
+
   def is[_: P]: P[Unit] = {
     P("is" | "are" | ":" | "=")./
   }
@@ -92,12 +102,12 @@ trait CommonParser extends ParsingContext {
     validOptions: => P[String]
   )(mapper: => (Location, String) => TY): P[Seq[TY]] = {
     P(
-      ("options" ~/ "{" ~ (location ~ validOptions)
+      ("options" ~/ open ~ (location ~ validOptions)
         .rep(2)
-        .map(_.map(mapper.tupled(_))) ~ "}") | ("option" ~ is ~/ (location ~ validOptions)
-        .map(
-          tpl => Seq(mapper.tupled(tpl))
-        )) | P(
+        .map(_.map(mapper.tupled(_))) ~ close) | ("option" ~ is ~/ (location ~
+        validOptions).map(
+        tpl => Seq(mapper.tupled(tpl))
+      )) | P(
         ""
       ).map { _ =>
         Seq.empty[TY]
@@ -139,6 +149,11 @@ trait CommonParser extends ParsingContext {
       .map(tpl => (ChannelRef.apply _).tupled(tpl))
   }
 
+  def functionRef[_: P]: P[FunctionRef] = {
+    P(location ~ "function" ~/ identifier)
+      .map(tpl => (FunctionRef.apply _).tupled(tpl))
+  }
+
   def contextRef[_: P]: P[ContextRef] = {
     P(location ~ "context" ~/ identifier)
       .map(tpl => (ContextRef.apply _).tupled(tpl))
@@ -148,5 +163,4 @@ trait CommonParser extends ParsingContext {
     P(location ~ "domain" ~/ identifier)
       .map(tpl => (DomainRef.apply _).tupled(tpl))
   }
-
 }

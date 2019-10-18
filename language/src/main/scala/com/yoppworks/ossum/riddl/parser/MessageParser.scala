@@ -47,14 +47,14 @@ trait MessageParser extends CommonParser with TypeParser {
 
   def eventRefsForCommandDefs[_: P]: P[EventRefs] = {
     P(
-      ("event" ~/ (location ~ identifier)
-        .map(tpl => Seq((EventRef.apply _).tupled(tpl)))) |
-        "events" ~ "{" ~/ (location ~/ identifier)
-          .map { tpl =>
-            (EventRef.apply _).tupled(tpl)
-          }
-          .rep(0) ~
-          "}"
+      eventRef.map(Seq(_)) |
+        "events" ~/ open ~
+          (location ~ identifier)
+            .map { tpl =>
+              (EventRef.apply _).tupled(tpl)
+            }
+            .rep(2) ~
+          close
     )
   }
 }

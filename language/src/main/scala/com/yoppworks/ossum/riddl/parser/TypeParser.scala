@@ -10,7 +10,7 @@ import scala.collection.immutable.ListMap
 trait TypeParser extends CommonParser {
 
   def enumerationType[_: P]: P[Enumeration] = {
-    P(location ~ "any" ~/ "[" ~ identifier.rep(1, sep = ",".?) ~ "]").map {
+    P(location ~ "any" ~/ open ~ identifier.rep(1, sep = ",".?) ~ close).map {
       enums =>
         (Enumeration.apply _).tupled(enums)
     }
@@ -19,7 +19,7 @@ trait TypeParser extends CommonParser {
   def alternationType[_: P]: P[Alternation] = {
     P(
       location ~
-        "choose" ~/ (location ~ identifier).rep(2, P("or" | "|"))
+        "choose" ~/ open ~ (location ~ identifier).rep(2, P("or" | "|")) ~ close
     ).map {
       case (loc, ids: Seq[(Location, Identifier)]) =>
         Alternation(loc, ids.map(x => TypeRef(x._1, x._2)))
@@ -51,7 +51,7 @@ trait TypeParser extends CommonParser {
   def aggregationType[_: P]: P[Aggregation] = {
     P(
       location ~
-        "combine" ~/ "{" ~ fields ~ "}"
+        "combine" ~/ open ~ fields ~ close
     ).map {
       case (loc, types) =>
         Aggregation(loc, ListMap[Identifier, TypeExpression](types: _*))

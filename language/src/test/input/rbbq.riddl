@@ -54,7 +54,7 @@ domain ReactiveBBQ {
       pointsAwarded is Number,
       toOrder is OrderId
     }
-    type RewardEvent is choose AccrualEvent or AwardEvent
+    type RewardEvent is choose { AccrualEvent or AwardEvent }
     type RewardsAccountType is combine {
       id is CustomerId,
       points is Number,

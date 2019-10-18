@@ -54,29 +54,29 @@ trait FeatureParser extends CommonParser {
 
   def example[_: P]: P[ExampleDef] = {
     P(
-      location ~ IgnoreCase("example") ~/ identifier ~ "{" ~/ literalString ~
+      location ~ IgnoreCase("example") ~/ identifier ~ open ~/ literalString ~
         givens ~
         whens ~ thens ~
-        "}" ~ addendum
+        close ~ addendum
     ).map { tpl =>
       (ExampleDef.apply _).tupled(tpl)
     }
   }
 
   def background[_: P]: P[Background] = {
-    P(location ~ IgnoreCase("background") ~/ "{" ~/ givens)
-      .map(tpl => (Background.apply _).tupled(tpl)) ~ "}"
+    P(location ~ IgnoreCase("background") ~/ open ~/ givens)
+      .map(tpl => (Background.apply _).tupled(tpl)) ~ close
   }
 
-  def description[_: P]: P[Seq[String]] = {
-    P(IgnoreCase("description") ~/ lines)
+  def description[_: P]: P[Seq[LiteralString]] = {
+    P(IgnoreCase("description") ~/ literalStrings(""))
   }
 
   def featureDef[_: P]: P[FeatureDef] = {
     P(
-      location ~ IgnoreCase("feature") ~/ identifier ~ "{" ~
+      location ~ IgnoreCase("feature") ~/ identifier ~ open ~
         description ~ background.? ~ example.rep(1) ~
-        "}" ~/ addendum
+        close ~/ addendum
     ).map { tpl =>
       (FeatureDef.apply _).tupled(tpl)
     }

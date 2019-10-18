@@ -21,24 +21,14 @@ trait InteractionParser extends CommonParser {
 
   def role[_: P]: P[RoleDef] = {
     P(
-      location ~ "role" ~/ identifier ~ "{" ~
+      location ~ "role" ~/ identifier ~ open ~
         roleOptions ~
-        ("handles" ~/ literalString.rep(1, ",")).?.map(
-          _.getOrElse(Seq.empty[LiteralString]).toList
-        ) ~
-        ("requires" ~ literalString.rep(1, ",")).?.map(
-          _.getOrElse(Seq.empty[LiteralString]).toList
-        ) ~ "}" ~ addendum
+        "handles" ~/ literalStrings() ~
+        "requires" ~ literalStrings() ~
+        close ~ addendum
     ).map { tpl =>
       (RoleDef.apply _).tupled(tpl)
     }
-  }
-
-  def processingActionDef[_: P]: P[ProcessingActionDef] = {
-    P(
-      location ~ "processing" ~/ identifier ~ "for" ~ entityRef ~ "as" ~
-        literalString ~ addendum
-    ).map(x => (ProcessingActionDef.apply _).tupled(x))
   }
 
   def messageOptions[_: P]: P[Seq[MessageOption]] = {
@@ -50,12 +40,27 @@ trait InteractionParser extends CommonParser {
     }
   }
 
+  def reaction[_: P]: P[Reaction] = {
+    P(
+      location ~ identifier ~ "call" ~ entityRef ~/ functionRef ~
+        literalStrings() ~ addendum
+    ).map(x => (Reaction.apply _).tupled(x))
+  }
+
+  def reactions[_: P]: P[Seq[Reaction]] = {
+    P(open ~ reaction.rep(0, ",") ~ close)
+  }
+
+  def causing[_: P]: P[Seq[Reaction]] = {
+    P("causing" ~ reactions).?.map(_.getOrElse(Seq.empty[Reaction]))
+  }
+
   def messageActionDef[_: P]: P[MessageActionDef] = {
     P(
       location ~
         "message" ~/ identifier ~ messageOptions ~ "from" ~/ entityRef ~ "to" ~/
         entityRef ~
-        "with" ~ messageRef ~ addendum
+        "as" ~ messageRef ~ causing ~ addendum
     ).map { tpl =>
       (MessageActionDef.apply _).tupled(tpl)
     }
@@ -66,14 +71,34 @@ trait InteractionParser extends CommonParser {
       location ~
         "directive" ~/ identifier ~ messageOptions ~ "from" ~ roleRef ~ "to" ~
         entityRef ~
-        "with" ~ messageRef ~ addendum
+        "as" ~ messageRef ~ causing ~ addendum
     ).map { tpl =>
       (DirectiveActionDef.apply _).tupled(tpl)
     }
   }
 
+  def creationActionDef[_: P]: P[CreationActionDef] = {
+    P(
+      location ~
+        "create" ~/ identifier ~ entityRef ~ causing ~ addendum
+    ).map { tpl =>
+      (CreationActionDef.apply _).tupled(tpl)
+    }
+  }
+
+  def deletionActionDef[_: P]: P[DeletionActionDef] = {
+    P(
+      location ~
+        "delete" ~/ identifier ~ entityRef ~ causing ~ addendum
+    ).map { tpl =>
+      (DeletionActionDef.apply _).tupled(tpl)
+    }
+  }
+
   def interactions[_: P]: P[Actions] = {
-    P(messageActionDef | directiveActionDef | processingActionDef).rep(1)
+    P(
+      messageActionDef | directiveActionDef | creationActionDef | deletionActionDef
+    ).rep(1)
   }
 
   def interactionDef[_: P]: P[InteractionDef] = {

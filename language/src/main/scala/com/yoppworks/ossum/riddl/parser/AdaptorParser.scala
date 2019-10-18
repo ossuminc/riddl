@@ -10,7 +10,7 @@ trait AdaptorParser extends CommonParser {
   def adaptorDef[_: P]: P[AdaptorDef] = {
     P(
       location ~ "adaptor" ~/ identifier ~ "for" ~/ domainRef.? ~/ contextRef ~
-        addendum
+        open ~ close ~ addendum
     ).map { tpl =>
       (AdaptorDef.apply _).tupled(tpl)
     }

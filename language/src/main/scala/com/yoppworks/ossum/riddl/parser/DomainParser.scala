@@ -19,11 +19,11 @@ trait DomainParser
   def domainDef[_: P]: P[DomainDef] = {
     P(
       location ~ "domain" ~/ identifier ~
-        ("is" ~ "subdomain" ~ "of" ~/ identifier).? ~ "{" ~/
+        ("is" ~ "subdomain" ~ "of" ~/ identifier).? ~ open ~/
         typeDef.rep(0) ~
         interactionDef.rep(0) ~
         contextDef.rep(0) ~
-        "}" ~ addendum
+        close ~ addendum
     ).map { tpl =>
       (DomainDef.apply _).tupled(tpl)
     }
