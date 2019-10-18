@@ -67,6 +67,8 @@ object AST {
   sealed trait Definition extends RiddlValue {
     def id: Identifier
     def addendum: Option[Addendum]
+    def kind: String
+    def identify: String = s"$kind '${id.value}'"
   }
 
   sealed trait Type extends RiddlValue
@@ -90,6 +92,8 @@ object AST {
       extends TypeSpecification
   case class Aggregation(loc: Location, of: ListMap[Identifier, TypeExpression])
       extends TypeSpecification
+  case class Mapping(loc: Location, from: TypeExpression, to: TypeExpression)
+      extends TypeSpecification
 
   sealed trait TypeDefinition extends Definition
 
@@ -97,6 +101,7 @@ object AST {
     def loc: Location = Location.empty
     def id: Identifier = Identifier(loc, name)
     def addendum: Option[Addendum] = None
+    def kind: String = name
   }
 
   case object Strng extends PredefinedType("String")
@@ -117,7 +122,9 @@ object AST {
     id: Identifier,
     typ: Type,
     addendum: Option[Addendum] = None
-  ) extends TypeDefinition
+  ) extends TypeDefinition {
+    def kind: String = "Type"
+  }
 
   case class ChannelRef(loc: Location, id: Identifier) extends Reference
   case class ChannelDef(
@@ -128,7 +135,9 @@ object AST {
     queries: Seq[QueryRef] = Seq.empty[QueryRef],
     results: Seq[ResultRef] = Seq.empty[ResultRef],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Channel"
+  }
 
   sealed trait MessageReference extends Reference
   sealed trait MessageDefinition extends Definition
@@ -140,7 +149,9 @@ object AST {
     typ: TypeExpression,
     events: EventRefs,
     addendum: Option[Addendum] = None
-  ) extends MessageDefinition
+  ) extends MessageDefinition {
+    def kind: String = "Command"
+  }
 
   case class EventRef(loc: Location, id: Identifier) extends MessageReference
   type EventRefs = Seq[EventRef]
@@ -149,7 +160,9 @@ object AST {
     id: Identifier,
     typ: TypeExpression,
     addendum: Option[Addendum] = None
-  ) extends MessageDefinition
+  ) extends MessageDefinition {
+    def kind: String = "Event"
+  }
 
   case class QueryRef(loc: Location, id: Identifier) extends MessageReference
   case class QueryDef(
@@ -158,7 +171,9 @@ object AST {
     typ: TypeExpression,
     result: ResultRef,
     addendum: Option[Addendum] = None
-  ) extends MessageDefinition
+  ) extends MessageDefinition {
+    def kind: String = "Query"
+  }
 
   case class ResultRef(loc: Location, id: Identifier) extends MessageReference
   case class ResultDef(
@@ -166,7 +181,9 @@ object AST {
     id: Identifier,
     typ: TypeExpression,
     addendum: Option[Addendum] = None
-  ) extends MessageDefinition
+  ) extends MessageDefinition {
+    def kind: String = "Result"
+  }
 
   sealed trait EntityValue extends RiddlValue
 
@@ -196,7 +213,9 @@ object AST {
     whens: Seq[When] = Seq.empty[When],
     thens: Seq[Then] = Seq.empty[Then],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Example"
+  }
 
   case class FeatureRef(loc: Location, id: Identifier) extends Reference
   case class FeatureDef(
@@ -206,7 +225,9 @@ object AST {
     background: Option[Background] = None,
     examples: Seq[ExampleDef] = Seq.empty[ExampleDef],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Feature"
+  }
 
   case class FunctionRef(loc: Location, id: Identifier) extends Reference
   case class FunctionDef(
@@ -216,7 +237,9 @@ object AST {
     outputs: Seq[TypeExpression] = Seq.empty[TypeRef],
     description: Seq[String] = Seq.empty[String],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Function"
+  }
 
   case class InvariantRef(loc: Location, id: Identifier) extends Reference
   case class InvariantDef(
@@ -224,7 +247,9 @@ object AST {
     id: Identifier,
     expression: Seq[LiteralString],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Invariant"
+  }
 
   /** Definition of an Entity
     *
@@ -246,7 +271,9 @@ object AST {
     functions: Seq[FunctionDef] = Seq.empty[FunctionDef],
     invariants: Seq[InvariantDef] = Seq.empty[InvariantDef],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Entity"
+  }
 
   trait TranslationRule extends Definition {
     def channel: String
@@ -260,7 +287,9 @@ object AST {
     output: String,
     rule: String,
     addendum: Option[Addendum] = None
-  ) extends TranslationRule
+  ) extends TranslationRule {
+    def kind: String = "Message Translation Rule"
+  }
 
   /** Definition of an Adaptor
     * Adaptors are defined in Contexts to convert messaging from one Context to
@@ -278,7 +307,9 @@ object AST {
     targetContext: ContextRef,
     addendum: Option[Addendum] = None
     // Details TBD
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Adaptor"
+  }
 
   sealed trait ContextOption extends RiddlValue
   case class WrapperOption(loc: Location) extends ContextOption
@@ -301,7 +332,9 @@ object AST {
     adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Context"
+  }
 
   /** Definition of an Interaction
     * Interactions define an exemplary interaction between the system being
@@ -319,7 +352,9 @@ object AST {
     roles: Seq[RoleDef] = Seq.empty[RoleDef],
     actions: Seq[ActionDef] = Seq.empty[ActionDef],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Interaction"
+  }
 
   sealed trait RoleOption extends RiddlValue
   case class HumanOption(loc: Location) extends RoleOption
@@ -332,7 +367,9 @@ object AST {
     responsibilities: Seq[LiteralString] = Seq.empty[LiteralString],
     capacities: Seq[LiteralString] = Seq.empty[LiteralString],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Role"
+  }
 
   case class RoleRef(loc: Location, id: Identifier) extends Reference
 
@@ -377,7 +414,9 @@ object AST {
     message: MessageReference,
     reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
-  ) extends ActionDef
+  ) extends ActionDef {
+    def kind: String = "Message Action"
+  }
 
   /** A directive from an actor (Role) towards some entity. You can think of
     * this like external input, coming from outside the system.
@@ -391,25 +430,11 @@ object AST {
     message: MessageReference,
     reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
-  ) extends ActionDef
+  ) extends ActionDef {
+    def kind: String = "Directive Action"
+  }
 
   case class ReactionRef(loc: Location, id: Identifier) extends Reference
-
-  case class DeletionActionDef(
-    loc: Location,
-    id: Identifier,
-    entity: EntityRef,
-    reactions: Seq[Reaction],
-    addendum: Option[Addendum] = None
-  ) extends ActionDef
-
-  case class CreationActionDef(
-    loc: Location,
-    id: Identifier,
-    entity: EntityRef,
-    reactions: Seq[Reaction],
-    addendum: Option[Addendum] = None
-  ) extends ActionDef
 
   case class DomainRef(loc: Location, id: Identifier) extends Reference
 
@@ -421,7 +446,9 @@ object AST {
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
     contexts: Seq[ContextDef] = Seq.empty[ContextDef],
     addendum: Option[Addendum] = None
-  ) extends Definition
+  ) extends Definition {
+    def kind: String = "Domain"
+  }
 
   type Domains = Seq[DomainDef]
 }

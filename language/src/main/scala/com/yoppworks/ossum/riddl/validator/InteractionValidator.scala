@@ -26,14 +26,6 @@ case class InteractionValidator(
         checkRef[MessageDefinition](da.message.id)
         checkRef[RoleDef](da.role.id)
         da.reactions.foreach(x => checkRef(x.entity.id))
-
-      case da: DeletionActionDef =>
-        checkRef[EntityDef](da.entity.id)
-        da.reactions.foreach(x => checkRef(x.entity.id))
-
-      case ca: CreationActionDef =>
-        checkRef[EntityDef](ca.entity.id)
-        ca.reactions.foreach(x => checkRef(x.entity.id))
     }
   }
 }

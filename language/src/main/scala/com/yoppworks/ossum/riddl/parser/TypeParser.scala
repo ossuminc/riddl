@@ -58,9 +58,17 @@ trait TypeParser extends CommonParser {
     }
   }
 
+  def mappingType[_: P]: P[Mapping] = {
+    P(location ~ "mapping" ~ "from" ~/ typeExpression ~ "to" ~ typeExpression)
+      .map {
+        case (loc, from, to) =>
+          Mapping(loc, from, to)
+      }
+  }
+
   def typeDefinitions[_: P]: P[TypeSpecification] = {
     P(
-      enumerationType | alternationType | aggregationType
+      enumerationType | alternationType | aggregationType | mappingType
     )
   }
 

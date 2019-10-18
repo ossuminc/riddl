@@ -77,27 +77,9 @@ trait InteractionParser extends CommonParser {
     }
   }
 
-  def creationActionDef[_: P]: P[CreationActionDef] = {
-    P(
-      location ~
-        "create" ~/ identifier ~ entityRef ~ causing ~ addendum
-    ).map { tpl =>
-      (CreationActionDef.apply _).tupled(tpl)
-    }
-  }
-
-  def deletionActionDef[_: P]: P[DeletionActionDef] = {
-    P(
-      location ~
-        "delete" ~/ identifier ~ entityRef ~ causing ~ addendum
-    ).map { tpl =>
-      (DeletionActionDef.apply _).tupled(tpl)
-    }
-  }
-
   def interactions[_: P]: P[Actions] = {
     P(
-      messageActionDef | directiveActionDef | creationActionDef | deletionActionDef
+      messageActionDef | directiveActionDef
     ).rep(1)
   }
 

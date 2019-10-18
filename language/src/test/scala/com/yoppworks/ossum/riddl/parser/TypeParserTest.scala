@@ -108,6 +108,16 @@ class TypeParserTest extends ParsingTest {
               )
             )
           ),
+        "type m1 = mapping from String to Number" ->
+          TypeDef(
+            (1, 1),
+            Identifier((1, 6), "m1"),
+            Mapping(
+              (1, 11),
+              TypeRef((1, 24), Identifier((1, 24), "String")),
+              TypeRef((1, 34), Identifier((1, 34), "Number"))
+            )
+          ),
         "type oneOrMore = agg+" ->
           TypeDef(
             (1, 1),

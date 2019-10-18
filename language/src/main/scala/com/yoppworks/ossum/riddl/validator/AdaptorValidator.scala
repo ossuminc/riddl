@@ -9,4 +9,11 @@ case class AdaptorValidator(
   adaptor: AdaptorDef,
   payload: ValidationState
 ) extends ValidatorBase[AdaptorDef](adaptor)
-    with Traversal.AdaptorTraveler[ValidationState] {}
+    with Traversal.AdaptorTraveler[ValidationState] {
+
+  override def open(): Unit = {
+    super.open()
+    adaptor.targetDomain.foreach(x => checkRef[DomainDef](x.id))
+    checkRef[ContextDef](adaptor.targetContext.id)
+  }
+}

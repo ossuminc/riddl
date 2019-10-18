@@ -107,6 +107,8 @@ object Generator {
                 s"$spc  ${k.value} is ${visitTypeExpression(v)}"
             }
             .mkString(s",\n")}\n$spc}"
+        case AST.Mapping(_, from, to) =>
+          s"mapping from ${from} to ${to}"
       }
     }
   }
