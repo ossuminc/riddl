@@ -9,7 +9,7 @@ domain ReactiveBBQ {
   }
   type OrderId is Id explained as {
     "Unique identifier for a customer's order"
-  }
+  } see also {"foo"}
 
   // #Kitchen
   // The Kitchen context pertains to
@@ -18,8 +18,9 @@ domain ReactiveBBQ {
     type OrderViewType is combine {
       address is IP4Address
     }
-    entity OrderViewer is OrderViewType {
-      option is device
+    channel Commands { commands {} events {} queries {} results {} }
+    device entity OrderViewer is OrderViewType {
+      consumes channel Commands
     } explained as {
       "The OrderViewer is the device in the kitchen, probably a touch screen,"
       "that the cooks use to view the sequence of orders to cook"
@@ -34,8 +35,8 @@ domain ReactiveBBQ {
     "### Subject-Verb-Object Statements"
     "1. Kitchen displays orders"
     "1. Order is sent to Kitchen for display"
-    "2. Order sends order status changes to Kitchen"
-    "2. Kitchen ignores drink items on order"
+    "1. Order sends order status changes to Kitchen"
+    "1. Kitchen ignores drink items on order"
     "1. "
   }
   // #Kitchen
@@ -60,7 +61,10 @@ domain ReactiveBBQ {
       points is Number,
       rewardEvents is RewardEvent*
     }
+    channel Commands { commands {} events {} queries {} results {} }
+
     entity RewardsAccount is RewardsAccountType {
+      consumes channel Commands
     }
   }
   // #Loyalty
@@ -71,8 +75,11 @@ domain ReactiveBBQ {
       orderId is OrderId,
       customerId is CustomerId
     }
+    channel Commands { commands {} events {} queries {} results {} }
+
     entity Order is OrderType {
       option is aggregate
+      consumes channel Commands
     }
   }
   // #Order
@@ -84,18 +91,24 @@ domain ReactiveBBQ {
       amount is Number,
       cardToken is String
     }
+    channel Commands { commands {} events {} queries {} results {} }
     entity Payment is PaymentType {
       option is aggregate
+      consumes channel Commands
     }
   }
   // #Payment
 
   // #Menu
   context Menu {
+    channel Commands { commands {} events {} queries {} results {} }
     entity MenuItem is String {
+      consumes channel Commands
     }
-    entity Menu is MenuItem+ {
+    type MenuItemRef is reference to entity MenuItem
+    entity Menu is MenuItemRef+ {
       option is aggregate
+      consumes channel Commands
     }
   }
   // #Menu
@@ -110,9 +123,16 @@ domain ReactiveBBQ {
       date is Date
     }
 
+  event bar is String
+  command foo is String yields event bar
+
+    channel Commands { commands { foo } events {} queries {} results {} }
+    channel Events {  commands {} events {  } queries {} results {} }
+
     entity Reservation is ReservationValue {
-      consumes channel foo
-      produces channel bar
+      options { aggregate  }
+      consumes channel Commands
+      produces channel Events
     }
   }
   // #Reservation

@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.translator
 
-import com.yoppworks.ossum.riddl.parser.AST._
+import com.yoppworks.ossum.riddl.language.AST._
 
 /** An F-Algebra based anamorphism for the AST */
 object Translation {

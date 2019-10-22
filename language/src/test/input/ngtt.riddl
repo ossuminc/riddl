@@ -1,0 +1,14 @@
+domain innovapost {}
+domain ngtt subdomain of innovapost {
+
+
+context Inception {
+
+}
+}
+
+// Terminology
+// Monotainer - a container of containers
+// PIN - Package Identification Number
+// Manifest - a list of PIN
+// TripID = delivery of containers
