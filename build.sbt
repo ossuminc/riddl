@@ -1,5 +1,6 @@
-import sbt.Keys.resolvers
 import sbt.Keys.scalaVersion
+import sbtbuildinfo.BuildInfoOption.BuildTime
+import sbtbuildinfo.BuildInfoOption.ToMap
 
 name := "riddl"
 
@@ -47,9 +48,30 @@ lazy val root = (project in file("."))
   .enablePlugins(ParadoxPlugin)
   .enablePlugins(ParadoxSitePlugin)
   .enablePlugins(ParadoxMaterialThemePlugin)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "riddl",
-    paradoxTheme := Some(builtinParadoxTheme("generic"))
+    mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
+    paradoxTheme := Some(builtinParadoxTheme("generic")),
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.typesafe" % "config" % "1.4.0"
+    ),
+    buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      normalizedName,
+      description,
+      homepage,
+      startYear,
+      organization,
+      organizationName,
+      organizationHomepage,
+      version,
+      scalaVersion,
+      sbtVersion
+    ),
+    buildInfoPackage := "com.yoppworks.ossum.riddl",
+    buildInfoOptions := Seq(ToMap, BuildTime)
   )
   .dependsOn(language)
   .aggregate(language)
