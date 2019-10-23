@@ -14,18 +14,23 @@ object Validation {
   }
   case object MissingWarning extends ValidationMessageKind {
     override def isWarning = true
+    override def toString: String = "Missing"
   }
   case object StyleWarning extends ValidationMessageKind {
     override def isWarning = true
+    override def toString: String = "Style"
   }
   case object Warning extends ValidationMessageKind {
     override def isWarning = true
+    override def toString: String = "Warning"
   }
   case object Error extends ValidationMessageKind {
     override def isError = true
+    override def toString: String = "Error"
   }
   case object SevereError extends ValidationMessageKind {
     override def isError = true
+    override def toString: String = "Severe"
   }
 
   case class ValidationMessage(
@@ -35,7 +40,7 @@ object Validation {
   ) {
 
     def format(source: String): String = {
-      source + s" $loc: $message"
+      s"$kind: $source$loc: $message"
     }
   }
 

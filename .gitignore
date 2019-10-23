@@ -1,4 +1,7 @@
-.idea
+.idea/*.*
+.idea/libraries/
+.idea/codeStyles/
+.idea/modules/
 !.idea/runConfigurations/
 !.idea/dictionaries
 project/target

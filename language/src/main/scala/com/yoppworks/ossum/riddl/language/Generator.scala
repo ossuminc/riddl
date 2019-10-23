@@ -23,6 +23,20 @@ object Generator {
     DomainGenerator(domain).traverse
   }
 
+  def forContainer(container: ContainingDefinition): Lines = {
+    container match {
+      case domain: DomainDef   => DomainGenerator(domain).traverse
+      case context: ContextDef => ContextGenerator(context).traverse
+      case entity: EntityDef   => EntityGenerator(entity).traverse
+      case interaction: InteractionDef =>
+        InteractionGenerator(interaction).traverse
+      case feature: FeatureDef => FeatureGenerator(feature).traverse
+      case channel: ChannelDef => ChannelGenerator(channel).traverse
+      case adaptor: AdaptorDef => AdaptorGenerator(adaptor).traverse
+      case _                   => throw new RuntimeException("No can do")
+    }
+  }
+
   abstract class GeneratorBase[D <: Definition](definition: D)
       extends DefTraveler[Lines, D] {
     def payload: Lines
@@ -108,11 +122,11 @@ object Generator {
             }
             .mkString(s",\n")}\n$spc}"
         case AST.Mapping(_, from, to) =>
-          s"mapping from ${from} to ${to}"
+          s"mapping from $from to $to"
         case AST.RangeType(_, min, max) =>
-          s"range from ${min} to ${max}"
+          s"range from $min to $max"
         case AST.ReferenceType(_, id) =>
-          s"reference to ${id}"
+          s"reference to $id"
       }
     }
   }
@@ -157,8 +171,11 @@ object Generator {
     }
   }
 
-  case class ChannelGenerator(channel: ChannelDef, payload: Lines, indent: Int)
-      extends GeneratorBase[ChannelDef](channel)
+  case class ChannelGenerator(
+    channel: ChannelDef,
+    payload: Lines = Lines(),
+    indent: Int = 0
+  ) extends GeneratorBase[ChannelDef](channel)
       with Traversal.ChannelTraveler[Lines] {
 
     def open(): Unit = {
@@ -200,8 +217,8 @@ object Generator {
 
   case class ContextGenerator(
     context: ContextDef,
-    payload: Lines,
-    indent: Int
+    payload: Lines = Lines(),
+    indent: Int = 0
   ) extends GeneratorBase[ContextDef](context)
       with Traversal.ContextTraveler[Lines] {
 
@@ -262,8 +279,11 @@ object Generator {
 
   }
 
-  case class EntityGenerator(entity: EntityDef, payload: Lines, indent: Int)
-      extends GeneratorBase[EntityDef](entity)
+  case class EntityGenerator(
+    entity: EntityDef,
+    payload: Lines = Lines(),
+    indent: Int = 0
+  ) extends GeneratorBase[EntityDef](entity)
       with Traversal.EntityTraveler[Lines] {
 
     def open(): Unit = {
@@ -298,8 +318,11 @@ object Generator {
     }
   }
 
-  case class FeatureGenerator(feature: FeatureDef, payload: Lines, indent: Int)
-      extends GeneratorBase[FeatureDef](feature)
+  case class FeatureGenerator(
+    feature: FeatureDef,
+    payload: Lines = Lines(),
+    indent: Int = 0
+  ) extends GeneratorBase[FeatureDef](feature)
       with Traversal.FeatureTraveler[Lines] {
 
     def open(): Unit = {
@@ -315,8 +338,8 @@ object Generator {
 
   case class InteractionGenerator(
     interaction: InteractionDef,
-    payload: Lines,
-    indent: Int
+    payload: Lines = Lines(),
+    indent: Int = 0
   ) extends GeneratorBase[InteractionDef](interaction)
       with Traversal.InteractionTraveler[Lines] {
 
@@ -329,8 +352,11 @@ object Generator {
     def visitAction(action: ActionDef): Unit = {}
   }
 
-  case class AdaptorGenerator(adaptor: AdaptorDef, payload: Lines, indent: Int)
-      extends GeneratorBase[AdaptorDef](adaptor)
+  case class AdaptorGenerator(
+    adaptor: AdaptorDef,
+    payload: Lines = Lines(),
+    indent: Int = 0
+  ) extends GeneratorBase[AdaptorDef](adaptor)
       with Traversal.AdaptorTraveler[Lines] {
 
     def open(): Unit = {
