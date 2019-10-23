@@ -7,14 +7,18 @@ Domain Driven Design (DDD) concepts.
 @@toc { depth=2 }
 
 ## Introduction 
-RIDDL eliminates the boilerplate code from micro-services implementations of
-systems designed with Domain Driven Design (DDD). The RIDDL uses a DDD 
-inspired specification language to allow domain experts and developers to work
-at a higher level of specification than they would if they
+RIDDL eliminates the boilerplate code from micro-services implementations for
+reactive systems designed with Domain Driven Design (DDD). The RIDDL uses a
+DDD-inspired specification language to allow domain experts and developers
+to work at a higher level of specification than they would if they
 were coding directly in a programming language. It aims to relieve developers
 of the burden of maintaining infrastructural code through evolution of the
 domain abstractions. It also aims to aide the domain expert with a rigorous
 but simple language to use for a specification.
+
+Once a domain is specified in RIDDL, the Ossum tools can be used to generate
+documentation, diagrams, infrastructure code, API definitions, and anything
+else that is needful.  
 
 For best comprehension of the language, it is best to be familiar with the
 DDD concepts. For a four minute overview, 

@@ -50,7 +50,7 @@ lazy val root = (project in file("."))
   .enablePlugins(ParadoxMaterialThemePlugin)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    name := "riddl",
+    name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
     paradoxTheme := Some(builtinParadoxTheme("generic")),
     libraryDependencies ++= Seq(
