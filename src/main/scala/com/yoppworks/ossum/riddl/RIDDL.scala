@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl
 
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import com.yoppworks.ossum.riddl.RiddlOptions._
 import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.Generator
@@ -98,7 +100,7 @@ object RIDDL {
     }
   }
 
-  def validate(options: RiddlOptions): Unit = {
+  def parseAndValidate(options: RiddlOptions): Boolean = {
     options.inputFile match {
       case Some(file) =>
         timer("parse", options.showTimes) {
@@ -107,6 +109,7 @@ object RIDDL {
         } match {
           case Left(msg) =>
             println(msg)
+            false
           case Right(value) =>
             val msgs = timer("validate", options.showTimes) {
               value.content.foldLeft(Validation.NoValidationMessages) {
@@ -125,10 +128,32 @@ object RIDDL {
             toPrint.map(_.format(file.getName)).foreach { msg =>
               System.err.println(msg)
             }
+            toPrint.isEmpty
         }
       case None =>
         error("No input file specified")
+        false
     }
   }
-  def translate(options: RiddlOptions): Unit = {}
+
+  def validate(options: RiddlOptions): Unit = {
+    parseAndValidate(options)
+  }
+
+  def translate(options: RiddlOptions): Unit = {
+    if (parseAndValidate(options)) {
+      val config = timer("config", options.showTimes) {
+        options.configFile match {
+          case Some(file) =>
+            ConfigFactory.parseFile(file)
+          case None =>
+            error("No translation configuration file provided")
+            ConfigFactory.empty()
+        }
+      }
+      timer("translate", options.showTimes) {
+        println("Translation not yet implemented")
+      }
+    }
+  }
 }
