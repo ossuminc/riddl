@@ -165,7 +165,7 @@ object Traversal {
 
   def traverse[T](
     root: RootContainer
-  )(f: ContainingDefinition => DomainTraveler[T]): Seq[T] = {
+  )(f: Container => DomainTraveler[T]): Seq[T] = {
     root.content.map { container =>
       f(container).traverse
     }

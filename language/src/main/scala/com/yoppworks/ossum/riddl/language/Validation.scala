@@ -85,7 +85,7 @@ object Validation {
 
     def parentOf(
       definition: Definition
-    ): ContainingDefinition = {
+    ): Container = {
       symbolTable.parentOf(definition).getOrElse(RootContainer.empty)
     }
 
@@ -97,7 +97,7 @@ object Validation {
 
     def lookup[T <: Definition: ClassTag](
       id: Identifier,
-      within: ContainingDefinition
+      within: Container
     ): List[T] = {
       symbolTable.lookup[T](id, within)
     }
@@ -134,7 +134,7 @@ object Validation {
 
     def checkTypeExpression(
       typ: TypeExpression,
-      definition: ContainingDefinition
+      definition: Container
     ): ValidationState = {
       typ match {
         case Optional(_, id) =>
@@ -150,14 +150,14 @@ object Validation {
 
     def checkRef[T <: Definition: ClassTag](
       reference: Reference,
-      within: ContainingDefinition
+      within: Container
     ): ValidationState = {
       checkRef[T](reference.id, within)
     }
 
     def checkRef[T <: Definition: ClassTag](
       id: Identifier,
-      within: ContainingDefinition
+      within: Container
     ): ValidationState = {
       val tc = classTag[T].runtimeClass
       symbolTable.lookup[T](id, within) match {
@@ -227,7 +227,7 @@ object Validation {
     }
   }
 
-  def validate[C <: ContainingDefinition](
+  def validate[C <: Container](
     root: C,
     options: Seq[ValidationOptions] = defaultOptions
   ): Seq[ValidationMessage] = {
@@ -238,8 +238,8 @@ object Validation {
     validatedState.msgs
   }
 
-  def validationDispatch[C <: ContainingDefinition](
-    container: ContainingDefinition,
+  def validationDispatch[C <: Container](
+    container: Container,
     definition: Definition,
     state: ValidationState
   ): ValidationState = {
@@ -289,7 +289,7 @@ object Validation {
   }
 
   def checkDefinition(
-    container: ContainingDefinition,
+    container: Container,
     definition: Definition,
     state: ValidationState
   ): ValidationState = {
@@ -386,7 +386,7 @@ object Validation {
 
   def checkRoot(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     root: RootContainer
   ): ValidationState = {
     state
@@ -394,7 +394,7 @@ object Validation {
 
   def checkDomain(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     domain: DomainDef
   ): ValidationState = {
     var result = state
@@ -406,7 +406,7 @@ object Validation {
 
   def checkContext(
     state: Validation.ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     context: AST.ContextDef
   ): ValidationState = {
     var result = state
@@ -426,7 +426,7 @@ object Validation {
 
   def checkEntity(
     state: Validation.ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     entity: AST.EntityDef
   ): ValidationState = {
     val result1 = state
@@ -478,7 +478,7 @@ object Validation {
 
   def checkChannel(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     channel: ChannelDef
   ): ValidationState = {
     var result = state.check(
@@ -508,7 +508,7 @@ object Validation {
 
   def checkCommand(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     command: CommandDef
   ): ValidationState = {
     var result = state.checkTypeExpression(command.typ, container)
@@ -529,7 +529,7 @@ object Validation {
 
   def checkEvent(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     event: EventDef
   ): ValidationState = {
     state.checkTypeExpression(event.typ, container)
@@ -537,7 +537,7 @@ object Validation {
 
   def checkQuery(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     query: QueryDef
   ): ValidationState = {
     val result = state.checkTypeExpression(query.typ, container)
@@ -546,7 +546,7 @@ object Validation {
 
   def checkResult(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     result: ResultDef
   ): ValidationState = {
     state.checkTypeExpression(result.typ, container)
@@ -554,7 +554,7 @@ object Validation {
 
   def checkFeature(
     state: Validation.ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     feature: FeatureDef
   ): ValidationState = {
     var result =
@@ -575,7 +575,7 @@ object Validation {
 
   def checkAdaptor(
     state: Validation.ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     adaptor: AdaptorDef
   ): ValidationState = {
     val result = adaptor.targetDomain.foldLeft(state) {
@@ -586,7 +586,7 @@ object Validation {
 
   def checkInteraction(
     state: Validation.ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     interaction: InteractionDef
   ): ValidationState = {
 
@@ -626,7 +626,7 @@ object Validation {
 
   def checkType(
     state: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     typeDef: TypeDef
   ): ValidationState = {
     val result = state.check(
@@ -697,7 +697,7 @@ object Validation {
 
   def checkPredefinedType(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     predef: PredefinedType
   ): ValidationState = {
     result
@@ -705,7 +705,7 @@ object Validation {
 
   def checkAction(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     action: ActionDef
   ): ValidationState = {
     result
@@ -713,7 +713,7 @@ object Validation {
 
   def checkExample(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     example: ExampleDef
   ): ValidationState = {
     result
@@ -721,7 +721,7 @@ object Validation {
 
   def checkFunction(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     function: FunctionDef
   ): ValidationState = {
     result
@@ -729,7 +729,7 @@ object Validation {
 
   def checkInvariant(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     invariant: InvariantDef
   ): ValidationState = {
     result
@@ -737,7 +737,7 @@ object Validation {
 
   def checkRole(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     role: RoleDef
   ): ValidationState = {
     result
@@ -745,7 +745,7 @@ object Validation {
 
   def checkTranslationRule(
     result: ValidationState,
-    container: ContainingDefinition,
+    container: Container,
     rule: TranslationRule
   ): ValidationState = {
     result

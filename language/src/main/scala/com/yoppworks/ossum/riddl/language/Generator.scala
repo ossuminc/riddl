@@ -23,7 +23,7 @@ object Generator {
     DomainGenerator(domain).traverse
   }
 
-  def forContainer(container: ContainingDefinition): Lines = {
+  def forContainer(container: Container): Lines = {
     container match {
       case domain: DomainDef   => DomainGenerator(domain).traverse
       case context: ContextDef => ContextGenerator(context).traverse

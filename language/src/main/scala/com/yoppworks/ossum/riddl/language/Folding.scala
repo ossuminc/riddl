@@ -6,11 +6,11 @@ import com.yoppworks.ossum.riddl.language.AST._
 object Folding {
 
   def foldLeft[T](
-    parent: ContainingDefinition,
-    root: ContainingDefinition,
+    parent: Container,
+    root: Container,
     init: T
   )(
-    f: (ContainingDefinition, Definition, T) => T
+    f: (Container, Definition, T) => T
   ): T = {
     var result = init
     root match {

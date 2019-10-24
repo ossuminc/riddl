@@ -10,7 +10,7 @@ import org.scalatest.Assertion
 /** Convenience functions for tests that do validation*/
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidate[D <: ContainingDefinition: ClassTag](input: String)(
+  def parseAndValidate[D <: Container: ClassTag](input: String)(
     validation: (D, Seq[ValidationMessage]) => Assertion
   ): Assertion = {
     parseDefinition[D](input) match {

@@ -8,11 +8,11 @@ import scala.collection.mutable
 import scala.reflect._
 
 /** Unit Tests For SymbolTable */
-case class SymbolTable(container: ContainingDefinition) {
-  type Parentage = Map[Definition, ContainingDefinition]
+case class SymbolTable(container: Container) {
+  type Parentage = Map[Definition, Container]
 
   val parentage: Parentage = {
-    val predefined = Map[Definition, ContainingDefinition](
+    val predefined = Map[Definition, Container](
       Strng -> container,
       Number -> container,
       Id -> container,
@@ -28,16 +28,16 @@ case class SymbolTable(container: ContainingDefinition) {
     }
   }
 
-  def parentOf(definition: Definition): Option[ContainingDefinition] = {
+  def parentOf(definition: Definition): Option[Container] = {
     parentage.get(definition)
   }
 
-  def parentsOf(definition: Definition): List[ContainingDefinition] = {
+  def parentsOf(definition: Definition): List[Container] = {
     @tailrec
     def recurse(
-      init: List[ContainingDefinition],
+      init: List[Container],
       examine: Definition
-    ): List[ContainingDefinition] = {
+    ): List[Container] = {
       parentage.get(examine) match {
         case None =>
           init
@@ -48,15 +48,15 @@ case class SymbolTable(container: ContainingDefinition) {
           recurse(newList, parent)
       }
     }
-    recurse(List.empty[ContainingDefinition], definition)
+    recurse(List.empty[Container], definition)
   }
 
   type Symbols =
-    mutable.HashMap[String, mutable.Set[(Definition, ContainingDefinition)]]
+    mutable.HashMap[String, mutable.Set[(Definition, Container)]]
 
   val symbols: Symbols = {
-    val predefined = mutable.HashMap
-      .newBuilder[String, mutable.Set[(Definition, ContainingDefinition)]]
+    val predefined =
+      mutable.HashMap.newBuilder[String, mutable.Set[(Definition, Container)]]
     predefined.addAll(
       Seq(
         Strng.id.value -> mutable.Set(Strng -> container),
@@ -74,7 +74,7 @@ case class SymbolTable(container: ContainingDefinition) {
       (parent, child, next) =>
         val extracted = next.getOrElse(
           child.id.value,
-          mutable.Set.empty[(Definition, ContainingDefinition)]
+          mutable.Set.empty[(Definition, Container)]
         )
         val included = extracted.addOne(child -> parent)
         next.update(child.id.value, included)
@@ -84,14 +84,14 @@ case class SymbolTable(container: ContainingDefinition) {
 
   def lookup[D <: Definition: ClassTag](
     ref: Reference,
-    within: ContainingDefinition
+    within: Container
   ): List[D] = {
     lookup[D](ref.id, within)
   }
 
   def lookup[D <: Definition: ClassTag](
     id: Identifier,
-    within: ContainingDefinition
+    within: Container
   ): List[D] = {
     val parents = within +: parentsOf(within)
     val clazz = classTag[D].runtimeClass
@@ -99,7 +99,7 @@ case class SymbolTable(container: ContainingDefinition) {
       case Some(set) =>
         val result = set
           .filter {
-            case (d: Definition, container: ContainingDefinition) =>
+            case (d: Definition, container: Container) =>
               val compatible = clazz.isInstance(d)
               val in_scope = parents.contains(container)
               compatible && in_scope

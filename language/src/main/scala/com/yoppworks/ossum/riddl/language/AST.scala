@@ -71,10 +71,9 @@ object AST {
     def identify: String = s"$kind '${id.value}'"
   }
 
-  sealed trait ContainingDefinition extends Definition {}
+  sealed trait Container extends Definition {}
 
-  case class RootContainer(content: Seq[ContainingDefinition])
-      extends ContainingDefinition {
+  case class RootContainer(content: Seq[Container]) extends Container {
     def id: Identifier = Identifier((0, 0), "root")
     def addendum: Option[Addendum] = None
     def kind: String = "RootContainer"
@@ -82,7 +81,7 @@ object AST {
   }
 
   object RootContainer {
-    val empty: RootContainer = RootContainer(Seq.empty[ContainingDefinition])
+    val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
 
   sealed trait TypeValue extends RiddlValue
@@ -275,7 +274,7 @@ object AST {
     background: Option[Background] = None,
     examples: Seq[ExampleDef] = Seq.empty[ExampleDef],
     addendum: Option[Addendum] = None
-  ) extends ContainingDefinition {
+  ) extends Container {
     def kind: String = "Feature"
   }
 
@@ -328,7 +327,7 @@ object AST {
     functions: Seq[FunctionDef] = Seq.empty[FunctionDef],
     invariants: Seq[InvariantDef] = Seq.empty[InvariantDef],
     addendum: Option[Addendum] = None
-  ) extends ContainingDefinition {
+  ) extends Container {
     def kind: String = "Entity"
   }
 
@@ -364,7 +363,7 @@ object AST {
     targetContext: ContextRef,
     addendum: Option[Addendum] = None
     // Details TBD
-  ) extends ContainingDefinition {
+  ) extends Container {
     def kind: String = "Adaptor"
   }
 
@@ -392,7 +391,7 @@ object AST {
     adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
     addendum: Option[Addendum] = None
-  ) extends ContainingDefinition {
+  ) extends Container {
     def kind: String = "Context"
   }
 
@@ -412,7 +411,7 @@ object AST {
     roles: Seq[RoleDef] = Seq.empty[RoleDef],
     actions: Seq[ActionDef] = Seq.empty[ActionDef],
     addendum: Option[Addendum] = None
-  ) extends ContainingDefinition {
+  ) extends Container {
     def kind: String = "Interaction"
   }
 
@@ -516,7 +515,7 @@ object AST {
     contexts: Seq[ContextDef] = Seq.empty[ContextDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
     addendum: Option[Addendum] = None
-  ) extends ContainingDefinition {
+  ) extends Container {
     def kind: String = "Domain"
   }
 }
