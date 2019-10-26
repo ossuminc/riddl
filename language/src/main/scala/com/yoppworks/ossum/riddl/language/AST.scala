@@ -97,8 +97,6 @@ object AST {
   case class OneOrMore(loc: Location, texp: TypeExpression)
       extends TypeExpression
 
-  case class UniqueId(loc: Location, entityName: Identifier)
-      extends TypeExpression
   case class Enumeration(loc: Location, of: Seq[Identifier])
       extends TypeExpression
   case class Alternation(loc: Location, of: Seq[TypeExpression])
@@ -116,24 +114,28 @@ object AST {
 
   sealed trait TypeDefinition extends Definition
 
-  class PredefinedType(name: String) extends TypeDefinition {
-    def loc: Location = Location.empty
+  abstract class PredefinedType(locattion: Location, name: String)
+      extends TypeExpression {
+    def loc: Location
     def id: Identifier = Identifier(loc, name)
     def addendum: Option[Addendum] = None
     def kind: String = name
   }
 
-  case object Strng extends PredefinedType("String")
-  case object Bool extends PredefinedType("Boolean")
-  case object Number extends PredefinedType("Number")
-  /* eventually include these:
-  case object Integer extends PredefinedType("Integer")
-  case object Decimal extends PredefinedType("Decimal")
-   */
-  case object Date extends PredefinedType("Date")
-  case object Time extends PredefinedType("Time")
-  case object TimeStamp extends PredefinedType("TimeStamp")
-  case object URL extends PredefinedType("URL")
+  case class Strng(loc: Location) extends PredefinedType(loc, "String")
+  case class Bool(loc: Location) extends PredefinedType(loc, "Boolean")
+  case class Number(loc: Location) extends PredefinedType(loc, "Number")
+  case class Integer(loc: Location) extends PredefinedType(loc, "Integer")
+  case class Decimal(loc: Location) extends PredefinedType(loc, "Decimal")
+  case class Date(loc: Location) extends PredefinedType(loc, "Date")
+  case class Time(loc: Location) extends PredefinedType(loc, "Time")
+  case class DateTime(loc: Location) extends PredefinedType(loc, "DateTime")
+  case class TimeStamp(loc: Location) extends PredefinedType(loc, "TimeStamp")
+  case class URL(loc: Location) extends PredefinedType(loc, "URL")
+  case class Pattern(loc: Location, pattern: LiteralString)
+      extends PredefinedType(loc, "Pattern")
+  case class UniqueId(loc: Location, entityName: Identifier)
+      extends PredefinedType(loc, "Id")
 
   case class TypeDef(
     loc: Location,

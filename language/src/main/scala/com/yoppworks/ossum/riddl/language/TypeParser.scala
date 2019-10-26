@@ -9,13 +9,6 @@ import scala.collection.immutable.ListMap
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
 
-  def uniqueIdType[_: P]: P[UniqueId] = {
-    P(location ~ "Id" ~ "(" ~/ identifier.? ~ ")").map {
-      case (loc, Some(id)) => UniqueId(loc, id)
-      case (loc, None)     => UniqueId(loc, Identifier(loc, ""))
-    }
-  }
-
   def referToType[_: P]: P[ReferenceType] = {
     P(location ~ "refer" ~ "to" ~/ entityRef).map { tpl =>
       (ReferenceType.apply _).tupled(tpl)
@@ -63,18 +56,39 @@ trait TypeParser extends CommonParser {
       case (Some(_), Some(_), loc, typ, Some("*"))    => ZeroOrMore(loc, typ)
       case (Some(_), Some(_), loc, typ, Some("...?")) => ZeroOrMore(loc, typ)
       case (Some(_), None, loc, typ, Some("..."))     => OneOrMore(loc, typ)
-      case (None, None, loc, typ, None)               => typ
+      case (None, None, _, typ, None)                 => typ
       case (_, _, loc, typ, _) =>
         error(loc, s"Cannot determine cardinality for $typ")
         typ
     }
   }
 
+  def predefinedTypes[_: P]: P[TypeExpression] = {
+    P(
+      (location ~ "String").map(AST.Strng) |
+        (location ~ "Boolean").map(AST.Bool) |
+        (location ~ "Number").map(AST.Number) |
+        (location ~ "Integer").map(AST.Integer) |
+        (location ~ "Decimal").map(AST.Decimal) |
+        (location ~ "DateTime").map(AST.DateTime) |
+        (location ~ "Date").map(AST.Date) |
+        (location ~ "TimeStamp").map(AST.TimeStamp) |
+        (location ~ "Time").map(AST.Time) |
+        (location ~ "URL").map(AST.URL) |
+        (location ~ "Pattern" ~ "(" ~ literalString ~ ")")
+          .map(tpl => (Pattern.apply _).tupled(tpl)) |
+        (location ~ "Id" ~ "(" ~/ identifier.? ~ ")").map {
+          case (loc, Some(id)) => UniqueId(loc, id)
+          case (loc, None)     => UniqueId(loc, Identifier(loc, ""))
+        }
+    )
+  }
+
   def typeExpression[_: P]: P[TypeExpression] = {
     P(
       cardinality(
         P(
-          uniqueIdType | enumerationType | alternationType | referToType |
+          predefinedTypes | enumerationType | alternationType | referToType |
             aggregationType | mappingType | rangeType | typeRef
         )
       )

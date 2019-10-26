@@ -83,12 +83,22 @@ object Prettify extends Translator {
 
     protected def visitTypeExpr(typEx: AST.TypeExpression): String = {
       typEx match {
-        case pt: PredefinedType   => pt.id.value
+        case Pattern(_, pat)      => "Pattern(\"" + pat + "\")"
+        case UniqueId(_, id)      => s"Id($id)"
+        case Strng(_)             => "String"
+        case Bool(_)              => "Boolean"
+        case Number(_)            => "Number"
+        case Integer(_)           => "Integer"
+        case Decimal(_)           => "Decimal"
+        case Date(_)              => "Date"
+        case Time(_)              => "Time"
+        case DateTime(_)          => "DateTime"
+        case TimeStamp(_)         => "TimeStamp"
+        case x: PredefinedType    => require(false, s"Unknown type $x"); ""
         case TypeRef(_, id)       => "type " + id.value
         case Optional(_, typex)   => visitTypeExpr(typex) + "?"
         case ZeroOrMore(_, typex) => visitTypeExpr(typex) + "*"
         case OneOrMore(_, typex)  => visitTypeExpr(typex) + "+"
-        case UniqueId(_, id)      => s"Id($id)"
         case AST.Enumeration(_, of) =>
           s"any { ${of.map(_.value).mkString(" ")} }"
         case AST.Alternation(_, of) =>

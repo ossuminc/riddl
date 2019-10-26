@@ -12,16 +12,7 @@ case class SymbolTable(container: Container) {
   type Parentage = Map[Definition, Container]
 
   val parentage: Parentage = {
-    val predefined = Map[Definition, Container](
-      Strng -> container,
-      Number -> container,
-      Bool -> container,
-      Time -> container,
-      Date -> container,
-      TimeStamp -> container,
-      URL -> container
-    )
-    foldLeft[Parentage](container, container, predefined) {
+    foldLeft[Parentage](container, container, Map.empty[Definition, Container]) {
       (parent, child, next) =>
         next + (child -> parent)
     }
@@ -53,21 +44,11 @@ case class SymbolTable(container: Container) {
   type Symbols =
     mutable.HashMap[String, mutable.Set[(Definition, Container)]]
 
-  val symbols: Symbols = {
-    val predefined =
-      mutable.HashMap.newBuilder[String, mutable.Set[(Definition, Container)]]
-    predefined ++= Seq(
-      Strng.id.value -> mutable.Set(Strng -> container),
-      Number.id.value -> mutable.Set(Number -> container),
-      Bool.id.value -> mutable.Set(Bool -> container),
-      Time.id.value -> mutable.Set(Time -> container),
-      Date.id.value -> mutable.Set(Date -> container),
-      TimeStamp.id.value -> mutable.Set(TimeStamp -> container),
-      URL.id.value -> mutable.Set(URL -> container),
-      container.id.value -> mutable.Set(container -> container)
-    )
+  val emptySymbols =
+    mutable.HashMap.empty[String, mutable.Set[(Definition, Container)]]
 
-    foldLeft[Symbols](container, container, predefined.result()) {
+  val symbols: Symbols = {
+    foldLeft[Symbols](container, container, emptySymbols) {
       (parent, child, next) =>
         val extracted = next.getOrElse(
           child.id.value,

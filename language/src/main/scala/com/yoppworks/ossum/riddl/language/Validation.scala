@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
+import java.util.regex.PatternSyntaxException
+
 import com.yoppworks.ossum.riddl.language.AST._
 
 import scala.collection.immutable
@@ -151,6 +153,20 @@ object Validation {
       definition: Container
     ): ValidationState = {
       typ match {
+        case Pattern(loc, pattern) =>
+          try {
+            java.util.regex.Pattern.compile(pattern.s)
+          } catch {
+            case x: PatternSyntaxException =>
+              add(ValidationMessage(loc, x.getMessage))
+          }
+          this
+        case UniqueId(loc, entityName) =>
+          this
+            .checkIdentifier(entityName)
+            .checkRef[EntityDef](entityName, definition)
+        case _: AST.PredefinedType =>
+          this
         case AST.TypeRef(_, id: Identifier) =>
           checkRef[TypeDefinition](id, definition)
         case Optional(_, typex: TypeExpression) =>
@@ -159,10 +175,6 @@ object Validation {
           checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
-        case UniqueId(loc, entityName) =>
-          this
-            .checkIdentifier(entityName)
-            .checkRef[EntityDef](entityName, definition)
         case Enumeration(_, enumerators: Seq[Identifier]) =>
           enumerators.foldLeft(this) {
             case (state, id) =>
