@@ -55,7 +55,7 @@ lazy val root = (project in file("."))
     buildInfoPackage := "com.yoppworks.ossum.riddl"
   )
   .dependsOn(translator)
-  .aggregate(language, translator)
+  .aggregate(language, translator, sbt_riddl)
 
 lazy val language = (project in file("language")).settings(
   name := "riddl-languge",
@@ -106,7 +106,6 @@ lazy val sbt_riddl = (project in file("sbt-riddl"))
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.10",
-    crossScalaVersions := Seq("2.13.1", "2.12.10"),
     scalacOptions ++= standardScalaCOptions(false),
     buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
   )
