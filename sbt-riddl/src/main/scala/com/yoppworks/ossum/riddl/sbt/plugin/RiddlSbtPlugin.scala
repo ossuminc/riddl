@@ -46,11 +46,11 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   private def paradoxTask: Def.Initialize[Task[Seq[File]]] = Def.task {
     val log: ManagedLogger = streams.value.log
-    val srcDir = (sourceDirectory in Compile).value / "main" / "riddl"
+    val srcDir = (sourceDirectory in Compile).value / "riddl"
     val sourceFiles: Seq[File] = riddl2ParadoxSourceFiles.value.map { name =>
       srcDir / name
     }
-    val targetDir: File = (sourceManaged in Compile).value / "main" / "paradox"
+    val targetDir: File = (sourceManaged in Compile).value / "paradox"
     val configFile: File = riddl2ParadoxConfigFile.value
     paradoxTranslation(sourceFiles, targetDir, configFile, log)
   }
