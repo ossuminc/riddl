@@ -22,7 +22,7 @@ buildInfoKeys in ThisBuild := Seq[BuildInfoKey](
   sbtVersion
 )
 
-def standardScalaCOptions(is2_13: Boolean) = {
+def standardScalaCOptions(is2_13: => Boolean) = {
   Seq(
     "-encoding",
     "utf8",
@@ -55,7 +55,7 @@ lazy val root = (project in file("."))
     buildInfoPackage := "com.yoppworks.ossum.riddl"
   )
   .dependsOn(translator)
-  .aggregate(language, translator, sbt_riddl)
+  .aggregate(language, translator)
 
 lazy val language = (project in file("language")).settings(
   name := "riddl-languge",
