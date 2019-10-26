@@ -1,11 +1,11 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.translator
 
 import org.scalatest.Assertion
-
+import com.yoppworks.ossum.riddl.language.ParsingTest
 import scala.io.Source
 
 /** Test Generator and Traversal */
-class GeneratorTest extends ParsingTest {
+class PrettifyTest extends ParsingTest {
 
   def runOne(fileName: String): Assertion = {
     val everything = s"language/src/test/input/$fileName"
@@ -32,7 +32,7 @@ class GeneratorTest extends ParsingTest {
         fail(message)
       case Right(domains) =>
         domains.map { domain =>
-          val generator = Generator.DomainGenerator(domain)
+          val generator = Prettify.DomainPrettifier(domain)
           val output = generator.traverse.mkString
           parseTopLevelDomains(output) match {
             case Left(message) =>
@@ -40,7 +40,7 @@ class GeneratorTest extends ParsingTest {
             case Right(domains2) =>
               input mustEqual output
               domains2.map { domain2 =>
-                val generator = new Generator.DomainGenerator(domain2)
+                val generator = Prettify.DomainPrettifier(domain2)
                 val output2 = generator.traverse.mkString
                 parseTopLevelDomains(output2) match {
                   case Left(message) =>

@@ -157,6 +157,19 @@ class ParsingTest extends WordSpec with MustMatchers {
     tp.parseDefinition[FROM]
   }
 
+  def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+    input: String,
+    expected: TO,
+    extract: FROM => TO
+  ): Unit = {
+    val rip = RiddlParserInput(input)
+    TestParser(rip).parseDefinition[FROM] match {
+      case Left(msg) => fail(msg)
+      case Right(content) =>
+        content mustBe expected
+    }
+  }
+
   def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlNode](
     cases: Map[String, TO],
     extract: FROM => TO

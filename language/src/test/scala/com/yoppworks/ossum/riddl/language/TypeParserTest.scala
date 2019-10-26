@@ -58,86 +58,124 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinitions[TypeDef, TypeDef](cases, identity)
     }
-    "allow various type definitions" in {
-      val cases: Map[String, TypeDef] = Map(
-        "type enum = any [ Apple Pear Peach Persimmon ]" ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "enum"),
-            Enumeration(
-              (1, 13),
-              List(
-                Identifier((1, 19), "Apple"),
-                Identifier((1, 25), "Pear"),
-                Identifier((1, 30), "Peach"),
-                Identifier((1, 36), "Persimmon")
-              )
+    "allow enumerators" in {
+      val input = "type enum = any { Apple Pear Peach Persimmon }"
+      val expected =
+        TypeDef(
+          (1, 1),
+          Identifier((1, 6), "enum"),
+          Enumeration(
+            (1, 13),
+            List(
+              Identifier((1, 19), "Apple"),
+              Identifier((1, 25), "Pear"),
+              Identifier((1, 30), "Peach"),
+              Identifier((1, 36), "Persimmon")
             )
-          ),
-        "type alt = choose { enum or stamp or url } " ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "alt"),
-            Alternation(
-              (1, 12),
-              List(
-                TypeRef((1, 21), Identifier((1, 21), "enum")),
-                TypeRef((1, 29), Identifier((1, 29), "stamp")),
-                TypeRef((1, 38), Identifier((1, 38), "url"))
-              )
-            )
-          ),
+          )
+        )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow alternation" in {
+      val input = "type alt = choose { enum or stamp or url } "
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "alt"),
+        Alternation(
+          (1, 12),
+          List(
+            TypeRef((1, 21), Identifier((1, 21), "enum")),
+            TypeRef((1, 29), Identifier((1, 29), "stamp")),
+            TypeRef((1, 38), Identifier((1, 38), "url"))
+          )
+        )
+      )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow aggregation" in {
+      val input =
         """type agg = combine {
           |  key: Number,
           |  id: Id,
           |  time: TimeStamp
           |}
-          |""".stripMargin ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "agg"),
-            Aggregation(
-              (1, 12),
-              ListMap(
-                Identifier((2, 3), "key") ->
-                  TypeRef((2, 8), Identifier((2, 8), "Number")),
-                Identifier((3, 3), "id") ->
-                  TypeRef((3, 7), Identifier((3, 7), "Id")),
-                Identifier((4, 3), "time") ->
-                  TypeRef((4, 9), Identifier((4, 9), "TimeStamp"))
-              )
-            )
-          ),
-        "type m1 = mapping from String to Number" ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "m1"),
-            Mapping(
-              (1, 11),
-              TypeRef((1, 24), Identifier((1, 24), "String")),
-              TypeRef((1, 34), Identifier((1, 34), "Number"))
-            )
-          ),
-        "type oneOrMore = agg+" ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "oneOrMore"),
-            OneOrMore((1, 18), Identifier((1, 18), "agg"))
-          ),
-        "type zeroOrMore = agg*" ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "zeroOrMore"),
-            ZeroOrMore((1, 19), Identifier((1, 19), "agg"))
-          ),
-        "type optional = agg?" ->
-          TypeDef(
-            (1, 1),
-            Identifier((1, 6), "optional"),
-            Optional((1, 17), Identifier((1, 17), "agg"))
+          |""".stripMargin
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "agg"),
+        Aggregation(
+          (1, 12),
+          ListMap(
+            Identifier((2, 3), "key") ->
+              TypeRef((2, 8), Identifier((2, 8), "Number")),
+            Identifier((3, 3), "id") ->
+              TypeRef((3, 7), Identifier((3, 7), "Id")),
+            Identifier((4, 3), "time") ->
+              TypeRef((4, 9), Identifier((4, 9), "TimeStamp"))
           )
+        )
       )
-      checkDefinitions[TypeDef, TypeDef](cases, identity)
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow mappings between two types" in {
+      val input = "type m1 = mapping from String to Number"
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "m1"),
+        Mapping(
+          (1, 11),
+          TypeRef((1, 24), Identifier((1, 24), "String")),
+          TypeRef((1, 34), Identifier((1, 34), "Number"))
+        )
+      )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow one or more in word style" in {
+      val input = "type oneOrMoreA = many agg"
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "oneOrMoreA"),
+        OneOrMore((1, 24), TypeRef((1, 24), Identifier((1, 24), "agg")))
+      )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow one or more in simple style" in {
+      val input = "type oneOrMoreC = agg..."
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "oneOrMoreC"),
+        OneOrMore((1, 19), TypeRef((1, 19), Identifier((1, 19), "agg")))
+      )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow one or more in regex style" in {
+      val input = "type oneOrMoreB = agg+"
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "oneOrMoreB"),
+        OneOrMore((1, 19), TypeRef((1, 19), Identifier((1, 19), "agg")))
+      )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow zero or more" in {
+      val input = "type zeroOrMore = many optional agg"
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "zeroOrMore"),
+        ZeroOrMore((1, 33), TypeRef((1, 33), Identifier((1, 33), "agg")))
+      )
+      // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:33),TypeRef((1:33),Identifier((1:33),agg))),None)
+      // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:19),TypeRef((1:33),Identifier((1:33),agg))),None)
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+    }
+    "allow optionality" in {
+      val input = "type optional = optional agg"
+      val expected = TypeDef(
+        (1, 1),
+        Identifier((1, 6), "optional"),
+        Optional((1, 26), TypeRef((1, 26), Identifier((1, 26), "agg")))
+      )
+      checkDefinition[TypeDef, TypeDef](input, expected, identity)
     }
     "allow complex nested type definitions" in {
       val input =
@@ -146,14 +184,14 @@ class TypeParserTest extends ParsingTest {
           |  type Simple = String
           |  type Compound is combine {
           |    s: Simple,
-          |    ns: Number+
+          |    ns: many Number
           |  }
           |  type Choices is choose { Number or Id }
           |  type Complex is combine {
           |    a: Simple,
           |    b: TimeStamp,
-          |    c: Compound*,
-          |    d: Choices?
+          |    c: many optional Compound,
+          |    d: optional Choices
           |  }
           |}
           |""".stripMargin
@@ -172,9 +210,15 @@ class TypeParserTest extends ParsingTest {
                 Identifier((11, 5), "b") ->
                   TypeRef((11, 8), Identifier((11, 8), "TimeStamp")),
                 Identifier((12, 5), "c") ->
-                  ZeroOrMore((12, 8), Identifier((12, 8), "Compound")),
+                  ZeroOrMore(
+                    (12, 22),
+                    TypeRef((12, 22), Identifier((12, 22), "Compound"))
+                  ),
                 Identifier((13, 5), "d") ->
-                  Optional((13, 8), Identifier((13, 8), "Choices"))
+                  Optional(
+                    (13, 17),
+                    TypeRef((13, 17), Identifier((13, 17), "Choices"))
+                  )
               )
             ),
             None

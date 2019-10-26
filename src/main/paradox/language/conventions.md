@@ -53,14 +53,15 @@ Here is how RIDDL nesting can be structured:
       * Event
       * Query
       * Result
-  * Context
-    * Type
-    * Entity
-      * Functions
-      * Invariants
+    * Context
+      * Type
+      * Entity
+        * Functions
+        * Invariants
+      * Interaction
+      * Adaptor
+      * Feature
     * Interaction
-    * Adaptor
-    * Feature
-  * Interaction
+      * Action
    
 

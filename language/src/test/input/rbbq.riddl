@@ -4,10 +4,10 @@ domain ReactiveBBQ {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id explained as {
+  type CustomerId is Id() explained as {
     "Unique identifier for a customer"
   }
-  type OrderId is Id explained as {
+  type OrderId is Id() explained as {
     "Unique identifier for a customer's order"
   } see also {"foo"}
 
@@ -59,7 +59,7 @@ domain ReactiveBBQ {
     type RewardsAccountType is combine {
       id is CustomerId,
       points is Number,
-      rewardEvents is RewardEvent*
+      rewardEvents is many optional RewardEvent
     }
     channel Commands { commands {} events {} queries {} results {} }
 
@@ -87,7 +87,7 @@ domain ReactiveBBQ {
   // #Payment
   context Payment {
     type PaymentType is combine {
-      orderId is Id,
+      orderId is Id(),
       amount is Number,
       cardToken is String
     }
@@ -105,8 +105,8 @@ domain ReactiveBBQ {
     entity MenuItem is String {
       consumes channel Commands
     }
-    type MenuItemRef is reference to entity MenuItem
-    entity Menu is MenuItemRef+ {
+    type MenuItemRef is refer to entity MenuItem
+    entity Menu is many MenuItemRef {
       option is aggregate
       consumes channel Commands
     }
@@ -118,9 +118,12 @@ domain ReactiveBBQ {
     type ReservationValue is combine {
       partyName is String,
       phoneNumber is String,
-      location is Id,
+      location is Id(Location),
       time is Time,
       date is Date
+    }
+    entity Location is String { consumes channel Commands } explained as {
+    "foo"
     }
 
   event bar is String

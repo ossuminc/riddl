@@ -31,9 +31,9 @@ class TypeValidatorTest extends ValidatingTest {
         """
           |domain foo {
           |type Rename is Bar
-          |type OneOrMore is Bar+
-          |type ZeroOrMore is Bar*
-          |type Optional is Bar?
+          |type OneOrMore is many Bar
+          |type ZeroOrMore is many optional Bar
+          |type Optional is optional Bar
           |type Aggregate is combine {a: Bar, b: Foo}
           |type Alternation is choose { Bar or Foo }
           |}

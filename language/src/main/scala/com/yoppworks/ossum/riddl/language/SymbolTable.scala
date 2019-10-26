@@ -15,7 +15,6 @@ case class SymbolTable(container: Container) {
     val predefined = Map[Definition, Container](
       Strng -> container,
       Number -> container,
-      Id -> container,
       Bool -> container,
       Time -> container,
       Date -> container,
@@ -61,7 +60,6 @@ case class SymbolTable(container: Container) {
       Seq(
         Strng.id.value -> mutable.Set(Strng -> container),
         Number.id.value -> mutable.Set(Number -> container),
-        Id.id.value -> mutable.Set(Id -> container),
         Bool.id.value -> mutable.Set(Bool -> container),
         Time.id.value -> mutable.Set(Time -> container),
         Date.id.value -> mutable.Set(Date -> container),

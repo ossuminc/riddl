@@ -1,12 +1,18 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.translator
+
+import java.io.File
 
 import com.yoppworks.ossum.riddl.language.AST._
-import com.yoppworks.ossum.riddl.language.Traversal._
+import com.yoppworks.ossum.riddl.language.Traversal.ChannelTraveler
+import com.yoppworks.ossum.riddl.language.Traversal.DefTraveler
+import com.yoppworks.ossum.riddl.language.Traversal.FeatureTraveler
+import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.Traversal
 
 import scala.collection.mutable
 
-/** This is the RIDDL generator to convert an AST back to RIDDL plain text */
-object Generator {
+/** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
+object Prettify extends Translator {
 
   type Lines = mutable.StringBuilder
 
@@ -19,25 +25,34 @@ object Generator {
     }
   }
 
-  def fromDomain(domain: DomainDef): Lines = {
-    DomainGenerator(domain).traverse
+  def translate(root: RootContainer, configFile: File): Unit = {
+    root.content.foreach(x => translateContainer(x, configFile))
+  }
+
+  def translateContainer(container: Container, configFile: File): Unit = {
+    container match {
+      case domain: DomainDef =>
+        DomainPrettifier(domain).traverse
+      case x: Container =>
+        throw new NotImplementedError()
+    }
   }
 
   def forContainer(container: Container): Lines = {
     container match {
-      case domain: DomainDef   => DomainGenerator(domain).traverse
-      case context: ContextDef => ContextGenerator(context).traverse
-      case entity: EntityDef   => EntityGenerator(entity).traverse
+      case domain: DomainDef   => DomainPrettifier(domain).traverse
+      case context: ContextDef => ContextPrettifier(context).traverse
+      case entity: EntityDef   => EntityPrettifier(entity).traverse
       case interaction: InteractionDef =>
-        InteractionGenerator(interaction).traverse
-      case feature: FeatureDef => FeatureGenerator(feature).traverse
-      case channel: ChannelDef => ChannelGenerator(channel).traverse
-      case adaptor: AdaptorDef => AdaptorGenerator(adaptor).traverse
+        InteractionPrettifier(interaction).traverse
+      case feature: FeatureDef => FeaturePrettifier(feature).traverse
+      case channel: ChannelDef => ChannelPrettifier(channel).traverse
+      case adaptor: AdaptorDef => AdaptorPrettifier(adaptor).traverse
       case _                   => throw new RuntimeException("No can do")
     }
   }
 
-  abstract class GeneratorBase[D <: Definition](definition: D)
+  abstract class PrettifyBase[D <: Definition](definition: D)
       extends DefTraveler[Lines, D] {
     def payload: Lines
 
@@ -65,13 +80,31 @@ object Generator {
       payload.append(spc + "}")
     }
 
-    protected def visitTypeExpression(typEx: AST.TypeExpression): String = {
+    protected def visitTypeExpr(typEx: AST.TypeExpression): String = {
       typEx match {
-        case TypeRef(_, id)     => id.value
-        case pt: PredefinedType => pt.id.value
-        case Optional(_, id)    => id.value + "?"
-        case ZeroOrMore(_, id)  => id.value + "*"
-        case OneOrMore(_, id)   => id.value + "+"
+        case pt: PredefinedType   => pt.id.value
+        case TypeRef(_, id)       => "type " + id.value
+        case Optional(_, typex)   => visitTypeExpr(typex) + "?"
+        case ZeroOrMore(_, typex) => visitTypeExpr(typex) + "*"
+        case OneOrMore(_, typex)  => visitTypeExpr(typex) + "+"
+        case UniqueId(_, id)      => s"Id($id)"
+        case AST.Enumeration(_, of) =>
+          s"any { ${of.map(_.value).mkString(" ")} }"
+        case AST.Alternation(_, of) =>
+          s"choose { ${of.map(visitTypeExpr).mkString(" or ")} }"
+        case AST.Aggregation(_, of) =>
+          s"combine {\n${of
+            .map {
+              case (k: Identifier, v: TypeExpression) =>
+                s"$spc  ${k.value} is ${visitTypeExpr(v)}"
+            }
+            .mkString(s",\n")}\n$spc}"
+        case AST.Mapping(_, from, to) =>
+          s"mapping from ${visitTypeExpr(from)} to ${visitTypeExpr(to)}"
+        case AST.RangeType(_, min, max) =>
+          s"range from $min to $max"
+        case AST.ReferenceType(_, id) =>
+          s"reference to $id"
       }
     }
 
@@ -82,11 +115,10 @@ object Generator {
     protected def terminus(): Lines = {
       payload.append("\n")
     }
-
   }
 
-  case class TypeGenerator(typeDef: TypeDef, payload: Lines, indent: Int = 2)
-      extends GeneratorBase[TypeDef](typeDef)
+  case class TypePrettifier(typeDef: TypeDef, payload: Lines, indent: Int = 2)
+      extends PrettifyBase[TypeDef](typeDef)
       with Traversal.TypeTraveler[Lines] {
 
     protected def open(): Unit = {
@@ -97,45 +129,16 @@ object Generator {
 
     override def close(): Unit = {}
 
-    def visitType(ty: TypeValue): Unit = {
-      ty match {
-        case exp: TypeExpression =>
-          payload.append(visitTypeExpression(exp))
-        case dfn: TypeSpecification =>
-          payload.append(visitTypeDefinition(dfn))
-      }
-    }
-
-    def visitTypeDefinition(
-      typeDef: AST.TypeSpecification
-    ): String = {
-      typeDef match {
-        case AST.Enumeration(_, of) =>
-          s"any { ${of.map(_.value).mkString(" ")} }"
-        case AST.Alternation(_, of) =>
-          s"choose { ${of.map(_.id.value).mkString(" or ")} }"
-        case AST.Aggregation(_, of) =>
-          s"combine {\n${of
-            .map {
-              case (k: Identifier, v: TypeExpression) =>
-                s"$spc  ${k.value} is ${visitTypeExpression(v)}"
-            }
-            .mkString(s",\n")}\n$spc}"
-        case AST.Mapping(_, from, to) =>
-          s"mapping from $from to $to"
-        case AST.RangeType(_, min, max) =>
-          s"range from $min to $max"
-        case AST.ReferenceType(_, id) =>
-          s"reference to $id"
-      }
+    override def visitTypeExpression(typex: TypeExpression): Unit = {
+      payload.append(visitTypeExpr(typex))
     }
   }
 
-  case class DomainGenerator(
+  case class DomainPrettifier(
     domain: DomainDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[DomainDef](domain)
+  ) extends PrettifyBase[DomainDef](domain)
       with Traversal.DomainTraveler[Lines] {
 
     def open(): Unit = {
@@ -149,33 +152,33 @@ object Generator {
     def visitType(
       typ: TypeDef
     ): Traversal.TypeTraveler[Lines] = {
-      TypeGenerator(typ, payload, indent + 2)
+      TypePrettifier(typ, payload, indent + 2)
     }
 
     def visitChannel(
       channel: ChannelDef
     ): Traversal.ChannelTraveler[Lines] = {
-      ChannelGenerator(channel, payload, indent + 2)
+      ChannelPrettifier(channel, payload, indent + 2)
     }
 
     def visitInteraction(
       i: InteractionDef
     ): Traversal.InteractionTraveler[Lines] = {
-      InteractionGenerator(i, payload, indent + 2)
+      InteractionPrettifier(i, payload, indent + 2)
     }
 
     def visitContext(
       context: ContextDef
     ): Traversal.ContextTraveler[Lines] = {
-      ContextGenerator(context, payload, indent + 2)
+      ContextPrettifier(context, payload, indent + 2)
     }
   }
 
-  case class ChannelGenerator(
+  case class ChannelPrettifier(
     channel: ChannelDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[ChannelDef](channel)
+  ) extends PrettifyBase[ChannelDef](channel)
       with Traversal.ChannelTraveler[Lines] {
 
     def open(): Unit = {
@@ -215,11 +218,11 @@ object Generator {
     }
   }
 
-  case class ContextGenerator(
+  case class ContextPrettifier(
     context: ContextDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[ContextDef](context)
+  ) extends PrettifyBase[ContextDef](context)
       with Traversal.ContextTraveler[Lines] {
 
     def open(): Unit = {
@@ -227,12 +230,12 @@ object Generator {
     }
 
     def visitType(t: TypeDef): Traversal.TypeTraveler[Lines] = {
-      TypeGenerator(t, payload, indent + 2)
+      TypePrettifier(t, payload, indent + 2)
     }
 
     def visitCommand(command: CommandDef): Unit = {
       payload.append(
-        s"$spc  command ${command.id.value} is ${visitTypeExpression(command.typ)}"
+        s"$spc  command ${command.id.value} is ${visitTypeExpr(command.typ)}"
       )
       val keyword = if (command.events.size > 1) "events" else "event"
       payload.append(
@@ -242,53 +245,53 @@ object Generator {
 
     def visitEvent(event: EventDef): Unit = {
       payload.append(
-        s"$spc  event ${event.id.value} is ${visitTypeExpression(event.typ)}\n"
+        s"$spc  event ${event.id.value} is ${visitTypeExpr(event.typ)}\n"
       )
     }
 
     def visitQuery(query: QueryDef): Unit = {
       payload.append(
-        s"$spc  query ${query.id.value} is ${visitTypeExpression(query.typ)}"
+        s"$spc  query ${query.id.value} is ${visitTypeExpr(query.typ)}"
       )
       payload.append(s" yields result ${query.result.id.value}\n")
     }
 
     def visitResult(result: ResultDef): Unit = {
       payload.append(
-        s"$spc  result ${result.id.value} is ${visitTypeExpression(result.typ)}\n"
+        s"$spc  result ${result.id.value} is ${visitTypeExpr(result.typ)}\n"
       )
     }
 
     override def visitChannel(chan: ChannelDef): ChannelTraveler[Lines] = {
-      ChannelGenerator(chan, payload, indent + 2)
+      ChannelPrettifier(chan, payload, indent + 2)
     }
 
     def visitAdaptor(
       a: AdaptorDef
     ): Traversal.AdaptorTraveler[Lines] =
-      AdaptorGenerator(a, payload, indent + 2)
+      AdaptorPrettifier(a, payload, indent + 2)
 
     def visitInteraction(
       i: InteractionDef
     ): Traversal.InteractionTraveler[Lines] =
-      InteractionGenerator(i, payload, indent + 2)
+      InteractionPrettifier(i, payload, indent + 2)
 
     def visitEntity(e: EntityDef): Traversal.EntityTraveler[Lines] = {
-      EntityGenerator(e, payload, indent + 2)
+      EntityPrettifier(e, payload, indent + 2)
     }
 
   }
 
-  case class EntityGenerator(
+  case class EntityPrettifier(
     entity: EntityDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[EntityDef](entity)
+  ) extends PrettifyBase[EntityDef](entity)
       with Traversal.EntityTraveler[Lines] {
 
     def open(): Unit = {
       payload.append(
-        s"${spc}entity ${entity.id.value} is ${visitTypeExpression(entity.typ)} {\n"
+        s"${spc}entity ${entity.id.value} is ${visitTypeExpr(entity.typ)} {\n"
       )
       entity.options.size match {
         case 1 =>
@@ -314,15 +317,15 @@ object Generator {
     }
 
     def visitFeature(f: FeatureDef): FeatureTraveler[Lines] = {
-      FeatureGenerator(f, payload, indent + 2)
+      FeaturePrettifier(f, payload, indent + 2)
     }
   }
 
-  case class FeatureGenerator(
+  case class FeaturePrettifier(
     feature: FeatureDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[FeatureDef](feature)
+  ) extends PrettifyBase[FeatureDef](feature)
       with Traversal.FeatureTraveler[Lines] {
 
     def open(): Unit = {
@@ -336,11 +339,11 @@ object Generator {
     def visitExample(example: ExampleDef): Unit = {}
   }
 
-  case class InteractionGenerator(
+  case class InteractionPrettifier(
     interaction: InteractionDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[InteractionDef](interaction)
+  ) extends PrettifyBase[InteractionDef](interaction)
       with Traversal.InteractionTraveler[Lines] {
 
     def open(): Unit = {
@@ -352,11 +355,11 @@ object Generator {
     def visitAction(action: ActionDef): Unit = {}
   }
 
-  case class AdaptorGenerator(
+  case class AdaptorPrettifier(
     adaptor: AdaptorDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends GeneratorBase[AdaptorDef](adaptor)
+  ) extends PrettifyBase[AdaptorDef](adaptor)
       with Traversal.AdaptorTraveler[Lines] {
 
     def open(): Unit = {

@@ -2,6 +2,7 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST._
 
+import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 
@@ -132,19 +133,89 @@ object Validation {
       }
     }
 
+    def checkIdentifier(id: Identifier): ValidationState = {
+      if (id.value.length <= 2) {
+        add(
+          ValidationMessage(
+            id.loc,
+            "Identifier is too short. Identifiers must be at least 3 characters",
+            StyleWarning
+          )
+        )
+      }
+      this
+    }
+
     def checkTypeExpression(
       typ: TypeExpression,
       definition: Container
     ): ValidationState = {
       typ match {
-        case Optional(_, id) =>
+        case AST.TypeRef(_, id: Identifier) =>
           checkRef[TypeDefinition](id, definition)
-        case OneOrMore(_, id) =>
-          checkRef[TypeDefinition](id, definition)
-        case ZeroOrMore(_, id) =>
-          checkRef[TypeDefinition](id, definition)
-        case AST.TypeRef(_, id) =>
-          checkRef[TypeDefinition](id, definition)
+        case Optional(_, typex: TypeExpression) =>
+          checkTypeExpression(typex, definition)
+        case OneOrMore(_, typex: TypeExpression) =>
+          checkTypeExpression(typex, definition)
+        case ZeroOrMore(_, typex: TypeExpression) =>
+          checkTypeExpression(typex, definition)
+        case UniqueId(loc, entityName) =>
+          this
+            .checkIdentifier(entityName)
+            .checkRef[EntityDef](entityName, definition)
+        case Enumeration(_, enumerators: Seq[Identifier]) =>
+          enumerators.foldLeft(this) {
+            case (state, id) =>
+              state
+                .checkIdentifier(id)
+                .check(
+                  id.value.head.isUpper,
+                  s"Enumerator '${id.value}' must start with lower case",
+                  StyleWarning,
+                  id.loc
+                )
+          }
+        case Alternation(_, of) =>
+          of.foldLeft(this) {
+            case (state, typex) =>
+              state.checkTypeExpression(typex, definition)
+          }
+        case Aggregation(
+            loc,
+            of: immutable.ListMap[Identifier, TypeExpression]
+            ) =>
+          of.foldLeft(this) {
+            case (state, (id, typex)) =>
+              state
+                .checkIdentifier(id)
+                .check(
+                  id.value.head.isLower,
+                  "Field names should start with a lower case letter",
+                  StyleWarning,
+                  loc
+                )
+                .checkTypeExpression(typex, definition)
+          }
+        case Mapping(_, from, to) =>
+          this
+            .checkTypeExpression(from, definition)
+            .checkTypeExpression(to, definition)
+        case RangeType(loc, min, max) =>
+          this
+            .check(
+              min.n >= BigInt.long2bigInt(Long.MinValue),
+              "Minimum value might be too small to store in a Long",
+              Warning,
+              loc
+            )
+            .check(
+              max.n <= BigInt.long2bigInt(Long.MaxValue),
+              "Maximum value might be too small to store in a Long",
+              Warning,
+              loc
+            )
+        case ReferenceType(_, entity: EntityRef) =>
+          this.checkRef[EntityDef](entity, definition)
       }
     }
 
@@ -159,35 +230,39 @@ object Validation {
       id: Identifier,
       within: Container
     ): ValidationState = {
-      val tc = classTag[T].runtimeClass
-      symbolTable.lookup[T](id, within) match {
-        case Nil =>
-          add(
-            ValidationMessage(
-              id.loc,
-              s"Identifier ${id.value} is not defined but should be a ${tc.getSimpleName}",
-              Error
+      if (id.value.nonEmpty) {
+        val tc = classTag[T].runtimeClass
+        symbolTable.lookup[T](id, within) match {
+          case Nil =>
+            add(
+              ValidationMessage(
+                id.loc,
+                s"Identifier ${id.value} is not defined but should be a ${tc.getSimpleName}",
+                Error
+              )
             )
-          )
-        case d :: Nil =>
-          check(
-            tc.isAssignableFrom(d.getClass),
-            s"Identifier ${id.value} was expected to be ${tc.getSimpleName}" +
-              s" but is ${d.getClass.getSimpleName} instead",
-            Error,
-            id.loc
-          )
-        case _ :: tail =>
-          add(
-            ValidationMessage(
-              id.loc,
-              s"""Identifier ${id.value} is not uniquely defined. Other
-                 |definitions are:
-                 |${tail.map(_.loc.toString).mkString("  \n")}",
-                 |""".stripMargin,
-              Error
+          case d :: Nil =>
+            check(
+              tc.isAssignableFrom(d.getClass),
+              s"Identifier ${id.value} was expected to be ${tc.getSimpleName}" +
+                s" but is ${d.getClass.getSimpleName} instead",
+              Error,
+              id.loc
             )
-          )
+          case _ :: tail =>
+            add(
+              ValidationMessage(
+                id.loc,
+                s"""Identifier ${id.value} is not uniquely defined. Other
+                   |definitions are:
+                   |${tail.map(_.loc.toString).mkString("  \n")}",
+                   |""".stripMargin,
+                Error
+              )
+            )
+        }
+      } else {
+        this
       }
     }
 
@@ -635,64 +710,8 @@ object Validation {
       StyleWarning,
       typeDef.loc
     )
-    typeDef.typ match {
-      case pd: PredefinedType =>
-        result.checkRef[TypeDefinition](pd.id, container)
-      case Optional(_: Location, typeName: Identifier) =>
-        result.checkRef[TypeDefinition](typeName, container)
-      case ZeroOrMore(_: Location, typeName: Identifier) =>
-        result.checkRef[TypeDefinition](typeName, container)
-      case OneOrMore(_: Location, typeName: Identifier) =>
-        result.checkRef[TypeDefinition](typeName, container)
-      case TypeRef(_, typeName) =>
-        result.checkRef[TypeDefinition](typeName, container)
-      case Aggregation(_, of) =>
-        of.foldLeft(result) {
-          case (s, (id: Identifier, typEx: TypeExpression)) =>
-            s.checkTypeExpression(typEx, container)
-              .check(
-                id.value.head.isLower,
-                "Field names should start with a lower case letter",
-                StyleWarning,
-                typEx.loc
-              )
-        }
-      case Alternation(_, of) =>
-        of.foldLeft(result) {
-          case (s, typEx: TypeExpression) =>
-            s.checkRef[TypeDefinition](typEx.id, container)
-        }
-      case Enumeration(_, of) =>
-        of.foldLeft(result) {
-          case (s, id) =>
-            s.check(
-              id.value.head.isUpper,
-              s"Enumerator '${id.value}' must start with lower case",
-              StyleWarning,
-              id.loc
-            )
-        }
-      case Mapping(_, from, to) =>
-        result
-          .checkTypeExpression(from, container)
-          .checkTypeExpression(to, container)
-      case tyEx @ RangeType(_, min, max) =>
-        result
-          .check(
-            min.n >= BigInt.long2bigInt(Long.MinValue),
-            "Minimum value might be too small to store in a Long",
-            Warning,
-            tyEx.loc
-          )
-          .check(
-            max.n <= BigInt.long2bigInt(Long.MaxValue),
-            "Maximum value might be too small to store in a Long",
-            Warning,
-            tyEx.loc
-          )
-      case ReferenceType(_, entity) =>
-        result.checkRef[EntityDef](entity, container)
-    }
+    val container = result.parentOf(typeDef)
+    result.checkTypeExpression(typeDef.typ, container)
   }
 
   def checkPredefinedType(

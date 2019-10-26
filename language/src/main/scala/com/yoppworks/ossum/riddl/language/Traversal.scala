@@ -46,12 +46,12 @@ object Traversal {
     final def definition: AST.TypeDef = typeDef
     final def traverse: P = {
       open()
-      visitType(typeDef.typ)
+      visitTypeExpression(typeDef.typ)
       close()
       visitAddendum(typeDef.addendum)
       terminus()
     }
-    def visitType(ty: AST.TypeValue): Unit
+    def visitTypeExpression(ty: AST.TypeExpression): Unit
   }
 
   trait ChannelTraveler[P] extends DefTraveler[P, ChannelDef] {

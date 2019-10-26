@@ -9,35 +9,76 @@ import scala.collection.immutable.ListMap
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
 
-  def enumerationType[_: P]: P[Enumeration] = {
-    P(location ~ "any" ~/ open ~ identifier.rep(1, sep = ",".?) ~ close).map {
-      enums =>
-        (Enumeration.apply _).tupled(enums)
+  def uniqueIdType[_: P]: P[UniqueId] = {
+    P(location ~ "Id" ~ "(" ~/ identifier.? ~ ")").map {
+      case (loc, Some(id)) => UniqueId(loc, id)
+      case (loc, None)     => UniqueId(loc, Identifier(loc, ""))
     }
+  }
+
+  def referToType[_: P]: P[ReferenceType] = {
+    P(location ~ "refer" ~ "to" ~/ entityRef).map { tpl =>
+      (ReferenceType.apply _).tupled(tpl)
+    }
+  }
+
+  def enumerationType[_: P]: P[Enumeration] = {
+    P(location ~ "any" ~/ open ~ identifier.rep(1, sep = ",".?) ~ close)
+      .map(enums => (Enumeration.apply _).tupled(enums))
   }
 
   def alternationType[_: P]: P[Alternation] = {
     P(
       location ~
-        "choose" ~/ open ~ (location ~ identifier).rep(2, P("or" | "|")) ~ close
+        "choose" ~/ open ~ typeExpression.rep(2, P("or" | "|")) ~
+        close
+    ).map { x =>
+      (Alternation.apply _).tupled(x)
+    }
+  }
+
+  def typeRef[_: P]: P[TypeRef] = {
+    P(location ~ identifier).map {
+      case (location, identifier) =>
+        TypeRef(location, identifier)
+    }
+  }
+
+  def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
+    P(
+      "many".!.? ~ "optional".!.? ~
+        location ~ p ~
+        ("?".! | "*".! | "+".! | "...?".! | "...".!).?
     ).map {
-      case (loc, ids: Seq[(Location, Identifier)]) =>
-        Alternation(loc, ids.map(x => TypeRef(x._1, x._2)))
+      case (None, None, loc, typ, Some("?"))          => Optional(loc, typ)
+      case (None, None, loc, typ, Some("+"))          => OneOrMore(loc, typ)
+      case (None, None, loc, typ, Some("*"))          => ZeroOrMore(loc, typ)
+      case (None, None, loc, typ, Some("...?"))       => ZeroOrMore(loc, typ)
+      case (None, None, loc, typ, Some("..."))        => OneOrMore(loc, typ)
+      case (Some(_), None, loc, typ, None)            => OneOrMore(loc, typ)
+      case (None, Some(_), loc, typ, None)            => Optional(loc, typ)
+      case (Some(_), Some(_), loc, typ, None)         => ZeroOrMore(loc, typ)
+      case (None, Some(_), loc, typ, Some("?"))       => Optional(loc, typ)
+      case (Some(_), None, loc, typ, Some("+"))       => OneOrMore(loc, typ)
+      case (Some(_), Some(_), loc, typ, Some("*"))    => ZeroOrMore(loc, typ)
+      case (Some(_), Some(_), loc, typ, Some("...?")) => ZeroOrMore(loc, typ)
+      case (Some(_), None, loc, typ, Some("..."))     => OneOrMore(loc, typ)
+      case (None, None, loc, typ, None)               => typ
+      case (_, _, loc, typ, _) =>
+        error(loc, s"Cannot determine cardinality for $typ")
+        typ
     }
   }
 
   def typeExpression[_: P]: P[TypeExpression] = {
-    P(cardinality(typeRef))
-  }
-
-  def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
-    P(location ~ p ~ ("?".! | "*".! | "+".!).?).map {
-      case (loc, typ, Some("?")) => Optional(loc, typ.id)
-      case (loc, typ, Some("+")) => OneOrMore(loc, typ.id)
-      case (loc, typ, Some("*")) => ZeroOrMore(loc, typ.id)
-      case (_, typ, Some(_))     => typ
-      case (_, typ, None)        => typ
-    }
+    P(
+      cardinality(
+        P(
+          uniqueIdType | enumerationType | alternationType | referToType |
+            aggregationType | mappingType | rangeType | typeRef
+        )
+      )
+    )
   }
 
   def field[_: P]: P[(Identifier, TypeExpression)] = {
@@ -72,34 +113,12 @@ trait TypeParser extends CommonParser {
       }
   }
 
-  def referToType[_: P]: P[ReferenceType] = {
-    P(location ~ "reference" ~ "to" ~/ entityRef).map { tpl =>
-      (ReferenceType.apply _).tupled(tpl)
-    }
-  }
-
-  def typeDefinitions[_: P]: P[TypeSpecification] = {
-    P(
-      enumerationType | alternationType | aggregationType | mappingType |
-        rangeType | referToType
-    )
-  }
-
-  def types[_: P]: P[TypeValue] = {
-    P(typeDefinitions | typeExpression)
-  }
-
   def typeDef[_: P]: P[TypeDef] = {
     P(
-      location ~ "type" ~/ identifier ~ is ~ types ~ addendum
+      location ~ "type" ~/ identifier ~ is ~ typeExpression ~ addendum
     ).map { tpl =>
       (TypeDef.apply _).tupled(tpl)
     }
   }
 
-  def typeRef[_: P]: P[TypeRef] = {
-    P(location ~ identifier).map { id =>
-      TypeRef(id._1, id._2)
-    }
-  }
 }

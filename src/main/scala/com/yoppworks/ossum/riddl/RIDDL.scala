@@ -1,13 +1,11 @@
 package com.yoppworks.ossum.riddl
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import com.yoppworks.ossum.riddl.RiddlOptions._
-import com.yoppworks.ossum.riddl.language.AST
-import com.yoppworks.ossum.riddl.language.Generator
-import com.yoppworks.ossum.riddl.language.Generator.Lines
+import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.RiddlParserInput
 import com.yoppworks.ossum.riddl.language.Validation
+import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
+import com.yoppworks.ossum.riddl.translator.Prettify
 import scopt.OParser
 
 /** RIDDL Main Program
@@ -21,8 +19,6 @@ object RIDDL {
           options.command match {
             case Parse =>
               parse(options)
-            case Prettify =>
-              prettify(options)
             case Validate =>
               validate(options)
             case Translate =>
@@ -77,7 +73,7 @@ object RIDDL {
     }
   }
 
-  def prettify(options: RiddlOptions): Unit = {
+  def parseAndValidate(options: RiddlOptions): Option[RootContainer] = {
     options.inputFile match {
       case Some(file) =>
         timer("parse", options.showTimes) {
@@ -86,33 +82,10 @@ object RIDDL {
         } match {
           case Left(msg) =>
             println(msg)
-          case Right(root: AST.RootContainer) =>
-            val lines = timer("prettify", options.showTimes) {
-              root.content.foldLeft(Lines()) {
-                case (prior, container) =>
-                  prior.append(Generator.forContainer(container))
-              }
-            }
-            System.out.println(lines)
-        }
-      case None =>
-        error("No input file specified")
-    }
-  }
-
-  def parseAndValidate(options: RiddlOptions): Boolean = {
-    options.inputFile match {
-      case Some(file) =>
-        timer("parse", options.showTimes) {
-          val input = RiddlParserInput(file)
-          language.TopLevelParser.parse(input)
-        } match {
-          case Left(msg) =>
-            println(msg)
-            false
-          case Right(value) =>
+            None
+          case Right(root) =>
             val msgs = timer("validate", options.showTimes) {
-              value.content.foldLeft(Validation.NoValidationMessages) {
+              root.content.foldLeft(Validation.NoValidationMessages) {
                 case (prior, container) =>
                   prior ++ Validation.validate(
                     container,
@@ -128,11 +101,14 @@ object RIDDL {
             toPrint.map(_.format(file.getName)).foreach { msg =>
               System.err.println(msg)
             }
-            toPrint.isEmpty
+            if (toPrint.isEmpty)
+              None
+            else
+              Some(root)
         }
       case None =>
         error("No input file specified")
-        false
+        None
     }
   }
 
@@ -141,18 +117,22 @@ object RIDDL {
   }
 
   def translate(options: RiddlOptions): Unit = {
-    if (parseAndValidate(options)) {
-      val config = timer("config", options.showTimes) {
-        options.configFile match {
-          case Some(file) =>
-            ConfigFactory.parseFile(file)
-          case None =>
-            error("No translation configuration file provided")
-            ConfigFactory.empty()
-        }
-      }
-      timer("translate", options.showTimes) {
-        println("Translation not yet implemented")
+    if (options.configFile.isEmpty) {
+      error("No translation configuration file provided")
+    } else {
+      parseAndValidate(options) match {
+        case None =>
+        case Some(root) =>
+          timer("translate", options.showTimes) {
+            options.outputKind match {
+              case Kinds.Prettify =>
+                Prettify.translate(root, options.configFile.get)
+              case Kinds.Paradox =>
+                ParadoxTranslator.translate(root, options.configFile.get)
+              case x: Kinds.Value =>
+                println(s"Translation $x not yet implemented")
+            }
+          }
       }
     }
   }

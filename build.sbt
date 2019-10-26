@@ -39,10 +39,11 @@ lazy val translator = (project in file("translator"))
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % "3.0.8",
       "org.scalatest" %% "scalatest" % "3.0.8" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
+      "com.github.pureconfig" %% "pureconfig" % "0.12.1"
     )
   )
-  .dependsOn(language)
+  .dependsOn(language % "test->test;compile->compile")
 
 lazy val root = (project in file("."))
   .enablePlugins(ParadoxPlugin)
@@ -73,5 +74,5 @@ lazy val root = (project in file("."))
     buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoOptions := Seq(ToMap, BuildTime)
   )
-  .dependsOn(language)
-  .aggregate(language)
+  .dependsOn(translator)
+  .aggregate(language, translator)

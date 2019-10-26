@@ -7,6 +7,12 @@ import com.yoppworks.ossum.riddl.language.AST._
 /** Common Parsing Rules */
 trait CommonParser extends ParsingContext {
 
+  def error(loc: Location, msg: String): Unit = {
+    throw new Exception(
+      s"Parse error at $loc: $msg"
+    )
+  }
+
   def location[_: P]: P[Location] = {
     P(Index).map(input.location)
   }
@@ -21,6 +27,13 @@ trait CommonParser extends ParsingContext {
 
   def literalStrings[_: P](sep: String = ","): P[Seq[LiteralString]] = {
     P(open ~ literalString.rep(0, sep) ~ close)
+  }
+
+  final val specialLineChars: String =
+    "~`!@#$%^&*()_-+=[]\"':;<>,.?/"
+
+  def lineCharPredicate(c: Char): Boolean = {
+    c.isLetterOrDigit | c.isSpaceChar | specialLineChars.contains(c)
   }
 
   def lines[_: P]: P[Seq[String]] = {
@@ -87,11 +100,11 @@ trait CommonParser extends ParsingContext {
   }
 
   def open[_: P]: P[Unit] = {
-    P("{" | "[" | "(")./
+    P("{")./
   }
 
   def close[_: P]: P[Unit] = {
-    P("}" | "]" | ")")./
+    P("}")./
   }
 
   def is[_: P]: P[Unit] = {

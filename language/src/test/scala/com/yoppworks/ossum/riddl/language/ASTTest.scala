@@ -21,7 +21,6 @@ class ASTTest extends WordSpec with MustMatchers {
       Strng mustBe Strng
       Bool mustBe Bool
       Number mustBe Number
-      Id mustBe Id
       Date mustBe Date
       Time mustBe Time
       TimeStamp mustBe TimeStamp
@@ -32,12 +31,12 @@ class ASTTest extends WordSpec with MustMatchers {
         Alternation((0, 0), Seq.empty[TypeRef])
       Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression]) mustBe
         Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression])
-      Optional((0, 0), Identifier((0, 0), "String")) mustBe
-        Optional((0, 0), Identifier((0, 0), "String"))
-      ZeroOrMore((0, 0), Identifier((0, 0), "Time")) mustBe
-        ZeroOrMore((0, 0), Identifier((0, 0), "Time"))
-      OneOrMore((0, 0), Identifier((0, 0), "URL")) mustBe
-        OneOrMore((0, 0), Identifier((0, 0), "URL"))
+      Optional((0, 0), TypeRef((0, 0), Identifier((0, 0), "String"))) mustBe
+        Optional((0, 0), TypeRef((0, 0), Identifier((0, 0), "String")))
+      ZeroOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "Time"))) mustBe
+        ZeroOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "Time")))
+      OneOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "URL"))) mustBe
+        OneOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "URL")))
     }
   }
 }

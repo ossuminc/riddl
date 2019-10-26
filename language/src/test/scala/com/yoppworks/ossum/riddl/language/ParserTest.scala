@@ -90,9 +90,9 @@ class ParserTest extends ParsingTest {
     }
     "allow type definitions in contexts" in {
       val input =
-        """type Vikings = any [
+        """type Vikings = any {
           |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
-          |]""".stripMargin
+          |}""".stripMargin
       parseInContext(input, _.types.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>

@@ -71,7 +71,7 @@ object AST {
     def identify: String = s"$kind '${id.value}'"
   }
 
-  sealed trait Container extends Definition {}
+  sealed trait Container extends Definition
 
   case class RootContainer(content: Seq[Container]) extends Container {
     def id: Identifier = Identifier((0, 0), "root")
@@ -84,37 +84,35 @@ object AST {
     val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
 
-  sealed trait TypeValue extends RiddlValue
+  sealed trait TypeExpression extends RiddlValue
 
-  sealed trait TypeExpression extends TypeValue {
-    def id: Identifier
-  }
-  case class TypeRef(
-    loc: Location,
-    id: Identifier
-  ) extends Reference
+  case class TypeRef(loc: Location, id: Identifier)
+      extends Reference
       with TypeExpression
 
-  case class Optional(loc: Location, id: Identifier) extends TypeExpression
-  case class ZeroOrMore(loc: Location, id: Identifier) extends TypeExpression
-  case class OneOrMore(loc: Location, id: Identifier) extends TypeExpression
+  case class Optional(loc: Location, texp: TypeExpression)
+      extends TypeExpression
+  case class ZeroOrMore(loc: Location, texp: TypeExpression)
+      extends TypeExpression
+  case class OneOrMore(loc: Location, texp: TypeExpression)
+      extends TypeExpression
 
-  sealed trait TypeSpecification extends TypeValue
-
+  case class UniqueId(loc: Location, entityName: Identifier)
+      extends TypeExpression
   case class Enumeration(loc: Location, of: Seq[Identifier])
-      extends TypeSpecification
+      extends TypeExpression
   case class Alternation(loc: Location, of: Seq[TypeExpression])
-      extends TypeSpecification
+      extends TypeExpression
   case class Aggregation(loc: Location, of: ListMap[Identifier, TypeExpression])
-      extends TypeSpecification
+      extends TypeExpression
   case class Mapping(loc: Location, from: TypeExpression, to: TypeExpression)
-      extends TypeSpecification
+      extends TypeExpression
   case class RangeType(loc: Location, min: LiteralInteger, max: LiteralInteger)
-      extends TypeSpecification
+      extends TypeExpression
   case class ReferenceType(
     loc: Location,
     entity: EntityRef
-  ) extends TypeSpecification
+  ) extends TypeExpression
 
   sealed trait TypeDefinition extends Definition
 
@@ -132,7 +130,6 @@ object AST {
   case object Integer extends PredefinedType("Integer")
   case object Decimal extends PredefinedType("Decimal")
    */
-  case object Id extends PredefinedType("Id")
   case object Date extends PredefinedType("Date")
   case object Time extends PredefinedType("Time")
   case object TimeStamp extends PredefinedType("TimeStamp")
@@ -141,7 +138,7 @@ object AST {
   case class TypeDef(
     loc: Location,
     id: Identifier,
-    typ: TypeValue,
+    typ: TypeExpression,
     addendum: Option[Addendum] = None
   ) extends TypeDefinition {
     def kind: String = "Type"

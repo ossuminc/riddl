@@ -3,7 +3,6 @@ package com.yoppworks.ossum.riddl
 import java.io.File
 
 import com.yoppworks.ossum.riddl.language.Validation
-import com.yoppworks.ossum.riddl.language.Validation.MissingWarning
 import com.yoppworks.ossum.riddl.language.Validation.ReportMissingWarnings
 import com.yoppworks.ossum.riddl.language.Validation.ReportStyleWarnings
 import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
@@ -21,7 +20,8 @@ case class RiddlOptions(
   command: RiddlOptions.Command = RiddlOptions.Unspecified,
   inputFile: Option[File] = None,
   outputDir: Option[File] = None,
-  configFile: Option[File] = None
+  configFile: Option[File] = None,
+  outputKind: Kinds.Kinds = Kinds.Paradox
 ) {
 
   def makeValidationOptions: Seq[ValidationOptions] = {
@@ -34,13 +34,20 @@ case class RiddlOptions(
   }
 }
 
+object Kinds extends Enumeration {
+  type Kinds = Value
+  val Paradox, Prettify = Value
+}
+
 object RiddlOptions {
   import scopt.OParser
+
+  implicit val kindsRead: scopt.Read[Kinds.Value] =
+    scopt.Read.reads(Kinds withName)
 
   sealed trait Command
   case object Unspecified extends Command
   case object Parse extends Command
-  case object Prettify extends Command
   case object Translate extends Command
   case object Validate extends Command
 
@@ -76,15 +83,6 @@ object RiddlOptions {
             .action((x, c) => c.copy(inputFile = Some(x)))
             .text("required riddl input file to compile")
         ),
-      cmd("prettify")
-        .action((_, c) => c.copy(command = Prettify))
-        .text("Parse the input and print it out in prettified style")
-        .children(
-          opt[File]('i', "input-file")
-            .required()
-            .action((x, c) => c.copy(inputFile = Some(x)))
-            .text("required riddl input file to compile")
-        ),
       cmd("validate")
         .action((_, c) => c.copy(command = Validate))
         .children(
@@ -97,6 +95,9 @@ object RiddlOptions {
         .action((_, c) => c.copy(command = Translate))
         .text("translate riddl as specified in configuration file ")
         .children(
+          arg[Kinds.Kinds]("kind")
+            .action((k, c) => c.copy(outputKind = k))
+            .text("The kind of output to generate during translation"),
           opt[File]('i', "input-file")
             .required()
             .action((x, c) => c.copy(inputFile = Some(x)))

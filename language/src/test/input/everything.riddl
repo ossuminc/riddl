@@ -17,7 +17,7 @@ domain Everything {
     type url is URL
 
     // Enumerations have a value chosen from a list of identifiers
-    type enum is any [ Apple Pear Peach Persimmon ]
+    type enum is any { Apple Pear Peach Persimmon }
 
     // Alternations select one type from a list of types
     type alt is choose { enum or stamp or url }
@@ -30,9 +30,9 @@ domain Everything {
     }
 
     // Types can have cardinality requirements similar to regular expressions
-    type oneOrMore is agg+
-    type zeroOrMore is agg*
-    type optional is agg?
+    type oneOrMore is many agg
+    type zeroOrMore is many optional agg
+    type optional is optional agg
 
     // Commands, Events, Queries and Results are defined in terms of some
     // type, previously defined. Commands yield events. Queries yield results.
