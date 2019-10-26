@@ -1,6 +1,7 @@
 import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
+import org.jetbrains.sbtidea.Keys._
 
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
@@ -21,6 +22,7 @@ buildInfoKeys in ThisBuild := Seq[BuildInfoKey](
   scalaVersion,
   sbtVersion
 )
+intellijPluginName := name.value
 
 def standardScalaCOptions(is2_13: => Boolean) = {
   Seq(
@@ -37,7 +39,11 @@ def standardScalaCOptions(is2_13: => Boolean) = {
   )
 }
 
-lazy val root = (project in file("."))
+lazy val riddl = (project in file("."))
+  .settings(publish := {}, publishLocal := {})
+  .aggregate(language, translator, riddlc, idea, `sbt-riddl`)
+
+lazy val riddlc = (project in file("riddlc"))
   .enablePlugins(ParadoxPlugin)
   .enablePlugins(ParadoxSitePlugin)
   .enablePlugins(ParadoxMaterialThemePlugin)
@@ -87,20 +93,35 @@ lazy val translator = (project in file("translator"))
   .dependsOn(language % "test->test;compile->compile")
 
 lazy val idea = (project in file("idea-plugin"))
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin, SbtIdeaPlugin)
+  .dependsOn(language)
   .settings(
     name := "riddl-idea-plugin",
-    mainClass := Some("com.yoppworks.ossum.riddl.idea.plugin.Main"),
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
-      "com.typesafe" % "config" % "1.4.0"
+    intellijPlatform := IntelliJPlatform.IdeaCommunity,
+    intellijDownloadSources := true,
+    packageLibraryMappings := Seq.empty, // allow scala-library
+    packageMethod := PackagingMethod.Standalone(),
+    patchPluginXml := pluginXmlOptions { xml =>
+      xml.version = version.value
+      xml.sinceBuild = intellijBuild.value
+      xml.untilBuild = "193.*"
+    },
+    scalaVersion := "2.12.10",
+    javacOptions in Global ++= Seq("-source", "1.8", "-target", "1.8"),
+    scalacOptions in Global ++= Seq(
+      "-target:jvm-1.8",
+      "-deprecation",
+      "-feature",
+      "-unchecked",
+      "-Xfatal-warnings"
     ),
     buildInfoPackage := "com.yoppworks.ossum.riddl.idea.plugin",
     buildInfoOptions := Seq(ToMap, BuildTime)
   )
-  .dependsOn(language)
 
-lazy val sbt_riddl = (project in file("sbt-riddl"))
+lazy val ideaRunner = createRunnerProject(idea, "ideaRunner")
+
+lazy val `sbt-riddl` = (project in file("sbt-riddl"))
   .enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-riddl",

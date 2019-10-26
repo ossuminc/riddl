@@ -1,7 +1,15 @@
+import sbt.Resolver
+
 resolvers in ThisBuild ++= Seq(
-  "Artima Maven Repository" at "https://repo.artima.com/releases"
+  "Artima Maven Repository" at "https://repo.artima.com/releases",
+  Resolver.url(
+    "jetbrains-sbt",
+    url(s"https://dl.bintray.com/jetbrains/sbt-plugins")
+  )(Resolver.ivyStylePatterns)
 )
 
+addSbtPlugin("org.jetbrains" % "sbt-idea-plugin" % "3.3.2")
+addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "1.0.0")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.4")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.2.0")
 addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.4.2")
