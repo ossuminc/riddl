@@ -25,8 +25,9 @@ object Prettify extends Translator {
     }
   }
 
-  def translate(root: RootContainer, configFile: File): Unit = {
+  def translate(root: RootContainer, configFile: File): Seq[File] = {
     root.content.foreach(x => translateContainer(x, configFile))
+    Seq.empty[File]
   }
 
   def translateContainer(container: Container, configFile: File): Unit = {

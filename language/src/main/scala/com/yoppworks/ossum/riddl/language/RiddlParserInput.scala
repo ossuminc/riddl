@@ -9,7 +9,7 @@ import fastparse.internal.Util
 import scala.io.Source
 
 /** Same as fastparse.IndexedParserInput but with Location support */
-case class RiddlParserInput(data: String) extends ParserInput {
+case class RiddlParserInput(data: String, origin: String) extends ParserInput {
   override def apply(index: Int): Char = data.charAt(index)
   override def dropBuffer(index: Int): Unit = {}
   override def slice(from: Int, until: Int): String = data.slice(from, until)
@@ -37,15 +37,15 @@ case class RiddlParserInput(data: String) extends ParserInput {
 
 object RiddlParserInput {
   implicit def apply(data: String): RiddlParserInput = {
-    new RiddlParserInput(data)
+    new RiddlParserInput(data, "internal")
   }
   implicit def apply(source: Source): RiddlParserInput = {
     val lines = source.getLines()
     val input = lines.mkString("\n")
-    RiddlParserInput(input)
+    RiddlParserInput(input, source.descr)
   }
   implicit def apply(file: File): RiddlParserInput = {
     val source = Source.fromFile(file)
-    RiddlParserInput(source)
+    new RiddlParserInput(source.getLines().mkString("\n"), file.getName)
   }
 }

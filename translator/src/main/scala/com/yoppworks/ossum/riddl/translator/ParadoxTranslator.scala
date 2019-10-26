@@ -4,10 +4,14 @@ import java.io.File
 
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.Folding
+import com.yoppworks.ossum.riddl.language.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.TopLevelParser
+import com.yoppworks.ossum.riddl.language.Validation
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 import pureconfig._
-import pureconfig.error.ConfigReaderFailure
-import pureconfig.error.ConfigValueLocation
 import pureconfig.generic.auto._
+import pureconfig.error.ConfigReaderFailure
+import pureconfig.error.ConfigReaderFailures
 
 /** A Translator that generates Paradox documentation */
 object ParadoxTranslator extends Translator {
@@ -15,12 +19,39 @@ object ParadoxTranslator extends Translator {
   case class Configuration()
 
   case class State(
-    config: Configuration
-  )
+    config: Configuration,
+    generatedFiles: Seq[File] = Seq.empty[File]
+  ) {
 
-  def translate(root: RootContainer, configFile: File): Unit = {
+    def addFile(f: File): State = {
+      this.copy(generatedFiles = this.generatedFiles :+ f)
+    }
+  }
+
+  def parseValidateTranslate(
+    input: RiddlParserInput,
+    errorLog: (=> String) => Unit,
+    configFile: File
+  ): Seq[File] = {
+    TopLevelParser.parse(input) match {
+      case Left(error) =>
+        errorLog(error)
+        Seq.empty[File]
+      case Right(root) =>
+        val errors: Seq[ValidationMessage] =
+          Validation.validate[RootContainer](root)
+        if (errors.nonEmpty) {
+          errors.map(_.format(input.origin)).foreach(errorLog(_))
+          Seq.empty[File]
+        } else {
+          translate(root, configFile)
+        }
+    }
+  }
+
+  def translate(root: RootContainer, configFile: File): Seq[File] = {
     ConfigSource.default.load[Configuration] match {
-      case Left(failures) =>
+      case Left(failures: ConfigReaderFailures) =>
         failures.toList.foreach { crf: ConfigReaderFailure =>
           val location = crf.location match {
             case Some(cvl) => cvl.description
@@ -29,9 +60,11 @@ object ParadoxTranslator extends Translator {
           System.err.println(s"In $location:")
           System.err.println(crf.description)
         }
+        Seq.empty[File]
       case Right(configuration: Configuration) =>
-        val state: State = State(configuration)
-        Folding.foldLeft[State](root, root, state)(dispatch)
+        val state: State = State(configuration, Seq.empty[File])
+        val finalState = Folding.foldLeft[State](root, root, state)(dispatch)
+        finalState.generatedFiles
     }
   }
 

@@ -56,25 +56,24 @@ case class SymbolTable(container: Container) {
   val symbols: Symbols = {
     val predefined =
       mutable.HashMap.newBuilder[String, mutable.Set[(Definition, Container)]]
-    predefined.addAll(
-      Seq(
-        Strng.id.value -> mutable.Set(Strng -> container),
-        Number.id.value -> mutable.Set(Number -> container),
-        Bool.id.value -> mutable.Set(Bool -> container),
-        Time.id.value -> mutable.Set(Time -> container),
-        Date.id.value -> mutable.Set(Date -> container),
-        TimeStamp.id.value -> mutable.Set(TimeStamp -> container),
-        URL.id.value -> mutable.Set(URL -> container),
-        container.id.value -> mutable.Set(container -> container)
-      )
+    predefined ++= Seq(
+      Strng.id.value -> mutable.Set(Strng -> container),
+      Number.id.value -> mutable.Set(Number -> container),
+      Bool.id.value -> mutable.Set(Bool -> container),
+      Time.id.value -> mutable.Set(Time -> container),
+      Date.id.value -> mutable.Set(Date -> container),
+      TimeStamp.id.value -> mutable.Set(TimeStamp -> container),
+      URL.id.value -> mutable.Set(URL -> container),
+      container.id.value -> mutable.Set(container -> container)
     )
+
     foldLeft[Symbols](container, container, predefined.result()) {
       (parent, child, next) =>
         val extracted = next.getOrElse(
           child.id.value,
           mutable.Set.empty[(Definition, Container)]
         )
-        val included = extracted.addOne(child -> parent)
+        val included = extracted += (child -> parent)
         next.update(child.id.value, included)
         next
     }
