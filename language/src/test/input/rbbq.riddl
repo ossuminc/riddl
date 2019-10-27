@@ -14,8 +14,8 @@ domain ReactiveBBQ {
   // #Kitchen
   // The Kitchen context pertains to
   context Kitchen {
-    type IP4Address is combine { a: Number, b: Number, c: Number, d: Number}
-    type OrderViewType is combine {
+    type IP4Address is { a: Number, b: Number, c: Number, d: Number}
+    type OrderViewType is {
       address is IP4Address
     }
     channel Commands { commands {} events {} queries {} results {} }
@@ -43,20 +43,20 @@ domain ReactiveBBQ {
 
   // #Loyalty
   context Loyalty {
-    type AccrualEvent is combine {
+    type AccrualEvent is {
       when is TimeStamp,
       who is CustomerId,
       pointsAccrued is Number,
       fromOrder is OrderId
     }
-    type AwardEvent is combine {
+    type AwardEvent is {
       when is TimeStamp,
       who is CustomerId,
       pointsAwarded is Number,
       toOrder is OrderId
     }
-    type RewardEvent is choose { AccrualEvent or AwardEvent }
-    type RewardsAccountType is combine {
+    type RewardEvent is ( AccrualEvent or AwardEvent )
+    type RewardsAccountType is {
       id is CustomerId,
       points is Number,
       rewardEvents is many optional RewardEvent
@@ -71,7 +71,7 @@ domain ReactiveBBQ {
 
   // #Order
   context Order {
-    type OrderType is combine {
+    type OrderType is  {
       orderId is OrderId,
       customerId is CustomerId
     }
@@ -86,7 +86,7 @@ domain ReactiveBBQ {
 
   // #Payment
   context Payment {
-    type PaymentType is combine {
+    type PaymentType is  {
       orderId is Id(),
       amount is Number,
       cardToken is String
@@ -115,7 +115,7 @@ domain ReactiveBBQ {
 
   // #Reservation
   context Reservation {
-    type ReservationValue is combine {
+    type ReservationValue is {
       partyName is String,
       phoneNumber is String,
       location is Id(Location),

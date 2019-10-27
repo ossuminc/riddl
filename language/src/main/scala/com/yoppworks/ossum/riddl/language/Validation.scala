@@ -175,10 +175,11 @@ object Validation {
           checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
-        case Enumeration(_, enumerators: Seq[Identifier]) =>
+        case Enumeration(_, enumerators: Seq[Enumerator]) =>
           enumerators.foldLeft(this) {
-            case (state, id) =>
-              state
+            case (state, enumerator) =>
+              val id = enumerator.id
+              val s = state
                 .checkIdentifier(id)
                 .check(
                   id.value.head.isUpper,
@@ -186,6 +187,11 @@ object Validation {
                   StyleWarning,
                   id.loc
                 )
+              if (enumerator.value.nonEmpty) {
+                s.checkTypeExpression(enumerator.value.get, definition)
+              } else {
+                s
+              }
           }
         case Alternation(_, of) =>
           of.foldLeft(this) {

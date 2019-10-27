@@ -59,7 +59,7 @@ class TypeParserTest extends ParsingTest {
       checkDefinitions[TypeDef, TypeDef](cases, identity)
     }
     "allow enumerators" in {
-      val input = "type enum = any { Apple Pear Peach Persimmon }"
+      val input = "type enum = [ Apple Pear Peach Persimmon ]"
       val expected =
         TypeDef(
           1 -> 1,
@@ -67,26 +67,26 @@ class TypeParserTest extends ParsingTest {
           Enumeration(
             1 -> 13,
             List(
-              Identifier(1 -> 19, "Apple"),
-              Identifier(1 -> 25, "Pear"),
-              Identifier(1 -> 30, "Peach"),
-              Identifier(1 -> 36, "Persimmon")
+              Enumerator(1 -> 15, Identifier(1 -> 15, "Apple"), None),
+              Enumerator(1 -> 21, Identifier(1 -> 21, "Pear"), None),
+              Enumerator(1 -> 26, Identifier(1 -> 26, "Peach"), None),
+              Enumerator(1 -> 32, Identifier(1 -> 32, "Persimmon"), None)
             )
           )
         )
       checkDefinition[TypeDef, TypeDef](input, expected, identity)
     }
     "allow alternation" in {
-      val input = "type alt = choose { enum or stamp or url } "
+      val input = "type alt = ( enum or stamp or url ) "
       val expected = TypeDef(
         1 -> 1,
         Identifier(1 -> 6, "alt"),
         Alternation(
           1 -> 12,
           List(
-            TypeRef(1 -> 21, Identifier(1 -> 21, "enum")),
-            TypeRef(1 -> 29, Identifier(1 -> 29, "stamp")),
-            TypeRef(1 -> 38, Identifier(1 -> 38, "url"))
+            TypeRef(1 -> 14, Identifier(1 -> 14, "enum")),
+            TypeRef(1 -> 22, Identifier(1 -> 22, "stamp")),
+            TypeRef(1 -> 31, Identifier(1 -> 31, "url"))
           )
         )
       )
@@ -94,7 +94,7 @@ class TypeParserTest extends ParsingTest {
     }
     "allow aggregation" in {
       val input =
-        """type agg = combine {
+        """type agg = {
           |  key: Number,
           |  id: Id(),
           |  time: TimeStamp
@@ -182,12 +182,12 @@ class TypeParserTest extends ParsingTest {
         """
           |domain foo {
           |  type Simple = String
-          |  type Compound is combine {
+          |  type Compound is {
           |    s: Simple,
           |    ns: many Number
           |  }
-          |  type Choices is choose { Number or Id }
-          |  type Complex is combine {
+          |  type Choices is ( Number or Id )
+          |  type Complex is {
           |    a: Simple,
           |    b: TimeStamp,
           |    c: many optional Compound,

@@ -5,9 +5,17 @@ import fastparse._
 import ScalaWhitespace._
 
 import scala.collection.immutable.ListMap
+import Symbols.Punctuation._
 
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
+
+  def typeRef[_: P]: P[TypeRef] = {
+    P(location ~ identifier).map {
+      case (location, identifier) =>
+        TypeRef(location, identifier)
+    }
+  }
 
   def referToType[_: P]: P[ReferenceType] = {
     P(location ~ "refer" ~ "to" ~/ entityRef).map { tpl =>
@@ -15,25 +23,26 @@ trait TypeParser extends CommonParser {
     }
   }
 
+  def enumerator[_: P]: P[Enumerator] = {
+    P(identifier ~ aggregationType.?).map {
+      case (id, typex) =>
+        Enumerator(id.loc, id, typex)
+    }
+  }
+
   def enumerationType[_: P]: P[Enumeration] = {
-    P(location ~ "any" ~/ open ~ identifier.rep(1, sep = ",".?) ~ close)
-      .map(enums => (Enumeration.apply _).tupled(enums))
+    P(
+      location ~ squareOpen ~/
+        enumerator.rep(1, sep = ",".?) ~ squareClose
+    ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
   def alternationType[_: P]: P[Alternation] = {
     P(
       location ~
-        "choose" ~/ open ~ typeExpression.rep(2, P("or" | "|")) ~
-        close
+        roundOpen ~ typeExpression.rep(2, P("or" | "|")) ~ roundClose
     ).map { x =>
       (Alternation.apply _).tupled(x)
-    }
-  }
-
-  def typeRef[_: P]: P[TypeRef] = {
-    P(location ~ identifier).map {
-      case (location, identifier) =>
-        TypeRef(location, identifier)
     }
   }
 
@@ -84,17 +93,6 @@ trait TypeParser extends CommonParser {
     )
   }
 
-  def typeExpression[_: P]: P[TypeExpression] = {
-    P(
-      cardinality(
-        P(
-          predefinedTypes | enumerationType | alternationType | referToType |
-            aggregationType | mappingType | rangeType | typeRef
-        )
-      )
-    )
-  }
-
   def field[_: P]: P[(Identifier, TypeExpression)] = {
     P(identifier ~ is ~ typeExpression)
   }
@@ -105,8 +103,7 @@ trait TypeParser extends CommonParser {
 
   def aggregationType[_: P]: P[Aggregation] = {
     P(
-      location ~
-        "combine" ~/ open ~ fields ~ close
+      location ~ open ~ fields ~ close
     ).map {
       case (loc, types) =>
         Aggregation(loc, ListMap[Identifier, TypeExpression](types: _*))
@@ -125,6 +122,17 @@ trait TypeParser extends CommonParser {
       .map { tpl =>
         (RangeType.apply _).tupled(tpl)
       }
+  }
+
+  def typeExpression[_: P]: P[TypeExpression] = {
+    P(
+      cardinality(
+        P(
+          predefinedTypes | enumerationType | alternationType | referToType |
+            aggregationType | mappingType | rangeType | typeRef
+        )
+      )
+    )
   }
 
   def typeDef[_: P]: P[TypeDef] = {

@@ -25,10 +25,10 @@ class ASTTest extends WordSpec with MustMatchers {
       Time mustBe Time
       TimeStamp mustBe TimeStamp
       URL mustBe URL
-      Enumeration((0, 0), Seq.empty[Identifier]) mustBe
-        Enumeration((0, 0), Seq.empty[Identifier])
-      Alternation((0, 0), Seq.empty[TypeRef]) mustBe
-        Alternation((0, 0), Seq.empty[TypeRef])
+      Enumeration((0, 0), Seq.empty[Enumerator]) mustBe
+        Enumeration((0, 0), Seq.empty[Enumerator])
+      Alternation((0, 0), Seq.empty[TypeExpression]) mustBe
+        Alternation((0, 0), Seq.empty[TypeExpression])
       Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression]) mustBe
         Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression])
       Optional((0, 0), TypeRef((0, 0), Identifier((0, 0), "String"))) mustBe

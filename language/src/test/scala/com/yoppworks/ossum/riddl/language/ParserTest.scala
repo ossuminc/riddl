@@ -12,7 +12,7 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            DomainDef((1, 1), Identifier((1, 8), "foo-fah|roo"), None)
+            DomainDef(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"), None)
       }
     }
     "allow a sub-domain" in {
@@ -24,9 +24,9 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             DomainDef(
-              (1, 1),
-              Identifier((1, 8), "subdomain"),
-              Some(Identifier((1, 36), "parent"))
+              1 -> 1,
+              Identifier(1 -> 8, "subdomain"),
+              Some(Identifier(1 -> 36, "parent"))
             )
       }
     }
@@ -40,8 +40,8 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             Seq[DomainDef](
-              DomainDef((1, 1), Identifier((1, 8), "foo"), None),
-              DomainDef((2, 1), Identifier((2, 8), "bar"), None)
+              DomainDef(1 -> 1, Identifier(1 -> 8, "foo"), None),
+              DomainDef(2 -> 1, Identifier(2 -> 8, "bar"), None)
             )
       }
     }
@@ -51,7 +51,7 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ContextDef((1, 14), id = Identifier((1, 22), "bar"))
+            ContextDef(1 -> 14, id = Identifier(1 -> 22, "bar"))
       }
     }
     "allow options on context definitions" in {
@@ -62,12 +62,12 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             ContextDef(
-              (1, 1),
-              Identifier((1, 9), "bar"),
+              1 -> 1,
+              Identifier(1 -> 9, "bar"),
               Seq(
-                FunctionOption((1, 24)),
-                WrapperOption((1, 33)),
-                GatewayOption((1, 41))
+                FunctionOption(1 -> 24),
+                WrapperOption(1 -> 33),
+                GatewayOption(1 -> 41)
               )
             )
       }
@@ -85,32 +85,32 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ChannelDef((4, 5), Identifier((4, 13), "bar"))
+            ChannelDef(4 -> 5, Identifier(4 -> 13, "bar"))
       }
     }
     "allow type definitions in contexts" in {
       val input =
-        """type Vikings = any {
+        """type Vikings = [
           |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
-          |}""".stripMargin
+          |]""".stripMargin
       parseInContext(input, _.types.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
             TypeDef(
-              (2, 1),
-              Identifier((2, 6), "Vikings"),
+              2 -> 1,
+              Identifier(2 -> 6, "Vikings"),
               Enumeration(
-                (2, 16),
+                2 -> 16,
                 Seq(
-                  Identifier((3, 3), "Ragnar"),
-                  Identifier((3, 10), "Lagertha"),
-                  Identifier((3, 19), "Bjorn"),
-                  Identifier((3, 25), "Floki"),
-                  Identifier((3, 31), "Rollo"),
-                  Identifier((3, 37), "Ivar"),
-                  Identifier((3, 42), "Aslaug"),
-                  Identifier((3, 49), "Ubbe")
+                  Enumerator(3 -> 3, Identifier(3 -> 3, "Ragnar"), None),
+                  Enumerator(3 -> 10, Identifier(3 -> 10, "Lagertha"), None),
+                  Enumerator(3 -> 19, Identifier(3 -> 19, "Bjorn"), None),
+                  Enumerator(3 -> 25, Identifier(3 -> 25, "Floki"), None),
+                  Enumerator(3 -> 31, Identifier(3 -> 31, "Rollo"), None),
+                  Enumerator(3 -> 37, Identifier(3 -> 37, "Ivar"), None),
+                  Enumerator(3 -> 42, Identifier(3 -> 42, "Aslaug"), None),
+                  Enumerator(3 -> 49, Identifier(3 -> 49, "Ubbe"), None)
                 )
               )
             )
@@ -124,10 +124,10 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             CommandDef(
-              (2, 1),
-              Identifier((2, 9), "DoThisThing"),
-              TypeRef((2, 23), Identifier((2, 23), "SomeType")),
-              Seq(EventRef((2, 39), Identifier((2, 45), "ThingWasDone")))
+              2 -> 1,
+              Identifier(2 -> 9, "DoThisThing"),
+              TypeRef(2 -> 23, Identifier(2 -> 23, "SomeType")),
+              Seq(EventRef(2 -> 39, Identifier(2 -> 45, "ThingWasDone")))
             )
       }
     }
@@ -138,9 +138,9 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             EventDef(
-              (2, 1),
-              Identifier((2, 7), "ThingWasDone"),
-              TypeRef((2, 22), Identifier((2, 22), "SomeType"))
+              2 -> 1,
+              Identifier(2 -> 7, "ThingWasDone"),
+              TypeRef(2 -> 22, Identifier(2 -> 22, "SomeType"))
             )
       }
     }
@@ -152,10 +152,10 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             QueryDef(
-              (2, 1),
-              Identifier((2, 7), "FindThisThing"),
-              Strng((2, 23)),
-              ResultRef((2, 37), Identifier((2, 44), "SomeResult"))
+              2 -> 1,
+              Identifier(2 -> 7, "FindThisThing"),
+              Strng(2 -> 23),
+              ResultRef(2 -> 37, Identifier(2 -> 44, "SomeResult"))
             )
       }
     }
@@ -167,9 +167,9 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             ResultDef(
-              (2, 1),
-              Identifier((2, 8), "ThisQueryResult"),
-              TypeRef((2, 26), Identifier((2, 26), "SomeType"))
+              2 -> 1,
+              Identifier(2 -> 8, "ThisQueryResult"),
+              TypeRef(2 -> 26, Identifier(2 -> 26, "SomeType"))
             )
 
       }
@@ -199,31 +199,31 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe EntityDef(
-            SoftwareEntityKind(Location(1, 1)),
-            (1, 1),
-            Identifier((1, 8), "Hamburger"),
-            TypeRef((1, 21), Identifier((1, 21), "SomeType")),
-            Seq(EntityPersistent(2, 13), EntityAggregate(2, 24)),
-            Seq(ChannelRef((3, 12), Identifier((3, 20), "EntityChannel"))),
-            Seq(ChannelRef((4, 12), Identifier((4, 20), "EntityChannel"))),
+            SoftwareEntityKind(1 -> 1),
+            1 -> 1,
+            Identifier(1 -> 8, "Hamburger"),
+            TypeRef(1 -> 21, Identifier(1 -> 21, "SomeType")),
+            Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),
+            Seq(ChannelRef(3 -> 12, Identifier(3 -> 20, "EntityChannel"))),
+            Seq(ChannelRef(4 -> 12, Identifier(4 -> 20, "EntityChannel"))),
             Seq(
               FeatureDef(
-                (5, 3),
-                Identifier((5, 11), "AnAspect"),
+                5 -> 3,
+                Identifier(5 -> 11, "AnAspect"),
                 Seq(
                   LiteralString(
-                    (6, 19),
+                    6 -> 19,
                     "This is some aspect of the entity"
                   )
                 ),
                 Some(
                   Background(
-                    (7, 5),
+                    7 -> 5,
                     Seq(
                       Given(
-                        (8, 7),
+                        8 -> 7,
                         LiteralString(
-                          (8, 13),
+                          8 -> 13,
                           "Nobody loves me"
                         )
                       )
@@ -232,21 +232,21 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(
                   ExampleDef(
-                    (10, 5),
-                    Identifier((10, 13), "foo"),
-                    LiteralString((11, 7), "My Fate"),
+                    10 -> 5,
+                    Identifier(10 -> 13, "foo"),
+                    LiteralString(11 -> 7, "My Fate"),
                     Seq(
                       Given(
-                        (12, 7),
-                        LiteralString((12, 13), "everybody hates me")
+                        12 -> 7,
+                        LiteralString(12 -> 13, "everybody hates me")
                       ),
-                      Given((13, 7), LiteralString((13, 11), "I'm depressed"))
+                      Given(13 -> 7, LiteralString(13 -> 11, "I'm depressed"))
                     ),
-                    Seq(When((14, 7), LiteralString((14, 12), "I go fishing"))),
+                    Seq(When(14 -> 7, LiteralString(14 -> 12, "I go fishing"))),
                     Seq(
                       Then(
-                        (15, 7),
-                        LiteralString((15, 12), "I'll just eat worms")
+                        15 -> 7,
+                        LiteralString(15 -> 12, "I'll just eat worms")
                       )
                     )
                   )
@@ -264,10 +264,10 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             AdaptorDef(
-              (1, 1),
-              Identifier((1, 9), "fuzz"),
-              Some(DomainRef((1, 18), Identifier((1, 25), "fuzzy"))),
-              ContextRef((1, 31), Identifier((1, 39), "blogger"))
+              1 -> 1,
+              Identifier(1 -> 9, "fuzz"),
+              Some(DomainRef(1 -> 18, Identifier(1 -> 25, "fuzzy"))),
+              ContextRef(1 -> 31, Identifier(1 -> 39, "blogger"))
             )
       }
     }
@@ -293,34 +293,34 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             InteractionDef(
-              (1, 1),
-              Identifier((1, 13), "dosomething"),
+              1 -> 1,
+              Identifier(1 -> 13, "dosomething"),
               Seq(
                 RoleDef(
-                  (2, 3),
-                  Identifier((2, 8), "SomeActor"),
-                  Seq(HumanOption((3, 15))),
-                  List(LiteralString((4, 15), "Doing stuff")),
-                  List(LiteralString((5, 16), "Skills"))
+                  2 -> 3,
+                  Identifier(2 -> 8, "SomeActor"),
+                  Seq(HumanOption(3 -> 15)),
+                  List(LiteralString(4 -> 15, "Doing stuff")),
+                  List(LiteralString(5 -> 16, "Skills"))
                 )
               ),
               Seq(
                 DirectiveActionDef(
-                  (7, 3),
-                  Identifier((7, 13), "perform a command"),
-                  Seq(AsynchOption((7, 43))),
-                  RoleRef((8, 10), Identifier((8, 15), "SomeActor")),
-                  EntityRef((9, 8), Identifier((9, 15), "myLittlePony")),
-                  CommandRef((9, 31), Identifier((9, 39), "DoAThing")),
+                  7 -> 3,
+                  Identifier(7 -> 13, "perform a command"),
+                  Seq(AsynchOption(7 -> 43)),
+                  RoleRef(8 -> 10, Identifier(8 -> 15, "SomeActor")),
+                  EntityRef(9 -> 8, Identifier(9 -> 15, "myLittlePony")),
+                  CommandRef(9 -> 31, Identifier(9 -> 39, "DoAThing")),
                   Seq.empty[Reaction]
                 ),
                 MessageActionDef(
-                  (11, 3),
-                  Identifier((11, 11), "handle a thing"),
-                  Seq(AsynchOption((11, 38))),
-                  EntityRef((12, 10), Identifier((12, 17), "myLittlePony")),
-                  EntityRef((13, 8), Identifier((13, 15), "Unicorn")),
-                  CommandRef((13, 26), Identifier((13, 34), "HandleAThing")),
+                  11 -> 3,
+                  Identifier(11 -> 11, "handle a thing"),
+                  Seq(AsynchOption(11 -> 38)),
+                  EntityRef(12 -> 10, Identifier(12 -> 17, "myLittlePony")),
+                  EntityRef(13 -> 8, Identifier(13 -> 15, "Unicorn")),
+                  CommandRef(13 -> 26, Identifier(13 -> 34, "HandleAThing")),
                   Seq.empty[Reaction]
                 )
               )

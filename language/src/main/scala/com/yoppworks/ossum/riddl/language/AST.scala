@@ -97,7 +97,13 @@ object AST {
   case class OneOrMore(loc: Location, texp: TypeExpression)
       extends TypeExpression
 
-  case class Enumeration(loc: Location, of: Seq[Identifier])
+  case class Enumerator(
+    loc: Location,
+    id: Identifier,
+    value: Option[Aggregation]
+  ) extends Reference
+
+  case class Enumeration(loc: Location, of: Seq[Enumerator])
       extends TypeExpression
   case class Alternation(loc: Location, of: Seq[TypeExpression])
       extends TypeExpression
