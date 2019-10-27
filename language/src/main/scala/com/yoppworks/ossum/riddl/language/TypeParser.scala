@@ -5,9 +5,9 @@ import fastparse._
 import ScalaWhitespace._
 
 import scala.collection.immutable.ListMap
-import com.yoppworks.ossum.riddl.language.Terminals.Predefined
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import Terminals.Predefined
+import Terminals.Readability
+import Terminals.Punctuation._
 
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
@@ -34,16 +34,15 @@ trait TypeParser extends CommonParser {
 
   def enumerationType[_: P]: P[Enumeration] = {
     P(
-      location ~ Punctuation.squareOpen ~/
-        enumerator.rep(1, sep = Punctuation.comma.?) ~ Punctuation.squareClose
+      location ~ squareOpen ~/
+        enumerator.rep(1, sep = comma.?) ~ squareClose
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
   def alternationType[_: P]: P[Alternation] = {
     P(
       location ~
-        Punctuation.roundOpen ~ typeExpression
-        .rep(2, P("or" | "|" | ",")) ~ Punctuation.roundClose
+        roundOpen ~ typeExpression.rep(2, P("or" | "|" | ",")) ~ roundClose
     ).map { x =>
       (Alternation.apply _).tupled(x)
     }
@@ -53,7 +52,7 @@ trait TypeParser extends CommonParser {
     P(
       Readability.many.!.? ~ Readability.optional.!.? ~
         location ~ p ~
-        ("?".! | "*".! | "+".! | "...?".! | "...".!).?
+        (question.! | asterisk.! | plus.! | ellipsisQuestion.! | ellipsis.!).?
     ).map {
       case (None, None, loc, typ, Some("?"))          => Optional(loc, typ)
       case (None, None, loc, typ, Some("+"))          => OneOrMore(loc, typ)
@@ -88,14 +87,14 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
         (location ~ Predefined.URL).map(AST.URL) |
-        (location ~ Predefined.Pattern ~ Punctuation.roundOpen ~
-          literalString ~ Punctuation.roundOpen)
+        (location ~ Predefined.Pattern ~ roundOpen ~
+          literalString ~ roundClose)
           .map(tpl => (Pattern.apply _).tupled(tpl)) |
-        (location ~ Predefined.Id ~ Punctuation.roundOpen ~/ identifier.? ~
-          Punctuation.roundClose).map {
-          case (loc, Some(id)) => UniqueId(loc, id)
-          case (loc, None)     => UniqueId(loc, Identifier(loc, ""))
-        }
+        (location ~ Predefined.Id ~ roundOpen ~/ identifier.? ~ roundClose)
+          .map {
+            case (loc, Some(id)) => UniqueId(loc, id)
+            case (loc, None)     => UniqueId(loc, Identifier(loc, ""))
+          }
     )
   }
 
@@ -104,12 +103,12 @@ trait TypeParser extends CommonParser {
   }
 
   def fields[_: P]: P[Seq[(Identifier, TypeExpression)]] = {
-    P(field.rep(1, Punctuation.comma))
+    P(field.rep(1, comma))
   }
 
   def aggregationType[_: P]: P[Aggregation] = {
     P(
-      location ~ Punctuation.curlyOpen ~ fields ~ Punctuation.curlyClose
+      location ~ curlyOpen ~ fields ~ curlyClose
     ).map {
       case (loc, types) =>
         Aggregation(loc, ListMap[Identifier, TypeExpression](types: _*))

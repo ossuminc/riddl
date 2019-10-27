@@ -6,6 +6,7 @@ import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Terminals.Options
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
 
 /** Parsing rules for entity definitions  */
 trait EntityParser
@@ -49,16 +50,16 @@ trait EntityParser
 
   def entityDef[_: P]: P[EntityDef] = {
     P(
-      entityKind ~ location ~ Keywords.entity ~/ identifier ~ is ~/
-        typeExpression ~
-        Punctuation.curlyOpen ~
+      entityKind ~ location ~ Keywords.entity ~/ identifier ~
+        Readability.as ~/ typeExpression ~ is ~ open ~/
         entityOptions ~
         (Keywords.consumes ~/ topicRef).rep(0) ~
         (Keywords.produces ~/ topicRef).rep(0) ~
         featureDef.rep(0) ~
         functionDef.rep(0) ~
         invariant.rep(0) ~
-        Punctuation.curlyClose ~/ addendum
+        close ~/
+        addendum
     ).map { tpl =>
       (EntityDef.apply _).tupled(tpl)
     }

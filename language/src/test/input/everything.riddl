@@ -60,11 +60,11 @@ domain Everything {
 
     // Entities are the main objects that contexts define. They can be
     // persistent (long lived) or aggregate (they consume commands and queries)
-    entity Something is SomeType {
+    entity Something as SomeType is {
       options (aggregate persistent)
       consumes topic AChannel
     }
-    entity SomeOtherThing is SomeType {
+    entity SomeOtherThing as SomeType {
     }
   }
 }

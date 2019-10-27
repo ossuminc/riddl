@@ -13,9 +13,9 @@ trait AdaptorParser extends CommonParser {
   def adaptorDef[_: P]: P[AdaptorDef] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~/ domainRef.? ~/
-        contextRef ~
-        Punctuation.curlyOpen
-        ~ Punctuation.curlyClose ~ addendum
+        contextRef ~ is ~/
+        open
+        ~ close ~ addendum
     ).map { tpl =>
       (AdaptorDef.apply _).tupled(tpl)
     }

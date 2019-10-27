@@ -24,11 +24,11 @@ trait InteractionParser extends CommonParser {
 
   def role[_: P]: P[RoleDef] = {
     P(
-      location ~ Keywords.role ~/ identifier ~ Punctuation.curlyOpen ~
+      location ~ Keywords.role ~/ identifier ~ open ~
         roleOptions ~
         Keywords.handles ~/ lines ~
         Keywords.requires ~ lines ~
-        Punctuation.curlyClose ~ addendum
+        close ~ addendum
     ).map { tpl =>
       (RoleDef.apply _).tupled(tpl)
     }
@@ -52,8 +52,7 @@ trait InteractionParser extends CommonParser {
 
   def reactions[_: P]: P[Seq[Reaction]] = {
     P(
-      Punctuation.curlyOpen ~ reaction
-        .rep(0, Punctuation.comma) ~ Punctuation.curlyClose
+      open ~ reaction.rep(0, Punctuation.comma) ~ close
     )
   }
 
@@ -91,9 +90,11 @@ trait InteractionParser extends CommonParser {
 
   def interactionDef[_: P]: P[InteractionDef] = {
     P(
-      location ~ Keywords.interaction ~/ identifier ~ Punctuation.curlyOpen ~
+      location ~ Keywords.interaction ~/ identifier ~ is ~
+        open ~
         role.rep(1) ~ interactions ~
-        Punctuation.curlyClose ~ addendum
+        close ~
+        addendum
     ).map { tpl =>
       (InteractionDef.apply _).tupled(tpl)
     }

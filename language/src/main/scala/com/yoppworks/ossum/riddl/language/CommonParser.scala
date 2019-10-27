@@ -12,9 +12,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def markdownLines[_: P]: P[Seq[LiteralString]] = {
     P(
-      Punctuation.curlyOpen ~
+      open ~
         markdownLine.rep ~
-        Punctuation.curlyClose
+        close
     )
   }
 
@@ -80,7 +80,15 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[_: P]: P[Unit] = {
-    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
+    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./.?
+  }
+
+  def open[_: P]: P[Unit] = {
+    P(Punctuation.curlyOpen /)
+  }
+
+  def close[_: P]: P[Unit] = {
+    P(Punctuation.curlyClose /)
   }
 
   def options[_: P, TY <: RiddlValue](
@@ -92,12 +100,11 @@ trait CommonParser extends NoWhiteSpaceParsers {
         .map(_.map(mapper.tupled(_))) ~ Punctuation.roundClose) |
         (Keywords.option ~ is ~/ (location ~ validOptions).map(
           tpl => Seq(mapper.tupled(tpl))
-        )) | P(
-        ""
-      ).map { _ =>
-        Seq.empty[TY]
-      }
-    )
+        ))
+    ).?.map {
+      case Some(x) => x
+      case None    => Seq.empty[TY]
+    }
   }
 
   def commandRef[_: P]: P[CommandRef] = {

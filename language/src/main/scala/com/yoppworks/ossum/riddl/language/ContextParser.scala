@@ -6,6 +6,7 @@ import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Terminals.Options
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
 
 /** Parsing rules for Context definitions */
 trait ContextParser
@@ -72,9 +73,10 @@ trait ContextParser
 
   def contextDef[_: P]: P[ContextDef] = {
     P(
-      location ~ Keywords.context ~/ identifier ~ Punctuation.curlyOpen ~
+      location ~ Keywords.context ~/ identifier ~ is ~
+        open ~
         contextOptions ~ contextDefinitions ~
-        Punctuation.curlyClose ~ addendum
+        close ~ addendum
     ).map {
       case (loc, id, options, defs, addendum) =>
         ContextDef(

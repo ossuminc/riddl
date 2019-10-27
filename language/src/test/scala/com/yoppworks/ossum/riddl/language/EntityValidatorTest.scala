@@ -9,7 +9,7 @@ class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
     "catch missing things" in {
-      val input = "entity Hamburger is SomeType {}"
+      val input = "entity Hamburger as SomeType is {}"
       parseAndValidate[EntityDef](input) {
         case (model: EntityDef, _: Seq[ValidationMessage]) =>
           val msgs = Validation.validate(model, Validation.defaultOptions)
@@ -27,7 +27,7 @@ class EntityValidatorTest extends ValidatingTest {
           |  commands { Foo } events {} queries {} results {}
           |}
           |context bar {
-          |  entity Hamburger is SomeType {
+          |  entity Hamburger as SomeType is {
           |    options (aggregate persistent)
           |    consumes topic EntityChannel
           |    produces topic EntityChannel

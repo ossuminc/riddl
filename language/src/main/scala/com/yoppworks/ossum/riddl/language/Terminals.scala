@@ -4,17 +4,22 @@ package com.yoppworks.ossum.riddl.language
 object Terminals {
 
   object Punctuation {
+    val asterisk = "*"
     val comma = ","
     val colon = ":"
-    val dot = "."
-    val equals = "="
-    val quote = "\""
     val curlyOpen = "{"
     val curlyClose = "}"
-    val squareOpen = "["
-    val squareClose = "]"
+    val dot = "."
+    val equals = "="
+    val ellipsis = "..."
+    val ellipsisQuestion = "...?"
+    val plus = "+"
+    val question = "?"
+    val quote = "\""
     val roundOpen = "("
     val roundClose = ")"
+    val squareOpen = "["
+    val squareClose = "]"
     val verticalBar = "|"
 
     val all: Seq[String] = Seq(
@@ -96,6 +101,7 @@ object Terminals {
     final val role = "role"
     final val subdomain = "subdomain"
     final val topic = "topic"
+    final val value = "value"
     final val all_keywords = Seq(
       adaptor,
       background,
@@ -128,7 +134,8 @@ object Terminals {
       results,
       role,
       subdomain,
-      topic
+      topic,
+      value
     ).sorted.distinct
   }
 
@@ -166,6 +173,7 @@ object Terminals {
   object Readability {
     final val and = "and"
     final val are = "are"
+    final val as = "as"
     final val for_ = "for"
     final val is = "is"
     final val many = "many"
@@ -175,8 +183,9 @@ object Terminals {
     final val yields = "yields"
 
     val all: Seq[String] = Seq(
-      are,
       and,
+      are,
+      as,
       for_,
       is,
       many,

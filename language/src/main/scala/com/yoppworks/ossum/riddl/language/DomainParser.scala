@@ -47,10 +47,11 @@ trait DomainParser
   def domainDef[_: P]: P[DomainDef] = {
     P(
       location ~ Keywords.domain ~/ identifier ~
-        (Readability.is ~ Keywords.subdomain ~ Readability.of ~/ identifier).? ~
-        Punctuation.curlyOpen ~/
+        (Readability.as ~ Keywords.subdomain ~ Readability.of ~/ identifier).? ~
+        is ~
+        open ~/
         domainContent ~
-        Punctuation.curlyClose ~ addendum
+        close ~ addendum
     ).map {
       case (
           loc,

@@ -17,7 +17,7 @@ class ParserTest extends ParsingTest {
     }
     "allow a sub-domain" in {
       val input =
-        """domain 'subdomain' is subdomain of 'parent' { }
+        """domain 'subdomain' as subdomain of 'parent' is { }
           |""".stripMargin
       parseTopLevelDomain(input, _.head) match {
         case Left(msg) => fail(msg)
@@ -176,7 +176,8 @@ class ParserTest extends ParsingTest {
     }
     "allow entity definitions in contexts" in {
       val input: String =
-        """entity Hamburger is SomeType {
+        """entity Hamburger as SomeType is {
+          |
           |  options ( persistent aggregate )
           |  consumes topic EntityChannel
           |  produces topic EntityChannel
@@ -205,27 +206,27 @@ class ParserTest extends ParsingTest {
             1 -> 1,
             Identifier(1 -> 8, "Hamburger"),
             TypeRef(1 -> 21, Identifier(1 -> 21, "SomeType")),
-            Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),
-            Seq(TopicRef(3 -> 12, Identifier(3 -> 18, "EntityChannel"))),
+            Seq(EntityPersistent(3 -> 13), EntityAggregate(3 -> 24)),
             Seq(TopicRef(4 -> 12, Identifier(4 -> 18, "EntityChannel"))),
+            Seq(TopicRef(5 -> 12, Identifier(5 -> 18, "EntityChannel"))),
             Seq(
               FeatureDef(
-                5 -> 3,
-                Identifier(5 -> 11, "AnAspect"),
+                6 -> 3,
+                Identifier(6 -> 11, "AnAspect"),
                 Seq(
                   LiteralString(
-                    7 -> 7,
+                    8 -> 7,
                     "This is some aspect of the entity"
                   )
                 ),
                 Some(
                   Background(
-                    9 -> 5,
+                    10 -> 5,
                     Seq(
                       Given(
-                        10 -> 7,
+                        11 -> 7,
                         LiteralString(
-                          10 -> 13,
+                          11 -> 13,
                           "Nobody loves me"
                         )
                       )
@@ -234,21 +235,21 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(
                   ExampleDef(
-                    12 -> 5,
-                    Identifier(12 -> 13, "foo"),
-                    LiteralString(13 -> 7, "My Fate"),
+                    13 -> 5,
+                    Identifier(13 -> 13, "foo"),
+                    LiteralString(14 -> 7, "My Fate"),
                     Seq(
                       Given(
-                        14 -> 7,
-                        LiteralString(14 -> 13, "everybody hates me")
+                        15 -> 7,
+                        LiteralString(15 -> 13, "everybody hates me")
                       ),
-                      Given(15 -> 7, LiteralString(15 -> 11, "I'm depressed"))
+                      Given(16 -> 7, LiteralString(16 -> 11, "I'm depressed"))
                     ),
-                    Seq(When(16 -> 7, LiteralString(16 -> 12, "I go fishing"))),
+                    Seq(When(17 -> 7, LiteralString(17 -> 12, "I go fishing"))),
                     Seq(
                       Then(
-                        17 -> 7,
-                        LiteralString(17 -> 12, "I'll just eat worms")
+                        18 -> 7,
+                        LiteralString(18 -> 12, "I'll just eat worms")
                       )
                     )
                   )

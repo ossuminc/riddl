@@ -12,22 +12,21 @@ trait FunctionParser extends CommonParser with TypeParser {
 
   def inputs[_: P]: P[Seq[TypeExpression]] = {
     P(
-      Punctuation.curlyOpen ~ typeExpression.rep(min = 0, Punctuation.comma) ~
-        Punctuation.curlyClose
+      open ~ typeExpression.rep(min = 0, Punctuation.comma) ~
+        close
     )
   }
 
   def outputs[_: P]: P[Seq[TypeExpression]] = {
     P(
-      Punctuation.colon ~ Punctuation.curlyOpen ~ typeExpression
-        .rep(min = 0, Punctuation.comma) ~
-        Punctuation.curlyClose
+      open ~ typeExpression.rep(min = 0, Punctuation.comma) ~
+        close
     )
   }
 
   def functionDef[_: P]: P[FunctionDef] = {
     P(
-      location ~ IgnoreCase(Keywords.function) ~/ identifier ~
+      location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~
         inputs ~ Punctuation.colon ~ outputs ~ lines ~/ addendum
     ).map { tpl =>
       (FunctionDef.apply _).tupled(tpl)

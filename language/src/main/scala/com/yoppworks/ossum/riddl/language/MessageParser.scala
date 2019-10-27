@@ -53,13 +53,13 @@ trait MessageParser extends CommonParser with TypeParser {
   def eventRefsForCommandDefs[_: P]: P[EventRefs] = {
     P(
       eventRef.map(Seq(_)) |
-        Keywords.events ~/ Punctuation.curlyOpen ~
+        Keywords.events ~/ open ~
           (location ~ identifier)
             .map { tpl =>
               (EventRef.apply _).tupled(tpl)
             }
             .rep(2) ~
-          Punctuation.curlyClose
+          close
     )
   }
 }

@@ -21,7 +21,7 @@ domain ReactiveBBQ {
       address is IP4Address
     }
     topic Commands { commands {} events {} queries {} results {} }
-    device entity OrderViewer is OrderViewType {
+    device entity OrderViewer as OrderViewType is {
       consumes topic Commands
     } explained as {
       |The OrderViewer is the device in the kitchen, probably a touch screen,
@@ -65,7 +65,7 @@ domain ReactiveBBQ {
     }
     topic Commands { commands {} events {} queries {} results {} }
 
-    entity RewardsAccount is RewardsAccountType {
+    entity RewardsAccount as RewardsAccountType {
       consumes topic Commands
     }
   }
@@ -79,7 +79,7 @@ domain ReactiveBBQ {
     }
     topic Commands { commands {} events {} queries {} results {} }
 
-    entity Order is OrderType {
+    entity Order as OrderType is {
       option is aggregate
       consumes topic Commands
     }
@@ -94,7 +94,7 @@ domain ReactiveBBQ {
       cardToken is String
     }
     topic Commands { commands {} events {} queries {} results {} }
-    entity Payment is PaymentType {
+    entity Payment as PaymentType is {
       option is aggregate
       consumes topic Commands
     }
@@ -104,11 +104,11 @@ domain ReactiveBBQ {
   // #Menu
   context Menu {
     topic Commands { commands {} events {} queries {} results {} }
-    entity MenuItem is String {
+    entity MenuItem as String is {
       consumes topic Commands
     }
     type MenuItemRef is refer to entity MenuItem
-    entity Menu is many MenuItemRef {
+    entity Menu as many MenuItemRef is {
       option is aggregate
       consumes topic Commands
     }
@@ -124,7 +124,7 @@ domain ReactiveBBQ {
       time is Time,
       date is Date
     }
-    entity Location is String { consumes topic Commands }
+    entity Location as String is { consumes topic Commands }
     explained as {
       |foo
     }
@@ -135,7 +135,7 @@ domain ReactiveBBQ {
     topic Commands { commands { foo } events {} queries {} results {} }
     topic Events {  commands {} events {  } queries {} results {} }
 
-    entity Reservation is ReservationValue {
+    entity Reservation as ReservationValue is {
       options ( aggregate )
       consumes topic Commands
       produces topic Events
