@@ -3,42 +3,22 @@ package com.yoppworks.ossum.riddl.language
 import fastparse._
 import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
 
 /** Common Parsing Rules */
-trait CommonParser extends ParsingContext {
+trait CommonParser extends NoWhiteSpaceParsers {
 
-  def error(loc: Location, msg: String): Unit = {
-    throw new Exception(
-      s"Parse error at $loc: $msg"
+  def markdownLines[_: P]: P[Seq[LiteralString]] = {
+    P(
+      Punctuation.curlyOpen ~
+        markdownLine.rep ~
+        Punctuation.curlyClose
     )
   }
 
-  def location[_: P]: P[Location] = {
-    P(Index).map(input.location)
-  }
-
-  def literalString[_: P]: P[LiteralString] = {
-    P(
-      location ~ "\"" ~~/ CharsWhile(_ != '"', 0).! ~~ "\""
-    ).map { tpl =>
-      (LiteralString.apply _).tupled(tpl)
-    }
-  }
-
-  def literalStrings[_: P](sep: String = ","): P[Seq[LiteralString]] = {
-    P(open ~ literalString.rep(0, sep) ~ close)
-  }
-
-  final val specialLineChars: String =
-    "~`!@#$%^&*()_-+=[]\"':;<>,.?/"
-
-  def lineCharPredicate(c: Char): Boolean = {
-    c.isLetterOrDigit | c.isSpaceChar | specialLineChars.contains(c)
-  }
-
-  def lines[_: P]: P[Seq[String]] = {
-    P(literalStrings("").map(_.map(_.s)))
-  }
+  def lines[_: P]: P[Seq[LiteralString]] = markdownLines
 
   def seeAlso[_: P]: P[SeeAlso] = {
     P(
@@ -49,7 +29,7 @@ trait CommonParser extends ParsingContext {
   def explanation[_: P]: P[Explanation] = {
     P(
       location ~
-        "explained" ~ "as" ~/ lines
+        "explained" ~ "as" ~/ markdownLines
     ).map(tpl => { Explanation.apply _ }.tupled(tpl))
   }
 
@@ -71,7 +51,7 @@ trait CommonParser extends ParsingContext {
     P(
       location ~
         CharIn("+\\-").?.! ~ CharIn("0-9").rep(1).! ~
-        ("." ~ CharIn("0-9").rep(0)).?.! ~
+        (Punctuation.dot ~ CharIn("0-9").rep(0)).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
     ).map {
       case (loc, a, b, c, d) => LiteralDecimal(loc, BigDecimal(a + b + c + d))
@@ -95,32 +75,24 @@ trait CommonParser extends ParsingContext {
   }
 
   def pathIdentifier[_: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier.repX(1, P(".")))
+    P(location ~ anyIdentifier.repX(1, P(Punctuation.dot)))
       .map(tpl => (PathIdentifier.apply _).tupled(tpl))
   }
 
-  def open[_: P]: P[Unit] = {
-    P("{")./
-  }
-
-  def close[_: P]: P[Unit] = {
-    P("}")./
-  }
-
   def is[_: P]: P[Unit] = {
-    P("is" | "are" | ":" | "=")./
+    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
   }
 
   def options[_: P, TY <: RiddlValue](
     validOptions: => P[String]
   )(mapper: => (Location, String) => TY): P[Seq[TY]] = {
     P(
-      ("options" ~/ open ~ (location ~ validOptions)
+      (Keywords.options ~/ Punctuation.roundOpen ~ (location ~ validOptions)
         .rep(1)
-        .map(_.map(mapper.tupled(_))) ~ close) | ("option" ~ is ~/ (location ~
-        validOptions).map(
-        tpl => Seq(mapper.tupled(tpl))
-      )) | P(
+        .map(_.map(mapper.tupled(_))) ~ Punctuation.roundClose) |
+        (Keywords.option ~ is ~/ (location ~ validOptions).map(
+          tpl => Seq(mapper.tupled(tpl))
+        )) | P(
         ""
       ).map { _ =>
         Seq.empty[TY]
@@ -129,22 +101,22 @@ trait CommonParser extends ParsingContext {
   }
 
   def commandRef[_: P]: P[CommandRef] = {
-    P(location ~ "command" ~/ identifier)
+    P(location ~ Keywords.command ~/ identifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }
 
   def eventRef[_: P]: P[EventRef] = {
-    P(location ~ "event" ~/ identifier)
+    P(location ~ Keywords.event ~/ identifier)
       .map(tpl => (EventRef.apply _).tupled(tpl))
   }
 
   def queryRef[_: P]: P[QueryRef] = {
-    P(location ~ "query" ~/ identifier)
+    P(location ~ Keywords.query ~/ identifier)
       .map(tpl => (QueryRef.apply _).tupled(tpl))
   }
 
   def resultRef[_: P]: P[ResultRef] = {
-    P(location ~ "result" ~/ identifier)
+    P(location ~ Keywords.result ~/ identifier)
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
@@ -153,27 +125,27 @@ trait CommonParser extends ParsingContext {
   }
 
   def entityRef[_: P]: P[EntityRef] = {
-    P(location ~ "entity" ~/ identifier)
+    P(location ~ Keywords.entity ~/ identifier)
       .map(tpl => (EntityRef.apply _).tupled(tpl))
   }
 
-  def channelRef[_: P]: P[ChannelRef] = {
-    P(location ~ "channel" ~/ identifier)
-      .map(tpl => (ChannelRef.apply _).tupled(tpl))
+  def topicRef[_: P]: P[TopicRef] = {
+    P(location ~ Keywords.topic ~/ identifier)
+      .map(tpl => (TopicRef.apply _).tupled(tpl))
   }
 
   def functionRef[_: P]: P[FunctionRef] = {
-    P(location ~ "function" ~/ identifier)
+    P(location ~ Keywords.function ~/ identifier)
       .map(tpl => (FunctionRef.apply _).tupled(tpl))
   }
 
   def contextRef[_: P]: P[ContextRef] = {
-    P(location ~ "context" ~/ identifier)
+    P(location ~ Keywords.context ~/ identifier)
       .map(tpl => (ContextRef.apply _).tupled(tpl))
   }
 
   def domainRef[_: P]: P[DomainRef] = {
-    P(location ~ "domain" ~/ identifier)
+    P(location ~ Keywords.domain ~/ identifier)
       .map(tpl => (DomainRef.apply _).tupled(tpl))
   }
 }

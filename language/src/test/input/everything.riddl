@@ -10,7 +10,7 @@ domain Everything {
     type str is String             // Define str as a String
     type num is Number             // Define num as a Number
     type boo is Boolean            // Define boo as a Boolean
-    type ident is Id              // Define ident as an Id
+    type ident is Id               // Define ident as an Id
     type dat is Date               // Define dat as a Date
     type tim is Time               // Define tim as a Time
     type stamp is TimeStamp        // Define stamp as a TimeStamp
@@ -44,25 +44,25 @@ domain Everything {
 
     // Channels are defined to flow messages between entities. They are defined
     // in domain scope because they can cross contexts too.
-    channel AChannel {
+    topic AChannel {
       commands {}
       events {}
       queries {}
       results {}
     } explained as {
-      "# Description"
-      "This channel is aimed at the same kind of functionality as /dev/null."
-      "It produces nothing and consumes everything"
+      |# Description
+      |This channel is aimed at the same kind of functionality as /dev/null.
+      |It produces nothing and consumes everything
     } see also {
-      "/dev/null"
+      |/dev/null
     }
 
 
     // Entities are the main objects that contexts define. They can be
     // persistent (long lived) or aggregate (they consume commands and queries)
     entity Something is SomeType {
-      options { aggregate persistent }
-      consumes channel AChannel
+      options (aggregate persistent)
+      consumes topic AChannel
     }
     entity SomeOtherThing is SomeType {
     }

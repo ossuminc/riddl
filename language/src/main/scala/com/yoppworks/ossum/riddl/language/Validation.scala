@@ -358,7 +358,7 @@ object Validation {
         checkFeature(result, container, feature)
       case adaptor: AdaptorDef =>
         checkAdaptor(result, container, adaptor)
-      case channel: ChannelDef =>
+      case channel: TopicDef =>
         checkChannel(result, container, channel)
       case interaction: InteractionDef =>
         checkInteraction(result, container, interaction)
@@ -529,9 +529,9 @@ object Validation {
       entity.produces.foldLeft(result1) { (s, chan) =>
         val persistentClass = EntityPersistent((0, 0)).getClass
         val lookupResult = s
-          .checkRef[ChannelDef](chan, entity)
+          .checkRef[TopicDef](chan, entity)
           .symbolTable
-          .lookup[ChannelDef](chan, entity)
+          .lookup[TopicDef](chan, entity)
         lookupResult match {
           case chan :: Nil =>
             s.check(
@@ -547,7 +547,7 @@ object Validation {
         }
       }
     var result = entity.consumes.foldLeft(result2) { (s, chan) =>
-      s.checkRef[ChannelDef](chan, entity)
+      s.checkRef[TopicDef](chan, entity)
     }
 
     // TODO: invariant?
@@ -572,7 +572,7 @@ object Validation {
   def checkChannel(
     state: ValidationState,
     container: Container,
-    channel: ChannelDef
+    channel: TopicDef
   ): ValidationState = {
     var result = state.check(
       channel.results.size + channel.queries.size + channel.commands.size +

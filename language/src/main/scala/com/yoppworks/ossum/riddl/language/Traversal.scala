@@ -54,9 +54,9 @@ object Traversal {
     def visitTypeExpression(ty: AST.TypeExpression): Unit
   }
 
-  trait ChannelTraveler[P] extends DefTraveler[P, ChannelDef] {
-    def channel: ChannelDef
-    final def definition: ChannelDef = channel
+  trait ChannelTraveler[P] extends DefTraveler[P, TopicDef] {
+    def channel: TopicDef
+    final def definition: TopicDef = channel
     final def traverse: P = {
       open()
       visitCommands(channel.commands)
@@ -84,7 +84,7 @@ object Traversal {
       context.events.foreach(visitEvent)
       context.queries.foreach(visitQuery)
       context.results.foreach(visitResult)
-      context.channels.foreach(visitChannel(_).traverse)
+      context.topics.foreach(visitChannel(_).traverse)
       context.adaptors.foreach(visitAdaptor(_).traverse)
       context.interactions.foreach(visitInteraction(_).traverse)
       context.entities.foreach(visitEntity(_).traverse)
@@ -97,7 +97,7 @@ object Traversal {
     def visitEvent(event: EventDef): Unit
     def visitQuery(query: QueryDef): Unit
     def visitResult(result: ResultDef): Unit
-    def visitChannel(chan: ChannelDef): ChannelTraveler[P]
+    def visitChannel(chan: TopicDef): ChannelTraveler[P]
     def visitAdaptor(a: AdaptorDef): AdaptorTraveler[P]
     def visitInteraction(i: InteractionDef): InteractionTraveler[P]
     def visitEntity(e: EntityDef): EntityTraveler[P]
@@ -127,8 +127,8 @@ object Traversal {
       visitAddendum(entity.addendum)
       terminus()
     }
-    def visitProducer(p: ChannelRef): Unit
-    def visitConsumer(c: ChannelRef): Unit
+    def visitProducer(p: TopicRef): Unit
+    def visitConsumer(c: TopicRef): Unit
     def visitInvariant(i: InvariantDef): Unit
     def visitFeature(f: FeatureDef): FeatureTraveler[P]
   }

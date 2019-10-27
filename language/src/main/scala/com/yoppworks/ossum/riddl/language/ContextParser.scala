@@ -3,22 +3,27 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.AST._
 import fastparse._
 import ScalaWhitespace._
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Options
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 
 /** Parsing rules for Context definitions */
 trait ContextParser
     extends AdaptorParser
-    with ChannelParser
+    with TopicParser
     with EntityParser
     with InteractionParser
     with MessageParser
     with TypeParser {
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
-    options[X, ContextOption](StringIn("wrapper", "function", "gateway").!) {
-      case (loc, "wrapper")  => WrapperOption(loc)
-      case (loc, "function") => FunctionOption(loc)
-      case (loc, "gateway")  => GatewayOption(loc)
-      case (_, _)            => throw new RuntimeException("Impossible case")
+    options[X, ContextOption](
+      StringIn(Options.wrapper, Options.function, Options.gateway).!
+    ) {
+      case (loc, Options.wrapper)  => WrapperOption(loc)
+      case (loc, Options.function) => FunctionOption(loc)
+      case (loc, Options.gateway)  => GatewayOption(loc)
+      case (_, _)                  => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -28,7 +33,7 @@ trait ContextParser
     Seq[EventDef],
     Seq[QueryDef],
     Seq[ResultDef],
-    Seq[ChannelDef],
+    Seq[TopicDef],
     Seq[EntityDef],
     Seq[AdaptorDef],
     Seq[InteractionDef]
@@ -45,7 +50,7 @@ trait ContextParser
         eventDef |
         queryDef |
         resultDef |
-        channelDef |
+        topicDef |
         entityDef |
         adaptorDef |
         interactionDef
@@ -57,7 +62,7 @@ trait ContextParser
         mapTo[EventDef](groups.get(classOf[EventDef])),
         mapTo[QueryDef](groups.get(classOf[QueryDef])),
         mapTo[ResultDef](groups.get(classOf[ResultDef])),
-        mapTo[ChannelDef](groups.get(classOf[ChannelDef])),
+        mapTo[TopicDef](groups.get(classOf[TopicDef])),
         mapTo[EntityDef](groups.get(classOf[EntityDef])),
         mapTo[AdaptorDef](groups.get(classOf[AdaptorDef])),
         mapTo[InteractionDef](groups.get(classOf[InteractionDef]))
@@ -67,9 +72,9 @@ trait ContextParser
 
   def contextDef[_: P]: P[ContextDef] = {
     P(
-      location ~ "context" ~/ identifier ~ open ~
+      location ~ Keywords.context ~/ identifier ~ Punctuation.curlyOpen ~
         contextOptions ~ contextDefinitions ~
-        close ~ addendum
+        Punctuation.curlyClose ~ addendum
     ).map {
       case (loc, id, options, defs, addendum) =>
         ContextDef(

@@ -23,7 +23,7 @@ object Folding {
         result = domain.types.foldLeft(result) { (next, ty) =>
           f(domain, ty, next)
         }
-        result = domain.channels.foldLeft(result) { (next, channel) =>
+        result = domain.topics.foldLeft(result) { (next, channel) =>
           f(domain, channel, next)
         }
         result = domain.contexts.foldLeft(result) { (next, context) =>
@@ -49,7 +49,7 @@ object Folding {
         result = context.results.foldLeft(result) { (next, result) =>
           f(context, result, next)
         }
-        result = context.channels.foldLeft(result) { (next, channel) =>
+        result = context.topics.foldLeft(result) { (next, channel) =>
           f(context, channel, next)
         }
         result = context.adaptors.foldLeft(result) { (next, adaptor) =>

@@ -56,7 +56,7 @@ class ParserTest extends ParsingTest {
     }
     "allow options on context definitions" in {
       val input =
-        "context bar { options {function wrapper gateway } }"
+        "context bar { options (function wrapper gateway ) }"
       parseContextDefinition[ContextDef](input, identity) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
@@ -72,20 +72,20 @@ class ParserTest extends ParsingTest {
             )
       }
     }
-    "allow channel definitions in contexts" in {
+    "allow topic definitions in contexts" in {
       val input =
         """
           |domain foo {
           |  context fum {
-          |    channel bar { commands{} events{} queries{} results{} }
+          |    topic bar { commands{} events{} queries{} results{} }
           |  }
           |}
           |""".stripMargin
-      parseDomainDefinition[ChannelDef](input, _.contexts.head.channels.head) match {
+      parseDomainDefinition[TopicDef](input, _.contexts.head.topics.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ChannelDef(4 -> 5, Identifier(4 -> 13, "bar"))
+            TopicDef(4 -> 5, Identifier(4 -> 11, "bar"))
       }
     }
     "allow type definitions in contexts" in {
@@ -177,11 +177,13 @@ class ParserTest extends ParsingTest {
     "allow entity definitions in contexts" in {
       val input: String =
         """entity Hamburger is SomeType {
-          |  options { persistent aggregate }
-          |  consumes channel EntityChannel
-          |  produces channel EntityChannel
+          |  options ( persistent aggregate )
+          |  consumes topic EntityChannel
+          |  produces topic EntityChannel
           |  feature AnAspect {
-          |    DESCRIPTION { "This is some aspect of the entity" }
+          |    DESCRIPTION {
+          |     |This is some aspect of the entity
+          |    }
           |    BACKGROUND {
           |      Given "Nobody loves me"
           |    }
@@ -204,26 +206,26 @@ class ParserTest extends ParsingTest {
             Identifier(1 -> 8, "Hamburger"),
             TypeRef(1 -> 21, Identifier(1 -> 21, "SomeType")),
             Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),
-            Seq(ChannelRef(3 -> 12, Identifier(3 -> 20, "EntityChannel"))),
-            Seq(ChannelRef(4 -> 12, Identifier(4 -> 20, "EntityChannel"))),
+            Seq(TopicRef(3 -> 12, Identifier(3 -> 18, "EntityChannel"))),
+            Seq(TopicRef(4 -> 12, Identifier(4 -> 18, "EntityChannel"))),
             Seq(
               FeatureDef(
                 5 -> 3,
                 Identifier(5 -> 11, "AnAspect"),
                 Seq(
                   LiteralString(
-                    6 -> 19,
+                    7 -> 7,
                     "This is some aspect of the entity"
                   )
                 ),
                 Some(
                   Background(
-                    7 -> 5,
+                    9 -> 5,
                     Seq(
                       Given(
-                        8 -> 7,
+                        10 -> 7,
                         LiteralString(
-                          8 -> 13,
+                          10 -> 13,
                           "Nobody loves me"
                         )
                       )
@@ -232,21 +234,21 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(
                   ExampleDef(
-                    10 -> 5,
-                    Identifier(10 -> 13, "foo"),
-                    LiteralString(11 -> 7, "My Fate"),
+                    12 -> 5,
+                    Identifier(12 -> 13, "foo"),
+                    LiteralString(13 -> 7, "My Fate"),
                     Seq(
                       Given(
-                        12 -> 7,
-                        LiteralString(12 -> 13, "everybody hates me")
+                        14 -> 7,
+                        LiteralString(14 -> 13, "everybody hates me")
                       ),
-                      Given(13 -> 7, LiteralString(13 -> 11, "I'm depressed"))
+                      Given(15 -> 7, LiteralString(15 -> 11, "I'm depressed"))
                     ),
-                    Seq(When(14 -> 7, LiteralString(14 -> 12, "I go fishing"))),
+                    Seq(When(16 -> 7, LiteralString(16 -> 12, "I go fishing"))),
                     Seq(
                       Then(
-                        15 -> 7,
-                        LiteralString(15 -> 12, "I'll just eat worms")
+                        17 -> 7,
+                        LiteralString(17 -> 12, "I'll just eat worms")
                       )
                     )
                   )
@@ -276,14 +278,18 @@ class ParserTest extends ParsingTest {
         """interaction dosomething {
           |  role SomeActor {
           |    option is human
-          |    handles { "Doing stuff" }
-          |    requires { "Skills" }
+          |    handles {
+          |      |Doing stuff
+          |    }
+          |    requires {
+          |      |Skills
+          |    }
           |  }
-          |  directive 'perform a command' option is asynch
+          |  directive 'perform a command' option is async
           |    from role SomeActor
           |    to entity myLittlePony as command DoAThing
           |
-          |  message 'handle a thing' option is asynch
+          |  message 'handle a thing' option is async
           |    from entity myLittlePony
           |    to entity Unicorn as command HandleAThing
           |}
@@ -300,27 +306,27 @@ class ParserTest extends ParsingTest {
                   2 -> 3,
                   Identifier(2 -> 8, "SomeActor"),
                   Seq(HumanOption(3 -> 15)),
-                  List(LiteralString(4 -> 15, "Doing stuff")),
-                  List(LiteralString(5 -> 16, "Skills"))
+                  List(LiteralString(5 -> 8, "Doing stuff")),
+                  List(LiteralString(8 -> 8, "Skills"))
                 )
               ),
               Seq(
                 DirectiveActionDef(
-                  7 -> 3,
-                  Identifier(7 -> 13, "perform a command"),
-                  Seq(AsynchOption(7 -> 43)),
-                  RoleRef(8 -> 10, Identifier(8 -> 15, "SomeActor")),
-                  EntityRef(9 -> 8, Identifier(9 -> 15, "myLittlePony")),
-                  CommandRef(9 -> 31, Identifier(9 -> 39, "DoAThing")),
+                  11 -> 3,
+                  Identifier(11 -> 13, "perform a command"),
+                  Seq(AsynchOption(11 -> 43)),
+                  RoleRef(12 -> 10, Identifier(12 -> 15, "SomeActor")),
+                  EntityRef(13 -> 8, Identifier(13 -> 15, "myLittlePony")),
+                  CommandRef(13 -> 31, Identifier(13 -> 39, "DoAThing")),
                   Seq.empty[Reaction]
                 ),
                 MessageActionDef(
-                  11 -> 3,
-                  Identifier(11 -> 11, "handle a thing"),
-                  Seq(AsynchOption(11 -> 38)),
-                  EntityRef(12 -> 10, Identifier(12 -> 17, "myLittlePony")),
-                  EntityRef(13 -> 8, Identifier(13 -> 15, "Unicorn")),
-                  CommandRef(13 -> 26, Identifier(13 -> 34, "HandleAThing")),
+                  15 -> 3,
+                  Identifier(15 -> 11, "handle a thing"),
+                  Seq(AsynchOption(15 -> 38)),
+                  EntityRef(16 -> 10, Identifier(16 -> 17, "myLittlePony")),
+                  EntityRef(17 -> 8, Identifier(17 -> 15, "Unicorn")),
+                  CommandRef(17 -> 26, Identifier(17 -> 34, "HandleAThing")),
                   Seq.empty[Reaction]
                 )
               )

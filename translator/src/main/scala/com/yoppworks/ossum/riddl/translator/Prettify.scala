@@ -47,7 +47,7 @@ object Prettify extends Translator {
       case interaction: InteractionDef =>
         InteractionPrettifier(interaction).traverse
       case feature: FeatureDef => FeaturePrettifier(feature).traverse
-      case channel: ChannelDef => ChannelPrettifier(channel).traverse
+      case channel: TopicDef   => ChannelPrettifier(channel).traverse
       case adaptor: AdaptorDef => AdaptorPrettifier(adaptor).traverse
       case _                   => throw new RuntimeException("No can do")
     }
@@ -167,7 +167,7 @@ object Prettify extends Translator {
     }
 
     def visitChannel(
-      channel: ChannelDef
+      channel: TopicDef
     ): Traversal.ChannelTraveler[Lines] = {
       ChannelPrettifier(channel, payload, indent + 2)
     }
@@ -186,10 +186,10 @@ object Prettify extends Translator {
   }
 
   case class ChannelPrettifier(
-    channel: ChannelDef,
+    channel: TopicDef,
     payload: Lines = Lines(),
     indent: Int = 0
-  ) extends PrettifyBase[ChannelDef](channel)
+  ) extends PrettifyBase[TopicDef](channel)
       with Traversal.ChannelTraveler[Lines] {
 
     def open(): Unit = {
@@ -273,7 +273,7 @@ object Prettify extends Translator {
       )
     }
 
-    override def visitChannel(chan: ChannelDef): ChannelTraveler[Lines] = {
+    override def visitChannel(chan: TopicDef): ChannelTraveler[Lines] = {
       ChannelPrettifier(chan, payload, indent + 2)
     }
 
@@ -315,11 +315,11 @@ object Prettify extends Translator {
       }
     }
 
-    def visitProducer(c: ChannelRef): Unit = {
+    def visitProducer(c: TopicRef): Unit = {
       payload.append(s"$spc  produces channel ${c.id.value}\n")
     }
 
-    def visitConsumer(c: ChannelRef): Unit = {
+    def visitConsumer(c: TopicRef): Unit = {
       payload.append(s"$spc  consumes channel ${c.id.value}\n")
     }
 

@@ -3,6 +3,9 @@ package com.yoppworks.ossum.riddl.language
 import AST._
 import fastparse._
 import ScalaWhitespace._
+import Terminals.Keywords
+import Terminals.Options
+import Terminals.Punctuation
 
 /** Parsing rules for context interactions */
 trait InteractionParser extends CommonParser {
@@ -21,38 +24,41 @@ trait InteractionParser extends CommonParser {
 
   def role[_: P]: P[RoleDef] = {
     P(
-      location ~ "role" ~/ identifier ~ open ~
+      location ~ Keywords.role ~/ identifier ~ Punctuation.curlyOpen ~
         roleOptions ~
-        "handles" ~/ literalStrings() ~
-        "requires" ~ literalStrings() ~
-        close ~ addendum
+        Keywords.handles ~/ lines ~
+        Keywords.requires ~ lines ~
+        Punctuation.curlyClose ~ addendum
     ).map { tpl =>
       (RoleDef.apply _).tupled(tpl)
     }
   }
 
   def messageOptions[_: P]: P[Seq[MessageOption]] = {
-    options(StringIn("synch", "asynch", "reply").!) {
-      case (loc, "synch")  => SynchOption(loc)
-      case (loc, "asynch") => AsynchOption(loc)
-      case (loc, "reply")  => ReplyOption(loc)
-      case _               => throw new RuntimeException("invalid message option")
+    options(StringIn(Options.sync, Options.async, Options.reply).!) {
+      case (loc, Options.sync)  => SynchOption(loc)
+      case (loc, Options.async) => AsynchOption(loc)
+      case (loc, Options.reply) => ReplyOption(loc)
+      case _                    => throw new RuntimeException("invalid message option")
     }
   }
 
   def reaction[_: P]: P[Reaction] = {
     P(
-      location ~ identifier ~ "call" ~ entityRef ~/ functionRef ~
-        literalStrings() ~ addendum
+      location ~ identifier ~ Keywords.call ~ entityRef ~/ functionRef ~
+        lines ~ addendum
     ).map(x => (Reaction.apply _).tupled(x))
   }
 
   def reactions[_: P]: P[Seq[Reaction]] = {
-    P(open ~ reaction.rep(0, ",") ~ close)
+    P(
+      Punctuation.curlyOpen ~ reaction
+        .rep(0, Punctuation.comma) ~ Punctuation.curlyClose
+    )
   }
 
   def causing[_: P]: P[Seq[Reaction]] = {
-    P("causing" ~ reactions).?.map(_.getOrElse(Seq.empty[Reaction]))
+    P(Keywords.causing ~ reactions).?.map(_.getOrElse(Seq.empty[Reaction]))
   }
 
   def messageActionDef[_: P]: P[MessageActionDef] = {
@@ -85,9 +91,9 @@ trait InteractionParser extends CommonParser {
 
   def interactionDef[_: P]: P[InteractionDef] = {
     P(
-      location ~ "interaction" ~/ identifier ~ "{" ~
+      location ~ Keywords.interaction ~/ identifier ~ Punctuation.curlyOpen ~
         role.rep(1) ~ interactions ~
-        "}" ~ addendum
+        Punctuation.curlyClose ~ addendum
     ).map { tpl =>
       (InteractionDef.apply _).tupled(tpl)
     }

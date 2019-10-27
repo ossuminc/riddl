@@ -46,12 +46,12 @@ object AST {
 
   case class Explanation(
     loc: Location,
-    markdown: Seq[String] = Seq.empty[String]
+    markdown: Seq[LiteralString] = Seq.empty[LiteralString]
   ) extends RiddlValue
 
   case class SeeAlso(
     loc: Location,
-    citations: Seq[String] = Seq.empty[String]
+    citations: Seq[LiteralString] = Seq.empty[LiteralString]
   ) extends RiddlValue
 
   case class Addendum(
@@ -133,6 +133,7 @@ object AST {
   case class Number(loc: Location) extends PredefinedType(loc, "Number")
   case class Integer(loc: Location) extends PredefinedType(loc, "Integer")
   case class Decimal(loc: Location) extends PredefinedType(loc, "Decimal")
+  case class Real(loc: Location) extends PredefinedType(loc, "Real")
   case class Date(loc: Location) extends PredefinedType(loc, "Date")
   case class Time(loc: Location) extends PredefinedType(loc, "Time")
   case class DateTime(loc: Location) extends PredefinedType(loc, "DateTime")
@@ -152,11 +153,11 @@ object AST {
     def kind: String = "Type"
   }
 
-  case class ChannelRef(
+  case class TopicRef(
     loc: Location,
     id: Identifier
   ) extends Reference
-  case class ChannelDef(
+  case class TopicDef(
     loc: Location,
     id: Identifier,
     commands: Seq[CommandRef] = Seq.empty[CommandRef],
@@ -165,7 +166,7 @@ object AST {
     results: Seq[ResultRef] = Seq.empty[ResultRef],
     addendum: Option[Addendum] = None
   ) extends Definition {
-    def kind: String = "Channel"
+    def kind: String = "Topic"
   }
 
   sealed trait MessageReference extends Reference
@@ -292,7 +293,7 @@ object AST {
     id: Identifier,
     inputs: Seq[TypeExpression] = Seq.empty[TypeRef],
     outputs: Seq[TypeExpression] = Seq.empty[TypeRef],
-    description: Seq[String] = Seq.empty[String],
+    description: Seq[LiteralString] = Seq.empty[LiteralString],
     addendum: Option[Addendum] = None
   ) extends Definition {
     def kind: String = "Function"
@@ -317,8 +318,8 @@ object AST {
     * @param loc The location in the input
     * @param id The name of the entity
     * @param typ The type of the entity's value
-    * @param consumes A reference to the channel from which the entity consumes
-    * @param produces A reference to the channel to which the entity produces
+    * @param consumes A reference to the topic from which the entity consumes
+    * @param produces A reference to the topic to which the entity produces
     */
   case class EntityDef(
     entityKind: EntityKind,
@@ -326,8 +327,8 @@ object AST {
     id: Identifier,
     typ: TypeExpression,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
-    consumes: Seq[ChannelRef] = Seq.empty[ChannelRef],
-    produces: Seq[ChannelRef] = Seq.empty[ChannelRef],
+    consumes: Seq[TopicRef] = Seq.empty[TopicRef],
+    produces: Seq[TopicRef] = Seq.empty[TopicRef],
     features: Seq[FeatureDef] = Seq.empty[FeatureDef],
     functions: Seq[FunctionDef] = Seq.empty[FunctionDef],
     invariants: Seq[InvariantDef] = Seq.empty[InvariantDef],
@@ -337,13 +338,13 @@ object AST {
   }
 
   trait TranslationRule extends Definition {
-    def channel: String
+    def topic: String
   }
 
   case class MessageTranslationRule(
     loc: Location,
     id: Identifier,
-    channel: String,
+    topic: String,
     input: String,
     output: String,
     rule: String,
@@ -391,7 +392,7 @@ object AST {
     events: Seq[EventDef] = Seq.empty[EventDef],
     queries: Seq[QueryDef] = Seq.empty[QueryDef],
     results: Seq[ResultDef] = Seq.empty[ResultDef],
-    channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
+    topics: Seq[TopicDef] = Seq.empty[TopicDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
     adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
@@ -516,7 +517,7 @@ object AST {
     id: Identifier,
     subdomain: Option[Identifier] = None,
     types: Seq[TypeDef] = Seq.empty[TypeDef],
-    channels: Seq[ChannelDef] = Seq.empty[ChannelDef],
+    topics: Seq[TopicDef] = Seq.empty[TopicDef],
     contexts: Seq[ContextDef] = Seq.empty[ContextDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
     addendum: Option[Addendum] = None

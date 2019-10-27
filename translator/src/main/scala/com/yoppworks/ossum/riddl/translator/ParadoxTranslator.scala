@@ -94,7 +94,7 @@ object ParadoxTranslator extends Translator {
         doFeature(state, container, feature)
       case adaptor: AdaptorDef =>
         doAdaptor(state, container, adaptor)
-      case channel: ChannelDef =>
+      case channel: TopicDef =>
         doChannel(state, container, channel)
       case interaction: InteractionDef =>
         doInteraction(state, container, interaction)
@@ -168,7 +168,7 @@ object ParadoxTranslator extends Translator {
   def doChannel(
     state: State,
     container: Container,
-    channel: ChannelDef
+    channel: TopicDef
   ): State = { state }
 
   def doInteraction(

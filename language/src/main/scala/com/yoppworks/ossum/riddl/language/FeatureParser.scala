@@ -1,8 +1,11 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
+import AST._
 import fastparse._
 import ScalaWhitespace._
+import Terminals.Keywords
+import Terminals.Punctuation
+import Terminals.Readability
 
 /** Parsing rules for entity feature definitions */
 trait FeatureParser extends CommonParser {
@@ -39,10 +42,10 @@ trait FeatureParser extends CommonParser {
 
   def thens[_: P]: P[Seq[Then]] = {
     P(
-      (location ~ IgnoreCase("then") ~/ literalString).map(
+      (location ~ IgnoreCase(Readability.then_) ~/ literalString).map(
         tpl => (Then.apply _).tupled(tpl)
       ) ~
-        (location ~ IgnoreCase("and") ~/ literalString)
+        (location ~ IgnoreCase(Readability.and) ~/ literalString)
           .map(
             tpl => (Then.apply _).tupled(tpl)
           )
@@ -54,29 +57,31 @@ trait FeatureParser extends CommonParser {
 
   def example[_: P]: P[ExampleDef] = {
     P(
-      location ~ IgnoreCase("example") ~/ identifier ~ open ~/ literalString ~
+      location ~ IgnoreCase(Keywords.example) ~/ identifier ~ Punctuation.curlyOpen ~/ literalString ~
         givens ~
         whens ~ thens ~
-        close ~ addendum
+        Punctuation.curlyClose ~ addendum
     ).map { tpl =>
       (ExampleDef.apply _).tupled(tpl)
     }
   }
 
   def background[_: P]: P[Background] = {
-    P(location ~ IgnoreCase("background") ~/ open ~/ givens)
-      .map(tpl => (Background.apply _).tupled(tpl)) ~ close
+    P(
+      location ~ IgnoreCase(Keywords.background) ~ Punctuation.curlyOpen ~/
+        givens
+    ).map(tpl => (Background.apply _).tupled(tpl)) ~ Punctuation.curlyClose
   }
 
   def description[_: P]: P[Seq[LiteralString]] = {
-    P(IgnoreCase("description") ~/ literalStrings(""))
+    P(IgnoreCase(Keywords.description) ~/ lines)
   }
 
   def featureDef[_: P]: P[FeatureDef] = {
     P(
-      location ~ IgnoreCase("feature") ~/ identifier ~ open ~
+      location ~ IgnoreCase(Keywords.feature) ~/ identifier ~ Punctuation.curlyOpen ~
         description ~ background.? ~ example.rep(1) ~
-        close ~/ addendum
+        Punctuation.curlyClose ~/ addendum
     ).map { tpl =>
       (FeatureDef.apply _).tupled(tpl)
     }
