@@ -8,7 +8,7 @@ class ParserTest extends ParsingTest {
   "Parser" should {
     "allow an empty funky-name domain" in {
       val input = "domain 'foo-fah|roo' { }"
-      parseTopLevelDomain(input, _.head) match {
+      parseTopLevelDomain(input, _.containers.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
@@ -19,7 +19,7 @@ class ParserTest extends ParsingTest {
       val input =
         """domain 'subdomain' as subdomain of 'parent' is { }
           |""".stripMargin
-      parseTopLevelDomain(input, _.head) match {
+      parseTopLevelDomain(input, _.containers.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
@@ -39,9 +39,11 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            Seq[DomainDef](
-              DomainDef(1 -> 1, Identifier(1 -> 8, "foo"), None),
-              DomainDef(2 -> 1, Identifier(2 -> 8, "bar"), None)
+            RootContainer(
+              Seq[DomainDef](
+                DomainDef(1 -> 1, Identifier(1 -> 8, "foo"), None),
+                DomainDef(2 -> 1, Identifier(2 -> 8, "bar"), None)
+              )
             )
       }
     }
@@ -72,16 +74,15 @@ class ParserTest extends ParsingTest {
             )
       }
     }
-    "allow topic definitions in contexts" in {
+    "allow topic definitions in domains" in {
       val input =
         """
           |domain foo {
-          |  context fum {
+          |
           |    topic bar { commands{} events{} queries{} results{} }
-          |  }
           |}
           |""".stripMargin
-      parseDomainDefinition[TopicDef](input, _.contexts.head.topics.head) match {
+      parseDomainDefinition[TopicDef](input, _.topics.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
@@ -116,58 +117,68 @@ class ParserTest extends ParsingTest {
             )
       }
     }
-    "allow command definitions in contexts" in {
+    "allow command definitions in topics" in {
       val input =
-        "command DoThisThing = SomeType yields event ThingWasDone"
-      parseInContext[CommandDef](input, _.commands.head) match {
+        """domain bar { topic foo is { commands {
+          |DoThisThing = SomeType yields event ThingWasDone
+          |} } }
+          |""".stripMargin
+      parseDomainDefinition[CommandDef](input, _.topics.head.commands.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
             CommandDef(
               2 -> 1,
-              Identifier(2 -> 9, "DoThisThing"),
-              TypeRef(2 -> 23, Identifier(2 -> 23, "SomeType")),
-              Seq(EventRef(2 -> 39, Identifier(2 -> 45, "ThingWasDone")))
+              Identifier(2 -> 1, "DoThisThing"),
+              TypeRef(2 -> 15, Identifier(2 -> 15, "SomeType")),
+              Seq(EventRef(2 -> 31, Identifier(2 -> 37, "ThingWasDone")))
             )
       }
     }
     "allow event definitions in contexts" in {
-      val input = "event ThingWasDone = SomeType"
-      parseInContext(input, _.events.head) match {
+      val input = """domain bar { topic foo is { events {
+                    |ThingWasDone is SomeType
+                    |} } }
+                    |""".stripMargin
+      parseDomainDefinition(input, _.topics.head.events.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
             EventDef(
               2 -> 1,
-              Identifier(2 -> 7, "ThingWasDone"),
-              TypeRef(2 -> 22, Identifier(2 -> 22, "SomeType"))
+              Identifier(2 -> 1, "ThingWasDone"),
+              TypeRef(2 -> 17, Identifier(2 -> 17, "SomeType"))
             )
       }
     }
     "allow query definitions in contexts" in {
-      val input =
-        "query FindThisThing = String yields result SomeResult"
-      parseInContext(input, _.queries.head) match {
+      val input = """domain bar { topic foo is { queries {
+                    |FindThisThing = String yields result SomeResult
+                    |} } }
+                    |""".stripMargin
+      parseDomainDefinition(input, _.topics.head.queries.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
             QueryDef(
               2 -> 1,
-              Identifier(2 -> 7, "FindThisThing"),
-              Strng(2 -> 23),
-              ResultRef(2 -> 37, Identifier(2 -> 44, "SomeResult"))
+              Identifier(2 -> 1, "FindThisThing"),
+              Strng(2 -> 17),
+              ResultRef(2 -> 31, Identifier(2 -> 38, "SomeResult"))
             )
       }
     }
     "allow result definitions in contexts" in {
-      val input =
-        "result ThisQueryResult = SomeType"
-      parseInContext(input, _.results.head) match {
+      val input = """domain bar { topic foo is {
+                    |result ThisQueryResult = SomeType
+                    |} }
+                    |""".stripMargin
+      parseDomainDefinition(input, _.topics.head.results.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
             ResultDef(
-              2 -> 1,
+              2 -> 8,
               Identifier(2 -> 8, "ThisQueryResult"),
               TypeRef(2 -> 26, Identifier(2 -> 26, "SomeType"))
             )

@@ -107,6 +107,10 @@ trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
+  def mapTo[T <: Definition](seq: Option[Seq[Definition]]): Seq[T] = {
+    seq.map(_.map(_.asInstanceOf[T])).getOrElse(Seq.empty[T])
+  }
+
   def commandRef[_: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~/ identifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))

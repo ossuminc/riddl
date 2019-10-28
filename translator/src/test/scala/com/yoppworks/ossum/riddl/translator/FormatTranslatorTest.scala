@@ -2,10 +2,11 @@ package com.yoppworks.ossum.riddl.translator
 
 import org.scalatest.Assertion
 import com.yoppworks.ossum.riddl.language.ParsingTest
+
 import scala.io.Source
 
 /** Test Generator and Traversal */
-class PrettifyTest extends ParsingTest {
+class FormatTranslatorTest extends ParsingTest {
 
   def runOne(fileName: String): Assertion = {
     val everything = s"language/src/test/input/$fileName"
@@ -30,29 +31,23 @@ class PrettifyTest extends ParsingTest {
     parseTopLevelDomains(input) match {
       case Left(message) =>
         fail(message)
-      case Right(domains) =>
-        domains.map { domain =>
-          val generator = Prettify.DomainPrettifier(domain)
-          val output = generator.traverse.mkString
-          parseTopLevelDomains(output) match {
-            case Left(message) =>
-              fail("On First Generation:\n" + message)
-            case Right(domains2) =>
-              input mustEqual output
-              domains2.map { domain2 =>
-                val generator = Prettify.DomainPrettifier(domain2)
-                val output2 = generator.traverse.mkString
-                parseTopLevelDomains(output2) match {
-                  case Left(message) =>
-                    fail("On Second Generation: " + message)
-                  case Right(_) =>
-                    output mustEqual output2
-                }
-              }
-          }
+      case Right(roots) =>
+        val output = FormatTranslator.translateToString(roots)
+        parseTopLevelDomains(output) match {
+          case Left(message) =>
+            fail("On First Generation:\n" + message)
+          case Right(roots2) =>
+            input mustEqual output
+            val output2 = FormatTranslator.translateToString(roots2)
+            parseTopLevelDomains(output2) match {
+              case Left(message) =>
+                fail("On Second Generation: " + message)
+              case Right(_) =>
+                output mustEqual output2
+            }
         }
-        succeed
     }
+    succeed
   }
 
   "Generator" should {

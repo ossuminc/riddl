@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST._
-import com.yoppworks.ossum.riddl.language.Folding.foldLeft
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -12,9 +11,12 @@ case class SymbolTable(container: Container) {
   type Parentage = Map[Definition, Container]
 
   val parentage: Parentage = {
-    foldLeft[Parentage](container, container, Map.empty[Definition, Container]) {
-      (parent, child, next) =>
-        next + (child -> parent)
+    Folding.foldEachDefinition[Parentage](
+      container,
+      container,
+      Map.empty[Definition, Container]
+    ) { (parent, child, next) =>
+      next + (child -> parent)
     }
   }
 
@@ -48,7 +50,7 @@ case class SymbolTable(container: Container) {
     mutable.HashMap.empty[String, mutable.Set[(Definition, Container)]]
 
   val symbols: Symbols = {
-    foldLeft[Symbols](container, container, emptySymbols) {
+    Folding.foldEachDefinition[Symbols](container, container, emptySymbols) {
       (parent, child, next) =>
         val extracted = next.getOrElse(
           child.id.value,

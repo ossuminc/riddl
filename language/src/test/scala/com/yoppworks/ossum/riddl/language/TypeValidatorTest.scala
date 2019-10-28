@@ -19,7 +19,9 @@ class TypeValidatorTest extends ValidatingTest {
         case (_: DomainDef, msgs: Seq[ValidationMessage]) =>
           if (msgs.isEmpty)
             fail("Type 'bar' should have generated warning")
-          else if (msgs.map(_.message).exists(_.contains("must start with"))) {
+          else if (msgs
+                     .map(_.message)
+                     .exists(_.contains("should start with"))) {
             succeed
           } else {
             fail("No such message")

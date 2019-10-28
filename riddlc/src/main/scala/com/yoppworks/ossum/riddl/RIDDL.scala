@@ -5,7 +5,7 @@ import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.RiddlParserInput
 import com.yoppworks.ossum.riddl.language.Validation
 import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
-import com.yoppworks.ossum.riddl.translator.Prettify
+import com.yoppworks.ossum.riddl.translator.FormatTranslator
 import scopt.OParser
 
 /** RIDDL Main Program
@@ -85,7 +85,7 @@ object RIDDL {
             None
           case Right(root) =>
             val msgs = timer("validate", options.showTimes) {
-              root.content.foldLeft(Validation.NoValidationMessages) {
+              root.containers.foldLeft(Validation.NoValidationMessages) {
                 case (prior, container) =>
                   prior ++ Validation.validate(
                     container,
@@ -126,7 +126,7 @@ object RIDDL {
           timer("translate", options.showTimes) {
             options.outputKind match {
               case Kinds.Prettify =>
-                Prettify.translate(root, options.configFile.get)
+                FormatTranslator.translate(root, options.configFile.get)
               case Kinds.Paradox =>
                 ParadoxTranslator.translate(root, options.configFile.get)
               case x: Kinds.Value =>

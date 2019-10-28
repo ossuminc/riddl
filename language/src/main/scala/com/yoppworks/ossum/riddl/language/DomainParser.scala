@@ -3,20 +3,18 @@ package com.yoppworks.ossum.riddl.language
 import AST._
 import fastparse._
 import ScalaWhitespace._
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import Terminals.Keywords
+import Terminals.Readability
 
 /** Parsing rules for domains. */
 trait DomainParser
     extends TopicParser
     with ContextParser
     with InteractionParser
-    with MessageParser
     with TypeParser {
 
   def domainDefinitions[_: P]: P[Definition] = {
-    P(typeDef | anyMessageDef | topicDef | interactionDef | contextDef)
+    P(typeDef | topicDef | interactionDef | contextDef)
   }
 
   type DomainDefinitions = (
@@ -73,7 +71,7 @@ trait DomainParser
     }
   }
 
-  def root[_: P]: P[Seq[DomainDef]] = {
-    P(Start ~ P(domainDef).rep(0) ~ End)
+  def root[_: P]: P[RootContainer] = {
+    P(Start ~ P(domainDef).rep(0) ~ End).map(RootContainer(_))
   }
 }

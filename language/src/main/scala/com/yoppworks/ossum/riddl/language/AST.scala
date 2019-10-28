@@ -73,7 +73,7 @@ object AST {
 
   sealed trait Container extends Definition
 
-  case class RootContainer(content: Seq[Container]) extends Container {
+  case class RootContainer(containers: Seq[Container]) extends Container {
     def id: Identifier = Identifier((0, 0), "root")
     def addendum: Option[Addendum] = None
     def kind: String = "RootContainer"
@@ -160,12 +160,12 @@ object AST {
   case class TopicDef(
     loc: Location,
     id: Identifier,
-    commands: Seq[CommandRef] = Seq.empty[CommandRef],
-    events: Seq[EventRef] = Seq.empty[EventRef],
-    queries: Seq[QueryRef] = Seq.empty[QueryRef],
-    results: Seq[ResultRef] = Seq.empty[ResultRef],
+    commands: Seq[CommandDef] = Seq.empty[CommandDef],
+    events: Seq[EventDef] = Seq.empty[EventDef],
+    queries: Seq[QueryDef] = Seq.empty[QueryDef],
+    results: Seq[ResultDef] = Seq.empty[ResultDef],
     addendum: Option[Addendum] = None
-  ) extends Definition {
+  ) extends Container {
     def kind: String = "Topic"
   }
 
@@ -388,11 +388,6 @@ object AST {
     id: Identifier,
     options: Seq[ContextOption] = Seq.empty[ContextOption],
     types: Seq[TypeDef] = Seq.empty[TypeDef],
-    commands: Seq[CommandDef] = Seq.empty[CommandDef],
-    events: Seq[EventDef] = Seq.empty[EventDef],
-    queries: Seq[QueryDef] = Seq.empty[QueryDef],
-    results: Seq[ResultDef] = Seq.empty[ResultDef],
-    topics: Seq[TopicDef] = Seq.empty[TopicDef],
     entities: Seq[EntityDef] = Seq.empty[EntityDef],
     adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
     interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],

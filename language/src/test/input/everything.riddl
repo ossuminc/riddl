@@ -2,6 +2,25 @@
 // RIDDL is about defining domains so ...
 domain Everything {
 
+  // Channels are defined to flow messages between entities. They are defined
+  // in domain scope because they can cross contexts too.
+  topic AChannel is {
+    commands {
+       DoThisThing is SomeType yields event ThingWasDone
+    }
+    events {
+      ThingWasDone is SomeType
+    }
+    query FindThisThing is SomeType yields result ThisQueryResult
+    result ThisQueryResult is SomeType
+  } explained as {
+    |# Description
+    |This channel is aimed at the same kind of functionality as /dev/null.
+    |It produces nothing and consumes everything
+  } see also {
+    |/dev/null
+  }
+
   // Domains are composed of bounded contexts so ...
   context full {
     // Contexts can contain many kinds of definitions
@@ -37,25 +56,6 @@ domain Everything {
     // Commands, Events, Queries and Results are defined in terms of some
     // type, previously defined. Commands yield events. Queries yield results.
 
-    command DoThisThing is SomeType yields event ThingWasDone
-    event ThingWasDone is SomeType
-    query FindThisThing is SomeType yields result ThisQueryResult
-    result ThisQueryResult is SomeType
-
-    // Channels are defined to flow messages between entities. They are defined
-    // in domain scope because they can cross contexts too.
-    topic AChannel {
-      commands {}
-      events {}
-      queries {}
-      results {}
-    } explained as {
-      |# Description
-      |This channel is aimed at the same kind of functionality as /dev/null.
-      |It produces nothing and consumes everything
-    } see also {
-      |/dev/null
-    }
 
 
     // Entities are the main objects that contexts define. They can be

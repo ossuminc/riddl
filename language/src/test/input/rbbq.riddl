@@ -13,6 +13,16 @@ domain ReactiveBBQ {
     |Reference to something about OrderIds
   }
 
+  topic Inputs {
+    commands {
+      foo is String yields event bar
+    } events {
+      bar is String
+    } queries {} results {}
+  }
+
+  topic Outputs {  commands {} events {  } queries {} results {} }
+
   // #Kitchen
   // The Kitchen context pertains to
   context Kitchen {
@@ -20,9 +30,8 @@ domain ReactiveBBQ {
     type OrderViewType is {
       address is IP4Address
     }
-    topic Commands { commands {} events {} queries {} results {} }
     device entity OrderViewer as OrderViewType is {
-      consumes topic Commands
+      consumes topic Inputs
     } explained as {
       |The OrderViewer is the device in the kitchen, probably a touch screen,
       |that the cooks use to view the sequence of orders to cook
@@ -63,10 +72,8 @@ domain ReactiveBBQ {
       points is Number,
       rewardEvents is many optional RewardEvent
     }
-    topic Commands { commands {} events {} queries {} results {} }
-
     entity RewardsAccount as RewardsAccountType {
-      consumes topic Commands
+      consumes topic Inputs
     }
   }
   // #Loyalty
@@ -77,11 +84,10 @@ domain ReactiveBBQ {
       orderId is OrderId,
       customerId is CustomerId
     }
-    topic Commands { commands {} events {} queries {} results {} }
 
     entity Order as OrderType is {
       option is aggregate
-      consumes topic Commands
+      consumes topic Inputs
     }
   }
   // #Order
@@ -93,24 +99,22 @@ domain ReactiveBBQ {
       amount is Number,
       cardToken is String
     }
-    topic Commands { commands {} events {} queries {} results {} }
     entity Payment as PaymentType is {
       option is aggregate
-      consumes topic Commands
+      consumes topic Inputs
     }
   }
   // #Payment
 
   // #Menu
   context Menu {
-    topic Commands { commands {} events {} queries {} results {} }
     entity MenuItem as String is {
-      consumes topic Commands
+      consumes topic Inputs
     }
     type MenuItemRef is refer to entity MenuItem
     entity Menu as many MenuItemRef is {
       option is aggregate
-      consumes topic Commands
+      consumes topic Inputs
     }
   }
   // #Menu
@@ -124,21 +128,15 @@ domain ReactiveBBQ {
       time is Time,
       date is Date
     }
-    entity Location as String is { consumes topic Commands }
+    entity Location as String is { consumes topic Inputs }
     explained as {
       |foo
     }
 
-  event bar is String
-  command foo is String yields event bar
-
-    topic Commands { commands { foo } events {} queries {} results {} }
-    topic Events {  commands {} events {  } queries {} results {} }
-
     entity Reservation as ReservationValue is {
       options ( aggregate )
-      consumes topic Commands
-      produces topic Events
+      consumes topic Inputs
+      produces topic Outputs
     }
   }
   // #Reservation

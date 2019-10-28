@@ -36,7 +36,6 @@ object TopLevelParser {
     input: RiddlParserInput
   ): Either[String, RootContainer] = {
     val tlp = TopLevelParser(input)
-    tlp.expect(tlp.root(_)).map(RootContainer(_))
+    tlp.expect(tlp.root(_))
   }
-
 }

@@ -41,14 +41,14 @@ case class TestParser(input: RiddlParserInput)
     parser.asInstanceOf[P[_] => P[T]]
   }
 
-  def parseTopLevelDomains: Either[String, Seq[DomainDef]] = {
+  def parseTopLevelDomains: Either[String, RootContainer] = {
     expect(root(_))
   }
 
   def parseTopLevelDomain[TO <: RiddlNode](
-    extract: Seq[DomainDef] => TO
+    extract: RootContainer => TO
   ): Either[String, TO] = {
-    expect(root(_)) match {
+    expect[RootContainer](root(_)) match {
       case Right(content) =>
         Right(extract(content))
       case Left(msg) =>
@@ -96,14 +96,14 @@ class ParsingTest extends WordSpec with MustMatchers {
 
   def parseTopLevelDomains(
     input: RiddlParserInput
-  ): Either[String, Seq[DomainDef]] = {
+  ): Either[String, RootContainer] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomains
   }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     input: RiddlParserInput,
-    extract: Seq[DomainDef] => TO
+    extract: RootContainer => TO
   ): Either[String, TO] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract)
