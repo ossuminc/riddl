@@ -26,8 +26,8 @@ trait Translator {
     configFile: File
   ): Seq[File] = {
     TopLevelParser.parse(input) match {
-      case Left(error) =>
-        errorLog(error)
+      case Left(errors) =>
+        errors.map(_.toString).foreach(errorLog(_))
         Seq.empty[File]
       case Right(root) =>
         val errors: Seq[ValidationMessage] =

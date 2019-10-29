@@ -6,10 +6,23 @@ class ParserTest extends ParsingTest {
   import AST._
 
   "Parser" should {
+    "report bad syntax" in {
+      val input = "Flerkins are evil but cute"
+      parseTopLevelDomain(input, _.contents.head) match {
+        case Left(errors) =>
+          errors.map(_.toString).foreach(println(_))
+          errors must not be (empty)
+        case Right(content) =>
+          fail("Invalid syntax should make an error")
+      }
+
+    }
     "allow an empty funky-name domain" in {
       val input = "domain 'foo-fah|roo' { }"
       parseTopLevelDomain(input, _.contents.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"), None)
@@ -20,7 +33,9 @@ class ParserTest extends ParsingTest {
         """domain 'subdomain' as subdomain of 'parent' is { }
           |""".stripMargin
       parseTopLevelDomain(input, _.contents.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Domain(
@@ -36,7 +51,9 @@ class ParserTest extends ParsingTest {
           |domain bar { }
           |""".stripMargin
       parseTopLevelDomains(input) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             RootContainer(
@@ -50,7 +67,9 @@ class ParserTest extends ParsingTest {
     "allow context definitions in domains" in {
       val input = "domain foo { context bar { } }"
       parseDomainDefinition[Context](input, _.contexts.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Context(1 -> 14, id = Identifier(1 -> 22, "bar"))
@@ -60,7 +79,9 @@ class ParserTest extends ParsingTest {
       val input =
         "context bar { options (function wrapper gateway ) }"
       parseContextDefinition[Context](input, identity) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Context(
@@ -83,7 +104,9 @@ class ParserTest extends ParsingTest {
           |}
           |""".stripMargin
       parseDomainDefinition[Topic](input, _.topics.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Topic(4 -> 5, Identifier(4 -> 11, "bar"))
@@ -95,7 +118,9 @@ class ParserTest extends ParsingTest {
           |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
           |]""".stripMargin
       parseInContext(input, _.types.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Type(
@@ -124,7 +149,9 @@ class ParserTest extends ParsingTest {
           |} } }
           |""".stripMargin
       parseDomainDefinition[Command](input, _.topics.head.commands.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Command(
@@ -141,7 +168,9 @@ class ParserTest extends ParsingTest {
                     |} } }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.events.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Event(
@@ -157,7 +186,9 @@ class ParserTest extends ParsingTest {
                     |} } }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.queries.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Query(
@@ -174,7 +205,9 @@ class ParserTest extends ParsingTest {
                     |} }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.results.head) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Result(
@@ -210,7 +243,9 @@ class ParserTest extends ParsingTest {
           |}
           |""".stripMargin
       parseDefinition[Entity](input) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe Entity(
             SoftwareEntityKind(1 -> 1),
@@ -274,7 +309,9 @@ class ParserTest extends ParsingTest {
       val input =
         "adaptor fuzz for domain fuzzy context blogger {}"
       parseDefinition[Adaptor](input) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Adaptor(
@@ -307,7 +344,9 @@ class ParserTest extends ParsingTest {
           |}
           |""".stripMargin
       parseDefinition[Interaction](input) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(content) =>
           content mustBe
             Interaction(

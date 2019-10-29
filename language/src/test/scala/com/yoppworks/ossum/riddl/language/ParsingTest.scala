@@ -19,12 +19,12 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   def parse[T <: RiddlNode, U <: RiddlNode](
     parser: P[_] => P[T],
     extract: T => U
-  ): Either[String, U] = {
+  ): Either[Seq[ParserError], U] = {
     expect(parser) match {
       case Right(content) =>
         Right(extract(content))
-      case Left(msg) =>
-        Left(msg)
+      case Left(errors) =>
+        Left(errors)
     }
   }
 
@@ -42,13 +42,13 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     parser.asInstanceOf[P[_] => P[T]]
   }
 
-  def parseTopLevelDomains: Either[String, RootContainer] = {
+  def parseTopLevelDomains: Either[Seq[ParserError], RootContainer] = {
     expect(fileRoot(_))
   }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     extract: RootContainer => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     expect[RootContainer](fileRoot(_)) match {
       case Right(content) =>
         Right(extract(content))
@@ -59,26 +59,27 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
     extract: FROM => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     val parser = parserFor[FROM]
     val result = expect[FROM](parser)
     result.map(extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag]: Either[String, FROM] = {
+  def parseDefinition[FROM <: Definition: ClassTag]
+    : Either[Seq[ParserError], FROM] = {
     val parser = parserFor[FROM]
     expect[FROM](parser)
   }
 
   def parseDomainDefinition[TO <: RiddlNode](
     extract: Domain => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     parse[Domain, TO](domainDef(_), extract)
   }
 
   def parseContextDefinition[TO <: RiddlNode](
     extract: Context => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     parse[Context, TO](contextDef(_), extract)
   }
 }
@@ -90,14 +91,14 @@ class ParsingTest extends WordSpec with MustMatchers {
     input: RiddlParserInput,
     parser: P[_] => P[T],
     extraction: T => U
-  ): Either[String, U] = {
+  ): Either[Seq[ParserError], U] = {
     val tp = TestParser(input)
     tp.parse[T, U](parser, extraction)
   }
 
   def parseTopLevelDomains(
     input: RiddlParserInput
-  ): Either[String, RootContainer] = {
+  ): Either[Seq[ParserError], RootContainer] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomains
   }
@@ -105,7 +106,7 @@ class ParsingTest extends WordSpec with MustMatchers {
   def parseTopLevelDomain[TO <: RiddlNode](
     input: RiddlParserInput,
     extract: RootContainer => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract)
   }
@@ -113,7 +114,7 @@ class ParsingTest extends WordSpec with MustMatchers {
   def parseDomainDefinition[TO <: RiddlNode](
     input: RiddlParserInput,
     extract: Domain => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     val tp = TestParser(input)
     tp.parseDomainDefinition[TO](extract)
   }
@@ -129,7 +130,8 @@ class ParsingTest extends WordSpec with MustMatchers {
         tp.parseDomainDefinition(extract) match {
           case Right(content) =>
             content mustBe expected
-          case Left(msg) =>
+          case Left(errors) =>
+            val msg = errors.map(_.toString).mkString
             fail(msg)
         }
     }
@@ -138,7 +140,7 @@ class ParsingTest extends WordSpec with MustMatchers {
   def parseContextDefinition[TO <: RiddlNode](
     input: RiddlParserInput,
     extract: Context => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     val tp = TestParser(input)
     tp.parseContextDefinition[TO](extract)
   }
@@ -146,14 +148,14 @@ class ParsingTest extends WordSpec with MustMatchers {
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
     input: RiddlParserInput,
     extract: FROM => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     val tp = TestParser(input)
     tp.parseDefinition[FROM, TO](extract)
   }
 
   def parseDefinition[FROM <: Definition: ClassTag](
     input: RiddlParserInput
-  ): Either[String, FROM] = {
+  ): Either[Seq[ParserError], FROM] = {
     val tp = TestParser(input)
     tp.parseDefinition[FROM]
   }
@@ -165,7 +167,9 @@ class ParsingTest extends WordSpec with MustMatchers {
   ): Unit = {
     val rip = RiddlParserInput(input)
     TestParser(rip).parseDefinition[FROM] match {
-      case Left(msg) => fail(msg)
+      case Left(errors) =>
+        val msg = errors.map(_.toString).mkString
+        fail(msg)
       case Right(content) =>
         content mustBe expected
     }
@@ -179,7 +183,9 @@ class ParsingTest extends WordSpec with MustMatchers {
       case (statement: String, expected: TO @unchecked) =>
         val rip = RiddlParserInput(statement)
         TestParser(rip).parseDefinition[FROM] match {
-          case Left(msg) => fail(msg)
+          case Left(errors) =>
+            val msg = errors.map(_.toString).mkString
+            fail(msg)
           case Right(content) =>
             content mustBe expected
         }
@@ -189,7 +195,7 @@ class ParsingTest extends WordSpec with MustMatchers {
   def parseInContext[TO <: RiddlNode](
     input: RiddlParserInput,
     extract: Context => TO
-  ): Either[String, TO] = {
+  ): Either[Seq[ParserError], TO] = {
     val tp = TestParser(
       RiddlParserInput(s"context foo {\n${input.data}\n}")
     )
@@ -207,7 +213,8 @@ class ParsingTest extends WordSpec with MustMatchers {
         tp.parseContextDefinition(extract) match {
           case Right(content) =>
             content mustBe expected
-          case Left(msg) =>
+          case Left(errors) =>
+            val msg = errors.map(_.toString).mkString
             fail(msg)
         }
     }
@@ -217,8 +224,9 @@ class ParsingTest extends WordSpec with MustMatchers {
     val directory = "language/src/test/input/"
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
-      case Left(error) =>
-        fail(s"$label:$error")
+      case Left(errors) =>
+        val msg = errors.map(_.toString).mkString
+        fail(msg)
       case Right(model) =>
         model
     }

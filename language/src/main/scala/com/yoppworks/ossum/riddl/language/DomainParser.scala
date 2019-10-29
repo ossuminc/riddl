@@ -64,9 +64,4 @@ trait DomainParser
         )
     }
   }
-
-  def fileRoot[_: P]: P[RootContainer] = {
-    P(Start ~ P(domainDef).rep(0) ~ End).map(RootContainer(_))
-  }
-
 }

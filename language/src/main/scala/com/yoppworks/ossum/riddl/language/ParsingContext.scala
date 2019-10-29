@@ -4,6 +4,8 @@ import java.io.File
 
 import com.yoppworks.ossum.riddl.language.AST.LiteralString
 import com.yoppworks.ossum.riddl.language.AST.Location
+import fastparse.Parsed.Failure
+import fastparse.Parsed.Success
 import fastparse._
 
 import scala.collection.mutable
@@ -11,15 +13,15 @@ import scala.collection.mutable
 case class ParserError(input: RiddlParserInput, loc: Location, msg: String)
     extends Throwable {
   override def toString: String = {
-    ""
+    val context = input.annotateErrorLine(loc)
+    s"${input.origin}$loc: $msg\n$context"
   }
 }
 
 /** Unit Tests For ParsingContext */
 trait ParsingContext {
 
-  def throwOnError: Boolean
-  def root: File
+  def root: File = new File(System.getProperty("user.dir"))
 
   protected val stack: InputStack = InputStack()
   protected val errors: mutable.ListBuffer[ParserError] =
@@ -29,14 +31,6 @@ trait ParsingContext {
     case Some(rpi) => rpi
     case None =>
       throw new RuntimeException("Parse Input Stack Underflow")
-  }
-
-  def error(loc: Location, msg: String): Unit = {
-    val error = ParserError(current, loc, msg)
-    errors.append(error)
-    if (throwOnError) {
-      throw error
-    }
   }
 
   def location[_: P]: P[Location] = {
@@ -53,14 +47,38 @@ trait ParsingContext {
       stack.push(file)
       val fp = FileParser(file)
       val result = fp.expect[T](rule) match {
-        case Left(string) =>
-          error(str.loc, string)
+        case Left(errors) =>
+          error(str.loc, s"Parse of '$name' failed")
           empty
         case Right(result) =>
           result
       }
       stack.pop()
       result
+    }
+  }
+
+  def error(loc: Location, msg: String): Unit = {
+    val lines = current.annotateErrorLine(loc)
+    val error = ParserError(current, loc, msg)
+    errors.append(error)
+  }
+
+  def expect[T](parser: P[_] => P[T]): Either[Seq[ParserError], T] = {
+    fastparse.parse(current, parser(_)) match {
+      case Success(content, _) =>
+        if (errors.nonEmpty) {
+          Left(errors)
+        } else {
+          Right(content)
+        }
+      case failure @ Failure(_, index, _) =>
+        val trace = failure.trace()
+        val msg =
+          s"""Parse failed:
+             |${trace.longAggregateMsg}""".stripMargin
+        error(current.location(index), msg)
+        Left(errors)
     }
   }
 }

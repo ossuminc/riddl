@@ -21,17 +21,47 @@ case class RiddlParserInput(data: String, origin: String) extends ParserInput {
 
   private[this] lazy val lineNumberLookup = Util.lineNumberLookup(data)
 
-  def location(index: Int): Location = {
-    val line = lineNumberLookup.indexWhere(_ > index) match {
-      case -1 => lineNumberLookup.length - 1
+  private def lineOf(index: Int): Int = {
+    lineNumberLookup.indexWhere(_ > index) match {
+      case -1 => 0
       case n  => math.max(0, n - 1)
     }
+  }
+
+  def rangeOf(index: Int): (Int, Int) = {
+    val line = lineOf(index)
+    val start = lineNumberLookup(line)
+    val end = lineNumberLookup(line + 1)
+    start -> end
+  }
+
+  def rangeOf(loc: Location): (Int, Int) = {
+    require(loc.line > 0)
+    val start = lineNumberLookup(loc.line - 1)
+    val end = if (lineNumberLookup.length == 1) {
+      data.length
+    } else {
+      lineNumberLookup(loc.line)
+    }
+    start -> end
+  }
+
+  def location(index: Int): Location = {
+    val line = lineOf(index)
     val col = index - lineNumberLookup(line)
     Location(line + 1, col + 1)
   }
 
   def prettyIndex(index: Int): String = {
     location(index).toString
+  }
+
+  val nl: String = System.getProperty("line.separator")
+
+  def annotateErrorLine(index: Location): String = {
+    val (start, end) = rangeOf(index)
+    val col = start + index.col - 1
+    slice(start, end) + nl + " ".repeat(col) + "^" + nl
   }
 }
 

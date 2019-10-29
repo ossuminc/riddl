@@ -196,7 +196,9 @@ class TypeParserTest extends ParsingTest {
           |}
           |""".stripMargin
       parseDomainDefinition[Type](input, _.types.last) match {
-        case Left(msg) => fail(msg)
+        case Left(errors) =>
+          val msg = errors.map(_.toString).mkString
+          fail(msg)
         case Right(typeDef) =>
           info(typeDef.toString)
           typeDef mustEqual Type(

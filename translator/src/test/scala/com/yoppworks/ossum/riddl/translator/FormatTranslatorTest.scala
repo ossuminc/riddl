@@ -29,8 +29,9 @@ class FormatTranslatorTest extends ParsingTest {
       .mkString("\n")
     source.close()
     parseTopLevelDomains(input) match {
-      case Left(message) =>
-        fail(message)
+      case Left(errors) =>
+        val msg = errors.map(_.toString).mkString
+        fail(msg)
       case Right(roots) =>
         val output = FormatTranslator.translateToString(roots)
         parseTopLevelDomains(output) match {
