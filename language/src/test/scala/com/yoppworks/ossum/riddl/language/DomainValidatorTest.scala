@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.DomainDef
+import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Identifier
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 
@@ -12,8 +12,8 @@ class DomainValidatorTest extends ValidatingTest {
       val errors = Validation.validate(
         RootContainer(
           Seq(
-            DomainDef((0, 0), Identifier((0, 0), "foo")),
-            DomainDef((1, 1), Identifier((1, 1), "foo"))
+            Domain((0, 0), Identifier((0, 0), "foo")),
+            Domain((1, 1), Identifier((1, 1), "foo"))
           )
         ),
         Seq.empty[Validation.ValidationOptions]

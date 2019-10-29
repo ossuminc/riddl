@@ -22,7 +22,7 @@ trait InteractionParser extends CommonParser {
     }
   }
 
-  def role[_: P]: P[RoleDef] = {
+  def role[_: P]: P[Role] = {
     P(
       location ~ Keywords.role ~/ identifier ~ open ~
         roleOptions ~
@@ -30,7 +30,7 @@ trait InteractionParser extends CommonParser {
         Keywords.requires ~ lines ~
         close ~ addendum
     ).map { tpl =>
-      (RoleDef.apply _).tupled(tpl)
+      (Role.apply _).tupled(tpl)
     }
   }
 
@@ -60,25 +60,25 @@ trait InteractionParser extends CommonParser {
     P(Keywords.causing ~ reactions).?.map(_.getOrElse(Seq.empty[Reaction]))
   }
 
-  def messageActionDef[_: P]: P[MessageActionDef] = {
+  def messageActionDef[_: P]: P[MessageAction] = {
     P(
       location ~
         "message" ~/ identifier ~ messageOptions ~ "from" ~/ entityRef ~ "to" ~/
         entityRef ~
         "as" ~ messageRef ~ causing ~ addendum
     ).map { tpl =>
-      (MessageActionDef.apply _).tupled(tpl)
+      (MessageAction.apply _).tupled(tpl)
     }
   }
 
-  def directiveActionDef[_: P]: P[DirectiveActionDef] = {
+  def directiveActionDef[_: P]: P[DirectiveAction] = {
     P(
       location ~
         "directive" ~/ identifier ~ messageOptions ~ "from" ~ roleRef ~ "to" ~
         entityRef ~
         "as" ~ messageRef ~ causing ~ addendum
     ).map { tpl =>
-      (DirectiveActionDef.apply _).tupled(tpl)
+      (DirectiveAction.apply _).tupled(tpl)
     }
   }
 
@@ -88,7 +88,7 @@ trait InteractionParser extends CommonParser {
     ).rep(1)
   }
 
-  def interactionDef[_: P]: P[InteractionDef] = {
+  def interactionDef[_: P]: P[Interaction] = {
     P(
       location ~ Keywords.interaction ~/ identifier ~ is ~
         open ~
@@ -96,7 +96,7 @@ trait InteractionParser extends CommonParser {
         close ~
         addendum
     ).map { tpl =>
-      (InteractionDef.apply _).tupled(tpl)
+      (Interaction.apply _).tupled(tpl)
     }
   }
 }

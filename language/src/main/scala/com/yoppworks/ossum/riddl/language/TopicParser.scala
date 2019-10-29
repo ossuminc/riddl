@@ -9,13 +9,13 @@ import Terminals.Readability
 /** Unit Tests For ChannelParser */
 trait TopicParser extends CommonParser with TypeParser {
 
-  def commandDef[_: P]: P[CommandDef] = {
+  def commandDef[_: P]: P[Command] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~
         Readability.yields ~
         eventRefsForCommandDefs ~ addendum
     ).map(
-      tpl => (CommandDef.apply _).tupled(tpl)
+      tpl => (Command.apply _).tupled(tpl)
     )
 
   }
@@ -33,35 +33,35 @@ trait TopicParser extends CommonParser with TypeParser {
     )
   }
 
-  def eventDef[_: P]: P[EventDef] = {
+  def eventDef[_: P]: P[Event] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~ addendum
     ).map(
-      tpl => (EventDef.apply _).tupled(tpl)
+      tpl => (Event.apply _).tupled(tpl)
     )
 
   }
 
-  def queryDef[_: P]: P[QueryDef] = {
+  def queryDef[_: P]: P[Query] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~
         Readability.yields ~ resultRef ~ addendum
     ).map(
-      tpl => (QueryDef.apply _).tupled(tpl)
+      tpl => (Query.apply _).tupled(tpl)
     )
 
   }
 
-  def resultDef[_: P]: P[ResultDef] = {
+  def resultDef[_: P]: P[Result] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~ addendum
     ).map(
-      tpl => (ResultDef.apply _).tupled(tpl)
+      tpl => (Result.apply _).tupled(tpl)
     )
   }
 
   type TopicDefinitions =
-    (Seq[CommandDef], Seq[EventDef], Seq[QueryDef], Seq[ResultDef])
+    (Seq[Command], Seq[Event], Seq[Query], Seq[Result])
 
   def topicDefinitions[_: P]: P[TopicDefinitions] = {
     P(
@@ -76,15 +76,15 @@ trait TopicParser extends CommonParser with TypeParser {
     ).rep(0).map { seq =>
       val groups = seq.flatten.groupBy(_.getClass)
       (
-        mapTo[CommandDef](groups.get(classOf[CommandDef])),
-        mapTo[EventDef](groups.get(classOf[EventDef])),
-        mapTo[QueryDef](groups.get(classOf[QueryDef])),
-        mapTo[ResultDef](groups.get(classOf[ResultDef]))
+        mapTo[Command](groups.get(classOf[Command])),
+        mapTo[Event](groups.get(classOf[Event])),
+        mapTo[Query](groups.get(classOf[Query])),
+        mapTo[Result](groups.get(classOf[Result]))
       )
     }
   }
 
-  def topicDef[_: P]: P[TopicDef] = {
+  def topicDef[_: P]: P[Topic] = {
     P(
       location ~ Keywords.topic ~/ identifier ~ is ~
         open ~/
@@ -92,7 +92,7 @@ trait TopicParser extends CommonParser with TypeParser {
         close ~/ addendum
     ).map {
       case (loc, id, (commands, events, queries, results), addendum) =>
-        TopicDef(loc, id, commands, events, queries, results, addendum)
+        Topic(loc, id, commands, events, queries, results, addendum)
     }
   }
 

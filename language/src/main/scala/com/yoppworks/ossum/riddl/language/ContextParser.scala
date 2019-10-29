@@ -24,31 +24,27 @@ trait ContextParser
     }
   }
 
-  type ContextDefinitions = (
-    Seq[TypeDef],
-    Seq[EntityDef],
-    Seq[AdaptorDef],
-    Seq[InteractionDef]
-  )
-
-  def contextDefinitions[_: P]: P[ContextDefinitions] = {
+  def contextInclude[_: P]: P[Seq[ContextDefinition]] = {
     P(
-      typeDef |
-        entityDef |
-        adaptorDef |
-        interactionDef
-    ).rep(0).map { seq =>
-      val groups = seq.groupBy(_.getClass)
-      (
-        mapTo[TypeDef](groups.get(classOf[TypeDef])),
-        mapTo[EntityDef](groups.get(classOf[EntityDef])),
-        mapTo[AdaptorDef](groups.get(classOf[AdaptorDef])),
-        mapTo[InteractionDef](groups.get(classOf[InteractionDef]))
-      )
+      Keywords.include ~/ literalString
+    ).map { str =>
+      doInclude(str, Seq.empty[ContextDefinition])(contextDefinitions(_))
     }
   }
 
-  def contextDef[_: P]: P[ContextDef] = {
+  def contextDefinitions[_: P]: P[Seq[ContextDefinition]] = {
+    P(
+      typeDef.map(Seq(_)) |
+        entityDef.map(Seq(_)) |
+        adaptorDef.map(Seq(_)) |
+        interactionDef.map(Seq(_)) |
+        contextInclude
+    ).rep(0).map { seq =>
+      seq.flatten
+    }
+  }
+
+  def contextDef[_: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ is ~
         open ~
@@ -59,10 +55,16 @@ trait ContextParser
           loc,
           id,
           options,
-          (types, entities, adaptors, interactions),
+          definitions,
           addendum
           ) =>
-        ContextDef(
+        val groups = definitions.groupBy(_.getClass)
+        val types = mapTo[Type](groups.get(classOf[Type]))
+        val entities = mapTo[Entity](groups.get(classOf[Entity]))
+        val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
+        val interactions =
+          mapTo[Interaction](groups.get(classOf[Interaction]))
+        Context(
           loc,
           id,
           options,

@@ -7,19 +7,7 @@ import com.yoppworks.ossum.riddl.language.AST.Location
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 
 /** Parser rules that should not collect white space */
-trait NoWhiteSpaceParsers {
-
-  def input: RiddlParserInput
-
-  def error(loc: Location, msg: String): Unit = {
-    throw new Exception(
-      s"Parse error at $loc: $msg"
-    )
-  }
-
-  def location[_: P]: P[Location] = {
-    P(Index).map(input.location)
-  }
+trait NoWhiteSpaceParsers extends ParsingContext {
 
   final val specialLineChars: String =
     "~`!@#$%^&*()_-+=[]\"':;<>,.?/"

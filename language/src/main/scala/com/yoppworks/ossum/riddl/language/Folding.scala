@@ -16,10 +16,10 @@ object Folding {
     var result = state
     root match {
       case root: RootContainer =>
-        root.containers.foldLeft(result) { (next, container) =>
+        root.contents.foldLeft(result) { (next, container) =>
           foldEachDefinition[S](root, container, next)(f)
         }
-      case domain: DomainDef =>
+      case domain: Domain =>
         result = f(parent, domain, result)
         result = domain.types.foldLeft(result) { (next, ty) =>
           f(domain, ty, next)
@@ -33,7 +33,7 @@ object Folding {
         domain.interactions.foldLeft(result) { (next, interaction) =>
           foldEachDefinition[S](domain, interaction, next)(f)
         }
-      case context: ContextDef =>
+      case context: Context =>
         result = f(parent, context, result)
         result = context.types.foldLeft(result) { (next, ty) =>
           f(context, ty, next)
@@ -47,7 +47,7 @@ object Folding {
         context.interactions.foldLeft(result) { (next, interaction) =>
           foldEachDefinition[S](context, interaction, next)(f)
         }
-      case entity: EntityDef =>
+      case entity: Entity =>
         result = f(parent, entity, result)
         result = entity.functions.foldLeft(result) { (next, function) =>
           f(entity, function, next)
@@ -58,7 +58,7 @@ object Folding {
         entity.features.foldLeft(result) { (next, feature) =>
           foldEachDefinition[S](entity, feature, next)(f)
         }
-      case interaction: InteractionDef =>
+      case interaction: Interaction =>
         result = f(parent, interaction, result)
         interaction.actions.foldLeft(result) { (next, action) =>
           f(interaction, action, next)
@@ -66,15 +66,15 @@ object Folding {
         interaction.roles.foldLeft(result) { (next, role) =>
           f(interaction, role, next)
         }
-      case feature: FeatureDef =>
+      case feature: Feature =>
         result = f(parent, feature, result)
         feature.examples.foldLeft(result) { (next, example) =>
           f(feature, example, next)
         }
-      case adaptor: AdaptorDef =>
+      case adaptor: Adaptor =>
         f(parent, adaptor, result)
 
-      case topic: TopicDef =>
+      case topic: Topic =>
         result = f(parent, topic, result)
         result = topic.commands.foldLeft(result) { (next, command) =>
           f(topic, command, next)
@@ -98,7 +98,7 @@ object Folding {
       root: RootContainer,
       state: S
     ): S = {
-      root.containers.foldLeft(state) {
+      root.contents.foldLeft(state) {
         case (s, content) =>
           foldLeft(root, content, s)
       }
@@ -112,7 +112,7 @@ object Folding {
       container match {
         case root: RootContainer =>
           foldLeft(root, initState)
-        case domain: DomainDef =>
+        case domain: Domain =>
           openDomain(initState, parent, domain)
             .step { state =>
               domain.types.foldLeft(state) { (next, ty) =>
@@ -138,7 +138,7 @@ object Folding {
               closeDomain(state, parent, domain)
             }
 
-        case context: ContextDef =>
+        case context: Context =>
           openContext(initState, parent, context)
             .step { state =>
               context.types.foldLeft(state) { (next, ty) =>
@@ -158,7 +158,7 @@ object Folding {
             .step { state =>
               closeContext(state, parent, context)
             }
-        case entity: EntityDef =>
+        case entity: Entity =>
           openEntity(initState, parent, entity)
             .step { state =>
               entity.features.foldLeft(state) { (next, feature) =>
@@ -178,7 +178,7 @@ object Folding {
             .step { state =>
               closeEntity(state, parent, entity)
             }
-        case interaction: InteractionDef =>
+        case interaction: Interaction =>
           openInteraction(initState, parent, interaction)
             .step { state =>
               interaction.actions.foldLeft(state) { (next, action) =>
@@ -193,17 +193,17 @@ object Folding {
             .step { state =>
               closeInteraction(state, parent, interaction)
             }
-        case feature: FeatureDef =>
+        case feature: Feature =>
           openFeature(initState, parent, feature).step { state =>
             feature.examples.foldLeft(state) { (next, example) =>
               doExample(next, feature, example)
             }
           }
-        case adaptor: AdaptorDef =>
+        case adaptor: Adaptor =>
           openAdaptor(initState, parent, adaptor).step { state =>
             closeAdaptor(state, parent, adaptor)
           }
-        case topic: TopicDef =>
+        case topic: Topic =>
           openTopic(initState, parent, topic)
             .step { state =>
               topic.commands.foldLeft(state) { (next, command) =>
@@ -234,115 +234,115 @@ object Folding {
     def openDomain(
       state: S,
       container: Container,
-      domain: DomainDef
+      domain: Domain
     ): S = { state }
 
     def closeDomain(
       state: S,
       container: Container,
-      domain: DomainDef
+      domain: Domain
     ): S = { state }
 
     def openContext(
       state: S,
       container: Container,
-      context: ContextDef
+      context: Context
     ): S = { state }
 
     def closeContext(
       state: S,
       container: Container,
-      context: ContextDef
+      context: Context
     ): S = { state }
 
     def openEntity(
       state: S,
       container: Container,
-      entity: EntityDef
+      entity: Entity
     ): S = { state }
 
     def closeEntity(
       state: S,
       container: Container,
-      entity: EntityDef
+      entity: Entity
     ): S = { state }
 
     def openTopic(
       state: S,
       container: Container,
-      channel: TopicDef
+      channel: Topic
     ): S = { state }
 
     def closeTopic(
       state: S,
       container: Container,
-      channel: TopicDef
+      channel: Topic
     ): S = { state }
 
     def openInteraction(
       state: S,
       container: Container,
-      interaction: InteractionDef
+      interaction: Interaction
     ): S = { state }
 
     def closeInteraction(
       state: S,
       container: Container,
-      interaction: InteractionDef
+      interaction: Interaction
     ): S = { state }
 
     def openFeature(
       state: S,
       container: Container,
-      feature: FeatureDef
+      feature: Feature
     ): S = { state }
 
     def closeFeature(
       state: S,
       container: Container,
-      feature: FeatureDef
+      feature: Feature
     ): S = { state }
 
     def openAdaptor(
       state: S,
       container: Container,
-      adaptor: AdaptorDef
+      adaptor: Adaptor
     ): S = { state }
 
     def closeAdaptor(
       state: S,
       container: Container,
-      adaptor: AdaptorDef
+      adaptor: Adaptor
     ): S = { state }
 
     def doType(
       state: S,
       container: Container,
-      typ: TypeDef
+      typ: Type
     ): S = { state }
 
     def doCommand(
       state: S,
       container: Container,
-      command: CommandDef
+      command: Command
     ): S = { state }
 
     def doEvent(
       state: S,
       container: Container,
-      event: EventDef
+      event: Event
     ): S = { state }
 
     def doQuery(
       state: S,
       container: Container,
-      query: QueryDef
+      query: Query
     ): S = { state }
 
     def doResult(
       state: S,
       container: Container,
-      rslt: ResultDef
+      rslt: Result
     ): S = { state }
 
     def doAction(
@@ -354,25 +354,25 @@ object Folding {
     def doExample(
       state: S,
       container: Container,
-      example: ExampleDef
+      example: Example
     ): S = { state }
 
     def doFunction(
       state: S,
       container: Container,
-      function: FunctionDef
+      function: Function
     ): S = { state }
 
     def doInvariant(
       state: S,
       container: Container,
-      invariant: InvariantDef
+      invariant: Invariant
     ): S = { state }
 
     def doRole(
       state: S,
       container: Container,
-      role: RoleDef
+      role: Role
     ): S = { state }
 
     def doPredefinedType(

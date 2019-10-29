@@ -175,7 +175,7 @@ object FormatTranslator extends Translator {
     override def openDomain(
       state: FormatState,
       container: Container,
-      domain: DomainDef
+      domain: Domain
     ): FormatState = {
       domain.subdomain
         .foldLeft(
@@ -190,13 +190,13 @@ object FormatTranslator extends Translator {
     override def closeDomain(
       state: FormatState,
       container: Container,
-      domain: DomainDef
+      domain: Domain
     ): FormatState = { state.close(domain) }
 
     override def openContext(
       state: FormatState,
       container: Container,
-      context: ContextDef
+      context: Context
     ): FormatState = {
       state.addLine(s"${state.spc}context ${context.id.value} {\n")
     }
@@ -204,13 +204,13 @@ object FormatTranslator extends Translator {
     override def closeContext(
       state: FormatState,
       container: Container,
-      context: ContextDef
+      context: Context
     ): FormatState = { state.close(context) }
 
     override def openEntity(
       state: FormatState,
       container: Container,
-      entity: EntityDef
+      entity: Entity
     ): FormatState = {
       state
         .addLine(
@@ -247,7 +247,7 @@ object FormatTranslator extends Translator {
     override def closeEntity(
       state: FormatState,
       container: Container,
-      entity: EntityDef
+      entity: Entity
     ): FormatState = {
       state.close(entity)
     }
@@ -255,7 +255,7 @@ object FormatTranslator extends Translator {
     override def openFeature(
       state: FormatState,
       container: Container,
-      feature: FeatureDef
+      feature: Feature
     ): FormatState = {
       state
         .addLine(s"${state.spc}feature ${feature.id.value} {\n")
@@ -272,13 +272,13 @@ object FormatTranslator extends Translator {
     override def closeFeature(
       state: FormatState,
       container: Container,
-      feature: FeatureDef
+      feature: Feature
     ): FormatState = { state.close(feature) }
 
     override def openAdaptor(
       state: FormatState,
       container: Container,
-      adaptor: AdaptorDef
+      adaptor: Adaptor
     ): FormatState = {
       state.addLine(s"${state.spc}adaptor ${adaptor.id.value} {\n")
     }
@@ -286,13 +286,13 @@ object FormatTranslator extends Translator {
     override def closeAdaptor(
       state: FormatState,
       container: Container,
-      adaptor: AdaptorDef
+      adaptor: Adaptor
     ): FormatState = { state.close(adaptor) }
 
     override def openTopic(
       state: FormatState,
       container: Container,
-      topic: TopicDef
+      topic: Topic
     ): FormatState = {
       state.addLine(s"${state.spc} topic ${topic.id.value} is {\n")
     }
@@ -300,13 +300,13 @@ object FormatTranslator extends Translator {
     override def closeTopic(
       state: FormatState,
       container: Container,
-      topic: TopicDef
+      topic: Topic
     ): FormatState = { state.close(topic) }
 
     override def openInteraction(
       state: FormatState,
       container: Container,
-      interaction: InteractionDef
+      interaction: Interaction
     ): FormatState = {
       state.addLine(s"${state.spc}interaction ${interaction.id.value} {\n")
 
@@ -315,13 +315,13 @@ object FormatTranslator extends Translator {
     override def closeInteraction(
       state: FormatState,
       container: Container,
-      interaction: InteractionDef
+      interaction: Interaction
     ): FormatState = { state.close(interaction) }
 
     override def doCommand(
       st: FormatState,
       container: Container,
-      command: CommandDef
+      command: Command
     ): FormatState = {
       val keyword = if (command.events.size > 1) "events" else "event"
       st.addLine(
@@ -336,7 +336,7 @@ object FormatTranslator extends Translator {
     override def doEvent(
       state: FormatState,
       container: Container,
-      event: EventDef
+      event: Event
     ): FormatState = {
       state.addLine(
         s"${state.spc}  event ${event.id.value} is ${state.visitTypeExpr(event.typ)}\n"
@@ -346,7 +346,7 @@ object FormatTranslator extends Translator {
     override def doQuery(
       state: FormatState,
       container: Container,
-      query: QueryDef
+      query: Query
     ): FormatState = {
       state
         .addLine(
@@ -360,7 +360,7 @@ object FormatTranslator extends Translator {
     override def doResult(
       state: FormatState,
       container: Container,
-      result: ResultDef
+      result: Result
     ): FormatState = {
       state.addLine(
         s"${state.spc}  result ${result.id.value} is ${state.visitTypeExpr(result.typ)}\n"
@@ -370,7 +370,7 @@ object FormatTranslator extends Translator {
     override def doType(
       state: FormatState,
       container: Container,
-      typeDef: TypeDef
+      typeDef: Type
     ): FormatState = {
       state
         .addLine(s"${state.spc}type ${typeDef.id.value} is ")
@@ -389,25 +389,25 @@ object FormatTranslator extends Translator {
     override def doExample(
       state: FormatState,
       container: Container,
-      example: ExampleDef
+      example: Example
     ): FormatState = { state }
 
     override def doFunction(
       state: FormatState,
       container: Container,
-      function: FunctionDef
+      function: Function
     ): FormatState = { state }
 
     override def doInvariant(
       state: FormatState,
       container: Container,
-      invariant: InvariantDef
+      invariant: Invariant
     ): FormatState = { state }
 
     override def doRole(
       state: FormatState,
       container: Container,
-      role: RoleDef
+      role: Role
     ): FormatState = {
       state
     }

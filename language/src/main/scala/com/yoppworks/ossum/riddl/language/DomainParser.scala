@@ -8,7 +8,8 @@ import Terminals.Readability
 
 /** Parsing rules for domains. */
 trait DomainParser
-    extends TopicParser
+    extends CommonParser
+    with TopicParser
     with ContextParser
     with InteractionParser
     with TypeParser {
@@ -17,32 +18,25 @@ trait DomainParser
     P(typeDef | topicDef | interactionDef | contextDef)
   }
 
-  type DomainDefinitions = (
-    Seq[TypeDef],
-    Seq[TopicDef],
-    Seq[ContextDef],
-    Seq[InteractionDef]
-  )
-
-  def domainContent[_: P]: P[DomainDefinitions] = {
+  def domainInclude[_: P]: P[Seq[DomainDefinition]] = {
     P(
-      typeDef |
-        topicDef |
-        interactionDef |
-        contextDef
-    ).rep(0).map { seq =>
-      val groups = seq.groupBy(_.getClass)
-      val result = (
-        mapTo[TypeDef](groups.get(classOf[TypeDef])),
-        mapTo[TopicDef](groups.get(classOf[TopicDef])),
-        mapTo[ContextDef](groups.get(classOf[ContextDef])),
-        mapTo[InteractionDef](groups.get(classOf[InteractionDef]))
-      )
-      result
+      Keywords.include ~/ literalString
+    ).map { str =>
+      doInclude(str, Seq.empty[DomainDefinition])(domainContent(_))
     }
   }
 
-  def domainDef[_: P]: P[DomainDef] = {
+  def domainContent[_: P]: P[Seq[DomainDefinition]] = {
+    P(
+      typeDef.map(Seq(_)) |
+        topicDef.map(Seq(_)) |
+        interactionDef.map(Seq(_)) |
+        contextDef.map(Seq(_)) |
+        domainInclude
+    ).rep(0).map(_.flatten)
+  }
+
+  def domainDef[_: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~
         (Readability.as ~ Keywords.subdomain ~ Readability.of ~/ identifier).? ~
@@ -51,27 +45,28 @@ trait DomainParser
         domainContent ~
         close ~ addendum
     ).map {
-      case (
+      case (loc, id, subdomain, defs, addendum) =>
+        val groups = defs.groupBy(_.getClass)
+        val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
+        val topics = mapTo[Topic](groups.get(classOf[Topic]))
+        val contexts = mapTo[Context](groups.get(classOf[Context]))
+        val interactions =
+          mapTo[Interaction](groups.get(classOf[Interaction]))
+        Domain(
           loc,
           id,
           subdomain,
-          defs,
-          addendum
-          ) =>
-        DomainDef(
-          loc,
-          id,
-          subdomain,
-          defs._1,
-          defs._2,
-          defs._3,
-          defs._4,
+          types,
+          topics,
+          contexts,
+          interactions,
           addendum
         )
     }
   }
 
-  def root[_: P]: P[RootContainer] = {
+  def fileRoot[_: P]: P[RootContainer] = {
     P(Start ~ P(domainDef).rep(0) ~ End).map(RootContainer(_))
   }
+
 }

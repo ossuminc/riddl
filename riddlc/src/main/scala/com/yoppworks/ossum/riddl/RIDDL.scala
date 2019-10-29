@@ -85,7 +85,7 @@ object RIDDL {
             None
           case Right(root) =>
             val msgs = timer("validate", options.showTimes) {
-              root.containers.foldLeft(Validation.NoValidationMessages) {
+              root.contents.foldLeft(Validation.NoValidationMessages) {
                 case (prior, container) =>
                   prior ++ Validation.validate(
                     container,

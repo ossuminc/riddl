@@ -186,7 +186,7 @@ object Validation {
         case UniqueId(loc, entityName) =>
           this
             .checkIdentifier(entityName)
-            .checkRef[EntityDef](entityName, definition)
+            .checkRef[Entity](entityName, definition)
         case _: AST.PredefinedType =>
           this
         case AST.TypeRef(_, id: Identifier) =>
@@ -255,7 +255,7 @@ object Validation {
               loc
             )
         case ReferenceType(_, entity: EntityRef) =>
-          this.checkRef[EntityDef](entity, definition)
+          this.checkRef[Entity](entity, definition)
       }
     }
 
@@ -439,20 +439,20 @@ object Validation {
     override def openDomain(
       state: ValidationState,
       container: Container,
-      domain: DomainDef
+      domain: Domain
     ): ValidationState = {
       domain.subdomain.foldLeft(
         state.checkDefinition(container, domain)
       ) {
         case (st, id) =>
-          st.checkRef[DomainDef](id, state.parentOf(domain))
+          st.checkRef[Domain](id, state.parentOf(domain))
       }
     }
 
     override def closeDomain(
       state: ValidationState,
       container: Container,
-      domain: DomainDef
+      domain: Domain
     ): ValidationState = {
       state
     }
@@ -460,7 +460,7 @@ object Validation {
     override def openContext(
       state: Validation.ValidationState,
       container: Container,
-      context: AST.ContextDef
+      context: AST.Context
     ): ValidationState = {
       val result =
         state
@@ -482,7 +482,7 @@ object Validation {
     override def closeContext(
       state: Validation.ValidationState,
       container: Container,
-      context: AST.ContextDef
+      context: AST.Context
     ): ValidationState = {
       state
     }
@@ -490,7 +490,7 @@ object Validation {
     override def openEntity(
       state: Validation.ValidationState,
       container: Container,
-      entity: AST.EntityDef
+      entity: AST.Entity
     ): ValidationState = {
       val result1 = state
         .checkDefinition(container, entity)
@@ -500,9 +500,9 @@ object Validation {
         entity.produces.foldLeft(result1) { (s, chan) =>
           val persistentClass = EntityPersistent((0, 0)).getClass
           val lookupResult = s
-            .checkRef[TopicDef](chan, entity)
+            .checkRef[Topic](chan, entity)
             .symbolTable
-            .lookup[TopicDef](chan, entity)
+            .lookup[Topic](chan, entity)
           lookupResult match {
             case chan :: Nil =>
               s.check(
@@ -519,7 +519,7 @@ object Validation {
           }
         }
       var result = entity.consumes.foldLeft(result2) { (s, chan) =>
-        s.checkRef[TopicDef](chan, entity)
+        s.checkRef[Topic](chan, entity)
       }
 
       // TODO: invariant?
@@ -544,7 +544,7 @@ object Validation {
     override def closeEntity(
       state: Validation.ValidationState,
       container: Container,
-      entity: AST.EntityDef
+      entity: AST.Entity
     ): ValidationState = {
       state
     }
@@ -552,7 +552,7 @@ object Validation {
     override def openTopic(
       state: ValidationState,
       container: Container,
-      topic: TopicDef
+      topic: Topic
     ): ValidationState = {
       state
         .checkDefinition(container, topic)
@@ -568,7 +568,7 @@ object Validation {
     override def closeTopic(
       state: ValidationState,
       container: Container,
-      channel: TopicDef
+      channel: Topic
     ): ValidationState = {
       state
     }
@@ -576,7 +576,7 @@ object Validation {
     override def openInteraction(
       state: ValidationState,
       container: Container,
-      interaction: InteractionDef
+      interaction: Interaction
     ): ValidationState = {
       state
         .checkDefinition(container, interaction)
@@ -586,7 +586,7 @@ object Validation {
     override def closeInteraction(
       state: ValidationState,
       container: Container,
-      interaction: InteractionDef
+      interaction: Interaction
     ): ValidationState = {
       state
     }
@@ -594,7 +594,7 @@ object Validation {
     override def openFeature(
       state: ValidationState,
       container: Container,
-      feature: FeatureDef
+      feature: Feature
     ): ValidationState = {
       val state2 = state
         .checkDefinition(container, feature)
@@ -608,7 +608,7 @@ object Validation {
     override def closeFeature(
       state: ValidationState,
       container: Container,
-      feature: FeatureDef
+      feature: Feature
     ): ValidationState = {
       state
     }
@@ -616,21 +616,21 @@ object Validation {
     override def openAdaptor(
       state: ValidationState,
       container: Container,
-      adaptor: AdaptorDef
+      adaptor: Adaptor
     ): ValidationState = {
       val result =
         state
           .checkDefinition(container, adaptor)
-          .checkRef[ContextDef](adaptor.targetContext, adaptor)
+          .checkRef[Context](adaptor.targetContext, adaptor)
       adaptor.targetDomain.foldLeft(result) {
-        case (s, domain) => s.checkRef[DomainDef](domain, adaptor)
+        case (s, domain) => s.checkRef[Domain](domain, adaptor)
       }
     }
 
     override def closeAdaptor(
       state: ValidationState,
       container: Container,
-      adaptor: AdaptorDef
+      adaptor: Adaptor
     ): ValidationState = {
       state
     }
@@ -638,7 +638,7 @@ object Validation {
     override def doCommand(
       state: ValidationState,
       container: Container,
-      command: CommandDef
+      command: Command
     ): ValidationState = {
       val result =
         state
@@ -654,7 +654,7 @@ object Validation {
       } else {
         command.events.foldLeft(result) {
           case (st, eventRef) =>
-            st.checkRef[EventDef](eventRef, container)
+            st.checkRef[Event](eventRef, container)
         }
       }
     }
@@ -662,7 +662,7 @@ object Validation {
     override def doEvent(
       state: ValidationState,
       container: Container,
-      event: EventDef
+      event: Event
     ): ValidationState = {
       state.checkTypeExpression(event.typ, container)
     }
@@ -670,18 +670,18 @@ object Validation {
     override def doQuery(
       state: ValidationState,
       container: Container,
-      query: QueryDef
+      query: Query
     ): ValidationState = {
       state
         .checkDefinition(container, query)
         .checkTypeExpression(query.typ, container)
-        .checkRef[ResultDef](query.result.id, container)
+        .checkRef[Result](query.result.id, container)
     }
 
     override def doResult(
       state: ValidationState,
       container: Container,
-      result: ResultDef
+      result: Result
     ): ValidationState = {
       state.checkTypeExpression(result.typ, container)
     }
@@ -689,7 +689,7 @@ object Validation {
     override def doType(
       state: ValidationState,
       container: Container,
-      typeDef: TypeDef
+      typeDef: Type
     ): ValidationState = {
       state
         .checkDefinition(container, typeDef)
@@ -717,22 +717,22 @@ object Validation {
     ): ValidationState = {
       val newState = state.checkDefinition(container, action)
       action match {
-        case ma: MessageActionDef =>
+        case ma: MessageAction =>
           ma.reactions.foldLeft(
             newState
-              .checkRef[EntityDef](ma.receiver, container)
-              .checkRef[EntityDef](ma.sender, container)
+              .checkRef[Entity](ma.receiver, container)
+              .checkRef[Entity](ma.sender, container)
               .checkRef[MessageDefinition](ma.message, container)
           ) {
             case (s, reaction) =>
               s.checkRef(reaction.entity, container)
           }
-        case da: DirectiveActionDef =>
+        case da: DirectiveAction =>
           da.reactions.foldLeft(
             newState
-              .checkRef[EntityDef](da.entity, container)
+              .checkRef[Entity](da.entity, container)
               .checkRef[MessageDefinition](da.message, container)
-              .checkRef[RoleDef](da.role, container)
+              .checkRef[Role](da.role, container)
           ) {
             case (s, reaction) => s.checkRef(reaction.entity, container)
           }
@@ -742,7 +742,7 @@ object Validation {
     override def doExample(
       state: ValidationState,
       container: Container,
-      example: ExampleDef
+      example: Example
     ): ValidationState = {
       state
         .checkDefinition(container, example)
@@ -755,7 +755,7 @@ object Validation {
     override def doFunction(
       state: ValidationState,
       container: Container,
-      function: FunctionDef
+      function: Function
     ): ValidationState = {
       state
     }
@@ -763,7 +763,7 @@ object Validation {
     override def doInvariant(
       state: ValidationState,
       container: Container,
-      invariant: InvariantDef
+      invariant: Invariant
     ): ValidationState = {
       state.checkDefinition(container, invariant)
     }
@@ -771,7 +771,7 @@ object Validation {
     override def doRole(
       state: ValidationState,
       container: Container,
-      role: RoleDef
+      role: Role
     ): ValidationState = {
       state
         .checkDefinition(container, role)

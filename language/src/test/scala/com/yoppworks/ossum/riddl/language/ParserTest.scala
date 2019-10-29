@@ -8,22 +8,22 @@ class ParserTest extends ParsingTest {
   "Parser" should {
     "allow an empty funky-name domain" in {
       val input = "domain 'foo-fah|roo' { }"
-      parseTopLevelDomain(input, _.containers.head) match {
+      parseTopLevelDomain(input, _.contents.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            DomainDef(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"), None)
+            Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"), None)
       }
     }
     "allow a sub-domain" in {
       val input =
         """domain 'subdomain' as subdomain of 'parent' is { }
           |""".stripMargin
-      parseTopLevelDomain(input, _.containers.head) match {
+      parseTopLevelDomain(input, _.contents.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            DomainDef(
+            Domain(
               1 -> 1,
               Identifier(1 -> 8, "subdomain"),
               Some(Identifier(1 -> 36, "parent"))
@@ -40,30 +40,30 @@ class ParserTest extends ParsingTest {
         case Right(content) =>
           content mustBe
             RootContainer(
-              Seq[DomainDef](
-                DomainDef(1 -> 1, Identifier(1 -> 8, "foo"), None),
-                DomainDef(2 -> 1, Identifier(2 -> 8, "bar"), None)
+              Seq[Domain](
+                Domain(1 -> 1, Identifier(1 -> 8, "foo"), None),
+                Domain(2 -> 1, Identifier(2 -> 8, "bar"), None)
               )
             )
       }
     }
     "allow context definitions in domains" in {
       val input = "domain foo { context bar { } }"
-      parseDomainDefinition[ContextDef](input, _.contexts.head) match {
+      parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ContextDef(1 -> 14, id = Identifier(1 -> 22, "bar"))
+            Context(1 -> 14, id = Identifier(1 -> 22, "bar"))
       }
     }
     "allow options on context definitions" in {
       val input =
         "context bar { options (function wrapper gateway ) }"
-      parseContextDefinition[ContextDef](input, identity) match {
+      parseContextDefinition[Context](input, identity) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ContextDef(
+            Context(
               1 -> 1,
               Identifier(1 -> 9, "bar"),
               Seq(
@@ -82,11 +82,11 @@ class ParserTest extends ParsingTest {
           |    topic bar { commands{} events{} queries{} results{} }
           |}
           |""".stripMargin
-      parseDomainDefinition[TopicDef](input, _.topics.head) match {
+      parseDomainDefinition[Topic](input, _.topics.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            TopicDef(4 -> 5, Identifier(4 -> 11, "bar"))
+            Topic(4 -> 5, Identifier(4 -> 11, "bar"))
       }
     }
     "allow type definitions in contexts" in {
@@ -98,7 +98,7 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            TypeDef(
+            Type(
               2 -> 1,
               Identifier(2 -> 6, "Vikings"),
               Enumeration(
@@ -123,11 +123,11 @@ class ParserTest extends ParsingTest {
           |DoThisThing = SomeType yields event ThingWasDone
           |} } }
           |""".stripMargin
-      parseDomainDefinition[CommandDef](input, _.topics.head.commands.head) match {
+      parseDomainDefinition[Command](input, _.topics.head.commands.head) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            CommandDef(
+            Command(
               2 -> 1,
               Identifier(2 -> 1, "DoThisThing"),
               TypeRef(2 -> 15, Identifier(2 -> 15, "SomeType")),
@@ -144,7 +144,7 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            EventDef(
+            Event(
               2 -> 1,
               Identifier(2 -> 1, "ThingWasDone"),
               TypeRef(2 -> 17, Identifier(2 -> 17, "SomeType"))
@@ -160,7 +160,7 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            QueryDef(
+            Query(
               2 -> 1,
               Identifier(2 -> 1, "FindThisThing"),
               Strng(2 -> 17),
@@ -177,7 +177,7 @@ class ParserTest extends ParsingTest {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            ResultDef(
+            Result(
               2 -> 8,
               Identifier(2 -> 8, "ThisQueryResult"),
               TypeRef(2 -> 26, Identifier(2 -> 26, "SomeType"))
@@ -209,10 +209,10 @@ class ParserTest extends ParsingTest {
           |  }
           |}
           |""".stripMargin
-      parseDefinition[EntityDef](input) match {
+      parseDefinition[Entity](input) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
-          content mustBe EntityDef(
+          content mustBe Entity(
             SoftwareEntityKind(1 -> 1),
             1 -> 1,
             Identifier(1 -> 8, "Hamburger"),
@@ -221,7 +221,7 @@ class ParserTest extends ParsingTest {
             Seq(TopicRef(4 -> 12, Identifier(4 -> 18, "EntityChannel"))),
             Seq(TopicRef(5 -> 12, Identifier(5 -> 18, "EntityChannel"))),
             Seq(
-              FeatureDef(
+              Feature(
                 6 -> 3,
                 Identifier(6 -> 11, "AnAspect"),
                 Seq(
@@ -245,7 +245,7 @@ class ParserTest extends ParsingTest {
                   )
                 ),
                 Seq(
-                  ExampleDef(
+                  Example(
                     13 -> 5,
                     Identifier(13 -> 13, "foo"),
                     LiteralString(14 -> 7, "My Fate"),
@@ -273,11 +273,11 @@ class ParserTest extends ParsingTest {
     "allow adaptor definitions" in {
       val input =
         "adaptor fuzz for domain fuzzy context blogger {}"
-      parseDefinition[AdaptorDef](input) match {
+      parseDefinition[Adaptor](input) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            AdaptorDef(
+            Adaptor(
               1 -> 1,
               Identifier(1 -> 9, "fuzz"),
               Some(DomainRef(1 -> 18, Identifier(1 -> 25, "fuzzy"))),
@@ -306,15 +306,15 @@ class ParserTest extends ParsingTest {
           |    to entity Unicorn as command HandleAThing
           |}
           |""".stripMargin
-      parseDefinition[InteractionDef](input) match {
+      parseDefinition[Interaction](input) match {
         case Left(msg) => fail(msg)
         case Right(content) =>
           content mustBe
-            InteractionDef(
+            Interaction(
               1 -> 1,
               Identifier(1 -> 13, "dosomething"),
               Seq(
-                RoleDef(
+                Role(
                   2 -> 3,
                   Identifier(2 -> 8, "SomeActor"),
                   Seq(HumanOption(3 -> 15)),
@@ -323,7 +323,7 @@ class ParserTest extends ParsingTest {
                 )
               ),
               Seq(
-                DirectiveActionDef(
+                DirectiveAction(
                   11 -> 3,
                   Identifier(11 -> 13, "perform a command"),
                   Seq(AsynchOption(11 -> 43)),
@@ -332,7 +332,7 @@ class ParserTest extends ParsingTest {
                   CommandRef(13 -> 31, Identifier(13 -> 39, "DoAThing")),
                   Seq.empty[Reaction]
                 ),
-                MessageActionDef(
+                MessageAction(
                   15 -> 3,
                   Identifier(15 -> 11, "handle a thing"),
                   Seq(AsynchOption(15 -> 38)),

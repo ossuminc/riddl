@@ -1,11 +1,15 @@
 package com.yoppworks.ossum.riddl.language
 
+import java.io.File
+
 import fastparse._
 import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.AST._
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import Terminals.Keywords
+import Terminals.Punctuation
+import Terminals.Readability
+
+import scala.reflect.runtime.universe._
 
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {

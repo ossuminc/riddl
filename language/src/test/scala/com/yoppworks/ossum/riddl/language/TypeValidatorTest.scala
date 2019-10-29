@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.Validation._
-import com.yoppworks.ossum.riddl.language.AST.DomainDef
-import com.yoppworks.ossum.riddl.language.AST.TypeDef
+import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.Type
 import org.scalatest._
 
 /** Unit Tests For TypeValidationTest */
@@ -10,13 +10,13 @@ class TypeValidatorTest extends ValidatingTest {
 
   "TypeValidator" should {
     "ensure type names start with capital letter" in {
-      parseAndValidate[DomainDef](
+      parseAndValidate[Domain](
         """domain foo {
           |type bar is String
           |}
           |""".stripMargin
       ) {
-        case (_: DomainDef, msgs: Seq[ValidationMessage]) =>
+        case (_: Domain, msgs: Seq[ValidationMessage]) =>
           if (msgs.isEmpty)
             fail("Type 'bar' should have generated warning")
           else if (msgs
@@ -29,7 +29,7 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
     "identify undefined type references" in {
-      parseAndValidate[DomainDef](
+      parseAndValidate[Domain](
         """
           |domain foo {
           |type Rename is Bar
@@ -41,7 +41,7 @@ class TypeValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       ) {
-        case (_: DomainDef, msgsAndWarnings: Seq[ValidationMessage]) =>
+        case (_: Domain, msgsAndWarnings: Seq[ValidationMessage]) =>
           val msgs = msgsAndWarnings.filter(_.kind == Error)
           assert(msgs.size == 8, "Should have 8 errors")
           assert(msgs.forall(_.kind == Error), "Should be an error")

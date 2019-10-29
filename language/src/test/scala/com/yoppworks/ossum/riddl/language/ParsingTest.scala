@@ -11,9 +11,10 @@ import org.scalatest.WordSpec
 
 import scala.reflect._
 
-case class TestParser(input: RiddlParserInput)
-    extends AbstractTopLevelParser
+case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
+    extends TopLevelParser
     with MustMatchers {
+  stack.push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
     parser: P[_] => P[T],
@@ -29,26 +30,26 @@ case class TestParser(input: RiddlParserInput)
 
   protected def parserFor[T <: Definition: ClassTag]: P[_] => P[T] = {
     val parser: P[_] => P[_] = classTag[T].runtimeClass match {
-      case x if x == classOf[AST.TypeDef]        => typeDef(_)
-      case x if x == classOf[AST.DomainDef]      => domainDef(_)
-      case x if x == classOf[AST.ContextDef]     => contextDef(_)
-      case x if x == classOf[AST.InteractionDef] => interactionDef(_)
-      case x if x == classOf[AST.FeatureDef]     => featureDef(_)
-      case x if x == classOf[AST.EntityDef]      => entityDef(_)
-      case x if x == classOf[AST.AdaptorDef]     => adaptorDef(_)
-      case _                                     => domainDef(_)
+      case x if x == classOf[AST.Type]        => typeDef(_)
+      case x if x == classOf[AST.Domain]      => domainDef(_)
+      case x if x == classOf[AST.Context]     => contextDef(_)
+      case x if x == classOf[AST.Interaction] => interactionDef(_)
+      case x if x == classOf[AST.Feature]     => featureDef(_)
+      case x if x == classOf[AST.Entity]      => entityDef(_)
+      case x if x == classOf[AST.Adaptor]     => adaptorDef(_)
+      case _                                  => domainDef(_)
     }
     parser.asInstanceOf[P[_] => P[T]]
   }
 
   def parseTopLevelDomains: Either[String, RootContainer] = {
-    expect(root(_))
+    expect(fileRoot(_))
   }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     extract: RootContainer => TO
   ): Either[String, TO] = {
-    expect[RootContainer](root(_)) match {
+    expect[RootContainer](fileRoot(_)) match {
       case Right(content) =>
         Right(extract(content))
       case Left(msg) =>
@@ -70,15 +71,15 @@ case class TestParser(input: RiddlParserInput)
   }
 
   def parseDomainDefinition[TO <: RiddlNode](
-    extract: DomainDef => TO
+    extract: Domain => TO
   ): Either[String, TO] = {
-    parse[DomainDef, TO](domainDef(_), extract)
+    parse[Domain, TO](domainDef(_), extract)
   }
 
   def parseContextDefinition[TO <: RiddlNode](
-    extract: ContextDef => TO
+    extract: Context => TO
   ): Either[String, TO] = {
-    parse[ContextDef, TO](contextDef(_), extract)
+    parse[Context, TO](contextDef(_), extract)
   }
 }
 
@@ -111,7 +112,7 @@ class ParsingTest extends WordSpec with MustMatchers {
 
   def parseDomainDefinition[TO <: RiddlNode](
     input: RiddlParserInput,
-    extract: DomainDef => TO
+    extract: Domain => TO
   ): Either[String, TO] = {
     val tp = TestParser(input)
     tp.parseDomainDefinition[TO](extract)
@@ -119,7 +120,7 @@ class ParsingTest extends WordSpec with MustMatchers {
 
   def checkDomainDefinitions[TO <: RiddlNode](
     cases: Map[String, TO],
-    extract: DomainDef => TO
+    extract: Domain => TO
   ): Unit = {
     cases foreach {
       case (statement, expected) =>
@@ -136,7 +137,7 @@ class ParsingTest extends WordSpec with MustMatchers {
 
   def parseContextDefinition[TO <: RiddlNode](
     input: RiddlParserInput,
-    extract: ContextDef => TO
+    extract: Context => TO
   ): Either[String, TO] = {
     val tp = TestParser(input)
     tp.parseContextDefinition[TO](extract)
@@ -187,7 +188,7 @@ class ParsingTest extends WordSpec with MustMatchers {
 
   def parseInContext[TO <: RiddlNode](
     input: RiddlParserInput,
-    extract: ContextDef => TO
+    extract: Context => TO
   ): Either[String, TO] = {
     val tp = TestParser(
       RiddlParserInput(s"context foo {\n${input.data}\n}")
@@ -197,7 +198,7 @@ class ParsingTest extends WordSpec with MustMatchers {
 
   def checkContextDefinitions[TO <: RiddlNode](
     cases: Map[String, TO],
-    extract: ContextDef => TO
+    extract: Context => TO
   ): Unit = {
     cases.foreach {
       case (statement: String, expected: TO @unchecked) =>

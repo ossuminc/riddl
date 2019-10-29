@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.DomainDef
-import com.yoppworks.ossum.riddl.language.AST.EntityDef
+import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.Entity
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 
 /** Unit Tests For EntityValidatorTest */
@@ -10,8 +10,8 @@ class EntityValidatorTest extends ValidatingTest {
   "EntityValidator" should {
     "catch missing things" in {
       val input = "entity Hamburger as SomeType is {}"
-      parseAndValidate[EntityDef](input) {
-        case (model: EntityDef, _: Seq[ValidationMessage]) =>
+      parseAndValidate[Entity](input) {
+        case (model: Entity, _: Seq[ValidationMessage]) =>
           val msgs = Validation.validate(model, Validation.defaultOptions)
           msgs.size mustEqual 3
           msgs.exists(_.message.contains("is not defined")) mustBe true
@@ -35,8 +35,8 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[DomainDef](input) {
-        case (_: DomainDef, msgs: Seq[ValidationMessage]) =>
+      parseAndValidate[Domain](input) {
+        case (_: Domain, msgs: Seq[ValidationMessage]) =>
           val errors = msgs.filter(_.kind.isError)
           errors mustNot be(empty)
           errors.exists(

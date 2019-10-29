@@ -70,10 +70,15 @@ object AST {
     def kind: String
     def identify: String = s"$kind '${id.value}'"
   }
+  sealed trait DomainDefinition extends Definition
+  sealed trait ContextDefinition extends Definition
+  sealed trait EntityDefinition extends Definition
 
-  sealed trait Container extends Definition
+  sealed trait Container extends Definition {
+    def contents: Seq[Definition]
+  }
 
-  case class RootContainer(containers: Seq[Container]) extends Container {
+  case class RootContainer(contents: Seq[Container]) extends Container {
     def id: Identifier = Identifier((0, 0), "root")
     def addendum: Option[Addendum] = None
     def kind: String = "RootContainer"
@@ -144,12 +149,14 @@ object AST {
   case class UniqueId(loc: Location, entityName: Identifier)
       extends PredefinedType(loc, "Id")
 
-  case class TypeDef(
+  case class Type(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
     addendum: Option[Addendum] = None
-  ) extends TypeDefinition {
+  ) extends TypeDefinition
+      with ContextDefinition
+      with DomainDefinition {
     def kind: String = "Type"
   }
 
@@ -157,16 +164,19 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends Reference
-  case class TopicDef(
+
+  case class Topic(
     loc: Location,
     id: Identifier,
-    commands: Seq[CommandDef] = Seq.empty[CommandDef],
-    events: Seq[EventDef] = Seq.empty[EventDef],
-    queries: Seq[QueryDef] = Seq.empty[QueryDef],
-    results: Seq[ResultDef] = Seq.empty[ResultDef],
+    commands: Seq[Command] = Seq.empty[Command],
+    events: Seq[Event] = Seq.empty[Event],
+    queries: Seq[Query] = Seq.empty[Query],
+    results: Seq[Result] = Seq.empty[Result],
     addendum: Option[Addendum] = None
-  ) extends Container {
+  ) extends Container
+      with DomainDefinition {
     def kind: String = "Topic"
+    def contents: Seq[Definition] = commands ++ events ++ queries ++ results
   }
 
   sealed trait MessageReference extends Reference
@@ -176,7 +186,7 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends MessageReference
-  case class CommandDef(
+  case class Command(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
@@ -191,7 +201,7 @@ object AST {
     id: Identifier
   ) extends MessageReference
   type EventRefs = Seq[EventRef]
-  case class EventDef(
+  case class Event(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
@@ -204,7 +214,7 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends MessageReference
-  case class QueryDef(
+  case class Query(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
@@ -218,7 +228,7 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends MessageReference
-  case class ResultDef(
+  case class Result(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
@@ -257,7 +267,7 @@ object AST {
   case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given])
       extends FeatureValue
 
-  case class ExampleDef(
+  case class Example(
     loc: Location,
     id: Identifier,
     description: LiteralString,
@@ -273,29 +283,32 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends Reference
-  case class FeatureDef(
+
+  case class Feature(
     loc: Location,
     id: Identifier,
     description: Seq[LiteralString],
     background: Option[Background] = None,
-    examples: Seq[ExampleDef] = Seq.empty[ExampleDef],
+    examples: Seq[Example] = Seq.empty[Example],
     addendum: Option[Addendum] = None
-  ) extends Container {
+  ) extends Container
+      with EntityDefinition {
     def kind: String = "Feature"
+    def contents: Seq[Definition] = examples
   }
 
   case class FunctionRef(
     loc: Location,
     id: Identifier
   ) extends Reference
-  case class FunctionDef(
+  case class Function(
     loc: Location,
     id: Identifier,
     inputs: Seq[TypeExpression] = Seq.empty[TypeRef],
     outputs: Seq[TypeExpression] = Seq.empty[TypeRef],
     description: Seq[LiteralString] = Seq.empty[LiteralString],
     addendum: Option[Addendum] = None
-  ) extends Definition {
+  ) extends EntityDefinition {
     def kind: String = "Function"
   }
 
@@ -303,12 +316,13 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends Reference
-  case class InvariantDef(
+
+  case class Invariant(
     loc: Location,
     id: Identifier,
     expression: Seq[LiteralString],
     addendum: Option[Addendum] = None
-  ) extends Definition {
+  ) extends EntityDefinition {
     def kind: String = "Invariant"
   }
 
@@ -321,7 +335,7 @@ object AST {
     * @param consumes A reference to the topic from which the entity consumes
     * @param produces A reference to the topic to which the entity produces
     */
-  case class EntityDef(
+  case class Entity(
     entityKind: EntityKind,
     loc: Location,
     id: Identifier,
@@ -329,12 +343,16 @@ object AST {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     consumes: Seq[TopicRef] = Seq.empty[TopicRef],
     produces: Seq[TopicRef] = Seq.empty[TopicRef],
-    features: Seq[FeatureDef] = Seq.empty[FeatureDef],
-    functions: Seq[FunctionDef] = Seq.empty[FunctionDef],
-    invariants: Seq[InvariantDef] = Seq.empty[InvariantDef],
+    features: Seq[Feature] = Seq.empty[Feature],
+    functions: Seq[Function] = Seq.empty[Function],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     addendum: Option[Addendum] = None
-  ) extends Container {
+  ) extends Container
+      with ContextDefinition {
     def kind: String = "Entity"
+
+    def contents: Seq[Definition] =
+      features ++ functions ++ invariants
   }
 
   trait TranslationRule extends Definition {
@@ -362,15 +380,17 @@ object AST {
     * @param loc Location in the parsing input
     * @param id Name of the adaptor
     */
-  case class AdaptorDef(
+  case class Adaptor(
     loc: Location,
     id: Identifier,
     targetDomain: Option[DomainRef] = None,
     targetContext: ContextRef,
     addendum: Option[Addendum] = None
     // Details TBD
-  ) extends Container {
+  ) extends Container
+      with ContextDefinition {
     def kind: String = "Adaptor"
+    def contents: Seq[Definition] = Seq.empty[Definition]
   }
 
   sealed trait ContextOption extends RiddlValue
@@ -383,17 +403,21 @@ object AST {
     id: Identifier
   ) extends Reference
 
-  case class ContextDef(
+  case class Context(
     loc: Location,
     id: Identifier,
     options: Seq[ContextOption] = Seq.empty[ContextOption],
-    types: Seq[TypeDef] = Seq.empty[TypeDef],
-    entities: Seq[EntityDef] = Seq.empty[EntityDef],
-    adaptors: Seq[AdaptorDef] = Seq.empty[AdaptorDef],
-    interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
+    types: Seq[Type] = Seq.empty[Type],
+    entities: Seq[Entity] = Seq.empty[Entity],
+    adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
+    interactions: Seq[Interaction] = Seq.empty[Interaction],
     addendum: Option[Addendum] = None
-  ) extends Container {
+  ) extends Container
+      with DomainDefinition {
     def kind: String = "Context"
+
+    def contents: Seq[Definition] =
+      types ++ entities ++ adaptors ++ interactions
   }
 
   /** Definition of an Interaction
@@ -406,21 +430,24 @@ object AST {
     * @param roles The roles defined for the interaction
     * @param actions The actions that constitute the interaction
     */
-  case class InteractionDef(
+  case class Interaction(
     loc: Location,
     id: Identifier,
-    roles: Seq[RoleDef] = Seq.empty[RoleDef],
+    roles: Seq[Role] = Seq.empty[Role],
     actions: Seq[ActionDef] = Seq.empty[ActionDef],
     addendum: Option[Addendum] = None
-  ) extends Container {
+  ) extends Container
+      with DomainDefinition
+      with ContextDefinition {
     def kind: String = "Interaction"
+    def contents: Seq[Definition] = roles ++ actions
   }
 
   sealed trait RoleOption extends RiddlValue
   case class HumanOption(loc: Location) extends RoleOption
   case class DeviceOption(loc: Location) extends RoleOption
 
-  case class RoleDef(
+  case class Role(
     loc: Location,
     id: Identifier,
     options: Seq[RoleOption] = Seq.empty[RoleOption],
@@ -468,7 +495,7 @@ object AST {
     * @param receiver A reference to the entity receiving the message
     * @param message A reference to the kind of message sent & received
     */
-  case class MessageActionDef(
+  case class MessageAction(
     loc: Location,
     id: Identifier,
     options: Seq[MessageOption] = Seq.empty[MessageOption],
@@ -484,7 +511,7 @@ object AST {
   /** A directive from an actor (Role) towards some entity. You can think of
     * this like external input, coming from outside the system.
     */
-  case class DirectiveActionDef(
+  case class DirectiveAction(
     loc: Location,
     id: Identifier,
     options: Seq[MessageOption] = Seq.empty[MessageOption],
@@ -507,16 +534,19 @@ object AST {
     id: Identifier
   ) extends Reference
 
-  case class DomainDef(
+  case class Domain(
     loc: Location,
     id: Identifier,
     subdomain: Option[Identifier] = None,
-    types: Seq[TypeDef] = Seq.empty[TypeDef],
-    topics: Seq[TopicDef] = Seq.empty[TopicDef],
-    contexts: Seq[ContextDef] = Seq.empty[ContextDef],
-    interactions: Seq[InteractionDef] = Seq.empty[InteractionDef],
+    types: Seq[Type] = Seq.empty[Type],
+    topics: Seq[Topic] = Seq.empty[Topic],
+    contexts: Seq[Context] = Seq.empty[Context],
+    interactions: Seq[Interaction] = Seq.empty[Interaction],
     addendum: Option[Addendum] = None
   ) extends Container {
     def kind: String = "Domain"
+
+    def contents: Seq[DomainDefinition] =
+      types ++ topics ++ contexts ++ interactions
   }
 }

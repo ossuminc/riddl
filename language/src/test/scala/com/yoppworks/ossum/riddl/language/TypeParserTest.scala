@@ -9,59 +9,59 @@ class TypeParserTest extends ParsingTest {
 
   "TypeParser" should {
     "allow renames of 8 literal types" in {
-      val cases = Map[String, TypeDef](
-        "type str = String" -> TypeDef(
+      val cases = Map[String, Type](
+        "type str = String" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "str"),
           Strng(1 -> 12)
         ),
-        "type num = Number" -> TypeDef(
+        "type num = Number" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "num"),
           Number(1 -> 12)
         ),
-        "type boo = Boolean" -> TypeDef(
+        "type boo = Boolean" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "boo"),
           Bool(1 -> 12)
         ),
-        "type ident = Id()" -> TypeDef(
+        "type ident = Id()" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "ident"),
           UniqueId(1 -> 14, Identifier(1 -> 14, ""))
         ),
-        "type dat = Date" -> TypeDef(
+        "type dat = Date" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "dat"),
           Date(1 -> 12)
         ),
-        "type tim = Time" -> TypeDef(
+        "type tim = Time" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "tim"),
           Time(1 -> 12)
         ),
-        "type stamp = TimeStamp" -> TypeDef(
+        "type stamp = TimeStamp" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "stamp"),
           TimeStamp(1 -> 14)
         ),
-        "type url = URL" -> TypeDef(
+        "type url = URL" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "url"),
           URL(1 -> 12)
         ),
-        "type FirstName = url" -> TypeDef(
+        "type FirstName = url" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "FirstName"),
           TypeRef(1 -> 18, Identifier(1 -> 18, "url"))
         )
       )
-      checkDefinitions[TypeDef, TypeDef](cases, identity)
+      checkDefinitions[Type, Type](cases, identity)
     }
     "allow enumerators" in {
       val input = "type enum = [ Apple Pear Peach Persimmon ]"
       val expected =
-        TypeDef(
+        Type(
           1 -> 1,
           Identifier(1 -> 6, "enum"),
           Enumeration(
@@ -74,11 +74,11 @@ class TypeParserTest extends ParsingTest {
             )
           )
         )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow alternation" in {
       val input = "type alt = ( enum or stamp or url ) "
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "alt"),
         Alternation(
@@ -90,7 +90,7 @@ class TypeParserTest extends ParsingTest {
           )
         )
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow aggregation" in {
       val input =
@@ -100,7 +100,7 @@ class TypeParserTest extends ParsingTest {
           |  time: TimeStamp
           |}
           |""".stripMargin
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "agg"),
         Aggregation(
@@ -115,11 +115,11 @@ class TypeParserTest extends ParsingTest {
           )
         )
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow mappings between two types" in {
       val input = "type m1 = mapping from String to Number"
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "m1"),
         Mapping(
@@ -128,54 +128,54 @@ class TypeParserTest extends ParsingTest {
           Number(1 -> 34)
         )
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow one or more in word style" in {
       val input = "type oneOrMoreA = many agg"
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreA"),
         OneOrMore(1 -> 24, TypeRef(1 -> 24, Identifier(1 -> 24, "agg")))
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow one or more in simple style" in {
       val input = "type oneOrMoreC = agg..."
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreC"),
         OneOrMore(1 -> 19, TypeRef(1 -> 19, Identifier(1 -> 19, "agg")))
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow one or more in regex style" in {
       val input = "type oneOrMoreB = agg+"
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreB"),
         OneOrMore(1 -> 19, TypeRef(1 -> 19, Identifier(1 -> 19, "agg")))
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow zero or more" in {
       val input = "type zeroOrMore = many optional agg"
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "zeroOrMore"),
         ZeroOrMore(1 -> 33, TypeRef(1 -> 33, Identifier(1 -> 33, "agg")))
       )
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:33),TypeRef((1:33),Identifier((1:33),agg))),None)
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:19),TypeRef((1:33),Identifier((1:33),agg))),None)
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow optionality" in {
       val input = "type optional = optional agg"
-      val expected = TypeDef(
+      val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "optional"),
         Optional(1 -> 26, TypeRef(1 -> 26, Identifier(1 -> 26, "agg")))
       )
-      checkDefinition[TypeDef, TypeDef](input, expected, identity)
+      checkDefinition[Type, Type](input, expected, identity)
     }
     "allow complex nested type definitions" in {
       val input =
@@ -195,11 +195,11 @@ class TypeParserTest extends ParsingTest {
           |  }
           |}
           |""".stripMargin
-      parseDomainDefinition[TypeDef](input, _.types.last) match {
+      parseDomainDefinition[Type](input, _.types.last) match {
         case Left(msg) => fail(msg)
         case Right(typeDef) =>
           info(typeDef.toString)
-          typeDef mustEqual TypeDef(
+          typeDef mustEqual Type(
             9 -> 3,
             Identifier(9 -> 8, "Complex"),
             Aggregation(

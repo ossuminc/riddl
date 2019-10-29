@@ -42,13 +42,13 @@ trait EntityParser
     }
   }
 
-  def invariant[_: P]: P[InvariantDef] = {
+  def invariant[_: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ lines("") ~ addendum
-    ).map(tpl => (InvariantDef.apply _).tupled(tpl))
+    ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
-  def entityDef[_: P]: P[EntityDef] = {
+  def entityDef[_: P]: P[Entity] = {
     P(
       entityKind ~ location ~ Keywords.entity ~/ identifier ~
         Readability.as ~/ typeExpression ~ is ~ open ~/
@@ -61,7 +61,7 @@ trait EntityParser
         close ~/
         addendum
     ).map { tpl =>
-      (EntityDef.apply _).tupled(tpl)
+      (Entity.apply _).tupled(tpl)
     }
   }
 }

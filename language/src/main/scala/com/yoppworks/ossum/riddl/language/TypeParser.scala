@@ -140,11 +140,11 @@ trait TypeParser extends CommonParser {
     )
   }
 
-  def typeDef[_: P]: P[TypeDef] = {
+  def typeDef[_: P]: P[Type] = {
     P(
       location ~ "type" ~/ identifier ~ is ~ typeExpression ~ addendum
     ).map { tpl =>
-      (TypeDef.apply _).tupled(tpl)
+      (Type.apply _).tupled(tpl)
     }
   }
 

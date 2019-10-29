@@ -86,6 +86,7 @@ object Terminals {
     final val feature = "feature"
     final val function = "function"
     final val handles = "handles"
+    final val include = "include"
     final val interaction = "interaction"
     final val invariant = "invariant"
     final val mapping = "mapping"

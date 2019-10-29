@@ -55,14 +55,14 @@ trait FeatureParser extends CommonParser {
     }
   }
 
-  def example[_: P]: P[ExampleDef] = {
+  def example[_: P]: P[Example] = {
     P(
       location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/ literalString ~
         givens ~
         whens ~ thens ~
         close ~ addendum
     ).map { tpl =>
-      (ExampleDef.apply _).tupled(tpl)
+      (Example.apply _).tupled(tpl)
     }
   }
 
@@ -77,7 +77,7 @@ trait FeatureParser extends CommonParser {
     P(IgnoreCase(Keywords.description) ~/ lines)
   }
 
-  def featureDef[_: P]: P[FeatureDef] = {
+  def featureDef[_: P]: P[Feature] = {
     P(
       location ~ IgnoreCase(Keywords.feature) ~/ identifier ~ is ~
         open ~/
@@ -85,7 +85,7 @@ trait FeatureParser extends CommonParser {
         close ~/
         addendum
     ).map { tpl =>
-      (FeatureDef.apply _).tupled(tpl)
+      (Feature.apply _).tupled(tpl)
     }
   }
 }
