@@ -2,21 +2,18 @@
 // RIDDL is about defining domains so ...
 domain Everything {
 
+  type SomeType is String
+
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
   topic AChannel is {
-    commands {
-       DoThisThing is SomeType yields event ThingWasDone
-    }
-    events {
-      ThingWasDone is SomeType
-    }
+    command DoThisThing is SomeType yields event ThingWasDone
+    event ThingWasDone is SomeType
     query FindThisThing is SomeType yields result ThisQueryResult
     result ThisQueryResult is SomeType
   } explained as {
     |# Description
     |This channel is aimed at the same kind of functionality as /dev/null.
-    |It produces nothing and consumes everything
   } see also {
     |/dev/null
   }
@@ -36,10 +33,10 @@ domain Everything {
     type url is URL
 
     // Enumerations have a value chosen from a list of identifiers
-    type enum is [ Apple Pear Peach Persimmon ]
+    type enum is any of { Apple Pear Peach{a: Int} Persimmon }
 
     // Alternations select one type from a list of types
-    type alt is ( enum or stamp or url )
+    type alt is one of { enum or stamp or url }
 
     // Aggregations combine several types and give each a field name identifier
     type agg is {
@@ -60,11 +57,13 @@ domain Everything {
 
     // Entities are the main objects that contexts define. They can be
     // persistent (long lived) or aggregate (they consume commands and queries)
-    entity Something as SomeType is {
+    entity Something is {
       options (aggregate persistent)
-      consumes topic AChannel
+      state is { field:  SomeType }
+      consumer foo for topic AChannel
     }
-    entity SomeOtherThing as SomeType {
+    entity SomeOtherThing {
+      state is { field: SomeType }
     }
   }
 }

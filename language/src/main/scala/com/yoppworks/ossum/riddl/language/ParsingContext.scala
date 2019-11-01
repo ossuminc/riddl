@@ -12,7 +12,8 @@ import scala.collection.mutable
 
 case class ParserError(input: RiddlParserInput, loc: Location, msg: String)
     extends Throwable {
-  override def toString: String = {
+
+  def format: String = {
     val context = input.annotateErrorLine(loc)
     s"${input.origin}$loc: $msg\n$context"
   }
@@ -27,10 +28,12 @@ trait ParsingContext {
   protected val errors: mutable.ListBuffer[ParserError] =
     mutable.ListBuffer.empty[ParserError]
 
-  def current: RiddlParserInput = stack.current() match {
-    case Some(rpi) => rpi
-    case None =>
-      throw new RuntimeException("Parse Input Stack Underflow")
+  def current: RiddlParserInput = {
+    stack.current() match {
+      case Some(rpi) => rpi
+      case None =>
+        throw new RuntimeException("Parse Input Stack Underflow")
+    }
   }
 
   def location[_: P]: P[Location] = {
@@ -45,8 +48,7 @@ trait ParsingContext {
       empty
     } else {
       stack.push(file)
-      val fp = FileParser(file)
-      val result = fp.expect[T](rule) match {
+      val result = this.expect[T](rule) match {
         case Left(errors) =>
           error(str.loc, s"Parse of '$name' failed")
           empty
@@ -59,7 +61,6 @@ trait ParsingContext {
   }
 
   def error(loc: Location, msg: String): Unit = {
-    val lines = current.annotateErrorLine(loc)
     val error = ParserError(current, loc, msg)
     errors.append(error)
   }

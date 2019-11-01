@@ -9,7 +9,7 @@ class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
     "catch missing things" in {
-      val input = "entity Hamburger as SomeType is {}"
+      val input = "entity Hamburger is { state is {field:  SomeType } }"
       parseAndValidate[Entity](input) {
         case (model: Entity, _: Seq[ValidationMessage]) =>
           val msgs = Validation.validate(model, Validation.defaultOptions)
@@ -28,9 +28,10 @@ class EntityValidatorTest extends ValidatingTest {
           |  events { bar is Number } queries {} results {}
           |}
           |context bar {
-          |  entity Hamburger as SomeType is {
+          |  entity Hamburger  is {
           |    options (aggregate persistent)
-          |    consumes topic EntityChannel
+          |    state { field: SomeType }
+          |    consumer foo for topic EntityChannel
           |  }
           |}
           |}
@@ -39,11 +40,7 @@ class EntityValidatorTest extends ValidatingTest {
         case (_: Domain, msgs: Seq[ValidationMessage]) =>
           val errors = msgs.filter(_.kind.isError)
           errors mustNot be(empty)
-          errors.exists(
-            _.message.contains(
-              "no events on a topic"
-            )
-          ) mustBe true
+          msgs.exists { _.message.contains("has only empty topic") } mustBe true
       }
     }
   }

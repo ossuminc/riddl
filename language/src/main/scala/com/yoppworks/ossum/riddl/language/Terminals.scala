@@ -20,6 +20,7 @@ object Terminals {
     val roundClose = ")"
     val squareOpen = "["
     val squareClose = "]"
+    val undefined = "???"
     val verticalBar = "|"
 
     val all: Seq[String] = Seq(
@@ -35,6 +36,7 @@ object Terminals {
       squareClose,
       roundOpen,
       roundClose,
+      undefined,
       verticalBar
     )
   }
@@ -70,12 +72,15 @@ object Terminals {
 
   object Keywords {
     final val adaptor = "adaptor"
+    final val all = "all"
+    final val any = "any"
+    final val append = "append"
     final val background = "background"
     final val call = "call"
     final val causing = "causing"
     final val command = "command"
     final val commands = "commands"
-    final val consumes = "consumes"
+    final val consumer = "consumer"
     final val context = "context"
     final val description = "description"
     final val domain = "domain"
@@ -90,27 +95,35 @@ object Terminals {
     final val interaction = "interaction"
     final val invariant = "invariant"
     final val mapping = "mapping"
+    final val on = "on"
+    final val one = "one"
     final val option = "option"
     final val options = "options"
     final val produces = "produces"
     final val query = "query"
     final val queries = "queries"
     final val range = "range"
+    final val remove = "remove"
     final val requires = "requires"
     final val result = "result"
     final val results = "results"
     final val role = "role"
-    final val subdomain = "subdomain"
+    final val send = "send"
+    final val set = "set"
+    final val state = "state"
     final val topic = "topic"
     final val value = "value"
+    final val when = "when"
     final val all_keywords = Seq(
       adaptor,
+      any,
+      all,
       background,
       call,
       causing,
       command,
       commands,
-      consumes,
+      consumer,
       context,
       description,
       domain,
@@ -124,19 +137,25 @@ object Terminals {
       interaction,
       invariant,
       mapping,
+      on,
+      one,
       option,
       options,
       produces,
       query,
       queries,
       range,
+      remove,
       requires,
       result,
       results,
       role,
-      subdomain,
+      send,
+      set,
+      state,
       topic,
-      value
+      value,
+      when
     ).sorted.distinct
   }
 
@@ -147,6 +166,7 @@ object Terminals {
     final val Decimal = "Decimal"
     final val Id = "Id"
     final val Integer = "Integer"
+    final val LatLong = "LatLong"
     final val Number = "Number"
     final val Pattern = "Pattern"
     final val Real = "Real"
@@ -176,11 +196,13 @@ object Terminals {
     final val are = "are"
     final val as = "as"
     final val for_ = "for"
+    final val from = "from"
     final val is = "is"
     final val many = "many"
     final val of = "of"
     final val optional = "optional"
     final val then_ = "then"
+    final val to = "to"
     final val yields = "yields"
 
     val all: Seq[String] = Seq(
@@ -188,11 +210,13 @@ object Terminals {
       are,
       as,
       for_,
+      from,
       is,
       many,
       of,
       optional,
       then_,
+      to,
       yields
     ).sorted.distinct
   }

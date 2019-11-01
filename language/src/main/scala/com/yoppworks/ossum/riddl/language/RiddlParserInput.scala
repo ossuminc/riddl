@@ -60,8 +60,8 @@ case class RiddlParserInput(data: String, origin: String) extends ParserInput {
 
   def annotateErrorLine(index: Location): String = {
     val (start, end) = rangeOf(index)
-    val col = start + index.col - 1
-    slice(start, end) + nl + " ".repeat(col) + "^" + nl
+    val col = index.col - 1
+    slice(start, end).stripTrailing() + nl + " ".repeat(col) + "^" + nl
   }
 }
 

@@ -27,7 +27,7 @@ trait FeatureParser extends CommonParser {
 
   def whens[_: P]: P[Seq[When]] = {
     P(
-      (location ~ IgnoreCase("when") ~/ literalString).map(
+      (location ~ IgnoreCase(Keywords.when) ~/ literalString).map(
         tpl => (When.apply _).tupled(tpl)
       ) ~
         (location ~ IgnoreCase("and") ~/ literalString)
@@ -68,21 +68,23 @@ trait FeatureParser extends CommonParser {
 
   def background[_: P]: P[Background] = {
     P(
-      location ~ IgnoreCase(Keywords.background) ~ open ~/
+      location ~ IgnoreCase(Keywords.background) ~/ open ~/
         givens
     ).map(tpl => (Background.apply _).tupled(tpl)) ~ close
   }
 
   def description[_: P]: P[Seq[LiteralString]] = {
-    P(IgnoreCase(Keywords.description) ~/ lines)
+    P(IgnoreCase(Keywords.description) ~/ docBlock)
   }
 
   def featureDef[_: P]: P[Feature] = {
     P(
-      location ~ IgnoreCase(Keywords.feature) ~/ identifier ~ is ~
-        open ~/
+      location ~
+        IgnoreCase(Keywords.feature) ~/
+        identifier ~ is ~
+        open ~
         description ~ background.? ~ example.rep(1) ~
-        close ~/
+        close ~
         addendum
     ).map { tpl =>
       (Feature.apply _).tupled(tpl)

@@ -69,9 +69,9 @@ trait TopicParser extends CommonParser with TypeParser {
         Keywords.events ~/ open ~ eventDef.rep ~ close |
         Keywords.queries ~/ open ~ queryDef.rep ~ close |
         Keywords.results ~/ open ~ resultDef.rep ~ close |
-        Keywords.command ~/ commandDef.map(Seq(_)) |
-        Keywords.event ~/ eventDef.map(Seq(_)) |
-        Keywords.query ~/ queryDef.map(Seq(_)) |
+        Keywords.command ~/ commandDef.map(Seq(_))./ |
+        Keywords.event ~/ eventDef.map(Seq(_))./ |
+        Keywords.query ~/ queryDef.map(Seq(_))./ |
         Keywords.result ~/ resultDef.map(Seq(_))
     ).rep(0).map { seq =>
       val groups = seq.flatten.groupBy(_.getClass)

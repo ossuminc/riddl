@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
+import com.yoppworks.ossum.riddl.language.Terminals.Predefined
+
 import scala.collection.immutable.ListMap
 
 /** Abstract Syntax Tree
@@ -114,6 +116,7 @@ object AST {
       extends TypeExpression
   case class Aggregation(loc: Location, of: ListMap[Identifier, TypeExpression])
       extends TypeExpression
+      with EntityValue
   case class Mapping(loc: Location, from: TypeExpression, to: TypeExpression)
       extends TypeExpression
   case class RangeType(loc: Location, min: LiteralInteger, max: LiteralInteger)
@@ -133,17 +136,24 @@ object AST {
     def kind: String = name
   }
 
-  case class Strng(loc: Location) extends PredefinedType(loc, "String")
-  case class Bool(loc: Location) extends PredefinedType(loc, "Boolean")
-  case class Number(loc: Location) extends PredefinedType(loc, "Number")
-  case class Integer(loc: Location) extends PredefinedType(loc, "Integer")
-  case class Decimal(loc: Location) extends PredefinedType(loc, "Decimal")
-  case class Real(loc: Location) extends PredefinedType(loc, "Real")
-  case class Date(loc: Location) extends PredefinedType(loc, "Date")
-  case class Time(loc: Location) extends PredefinedType(loc, "Time")
-  case class DateTime(loc: Location) extends PredefinedType(loc, "DateTime")
-  case class TimeStamp(loc: Location) extends PredefinedType(loc, "TimeStamp")
-  case class URL(loc: Location) extends PredefinedType(loc, "URL")
+  case class Strng(loc: Location) extends PredefinedType(loc, Predefined.String)
+  case class Bool(loc: Location) extends PredefinedType(loc, Predefined.Boolean)
+  case class Number(loc: Location)
+      extends PredefinedType(loc, Predefined.Number)
+  case class Integer(loc: Location)
+      extends PredefinedType(loc, Predefined.Integer)
+  case class Decimal(loc: Location)
+      extends PredefinedType(loc, Predefined.Decimal)
+  case class Real(loc: Location) extends PredefinedType(loc, Predefined.Real)
+  case class Date(loc: Location) extends PredefinedType(loc, Predefined.Date)
+  case class Time(loc: Location) extends PredefinedType(loc, Predefined.Time)
+  case class DateTime(loc: Location)
+      extends PredefinedType(loc, Predefined.DateTime)
+  case class TimeStamp(loc: Location)
+      extends PredefinedType(loc, Predefined.TimeStamp)
+  case class URL(loc: Location) extends PredefinedType(loc, Predefined.URL)
+  case class LatLong(loc: Location)
+      extends PredefinedType(loc, Predefined.LatLong)
   case class Pattern(loc: Location, pattern: LiteralString)
       extends PredefinedType(loc, "Pattern")
   case class UniqueId(loc: Location, entityName: Identifier)
@@ -301,6 +311,7 @@ object AST {
     loc: Location,
     id: Identifier
   ) extends Reference
+
   case class Function(
     loc: Location,
     id: Identifier,
@@ -326,23 +337,59 @@ object AST {
     def kind: String = "Invariant"
   }
 
+  sealed trait OnClauseAction extends RiddlValue
+  case class SetAction(
+    loc: Location,
+    target: PathIdentifier,
+    value: PathIdentifier
+  ) extends OnClauseAction
+
+  case class AppendAction(
+    loc: Location,
+    value: PathIdentifier,
+    target: Identifier
+  ) extends OnClauseAction
+
+  case class SendAction(loc: Location, msg: MessageReference, topic: TopicRef)
+      extends OnClauseAction
+
+  case class RemoveAction(
+    loc: Location,
+    id: PathIdentifier,
+    from: PathIdentifier
+  ) extends OnClauseAction
+
+  case class OnClause(
+    loc: Location,
+    msg: MessageReference,
+    actions: Seq[OnClauseAction]
+  ) extends EntityValue
+
+  case class Consumer(
+    loc: Location,
+    id: Identifier,
+    topic: TopicRef,
+    clauses: Seq[OnClause] = Seq.empty[OnClause],
+    addendum: Option[Addendum] = None
+  ) extends EntityDefinition {
+    def kind: String = "Consumption"
+  }
+
   /** Definition of an Entity
     *
     * @param options The options for the entity
     * @param loc The location in the input
     * @param id The name of the entity
-    * @param typ The type of the entity's value
-    * @param consumes A reference to the topic from which the entity consumes
-    * @param produces A reference to the topic to which the entity produces
+    * @param state The type of the entity's real time state value
+    * @param consumers A reference to the topic from which the entity consumes
     */
   case class Entity(
     entityKind: EntityKind,
     loc: Location,
     id: Identifier,
-    typ: TypeExpression,
+    state: Aggregation,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
-    consumes: Seq[TopicRef] = Seq.empty[TopicRef],
-    produces: Seq[TopicRef] = Seq.empty[TopicRef],
+    consumers: Seq[Consumer] = Seq.empty[Consumer],
     features: Seq[Feature] = Seq.empty[Feature],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
@@ -434,7 +481,7 @@ object AST {
     loc: Location,
     id: Identifier,
     roles: Seq[Role] = Seq.empty[Role],
-    actions: Seq[ActionDef] = Seq.empty[ActionDef],
+    actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     addendum: Option[Addendum] = None
   ) extends Container
       with DomainDefinition
@@ -463,7 +510,7 @@ object AST {
     id: Identifier
   ) extends Reference
 
-  sealed trait ActionDef extends Definition {
+  sealed trait ActionDefinition extends Definition {
     def reactions: Seq[Reaction]
   }
 
@@ -479,7 +526,7 @@ object AST {
     addendum: Option[Addendum] = None
   )
 
-  type Actions = Seq[ActionDef]
+  type Actions = Seq[ActionDefinition]
 
   sealed trait MessageOption extends RiddlValue
   case class SynchOption(loc: Location) extends MessageOption
@@ -504,7 +551,7 @@ object AST {
     message: MessageReference,
     reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
-  ) extends ActionDef {
+  ) extends ActionDefinition {
     def kind: String = "Message Action"
   }
 
@@ -520,7 +567,7 @@ object AST {
     message: MessageReference,
     reactions: Seq[Reaction],
     addendum: Option[Addendum] = None
-  ) extends ActionDef {
+  ) extends ActionDefinition {
     def kind: String = "Directive Action"
   }
 
@@ -537,13 +584,14 @@ object AST {
   case class Domain(
     loc: Location,
     id: Identifier,
-    subdomain: Option[Identifier] = None,
     types: Seq[Type] = Seq.empty[Type],
     topics: Seq[Topic] = Seq.empty[Topic],
     contexts: Seq[Context] = Seq.empty[Context],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
+    domains: Seq[Domain] = Seq.empty[Domain],
     addendum: Option[Addendum] = None
-  ) extends Container {
+  ) extends Container
+      with DomainDefinition {
     def kind: String = "Domain"
 
     def contents: Seq[DomainDefinition] =

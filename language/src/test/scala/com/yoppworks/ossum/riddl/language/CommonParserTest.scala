@@ -24,7 +24,7 @@ class CommonParserTest extends ParsingTest {
         identity
       ) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe

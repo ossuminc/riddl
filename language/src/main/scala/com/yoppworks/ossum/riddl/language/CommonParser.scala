@@ -14,26 +14,32 @@ import scala.reflect.runtime.universe._
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
-  def markdownLines[_: P]: P[Seq[LiteralString]] = {
+  def undefined[_: P]: P[Unit] = {
+    P(Punctuation.undefined /)
+  }
+
+  def docBlock[_: P]: P[Seq[LiteralString]] = {
     P(
-      open ~
-        markdownLine.rep ~
-        close
+      (open ~ literalString.rep ~ close) |
+        (open ~ markdownLine.rep ~ close) |
+        literalString.map(Seq(_))
     )
   }
 
-  def lines[_: P]: P[Seq[LiteralString]] = markdownLines
+  def optionalNestedContent[_: P, T](parser: => P[T]): P[Seq[T]] = {
+    P(open ~ parser.rep ~ close).?.map(_.getOrElse(Seq.empty[T]))
+  }
 
   def seeAlso[_: P]: P[SeeAlso] = {
     P(
-      location ~ "see" ~ "also" ~ lines./
+      location ~ "see" ~ "also" ~ docBlock
     ).map(tpl => (SeeAlso.apply _).tupled(tpl))
   }
 
   def explanation[_: P]: P[Explanation] = {
     P(
       location ~
-        "explained" ~ "as" ~/ markdownLines
+        "explained" ~ "as" ~/ docBlock
     ).map(tpl => { Explanation.apply _ }.tupled(tpl))
   }
 
@@ -88,11 +94,13 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def open[_: P]: P[Unit] = {
-    P(Punctuation.curlyOpen /)
+    P(
+      Punctuation.curlyOpen
+    )
   }
 
   def close[_: P]: P[Unit] = {
-    P(Punctuation.curlyClose /)
+    P(Punctuation.curlyClose)
   }
 
   def options[_: P, TY <: RiddlValue](

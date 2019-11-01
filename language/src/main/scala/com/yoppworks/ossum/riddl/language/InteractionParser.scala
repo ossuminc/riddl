@@ -26,8 +26,8 @@ trait InteractionParser extends CommonParser {
     P(
       location ~ Keywords.role ~/ identifier ~ open ~
         roleOptions ~
-        Keywords.handles ~/ lines ~
-        Keywords.requires ~ lines ~
+        Keywords.handles ~/ docBlock ~
+        Keywords.requires ~ docBlock ~
         close ~ addendum
     ).map { tpl =>
       (Role.apply _).tupled(tpl)
@@ -46,7 +46,7 @@ trait InteractionParser extends CommonParser {
   def reaction[_: P]: P[Reaction] = {
     P(
       location ~ identifier ~ Keywords.call ~ entityRef ~/ functionRef ~
-        lines ~ addendum
+        docBlock ~ addendum
     ).map(x => (Reaction.apply _).tupled(x))
   }
 

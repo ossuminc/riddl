@@ -39,8 +39,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   ): Seq[File] = {
     sources.flatMap { source =>
       log.info(s"Translating RIDDL ${source.getName}")
-      val input = RiddlParserInput(source)
-      ParadoxTranslator.parseValidateTranslate(input, log.err, configFile)
+      ParadoxTranslator.parseValidateTranslateFile(source, log.err, configFile)
     }
   }
 

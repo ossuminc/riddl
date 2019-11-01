@@ -15,7 +15,7 @@ abstract class ValidatingTest extends ParsingTest {
   ): Assertion = {
     parseDefinition[D](input) match {
       case Left(errors) =>
-        val msg = errors.map(_.toString).mkString
+        val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(model: D @unchecked) =>
         val msgs = Validation.validate(model)

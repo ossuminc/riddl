@@ -41,7 +41,7 @@ def standardScalaCOptions(is2_13: => Boolean) = {
 
 lazy val riddl = (project in file("."))
   .settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc, idea, `sbt-riddl`)
+  .aggregate(language, translator, riddlc, /*idea,*/ `sbt-riddl`)
 
 lazy val riddlc = (project in file("riddlc"))
   .enablePlugins(ParadoxPlugin)
@@ -93,7 +93,7 @@ lazy val translator = (project in file("translator"))
   .dependsOn(language % "test->test;compile->compile")
 
 lazy val idea = (project in file("idea-plugin"))
-  .enablePlugins(BuildInfoPlugin, SbtIdeaPlugin)
+  .enablePlugins(SbtIdeaPlugin)
   .dependsOn(language)
   .settings(
     name := "riddl-idea-plugin",

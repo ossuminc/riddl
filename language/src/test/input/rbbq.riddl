@@ -4,9 +4,8 @@ domain ReactiveBBQ {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id() explained as {
-    |Unique identifier for a customer
-  }
+  type CustomerId is Id() explained as "Unique identifier for a customer"
+
   type OrderId is Id() explained as {
     |Unique identifier for a customer's order
   } see also {
@@ -30,8 +29,9 @@ domain ReactiveBBQ {
     type OrderViewType is {
       address is IP4Address
     }
-    device entity OrderViewer as OrderViewType is {
-      consumes topic Inputs
+    device entity OrderViewer {
+     state is { field: OrderViewType }
+     consumer input for topic Inputs
     } explained as {
       |The OrderViewer is the device in the kitchen, probably a touch screen,
       |that the cooks use to view the sequence of orders to cook
@@ -66,55 +66,60 @@ domain ReactiveBBQ {
       pointsAwarded is Number,
       toOrder is OrderId
     }
-    type RewardEvent is ( AccrualEvent or AwardEvent )
-    type RewardsAccountType is {
-      id is CustomerId,
-      points is Number,
-      rewardEvents is many optional RewardEvent
-    }
-    entity RewardsAccount as RewardsAccountType {
-      consumes topic Inputs
+    type RewardEvent is one of { AccrualEvent or AwardEvent }
+    entity RewardsAccount is {
+      state is {
+        id is CustomerId,
+        points is Number,
+        rewardEvents is many optional RewardEvent
+      }
+      consumer ofInputs for topic Inputs
     }
   }
   // #Loyalty
 
   // #Order
   context Order {
-    type OrderType is  {
-      orderId is OrderId,
-      customerId is CustomerId
-    }
-
-    entity Order as OrderType is {
+    entity Order {
       option is aggregate
-      consumes topic Inputs
+      state is {
+        orderId is OrderId,
+        customerId is CustomerId
+      }
+      consumer foo for topic Inputs
     }
   }
   // #Order
 
   // #Payment
   context Payment {
-    type PaymentType is  {
-      orderId is Id(),
-      amount is Number,
-      cardToken is String
-    }
-    entity Payment as PaymentType is {
+    entity Payment {
       option is aggregate
-      consumes topic Inputs
+      state is {
+        orderId is Id(),
+        amount is Number,
+        cardToken is String
+      }
+      consumer foo for topic Inputs
     }
   }
   // #Payment
 
   // #Menu
   context Menu {
-    entity MenuItem as String is {
-      consumes topic Inputs
+    entity MenuItem {
+      state is {
+        something: String
+      }
+      consumer foo for topic Inputs
     }
     type MenuItemRef is refer to entity MenuItem
-    entity Menu as many MenuItemRef is {
+    entity Menu is {
       option is aggregate
-      consumes topic Inputs
+      state {
+         items: many MenuItemRef
+      }
+      consumer foo for topic Inputs
     }
   }
   // #Menu
@@ -128,15 +133,18 @@ domain ReactiveBBQ {
       time is Time,
       date is Date
     }
-    entity Location as String is { consumes topic Inputs }
+    entity Location is {
+      state is { foo:  String }
+      consumer foo for topic Inputs
+    }
     explained as {
       |foo
     }
 
-    entity Reservation as ReservationValue is {
-      options ( aggregate )
-      consumes topic Inputs
-      produces topic Outputs
+    entity Reservation {
+     options ( aggregate )
+     state { reservation: ReservationValue }
+     consumer ofInputs for topic Inputs
     }
   }
   // #Reservation

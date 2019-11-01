@@ -36,5 +36,8 @@ class IncludesTest extends ParsingTest {
         )
       )
     }
+    "generate error messages from included files" in {
+      pending
+    }
   }
 }

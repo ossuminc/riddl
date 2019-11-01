@@ -27,7 +27,7 @@ trait FunctionParser extends CommonParser with TypeParser {
   def functionDef[_: P]: P[Function] = {
     P(
       location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~
-        inputs ~ Punctuation.colon ~ outputs ~ lines ~/ addendum
+        inputs ~ Punctuation.colon ~ outputs ~ docBlock ~/ addendum
     ).map { tpl =>
       (Function.apply _).tupled(tpl)
     }

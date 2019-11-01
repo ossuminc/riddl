@@ -18,9 +18,8 @@ class DomainValidatorTest extends ValidatingTest {
         ),
         Seq.empty[Validation.ValidationOptions]
       )
-      errors.nonEmpty mustBe true
-      errors.head.message.contains("'foo' is defined multiple times") mustBe
-        true
+      errors must not be (empty)
+      errors.head.message must include("'foo' is defined multiple times")
     }
   }
 }

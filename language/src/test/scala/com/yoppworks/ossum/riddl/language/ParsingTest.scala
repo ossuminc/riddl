@@ -131,7 +131,7 @@ class ParsingTest extends WordSpec with MustMatchers {
           case Right(content) =>
             content mustBe expected
           case Left(errors) =>
-            val msg = errors.map(_.toString).mkString
+            val msg = errors.map(_.format).mkString
             fail(msg)
         }
     }
@@ -168,7 +168,7 @@ class ParsingTest extends WordSpec with MustMatchers {
     val rip = RiddlParserInput(input)
     TestParser(rip).parseDefinition[FROM] match {
       case Left(errors) =>
-        val msg = errors.map(_.toString).mkString
+        val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(content) =>
         content mustBe expected
@@ -184,7 +184,7 @@ class ParsingTest extends WordSpec with MustMatchers {
         val rip = RiddlParserInput(statement)
         TestParser(rip).parseDefinition[FROM] match {
           case Left(errors) =>
-            val msg = errors.map(_.toString).mkString
+            val msg = errors.map(_.format).mkString
             fail(msg)
           case Right(content) =>
             content mustBe expected
@@ -214,7 +214,7 @@ class ParsingTest extends WordSpec with MustMatchers {
           case Right(content) =>
             content mustBe expected
           case Left(errors) =>
-            val msg = errors.map(_.toString).mkString
+            val msg = errors.map(_.format).mkString
             fail(msg)
         }
     }
@@ -225,7 +225,7 @@ class ParsingTest extends WordSpec with MustMatchers {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
       case Left(errors) =>
-        val msg = errors.map(_.toString).mkString
+        val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(model) =>
         model

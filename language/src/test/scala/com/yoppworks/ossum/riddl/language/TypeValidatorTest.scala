@@ -37,7 +37,7 @@ class TypeValidatorTest extends ValidatingTest {
           |type ZeroOrMore is many optional Bar
           |type Optional is optional Bar
           |type Aggregate is {a: Bar, b: Foo}
-          |type Alternation is ( Bar or Foo )
+          |type Alternation is one of { Bar or Foo }
           |}
           |""".stripMargin
       ) {

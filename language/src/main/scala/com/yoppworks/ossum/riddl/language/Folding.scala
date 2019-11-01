@@ -348,7 +348,7 @@ object Folding {
     def doAction(
       state: S,
       container: Container,
-      action: ActionDef
+      action: ActionDefinition
     ): S = { state }
 
     def doExample(

@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
+import scala.collection.immutable.ListMap
+
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 
@@ -10,38 +12,43 @@ class ParserTest extends ParsingTest {
       val input = "Flerkins are evil but cute"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
-          errors.map(_.toString).foreach(println(_))
-          errors must not be (empty)
+          errors.map(_.format).foreach(println(_))
+          errors must not be empty
         case Right(content) =>
           fail("Invalid syntax should make an error")
       }
-
     }
     "allow an empty funky-name domain" in {
       val input = "domain 'foo-fah|roo' { }"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
-            Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"), None)
+            Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"))
       }
     }
-    "allow a sub-domain" in {
+    "allow nesed domains" in {
       val input =
-        """domain 'subdomain' as subdomain of 'parent' is { }
+        """domain foo {
+          |domain bar { }
+          |}
           |""".stripMargin
-      parseTopLevelDomain(input, _.contents.head) match {
+      parseTopLevelDomains(input) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
-            Domain(
-              1 -> 1,
-              Identifier(1 -> 8, "subdomain"),
-              Some(Identifier(1 -> 36, "parent"))
+            RootContainer(
+              Seq[Domain](
+                Domain(
+                  1 -> 1,
+                  Identifier(1 -> 8, "foo"),
+                  domains = Seq(Domain(2 -> 1, Identifier(2 -> 8, "bar")))
+                )
+              )
             )
       }
     }
@@ -52,14 +59,14 @@ class ParserTest extends ParsingTest {
           |""".stripMargin
       parseTopLevelDomains(input) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
             RootContainer(
               Seq[Domain](
-                Domain(1 -> 1, Identifier(1 -> 8, "foo"), None),
-                Domain(2 -> 1, Identifier(2 -> 8, "bar"), None)
+                Domain(1 -> 1, Identifier(1 -> 8, "foo")),
+                Domain(2 -> 1, Identifier(2 -> 8, "bar"))
               )
             )
       }
@@ -68,7 +75,7 @@ class ParserTest extends ParsingTest {
       val input = "domain foo { context bar { } }"
       parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -80,7 +87,7 @@ class ParserTest extends ParsingTest {
         "context bar { options (function wrapper gateway ) }"
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -105,7 +112,7 @@ class ParserTest extends ParsingTest {
           |""".stripMargin
       parseDomainDefinition[Topic](input, _.topics.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -114,12 +121,12 @@ class ParserTest extends ParsingTest {
     }
     "allow type definitions in contexts" in {
       val input =
-        """type Vikings = [
+        """type Vikings = any of {
           |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
-          |]""".stripMargin
+          |}""".stripMargin
       parseInContext(input, _.types.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -150,7 +157,7 @@ class ParserTest extends ParsingTest {
           |""".stripMargin
       parseDomainDefinition[Command](input, _.topics.head.commands.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -169,7 +176,7 @@ class ParserTest extends ParsingTest {
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.events.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -180,14 +187,14 @@ class ParserTest extends ParsingTest {
             )
       }
     }
-    "allow query definitions in contexts" in {
+    "allow query definitions in topics" in {
       val input = """domain bar { topic foo is { queries {
                     |FindThisThing = String yields result SomeResult
                     |} } }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.queries.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -199,14 +206,14 @@ class ParserTest extends ParsingTest {
             )
       }
     }
-    "allow result definitions in contexts" in {
+    "allow result definitions in topics" in {
       val input = """domain bar { topic foo is {
                     |result ThisQueryResult = SomeType
                     |} }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.results.head) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -220,11 +227,10 @@ class ParserTest extends ParsingTest {
     }
     "allow entity definitions in contexts" in {
       val input: String =
-        """entity Hamburger as SomeType is {
-          |
+        """entity Hamburger is {
           |  options ( persistent aggregate )
-          |  consumes topic EntityChannel
-          |  produces topic EntityChannel
+          |  state { x: String }
+          |  consumer foo for topic EntityChannel
           |  feature AnAspect {
           |    DESCRIPTION {
           |     |This is some aspect of the entity
@@ -244,35 +250,43 @@ class ParserTest extends ParsingTest {
           |""".stripMargin
       parseDefinition[Entity](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe Entity(
             SoftwareEntityKind(1 -> 1),
             1 -> 1,
             Identifier(1 -> 8, "Hamburger"),
-            TypeRef(1 -> 21, Identifier(1 -> 21, "SomeType")),
-            Seq(EntityPersistent(3 -> 13), EntityAggregate(3 -> 24)),
-            Seq(TopicRef(4 -> 12, Identifier(4 -> 18, "EntityChannel"))),
-            Seq(TopicRef(5 -> 12, Identifier(5 -> 18, "EntityChannel"))),
-            Seq(
+            Aggregation(
+              3 -> 9,
+              ListMap(Identifier(3 -> 11, "x") -> Strng(3 -> 14))
+            ),
+            Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),
+            consumers = Seq(
+              Consumer(
+                4 -> 12,
+                Identifier(4 -> 12, "foo"),
+                TopicRef(4 -> 20, Identifier(4 -> 26, "EntityChannel"))
+              )
+            ),
+            features = Seq(
               Feature(
-                6 -> 3,
-                Identifier(6 -> 11, "AnAspect"),
+                5 -> 3,
+                Identifier(5 -> 11, "AnAspect"),
                 Seq(
                   LiteralString(
-                    8 -> 7,
+                    7 -> 7,
                     "This is some aspect of the entity"
                   )
                 ),
                 Some(
                   Background(
-                    10 -> 5,
+                    9 -> 5,
                     Seq(
                       Given(
-                        11 -> 7,
+                        10 -> 7,
                         LiteralString(
-                          11 -> 13,
+                          10 -> 13,
                           "Nobody loves me"
                         )
                       )
@@ -281,21 +295,21 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(
                   Example(
-                    13 -> 5,
-                    Identifier(13 -> 13, "foo"),
-                    LiteralString(14 -> 7, "My Fate"),
+                    12 -> 5,
+                    Identifier(12 -> 13, "foo"),
+                    LiteralString(13 -> 7, "My Fate"),
                     Seq(
                       Given(
-                        15 -> 7,
-                        LiteralString(15 -> 13, "everybody hates me")
+                        14 -> 7,
+                        LiteralString(14 -> 13, "everybody hates me")
                       ),
-                      Given(16 -> 7, LiteralString(16 -> 11, "I'm depressed"))
+                      Given(15 -> 7, LiteralString(15 -> 11, "I'm depressed"))
                     ),
-                    Seq(When(17 -> 7, LiteralString(17 -> 12, "I go fishing"))),
+                    Seq(When(16 -> 7, LiteralString(16 -> 12, "I go fishing"))),
                     Seq(
                       Then(
-                        18 -> 7,
-                        LiteralString(18 -> 12, "I'll just eat worms")
+                        17 -> 7,
+                        LiteralString(17 -> 12, "I'll just eat worms")
                       )
                     )
                   )
@@ -310,7 +324,7 @@ class ParserTest extends ParsingTest {
         "adaptor fuzz for domain fuzzy context blogger {}"
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
@@ -345,7 +359,7 @@ class ParserTest extends ParsingTest {
           |""".stripMargin
       parseDefinition[Interaction](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe

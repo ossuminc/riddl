@@ -32,6 +32,7 @@ trait DomainParser
         topicDef.map(Seq(_)) |
         interactionDef.map(Seq(_)) |
         contextDef.map(Seq(_)) |
+        domainDef.map(Seq(_)) |
         domainInclude
     ).rep(0).map(_.flatten)
   }
@@ -39,14 +40,14 @@ trait DomainParser
   def domainDef[_: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~
-        (Readability.as ~ Keywords.subdomain ~ Readability.of ~/ identifier).? ~
         is ~
         open ~/
         domainContent ~
         close ~ addendum
     ).map {
-      case (loc, id, subdomain, defs, addendum) =>
+      case (loc, id, defs, addendum) =>
         val groups = defs.groupBy(_.getClass)
+        val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
         val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
         val topics = mapTo[Topic](groups.get(classOf[Topic]))
         val contexts = mapTo[Context](groups.get(classOf[Context]))
@@ -55,11 +56,11 @@ trait DomainParser
         Domain(
           loc,
           id,
-          subdomain,
           types,
           topics,
           contexts,
           interactions,
+          domains,
           addendum
         )
     }

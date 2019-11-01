@@ -59,7 +59,7 @@ class TypeParserTest extends ParsingTest {
       checkDefinitions[Type, Type](cases, identity)
     }
     "allow enumerators" in {
-      val input = "type enum = [ Apple Pear Peach Persimmon ]"
+      val input = "type enum = any of { Apple Pear Peach Persimmon }"
       val expected =
         Type(
           1 -> 1,
@@ -67,26 +67,26 @@ class TypeParserTest extends ParsingTest {
           Enumeration(
             1 -> 13,
             List(
-              Enumerator(1 -> 15, Identifier(1 -> 15, "Apple"), None),
-              Enumerator(1 -> 21, Identifier(1 -> 21, "Pear"), None),
-              Enumerator(1 -> 26, Identifier(1 -> 26, "Peach"), None),
-              Enumerator(1 -> 32, Identifier(1 -> 32, "Persimmon"), None)
+              Enumerator(1 -> 22, Identifier(1 -> 22, "Apple"), None),
+              Enumerator(1 -> 28, Identifier(1 -> 28, "Pear"), None),
+              Enumerator(1 -> 33, Identifier(1 -> 33, "Peach"), None),
+              Enumerator(1 -> 39, Identifier(1 -> 39, "Persimmon"), None)
             )
           )
         )
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow alternation" in {
-      val input = "type alt = ( enum or stamp or url ) "
+      val input = "type alt = one of { enum or stamp or url }"
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "alt"),
         Alternation(
           1 -> 12,
           List(
-            TypeRef(1 -> 14, Identifier(1 -> 14, "enum")),
-            TypeRef(1 -> 22, Identifier(1 -> 22, "stamp")),
-            TypeRef(1 -> 31, Identifier(1 -> 31, "url"))
+            TypeRef(1 -> 21, Identifier(1 -> 21, "enum")),
+            TypeRef(1 -> 29, Identifier(1 -> 29, "stamp")),
+            TypeRef(1 -> 38, Identifier(1 -> 38, "url"))
           )
         )
       )
@@ -186,7 +186,7 @@ class TypeParserTest extends ParsingTest {
           |    s: Simple,
           |    ns: many Number
           |  }
-          |  type Choices is ( Number or Id )
+          |  type Choices is one of { Number or Id }
           |  type Complex is {
           |    a: Simple,
           |    b: TimeStamp,
@@ -197,7 +197,7 @@ class TypeParserTest extends ParsingTest {
           |""".stripMargin
       parseDomainDefinition[Type](input, _.types.last) match {
         case Left(errors) =>
-          val msg = errors.map(_.toString).mkString
+          val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(typeDef) =>
           info(typeDef.toString)

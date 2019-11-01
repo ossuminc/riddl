@@ -183,7 +183,7 @@ object Validation {
               add(ValidationMessage(loc, x.getMessage))
           }
           this
-        case UniqueId(loc, entityName) =>
+        case UniqueId(_, entityName) =>
           this
             .checkIdentifier(entityName)
             .checkRef[Entity](entityName, definition)
@@ -441,12 +441,7 @@ object Validation {
       container: Container,
       domain: Domain
     ): ValidationState = {
-      domain.subdomain.foldLeft(
-        state.checkDefinition(container, domain)
-      ) {
-        case (st, id) =>
-          st.checkRef[Domain](id, state.parentOf(domain))
-      }
+      state.checkDefinition(container, domain)
     }
 
     override def closeDomain(
@@ -492,49 +487,26 @@ object Validation {
       container: Container,
       entity: AST.Entity
     ): ValidationState = {
-      val result1 = state
+      var result = state
         .checkDefinition(container, entity)
-        .checkTypeExpression(entity.typ, entity)
+        .checkTypeExpression(entity.state, entity)
         .checkOptions[EntityOption](entity.options, entity.loc)
-      val result2: ValidationState =
-        entity.produces.foldLeft(result1) { (s, chan) =>
-          val persistentClass = EntityPersistent((0, 0)).getClass
-          val lookupResult = s
-            .checkRef[Topic](chan, entity)
-            .symbolTable
-            .lookup[Topic](chan, entity)
-          lookupResult match {
-            case chan :: Nil =>
-              s.check(
-                !(chan.events.isEmpty &&
-                  entity.options.exists(_.getClass == persistentClass)),
-                s"Persistent ${entity.identify} requires a topic " +
-                  "that produces events but " +
-                  s"${chan.identify} does not define any.",
-                Error,
-                chan.loc
-              )
-            case _ =>
-              s
-          }
-        }
-      var result = entity.consumes.foldLeft(result2) { (s, chan) =>
-        s.checkRef[Topic](chan, entity)
+      result = entity.consumers.foldLeft(result) { (s, consumer) =>
+        s.checkRef[Topic](consumer.topic, entity)
       }
 
       // TODO: invariant?
 
-      if (entity.consumes.isEmpty) {
+      if (entity.consumers.isEmpty) {
         result = result.add(
           ValidationMessage(entity.loc, "An entity must consume a topic")
         )
-      }
-      if (entity.produces.isEmpty &&
-          entity.options.exists(_.getClass == classOf[EntityPersistent])) {
+      } else if (!entity.consumers.exists(_.clauses.nonEmpty)) {
         result = result.add(
           ValidationMessage(
             entity.loc,
-            "An entity that produces no events on a topic cannot be persistent"
+            s"Entity `${entity.id.value}` has only empty topic consumers",
+            MissingWarning
           )
         )
       }
@@ -713,7 +685,7 @@ object Validation {
     override def doAction(
       state: ValidationState,
       container: Container,
-      action: ActionDef
+      action: ActionDefinition
     ): ValidationState = {
       val newState = state.checkDefinition(container, action)
       action match {

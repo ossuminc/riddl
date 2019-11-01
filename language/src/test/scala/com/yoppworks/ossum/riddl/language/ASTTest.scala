@@ -10,8 +10,8 @@ class ASTTest extends WordSpec with MustMatchers {
 
   "Types" should {
     "support domain definitions" in {
-      Domain((0, 0), Identifier((1, 1), "foo"), None) must be
-      Domain((0, 0), Identifier((1, 1), "foo"), None, Seq.empty[Type])
+      Domain((0, 0), Identifier((1, 1), "foo")) must be
+      Domain((0, 0), Identifier((1, 1), "foo"), Seq.empty[Type])
     }
     "support all type constructs" in {
       TypeRef((0, 0), Identifier((0, 0), "Foo")) mustBe TypeRef(
