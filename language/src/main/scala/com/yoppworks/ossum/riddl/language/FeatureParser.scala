@@ -73,17 +73,13 @@ trait FeatureParser extends CommonParser {
     ).map(tpl => (Background.apply _).tupled(tpl)) ~ close
   }
 
-  def description[_: P]: P[Seq[LiteralString]] = {
-    P(IgnoreCase(Keywords.description) ~/ docBlock)
-  }
-
   def feature[_: P]: P[Feature] = {
     P(
       location ~
         IgnoreCase(Keywords.feature) ~/
         identifier ~ is ~
-        open ~
-        description ~ background.? ~ example.rep(1) ~
+        open ~ IgnoreCase(Keywords.description) ~/ docBlock ~
+        background.? ~ example.rep(1) ~
         close ~
         addendum
     ).map { tpl =>

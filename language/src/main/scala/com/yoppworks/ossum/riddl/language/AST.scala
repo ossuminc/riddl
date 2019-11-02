@@ -56,6 +56,14 @@ object AST {
     citations: Seq[LiteralString] = Seq.empty[LiteralString]
   ) extends RiddlValue
 
+  case class Description(
+    loc: Location,
+    brief: LiteralString,
+    details: Seq[LiteralString],
+    fields: Map[Identifier, LiteralString],
+    citations: Seq[LiteralString]
+  )
+
   case class Addendum(
     loc: Location,
     explanation: Option[Explanation],
@@ -332,9 +340,10 @@ object AST {
   case class Action(
     loc: Location,
     id: Identifier,
+    description: Option[Description],
     input: Aggregation,
     outputs: Aggregation,
-    addendum: Option[Addendum] = None
+    addendum: Option[Addendum]
   ) extends EntityDefinition {
     def kind: String = "Action"
   }

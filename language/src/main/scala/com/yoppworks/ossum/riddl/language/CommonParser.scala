@@ -30,6 +30,28 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(open ~ parser.rep ~ close).?.map(_.getOrElse(Seq.empty[T]))
   }
 
+  def items[_: P]: P[Map[Identifier, LiteralString]] = {
+    P(
+      Keywords.items ~ open ~
+        (identifier ~ Punctuation.colon ~ literalString).rep.map(_.toMap) ~
+        close
+    )
+  }
+
+  def citations[_: P]: P[Seq[LiteralString]] = {
+    P(Keywords.see ~ literalString).rep
+  }
+
+  def description[_: P]: P[Option[Description]] = {
+    P(
+      location ~
+        Keywords.description ~ open ~
+        Keywords.brief ~ literalString ~
+        Keywords.details ~ docBlock ~
+        items ~ citations ~ close
+    ).map(t => (Description.apply _).tupled(t)).?
+  }
+
   def seeAlso[_: P]: P[SeeAlso] = {
     P(
       location ~ "see" ~ "also" ~ docBlock

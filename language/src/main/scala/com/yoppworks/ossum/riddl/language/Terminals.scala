@@ -77,6 +77,7 @@ object Terminals {
     final val any = "any"
     final val append = "append"
     final val background = "background"
+    final val brief = "brief"
     final val call = "call"
     final val causing = "causing"
     final val command = "command"
@@ -84,6 +85,7 @@ object Terminals {
     final val consumer = "consumer"
     final val context = "context"
     final val description = "description"
+    final val details = "details"
     final val domain = "domain"
     final val entity = "entity"
     final val event = "event"
@@ -95,6 +97,7 @@ object Terminals {
     final val input = "input"
     final val interaction = "interaction"
     final val invariant = "invariant"
+    final val items = "items"
     final val mapping = "mapping"
     final val on = "on"
     final val one = "one"
@@ -109,6 +112,7 @@ object Terminals {
     final val result = "result"
     final val results = "results"
     final val role = "role"
+    final val see = "see"
     final val send = "send"
     final val set = "set"
     final val state = "state"
@@ -121,6 +125,7 @@ object Terminals {
       any,
       all,
       background,
+      brief,
       call,
       causing,
       command,
@@ -128,6 +133,7 @@ object Terminals {
       consumer,
       context,
       description,
+      details,
       domain,
       entity,
       event,
@@ -138,6 +144,7 @@ object Terminals {
       input,
       interaction,
       invariant,
+      items,
       mapping,
       on,
       one,
@@ -152,6 +159,7 @@ object Terminals {
       result,
       results,
       role,
+      see,
       send,
       set,
       state,
