@@ -52,7 +52,7 @@ object Folding {
         result = entity.consumers.foldLeft(result) { (next, consumer) =>
           f(entity, consumer, next)
         }
-        result = entity.functions.foldLeft(result) { (next, function) =>
+        result = entity.actions.foldLeft(result) { (next, function) =>
           f(entity, function, next)
         }
         result = entity.invariants.foldLeft(result) { (next, invariant) =>
@@ -174,7 +174,7 @@ object Folding {
               }
             }
             .step { state =>
-              entity.functions.foldLeft(state) { (next, function) =>
+              entity.actions.foldLeft(state) { (next, function) =>
                 doFunction(next, entity, function)
               }
             }
@@ -374,7 +374,7 @@ object Folding {
     def doFunction(
       state: S,
       container: Container,
-      function: Function
+      function: Action
     ): S = { state }
 
     def doInvariant(

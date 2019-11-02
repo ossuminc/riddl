@@ -13,7 +13,7 @@ trait EntityParser
     with TypeParser
     with FeatureParser
     with TopicParser
-    with FunctionParser {
+    with ActionParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -52,35 +52,35 @@ trait EntityParser
     P(Keywords.state ~/ is ~ aggregationType)
   }
 
-  def setAction[_: P]: P[SetAction] = {
+  def setAction[_: P]: P[SetStatement] = {
     (Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
       pathIdentifier).map { t =>
-      (SetAction.apply _).tupled(t)
+      (SetStatement.apply _).tupled(t)
     }
   }
 
-  def appendAction[_: P]: P[AppendAction] = {
+  def appendAction[_: P]: P[AppendStatement] = {
     (Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
       identifier).map { t =>
-      (AppendAction.apply _).tupled(t)
+      (AppendStatement.apply _).tupled(t)
     }
   }
 
-  def sendAction[_: P]: P[SendAction] = {
+  def sendAction[_: P]: P[SendStatement] = {
     (Keywords.send ~/ location ~ messageRef ~ Terminals.Readability.to ~
       topicRef).map { t =>
-      (SendAction.apply _).tupled(t)
+      (SendStatement.apply _).tupled(t)
     }
   }
 
-  def removeAction[_: P]: P[RemoveAction] = {
+  def removeAction[_: P]: P[RemoveStatement] = {
     (Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~
       pathIdentifier).map { t =>
-      (RemoveAction.apply _).tupled(t)
+      (RemoveStatement.apply _).tupled(t)
     }
   }
 
-  def onClauseAction[_: P]: P[OnClauseAction] = {
+  def onClauseAction[_: P]: P[OnClauseStatement] = {
     P(setAction | appendAction | sendAction | removeAction)
   }
 
@@ -98,8 +98,8 @@ trait EntityParser
   def entityDefinition[_: P]: P[EntityDefinition] = {
     P(
       consumer |
-        featureDef |
-        functionDef |
+        feature |
+        action |
         invariant
     )
   }
@@ -117,7 +117,7 @@ trait EntityParser
         val groups = entityDefs.groupBy(_.getClass)
         val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
         val features = mapTo[Feature](groups.get(classOf[Feature]))
-        val functions = mapTo[Function](groups.get(classOf[Function]))
+        val actions = mapTo[Action](groups.get(classOf[Action]))
         val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         Entity(
           kind,
@@ -127,7 +127,7 @@ trait EntityParser
           options,
           consumers,
           features,
-          functions,
+          actions,
           invariants,
           addendum
         )

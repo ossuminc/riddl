@@ -430,7 +430,7 @@ object FormatTranslator extends Translator {
     override def doFunction(
       state: FormatState,
       container: Container,
-      function: Function
+      function: Action
     ): FormatState = { state }
 
     override def doInvariant(

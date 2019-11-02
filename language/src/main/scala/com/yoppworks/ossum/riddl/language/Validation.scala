@@ -737,7 +737,7 @@ object Validation {
     override def doFunction(
       state: ValidationState,
       container: Container,
-      function: Function
+      function: Action
     ): ValidationState = {
       state
     }

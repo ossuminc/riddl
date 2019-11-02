@@ -71,6 +71,7 @@ object Terminals {
   }
 
   object Keywords {
+    final val action = "action"
     final val adaptor = "adaptor"
     final val all = "all"
     final val any = "any"
@@ -89,9 +90,9 @@ object Terminals {
     final val events = "events"
     final val example = "example"
     final val feature = "feature"
-    final val function = "function"
     final val handles = "handles"
     final val include = "include"
+    final val input = "input"
     final val interaction = "interaction"
     final val invariant = "invariant"
     final val mapping = "mapping"
@@ -99,7 +100,7 @@ object Terminals {
     final val one = "one"
     final val option = "option"
     final val options = "options"
-    final val produces = "produces"
+    final val output = "output"
     final val query = "query"
     final val queries = "queries"
     final val range = "range"
@@ -115,6 +116,7 @@ object Terminals {
     final val value = "value"
     final val when = "when"
     final val all_keywords = Seq(
+      action,
       adaptor,
       any,
       all,
@@ -132,8 +134,8 @@ object Terminals {
       events,
       example,
       feature,
-      function,
       handles,
+      input,
       interaction,
       invariant,
       mapping,
@@ -141,7 +143,7 @@ object Terminals {
       one,
       option,
       options,
-      produces,
+      output,
       query,
       queries,
       range,

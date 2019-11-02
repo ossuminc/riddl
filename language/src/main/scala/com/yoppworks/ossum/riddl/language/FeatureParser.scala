@@ -77,7 +77,7 @@ trait FeatureParser extends CommonParser {
     P(IgnoreCase(Keywords.description) ~/ docBlock)
   }
 
-  def featureDef[_: P]: P[Feature] = {
+  def feature[_: P]: P[Feature] = {
     P(
       location ~
         IgnoreCase(Keywords.feature) ~/

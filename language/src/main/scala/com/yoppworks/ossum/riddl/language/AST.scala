@@ -324,20 +324,19 @@ object AST {
     def contents: Seq[Definition] = examples
   }
 
-  case class FunctionRef(
+  case class ActionRef(
     loc: Location,
     id: Identifier
   ) extends Reference
 
-  case class Function(
+  case class Action(
     loc: Location,
     id: Identifier,
-    inputs: Seq[TypeExpression] = Seq.empty[TypeRef],
-    outputs: Seq[TypeExpression] = Seq.empty[TypeRef],
-    description: Seq[LiteralString] = Seq.empty[LiteralString],
+    input: Aggregation,
+    outputs: Aggregation,
     addendum: Option[Addendum] = None
   ) extends EntityDefinition {
-    def kind: String = "Function"
+    def kind: String = "Action"
   }
 
   case class InvariantRef(
@@ -354,32 +353,36 @@ object AST {
     def kind: String = "Invariant"
   }
 
-  sealed trait OnClauseAction extends RiddlValue
-  case class SetAction(
+  sealed trait OnClauseStatement extends RiddlValue
+
+  case class SetStatement(
     loc: Location,
     target: PathIdentifier,
     value: PathIdentifier
-  ) extends OnClauseAction
+  ) extends OnClauseStatement
 
-  case class AppendAction(
+  case class AppendStatement(
     loc: Location,
     value: PathIdentifier,
     target: Identifier
-  ) extends OnClauseAction
+  ) extends OnClauseStatement
 
-  case class SendAction(loc: Location, msg: MessageReference, topic: TopicRef)
-      extends OnClauseAction
+  case class SendStatement(
+    loc: Location,
+    msg: MessageReference,
+    topic: TopicRef
+  ) extends OnClauseStatement
 
-  case class RemoveAction(
+  case class RemoveStatement(
     loc: Location,
     id: PathIdentifier,
     from: PathIdentifier
-  ) extends OnClauseAction
+  ) extends OnClauseStatement
 
   case class OnClause(
     loc: Location,
     msg: MessageReference,
-    actions: Seq[OnClauseAction]
+    actions: Seq[OnClauseStatement]
   ) extends EntityValue
 
   case class Consumer(
@@ -408,7 +411,7 @@ object AST {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     consumers: Seq[Consumer] = Seq.empty[Consumer],
     features: Seq[Feature] = Seq.empty[Feature],
-    functions: Seq[Function] = Seq.empty[Function],
+    actions: Seq[Action] = Seq.empty[Action],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     addendum: Option[Addendum] = None
   ) extends Container
@@ -416,7 +419,7 @@ object AST {
     def kind: String = "Entity"
 
     def contents: Seq[Definition] =
-      features ++ functions ++ invariants
+      features ++ actions ++ invariants
   }
 
   trait TranslationRule extends Definition {
@@ -538,7 +541,7 @@ object AST {
     loc: Location,
     id: Identifier,
     entity: EntityRef,
-    function: FunctionRef,
+    function: ActionRef,
     arguments: Seq[LiteralString],
     addendum: Option[Addendum] = None
   )

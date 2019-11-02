@@ -157,9 +157,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
       .map(tpl => (TopicRef.apply _).tupled(tpl))
   }
 
-  def functionRef[_: P]: P[FunctionRef] = {
-    P(location ~ Keywords.function ~/ identifier)
-      .map(tpl => (FunctionRef.apply _).tupled(tpl))
+  def functionRef[_: P]: P[ActionRef] = {
+    P(location ~ Keywords.action ~/ identifier)
+      .map(tpl => (ActionRef.apply _).tupled(tpl))
   }
 
   def contextRef[_: P]: P[ContextRef] = {
