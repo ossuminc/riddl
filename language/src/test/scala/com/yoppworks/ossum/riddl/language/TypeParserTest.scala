@@ -28,7 +28,7 @@ class TypeParserTest extends ParsingTest {
         "type ident = Id()" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "ident"),
-          UniqueId(1 -> 14, Identifier(1 -> 14, ""))
+          UniqueId(1 -> 14, Identifier(1 -> 14, ""), None)
         ),
         "type dat = Date" -> Type(
           1 -> 1,
@@ -109,7 +109,7 @@ class TypeParserTest extends ParsingTest {
             Identifier(2 -> 3, "key") ->
               Number(2 -> 8),
             Identifier(3 -> 3, "id") ->
-              UniqueId(3 -> 7, Identifier(3 -> 7, "")),
+              UniqueId(3 -> 7, Identifier(3 -> 7, ""), None),
             Identifier(4 -> 3, "time") ->
               TimeStamp(4 -> 9)
           )
@@ -195,7 +195,7 @@ class TypeParserTest extends ParsingTest {
           |  }
           |}
           |""".stripMargin
-      parseDomainDefinition[Type](input, _.types.last) match {
+      parseDomainDefinition[Type](RiddlParserInput(input), _.types.last) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)

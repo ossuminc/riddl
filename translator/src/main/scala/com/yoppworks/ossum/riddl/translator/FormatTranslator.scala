@@ -138,48 +138,61 @@ object FormatTranslator extends Translator {
 
     def visitTypeExpr(typEx: AST.TypeExpression): String = {
       typEx match {
-        case Pattern(_, pat)      => "Pattern(\"" + pat + "\")"
-        case UniqueId(_, id)      => s"Id(${id.value})"
-        case Strng(_)             => "String"
-        case Bool(_)              => "Boolean"
-        case Number(_)            => "Number"
-        case Integer(_)           => "Integer"
-        case Decimal(_)           => "Decimal"
-        case Date(_)              => "Date"
-        case Time(_)              => "Time"
-        case DateTime(_)          => "DateTime"
-        case TimeStamp(_)         => "TimeStamp"
-        case URL(_)               => "URL"
-        case LatLong(_)           => "LatLong"
-        case TypeRef(_, id)       => id.value
-        case Optional(_, typex)   => visitTypeExpr(typex) + "?"
-        case ZeroOrMore(_, typex) => visitTypeExpr(typex) + "*"
-        case OneOrMore(_, typex)  => visitTypeExpr(typex) + "+"
-        case AST.Enumeration(_, of) =>
+        case Strng(_)       => "String"
+        case Bool(_)        => "Boolean"
+        case Number(_)      => "Number"
+        case Integer(_)     => "Integer"
+        case Decimal(_)     => "Decimal"
+        case Date(_)        => "Date"
+        case Time(_)        => "Time"
+        case DateTime(_)    => "DateTime"
+        case TimeStamp(_)   => "TimeStamp"
+        case URL(_)         => "URL"
+        case LatLong(_)     => "LatLong"
+        case TypeRef(_, id) => id.value
+        case AST.Enumeration(_, of, add) =>
           def doTypex(t: Option[TypeExpression]): String = {
             t match {
               case None        => ""
               case Some(typex) => visitTypeExpr(typex)
             }
           }
-          s"any { ${of.map(e => e.id.value + doTypex(e.value)).mkString(" ")} }"
-        case AST.Alternation(_, of) =>
-          s"one { ${of.map(visitTypeExpr).mkString(" or ")} }"
-        case AST.Aggregation(_, of) =>
+          s"any { ${of.map(e => e.id.value + doTypex(e.value)).mkString(" ")} } ${visitAddendum(add)}"
+        case AST.Alternation(_, of, add) =>
+          s"one { ${of.map(visitTypeExpr).mkString(" or ")} } ${visitAddendum(add)}"
+        case AST.Aggregation(_, of, add) =>
           s" {\n${of
             .map {
               case (k: Identifier, v: TypeExpression) =>
                 s"$spc  ${k.value} is ${visitTypeExpr(v)}"
             }
-            .mkString(s",\n")}\n$spc}"
-        case AST.Mapping(_, from, to) =>
-          s"mapping from ${visitTypeExpr(from)} to ${visitTypeExpr(to)}"
-        case AST.RangeType(_, min, max) =>
-          s"range from $min to $max"
-        case AST.ReferenceType(_, id) =>
-          s"reference to $id"
-        case x: PredefinedType =>
-          require(requirement = false, s"Unknown type $x"); ""
+            .mkString(s",\n")}\n$spc} ${visitAddendum(add)}"
+        case AST.Mapping(_, from, to, add) =>
+          s"mapping from ${visitTypeExpr(from)} to ${visitTypeExpr(to)} ${visitAddendum(add)}"
+        case AST.RangeType(_, min, max, add) =>
+          s"range from $min to $max ${visitAddendum(add)}"
+        case AST.ReferenceType(_, id, add) =>
+          s"reference to $id ${visitAddendum(add)}"
+        case Pattern(_, pat, add) =>
+          if (pat.size == 1) {
+            "Pattern(\"" +
+              pat.head.s +
+              "\"" + s") ${visitAddendum(add)}"
+          } else {
+            s"Pattern(\n" +
+              pat.map(l => spc + "  \"" + l.s + "\"\n")
+            s"\n) ${visitAddendum(add)}"
+          }
+        case UniqueId(_, id, add) =>
+          s"Id(${id.value}) ${visitAddendum(add)}"
+
+        case Optional(_, typex)   => visitTypeExpr(typex) + "?"
+        case ZeroOrMore(_, typex) => visitTypeExpr(typex) + "*"
+        case OneOrMore(_, typex)  => visitTypeExpr(typex) + "+"
+
+        case x: TypeExpression =>
+          require(requirement = false, s"Unknown type $x")
+          ""
       }
     }
 

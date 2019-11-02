@@ -49,6 +49,9 @@ object Folding {
         }
       case entity: Entity =>
         result = f(parent, entity, result)
+        result = entity.consumers.foldLeft(result) { (next, consumer) =>
+          f(entity, consumer, next)
+        }
         result = entity.functions.foldLeft(result) { (next, function) =>
           f(entity, function, next)
         }
@@ -160,6 +163,11 @@ object Folding {
             }
         case entity: Entity =>
           openEntity(initState, parent, entity)
+            .step { state =>
+              entity.consumers.foldLeft(state) { (next, consumer) =>
+                doConsumer(next, entity, consumer)
+              }
+            }
             .step { state =>
               entity.features.foldLeft(state) { (next, feature) =>
                 foldLeft(entity, feature, next)
@@ -343,6 +351,12 @@ object Folding {
       state: S,
       container: Container,
       rslt: Result
+    ): S = { state }
+
+    def doConsumer(
+      state: S,
+      container: Container,
+      consumer: Consumer
     ): S = { state }
 
     def doAction(

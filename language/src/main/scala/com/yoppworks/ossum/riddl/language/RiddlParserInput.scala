@@ -9,7 +9,11 @@ import fastparse.internal.Util
 import scala.io.Source
 
 /** Same as fastparse.IndexedParserInput but with Location support */
-case class RiddlParserInput(data: String, origin: String) extends ParserInput {
+abstract class RiddlParserInput extends ParserInput {
+  def origin: String
+  def data: String
+  def root: File
+
   override def apply(index: Int): Char = data.charAt(index)
   override def dropBuffer(index: Int): Unit = {}
   override def slice(from: Int, until: Int): String = data.slice(from, until)
@@ -65,17 +69,36 @@ case class RiddlParserInput(data: String, origin: String) extends ParserInput {
   }
 }
 
+case class StringParserInput(data: String, origin: String = "internal")
+    extends RiddlParserInput {
+  val root: File = new File(System.getProperty("user.dir"))
+}
+
+case class FileParserInput(file: File) extends RiddlParserInput {
+  val source: Source = Source.fromFile(file)
+  val data: String = source.getLines().mkString("\n")
+  source.close()
+  val root: File = file.getParentFile
+  def origin: String = file.getName
+}
+
+case class SourceParserInput(source: Source, origin: String)
+    extends RiddlParserInput {
+  val data: String = source.getLines().mkString("\n")
+  source.close()
+  val root: File = new File(System.getProperty("user.dir"))
+}
+
 object RiddlParserInput {
-  implicit def apply(data: String): RiddlParserInput = {
-    new RiddlParserInput(data, "internal")
+  implicit def apply(
+    data: String
+  ): RiddlParserInput = {
+    StringParserInput(data)
   }
   implicit def apply(source: Source): RiddlParserInput = {
-    val lines = source.getLines()
-    val input = lines.mkString("\n")
-    RiddlParserInput(input, source.descr)
+    SourceParserInput(source, source.descr)
   }
   implicit def apply(file: File): RiddlParserInput = {
-    val source = Source.fromFile(file)
-    new RiddlParserInput(source.getLines().mkString("\n"), file.getName)
+    new FileParserInput(file)
   }
 }

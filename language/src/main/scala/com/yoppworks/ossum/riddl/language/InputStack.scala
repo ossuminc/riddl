@@ -13,7 +13,7 @@ case class InputStack(
   def push(input: RiddlParserInput): Unit = files.push(input)
 
   def push(file: File): Unit = {
-    files.push(RiddlParserInput(file))
+    files.push(FileParserInput(file))
   }
 
   def pop(): RiddlParserInput = {

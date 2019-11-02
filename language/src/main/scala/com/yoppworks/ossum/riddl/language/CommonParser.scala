@@ -1,15 +1,11 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.io.File
-
 import fastparse._
 import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.AST._
 import Terminals.Keywords
 import Terminals.Punctuation
 import Terminals.Readability
-
-import scala.reflect.runtime.universe._
 
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
@@ -18,9 +14,13 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(Punctuation.undefined /)
   }
 
+  def literalStrings[_: P]: P[Seq[LiteralString]] = {
+    P(literalString.rep(1))
+  }
+
   def docBlock[_: P]: P[Seq[LiteralString]] = {
     P(
-      (open ~ literalString.rep ~ close) |
+      (open ~ literalStrings ~ close) |
         (open ~ markdownLine.rep ~ close) |
         literalString.map(Seq(_))
     )
@@ -39,7 +39,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   def explanation[_: P]: P[Explanation] = {
     P(
       location ~
-        "explained" ~ "as" ~/ docBlock
+        "explained" ~/ ("as" | "by") ~/ docBlock
     ).map(tpl => { Explanation.apply _ }.tupled(tpl))
   }
 

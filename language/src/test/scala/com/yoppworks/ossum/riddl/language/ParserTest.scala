@@ -2,6 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import scala.collection.immutable.ListMap
 
+import RiddlParserInput._
+
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 

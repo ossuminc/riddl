@@ -12,7 +12,7 @@ import org.scalatest.WordSpec
 import scala.reflect._
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
-    extends TopLevelParser
+    extends TopLevelParser(input)
     with MustMatchers {
   stack.push(input)
 
@@ -153,10 +153,25 @@ class ParsingTest extends WordSpec with MustMatchers {
     tp.parseDefinition[FROM, TO](extract)
   }
 
+  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+    input: String,
+    extract: FROM => TO
+  ): Either[Seq[ParserError], TO] = {
+    val tp = TestParser(RiddlParserInput(input))
+    tp.parseDefinition[FROM, TO](extract)
+  }
+
   def parseDefinition[FROM <: Definition: ClassTag](
     input: RiddlParserInput
   ): Either[Seq[ParserError], FROM] = {
     val tp = TestParser(input)
+    tp.parseDefinition[FROM]
+  }
+
+  def parseDefinition[FROM <: Definition: ClassTag](
+    input: String
+  ): Either[Seq[ParserError], FROM] = {
+    val tp = TestParser(RiddlParserInput(input))
     tp.parseDefinition[FROM]
   }
 

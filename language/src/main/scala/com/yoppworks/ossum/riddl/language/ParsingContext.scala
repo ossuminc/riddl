@@ -29,7 +29,7 @@ trait ParsingContext {
     mutable.ListBuffer.empty[ParserError]
 
   def current: RiddlParserInput = {
-    stack.current() match {
+    stack.current match {
       case Some(rpi) => rpi
       case None =>
         throw new RuntimeException("Parse Input Stack Underflow")
@@ -42,7 +42,7 @@ trait ParsingContext {
 
   def doInclude[T](str: LiteralString, empty: T)(rule: P[_] => P[T]): T = {
     val name = str.s + ".riddl"
-    val file = new File(root, name)
+    val file = new File(current.root, name)
     if (!file.exists()) {
       error(str.loc, s"File '$name' does not exist, can't be included.")
       empty
@@ -55,7 +55,7 @@ trait ParsingContext {
         case Right(result) =>
           result
       }
-      stack.pop()
+      stack.pop
       result
     }
   }

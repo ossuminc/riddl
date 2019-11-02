@@ -13,7 +13,7 @@ class EntityValidatorTest extends ValidatingTest {
       parseAndValidate[Entity](input) {
         case (model: Entity, _: Seq[ValidationMessage]) =>
           val msgs = Validation.validate(model, Validation.defaultOptions)
-          msgs.size mustEqual 3
+          msgs.size mustEqual 4
           msgs.exists(_.message.contains("is not defined")) mustBe true
           msgs.exists(_.message.contains("entity must consume a topic")) mustBe true
           msgs.exists(_.message.contains("should have explanations")) mustBe true

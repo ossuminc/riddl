@@ -21,12 +21,12 @@ trait TypeParser extends CommonParser {
   }
 
   def referToType[_: P]: P[ReferenceType] = {
-    P(location ~ "refer" ~ "to" ~/ entityRef).map { tpl =>
+    P(location ~ "refer" ~ "to" ~/ entityRef ~ addendum).map { tpl =>
       (ReferenceType.apply _).tupled(tpl)
     }
   }
 
-  def predefinedTypes[_: P]: P[TypeExpression] = {
+  def simplePredefinedTypes[_: P]: P[TypeExpression] = {
     P(
       (location ~ Predefined.String).map(AST.Strng) |
         (location ~ Predefined.Boolean).map(AST.Bool) |
@@ -39,16 +39,23 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.Date).map(AST.Date) |
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
-        (location ~ Predefined.URL).map(AST.URL) |
-        (location ~ Predefined.Pattern ~ roundOpen ~
-          literalString ~ roundClose)
-          .map(tpl => (Pattern.apply _).tupled(tpl)) |
-        (location ~ Predefined.Id ~ roundOpen ~/ identifier.? ~ roundClose)
-          .map {
-            case (loc, Some(id)) => UniqueId(loc, id)
-            case (loc, None)     => UniqueId(loc, Identifier(loc, ""))
-          }
+        (location ~ Predefined.URL).map(AST.URL)
     )
+  }
+
+  def patternType[_: P]: P[Pattern] = {
+    P(
+      location ~ Predefined.Pattern ~/
+        roundOpen ~/ literalStrings ~ roundClose ~/ addendum
+    ).map(tpl => (Pattern.apply _).tupled(tpl))
+  }
+
+  def uniqueIdType[_: P]: P[UniqueId] = {
+    (location ~ Predefined.Id ~ roundOpen ~/ identifier.? ~ roundClose ~/
+      addendum).map {
+      case (loc, Some(id), add) => UniqueId(loc, id, add)
+      case (loc, None, add)     => UniqueId(loc, Identifier(loc, ""), add)
+    }
   }
 
   def enumerator[_: P]: P[Enumerator] = {
@@ -61,14 +68,15 @@ trait TypeParser extends CommonParser {
   def enumerationType[_: P]: P[Enumeration] = {
     P(
       location ~ Keywords.any ~ Readability.of.? ~ curlyOpen ~/
-        enumerator.rep(1, sep = comma.?) ~ curlyClose
+        enumerator.rep(1, sep = comma.?) ~ curlyClose ~ addendum
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
   def alternationType[_: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/
-        curlyOpen ~ typeExpression.rep(2, P("or" | "|" | ",")) ~ curlyClose
+        curlyOpen ~ typeExpression.rep(2, P("or" | "|" | ",")) ~
+        curlyClose ~ addendum
     ).map { x =>
       (Alternation.apply _).tupled(x)
     }
@@ -84,25 +92,33 @@ trait TypeParser extends CommonParser {
 
   def aggregationType[_: P]: P[Aggregation] = {
     P(
-      location ~ curlyOpen ~ fields ~ curlyClose
+      location ~ curlyOpen ~ fields ~ curlyClose ~ addendum
     ).map {
-      case (loc, types) =>
-        Aggregation(loc, ListMap[Identifier, TypeExpression](types: _*))
+      case (loc, types, addendum) =>
+        Aggregation(
+          loc,
+          ListMap[Identifier, TypeExpression](types: _*),
+          addendum
+        )
     }
   }
 
   def mappingType[_: P]: P[Mapping] = {
-    P(location ~ "mapping" ~ "from" ~/ typeExpression ~ "to" ~ typeExpression)
-      .map { tpl =>
-        (Mapping.apply _).tupled(tpl)
-      }
+    P(
+      location ~ "mapping" ~ "from" ~/ typeExpression ~ "to" ~ typeExpression
+        ~ addendum
+    ).map { tpl =>
+      (Mapping.apply _).tupled(tpl)
+    }
   }
 
   def rangeType[_: P]: P[RangeType] = {
-    P(location ~ "range" ~ "from" ~/ literalInteger ~ "to" ~ literalInteger)
-      .map { tpl =>
-        (RangeType.apply _).tupled(tpl)
-      }
+    P(
+      location ~ "range" ~ "from" ~/ literalInteger ~ "to" ~ literalInteger ~
+        addendum
+    ).map { tpl =>
+      (RangeType.apply _).tupled(tpl)
+    }
   }
 
   def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
@@ -135,7 +151,8 @@ trait TypeParser extends CommonParser {
     P(
       cardinality(
         P(
-          predefinedTypes | enumerationType | alternationType | referToType |
+          simplePredefinedTypes | patternType | uniqueIdType |
+            enumerationType | alternationType | referToType |
             aggregationType | mappingType | rangeType | typeRef
         )
       )
@@ -149,5 +166,4 @@ trait TypeParser extends CommonParser {
       (Type.apply _).tupled(tpl)
     }
   }
-
 }

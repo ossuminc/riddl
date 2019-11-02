@@ -175,29 +175,31 @@ object Validation {
       definition: Container
     ): ValidationState = {
       typ match {
-        case Pattern(loc, pattern) =>
+        case Pattern(loc, pattern, addendum) =>
           try {
-            java.util.regex.Pattern.compile(pattern.s)
+            val compound = pattern.map(_.s).reduce(_ + _)
+            java.util.regex.Pattern.compile(compound)
           } catch {
             case x: PatternSyntaxException =>
               add(ValidationMessage(loc, x.getMessage))
           }
-          this
-        case UniqueId(_, entityName) =>
+          this.checkAddendum(definition, addendum)
+        case UniqueId(_, entityName, addendum) =>
           this
             .checkIdentifier(entityName)
             .checkRef[Entity](entityName, definition)
+            .checkAddendum(definition, addendum)
         case _: AST.PredefinedType =>
           this
         case AST.TypeRef(_, id: Identifier) =>
-          checkRef[TypeDefinition](id, definition)
+          checkRef[Type](id, definition)
         case Optional(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
         case OneOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
-        case Enumeration(_, enumerators: Seq[Enumerator]) =>
+        case Enumeration(_, enumerators: Seq[Enumerator], addendum) =>
           enumerators.foldLeft(this) {
             case (state, enumerator) =>
               val id = enumerator.id
@@ -211,36 +213,41 @@ object Validation {
                 )
               if (enumerator.value.nonEmpty) {
                 s.checkTypeExpression(enumerator.value.get, definition)
+                  .checkAddendum(definition, addendum)
               } else {
-                s
+                s.checkAddendum(definition, addendum)
               }
           }
-        case Alternation(_, of) =>
+        case Alternation(_, of, addendum) =>
           of.foldLeft(this) {
-            case (state, typex) =>
-              state.checkTypeExpression(typex, definition)
-          }
+              case (state, typex) =>
+                state.checkTypeExpression(typex, definition)
+            }
+            .checkAddendum(definition, addendum)
         case Aggregation(
             loc,
-            of: immutable.ListMap[Identifier, TypeExpression]
+            of: immutable.ListMap[Identifier, TypeExpression],
+            addendum
             ) =>
           of.foldLeft(this) {
-            case (state, (id, typex)) =>
-              state
-                .checkIdentifier(id)
-                .check(
-                  id.value.head.isLower,
-                  "Field names should start with a lower case letter",
-                  StyleWarning,
-                  loc
-                )
-                .checkTypeExpression(typex, definition)
-          }
-        case Mapping(_, from, to) =>
+              case (state, (id, typex)) =>
+                state
+                  .checkIdentifier(id)
+                  .check(
+                    id.value.head.isLower,
+                    "Field names should start with a lower case letter",
+                    StyleWarning,
+                    loc
+                  )
+                  .checkTypeExpression(typex, definition)
+            }
+            .checkAddendum(definition, addendum)
+        case Mapping(_, from, to, addendum) =>
           this
             .checkTypeExpression(from, definition)
             .checkTypeExpression(to, definition)
-        case RangeType(loc, min, max) =>
+            .checkAddendum(definition, addendum)
+        case RangeType(loc, min, max, addendum) =>
           this
             .check(
               min.n >= BigInt.long2bigInt(Long.MinValue),
@@ -250,12 +257,15 @@ object Validation {
             )
             .check(
               max.n <= BigInt.long2bigInt(Long.MaxValue),
-              "Maximum value might be too small to store in a Long",
+              "Maximum value might be too large to store in a Long",
               Warning,
               loc
             )
-        case ReferenceType(_, entity: EntityRef) =>
-          this.checkRef[Entity](entity, definition)
+            .checkAddendum(definition, addendum)
+        case ReferenceType(_, entity: EntityRef, addendum) =>
+          this
+            .checkRef[Entity](entity, definition)
+            .checkAddendum(definition, addendum)
       }
     }
 

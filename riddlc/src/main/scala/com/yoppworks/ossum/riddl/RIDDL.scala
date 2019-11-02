@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl
 
 import com.yoppworks.ossum.riddl.RiddlOptions._
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.FileParserInput
 import com.yoppworks.ossum.riddl.language.Validation
 import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
 import com.yoppworks.ossum.riddl.translator.FormatTranslator
@@ -60,7 +60,7 @@ object RIDDL {
     options.inputFile match {
       case Some(file) =>
         timer("parse", options.showTimes) {
-          val input = RiddlParserInput(file)
+          val input = FileParserInput(file)
           language.TopLevelParser.parse(input)
         } match {
           case Left(msg) =>
@@ -77,7 +77,7 @@ object RIDDL {
     options.inputFile match {
       case Some(file) =>
         timer("parse", options.showTimes) {
-          val input = RiddlParserInput(file)
+          val input = FileParserInput(file)
           language.TopLevelParser.parse(input)
         } match {
           case Left(msg) =>

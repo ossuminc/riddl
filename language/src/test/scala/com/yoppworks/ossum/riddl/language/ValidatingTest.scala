@@ -13,7 +13,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidate[D <: Container: ClassTag](input: String)(
     validation: (D, Seq[ValidationMessage]) => Assertion
   ): Assertion = {
-    parseDefinition[D](input) match {
+    parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)

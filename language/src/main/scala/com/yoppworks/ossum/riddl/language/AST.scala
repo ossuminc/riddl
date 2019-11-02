@@ -110,54 +110,71 @@ object AST {
     value: Option[Aggregation]
   ) extends Reference
 
-  case class Enumeration(loc: Location, of: Seq[Enumerator])
-      extends TypeExpression
-  case class Alternation(loc: Location, of: Seq[TypeExpression])
-      extends TypeExpression
-  case class Aggregation(loc: Location, of: ListMap[Identifier, TypeExpression])
-      extends TypeExpression
+  case class Enumeration(
+    loc: Location,
+    of: Seq[Enumerator],
+    addendum: Option[Addendum] = None
+  ) extends TypeExpression
+  case class Alternation(
+    loc: Location,
+    of: Seq[TypeExpression],
+    addendum: Option[Addendum] = None
+  ) extends TypeExpression
+  case class Aggregation(
+    loc: Location,
+    of: ListMap[Identifier, TypeExpression],
+    addendum: Option[Addendum] = None
+  ) extends TypeExpression
       with EntityValue
-  case class Mapping(loc: Location, from: TypeExpression, to: TypeExpression)
-      extends TypeExpression
-  case class RangeType(loc: Location, min: LiteralInteger, max: LiteralInteger)
-      extends TypeExpression
+  case class Mapping(
+    loc: Location,
+    from: TypeExpression,
+    to: TypeExpression,
+    addendum: Option[Addendum] = None
+  ) extends TypeExpression
+  case class RangeType(
+    loc: Location,
+    min: LiteralInteger,
+    max: LiteralInteger,
+    addendum: Option[Addendum] = None
+  ) extends TypeExpression
   case class ReferenceType(
     loc: Location,
-    entity: EntityRef
+    entity: EntityRef,
+    addendum: Option[Addendum] = None
   ) extends TypeExpression
 
-  sealed trait TypeDefinition extends Definition
+  case class Pattern(
+    loc: Location,
+    pattern: Seq[LiteralString],
+    addendum: Option[Addendum]
+  ) extends TypeExpression
 
-  abstract class PredefinedType(locattion: Location, name: String)
-      extends TypeExpression {
+  case class UniqueId(
+    loc: Location,
+    entityName: Identifier,
+    addendum: Option[Addendum]
+  ) extends TypeExpression
+
+  abstract class PredefinedType(val kind: String) extends TypeExpression {
     def loc: Location
-    def id: Identifier = Identifier(loc, name)
-    def addendum: Option[Addendum] = None
-    def kind: String = name
   }
 
-  case class Strng(loc: Location) extends PredefinedType(loc, Predefined.String)
-  case class Bool(loc: Location) extends PredefinedType(loc, Predefined.Boolean)
-  case class Number(loc: Location)
-      extends PredefinedType(loc, Predefined.Number)
-  case class Integer(loc: Location)
-      extends PredefinedType(loc, Predefined.Integer)
-  case class Decimal(loc: Location)
-      extends PredefinedType(loc, Predefined.Decimal)
-  case class Real(loc: Location) extends PredefinedType(loc, Predefined.Real)
-  case class Date(loc: Location) extends PredefinedType(loc, Predefined.Date)
-  case class Time(loc: Location) extends PredefinedType(loc, Predefined.Time)
-  case class DateTime(loc: Location)
-      extends PredefinedType(loc, Predefined.DateTime)
+  case class Strng(loc: Location) extends PredefinedType(Predefined.String)
+  case class Bool(loc: Location) extends PredefinedType(Predefined.Boolean)
+  case class Number(loc: Location) extends PredefinedType(Predefined.Number)
+  case class Integer(loc: Location) extends PredefinedType(Predefined.Integer)
+  case class Decimal(loc: Location) extends PredefinedType(Predefined.Decimal)
+  case class Real(loc: Location) extends PredefinedType(Predefined.Real)
+  case class Date(loc: Location) extends PredefinedType(Predefined.Date)
+  case class Time(loc: Location) extends PredefinedType(Predefined.Time)
+  case class DateTime(loc: Location) extends PredefinedType(Predefined.DateTime)
   case class TimeStamp(loc: Location)
-      extends PredefinedType(loc, Predefined.TimeStamp)
-  case class URL(loc: Location) extends PredefinedType(loc, Predefined.URL)
-  case class LatLong(loc: Location)
-      extends PredefinedType(loc, Predefined.LatLong)
-  case class Pattern(loc: Location, pattern: LiteralString)
-      extends PredefinedType(loc, "Pattern")
-  case class UniqueId(loc: Location, entityName: Identifier)
-      extends PredefinedType(loc, "Id")
+      extends PredefinedType(Predefined.TimeStamp)
+  case class URL(loc: Location) extends PredefinedType(Predefined.URL)
+  case class LatLong(loc: Location) extends PredefinedType(Predefined.LatLong)
+
+  sealed trait TypeDefinition extends Definition
 
   case class Type(
     loc: Location,
