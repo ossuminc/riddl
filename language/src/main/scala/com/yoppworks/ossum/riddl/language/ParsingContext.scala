@@ -50,7 +50,6 @@ trait ParsingContext {
       stack.push(file)
       val result = this.expect[T](rule) match {
         case Left(errors) =>
-          error(str.loc, s"Parse of '$name' failed")
           empty
         case Right(result) =>
           result

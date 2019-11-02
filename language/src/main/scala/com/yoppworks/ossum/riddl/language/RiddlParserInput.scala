@@ -99,6 +99,6 @@ object RiddlParserInput {
     SourceParserInput(source, source.descr)
   }
   implicit def apply(file: File): RiddlParserInput = {
-    new FileParserInput(file)
+    FileParserInput(file)
   }
 }

@@ -25,16 +25,22 @@ trait Translator {
     result: Either[Seq[ParserError], RootContainer],
     origin: String,
     errorLog: (=> String) => Unit,
-    configFile: File
+    configFile: File,
+    showWarnings: Boolean = true
   ): Seq[File] = {
     result match {
       case Left(errors) =>
         errors.map(_.format).foreach(errorLog(_))
+        errorLog(s"TOTAL: ${errors.length} syntax errors")
         Seq.empty[File]
       case Right(root) =>
         val errors: Seq[ValidationMessage] =
           Validation.validate[RootContainer](root)
         if (errors.nonEmpty) {
+          val (warns, errs) = errors.partition(_.kind.isWarning)
+          if (showWarnings) {
+            warns.map(_.format(origin)).foreach(errorLog(_))
+          }
           errors.map(_.format(origin)).foreach(errorLog(_))
           Seq.empty[File]
         } else {
