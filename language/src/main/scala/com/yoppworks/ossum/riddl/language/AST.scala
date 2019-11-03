@@ -47,7 +47,7 @@ object AST {
 
   case class Description(
     loc: Location,
-    brief: LiteralString,
+    brief: Seq[LiteralString],
     details: Seq[LiteralString],
     fields: Map[Identifier, Seq[LiteralString]],
     citations: Seq[LiteralString]

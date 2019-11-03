@@ -7,6 +7,8 @@ import Terminals.Keywords
 import Terminals.Punctuation
 import Terminals.Readability
 
+import scala.Option
+
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
@@ -28,6 +30,10 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def optionalNestedContent[_: P, T](parser: => P[T]): P[Seq[T]] = {
     P(open ~ parser.rep ~ close).?.map(_.getOrElse(Seq.empty[T]))
+  }
+
+  def brief[_: P]: P[Seq[LiteralString]] = {
+    (Keywords.brief ~ docBlock).?.map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
   def details[_: P]: P[Seq[LiteralString]] = {
@@ -58,10 +64,22 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(
       location ~
         (Keywords.described | Keywords.explained) ~ as ~ open ~/
-        Keywords.brief ~ literalString ~
-        details ~
-        items ~ citations ~ close
-    ).map(t => (Description.apply _).tupled(t)).?
+        (literalString.map(
+          x =>
+            (
+              Seq(x),
+              Seq.empty[LiteralString],
+              Map.empty[Identifier, Seq[LiteralString]],
+              Seq.empty[LiteralString]
+            )
+        ) |
+          (brief ~ details ~ items ~ citations)) ~ close
+    ).?.map {
+      case yes @ Some((loc, (brief, details, items, cites))) =>
+        Some(Description(loc, brief, details, items, cites))
+      case no @ None =>
+        no
+    }
   }
 
   def literalInteger[_: P]: P[LiteralInteger] = {

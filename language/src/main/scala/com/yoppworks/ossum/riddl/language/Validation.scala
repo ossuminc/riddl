@@ -414,10 +414,10 @@ object Validation {
         val brief = desc.brief
         val result: ValidationState = this
           .check(
-            brief.s.nonEmpty,
+            brief.nonEmpty,
             s"Brief description should not be empty",
             MissingWarning,
-            brief.loc
+            desc.loc
           )
           .check(
             desc.details.nonEmpty,
