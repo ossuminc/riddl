@@ -14,7 +14,7 @@ import Terminals.Punctuation._
 trait TypeParser extends CommonParser {
 
   def typeRef[_: P]: P[TypeRef] = {
-    P(location ~ identifier).map {
+    P(location ~ pathIdentifier).map {
       case (location, identifier) =>
         TypeRef(location, identifier)
     }
@@ -51,10 +51,11 @@ trait TypeParser extends CommonParser {
   }
 
   def uniqueIdType[_: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ roundOpen ~/ identifier.? ~ roundClose ~/
+    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/
       description).map {
       case (loc, Some(id), add) => UniqueId(loc, id, add)
-      case (loc, None, add)     => UniqueId(loc, Identifier(loc, ""), add)
+      case (loc, None, add) =>
+        UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), add)
     }
   }
 

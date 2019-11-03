@@ -6,7 +6,10 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.reflect._
 
-/** Unit Tests For SymbolTable */
+/** Symbol Table for Validation
+  * This symbol table is built from the AST model after syntactic parsing
+  * is complete. It will also work for any sub-tree of the model that is
+  * rooted by a Container node. */
 case class SymbolTable(container: Container) {
   type Parentage = Map[Definition, Container]
 
@@ -43,46 +46,57 @@ case class SymbolTable(container: Container) {
     recurse(List.empty[Container], definition)
   }
 
+  def pathOf(definition: Definition): Seq[String] = {
+    definition.id.value +: parentsOf(definition).map(_.id.value)
+  }
+
   type Symbols =
     mutable.HashMap[String, mutable.Set[(Definition, Container)]]
 
-  val emptySymbols =
+  final val symbols =
     mutable.HashMap.empty[String, mutable.Set[(Definition, Container)]]
 
-  val symbols: Symbols = {
-    Folding.foldEachDefinition[Symbols](container, container, emptySymbols) {
-      (parent, child, next) =>
-        val extracted = next.getOrElse(
-          child.id.value,
-          mutable.Set.empty[(Definition, Container)]
-        )
-        val included = extracted += (child -> parent)
-        next.update(child.id.value, included)
-        next
-    }
+  Folding.foldEachDefinition[Symbols](container, container, symbols) {
+    (parent, child, next) =>
+      val extracted = next.getOrElse(
+        child.id.value,
+        mutable.Set.empty[(Definition, Container)]
+      )
+      val included = extracted += (child -> parent)
+      next.update(child.id.value, included)
+      next
   }
 
   def lookup[D <: Definition: ClassTag](
-    ref: Reference,
-    within: Container
+    ref: Reference
   ): List[D] = {
-    lookup[D](ref.id, within)
+    lookup[D](ref.id.value)
   }
 
   def lookup[D <: Definition: ClassTag](
-    id: Identifier,
-    within: Container
+    id: Seq[String]
   ): List[D] = {
-    val parents = within +: parentsOf(within)
     val clazz = classTag[D].runtimeClass
-    symbols.get(id.value) match {
+    val leafName = id.head
+    val containerNames = id.tail
+    symbols.get(leafName) match {
       case Some(set) =>
         val result = set
           .filter {
             case (d: Definition, container: Container) =>
-              val compatible = clazz.isInstance(d)
-              val in_scope = parents.contains(container)
-              compatible && in_scope
+              if (clazz.isInstance(d)) {
+                // It is in the result set as long as the container names
+                // given in the provided id are the same as the container
+                // names in the symbol table.
+                val parentNames =
+                  (container +: parentsOf(container)).map(_.id.value)
+                containerNames.zip(parentNames).forall {
+                  case (containerName, parentName) =>
+                    containerName == parentName
+                }
+              } else {
+                false
+              }
           }
           .map(_._1.asInstanceOf[D])
         result.toList

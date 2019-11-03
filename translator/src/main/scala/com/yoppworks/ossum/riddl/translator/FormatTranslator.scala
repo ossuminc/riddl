@@ -159,7 +159,7 @@ object FormatTranslator extends Translator {
         case TimeStamp(_)   => "TimeStamp"
         case URL(_)         => "URL"
         case LatLong(_)     => "LatLong"
-        case TypeRef(_, id) => id.value
+        case TypeRef(_, id) => id.value.mkString(".")
         case AST.Enumeration(_, of, add) =>
           def doTypex(t: Option[TypeExpression]): String = {
             t match {

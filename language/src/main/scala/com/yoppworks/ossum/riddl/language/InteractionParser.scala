@@ -11,7 +11,8 @@ import Terminals.Punctuation
 trait InteractionParser extends CommonParser {
 
   def roleRef[_: P]: P[RoleRef] = {
-    P(location ~ "role" ~/ identifier).map(tpl => (RoleRef.apply _).tupled(tpl))
+    P(location ~ "role" ~/ pathIdentifier)
+      .map(tpl => (RoleRef.apply _).tupled(tpl))
   }
 
   def roleOptions[_: P]: P[Seq[RoleOption]] = {
@@ -45,7 +46,7 @@ trait InteractionParser extends CommonParser {
 
   def reaction[_: P]: P[Reaction] = {
     P(
-      location ~ identifier ~ Keywords.call ~ entityRef ~/ functionRef ~
+      location ~ identifier ~ Keywords.call ~ entityRef ~/ actionRef ~
         docBlock ~ description
     ).map(x => (Reaction.apply _).tupled(x))
   }

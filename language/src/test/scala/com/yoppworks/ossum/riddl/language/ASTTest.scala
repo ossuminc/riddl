@@ -14,10 +14,11 @@ class ASTTest extends WordSpec with MustMatchers {
       Domain((0, 0), Identifier((1, 1), "foo"), Seq.empty[Type])
     }
     "support all type constructs" in {
-      TypeRef((0, 0), Identifier((0, 0), "Foo")) mustBe TypeRef(
-        (0, 0),
-        Identifier((0, 0), "Foo")
+      TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe TypeRef(
+        0 -> 0,
+        PathIdentifier(0 -> 0, Seq("Foo"))
       )
+
       Strng mustBe Strng
       Bool mustBe Bool
       Number mustBe Number
@@ -31,12 +32,12 @@ class ASTTest extends WordSpec with MustMatchers {
         Alternation((0, 0), Seq.empty[TypeExpression])
       Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression]) mustBe
         Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression])
-      Optional((0, 0), TypeRef((0, 0), Identifier((0, 0), "String"))) mustBe
-        Optional((0, 0), TypeRef((0, 0), Identifier((0, 0), "String")))
-      ZeroOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "Time"))) mustBe
-        ZeroOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "Time")))
-      OneOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "URL"))) mustBe
-        OneOrMore((0, 0), TypeRef((0, 0), Identifier((0, 0), "URL")))
+      Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))) mustBe
+        Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String"))))
+      ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))) mustBe
+        ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time"))))
+      OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL")))) mustBe
+        OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL"))))
     }
   }
 }

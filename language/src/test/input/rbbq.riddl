@@ -15,7 +15,7 @@ domain ReactiveBBQ {
 
   topic Inputs {
     commands {
-      foo is String yields event bar
+      foo is String yields event Inputs.bar
     } events {
       bar is String
     } queries {} results {}

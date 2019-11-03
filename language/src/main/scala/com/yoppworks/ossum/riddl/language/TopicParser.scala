@@ -24,7 +24,7 @@ trait TopicParser extends CommonParser with TypeParser {
     P(
       eventRef.map(Seq(_)) |
         Keywords.events ~/ open ~
-          (location ~ identifier)
+          (location ~ pathIdentifier)
             .map { tpl =>
               (EventRef.apply _).tupled(tpl)
             }

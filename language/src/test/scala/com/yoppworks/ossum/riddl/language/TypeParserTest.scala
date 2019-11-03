@@ -8,28 +8,49 @@ import scala.collection.immutable.ListMap
 class TypeParserTest extends ParsingTest {
 
   "TypeParser" should {
+    "allow renames of String" in {
+      val input = "type str = String"
+      val expected = Type(
+        1 -> 1,
+        Identifier(1 -> 6, "str"),
+        Strng(1 -> 12)
+      )
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow renames of Number" in {
+      val input = "type num = Number"
+      val expected = Type(
+        1 -> 1,
+        Identifier(1 -> 6, "num"),
+        Number(1 -> 12)
+      )
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Boolean" in {
+      val input = "type boo = Boolean"
+      val expected = Type(
+        1 -> 1,
+        Identifier(1 -> 6, "boo"),
+        Bool(1 -> 12)
+      )
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow renames of UniqueId" in {
+      val input = "type ident = Id()"
+      val expected = Type(
+        1 -> 1,
+        Identifier(1 -> 6, "ident"),
+        UniqueId(
+          1 -> 14,
+          entityPath = PathIdentifier(1 -> 14, Seq.empty[String]),
+          None
+        )
+      )
+      checkDefinition[Type, Type](input, expected, identity)
+
+    }
     "allow renames of 8 literal types" in {
       val cases = Map[String, Type](
-        "type str = String" -> Type(
-          1 -> 1,
-          Identifier(1 -> 6, "str"),
-          Strng(1 -> 12)
-        ),
-        "type num = Number" -> Type(
-          1 -> 1,
-          Identifier(1 -> 6, "num"),
-          Number(1 -> 12)
-        ),
-        "type boo = Boolean" -> Type(
-          1 -> 1,
-          Identifier(1 -> 6, "boo"),
-          Bool(1 -> 12)
-        ),
-        "type ident = Id()" -> Type(
-          1 -> 1,
-          Identifier(1 -> 6, "ident"),
-          UniqueId(1 -> 14, Identifier(1 -> 14, ""), None)
-        ),
         "type dat = Date" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "dat"),
@@ -53,7 +74,7 @@ class TypeParserTest extends ParsingTest {
         "type FirstName = url" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "FirstName"),
-          TypeRef(1 -> 18, Identifier(1 -> 18, "url"))
+          TypeRef(1 -> 18, PathIdentifier(1 -> 18, Seq("url")))
         )
       )
       checkDefinitions[Type, Type](cases, identity)
@@ -84,9 +105,9 @@ class TypeParserTest extends ParsingTest {
         Alternation(
           1 -> 12,
           List(
-            TypeRef(1 -> 21, Identifier(1 -> 21, "enum")),
-            TypeRef(1 -> 29, Identifier(1 -> 29, "stamp")),
-            TypeRef(1 -> 38, Identifier(1 -> 38, "url"))
+            TypeRef(1 -> 21, PathIdentifier(1 -> 21, Seq("enum"))),
+            TypeRef(1 -> 29, PathIdentifier(1 -> 29, Seq("stamp"))),
+            TypeRef(1 -> 38, PathIdentifier(1 -> 38, Seq("url")))
           )
         )
       )
@@ -109,7 +130,7 @@ class TypeParserTest extends ParsingTest {
             Identifier(2 -> 3, "key") ->
               Number(2 -> 8),
             Identifier(3 -> 3, "id") ->
-              UniqueId(3 -> 7, Identifier(3 -> 7, ""), None),
+              UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]), None),
             Identifier(4 -> 3, "time") ->
               TimeStamp(4 -> 9)
           )
@@ -149,7 +170,10 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreA"),
-        OneOrMore(1 -> 24, TypeRef(1 -> 24, Identifier(1 -> 24, "agg")))
+        OneOrMore(
+          1 -> 24,
+          TypeRef(1 -> 24, PathIdentifier(1 -> 24, Seq("agg")))
+        )
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -158,7 +182,10 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreC"),
-        OneOrMore(1 -> 19, TypeRef(1 -> 19, Identifier(1 -> 19, "agg")))
+        OneOrMore(
+          1 -> 19,
+          TypeRef(1 -> 19, PathIdentifier(1 -> 19, Seq("agg")))
+        )
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -167,7 +194,10 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreB"),
-        OneOrMore(1 -> 19, TypeRef(1 -> 19, Identifier(1 -> 19, "agg")))
+        OneOrMore(
+          1 -> 19,
+          TypeRef(1 -> 19, PathIdentifier(1 -> 19, Seq("agg")))
+        )
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -176,7 +206,10 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "zeroOrMore"),
-        ZeroOrMore(1 -> 33, TypeRef(1 -> 33, Identifier(1 -> 33, "agg")))
+        ZeroOrMore(
+          1 -> 33,
+          TypeRef(1 -> 33, PathIdentifier(1 -> 33, Seq("agg")))
+        )
       )
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:33),TypeRef((1:33),Identifier((1:33),agg))),None)
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:19),TypeRef((1:33),Identifier((1:33),agg))),None)
@@ -187,7 +220,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "optional"),
-        Optional(1 -> 26, TypeRef(1 -> 26, Identifier(1 -> 26, "agg")))
+        Optional(1 -> 26, TypeRef(1 -> 26, PathIdentifier(1 -> 26, Seq("agg"))))
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -222,18 +255,18 @@ class TypeParserTest extends ParsingTest {
               9 -> 19,
               ListMap(
                 Identifier(10 -> 5, "a") ->
-                  TypeRef(10 -> 8, Identifier(10 -> 8, "Simple")),
+                  TypeRef(10 -> 8, PathIdentifier(10 -> 8, Seq("Simple"))),
                 Identifier(11 -> 5, "b") ->
                   TimeStamp(11 -> 8),
                 Identifier(12 -> 5, "c") ->
                   ZeroOrMore(
                     12 -> 22,
-                    TypeRef(12 -> 22, Identifier(12 -> 22, "Compound"))
+                    TypeRef(12 -> 22, PathIdentifier(12 -> 22, Seq("Compound")))
                   ),
                 Identifier(13 -> 5, "d") ->
                   Optional(
                     13 -> 17,
-                    TypeRef(13 -> 17, Identifier(13 -> 17, "Choices"))
+                    TypeRef(13 -> 17, PathIdentifier(13 -> 17, Seq("Choices")))
                   )
               )
             ),

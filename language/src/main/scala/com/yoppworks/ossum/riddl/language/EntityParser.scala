@@ -52,36 +52,43 @@ trait EntityParser
     P(Keywords.state ~/ is ~ aggregation)
   }
 
-  def setAction[_: P]: P[SetStatement] = {
+  def setAction[_: P](): P[SetStatement] = {
     (Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
-      pathIdentifier).map { t =>
+      pathIdentifier ~ description).map { t =>
       (SetStatement.apply _).tupled(t)
     }
   }
 
   def appendAction[_: P]: P[AppendStatement] = {
     (Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
-      identifier).map { t =>
+      identifier ~ description).map { t =>
       (AppendStatement.apply _).tupled(t)
+    }
+  }
+
+  def publishAction[_: P]: P[PublishStatement] = {
+    (Keywords.publish ~/ location ~ messageRef ~ Terminals.Readability.to ~
+      topicRef ~ description).map { t =>
+      (PublishStatement.apply _).tupled(t)
     }
   }
 
   def sendAction[_: P]: P[SendStatement] = {
     (Keywords.send ~/ location ~ messageRef ~ Terminals.Readability.to ~
-      topicRef).map { t =>
+      entityRef ~ description).map { t =>
       (SendStatement.apply _).tupled(t)
     }
   }
 
-  def removeAction[_: P]: P[RemoveStatement] = {
+  def removeAction[_: P](): P[RemoveStatement] = {
     (Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~
-      pathIdentifier).map { t =>
+      pathIdentifier ~ description).map { t =>
       (RemoveStatement.apply _).tupled(t)
     }
   }
 
   def onClauseAction[_: P]: P[OnClauseStatement] = {
-    P(setAction | appendAction | sendAction | removeAction)
+    P(setAction | appendAction | removeAction | sendAction | publishAction)
   }
 
   def onClause[_: P]: P[OnClause] = {
@@ -90,7 +97,8 @@ trait EntityParser
 
   def consumer[_: P]: P[Consumer] = {
     P(
-      Keywords.consumer ~/ location ~ identifier ~ Readability.of ~ topicRef ~
+      Keywords.consumer ~/ location ~ identifier ~
+        (Readability.of | Readability.for_ | Readability.from) ~ topicRef ~
         optionalNestedContent(onClause) ~ description
     ).map(t => (Consumer.apply _).tupled(t))
   }

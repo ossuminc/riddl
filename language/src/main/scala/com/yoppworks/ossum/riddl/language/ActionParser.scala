@@ -12,7 +12,7 @@ trait ActionParser extends CommonParser with TypeParser {
 
   def input[_: P]: P[Aggregation] = {
     P(
-      Keywords.output ~ is ~ aggregation
+      Keywords.input ~ is ~ aggregation
     )
   }
 

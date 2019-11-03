@@ -166,8 +166,10 @@ class ParserTest extends ParsingTest {
             Command(
               2 -> 1,
               Identifier(2 -> 1, "DoThisThing"),
-              TypeRef(2 -> 15, Identifier(2 -> 15, "SomeType")),
-              Seq(EventRef(2 -> 31, Identifier(2 -> 37, "ThingWasDone")))
+              TypeRef(2 -> 15, PathIdentifier(2 -> 15, Seq("SomeType"))),
+              Seq(
+                EventRef(2 -> 31, PathIdentifier(2 -> 37, Seq("ThingWasDone")))
+              )
             )
       }
     }
@@ -185,7 +187,7 @@ class ParserTest extends ParsingTest {
             Event(
               2 -> 1,
               Identifier(2 -> 1, "ThingWasDone"),
-              TypeRef(2 -> 17, Identifier(2 -> 17, "SomeType"))
+              TypeRef(2 -> 17, PathIdentifier(2 -> 17, Seq("SomeType")))
             )
       }
     }
@@ -204,7 +206,7 @@ class ParserTest extends ParsingTest {
               2 -> 1,
               Identifier(2 -> 1, "FindThisThing"),
               Strng(2 -> 17),
-              ResultRef(2 -> 31, Identifier(2 -> 38, "SomeResult"))
+              ResultRef(2 -> 31, PathIdentifier(2 -> 38, Seq("SomeResult")))
             )
       }
     }
@@ -222,7 +224,7 @@ class ParserTest extends ParsingTest {
             Result(
               2 -> 8,
               Identifier(2 -> 8, "ThisQueryResult"),
-              TypeRef(2 -> 26, Identifier(2 -> 26, "SomeType"))
+              TypeRef(2 -> 26, PathIdentifier(2 -> 26, Seq("SomeType")))
             )
 
       }
@@ -264,7 +266,7 @@ class ParserTest extends ParsingTest {
               Consumer(
                 4 -> 12,
                 Identifier(4 -> 12, "foo"),
-                TopicRef(4 -> 19, Identifier(4 -> 25, "EntityChannel"))
+                TopicRef(4 -> 19, PathIdentifier(4 -> 25, Seq("EntityChannel")))
               )
             ),
             features = Seq(
@@ -322,8 +324,8 @@ class ParserTest extends ParsingTest {
             Adaptor(
               1 -> 1,
               Identifier(1 -> 9, "fuzz"),
-              Some(DomainRef(1 -> 18, Identifier(1 -> 25, "fuzzy"))),
-              ContextRef(1 -> 31, Identifier(1 -> 39, "blogger"))
+              Some(DomainRef(1 -> 18, PathIdentifier(1 -> 25, Seq("fuzzy")))),
+              ContextRef(1 -> 31, PathIdentifier(1 -> 39, Seq("blogger")))
             )
       }
     }
@@ -371,18 +373,30 @@ class ParserTest extends ParsingTest {
                   11 -> 3,
                   Identifier(11 -> 13, "perform a command"),
                   Seq(AsynchOption(11 -> 43)),
-                  RoleRef(12 -> 10, Identifier(12 -> 15, "SomeActor")),
-                  EntityRef(13 -> 8, Identifier(13 -> 15, "myLittlePony")),
-                  CommandRef(13 -> 31, Identifier(13 -> 39, "DoAThing")),
+                  RoleRef(12 -> 10, PathIdentifier(12 -> 15, Seq("SomeActor"))),
+                  EntityRef(
+                    13 -> 8,
+                    PathIdentifier(13 -> 15, Seq("myLittlePony"))
+                  ),
+                  CommandRef(
+                    13 -> 31,
+                    PathIdentifier(13 -> 39, Seq("DoAThing"))
+                  ),
                   Seq.empty[Reaction]
                 ),
                 MessageAction(
                   15 -> 3,
                   Identifier(15 -> 11, "handle a thing"),
                   Seq(AsynchOption(15 -> 38)),
-                  EntityRef(16 -> 10, Identifier(16 -> 17, "myLittlePony")),
-                  EntityRef(17 -> 8, Identifier(17 -> 15, "Unicorn")),
-                  CommandRef(17 -> 26, Identifier(17 -> 34, "HandleAThing")),
+                  EntityRef(
+                    16 -> 10,
+                    PathIdentifier(16 -> 17, Seq("myLittlePony"))
+                  ),
+                  EntityRef(17 -> 8, PathIdentifier(17 -> 15, Seq("Unicorn"))),
+                  CommandRef(
+                    17 -> 26,
+                    PathIdentifier(17 -> 34, Seq("HandleAThing"))
+                  ),
                   Seq.empty[Reaction]
                 )
               )

@@ -122,10 +122,15 @@ object Validation {
       options.contains(ReportStyleWarnings)
 
     def lookup[T <: Definition: ClassTag](
-      id: Identifier,
-      within: Container
+      id: PathIdentifier
     ): List[T] = {
-      symbolTable.lookup[T](id, within)
+      symbolTable.lookup[T](id.value)
+    }
+
+    def lookup[T <: Definition: ClassTag](
+      id: Seq[String]
+    ): List[T] = {
+      symbolTable.lookup[T](id)
     }
 
     def add(msg: ValidationMessage): ValidationState = {
@@ -187,13 +192,12 @@ object Validation {
           this.checkDescription(definition, addendum)
         case UniqueId(_, entityName, addendum) =>
           this
-            .checkIdentifier(entityName)
-            .checkRef[Entity](entityName, definition)
+            .checkRef[Entity](entityName)
             .checkDescription(definition, addendum)
         case _: AST.PredefinedType =>
           this
-        case AST.TypeRef(_, id: Identifier) =>
-          checkRef[Type](id, definition)
+        case AST.TypeRef(_, id: PathIdentifier) =>
+          checkRef[Type](id)
         case Optional(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
         case OneOrMore(_, typex: TypeExpression) =>
@@ -264,31 +268,27 @@ object Validation {
             )
             .checkDescription(definition, addendum)
         case ReferenceType(_, entity: EntityRef, addendum) =>
-          this
-            .checkRef[Entity](entity, definition)
-            .checkDescription(definition, addendum)
+          this.checkRef[Entity](entity).checkDescription(definition, addendum)
       }
     }
 
     def checkRef[T <: Definition: ClassTag](
-      reference: Reference,
-      within: Container
+      reference: Reference
     ): ValidationState = {
-      checkRef[T](reference.id, within)
+      checkRef[T](reference.id)
     }
 
     def checkRef[T <: Definition: ClassTag](
-      id: Identifier,
-      within: Container
+      id: PathIdentifier
     ): ValidationState = {
       if (id.value.nonEmpty) {
         val tc = classTag[T].runtimeClass
-        symbolTable.lookup[T](id, within) match {
+        symbolTable.lookup[T](id.value) match {
           case Nil =>
             add(
               ValidationMessage(
                 id.loc,
-                s"'${id.value}' is not defined but should be a ${tc.getSimpleName}",
+                s"'$id' is not defined but should be a ${tc.getSimpleName}",
                 Error
               )
             )
@@ -368,8 +368,9 @@ object Validation {
         StyleWarning,
         definition.loc
       )
+      val path = symbolTable.pathOf(definition)
       val matches =
-        result.lookup[Definition](definition.id, container)
+        result.lookup[Definition](path)
       if (matches.isEmpty) {
         result = result.add(
           ValidationMessage(
@@ -386,7 +387,7 @@ object Validation {
             result = result.add(
               ValidationMessage(
                 head.id.loc,
-                s"${head.identify} is defined multiple times; other " +
+                s"${definition.identify} is defined multiple times; other " +
                   s"definitions are:\n  " +
                   matches.map(x => x.identify + " " + x.loc).mkString("\n  "),
                 Error
@@ -504,7 +505,7 @@ object Validation {
         .checkTypeExpression(entity.state, entity)
         .checkOptions[EntityOption](entity.options, entity.loc)
       result = entity.consumers.foldLeft(result) { (s, consumer) =>
-        s.checkRef[Topic](consumer.topic, entity)
+        s.checkRef[Topic](consumer.topic)
       }
 
       // TODO: invariant?
@@ -603,9 +604,9 @@ object Validation {
       val result =
         state
           .checkDefinition(container, adaptor)
-          .checkRef[Context](adaptor.targetContext, adaptor)
+          .checkRef[Context](adaptor.targetContext)
       adaptor.targetDomain.foldLeft(result) {
-        case (s, domain) => s.checkRef[Domain](domain, adaptor)
+        case (s, domain) => s.checkRef[Domain](domain)
       }
     }
 
@@ -636,7 +637,7 @@ object Validation {
       } else {
         command.events.foldLeft(result) {
           case (st, eventRef) =>
-            st.checkRef[Event](eventRef, container)
+            st.checkRef[Event](eventRef)
         }
       }
     }
@@ -657,7 +658,7 @@ object Validation {
       state
         .checkDefinition(container, query)
         .checkTypeExpression(query.typ, container)
-        .checkRef[Result](query.result.id, container)
+        .checkRef[Result](query.result.id)
     }
 
     override def doResult(
@@ -702,21 +703,21 @@ object Validation {
         case ma: MessageAction =>
           ma.reactions.foldLeft(
             newState
-              .checkRef[Entity](ma.receiver, container)
-              .checkRef[Entity](ma.sender, container)
-              .checkRef[MessageDefinition](ma.message, container)
+              .checkRef[Entity](ma.receiver)
+              .checkRef[Entity](ma.sender)
+              .checkRef[MessageDefinition](ma.message)
           ) {
             case (s, reaction) =>
-              s.checkRef(reaction.entity, container)
+              s.checkRef(reaction.entity)
           }
         case da: DirectiveAction =>
           da.reactions.foldLeft(
             newState
-              .checkRef[Entity](da.entity, container)
-              .checkRef[MessageDefinition](da.message, container)
-              .checkRef[Role](da.role, container)
+              .checkRef[Entity](da.entity)
+              .checkRef[MessageDefinition](da.message)
+              .checkRef[Role](da.role)
           ) {
-            case (s, reaction) => s.checkRef(reaction.entity, container)
+            case (s, reaction) => s.checkRef(reaction.entity)
           }
       }
     }

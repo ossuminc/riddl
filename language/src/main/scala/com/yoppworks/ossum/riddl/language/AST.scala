@@ -43,7 +43,11 @@ object AST {
   case class LiteralInteger(loc: Location, n: BigInt) extends RiddlValue
   case class LiteralDecimal(loc: Location, d: BigDecimal) extends RiddlValue
   case class PathIdentifier(loc: Location, value: Seq[String])
-      extends RiddlValue
+      extends RiddlValue {
+    override def toString: String = {
+      if (value.isEmpty) "<empty>" else value.mkString(".")
+    }
+  }
 
   case class Description(
     loc: Location,
@@ -54,7 +58,7 @@ object AST {
   )
 
   sealed trait Reference extends RiddlValue {
-    def id: Identifier
+    def id: PathIdentifier
   }
 
   sealed trait DefinitionValue extends RiddlValue
@@ -89,7 +93,7 @@ object AST {
 
   sealed trait TypeExpression extends DefinitionValue
 
-  case class TypeRef(loc: Location, id: Identifier)
+  case class TypeRef(loc: Location, id: PathIdentifier)
       extends Reference
       with TypeExpression {}
 
@@ -153,7 +157,7 @@ object AST {
 
   case class UniqueId(
     loc: Location,
-    entityName: Identifier,
+    entityPath: PathIdentifier,
     description: Option[Description] = None
   ) extends TypeExpression
 
@@ -191,7 +195,7 @@ object AST {
 
   case class TopicRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class Topic(
@@ -214,7 +218,7 @@ object AST {
 
   case class CommandRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends MessageReference
   case class Command(
     loc: Location,
@@ -226,7 +230,7 @@ object AST {
 
   case class EventRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends MessageReference
 
   type EventRefs = Seq[EventRef]
@@ -240,7 +244,7 @@ object AST {
 
   case class QueryRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends MessageReference
 
   case class Query(
@@ -253,7 +257,7 @@ object AST {
 
   case class ResultRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends MessageReference
   case class Result(
     loc: Location,
@@ -282,7 +286,7 @@ object AST {
 
   case class EntityRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   sealed trait FeatureValue extends RiddlValue
@@ -303,7 +307,7 @@ object AST {
 
   case class FeatureRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class Feature(
@@ -319,7 +323,7 @@ object AST {
 
   case class ActionRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class Action(
@@ -332,7 +336,7 @@ object AST {
 
   case class InvariantRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class Invariant(
@@ -342,30 +346,43 @@ object AST {
     description: Option[Description] = None
   ) extends EntityDefinition {}
 
-  sealed trait OnClauseStatement extends RiddlValue
+  sealed trait OnClauseStatement extends RiddlValue {
+    def description: Option[Description]
+  }
 
   case class SetStatement(
     loc: Location,
     target: PathIdentifier,
-    value: PathIdentifier
+    value: PathIdentifier,
+    description: Option[Description] = None
   ) extends OnClauseStatement
 
   case class AppendStatement(
     loc: Location,
     value: PathIdentifier,
-    target: Identifier
+    target: Identifier,
+    description: Option[Description] = None
+  ) extends OnClauseStatement
+
+  case class PublishStatement(
+    loc: Location,
+    msg: MessageReference,
+    entity: TopicRef,
+    description: Option[Description] = None
   ) extends OnClauseStatement
 
   case class SendStatement(
     loc: Location,
     msg: MessageReference,
-    topic: TopicRef
+    topic: EntityRef,
+    description: Option[Description] = None
   ) extends OnClauseStatement
 
   case class RemoveStatement(
     loc: Location,
     id: PathIdentifier,
-    from: PathIdentifier
+    from: PathIdentifier,
+    description: Option[Description] = None
   ) extends OnClauseStatement
 
   case class OnClause(
@@ -450,7 +467,7 @@ object AST {
 
   case class ContextRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class Context(
@@ -506,7 +523,7 @@ object AST {
 
   case class RoleRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   sealed trait ActionDefinition extends Definition {
@@ -568,12 +585,12 @@ object AST {
 
   case class ReactionRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class DomainRef(
     loc: Location,
-    id: Identifier
+    id: PathIdentifier
   ) extends Reference
 
   case class Domain(

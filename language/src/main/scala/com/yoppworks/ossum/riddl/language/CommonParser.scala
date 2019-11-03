@@ -7,8 +7,6 @@ import Terminals.Keywords
 import Terminals.Punctuation
 import Terminals.Readability
 
-import scala.Option
-
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
@@ -22,9 +20,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def docBlock[_: P]: P[Seq[LiteralString]] = {
     P(
-      (open ~ literalStrings ~ close) |
-        (open ~ markdownLine.rep ~ close) |
-        literalString.map(Seq(_))
+      literalString.map(Seq(_)) |
+        (open ~ literalStrings ~ close) |
+        (open ~ markdownLine.rep ~ close)
     )
   }
 
@@ -63,7 +61,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   def description[_: P]: P[Option[Description]] = {
     P(
       location ~
-        (Keywords.described | Keywords.explained) ~ as ~ open ~/
+        (Keywords.described | Keywords.explained) ~ as ~/
         (literalString.map(
           x =>
             (
@@ -72,8 +70,16 @@ trait CommonParser extends NoWhiteSpaceParsers {
               Map.empty[Identifier, Seq[LiteralString]],
               Seq.empty[LiteralString]
             )
+        ) | docBlock.map(
+          x =>
+            (
+              Seq.empty[LiteralString],
+              x,
+              Map.empty[Identifier, Seq[LiteralString]],
+              Seq.empty[LiteralString]
+            )
         ) |
-          (brief ~ details ~ items ~ citations)) ~ close
+          (open ~/ brief ~ details ~ items ~ citations) ~ close)
     ).?.map {
       case yes @ Some((loc, (brief, details, items, cites))) =>
         Some(Description(loc, brief, details, items, cites))
@@ -115,7 +121,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def pathIdentifier[_: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier.repX(1, P(Punctuation.dot)))
+    P(location ~ anyIdentifier.repX(1, Punctuation.dot).map(_.reverse))
       .map(tpl => (PathIdentifier.apply _).tupled(tpl))
   }
 
@@ -154,22 +160,22 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def commandRef[_: P]: P[CommandRef] = {
-    P(location ~ Keywords.command ~/ identifier)
+    P(location ~ Keywords.command ~/ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }
 
   def eventRef[_: P]: P[EventRef] = {
-    P(location ~ Keywords.event ~/ identifier)
+    P(location ~ Keywords.event ~/ pathIdentifier)
       .map(tpl => (EventRef.apply _).tupled(tpl))
   }
 
   def queryRef[_: P]: P[QueryRef] = {
-    P(location ~ Keywords.query ~/ identifier)
+    P(location ~ Keywords.query ~/ pathIdentifier)
       .map(tpl => (QueryRef.apply _).tupled(tpl))
   }
 
   def resultRef[_: P]: P[ResultRef] = {
-    P(location ~ Keywords.result ~/ identifier)
+    P(location ~ Keywords.result ~/ pathIdentifier)
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
@@ -178,27 +184,27 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def entityRef[_: P]: P[EntityRef] = {
-    P(location ~ Keywords.entity ~/ identifier)
+    P(location ~ Keywords.entity ~/ pathIdentifier)
       .map(tpl => (EntityRef.apply _).tupled(tpl))
   }
 
   def topicRef[_: P]: P[TopicRef] = {
-    P(location ~ Keywords.topic ~/ identifier)
+    P(location ~ Keywords.topic ~/ pathIdentifier)
       .map(tpl => (TopicRef.apply _).tupled(tpl))
   }
 
-  def functionRef[_: P]: P[ActionRef] = {
-    P(location ~ Keywords.action ~/ identifier)
+  def actionRef[_: P]: P[ActionRef] = {
+    P(location ~ Keywords.action ~/ pathIdentifier)
       .map(tpl => (ActionRef.apply _).tupled(tpl))
   }
 
   def contextRef[_: P]: P[ContextRef] = {
-    P(location ~ Keywords.context ~/ identifier)
+    P(location ~ Keywords.context ~/ pathIdentifier)
       .map(tpl => (ContextRef.apply _).tupled(tpl))
   }
 
   def domainRef[_: P]: P[DomainRef] = {
-    P(location ~ Keywords.domain ~/ identifier)
+    P(location ~ Keywords.domain ~/ pathIdentifier)
       .map(tpl => (DomainRef.apply _).tupled(tpl))
   }
 }

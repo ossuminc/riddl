@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ValidatorExamplesTest" type="ScalaTestRunConfiguration" factoryName="ScalaTest" show_console_on_std_err="false" show_console_on_std_out="false">
+  <configuration default="false" name="ValidatExamplesTest" type="ScalaTestRunConfiguration" factoryName="ScalaTest" show_console_on_std_err="false" show_console_on_std_out="false">
     <module name="riddl-languge" />
     <option name="allowRunningInParallel" value="false" />
     <option name="testKind" value="Class" />
