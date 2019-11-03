@@ -232,16 +232,12 @@ class ParserTest extends ParsingTest {
         """entity Hamburger is {
           |  options ( persistent aggregate )
           |  state { x: String }
-          |  consumer foo for topic EntityChannel
+          |  consumer foo of topic EntityChannel
           |  feature AnAspect {
-          |    DESCRIPTION {
-          |     |This is some aspect of the entity
-          |    }
           |    BACKGROUND {
           |      Given "Nobody loves me"
           |    }
           |    EXAMPLE foo {
-          |      "My Fate"
           |      GIVEN "everybody hates me"
           |      AND "I'm depressed"
           |      WHEN "I go fishing"
@@ -268,27 +264,21 @@ class ParserTest extends ParsingTest {
               Consumer(
                 4 -> 12,
                 Identifier(4 -> 12, "foo"),
-                TopicRef(4 -> 20, Identifier(4 -> 26, "EntityChannel"))
+                TopicRef(4 -> 19, Identifier(4 -> 25, "EntityChannel"))
               )
             ),
             features = Seq(
               Feature(
                 5 -> 3,
                 Identifier(5 -> 11, "AnAspect"),
-                Seq(
-                  LiteralString(
-                    7 -> 7,
-                    "This is some aspect of the entity"
-                  )
-                ),
                 Some(
                   Background(
-                    9 -> 5,
+                    6 -> 5,
                     Seq(
                       Given(
-                        10 -> 7,
+                        7 -> 7,
                         LiteralString(
-                          10 -> 13,
+                          7 -> 13,
                           "Nobody loves me"
                         )
                       )
@@ -297,21 +287,20 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(
                   Example(
-                    12 -> 5,
-                    Identifier(12 -> 13, "foo"),
-                    LiteralString(13 -> 7, "My Fate"),
+                    9 -> 5,
+                    Identifier(9 -> 13, "foo"),
                     Seq(
                       Given(
-                        14 -> 7,
-                        LiteralString(14 -> 13, "everybody hates me")
+                        10 -> 7,
+                        LiteralString(10 -> 13, "everybody hates me")
                       ),
-                      Given(15 -> 7, LiteralString(15 -> 11, "I'm depressed"))
+                      Given(11 -> 7, LiteralString(11 -> 11, "I'm depressed"))
                     ),
-                    Seq(When(16 -> 7, LiteralString(16 -> 12, "I go fishing"))),
+                    Seq(When(12 -> 7, LiteralString(12 -> 12, "I go fishing"))),
                     Seq(
                       Then(
-                        17 -> 7,
-                        LiteralString(17 -> 12, "I'll just eat worms")
+                        13 -> 7,
+                        LiteralString(13 -> 12, "I'll just eat worms")
                       )
                     )
                   )

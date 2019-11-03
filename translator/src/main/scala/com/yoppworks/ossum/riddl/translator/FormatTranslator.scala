@@ -60,6 +60,9 @@ object FormatTranslator extends Translator {
   ) extends Folding.State[FormatState] {
     def step(f: FormatState => FormatState): FormatState = f(this)
 
+    private final val q = "\""
+    private final val nl = "\n"
+
     def addFile(file: File): FormatState = {
       this.copy(generatedFiles = generatedFiles :+ file)
     }
@@ -85,7 +88,10 @@ object FormatTranslator extends Translator {
     }
 
     def close(definition: Definition): FormatState = {
-      this.outdent.add(s"$spc}").visitAddendum(definition.addendum).add("\n")
+      this.outdent
+        .add(s"$spc}")
+        .visitDescription(definition.description)
+        .add("\n")
     }
 
     def indent: FormatState = {
@@ -98,42 +104,46 @@ object FormatTranslator extends Translator {
     }
     def spc: String = { " ".repeat(indentLevel) }
 
-    def visitAddendum(addendum: Option[Addendum]): FormatState = {
-      addendum.foldLeft(this) {
-        case (s, a) =>
-          val s2 = a.explanation.foldLeft(s) {
-            case (s, e) =>
-              s.visitExplanation(e)
-          }
-          a.seeAlso.foldLeft(s2) {
-            case (s, sa) =>
-              s.visitSeeAlso(sa)
-          }
+    def visitDescription(description: Option[Description]): FormatState = {
+      description.foldLeft(this) {
+        case (s, desc: Description) =>
+          s.step { s: FormatState =>
+              s.add(" described as {\n")
+                .indent
+                .add(
+                  s"${spc}brief" + q + desc.brief + q + nl + spc + "details {\n"
+                )
+                .indent
+            }
+            .step { s =>
+              desc.details.foldLeft(s) {
+                case (s, line) =>
+                  s.add(s.spc + "|" + line.s + "\n")
+              }
+            }
+            .step { s: FormatState =>
+              s.outdent.add(s"${spc}items {\n ").indent
+            }
+            .step { s =>
+              desc.fields.foldLeft(s) {
+                case (s, (id, desc)) =>
+                  s.add(s"$spc$id: " + q + desc + q + nl)
+              }
+            }
+            .step { s =>
+              s.outdent.add(s"$spc}\n")
+            }
+            .step { s =>
+              desc.citations
+                .foldLeft(s) {
+                  case (s, cite) =>
+                    s.add(s"${spc}see " + q + cite.s + q + nl)
+                }
+                .step { s =>
+                  s.outdent.add(s"$spc}\n")
+                }
+            }
       }
-    }
-
-    def visitExplanation(
-      exp: Explanation
-    ): FormatState = {
-      val result = exp.markdown.foldLeft(
-        this.add(" explained as {\n")
-      ) {
-        case (s, line) =>
-          s.add(s.spc + "  |" + line.s + "\n")
-      }
-      result.add(result.spc + "}")
-    }
-
-    def visitSeeAlso(
-      sa: SeeAlso
-    ): FormatState = {
-      val result = sa.citations.foldLeft(
-        this.add(s" see also {\n")
-      ) {
-        case (s, line) =>
-          s.add(s.spc + "  |" + line.s + "\n")
-      }
-      result.add(result.spc + "}")
     }
 
     def visitTypeExpr(typEx: AST.TypeExpression): String = {
@@ -157,34 +167,34 @@ object FormatTranslator extends Translator {
               case Some(typex) => visitTypeExpr(typex)
             }
           }
-          s"any { ${of.map(e => e.id.value + doTypex(e.value)).mkString(" ")} } ${visitAddendum(add)}"
+          s"any { ${of.map(e => e.id.value + doTypex(e.value)).mkString(" ")} } ${visitDescription(add)}"
         case AST.Alternation(_, of, add) =>
-          s"one { ${of.map(visitTypeExpr).mkString(" or ")} } ${visitAddendum(add)}"
+          s"one { ${of.map(visitTypeExpr).mkString(" or ")} } ${visitDescription(add)}"
         case AST.Aggregation(_, of, add) =>
           s" {\n${of
             .map {
               case (k: Identifier, v: TypeExpression) =>
                 s"$spc  ${k.value} is ${visitTypeExpr(v)}"
             }
-            .mkString(s",\n")}\n$spc} ${visitAddendum(add)}"
+            .mkString(s",\n")}\n$spc} ${visitDescription(add)}"
         case AST.Mapping(_, from, to, add) =>
-          s"mapping from ${visitTypeExpr(from)} to ${visitTypeExpr(to)} ${visitAddendum(add)}"
+          s"mapping from ${visitTypeExpr(from)} to ${visitTypeExpr(to)} ${visitDescription(add)}"
         case AST.RangeType(_, min, max, add) =>
-          s"range from $min to $max ${visitAddendum(add)}"
+          s"range from $min to $max ${visitDescription(add)}"
         case AST.ReferenceType(_, id, add) =>
-          s"reference to $id ${visitAddendum(add)}"
+          s"reference to $id ${visitDescription(add)}"
         case Pattern(_, pat, add) =>
           if (pat.size == 1) {
             "Pattern(\"" +
               pat.head.s +
-              "\"" + s") ${visitAddendum(add)}"
+              "\"" + s") ${visitDescription(add)}"
           } else {
             s"Pattern(\n" +
               pat.map(l => spc + "  \"" + l.s + "\"\n")
-            s"\n) ${visitAddendum(add)}"
+            s"\n) ${visitDescription(add)}"
           }
         case UniqueId(_, id, add) =>
-          s"Id(${id.value}) ${visitAddendum(add)}"
+          s"Id(${id.value}) ${visitDescription(add)}"
 
         case Optional(_, typex)   => visitTypeExpr(typex) + "?"
         case ZeroOrMore(_, typex) => visitTypeExpr(typex) + "*"
@@ -400,7 +410,7 @@ object FormatTranslator extends Translator {
         .addIndent()
         .add(s"type ${typeDef.id.value} is ")
         .add(state.visitTypeExpr(typeDef.typ))
-        .visitAddendum(typeDef.addendum)
+        .visitDescription(typeDef.description)
         .add("\n")
     }
 

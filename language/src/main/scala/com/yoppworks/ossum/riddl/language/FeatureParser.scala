@@ -4,7 +4,6 @@ import AST._
 import fastparse._
 import ScalaWhitespace._
 import Terminals.Keywords
-import Terminals.Punctuation
 import Terminals.Readability
 
 /** Parsing rules for entity feature definitions */
@@ -57,10 +56,10 @@ trait FeatureParser extends CommonParser {
 
   def example[_: P]: P[Example] = {
     P(
-      location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/ literalString ~
+      location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/
         givens ~
         whens ~ thens ~
-        close ~ addendum
+        close ~ description
     ).map { tpl =>
       (Example.apply _).tupled(tpl)
     }
@@ -78,10 +77,10 @@ trait FeatureParser extends CommonParser {
       location ~
         IgnoreCase(Keywords.feature) ~/
         identifier ~ is ~
-        open ~ IgnoreCase(Keywords.description) ~/ docBlock ~
+        open ~
         background.? ~ example.rep(1) ~
         close ~
-        addendum
+        description
     ).map { tpl =>
       (Feature.apply _).tupled(tpl)
     }

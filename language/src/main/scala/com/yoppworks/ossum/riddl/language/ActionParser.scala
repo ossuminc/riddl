@@ -12,20 +12,20 @@ trait ActionParser extends CommonParser with TypeParser {
 
   def input[_: P]: P[Aggregation] = {
     P(
-      Keywords.output ~ is ~ aggregationType
+      Keywords.output ~ is ~ aggregation
     )
   }
 
   def output[_: P]: P[Aggregation] = {
     P(
-      Keywords.output ~ is ~ aggregationType
+      Keywords.output ~ is ~ aggregation
     )
   }
 
   def action[_: P]: P[Action] = {
     P(
       location ~ IgnoreCase(Keywords.action) ~/ identifier ~ is ~ open ~
-        description ~ input ~ output ~ close ~ addendum
+        input.? ~ output ~ close ~ description
     ).map { tpl =>
       (Action.apply _).tupled(tpl)
     }

@@ -4,12 +4,13 @@ domain ReactiveBBQ {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id() explained as "Unique identifier for a customer"
+  type CustomerId is Id() explained as {
+    brief "Unique identifier for a customer"
+  }
 
-  type OrderId is Id() explained as {
-    |Unique identifier for a customer's order
-  } see also {
-    |Reference to something about OrderIds
+  type OrderId is Id() described as {
+    brief "Unique identifier for a customer's order"
+    see "http://www.example.com/show/details/on/OrderId"
   }
 
   topic Inputs {
@@ -31,24 +32,30 @@ domain ReactiveBBQ {
     }
     device entity OrderViewer {
      state is { field: OrderViewType }
-     consumer input for topic Inputs
+     consumer input of topic Inputs
     } explained as {
-      |The OrderViewer is the device in the kitchen, probably a touch screen,
-      |that the cooks use to view the sequence of orders to cook
+      brief "This is an OrderViewer"
+      details {
+        |The OrderViewer is the device in the kitchen, probably a touch screen,
+        |that the cooks use to view the sequence of orders to cook
+     }
     }
   } explained as {
-    |The kitchen bounded context provides the ability for the kitchen staff
-    |to interact with orders they are preparing. The kitchen is a client of
-    |the orders bounded context and interacts with that context alone
-    |the outstanding orders to be prepared. Everything else that happens in
-    |the kitchen is out of scope for the restaurant automation software.
-    |Consequently, this bounded context is pretty minimal.
-    |### Subject-Verb-Object Statements
-    |1. Kitchen displays orders
-    |1. Order is sent to Kitchen for display
-    |1. Order sends order status changes to Kitchen
-    |1. Kitchen ignores drink items on order
-    |1.
+    brief "The kitchen is where food is prepared"
+    details {
+      |The kitchen bounded context provides the ability for the kitchen staff
+      |to interact with orders they are preparing. The kitchen is a client of
+      |the orders bounded context and interacts with that context alone
+      |the outstanding orders to be prepared. Everything else that happens in
+      |the kitchen is out of scope for the restaurant automation software.
+      |Consequently, this bounded context is pretty minimal.
+      |### Subject-Verb-Object Statements
+      |1. Kitchen displays orders
+      |1. Order is sent to Kitchen for display
+      |1. Order sends order status changes to Kitchen
+      |1. Kitchen ignores drink items on order
+      |1.
+    } items { }
   }
   // #Kitchen
 
@@ -73,7 +80,7 @@ domain ReactiveBBQ {
         points is Number,
         rewardEvents is many optional RewardEvent
       }
-      consumer ofInputs for topic Inputs
+      consumer ofInputs of topic Inputs
     }
   }
   // #Loyalty
@@ -86,7 +93,7 @@ domain ReactiveBBQ {
         orderId is OrderId,
         customerId is CustomerId
       }
-      consumer foo for topic Inputs
+      consumer foo of topic Inputs
     }
   }
   // #Order
@@ -100,7 +107,7 @@ domain ReactiveBBQ {
         amount is Number,
         cardToken is String
       }
-      consumer foo for topic Inputs
+      consumer foo of topic Inputs
     }
   }
   // #Payment
@@ -111,7 +118,7 @@ domain ReactiveBBQ {
       state is {
         something: String
       }
-      consumer foo for topic Inputs
+      consumer foo of topic Inputs
     }
     type MenuItemRef is refer to entity MenuItem
     entity Menu is {
@@ -119,7 +126,7 @@ domain ReactiveBBQ {
       state {
          items: many MenuItemRef
       }
-      consumer foo for topic Inputs
+      consumer foo of topic Inputs
     }
   }
   // #Menu
@@ -135,25 +142,27 @@ domain ReactiveBBQ {
     }
     entity Location is {
       state is { foo:  String }
-      consumer foo for topic Inputs
+      consumer foo of topic Inputs
     }
-    explained as {
-      |foo
+    described as {
+      brief "This is a retail store Location"
     }
 
     entity Reservation {
      options ( aggregate )
      state { reservation: ReservationValue }
-     consumer ofInputs for topic Inputs
+     consumer ofInputs of topic Inputs
     }
   }
   // #Reservation
 } explained as {
-  |# Reactive BBQ Domain Definition
-  |This domain definition is designed to be instructive in the RIDDL language.
-  |It uses the case study from the Lightbend Reactive Architecture course as
-  |the basis for defining the domain. The course uses a set of interviews with
-  |Reactive BBQ employees to define the requirements. This domain specification
-  |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+  brief "Reactive BBQ Domain Definition"
+  details {
+    |This domain definition is designed to be instructive in the RIDDL language.
+    |It uses the case study from the Lightbend Reactive Architecture course as
+    |the basis for defining the domain. The course uses a set of interviews with
+    |Reactive BBQ employees to define the requirements. This domain specification
+    |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+  }
 }
 // #everything

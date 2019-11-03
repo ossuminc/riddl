@@ -30,48 +30,38 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(open ~ parser.rep ~ close).?.map(_.getOrElse(Seq.empty[T]))
   }
 
-  def items[_: P]: P[Map[Identifier, LiteralString]] = {
-    P(
-      Keywords.items ~ open ~
-        (identifier ~ Punctuation.colon ~ literalString).rep.map(_.toMap) ~
-        close
+  def details[_: P]: P[Seq[LiteralString]] = {
+    (Keywords.details ~ docBlock).?.map(
+      _.getOrElse(Seq.empty[LiteralString])
     )
   }
 
+  def items[_: P]: P[Map[Identifier, Seq[LiteralString]]] = {
+    P(
+      Keywords.items ~ open ~
+        (identifier ~ Punctuation.colon ~ docBlock).rep.map(_.toMap) ~
+        close
+    ).?.map(_.getOrElse(Map.empty[Identifier, Seq[LiteralString]]))
+  }
+
   def citations[_: P]: P[Seq[LiteralString]] = {
-    P(Keywords.see ~ literalString).rep
+    P(Keywords.see ~ docBlock).?.map(
+      _.getOrElse(Seq.empty[LiteralString])
+    )
+  }
+
+  def as[_: P]: P[Unit] = {
+    P(Readability.as | Readability.by).?
   }
 
   def description[_: P]: P[Option[Description]] = {
     P(
       location ~
-        Keywords.description ~ open ~
+        (Keywords.described | Keywords.explained) ~ as ~ open ~/
         Keywords.brief ~ literalString ~
-        Keywords.details ~ docBlock ~
+        details ~
         items ~ citations ~ close
     ).map(t => (Description.apply _).tupled(t)).?
-  }
-
-  def seeAlso[_: P]: P[SeeAlso] = {
-    P(
-      location ~ "see" ~ "also" ~ docBlock
-    ).map(tpl => (SeeAlso.apply _).tupled(tpl))
-  }
-
-  def explanation[_: P]: P[Explanation] = {
-    P(
-      location ~
-        "explained" ~/ ("as" | "by") ~/ docBlock
-    ).map(tpl => { Explanation.apply _ }.tupled(tpl))
-  }
-
-  def addendum[_: P]: P[Option[Addendum]] = {
-    P(location ~ explanation.? ~ seeAlso.?).map[Option[Addendum]] {
-      case (_, None, None)                    => None
-      case (loc, exp @ Some(_), None)         => Some(Addendum(loc, exp, None))
-      case (loc, exp @ Some(_), sa @ Some(_)) => Some(Addendum(loc, exp, sa))
-      case (loc, None, sa @ Some(_))          => Some(Addendum(loc, None, sa))
-    }
   }
 
   def literalInteger[_: P]: P[LiteralInteger] = {

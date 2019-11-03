@@ -84,13 +84,14 @@ object Terminals {
     final val commands = "commands"
     final val consumer = "consumer"
     final val context = "context"
-    final val description = "description"
+    final val described = "described"
     final val details = "details"
     final val domain = "domain"
     final val entity = "entity"
     final val event = "event"
     final val events = "events"
     final val example = "example"
+    final val explained = "explained"
     final val feature = "feature"
     final val handles = "handles"
     final val include = "include"
@@ -132,13 +133,14 @@ object Terminals {
       commands,
       consumer,
       context,
-      description,
+      described,
       details,
       domain,
       entity,
       event,
       events,
       example,
+      explained,
       feature,
       handles,
       input,
@@ -205,6 +207,7 @@ object Terminals {
     final val and = "and"
     final val are = "are"
     final val as = "as"
+    final val by = "by"
     final val for_ = "for"
     final val from = "from"
     final val is = "is"
@@ -219,6 +222,7 @@ object Terminals {
       and,
       are,
       as,
+      by,
       for_,
       from,
       is,

@@ -15,7 +15,7 @@ trait AdaptorParser extends CommonParser {
       location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~/ domainRef.? ~/
         contextRef ~ is ~/
         open
-        ~ close ~ addendum
+        ~ close ~ description
     ).map { tpl =>
       (Adaptor.apply _).tupled(tpl)
     }

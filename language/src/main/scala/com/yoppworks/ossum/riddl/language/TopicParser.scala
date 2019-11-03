@@ -13,7 +13,7 @@ trait TopicParser extends CommonParser with TypeParser {
     P(
       location ~ identifier ~ is ~ typeExpression ~
         Readability.yields ~
-        eventRefsForCommandDefs ~ addendum
+        eventRefsForCommandDefs ~ description
     ).map(
       tpl => (Command.apply _).tupled(tpl)
     )
@@ -35,7 +35,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def eventDef[_: P]: P[Event] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~ addendum
+      location ~ identifier ~ is ~ typeExpression ~ description
     ).map(
       tpl => (Event.apply _).tupled(tpl)
     )
@@ -45,7 +45,7 @@ trait TopicParser extends CommonParser with TypeParser {
   def queryDef[_: P]: P[Query] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~
-        Readability.yields ~ resultRef ~ addendum
+        Readability.yields ~ resultRef ~ description
     ).map(
       tpl => (Query.apply _).tupled(tpl)
     )
@@ -54,7 +54,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def resultDef[_: P]: P[Result] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~ addendum
+      location ~ identifier ~ is ~ typeExpression ~ description
     ).map(
       tpl => (Result.apply _).tupled(tpl)
     )
@@ -89,7 +89,7 @@ trait TopicParser extends CommonParser with TypeParser {
       location ~ Keywords.topic ~/ identifier ~ is ~
         open ~/
         topicDefinitions ~
-        close ~/ addendum
+        close ~/ description
     ).map {
       case (loc, id, (commands, events, queries, results), addendum) =>
         Topic(loc, id, commands, events, queries, results, addendum)

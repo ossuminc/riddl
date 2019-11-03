@@ -118,17 +118,31 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow mappings between two types" in {
-      val input = "type m1 = mapping from String to Number"
+      val input = "type m1 = mapping { from String to Number }"
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "m1"),
         Mapping(
           1 -> 11,
-          Strng(1 -> 24),
-          Number(1 -> 34)
+          Strng(1 -> 26),
+          Number(1 -> 36)
         )
       )
       checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow range of values" in {
+      val input = "type r1 = range { from 21 to 42 }"
+      val expected = Type(
+        1 -> 1,
+        Identifier(1 -> 6, "r1"),
+        RangeType(
+          1 -> 11,
+          LiteralInteger(1 -> 24, BigInt(21)),
+          LiteralInteger(1 -> 30, BigInt(42))
+        )
+      )
+      checkDefinition[Type, Type](input, expected, identity)
+
     }
     "allow one or more in word style" in {
       val input = "type oneOrMoreA = many agg"

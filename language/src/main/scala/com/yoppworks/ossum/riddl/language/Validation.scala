@@ -1,5 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
+import java.net.URI
 import java.util.regex.PatternSyntaxException
 
 import com.yoppworks.ossum.riddl.language.AST._
@@ -183,12 +184,12 @@ object Validation {
             case x: PatternSyntaxException =>
               add(ValidationMessage(loc, x.getMessage))
           }
-          this.checkAddendum(definition, addendum)
+          this.checkDescription(definition, addendum)
         case UniqueId(_, entityName, addendum) =>
           this
             .checkIdentifier(entityName)
             .checkRef[Entity](entityName, definition)
-            .checkAddendum(definition, addendum)
+            .checkDescription(definition, addendum)
         case _: AST.PredefinedType =>
           this
         case AST.TypeRef(_, id: Identifier) =>
@@ -213,9 +214,9 @@ object Validation {
                 )
               if (enumerator.value.nonEmpty) {
                 s.checkTypeExpression(enumerator.value.get, definition)
-                  .checkAddendum(definition, addendum)
+                  .checkDescription(definition, addendum)
               } else {
-                s.checkAddendum(definition, addendum)
+                s.checkDescription(definition, addendum)
               }
           }
         case Alternation(_, of, addendum) =>
@@ -223,7 +224,7 @@ object Validation {
               case (state, typex) =>
                 state.checkTypeExpression(typex, definition)
             }
-            .checkAddendum(definition, addendum)
+            .checkDescription(definition, addendum)
         case Aggregation(
             loc,
             of: immutable.ListMap[Identifier, TypeExpression],
@@ -241,12 +242,12 @@ object Validation {
                   )
                   .checkTypeExpression(typex, definition)
             }
-            .checkAddendum(definition, addendum)
+            .checkDescription(definition, addendum)
         case Mapping(_, from, to, addendum) =>
           this
             .checkTypeExpression(from, definition)
             .checkTypeExpression(to, definition)
-            .checkAddendum(definition, addendum)
+            .checkDescription(definition, addendum)
         case RangeType(loc, min, max, addendum) =>
           this
             .check(
@@ -261,11 +262,11 @@ object Validation {
               Warning,
               loc
             )
-            .checkAddendum(definition, addendum)
+            .checkDescription(definition, addendum)
         case ReferenceType(_, entity: EntityRef, addendum) =>
           this
             .checkRef[Entity](entity, definition)
-            .checkAddendum(definition, addendum)
+            .checkDescription(definition, addendum)
       }
     }
 
@@ -394,53 +395,54 @@ object Validation {
           case _ =>
         }
       }
-      result.checkAddendum(definition, definition.addendum)
+      result.checkDescription(definition, definition.description)
     }
 
-    def checkAddendum(
+    def checkDescription(
       definition: Definition,
-      add: Option[Addendum]
+      description: Option[Description]
     ): ValidationState = {
-      var result = this
-      if (add.isEmpty) {
-        result = result.check(
+      if (description.isEmpty) {
+        this.check(
           predicate = false,
-          s"Definition '${definition.id.value}' " +
-            "should have explanations or references",
+          s"Definition '${definition.id.value}' should have a description",
           MissingWarning,
           definition.loc
         )
       } else {
-        val explanation = add.get.explanation
-        if (explanation.nonEmpty)
-          result = result.checkExplanation(explanation.get)
-        val seeAlso = add.get.seeAlso
-        if (seeAlso.nonEmpty)
-          result = result.checkSeeAlso(seeAlso.get)
+        val desc = description.get
+        val brief = desc.brief
+        val result: ValidationState = this
+          .check(
+            brief.s.nonEmpty,
+            s"Brief description should not be empty",
+            MissingWarning,
+            brief.loc
+          )
+          .check(
+            desc.details.nonEmpty,
+            "Detailed description should not be empty",
+            MissingWarning,
+            desc.loc
+          )
+        desc.citations.foldLeft(result) {
+          case (next: ValidationState, citation: LiteralString) =>
+            val uriMsg = try {
+              new URI(citation.s); ""
+            } catch {
+              case x: Exception =>
+                x.getMessage
+            }
+            next
+              .check(uriMsg.isEmpty, uriMsg, Error, citation.loc)
+              .check(
+                citation.s.nonEmpty,
+                "Citations should not be empty",
+                MissingWarning,
+                citation.loc
+              )
+        }
       }
-      result
-    }
-
-    def checkExplanation(
-      exp: Explanation
-    ): ValidationState = {
-      this.check(
-        exp.markdown.nonEmpty,
-        "Explanations should not be empty",
-        MissingWarning,
-        exp.loc
-      )
-    }
-
-    def checkSeeAlso(
-      seeAlso: SeeAlso
-    ): ValidationState = {
-      this.check(
-        seeAlso.citations.nonEmpty,
-        "SeeAlso references should not be empty",
-        MissingWarning,
-        seeAlso.loc
-      )
     }
   }
 
@@ -578,9 +580,7 @@ object Validation {
       container: Container,
       feature: Feature
     ): ValidationState = {
-      val state2 = state
-        .checkDefinition(container, feature)
-        .checkNonEmpty(feature.description, "Description", feature)
+      val state2 = state.checkDefinition(container, feature)
       feature.background.foldLeft(state2) {
         case (s, bg) => s.checkNonEmpty(bg.givens, "Background", feature)
       }
@@ -728,7 +728,6 @@ object Validation {
     ): ValidationState = {
       state
         .checkDefinition(container, example)
-        .checkLiteralString(example.description, "Description", example)
         .checkNonEmpty(example.givens, "Givens", example)
         .checkNonEmpty(example.whens, "Whens", example)
         .checkNonEmpty(example.thens, "Thens", example)

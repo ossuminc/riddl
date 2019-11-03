@@ -44,12 +44,12 @@ trait EntityParser
 
   def invariant[_: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ docBlock("") ~ addendum
+      Keywords.invariant ~/ location ~ identifier ~ is ~ docBlock("") ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
   def state[_: P]: P[Aggregation] = {
-    P(Keywords.state ~/ is ~ aggregationType)
+    P(Keywords.state ~/ is ~ aggregation)
   }
 
   def setAction[_: P]: P[SetStatement] = {
@@ -90,17 +90,14 @@ trait EntityParser
 
   def consumer[_: P]: P[Consumer] = {
     P(
-      Keywords.consumer ~/ location ~ identifier ~ Readability.for_ ~ topicRef ~
-        optionalNestedContent(onClause) ~ addendum
+      Keywords.consumer ~/ location ~ identifier ~ Readability.of ~ topicRef ~
+        optionalNestedContent(onClause) ~ description
     ).map(t => (Consumer.apply _).tupled(t))
   }
 
   def entityDefinition[_: P]: P[EntityDefinition] = {
     P(
-      consumer |
-        feature |
-        action |
-        invariant
+      consumer | feature | action | invariant
     )
   }
 
@@ -111,7 +108,7 @@ trait EntityParser
         state ~
         entityDefinition.rep ~
         close ~/
-        addendum
+        description
     ).map {
       case (kind, loc, id, options, state, entityDefs, addendum) =>
         val groups = entityDefs.groupBy(_.getClass)

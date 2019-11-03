@@ -28,7 +28,7 @@ trait InteractionParser extends CommonParser {
         roleOptions ~
         Keywords.handles ~/ docBlock ~
         Keywords.requires ~ docBlock ~
-        close ~ addendum
+        close ~ description
     ).map { tpl =>
       (Role.apply _).tupled(tpl)
     }
@@ -46,7 +46,7 @@ trait InteractionParser extends CommonParser {
   def reaction[_: P]: P[Reaction] = {
     P(
       location ~ identifier ~ Keywords.call ~ entityRef ~/ functionRef ~
-        docBlock ~ addendum
+        docBlock ~ description
     ).map(x => (Reaction.apply _).tupled(x))
   }
 
@@ -65,7 +65,7 @@ trait InteractionParser extends CommonParser {
       location ~
         "message" ~/ identifier ~ messageOptions ~ "from" ~/ entityRef ~ "to" ~/
         entityRef ~
-        "as" ~ messageRef ~ causing ~ addendum
+        "as" ~ messageRef ~ causing ~ description
     ).map { tpl =>
       (MessageAction.apply _).tupled(tpl)
     }
@@ -76,7 +76,7 @@ trait InteractionParser extends CommonParser {
       location ~
         "directive" ~/ identifier ~ messageOptions ~ "from" ~ roleRef ~ "to" ~
         entityRef ~
-        "as" ~ messageRef ~ causing ~ addendum
+        "as" ~ messageRef ~ causing ~ description
     ).map { tpl =>
       (DirectiveAction.apply _).tupled(tpl)
     }
@@ -94,7 +94,7 @@ trait InteractionParser extends CommonParser {
         open ~
         role.rep(1) ~ interactions ~
         close ~
-        addendum
+        description
     ).map { tpl =>
       (Interaction.apply _).tupled(tpl)
     }

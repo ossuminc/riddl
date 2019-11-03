@@ -12,10 +12,12 @@ domain Everything {
     query FindThisThing is SomeType yields result ThisQueryResult
     result ThisQueryResult is SomeType
   } explained as {
-    |# Description
-    |This channel is aimed at the same kind of functionality as /dev/null.
-  } see also {
-    |/dev/null
+    brief "An example of a channel"
+    details {
+      |This channel is just an example of how to define messages
+    } see  {
+      |/dev/null
+    }
   }
 
   // Domains are composed of bounded contexts so ...
@@ -60,7 +62,7 @@ domain Everything {
     entity Something is {
       options (aggregate persistent)
       state is { field:  SomeType }
-      consumer foo for topic AChannel
+      consumer foo of topic AChannel
     }
     entity SomeOtherThing {
       state is { field: SomeType }

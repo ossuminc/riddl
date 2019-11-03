@@ -4,7 +4,6 @@ import AST._
 import fastparse._
 import ScalaWhitespace._
 import Terminals.Keywords
-import Terminals.Readability
 
 /** Parsing rules for domains. */
 trait DomainParser
@@ -43,9 +42,9 @@ trait DomainParser
         is ~
         open ~/
         domainContent ~
-        close ~ addendum
+        close ~ description
     ).map {
-      case (loc, id, defs, addendum) =>
+      case (loc, id, defs, description) =>
         val groups = defs.groupBy(_.getClass)
         val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
         val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
@@ -61,7 +60,7 @@ trait DomainParser
           contexts,
           interactions,
           domains,
-          addendum
+          description
         )
     }
   }

@@ -49,7 +49,7 @@ trait ContextParser
       location ~ Keywords.context ~/ identifier ~ is ~
         open ~
         contextOptions ~ contextDefinitions ~
-        close ~ addendum
+        close ~ description
     ).map {
       case (
           loc,

@@ -16,7 +16,8 @@ class EntityValidatorTest extends ValidatingTest {
           msgs.size mustEqual 4
           msgs.exists(_.message.contains("is not defined")) mustBe true
           msgs.exists(_.message.contains("entity must consume a topic")) mustBe true
-          msgs.exists(_.message.contains("should have explanations")) mustBe true
+          msgs.exists(_.message.contains("should have a description")) mustBe
+            true
       }
     }
     "error on persistent entity with no event producer" in {
@@ -31,7 +32,7 @@ class EntityValidatorTest extends ValidatingTest {
           |  entity Hamburger  is {
           |    options (aggregate persistent)
           |    state { field: SomeType }
-          |    consumer foo for topic EntityChannel
+          |    consumer foo of topic EntityChannel
           |  }
           |}
           |}

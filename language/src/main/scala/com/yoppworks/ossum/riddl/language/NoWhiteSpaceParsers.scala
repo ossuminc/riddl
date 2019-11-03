@@ -25,7 +25,8 @@ trait NoWhiteSpaceParsers extends ParsingContext {
 
   def literalString[_: P]: P[LiteralString] = {
     P(
-      location ~ Punctuation.quote ~~/ CharsWhile(_ != '"', 0).! ~~
+      location ~ Punctuation.quote ~~/
+        CharsWhile(_ != '"', 0).! ~~
         Punctuation.quote
     ).map { tpl =>
       (LiteralString.apply _).tupled(tpl)
