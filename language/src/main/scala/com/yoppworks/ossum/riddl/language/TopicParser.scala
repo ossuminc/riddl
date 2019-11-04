@@ -4,20 +4,18 @@ import com.yoppworks.ossum.riddl.language.AST._
 import fastparse._
 import ScalaWhitespace._
 import Terminals.Keywords
-import Terminals.Readability
 
 /** Unit Tests For ChannelParser */
 trait TopicParser extends CommonParser with TypeParser {
 
   def commandDef[_: P]: P[Command] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~
-        Readability.yields ~
+      location ~ identifier ~ is ~ aggregation ~
+        Keywords.yields ~
         eventRefsForCommandDefs ~ description
     ).map(
       tpl => (Command.apply _).tupled(tpl)
     )
-
   }
 
   def eventRefsForCommandDefs[_: P]: P[EventRefs] = {
@@ -35,7 +33,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def eventDef[_: P]: P[Event] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~ description
+      location ~ identifier ~ is ~ aggregation ~ description
     ).map(
       tpl => (Event.apply _).tupled(tpl)
     )
@@ -44,8 +42,8 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def queryDef[_: P]: P[Query] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~
-        Readability.yields ~ resultRef ~ description
+      location ~ identifier ~ is ~ aggregation ~
+        Keywords.yields ~ resultRef ~ description
     ).map(
       tpl => (Query.apply _).tupled(tpl)
     )
@@ -54,7 +52,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def resultDef[_: P]: P[Result] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~ description
+      location ~ identifier ~ is ~ aggregation ~ description
     ).map(
       tpl => (Result.apply _).tupled(tpl)
     )

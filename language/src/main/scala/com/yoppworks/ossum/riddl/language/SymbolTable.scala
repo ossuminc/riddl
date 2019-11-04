@@ -56,15 +56,47 @@ case class SymbolTable(container: Container) {
   final val symbols =
     mutable.HashMap.empty[String, mutable.Set[(Definition, Container)]]
 
-  Folding.foldEachDefinition[Symbols](container, container, symbols) {
-    (parent, child, next) =>
-      val extracted = next.getOrElse(
-        child.id.value,
-        mutable.Set.empty[(Definition, Container)]
-      )
-      val included = extracted += (child -> parent)
-      next.update(child.id.value, included)
-      next
+  private def addToSymTab(name: String, pair: (Definition, Container)): Unit = {
+    val extracted = symbols.getOrElse(
+      name,
+      mutable.Set.empty[(Definition, Container)]
+    )
+    val included = extracted += pair
+    symbols.update(name, included)
+  }
+
+  Folding.foldEachDefinition[Unit](container, container, ()) {
+    (parent, child, _) =>
+      addToSymTab(child.id.value, child -> parent)
+      child match {
+        case e: Entity =>
+          e.state.of.foreach {
+            case (id, _) =>
+              addToSymTab(id.value, e -> parent)
+          }
+        case m: MessageDefinition =>
+          m.typ.of.foreach {
+            case (id, _) =>
+              addToSymTab(id.value, m -> parent)
+          }
+        case t: Type =>
+          t.typ match {
+            case e: Enumeration =>
+              e.of.foreach { etor =>
+                addToSymTab(etor.id.value, t -> parent)
+                etor.value match {
+                  case Some(agg) =>
+                    agg.of.foreach {
+                      case (id, _) =>
+                        addToSymTab(id.value, t -> parent)
+                    }
+                  case None =>
+                }
+              }
+            case _ =>
+          }
+        case _ =>
+      }
   }
 
   def lookup[D <: Definition: ClassTag](

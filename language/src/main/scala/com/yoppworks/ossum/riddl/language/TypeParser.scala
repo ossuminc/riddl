@@ -39,7 +39,8 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.Date).map(AST.Date) |
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
-        (location ~ Predefined.URL).map(AST.URL)
+        (location ~ Predefined.URL).map(AST.URL) |
+        (location ~ Predefined.Nothing).map(AST.Nothing)
     )
   }
 
@@ -88,7 +89,7 @@ trait TypeParser extends CommonParser {
   }
 
   def fields[_: P]: P[Seq[(Identifier, TypeExpression)]] = {
-    P(field.rep(1, comma))
+    P(field.rep(min = 0, comma))
   }
 
   def aggregation[_: P]: P[Aggregation] = {
@@ -125,7 +126,7 @@ trait TypeParser extends CommonParser {
 
   def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
     P(
-      Readability.many.!.? ~ Readability.optional.!.? ~
+      Keywords.many.!.? ~ Keywords.optional.!.? ~
         location ~ p ~
         (question.! | asterisk.! | plus.! | ellipsisQuestion.! | ellipsis.!).?
     ).map {

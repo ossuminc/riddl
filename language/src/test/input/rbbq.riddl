@@ -15,9 +15,9 @@ domain ReactiveBBQ {
 
   topic Inputs {
     commands {
-      foo is String yields event Inputs.bar
+      foo is {} yields event Inputs.bar
     } events {
-      bar is String
+      bar is {}
     } queries {} results {}
   }
 
@@ -32,7 +32,7 @@ domain ReactiveBBQ {
     }
     device entity OrderViewer {
      state is { field: OrderViewType }
-     consumer input of topic Inputs
+     consumer input of topic Inputs {}
     } explained as {
       brief "This is an OrderViewer"
       details {
@@ -80,7 +80,7 @@ domain ReactiveBBQ {
         points is Number,
         rewardEvents is many optional RewardEvent
       }
-      consumer ofInputs of topic Inputs
+      consumer ofInputs of topic Inputs {}
     }
   }
   // #Loyalty
@@ -93,7 +93,7 @@ domain ReactiveBBQ {
         orderId is OrderId,
         customerId is CustomerId
       }
-      consumer foo of topic Inputs
+      consumer foo of topic Inputs {}
     }
   }
   // #Order
@@ -107,7 +107,7 @@ domain ReactiveBBQ {
         amount is Number,
         cardToken is String
       }
-      consumer foo of topic Inputs
+      consumer foo of topic Inputs {}
     }
   }
   // #Payment
@@ -118,7 +118,7 @@ domain ReactiveBBQ {
       state is {
         something: String
       }
-      consumer foo of topic Inputs
+      consumer foo of topic Inputs {}
     }
     type MenuItemRef is refer to entity MenuItem
     entity Menu is {
@@ -126,7 +126,7 @@ domain ReactiveBBQ {
       state {
          items: many MenuItemRef
       }
-      consumer foo of topic Inputs
+      consumer foo of topic Inputs {}
     }
   }
   // #Menu
@@ -142,16 +142,15 @@ domain ReactiveBBQ {
     }
     entity Location is {
       state is { foo:  String }
-      consumer foo of topic Inputs
-    }
-    described as {
+      consumer foo of topic Inputs {}
+    } explained as {
       brief "This is a retail store Location"
     }
 
     entity Reservation {
      options ( aggregate )
      state { reservation: ReservationValue }
-     consumer ofInputs of topic Inputs
+     consumer ofInputs of topic Inputs {}
     }
   }
   // #Reservation

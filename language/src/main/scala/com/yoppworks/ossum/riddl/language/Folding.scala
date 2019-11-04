@@ -10,11 +10,11 @@ object Folding {
 
   type SimpleDispatch[S] = (Container, Definition, S) => S
 
-  def foldEachDefinition[S](parent: Container, root: Container, state: S)(
+  def foldEachDefinition[S](parent: Container, container: Container, state: S)(
     f: SimpleDispatch[S]
   ): S = {
     var result = state
-    root match {
+    container match {
       case root: RootContainer =>
         root.contents.foldLeft(result) { (next, container) =>
           foldEachDefinition[S](root, container, next)(f)
@@ -52,8 +52,8 @@ object Folding {
         result = entity.consumers.foldLeft(result) { (next, consumer) =>
           f(entity, consumer, next)
         }
-        result = entity.actions.foldLeft(result) { (next, function) =>
-          f(entity, function, next)
+        result = entity.actions.foldLeft(result) { (next, action) =>
+          f(entity, action, next)
         }
         result = entity.invariants.foldLeft(result) { (next, invariant) =>
           f(entity, invariant, next)

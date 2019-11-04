@@ -100,10 +100,12 @@ object Terminals {
     final val interaction = "interaction"
     final val invariant = "invariant"
     final val items = "items"
+    final val many = "many"
     final val mapping = "mapping"
     final val on = "on"
     final val one = "one"
     final val option = "option"
+    final val optional = "optional"
     final val options = "options"
     final val output = "output"
     final val publish = "publish"
@@ -119,9 +121,11 @@ object Terminals {
     final val send = "send"
     final val set = "set"
     final val state = "state"
+    final val then_ = "then"
     final val topic = "topic"
     final val value = "value"
     final val when = "when"
+    final val yields = "yields"
     final val all_keywords = Seq(
       action,
       adaptor,
@@ -149,11 +153,13 @@ object Terminals {
       interaction,
       invariant,
       items,
+      many,
       mapping,
       on,
       one,
       option,
       options,
+      optional,
       output,
       query,
       queries,
@@ -167,6 +173,7 @@ object Terminals {
       send,
       set,
       state,
+      then_,
       topic,
       value,
       when
@@ -181,6 +188,7 @@ object Terminals {
     final val Id = "Id"
     final val Integer = "Integer"
     final val LatLong = "LatLong"
+    final val Nothing = "Nothing"
     final val Number = "Number"
     final val Pattern = "Pattern"
     final val Real = "Real"
@@ -191,6 +199,7 @@ object Terminals {
     final val URL = "URL"
     final val all = Seq(
       String,
+      Nothing,
       Number,
       Integer,
       Decimal,
@@ -213,12 +222,8 @@ object Terminals {
     final val for_ = "for"
     final val from = "from"
     final val is = "is"
-    final val many = "many"
     final val of = "of"
-    final val optional = "optional"
-    final val then_ = "then"
     final val to = "to"
-    final val yields = "yields"
 
     val all: Seq[String] = Seq(
       and,
@@ -228,12 +233,29 @@ object Terminals {
       for_,
       from,
       is,
-      many,
       of,
-      optional,
-      then_,
-      to,
-      yields
+      to
     ).sorted.distinct
+  }
+
+  object Operators {
+    final val and = "and"
+    final val or = "or"
+    final val not = "not"
+    final val plus = "+"
+    final val minus = "-"
+    final val times = "*"
+    final val div = "/"
+    final val mod = "%"
+    final val all: Seq[String] = Seq(
+      and,
+      or,
+      not,
+      plus,
+      minus,
+      times,
+      div,
+      mod
+    )
   }
 }

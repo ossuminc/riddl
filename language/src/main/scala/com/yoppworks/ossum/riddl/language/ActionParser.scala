@@ -10,15 +10,15 @@ import Terminals.Keywords
 /** Unit Tests For FunctionParser */
 trait ActionParser extends CommonParser with TypeParser {
 
-  def input[_: P]: P[Aggregation] = {
+  def input[_: P]: P[TypeExpression] = {
     P(
-      Keywords.input ~ is ~ aggregation
+      Keywords.requires ~ is ~ typeExpression
     )
   }
 
-  def output[_: P]: P[Aggregation] = {
+  def output[_: P]: P[TypeExpression] = {
     P(
-      Keywords.output ~ is ~ aggregation
+      Keywords.yields ~ is ~ typeExpression
     )
   }
 

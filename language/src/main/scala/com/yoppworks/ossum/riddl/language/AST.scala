@@ -44,7 +44,8 @@ object AST {
   case class LiteralDecimal(loc: Location, d: BigDecimal) extends RiddlValue
   case class PathIdentifier(loc: Location, value: Seq[String])
       extends RiddlValue {
-    override def toString: String = {
+
+    def format: String = {
       if (value.isEmpty) "<empty>" else value.mkString(".")
     }
   }
@@ -181,6 +182,7 @@ object AST {
   case class TimeStamp(loc: Location) extends PredefinedType
   case class URL(loc: Location) extends PredefinedType
   case class LatLong(loc: Location) extends PredefinedType
+  case class Nothing(loc: Location) extends PredefinedType
 
   sealed trait TypeDefinition extends Definition
 
@@ -214,7 +216,9 @@ object AST {
   }
 
   sealed trait MessageReference extends Reference
-  sealed trait MessageDefinition extends Definition
+  sealed trait MessageDefinition extends Definition {
+    def typ: Aggregation
+  }
 
   case class CommandRef(
     loc: Location,
@@ -223,7 +227,7 @@ object AST {
   case class Command(
     loc: Location,
     id: Identifier,
-    typ: TypeExpression,
+    typ: Aggregation,
     events: EventRefs,
     description: Option[Description] = None
   ) extends MessageDefinition
@@ -238,7 +242,7 @@ object AST {
   case class Event(
     loc: Location,
     id: Identifier,
-    typ: TypeExpression,
+    typ: Aggregation,
     description: Option[Description] = None
   ) extends MessageDefinition
 
@@ -250,7 +254,7 @@ object AST {
   case class Query(
     loc: Location,
     id: Identifier,
-    typ: TypeExpression,
+    typ: Aggregation,
     result: ResultRef,
     description: Option[Description] = None
   ) extends MessageDefinition
@@ -262,7 +266,7 @@ object AST {
   case class Result(
     loc: Location,
     id: Identifier,
-    typ: TypeExpression,
+    typ: Aggregation,
     description: Option[Description] = None
   ) extends MessageDefinition
 
@@ -329,8 +333,8 @@ object AST {
   case class Action(
     loc: Location,
     id: Identifier,
-    input: Option[Aggregation],
-    output: Aggregation,
+    input: Option[TypeExpression],
+    output: TypeExpression,
     description: Option[Description]
   ) extends EntityDefinition {}
 
@@ -382,6 +386,49 @@ object AST {
     loc: Location,
     id: PathIdentifier,
     from: PathIdentifier,
+    description: Option[Description] = None
+  ) extends OnClauseStatement
+
+  sealed trait Condition extends RiddlValue
+  case class True(loc: Location) extends Condition
+  case class False(loc: Location) extends Condition
+  case class Empty(loc: Location, ref: PathIdentifier) extends Condition
+  case class NonEmpty(loc: Location, ref: PathIdentifier) extends Condition
+  case class ReferenceCondition(loc: Location, ref: PathIdentifier)
+      extends Condition
+  case class Miscellaneous(loc: Location, description: Seq[LiteralString])
+      extends Condition
+  abstract class UnaryCondition extends Condition {
+    def cond1: Condition
+  }
+
+  case class NotCondition(loc: Location, cond1: Condition)
+      extends UnaryCondition
+
+  abstract class BinaryCondition extends UnaryCondition {
+    def cond2: Condition
+  }
+
+  case class AndCondition(loc: Location, cond1: Condition, cond2: Condition)
+      extends BinaryCondition
+  case class OrCondition(loc: Location, cond1: Condition, cond2: Condition)
+      extends BinaryCondition
+  case class EqualityCondition(
+    loc: Location,
+    cond1: Condition,
+    cond2: Condition
+  ) extends BinaryCondition
+
+  case class InequalityCondition(
+    loc: Location,
+    cond1: Condition,
+    cond2: Condition
+  ) extends BinaryCondition
+
+  case class WhenStatement(
+    loc: Location,
+    condition: Condition,
+    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
     description: Option[Description] = None
   ) extends OnClauseStatement
 

@@ -27,7 +27,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def optionalNestedContent[_: P, T](parser: => P[T]): P[Seq[T]] = {
-    P(open ~ parser.rep ~ close).?.map(_.getOrElse(Seq.empty[T]))
+    P(open ~ parser.rep.? ~ close).map(_.getOrElse(Seq.empty[T]))
   }
 
   def brief[_: P]: P[Seq[LiteralString]] = {

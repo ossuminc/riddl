@@ -7,10 +7,10 @@ domain Everything {
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
   topic AChannel is {
-    command DoThisThing is SomeType yields event ThingWasDone
-    event ThingWasDone is SomeType
-    query FindThisThing is SomeType yields result ThisQueryResult
-    result ThisQueryResult is SomeType
+    command DoThisThing is {} yields event ThingWasDone
+    event ThingWasDone is {}
+    query FindThisThing is {} yields result ThisQueryResult
+    result ThisQueryResult is {}
   } explained as {
     brief "An example of a channel"
     details {
@@ -61,9 +61,23 @@ domain Everything {
     // persistent (long lived) or aggregate (they consume commands and queries)
     entity Something is {
       options (aggregate persistent)
+
       state is { field:  SomeType }
-      consumer foo of topic AChannel
+
+      action whenUnderTheInfluence {
+        requires: Nothing
+        yields: Boolean
+      }
+
+      consumer foo of topic AChannel is {
+        on command Something {
+          when misc("inebrieted")  then {
+            publish event Inebriated to topic AChannel
+          }
+        }
+      }
     }
+
     entity SomeOtherThing {
       state is { field: SomeType }
     }

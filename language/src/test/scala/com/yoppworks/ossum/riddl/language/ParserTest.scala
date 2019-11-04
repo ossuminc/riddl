@@ -154,7 +154,7 @@ class ParserTest extends ParsingTest {
     "allow command definitions in topics" in {
       val input =
         """domain bar { topic foo is { commands {
-          |DoThisThing = SomeType yields event ThingWasDone
+          |DoThisThing is {} yields event ThingWasDone
           |} } }
           |""".stripMargin
       parseDomainDefinition[Command](input, _.topics.head.commands.head) match {
@@ -166,16 +166,16 @@ class ParserTest extends ParsingTest {
             Command(
               2 -> 1,
               Identifier(2 -> 1, "DoThisThing"),
-              TypeRef(2 -> 15, PathIdentifier(2 -> 15, Seq("SomeType"))),
+              Aggregation(2 -> 16, ListMap.empty[Identifier, TypeExpression]),
               Seq(
-                EventRef(2 -> 31, PathIdentifier(2 -> 37, Seq("ThingWasDone")))
+                EventRef(2 -> 26, PathIdentifier(2 -> 32, Seq("ThingWasDone")))
               )
             )
       }
     }
     "allow event definitions in contexts" in {
       val input = """domain bar { topic foo is { events {
-                    |ThingWasDone is SomeType
+                    |ThingWasDone is {}
                     |} } }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.events.head) match {
@@ -187,13 +187,13 @@ class ParserTest extends ParsingTest {
             Event(
               2 -> 1,
               Identifier(2 -> 1, "ThingWasDone"),
-              TypeRef(2 -> 17, PathIdentifier(2 -> 17, Seq("SomeType")))
+              Aggregation(2 -> 17, ListMap.empty[Identifier, TypeExpression])
             )
       }
     }
     "allow query definitions in topics" in {
       val input = """domain bar { topic foo is { queries {
-                    |FindThisThing = String yields result SomeResult
+                    |FindThisThing = {} yields result SomeResult
                     |} } }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.queries.head) match {
@@ -205,14 +205,14 @@ class ParserTest extends ParsingTest {
             Query(
               2 -> 1,
               Identifier(2 -> 1, "FindThisThing"),
-              Strng(2 -> 17),
-              ResultRef(2 -> 31, PathIdentifier(2 -> 38, Seq("SomeResult")))
+              Aggregation(2 -> 17, ListMap.empty[Identifier, TypeExpression]),
+              ResultRef(2 -> 27, PathIdentifier(2 -> 34, Seq("SomeResult")))
             )
       }
     }
     "allow result definitions in topics" in {
       val input = """domain bar { topic foo is {
-                    |result ThisQueryResult = SomeType
+                    |result ThisQueryResult = {}
                     |} }
                     |""".stripMargin
       parseDomainDefinition(input, _.topics.head.results.head) match {
@@ -224,7 +224,7 @@ class ParserTest extends ParsingTest {
             Result(
               2 -> 8,
               Identifier(2 -> 8, "ThisQueryResult"),
-              TypeRef(2 -> 26, PathIdentifier(2 -> 26, Seq("SomeType")))
+              Aggregation(2 -> 26, ListMap.empty[Identifier, TypeExpression])
             )
 
       }
@@ -234,7 +234,7 @@ class ParserTest extends ParsingTest {
         """entity Hamburger is {
           |  options ( persistent aggregate )
           |  state { x: String }
-          |  consumer foo of topic EntityChannel
+          |  consumer foo of topic EntityChannel {}
           |  feature AnAspect {
           |    BACKGROUND {
           |      Given "Nobody loves me"

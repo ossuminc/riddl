@@ -25,14 +25,14 @@ class EntityValidatorTest extends ValidatingTest {
         """
           |domain foo {
           |topic EntityChannel {
-          |  commands { Foo is String yields event bar }
-          |  events { bar is Number } queries {} results {}
+          |  commands { Foo is {} yields event bar }
+          |  events { bar is {} } queries {} results {}
           |}
           |context bar {
           |  entity Hamburger  is {
           |    options (aggregate persistent)
           |    state { field: SomeType }
-          |    consumer foo of topic EntityChannel
+          |    consumer foo of topic EntityChannel {}
           |  }
           |}
           |}

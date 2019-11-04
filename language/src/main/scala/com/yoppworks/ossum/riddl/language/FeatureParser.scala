@@ -41,7 +41,7 @@ trait FeatureParser extends CommonParser {
 
   def thens[_: P]: P[Seq[Then]] = {
     P(
-      (location ~ IgnoreCase(Readability.then_) ~/ literalString).map(
+      (location ~ IgnoreCase(Keywords.then_) ~/ literalString).map(
         tpl => (Then.apply _).tupled(tpl)
       ) ~
         (location ~ IgnoreCase(Readability.and) ~/ literalString)
