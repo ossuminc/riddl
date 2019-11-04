@@ -294,9 +294,11 @@ object AST {
   ) extends Reference
 
   sealed trait FeatureValue extends RiddlValue
-  case class Given(loc: Location, fact: LiteralString) extends FeatureValue
-  case class When(loc: Location, situation: LiteralString) extends FeatureValue
-  case class Then(loc: Location, result: LiteralString) extends FeatureValue
+  case class Given(loc: Location, fact: Seq[LiteralString]) extends FeatureValue
+  case class When(loc: Location, situation: Seq[LiteralString])
+      extends FeatureValue
+  case class Then(loc: Location, result: Seq[LiteralString])
+      extends FeatureValue
   case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given])
       extends FeatureValue
 

@@ -279,9 +279,11 @@ class ParserTest extends ParsingTest {
                     Seq(
                       Given(
                         7 -> 7,
-                        LiteralString(
-                          7 -> 13,
-                          "Nobody loves me"
+                        Seq(
+                          LiteralString(
+                            7 -> 13,
+                            "Nobody loves me"
+                          )
                         )
                       )
                     )
@@ -294,15 +296,23 @@ class ParserTest extends ParsingTest {
                     Seq(
                       Given(
                         10 -> 7,
-                        LiteralString(10 -> 13, "everybody hates me")
+                        Seq(LiteralString(10 -> 13, "everybody hates me"))
                       ),
-                      Given(11 -> 7, LiteralString(11 -> 11, "I'm depressed"))
+                      Given(
+                        11 -> 7,
+                        Seq(LiteralString(11 -> 11, "I'm depressed"))
+                      )
                     ),
-                    Seq(When(12 -> 7, LiteralString(12 -> 12, "I go fishing"))),
+                    Seq(
+                      When(
+                        12 -> 7,
+                        Seq(LiteralString(12 -> 12, "I go fishing"))
+                      )
+                    ),
                     Seq(
                       Then(
                         13 -> 7,
-                        LiteralString(13 -> 12, "I'll just eat worms")
+                        Seq(LiteralString(13 -> 12, "I'll just eat worms"))
                       )
                     )
                   )

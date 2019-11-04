@@ -11,10 +11,10 @@ trait FeatureParser extends CommonParser {
 
   def givens[_: P]: P[Seq[Given]] = {
     P(
-      (location ~ IgnoreCase("given") ~/ literalString).map(
+      (location ~ IgnoreCase("given") ~/ docBlock).map(
         tpl => (Given.apply _).tupled(tpl)
       ) ~
-        (location ~ IgnoreCase("and") ~/ literalString)
+        (location ~ IgnoreCase("and") ~/ docBlock)
           .map(
             tpl => (Given.apply _).tupled(tpl)
           )
@@ -26,10 +26,10 @@ trait FeatureParser extends CommonParser {
 
   def whens[_: P]: P[Seq[When]] = {
     P(
-      (location ~ IgnoreCase(Keywords.when) ~/ literalString).map(
+      (location ~ IgnoreCase(Keywords.when) ~/ docBlock).map(
         tpl => (When.apply _).tupled(tpl)
       ) ~
-        (location ~ IgnoreCase("and") ~/ literalString)
+        (location ~ IgnoreCase("and") ~/ docBlock)
           .map(
             tpl => (When.apply _).tupled(tpl)
           )
@@ -41,10 +41,10 @@ trait FeatureParser extends CommonParser {
 
   def thens[_: P]: P[Seq[Then]] = {
     P(
-      (location ~ IgnoreCase(Keywords.then_) ~/ literalString).map(
+      (location ~ IgnoreCase(Keywords.then_) ~/ docBlock).map(
         tpl => (Then.apply _).tupled(tpl)
       ) ~
-        (location ~ IgnoreCase(Readability.and) ~/ literalString)
+        (location ~ IgnoreCase(Readability.and) ~/ docBlock)
           .map(
             tpl => (Then.apply _).tupled(tpl)
           )
