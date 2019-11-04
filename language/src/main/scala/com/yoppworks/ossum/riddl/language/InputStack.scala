@@ -8,19 +8,20 @@ import scala.collection.mutable
 case class InputStack(
   ) {
 
-  val files: mutable.ArrayStack[RiddlParserInput] = mutable.ArrayStack()
+  private val inputs: mutable.ArrayStack[RiddlParserInput] =
+    mutable.ArrayStack()
 
-  def push(input: RiddlParserInput): Unit = files.push(input)
+  def push(input: RiddlParserInput): Unit = inputs.push(input)
 
   def push(file: File): Unit = {
-    files.push(FileParserInput(file))
+    inputs.push(FileParserInput(file))
   }
 
   def pop(): RiddlParserInput = {
-    files.pop()
+    inputs.pop()
   }
 
   def current(): Option[RiddlParserInput] = {
-    files.headOption
+    inputs.headOption
   }
 }

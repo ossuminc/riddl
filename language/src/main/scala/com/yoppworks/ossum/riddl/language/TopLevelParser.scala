@@ -11,7 +11,7 @@ class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
   stack.push(rpi)
 
   def fileRoot[_: P]: P[RootContainer] = {
-    P(Start ~ P(domainDef).rep(0) ~ End).map(RootContainer(_))
+    P(Start ~ P(domain).rep(0) ~ End).map(RootContainer(_))
   }
 }
 

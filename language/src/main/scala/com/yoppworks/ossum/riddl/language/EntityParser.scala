@@ -5,7 +5,6 @@ import fastparse._
 import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Terminals.Options
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
 
 /** Parsing rules for entity definitions  */
 trait EntityParser
@@ -45,7 +44,10 @@ trait EntityParser
 
   def invariant[_: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ docBlock("") ~ description
+      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
+        (undefined.map(_ => Seq.empty[LiteralString]) |
+          docBlock("")) ~
+        close ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
@@ -59,16 +61,22 @@ trait EntityParser
     )
   }
 
-  def entityDef[_: P]: P[Entity] = {
+  def entity[_: P]: P[Entity] = {
     P(
       entityKind ~ location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
-        entityOptions ~
-        state ~
-        entityDefinition.rep ~
-        close ~/
-        description
+        ((location ~ undefined).map { loc: Location =>
+          (
+            Seq.empty[EntityOption],
+            Aggregation(loc),
+            Seq.empty[EntityDefinition]
+          )
+        } | (
+          entityOptions ~
+            state ~
+            entityDefinition.rep
+        )) ~ close ~ description
     ).map {
-      case (kind, loc, id, options, state, entityDefs, addendum) =>
+      case (kind, loc, id, (options, state, entityDefs), addendum) =>
         val groups = entityDefs.groupBy(_.getClass)
         val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
         val features = mapTo[Feature](groups.get(classOf[Feature]))

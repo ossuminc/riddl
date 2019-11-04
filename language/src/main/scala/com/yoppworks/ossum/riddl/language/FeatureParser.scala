@@ -54,7 +54,14 @@ trait FeatureParser extends CommonParser {
     }
   }
 
-  def example[_: P]: P[Example] = {
+  def implicitExample[_: P]: P[Example] = {
+    P(location ~ givens ~ whens ~ thens).map {
+      case (loc, g, w, t) =>
+        Example(loc, Identifier(loc, "implicit"), g, w, t, None)
+    }
+  }
+
+  def namedExample[_: P]: P[Example] = {
     P(
       location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/
         givens ~
@@ -63,6 +70,11 @@ trait FeatureParser extends CommonParser {
     ).map { tpl =>
       (Example.apply _).tupled(tpl)
     }
+  }
+
+  def examples[_: P]: P[Seq[Example]] = {
+    implicitExample.map(Seq(_)) |
+      namedExample.rep(1)
   }
 
   def background[_: P]: P[Background] = {
@@ -76,13 +88,13 @@ trait FeatureParser extends CommonParser {
     P(
       location ~
         IgnoreCase(Keywords.feature) ~/
-        identifier ~ is ~
-        open ~
-        background.? ~ example.rep(1) ~
-        close ~
-        description
-    ).map { tpl =>
-      (Feature.apply _).tupled(tpl)
+        identifier ~ is ~ open ~
+        (undefined.map(_ => (None, Seq.empty[Example])) |
+          (background.? ~ examples)) ~
+        close ~ description
+    ).map {
+      case (loc, id, (bkgrnd, examples), desc) =>
+        Feature(loc, id, bkgrnd, examples, desc)
     }
   }
 }

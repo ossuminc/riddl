@@ -14,7 +14,7 @@ trait DomainParser
     with TypeParser {
 
   def domainDefinitions[_: P]: P[Definition] = {
-    P(typeDef | topicDef | interactionDef | contextDef)
+    P(typeDef | topicDef | interaction | context)
   }
 
   def domainInclude[_: P]: P[Seq[DomainDefinition]] = {
@@ -29,19 +29,19 @@ trait DomainParser
     P(
       typeDef.map(Seq(_)) |
         topicDef.map(Seq(_)) |
-        interactionDef.map(Seq(_)) |
-        contextDef.map(Seq(_)) |
-        domainDef.map(Seq(_)) |
+        interaction.map(Seq(_)) |
+        context.map(Seq(_)) |
+        domain.map(Seq(_)) |
         domainInclude
     ).rep(0).map(_.flatten)
   }
 
-  def domainDef[_: P]: P[Domain] = {
+  def domain[_: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~
         is ~
         open ~/
-        domainContent ~
+        (undefined.map(_ => Seq.empty[DomainDefinition]) | domainContent) ~
         close ~ description
     ).map {
       case (loc, id, defs, description) =>

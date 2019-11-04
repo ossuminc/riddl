@@ -31,13 +31,13 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   protected def parserFor[T <: Definition: ClassTag]: P[_] => P[T] = {
     val parser: P[_] => P[_] = classTag[T].runtimeClass match {
       case x if x == classOf[AST.Type]        => typeDef(_)
-      case x if x == classOf[AST.Domain]      => domainDef(_)
-      case x if x == classOf[AST.Context]     => contextDef(_)
-      case x if x == classOf[AST.Interaction] => interactionDef(_)
+      case x if x == classOf[AST.Domain]      => domain(_)
+      case x if x == classOf[AST.Context]     => context(_)
+      case x if x == classOf[AST.Interaction] => interaction(_)
       case x if x == classOf[AST.Feature]     => feature(_)
-      case x if x == classOf[AST.Entity]      => entityDef(_)
-      case x if x == classOf[AST.Adaptor]     => adaptorDef(_)
-      case _                                  => domainDef(_)
+      case x if x == classOf[AST.Entity]      => entity(_)
+      case x if x == classOf[AST.Adaptor]     => adaptor(_)
+      case _                                  => domain(_)
     }
     parser.asInstanceOf[P[_] => P[T]]
   }
@@ -74,13 +74,13 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   def parseDomainDefinition[TO <: RiddlNode](
     extract: Domain => TO
   ): Either[Seq[ParserError], TO] = {
-    parse[Domain, TO](domainDef(_), extract)
+    parse[Domain, TO](domain(_), extract)
   }
 
   def parseContextDefinition[TO <: RiddlNode](
     extract: Context => TO
   ): Either[Seq[ParserError], TO] = {
-    parse[Context, TO](contextDef(_), extract)
+    parse[Context, TO](context(_), extract)
   }
 }
 

@@ -31,7 +31,7 @@ class ParserTest extends ParsingTest {
             Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"))
       }
     }
-    "allow nesed domains" in {
+    "allow nested domains" in {
       val input =
         """domain foo {
           |domain bar { }
@@ -71,6 +71,36 @@ class ParserTest extends ParsingTest {
                 Domain(2 -> 1, Identifier(2 -> 8, "bar"))
               )
             )
+      }
+    }
+    "allow major definitions to be stubbed with ???" in {
+      val input =
+        """domain one { ??? }
+          |domain two {
+          |  topic one { ??? }
+          |  interaction one { ??? }
+          |  context one { ??? }
+          |  context two {
+          |    interaction two { ??? }
+          |    entity one { ??? }
+          |    entity two {
+          |      state is {}
+          |      feature one { ??? }
+          |      consumer one for topic foo is { ??? }
+          |      action one { ??? }
+          |      invariant one { ??? }
+          |    }
+          |    adaptor one { ??? }
+          |  }
+          |}
+          |""".stripMargin
+      parseTopLevelDomains(input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+        case Right(content) =>
+          content.contents must not be empty
+          succeed
       }
     }
     "allow context definitions in domains" in {
@@ -324,7 +354,7 @@ class ParserTest extends ParsingTest {
     }
     "allow adaptor definitions" in {
       val input =
-        "adaptor fuzz for domain fuzzy context blogger {}"
+        "adaptor fuzz  { ??? }"
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -333,9 +363,7 @@ class ParserTest extends ParsingTest {
           content mustBe
             Adaptor(
               1 -> 1,
-              Identifier(1 -> 9, "fuzz"),
-              Some(DomainRef(1 -> 18, PathIdentifier(1 -> 25, Seq("fuzzy")))),
-              ContextRef(1 -> 31, PathIdentifier(1 -> 39, Seq("blogger")))
+              Identifier(1 -> 9, "fuzz")
             )
       }
     }

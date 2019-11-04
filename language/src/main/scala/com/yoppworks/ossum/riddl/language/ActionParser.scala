@@ -25,9 +25,11 @@ trait ActionParser extends CommonParser with TypeParser {
   def action[_: P]: P[Action] = {
     P(
       location ~ IgnoreCase(Keywords.action) ~/ identifier ~ is ~ open ~
-        input.? ~ output ~ close ~ description
-    ).map { tpl =>
-      (Action.apply _).tupled(tpl)
+        ((location ~ undefined)
+          .map(loc => (None, Nothing(loc))) | (input.? ~ output)) ~ close ~ description
+    ).map {
+      case (loc, id, (inp, outp), descr) =>
+        Action(loc, id, inp, outp, descr)
     }
   }
 }

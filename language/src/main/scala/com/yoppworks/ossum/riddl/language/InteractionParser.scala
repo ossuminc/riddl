@@ -89,15 +89,17 @@ trait InteractionParser extends CommonParser {
     ).rep(1)
   }
 
-  def interactionDef[_: P]: P[Interaction] = {
+  def interaction[_: P]: P[Interaction] = {
     P(
       location ~ Keywords.interaction ~/ identifier ~ is ~
         open ~
-        role.rep(1) ~ interactions ~
+        (undefined.map(_ => Seq.empty[Role] -> Seq.empty[ActionDefinition]) |
+          (role.rep(1) ~ interactions)) ~
         close ~
         description
-    ).map { tpl =>
-      (Interaction.apply _).tupled(tpl)
+    ).map {
+      case (loc, id, (roles, interactions), description) =>
+        Interaction(loc, id, roles, interactions, description)
     }
   }
 }

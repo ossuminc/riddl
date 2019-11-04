@@ -73,7 +73,8 @@ trait ConsumerParser extends CommonParser with ConditionParser {
     P(
       Keywords.consumer ~/ location ~ identifier ~
         (Readability.of | Readability.for_ | Readability.from) ~ topicRef ~ is ~
-        optionalNestedContent(onClause) ~ description
+        ((open ~ undefined ~ close).map(_ => Seq.empty[OnClause]) |
+          optionalNestedContent(onClause)) ~ description
     ).map(t => (Consumer.apply _).tupled(t))
   }
 }

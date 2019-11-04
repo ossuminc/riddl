@@ -125,7 +125,8 @@ object AST {
 
   case class Aggregation(
     loc: Location,
-    of: ListMap[Identifier, TypeExpression],
+    of: ListMap[Identifier, TypeExpression] =
+      ListMap.empty[Identifier, TypeExpression],
     description: Option[Description] = None
   ) extends TypeExpression
       with EntityValue
@@ -500,8 +501,6 @@ object AST {
   case class Adaptor(
     loc: Location,
     id: Identifier,
-    targetDomain: Option[DomainRef] = None,
-    targetContext: ContextRef,
     description: Option[Description] = None
     // Details TBD
   ) extends Container

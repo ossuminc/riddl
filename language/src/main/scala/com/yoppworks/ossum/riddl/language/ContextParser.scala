@@ -35,27 +35,29 @@ trait ContextParser
   def contextDefinitions[_: P]: P[Seq[ContextDefinition]] = {
     P(
       typeDef.map(Seq(_)) |
-        entityDef.map(Seq(_)) |
-        adaptorDef.map(Seq(_)) |
-        interactionDef.map(Seq(_)) |
+        entity.map(Seq(_)) |
+        adaptor.map(Seq(_)) |
+        interaction.map(Seq(_)) |
         contextInclude
     ).rep(0).map { seq =>
       seq.flatten
     }
   }
 
-  def contextDef[_: P]: P[Context] = {
+  def context[_: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ is ~
         open ~
-        contextOptions ~ contextDefinitions ~
+        (undefined.map(
+          _ => Seq.empty[ContextOption] -> Seq.empty[ContextDefinition]
+        ) |
+          (contextOptions ~ contextDefinitions)) ~
         close ~ description
     ).map {
       case (
           loc,
           id,
-          options,
-          definitions,
+          (options, definitions),
           addendum
           ) =>
         val groups = definitions.groupBy(_.getClass)

@@ -86,8 +86,17 @@ trait TopicParser extends CommonParser with TypeParser {
     P(
       location ~ Keywords.topic ~/ identifier ~ is ~
         open ~/
-        topicDefinitions ~
-        close ~/ description
+        (undefined.map(
+          _ =>
+            (
+              Seq.empty[Command],
+              Seq.empty[Event],
+              Seq.empty[Query],
+              Seq.empty[Result]
+            )
+        ) | topicDefinitions)
+        ~
+          close ~/ description
     ).map {
       case (loc, id, (commands, events, queries, results), addendum) =>
         Topic(loc, id, commands, events, queries, results, addendum)

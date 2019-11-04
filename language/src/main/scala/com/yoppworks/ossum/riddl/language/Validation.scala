@@ -601,13 +601,7 @@ object Validation {
       container: Container,
       adaptor: Adaptor
     ): ValidationState = {
-      val result =
-        state
-          .checkDefinition(container, adaptor)
-          .checkRef[Context](adaptor.targetContext)
-      adaptor.targetDomain.foldLeft(result) {
-        case (s, domain) => s.checkRef[Domain](domain)
-      }
+      state.checkDefinition(container, adaptor)
     }
 
     override def closeAdaptor(
