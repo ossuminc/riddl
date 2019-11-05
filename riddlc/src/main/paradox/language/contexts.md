@@ -1,5 +1,6 @@
 # Contexts
 
+### Introduction
 DDD defines the notion of a **bounded context** which is portion of the domain
 in which the terminology is well defined. Contexts in RIDDL represent exactly 
 the same concept and are basically a container of various definitions that 

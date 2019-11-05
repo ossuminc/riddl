@@ -1,8 +1,8 @@
 # Conventions
 
 Syntax conventions of RIDDL are very simple and lenient. 
-The intended audience is business owners, principals, 
-architects and analysts. It is intentionally simple and 
+The intended audience is business owners, business analysts, domain engineers,
+and software architects. It is intentionally simple and 
 readable. The language is free in its formatting. It does
 not require indentation and its various constructs can be
 arranged on any line.  RIDDL supports the definition of a
@@ -19,7 +19,7 @@ cat Smudge is {
   owner is entity Reid
 }
 ```
-Here is an explanatin of each of these tokens:
+Here is an explanation of each of these tokens:
 * `cat` is the  kind of concept that the author wants to define
 * `Smudge` is the name the author wants to assign to this `cat` concept
 * `is` is a required keyword for readability
@@ -43,25 +43,12 @@ Definitions that may not contain other definitions are called "leaves"
 because, like tree leaves, they occur at the extremity (most nested) part of
 the definitions.
 
-# The hierarchy of containers and leaves
-Here is how RIDDL nesting can be structured:
-* Root (top level)
-  * Domain
-    * Type
-    * Channel
-      * Command
-      * Event
-      * Query
-      * Result
-    * Context
-      * Type
-      * Entity
-        * Functions
-        * Invariants
-      * Interaction
-      * Adaptor
-      * Feature
-    * Interaction
-      * Action
-   
-
+# Work In Progress
+Modelling a domain can be hard work. New ideas come up that must be flushed
+out.  Sometimes things get left undefined. That's okay! Riddl uses a special
+construct, `???` to mean "we don't know yet". It can be used as the body of
+any definition. For example it is entirely legal to write:
+```text
+entity Thing_A_Ma_Bob { ??? }
+```
+# Descriptions, or Explanation
