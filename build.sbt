@@ -51,7 +51,21 @@ lazy val riddlc = (project in file("riddlc"))
   .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-    paradoxTheme := Some(builtinParadoxTheme("generic")),
+    // paradoxTheme := Some(builtinParadoxTheme("generic")),
+    Compile / paradoxMaterialTheme := {
+      ParadoxMaterialTheme()
+        .withColor("blue", "grey")
+        .withLogoIcon("yw-elephant")
+        .withCopyright("Copyright © 2019 Yoppworks Inc.")
+        .withSocial(
+          uri("https://github.com/yoppworks"),
+          uri("https://twitter.com/yoppworks"),
+          uri("https://www.linkedin.com/company/yoppworks"),
+          uri("https://www.facebook.com/YoppWorks/")
+        )
+      // .withFavicon("assets/images/riddl-favicon.png")
+      // .withLogo("assets/images/riddl-logo.png")
+    },
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.0-RC2",
       "com.typesafe" % "config" % "1.4.0"

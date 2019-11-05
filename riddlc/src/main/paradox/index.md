@@ -25,9 +25,7 @@ DDD concepts. For a four minute overview,
 [watch this video](https://elearn.domainlanguage.com/). For a more in depth
 understanding, we recommend reading Vaughn Vernon's more concise book **[Domain
 Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon-ebook/dp/B01JJSGE5S/ref=sr_1_1)**
-or Eric Evans' original tome **[Domain Driven Design](
-https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software-ebook/dp/B00794TAUG/ref=pd_sim_351_2/139-5372630-4190805
-)**.
+or Eric Evans' original tome **[Domain Driven Design](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software-ebook/dp/B00794TAUG/ref=pd_sim_351_2/139-5372630-4190805)**.
 
 RIDDL is one of the Ossum tools. Ossum is a collection of tools for making
 awesome software systems based on reactive architecture.

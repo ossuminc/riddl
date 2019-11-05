@@ -12,17 +12,17 @@ What follows are the interviews conducted with key personnel
 at Reactive BBQ in order to identify the issues.  
 
 ## CEO of Reactive BBQ
-### How would you describe your restaurants?
+
+> How would you describe your restaurants?
 
 Reactive BBQ is a family restaurant with 500 locations across 20 countries. 
 We're open for breakfast, lunch and supper. Our specialty at Reactive BBQ is
- our award winning Reactive Ribs, but we are also well known for our tender 
- steaks and our slow roasted chicken. We take traditional BBQ flavours and
-  give them a bit of a spicy punch. The customer experience at each 
-  Reactive BBQ should have the same high level of quality across the globe.
+our award winning Reactive Ribs, but we are also well known for our tender 
+steaks and our slow roasted chicken. We take traditional BBQ flavours and
+give them a bit of a spicy punch. The customer experience at each 
+Reactive BBQ should have the same high level of quality across the globe.
 
-
-### What challenges do you face?
+> What challenges do you face?
 
 The challenge is that our original system was designed for one
 restaurant, and as more were opened, we started moving into the cloud. We
@@ -67,7 +67,7 @@ with the fact that it is online and deliveries and all that. I don't really unde
 adapting it to work in the restaurant is apparently going to be a lot of work. I would also like to put screens in
 the kitchen so we could get rid of paper completely.
 
-### Key Details
+### CEO's Key Details
 
 - 500+ Locations
 - Existing Cloud Infrastructure
@@ -81,7 +81,8 @@ the kitchen so we could get rid of paper completely.
 - Want to implement electronic menus but it is also risky
 
 ## Corporate Head Chef
-### What is your role in the restaurant? 
+> What is your role in the restaurant?
+ 
 Corporate wants each restaurant to have a consistent experience. 
 My job is to create new recipes to be included
 in the menu. I spend a lot of time trying out different ingredients and flavours to try to get the right balance for our
@@ -94,7 +95,8 @@ Once I have a new dish figured out I talk to the marketing team. They work on pr
 We also have a food photographer so I work with him to make sure that the dish looks nice and is presentable for his
 photos.
 
-### What challenges do you face?
+> What challenges do you face?
+
 Well, as I mentioned there is the issues with sourcing 
 ingredients. It can be a tricky business with all of the regions
 we have restaurants in. That's part of the reason why so many things have to be shipped from our warehouses. Some of our
@@ -107,7 +109,7 @@ menu items and recipes. But then we have to coordinate with the printers to make
 in time. And then we have to also coordinate with the website to make sure they are up to date. It becomes a bit of
 a hassle. Basically near the end of every month we have this flurry of activity to get everything prepared.
 
-### Key Details
+### Head Chef's Key Details
 
 - Corporate Chef updates the menu once a month.
 - Corporate Chef works with photographer on menu photographs.
@@ -115,13 +117,15 @@ a hassle. Basically near the end of every month we have this flurry of activity 
 - Menu updates must be coordinated with printing and website.
 
 ## Host
-### What is your role in the restaurant?
+> What is your role in the restaurant?
+
 I answer phones and record reservations. I also greet and seat guests as they
 arrive at the restaurant. Guests can either call, or use the website to make reservations, so
 it is necessary for me to consult the system before I seat customers. I also need to update the reservations system
 when I seat customers so that someone online can't reserve the same table.
 
-### What challenges do you face?
+> What challenges do you face?
+
 I think the biggest problem I have is the reservations system. It seems like it is never working properly. Sometimes
 I try to add a reservation and it takes forever. I have customers lined up waiting for their tables and I don't
 have time to be dealing with the slow software. Or I might go to look up the reservation for a customer and it takes so
@@ -134,7 +138,7 @@ I have started printing out all the reservations periodically during the day. It
 don't have to use the software. But it doesn't work for more recent reservations, so I end up looking at the print outs
 first and then only going to the software if I don't find the person on the sheet.
 
-### Key Details
+### Host's Key Details
 
 - Host takes reservations in person or via phone
 - Reservations can also be made online
@@ -145,26 +149,31 @@ first and then only going to the software if I don't find the person on the shee
 
 ## Server
 
-### What is your role in the restaurant? 
+> What is your role in the restaurant? 
+
 I greet guests at their table, help them understand the menu and
- make recommendations, then take their food and drink
+make recommendations, then take their food and drink
 orders. After taking their order I input it into our computer system. When the order is ready I pick it up from the
 kitchen or bar and deliver it to the table.
 
 When the guest is finished, I present the bill and settle at the table. At the end of the shift I pay out my cash bills
 to the restaurant, bundle and submit my receipts and collect my tips.
 
-### How do you know which prepared order from the kitchen/bar is for which table? 
+> How do you know which prepared order from the kitchen/bar is for which table? 
+
 Orders are input into the computer system with the table number, the prepared order is presented with a printout 
 including the table number.
 
-### How do you settle a bill at the table? 
+> How do you settle a bill at the table? 
+
 Guests can pay with cash or card.
 
-### How do you track how much you've made in tips for a shift?
+> How do you track how much you've made in tips for a shift?
+
 Our computer system keeps track of that for me and gives me a total at the end of the shift.
 
-### What challenges do you face?
+> What challenges do you face?
+
 During peak times things can get a little hectic. Entering orders seems to take longer when we get busy. We have a
 limited number of computer terminals to enter the information into, so as things slow down the other servers start to
 line up to enter their orders. We have asked for more terminals, but apparently they are really expensive so they won't
@@ -174,7 +183,7 @@ Some of us have tried going around the system and just asking the kitchen to sta
 order, but the cooks really don't like when we do that. They say it's too hard for them to keep track so they want
 us to use the computer.
 
-### Key Details
+### Server's Key Details
 
 - Server enters orders into the system.
 - Server collects orders from the kitchen and delivers it to the table.
@@ -187,7 +196,8 @@ us to use the computer.
 
 ## Bartender
 
-### What is your role in the restaurant?
+> What is your role in the restaurant?
+
 I take drink orders at the bar and entertain the guests. I mix the drinks and take them to the customers when they are
 ready. When the customer is done for the day I help them settle their tab.
 
@@ -196,7 +206,8 @@ and leave them on a tray with the table number so the servers know where they go
 
 At the end of a shift I cash out with the restaurant and take my tips.
 
-### What challenges do you face?
+> What challenges do you face?
+
 Sometimes drink orders will sit for a really long time. When a drink is ordered a ticket prints out at my station and I
 usually make it right away. But the servers get busy, or they forget to check for the order. The drink ends up sitting
 on the counter for a while before they are able to come and get it. This means the ice is melting and it can really ruin
@@ -207,7 +218,7 @@ and trying to signal them if the drink has been sitting for a while, but they ar
 they might be busy talking to customers. It would be nice if there was some way to get someone else to deliver the
 drinks. I would do it, but I am not allowed to leave the bar unattended.
 
-### Key Details
+### Bartender's Key Details
 
 - Bartender takes drink orders at the bar.
 - Bartender prepares drinks for customers at the bar.
@@ -219,24 +230,26 @@ drinks. I would do it, but I am not allowed to leave the bar unattended.
 
 ## Chef
 
-### What is your role in the restaurant?
+> What is your role in the restaurant?
+
 I oversee the entire kitchen and all of its staff. I source local ingredients 
 required to prepare our menu items. The menu is decided on monthly and
- distributed via email. I inspect all prepared orders that leave the kitchen.
+distributed via email. I inspect all prepared orders that leave the kitchen.
 
-### What challenges do you face?
+> What challenges do you face?
+
 I think the worst thing is when the system that prints our orders goes haywire.
- Sometimes the system crashes and orders get lost. While it is down we don't
- know what needs to be made. The servers have to resort to handwritten tickets
- and it's sometimes difficult to read their writing. Some of it is really
- just gibberish. It results in a lot of orders getting missed or getting made
- improperly.
+Sometimes the system crashes and orders get lost. While it is down we don't
+know what needs to be made. The servers have to resort to handwritten tickets
+and it's sometimes difficult to read their writing. Some of it is really
+just gibberish. It results in a lot of orders getting missed or getting made
+improperly.
 
 The servers complain a lot about the system being slow, but we don't really
 see that in the kitchen. Once they enter an order it usually prints out right
 away as long as the system is working.
 
-### Key Details
+### Chef's Key Details
 
 - Chef sources local ingredients for the menu.
 - Chef inspects all orders that leave the kitchen.
@@ -245,14 +258,16 @@ away as long as the system is working.
 
 ## Cook
 
-### What is your role in the restaurant?
+> What is your role in the restaurant?
+
 Depending on the day, I work at different stations in the kitchen. The chef
 tells me where I will be working for that day. I prepare orders according to
 the tickets that get printed out at my station. Once an order is ready, I take
 it over to a station where we gather all the pieces of that order. The chef
 then approves it and we notifiy the server that their order is ready.
 
-### What challenges do you face?
+> What challenges do you face?
+
 Handwritten tickets. Man do I hate those things. We have this one server that
 writes in this horrible chicken scratch. Every time he brings me these
 tickets, I have to get her to explain to me what she has written. It's just
@@ -266,7 +281,7 @@ when things get busy they start to get really annoying. When they get
  get to theirs, but it doesn't help. They end up storming off. I hear them
  talking sometimes like it's our fault somehow.
 
-### Key Details
+### Cook's Key Details
 
 - Printed Ticket provide details on orders to be prepared.
 - Handwritten tickets are a pain.
@@ -274,14 +289,16 @@ when things get busy they start to get really annoying. When they get
 
 ## Delivery Driver
 
-### What is your role in the restaurant?
+>  What is your role in the restaurant?
+
 I deliver for five locations around the city. We don't get a lot of deliveries. We aren't a pizza place after all.
 but our wings and ribs are popular delivery options. I am on call for each of the delivery locations. If one of them
 gets a delivery, I get a notification on my phone. I go pick up the food from the location nearest the customer. Then
 I drive to the customer, and deliver their food. I collect their payment if necessary. Sometimes they pay online. In 
 that case I don't have to do much, just drop off the food.
 
-### What challenges do you face?
+> What challenges do you face?
+
 You mean other than traffic and customers annoyed with the delivery times? I think the app they give me is probably my
 biggest headache. I have this app on my phone. When I get a delivery it notifies me. It gives me all the details about
 the order and the customer. I also have a dongle that I attach to my phone that allow me to collect credit/debit
@@ -298,7 +315,7 @@ Apparently they are going to start offering customer loyalty cards as well. They
 same app. That just sounds like more headache. So now when the system goes down I am going to have to write down the
 customer's loyalty number, and then enter it when manually when the system comes back up.
 
-### Key Details
+### Delivery Driver's Key Details
 
 - Driver gets notifications through the app on their phone.
 - Driver picks up orders and delivers them to the customer.
@@ -307,7 +324,8 @@ customer's loyalty number, and then enter it when manually when the system comes
 
 ## Online Customer
 
-### Describe how you place an order online with Reactive BBQ
+> Describe how you place an order online with Reactive BBQ
+
 Well, I go to the website and they have their menu there. I have a look at the menu and decide what I want. The menu
 is organized into different sections, like lunch, dinner, appetizers, dessert, that sort of thing. The menu online isn't
 identical to what I get in the restaurant, but it's pretty close. I have also done it through the phone app they have.
@@ -319,30 +337,34 @@ I also have to give them my credit card information so that I can pay for it. I 
 have all of that stuff on file already. I just enter my username and password. Once that is done, I finish the order
 and then I have to wait.
 
-### And what happens when your food is delivered?
+>  And what happens when your food is delivered?
+
 The driver brings the food to the door. They hand me the food. I usually pay online. I love that when they come to the
 door, I don't have to give them money. I can enter a tip online too so that I don't have to give them anything, but
 it always feels a bit weird to tip them when they haven't delivered the food yet. If I have cash I will often pay for
 the food online but then give them the tip in person. I live pretty far away and it's a bit of a drive for them, so I 
 usually tip them pretty well. I like to see their smile when I give it to them in person.
 
-### Do you ever order pickup?
+> Do you ever order pickup?
+
 Sometimes. I order pickup once in a while and just grab it on my way home from work. I can still order online so I
 usually do that, and then I just choose pickup instead of delivery. Sometimes, if I am away from my computer, I will
 just phone them and order something instead.
 
-### Do you ever have trouble ordering online?
+> Do you ever have trouble ordering online?
+
 Sometimes. Their website and app aren't always working. Or if it is working it can be really slow. I don't mind waiting
 when it's slow, unless I am in a hurry or really hungry. But when it doesn't work at all, I usually just don't bother.
 When that happens I will usually just order from the other place down the street. The food isn't as good, and their
 website is kind of hard to use, but it gets the job done in a pinch.
 
-### Have you ever used the online reservation system?
+>  Have you ever used the online reservation system?
+
 I have used it once or twice. I usually eat at home so I don't use it that often. But it has been okay when I have used
 it. I don't get to pick specific tables or anything. I just give them a few details about what I want, like how many
 people, whether I want a booth, that sort of thing.
 
-### Key Details
+### Online Customer's Key Details
 
 - Customer adds menu items to their order through the website/app.
 - Customer checks out when they have completed their order.
