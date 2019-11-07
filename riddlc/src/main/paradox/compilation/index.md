@@ -46,12 +46,13 @@ to produce output that flawed and not useful.
 ## Generation
 A Riddl AST, having been successfully analyzed for structure and validity, is
 ready to be translated into another form, which is the point of all this
-bother in the first place.   
+bother in the first place. 
   
 @@toc { depth=2 }
 
 @@@ index
 
+* []
 
 @@@
 

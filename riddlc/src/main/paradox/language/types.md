@@ -11,13 +11,16 @@ RIDDL supports several literal types that just "exist" because they are
 fundamental and well understood in any targeted computing environment. The 
 literal types are:
 
-* **String** - a sequence of characters with a finite length
-* **Number**  - a numeric value either integer or real
 * **Boolean** - a binary value for true/false logic
+* **String** - a sequence of characters with a finite length
+* **Number**  - a numeric value either integer or decimal
+* **Integer** - a numeric value that excludes fractional parts
+* **Decimal** - a numeric value that includes fractional parts 
 * **Id** - a globally unique identifier
 * **Date** - a date value
 * **Time** - a time of day value
-* **TimeStamp** - a date and time combined will at least millisecond accuracy
+* **DateTime** - a date and a time value together
+* **TimeStamp** - a date and time combined with at least millisecond accuracy
 * **URL** - a uniform resource locator
 
 ## Named Type Definitions

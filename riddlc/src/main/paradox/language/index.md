@@ -28,6 +28,7 @@ Here are the main concepts the language supports:
 * [Messages](messages.md)
 * [Topics](topics.md)
 * [Projections](projections.md)
+* [Action](actions.md)
 
 @@@
 

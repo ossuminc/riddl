@@ -11,19 +11,21 @@ Here is how RIDDL nesting can be structured:
     * [Domain](domains.md) - domains can be nested to form sub-domains
     * [Type](types.md) 
     * [Topic](topics.md)
-      * Command
-      * Event
-      * Query
-      * Result
+      * [Command](commands.md)
+      * [Event](events.md)
+      * [Query](queries.md)
+      * [Result](results.md)
     * [Context](contexts.md)
       * [Type](types.md)
       * [Entity](entities.md)
-        * State
-        * Features
-        * Consumers
-        * Actions
-        * Invariants
+        * [State](state.md)
+        * [Feature](features.md)
+        * [Consumer](consumers.md)
+          * onClause
+            * 
+        * [Action](actions.md)
+        * [Invariant](invariants.md)
       * [Interaction](interactions.md)
       * [Adaptor](adaptors.md)
-    * Interaction
+    * [Interaction](interactions.md)
       * Action
