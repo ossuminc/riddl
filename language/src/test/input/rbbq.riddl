@@ -15,7 +15,7 @@ domain ReactiveBBQ {
 
   topic Inputs {
     commands {
-      foo is {} yields event Inputs.bar
+      foo is {} yields event root.ReactiveBBQ.Inputs.bar
     } events {
       bar is {}
     } queries {} results {}
@@ -39,6 +39,10 @@ domain ReactiveBBQ {
         |The OrderViewer is the device in the kitchen, probably a touch screen,
         |that the cooks use to view the sequence of orders to cook
      }
+     items {
+
+     }
+     see "http://foo.com/"
     }
   } explained as {
     brief "The kitchen is where food is prepared"

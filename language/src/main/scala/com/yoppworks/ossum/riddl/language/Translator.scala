@@ -1,17 +1,13 @@
-package com.yoppworks.ossum.riddl.translator
+package com.yoppworks.ossum.riddl.language
 
 import java.io.File
 
-import com.yoppworks.ossum.riddl.language.AST._
-import com.yoppworks.ossum.riddl.language.ParserError
-import com.yoppworks.ossum.riddl.language.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.TopLevelParser
-import com.yoppworks.ossum.riddl.language.Validation
+import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 import pureconfig._
-import pureconfig.error.ConfigReaderFailure
-import pureconfig.error.ConfigReaderFailures
+import pureconfig.error._
 
+/** Unit Tests For Translator */
 trait Translator {
   trait Configuration extends Product
 

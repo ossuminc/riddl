@@ -123,12 +123,13 @@ object RIDDL {
       parseAndValidate(options) match {
         case None =>
         case Some(root) =>
-          timer("translate", options.showTimes) {
+          timer(stage = "translate", options.showTimes) {
             options.outputKind match {
               case Kinds.Prettify =>
                 FormatTranslator.translate(root, options.configFile.get)
               case Kinds.Paradox =>
-                ParadoxTranslator.translate(root, options.configFile.get)
+                val trans = new ParadoxTranslator
+                trans.translate(root, options.configFile.get)
               case x: Kinds.Value =>
                 println(s"Translation $x not yet implemented")
             }

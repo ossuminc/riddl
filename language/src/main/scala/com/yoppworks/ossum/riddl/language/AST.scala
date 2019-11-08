@@ -51,11 +51,12 @@ object AST {
   }
 
   case class Description(
-    loc: Location,
-    brief: Seq[LiteralString],
-    details: Seq[LiteralString],
-    fields: Map[Identifier, Seq[LiteralString]],
-    citations: Seq[LiteralString]
+    loc: Location = 0 -> 0,
+    brief: Seq[LiteralString] = Seq.empty[LiteralString],
+    details: Seq[LiteralString] = Seq.empty[LiteralString],
+    fields: Map[Identifier, Seq[LiteralString]] =
+      Map.empty[Identifier, Seq[LiteralString]],
+    citations: Seq[LiteralString] = Seq.empty[LiteralString]
   )
 
   sealed trait Reference extends RiddlValue {

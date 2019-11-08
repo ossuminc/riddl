@@ -1,16 +1,22 @@
 package com.yoppworks.ossum.riddl.translator
 
 import java.io.File
+import java.io.PrintWriter
+import java.nio.file.Files
+import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.Folding
+import com.yoppworks.ossum.riddl.language.Translator
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 
 /** A Translator that generates Paradox documentation */
-object ParadoxTranslator extends Translator {
+class ParadoxTranslator extends Translator {
 
-  case class ParadoxConfig() extends Configuration
+  case class ParadoxConfig(
+    outputRoot: Path = Path.of("target")
+  ) extends Configuration
 
   case class ParadoxState(
     config: ParadoxConfig,
@@ -45,5 +51,77 @@ object ParadoxTranslator extends Translator {
     container: Container,
     definition: Definition,
     state: ParadoxState
-  ) extends Folding.Folding[ParadoxState] {}
+  ) extends Folding.Folding[ParadoxState] {
+
+    def mkDefRef(definition: Definition): String = {
+      s"""* [${definition.id.value}]("${definition.id.value}.md")"""
+    }
+
+    def mkContRef(cont: Container): String = {
+      s"""* [${cont.id.value}]("${cont.id.value.toLowerCase()}/index.md")"""
+    }
+
+    def mkFields(
+      section: String,
+      fields: Map[Identifier, Seq[LiteralString]]
+    ): String = {
+      val sb = new StringBuilder
+      sb.append(s"## $section")
+      fields.foreach {
+        case (id, strs) =>
+          sb.append(s"### ${id.value}")
+          sb.append(strs.map(_.s).mkString("\n"))
+      }
+      sb.toString()
+    }
+
+    override def openDomain(
+      state: ParadoxState,
+      container: Container,
+      domain: Domain
+    ): ParadoxState = {
+      val baseDir = state.config.outputRoot
+        .resolve("riddl-paradox")
+        .resolve(domain.id.value)
+      Files.createDirectories(baseDir)
+      val indexFile = baseDir.resolve("index.md")
+      val w = new PrintWriter(indexFile.toFile)
+      val d = domain.description.getOrElse(Description())
+      w.write(
+        s"""
+           |# Domain `${domain.id.value}`
+           |## Briefly
+           |${d.brief.map(_.s).mkString("\n")}
+           |
+           |## Details
+           |${d.details.map(_.s).mkString("\n")}
+           |
+           |${mkFields("Fields", d.fields)}
+           |
+           |@@toc { depth=2 }
+           |
+           |@@@ index
+           |
+           |${domain.types.map(mkDefRef).mkString("\n")}
+           |${domain.contexts.map(mkContRef).mkString("\n")}
+           |${domain.interactions.map(mkContRef).mkString("\n")}
+           |
+           |@@@
+           |
+           |""".stripMargin
+      )
+      w.flush()
+      w.close()
+      state
+    }
+
+    override def doType(
+      state: ParadoxState,
+      container: Container,
+      typ: Type
+    ): ParadoxState = {
+      super.doType(state, container, typ)
+    }
+  }
+
 }

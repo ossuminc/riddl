@@ -2,9 +2,9 @@ package com.yoppworks.ossum.riddl.translator
 
 import java.io.File
 
-import org.scalatest.Assertion
 import com.yoppworks.ossum.riddl.language.ParsingTest
 import com.yoppworks.ossum.riddl.language.RiddlParserInput
+import org.scalatest.Assertion
 
 /** Test Generator and Traversal */
 class FormatTranslatorTest extends ParsingTest {

@@ -85,6 +85,7 @@ lazy val language = (project in file("language")).settings(
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % "2.0.0",
     "com.lihaoyi" %% "fastparse" % "2.1.3",
+    "com.github.pureconfig" %% "pureconfig" % "0.12.1",
     "org.scalactic" %% "scalactic" % "3.0.8",
     "org.scalatest" %% "scalatest" % "3.0.8" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"

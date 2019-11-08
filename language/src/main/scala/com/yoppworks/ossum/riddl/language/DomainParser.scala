@@ -42,7 +42,7 @@ trait DomainParser
         is ~
         open ~/
         (undefined.map(_ => Seq.empty[DomainDefinition]) | domainContent) ~
-        close ~ description
+        close ~/ description
     ).map {
       case (loc, id, defs, description) =>
         val groups = defs.groupBy(_.getClass)

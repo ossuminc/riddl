@@ -5,9 +5,11 @@ import java.io.File
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.Folding
+import com.yoppworks.ossum.riddl.language.Translator
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
+
 import scala.collection.mutable
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
