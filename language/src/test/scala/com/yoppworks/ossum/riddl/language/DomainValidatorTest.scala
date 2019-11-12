@@ -16,7 +16,7 @@ class DomainValidatorTest extends ValidatingTest {
             Domain((1, 1), Identifier((1, 1), "foo"))
           )
         ),
-        Seq.empty[Validation.ValidationOptions]
+        Validation.defaultOptions
       )
       errors must not be (empty)
       errors.head.message must include("'foo' is defined multiple times")

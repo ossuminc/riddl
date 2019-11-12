@@ -1,6 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.io.File
+import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST.Location
 import fastparse.ParserInput
@@ -80,6 +81,7 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   source.close()
   val root: File = file.getParentFile
   def origin: String = file.getName
+  def this(path: Path) = this(path.toFile)
 }
 
 case class SourceParserInput(source: Source, origin: String)

@@ -1,19 +1,22 @@
 package com.yoppworks.ossum.riddl.translator
 
 import java.io.File
+import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.Folding
+import com.yoppworks.ossum.riddl.language.Riddl
 import com.yoppworks.ossum.riddl.language.Translator
 import com.yoppworks.ossum.riddl.language.Folding.Folding
+import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 
 import scala.collection.mutable
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
-object FormatTranslator extends Translator {
+class FormatTranslator extends Translator {
 
   type Lines = mutable.StringBuilder
 
@@ -26,18 +29,26 @@ object FormatTranslator extends Translator {
     }
   }
 
-  case class FormatConfig(outputFile: Option[File] = None) extends Configuration
+  case class FormatConfig(
+    showTimes: Boolean = false,
+    showWarnings: Boolean = false,
+    showMissingWarnings: Boolean = false,
+    showStyleWarnings: Boolean = false,
+    inputPath: Option[Path] = None,
+    outputPath: Option[Path] = None
+  ) extends Configuration
 
-  def translate(root: RootContainer, confFile: File): Seq[File] = {
-    val readResult = ConfigSource.file(confFile).load[FormatConfig]
-    handleConfigLoad[FormatConfig](readResult) match {
-      case Some(c) => translate(root, c)
-      case None    => Seq.empty[File]
-    }
+  val defaultConfig = FormatConfig()
+
+  type CONF = FormatConfig
+
+  def loadConfig(path: Path): ConfigReader.Result[FormatConfig] = {
+    ConfigSource.file(path).load[FormatConfig]
   }
 
   def translate(
     root: RootContainer,
+    log: Riddl.Logger,
     configuration: FormatConfig
   ): Seq[File] = {
     val state = FormatState(configuration)

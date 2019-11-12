@@ -2,8 +2,8 @@ package com.yoppworks.ossum.riddl
 
 import com.yoppworks.ossum.riddl.RiddlOptions._
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.FileParserInput
-import com.yoppworks.ossum.riddl.language.Validation
+import com.yoppworks.ossum.riddl.language.Riddl
+import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
 import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
 import com.yoppworks.ossum.riddl.translator.FormatTranslator
 import scopt.OParser
@@ -24,7 +24,7 @@ object RIDDL {
             case Translate =>
               translate(options)
             case Unspecified =>
-              error(s"A command is required")
+              SysLogger.error(s"A command is required")
           }
         case _ =>
           // arguments are bad, error message will have been displayed
@@ -32,82 +32,29 @@ object RIDDL {
       }
     } catch {
       case xcptn: Throwable =>
-        error(xcptn.getClass.getName + ": " + xcptn.getMessage, 2)
-    }
-  }
-
-  def error(message: String, rc: Int = 1): Unit = {
-    System.err.println(message)
-    System.exit(rc)
-  }
-
-  def timer[T](stage: String, show: Boolean = true)(f: => T): T = {
-    if (show) {
-      val start = System.currentTimeMillis()
-      val result = f
-      val stop = System.currentTimeMillis()
-      val delta = stop - start
-      val seconds = delta / 1000
-      val milliseconds = delta % 1000
-      println(f"Stage '$stage': $seconds.$milliseconds%03d seconds")
-      result
-    } else {
-      f
+        SysLogger.error(xcptn.getClass.getName + ": " + xcptn.getMessage)
     }
   }
 
   def parse(options: RiddlOptions): Unit = {
     options.inputFile match {
       case Some(file) =>
-        timer("parse", options.showTimes) {
-          val input = FileParserInput(file)
-          language.TopLevelParser.parse(input)
-        } match {
-          case Left(msg) =>
-            println(msg)
-          case Right(_) =>
-            println("Success")
+        Riddl.parse(file.toPath, SysLogger, options) match {
+          case None =>
+          case Some(_) =>
+            SysLogger.info("Completed.")
         }
       case None =>
-        error("No input file specified")
+        SysLogger.error("No input file specified")
     }
   }
 
   def parseAndValidate(options: RiddlOptions): Option[RootContainer] = {
     options.inputFile match {
       case Some(file) =>
-        timer("parse", options.showTimes) {
-          val input = FileParserInput(file)
-          language.TopLevelParser.parse(input)
-        } match {
-          case Left(msg) =>
-            println(msg)
-            None
-          case Right(root) =>
-            val msgs = timer("validate", options.showTimes) {
-              root.contents.foldLeft(Validation.NoValidationMessages) {
-                case (prior, container) =>
-                  prior ++ Validation.validate(
-                    container,
-                    options.makeValidationOptions
-                  )
-              }
-            }
-            val toPrint =
-              if (options.suppressWarnings)
-                msgs.filterNot(_.kind.isWarning)
-              else
-                msgs
-            toPrint.map(_.format(file.getName)).foreach { msg =>
-              System.err.println(msg)
-            }
-            if (toPrint.isEmpty)
-              None
-            else
-              Some(root)
-        }
+        Riddl.parseAndValidate(file.toPath, SysLogger, options)
       case None =>
-        error("No input file specified")
+        SysLogger.error("No input file specified")
         None
     }
   }
@@ -118,18 +65,27 @@ object RIDDL {
 
   def translate(options: RiddlOptions): Unit = {
     if (options.configFile.isEmpty) {
-      error("No translation configuration file provided")
+      SysLogger.error("No translation configuration file provided")
     } else {
       parseAndValidate(options) match {
         case None =>
         case Some(root) =>
-          timer(stage = "translate", options.showTimes) {
+          Riddl.timer(stage = "translate", options.showTimes) {
             options.outputKind match {
               case Kinds.Prettify =>
-                FormatTranslator.translate(root, options.configFile.get)
+                val trans = new FormatTranslator
+                trans.translate(
+                  root,
+                  Riddl.SysLogger,
+                  options.configFile.map(_.toPath)
+                )
               case Kinds.Paradox =>
                 val trans = new ParadoxTranslator
-                trans.translate(root, options.configFile.get)
+                trans.translate(
+                  root,
+                  Riddl.SysLogger,
+                  options.configFile.map(_.toPath)
+                )
               case x: Kinds.Value =>
                 println(s"Translation $x not yet implemented")
             }

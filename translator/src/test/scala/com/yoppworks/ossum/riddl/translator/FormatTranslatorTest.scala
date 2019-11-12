@@ -17,7 +17,8 @@ class FormatTranslatorTest extends ParsingTest {
         val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(roots) =>
-        val output = FormatTranslator.translateToString(roots)
+        val trans = new FormatTranslator
+        val output = trans.translateToString(roots)
         parseTopLevelDomains(output) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
@@ -25,7 +26,8 @@ class FormatTranslatorTest extends ParsingTest {
             fail("On First Generation:\n" + message)
           case Right(roots2) =>
             input mustEqual output
-            val output2 = FormatTranslator.translateToString(roots2)
+            val trans2 = new FormatTranslator
+            val output2 = trans2.translateToString(roots2)
             parseTopLevelDomains(output2) match {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")

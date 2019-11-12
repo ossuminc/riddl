@@ -109,8 +109,9 @@ object AST {
   case class Enumerator(
     loc: Location,
     id: Identifier,
-    value: Option[Aggregation]
-  ) extends RiddlValue
+    value: Option[Aggregation] = None,
+    description: Option[Description] = None
+  ) extends Definition
 
   case class Enumeration(
     loc: Location,
@@ -588,8 +589,8 @@ object AST {
     entity: EntityRef,
     function: ActionRef,
     arguments: Seq[LiteralString],
-    addendum: Option[Description] = None
-  )
+    description: Option[Description] = None
+  ) extends DefinitionClause
 
   type Actions = Seq[ActionDefinition]
 

@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.ParsingTest
+import com.yoppworks.ossum.riddl.language.Riddl
 import com.yoppworks.ossum.riddl.language.RiddlParserInput
 import org.scalatest.Assertion
 
@@ -17,10 +18,10 @@ class ParadoxTranslatorTest extends ParsingTest {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(roots) =>
+      case Right(root) =>
         val trans = new ParadoxTranslator
         val config = trans.ParadoxConfig()
-        trans.translate(roots, config)
+        trans.translate(root, Riddl.SysLogger, config)
     }
     succeed
   }

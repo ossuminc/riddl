@@ -2,10 +2,7 @@ package com.yoppworks.ossum.riddl
 
 import java.io.File
 
-import com.yoppworks.ossum.riddl.language.Validation
-import com.yoppworks.ossum.riddl.language.Validation.ReportMissingWarnings
-import com.yoppworks.ossum.riddl.language.Validation.ReportStyleWarnings
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.Riddl
 import scopt.OParserBuilder
 
 /** Command Line Options for Riddl compiler program */
@@ -14,25 +11,15 @@ case class RiddlOptions(
   verbose: Boolean = false,
   quiet: Boolean = false,
   showTimes: Boolean = false,
-  suppressWarnings: Boolean = false,
-  suppressMissingWarnings: Boolean = false,
-  suppressStyleWarnings: Boolean = false,
+  showWarnings: Boolean = true,
+  showMissingWarnings: Boolean = false,
+  showStyleWarnings: Boolean = false,
   command: RiddlOptions.Command = RiddlOptions.Unspecified,
   inputFile: Option[File] = None,
   outputDir: Option[File] = None,
   configFile: Option[File] = None,
   outputKind: Kinds.Kinds = Kinds.Paradox
-) {
-
-  def makeValidationOptions: Seq[ValidationOptions] = {
-    var result = Validation.defaultOptions
-    if (suppressMissingWarnings)
-      result = result.filterNot(_ == ReportMissingWarnings)
-    if (suppressStyleWarnings)
-      result = result.filterNot(_ == ReportStyleWarnings)
-    result
-  }
-}
+) extends Riddl.Options
 
 object Kinds extends Enumeration {
   type Kinds = Value
@@ -67,11 +54,11 @@ object RiddlOptions {
       opt[Unit]('v', "verbose").action((_, c) => c.copy(verbose = true)),
       opt[Unit]('q', "quiet").action((_, c) => c.copy(quiet = true)),
       opt[Unit]('w', name = "suppress-warnings")
-        .action((_, c) => c.copy(suppressWarnings = true)),
+        .action((_, c) => c.copy(showWarnings = false)),
       opt[Unit]('m', name = "suppress-missing-warnings")
-        .action((_, c) => c.copy(suppressWarnings = true)),
+        .action((_, c) => c.copy(showMissingWarnings = false)),
       opt[Unit]('s', name = "suppress-style-warnings")
-        .action((_, c) => c.copy(suppressWarnings = true)),
+        .action((_, c) => c.copy(showStyleWarnings = false)),
       opt[Unit]('t', name = "show-times")
         .action((_, c) => c.copy(showTimes = true)),
       cmd("parse")

@@ -7,7 +7,9 @@ import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.Folding
+import com.yoppworks.ossum.riddl.language.Riddl
 import com.yoppworks.ossum.riddl.language.Translator
+import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 
@@ -15,8 +17,21 @@ import pureconfig.generic.auto._
 class ParadoxTranslator extends Translator {
 
   case class ParadoxConfig(
+    showTimes: Boolean = false,
+    showWarnings: Boolean = true,
+    showMissingWarnings: Boolean = false,
+    showStyleWarnings: Boolean = false,
+    inputPath: Option[Path] = None,
     outputRoot: Path = Path.of("target")
   ) extends Configuration
+
+  type CONF = ParadoxConfig
+
+  val defaultConfig = ParadoxConfig()
+
+  override def loadConfig(path: Path): ConfigReader.Result[ParadoxConfig] = {
+    ConfigSource.file(path).load[ParadoxConfig]
+  }
 
   case class ParadoxState(
     config: ParadoxConfig,
@@ -30,17 +45,10 @@ class ParadoxTranslator extends Translator {
     }
   }
 
-  def translate(root: RootContainer, confFile: File): Seq[File] = {
-    val readResult = ConfigSource.file(confFile).load[ParadoxConfig]
-    handleConfigLoad[ParadoxConfig](readResult) match {
-      case Some(c) => translate(root, c)
-      case None    => Seq.empty[File]
-    }
-  }
-
-  def translate[C <: ParadoxConfig](
+  def translate(
     root: RootContainer,
-    config: C
+    logger: Riddl.Logger,
+    config: CONF
   ): Seq[File] = {
     val state: ParadoxState = ParadoxState(config, Seq.empty[File])
     val dispatcher = ParadoxFolding(root, root, state)
@@ -123,5 +131,4 @@ class ParadoxTranslator extends Translator {
       super.doType(state, container, typ)
     }
   }
-
 }

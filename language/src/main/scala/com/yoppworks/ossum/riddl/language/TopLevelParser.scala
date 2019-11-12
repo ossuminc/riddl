@@ -1,10 +1,12 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.io.File
+import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import fastparse._
 import ScalaWhitespace._
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 
 /** Top level parsing rules */
 class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
@@ -36,6 +38,12 @@ object TopLevelParser {
     tlp.expect(tlp.fileRoot(_))
   }
 
+  def parse(path: Path): Either[Seq[ParserError], RootContainer] = {
+    val fpi = new FileParserInput(path)
+    val tlp = new TopLevelParser(fpi)
+    tlp.expect(tlp.fileRoot(_))
+  }
+
   def parse(
     input: String
   ): Either[Seq[ParserError], RootContainer] = {
@@ -43,4 +51,5 @@ object TopLevelParser {
     val tlp = new TopLevelParser(sp)
     tlp.expect(tlp.fileRoot(_))
   }
+
 }

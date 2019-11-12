@@ -14,7 +14,7 @@ object Validation {
 
   def validate[C <: Container](
     root: C,
-    options: Seq[ValidationOptions] = defaultOptions
+    options: ValidationOptions = defaultOptions
   ): Seq[ValidationMessage] = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, options)
@@ -23,38 +23,38 @@ object Validation {
   }
 
   sealed trait ValidationMessageKind {
+    def isSevereError: Boolean = true
     def isError: Boolean = false
-
     def isWarning: Boolean = false
+    def isMissing: Boolean = false
+    def isStyle: Boolean = false
   }
 
   case object MissingWarning extends ValidationMessageKind {
     override def isWarning = true
-
+    override def isMissing: Boolean = true
     override def toString: String = "Missing"
   }
 
   case object StyleWarning extends ValidationMessageKind {
     override def isWarning = true
-
+    override def isStyle: Boolean = true
     override def toString: String = "Style"
   }
 
   case object Warning extends ValidationMessageKind {
     override def isWarning = true
-
     override def toString: String = "Warning"
   }
 
   case object Error extends ValidationMessageKind {
     override def isError = true
-
     override def toString: String = "Error"
   }
 
   case object SevereError extends ValidationMessageKind {
     override def isError = true
-
+    override def isSevereError = true
     override def toString: String = "Severe"
   }
 
@@ -89,22 +89,18 @@ object Validation {
     }
   }
 
-  sealed trait ValidationOptions
+  trait ValidationOptions extends Riddl.Options
 
-  /** Warn when recommended features are left unused */
-  case object ReportMissingWarnings extends ValidationOptions
-
-  /** Warn when recommended stylistic violations occur */
-  case object ReportStyleWarnings extends ValidationOptions
-
-  val defaultOptions: Seq[ValidationOptions] = Seq(
-    ReportMissingWarnings,
-    ReportStyleWarnings
-  )
+  val defaultOptions: ValidationOptions = new ValidationOptions {
+    override def showTimes: Boolean = true
+    override def showWarnings: Boolean = true
+    override def showMissingWarnings: Boolean = true
+    override def showStyleWarnings: Boolean = true
+  }
 
   case class ValidationState(
     symbolTable: SymbolTable,
-    options: Seq[ValidationOptions] = defaultOptions,
+    options: ValidationOptions = defaultOptions,
     msgs: ValidationMessages = NoValidationMessages
   ) extends Folding.State[ValidationState] {
     def step(f: ValidationState => ValidationState): ValidationState = f(this)
@@ -116,10 +112,10 @@ object Validation {
     }
 
     def isReportMissingWarnings: Boolean =
-      options.contains(ReportMissingWarnings)
+      options.showMissingWarnings
 
     def isReportStyleWarnings: Boolean =
-      options.contains(ReportStyleWarnings)
+      options.showStyleWarnings
 
     def lookup[T <: Definition: ClassTag](
       id: PathIdentifier
@@ -178,7 +174,7 @@ object Validation {
 
     def checkTypeExpression(
       typ: TypeExpression,
-      definition: Container
+      definition: Definition
     ): ValidationState = {
       typ match {
         case Pattern(loc, pattern, addendum) =>
@@ -204,7 +200,7 @@ object Validation {
           checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
-        case Enumeration(_, enumerators: Seq[Enumerator], addendum) =>
+        case e @ Enumeration(_, enumerators: Seq[Enumerator], desc) =>
           enumerators.foldLeft(this) {
             case (state, enumerator) =>
               val id = enumerator.id
@@ -218,9 +214,9 @@ object Validation {
                 )
               if (enumerator.value.nonEmpty) {
                 s.checkTypeExpression(enumerator.value.get, definition)
-                  .checkDescription(definition, addendum)
+                  .checkDescription(definition, desc)
               } else {
-                s.checkDescription(definition, addendum)
+                s.checkDescription(definition, desc)
               }
           }
         case Alternation(_, of, addendum) =>
@@ -396,33 +392,33 @@ object Validation {
           case _ =>
         }
       }
-      result.checkDescription(definition, definition.description)
+      result
     }
 
     def checkDescription(
       definition: Definition,
       description: Option[Description]
     ): ValidationState = {
-      if (description.isEmpty) {
+      if (definition.description.isEmpty) {
         this.check(
           predicate = false,
-          s"Definition '${definition.id.value}' should have a description",
+          s"${definition.identify} should have a description",
           MissingWarning,
           definition.loc
         )
       } else {
-        val desc = description.get
+        val desc = definition.description.get
         val brief = desc.brief
         val result: ValidationState = this
           .check(
             brief.nonEmpty,
-            s"Brief description should not be empty",
+            s"For ${definition.identify}, brief description should not be empty",
             MissingWarning,
             desc.loc
           )
           .check(
             desc.details.nonEmpty,
-            "Detailed description should not be empty",
+            s"For ${definition.identify}, detailed description should not be empty",
             MissingWarning,
             desc.loc
           )
@@ -462,7 +458,7 @@ object Validation {
       container: Container,
       domain: Domain
     ): ValidationState = {
-      state
+      state.checkDescription(domain, domain.description)
     }
 
     override def openContext(
@@ -492,7 +488,7 @@ object Validation {
       container: Container,
       context: AST.Context
     ): ValidationState = {
-      state
+      state.checkDescription(context, context.description)
     }
 
     override def openEntity(
@@ -531,7 +527,7 @@ object Validation {
       container: Container,
       entity: AST.Entity
     ): ValidationState = {
-      state
+      state.checkDescription(entity, entity.description)
     }
 
     override def openTopic(
@@ -553,9 +549,9 @@ object Validation {
     override def closeTopic(
       state: ValidationState,
       container: Container,
-      channel: Topic
+      topic: Topic
     ): ValidationState = {
-      state
+      state.checkDescription(topic, topic.description)
     }
 
     override def openInteraction(
@@ -573,7 +569,7 @@ object Validation {
       container: Container,
       interaction: Interaction
     ): ValidationState = {
-      state
+      state.checkDescription(interaction, interaction.description)
     }
 
     override def openFeature(
@@ -593,7 +589,7 @@ object Validation {
       container: Container,
       feature: Feature
     ): ValidationState = {
-      state
+      state.checkDescription(feature, feature.description)
     }
 
     override def openAdaptor(
@@ -609,7 +605,7 @@ object Validation {
       container: Container,
       adaptor: Adaptor
     ): ValidationState = {
-      state
+      state.checkDescription(adaptor, adaptor.description)
     }
 
     override def doCommand(
@@ -620,6 +616,7 @@ object Validation {
       val result =
         state
           .checkDefinition(container, command)
+          .checkDescription(command, command.description)
           .checkTypeExpression(command.typ, container)
       if (command.events.isEmpty) {
         result.add(
@@ -641,7 +638,9 @@ object Validation {
       container: Container,
       event: Event
     ): ValidationState = {
-      state.checkTypeExpression(event.typ, container)
+      state
+        .checkTypeExpression(event.typ, container)
+        .checkDescription(event, event.description)
     }
 
     override def doQuery(
@@ -653,6 +652,7 @@ object Validation {
         .checkDefinition(container, query)
         .checkTypeExpression(query.typ, container)
         .checkRef[Result](query.result.id)
+        .checkDescription(query, query.description)
     }
 
     override def doResult(
@@ -660,7 +660,9 @@ object Validation {
       container: Container,
       result: Result
     ): ValidationState = {
-      state.checkTypeExpression(result.typ, container)
+      state
+        .checkTypeExpression(result.typ, container)
+        .checkDescription(result, result.description)
     }
 
     override def doType(
@@ -672,19 +674,20 @@ object Validation {
         .checkDefinition(container, typeDef)
         .check(
           typeDef.id.value.head.isUpper,
-          s"Type name ${typeDef.id.value} should start with a capital letter",
+          s"${typeDef.identify} should start with a capital letter",
           StyleWarning,
           typeDef.loc
         )
         .checkTypeExpression(typeDef.typ, container)
+        .checkDescription(typeDef, typeDef.description)
     }
 
     override def doPredefinedType(
-      result: ValidationState,
+      state: ValidationState,
       container: Container,
       predef: PredefinedType
     ): ValidationState = {
-      result
+      state
     }
 
     override def doAction(
@@ -692,7 +695,9 @@ object Validation {
       container: Container,
       action: ActionDefinition
     ): ValidationState = {
-      val newState = state.checkDefinition(container, action)
+      val newState = state
+        .checkDefinition(container, action)
+        .checkDescription(action, action.description)
       action match {
         case ma: MessageAction =>
           ma.reactions.foldLeft(
@@ -726,6 +731,7 @@ object Validation {
         .checkNonEmpty(example.givens, "Givens", example)
         .checkNonEmpty(example.whens, "Whens", example)
         .checkNonEmpty(example.thens, "Thens", example)
+        .checkDescription(example, example.description)
     }
 
     override def doFunction(
@@ -734,6 +740,13 @@ object Validation {
       function: Action
     ): ValidationState = {
       state
+        .checkDefinition(container, function)
+        .checkTypeExpression(
+          function.input.getOrElse(Nothing(function.loc)),
+          function
+        )
+        .checkTypeExpression(function.output, function)
+        .checkDescription(function, function.description)
     }
 
     override def doInvariant(
@@ -741,7 +754,10 @@ object Validation {
       container: Container,
       invariant: Invariant
     ): ValidationState = {
-      state.checkDefinition(container, invariant)
+      state
+        .checkDefinition(container, invariant)
+        .checkNonEmpty(invariant.expression, "Expression", invariant)
+        .checkDescription(invariant, invariant.description)
     }
 
     override def doRole(
@@ -754,6 +770,7 @@ object Validation {
         .checkOptions[RoleOption](role.options, role.loc)
         .checkNonEmpty(role.responsibilities, "Responsibilities", role)
         .checkNonEmpty(role.capacities, "Capacities", role)
+        .checkDescription(role, role.description)
     }
 
     override def doTranslationRule(
@@ -761,7 +778,9 @@ object Validation {
       container: Container,
       rule: TranslationRule
     ): ValidationState = {
-      state.checkDefinition(container, rule)
+      state
+        .checkDefinition(container, rule)
+        .checkDescription(rule, rule.description)
     }
   }
 }

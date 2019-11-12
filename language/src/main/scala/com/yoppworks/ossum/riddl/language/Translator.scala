@@ -1,15 +1,21 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.io.File
+import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.Riddl.Options
 import pureconfig._
 import pureconfig.error._
 
 /** Unit Tests For Translator */
 trait Translator {
-  trait Configuration extends Product
+
+  trait Configuration extends Options {
+    def inputPath: Option[Path]
+  }
+
+  type CONF <: Configuration
 
   trait State {
     def config: Configuration
@@ -17,76 +23,86 @@ trait Translator {
     def addFile(file: File): State
   }
 
-  private def handleParserResult(
-    result: Either[Seq[ParserError], RootContainer],
-    origin: String,
-    errorLog: (=> String) => Unit,
-    configFile: File,
-    showWarnings: Boolean = true
-  ): Seq[File] = {
-    result match {
-      case Left(errors) =>
-        errors.map(_.format).foreach(errorLog(_))
-        errorLog(s"TOTAL: ${errors.length} syntax errors")
-        Seq.empty[File]
-      case Right(root) =>
-        val errors: Seq[ValidationMessage] =
-          Validation.validate[RootContainer](root)
-        if (errors.nonEmpty) {
-          val (warns, errs) = errors.partition(_.kind.isWarning)
-          if (showWarnings) {
-            warns.map(_.format(origin)).foreach(errorLog(_))
-          }
-          errors.map(_.format(origin)).foreach(errorLog(_))
-          Seq.empty[File]
-        } else {
-          translate(root, configFile)
-        }
-    }
-  }
-
   def parseValidateTranslateFile(
-    file: File,
-    errorLog: (=> String) => Unit,
-    configFile: File
+    path: Path,
+    logger: Riddl.Logger,
+    config: CONF
   ): Seq[File] = {
-    handleParserResult(
-      TopLevelParser.parse(file),
-      file.getName,
-      errorLog,
-      configFile
-    )
+    Riddl.parseAndValidate(path, logger, config) match {
+      case Some(root) =>
+        translate(root, logger, config)
+      case None =>
+        Seq.empty[File]
+    }
   }
 
   def parseValidateTranslate(
     input: RiddlParserInput,
-    errorLog: (=> String) => Unit,
-    configFile: File
+    logger: Riddl.Logger,
+    config: CONF
   ): Seq[File] = {
-    handleParserResult(
-      TopLevelParser.parse(input),
-      input.origin,
-      errorLog,
-      configFile
-    )
-  }
 
-  def handleConfigLoad[C](result: ConfigReader.Result[C]): Option[C] = {
-    result match {
-      case Left(failures: ConfigReaderFailures) =>
-        failures.toList.foreach { crf: ConfigReaderFailure =>
-          val location = crf.location match {
-            case Some(cvl) => cvl.description
-            case None      => "unknown location"
-          }
-          System.err.println(s"In $location:")
-          System.err.println(crf.description)
-        }
-        None
-      case Right(configuration) =>
-        Some(configuration)
+    Riddl.parseAndValidate(input, logger, config) match {
+      case Some(root) =>
+        translate(root, logger, config)
+      case None =>
+        Seq.empty[File]
     }
   }
 
-  def translate(root: RootContainer, confFile: File): Seq[File]
+  def loadConfig(path: Path): ConfigReader.Result[CONF]
+
+  def defaultConfig: CONF
+
+  def getConfig(
+    logger: Riddl.Logger,
+    path: Option[Path]
+  ): Option[CONF] = {
+    path match {
+      case None => Some(defaultConfig)
+      case Some(p) =>
+        loadConfig(p) match {
+          case Left(failures: ConfigReaderFailures) =>
+            failures.toList.foreach { crf: ConfigReaderFailure =>
+              val location = crf.location match {
+                case Some(cvl) => cvl.description
+                case None      => "unknown location"
+              }
+              logger.error(s"In $location:")
+              logger.error(crf.description)
+            }
+            None
+          case Right(configuration) =>
+            Some(configuration)
+        }
+    }
+  }
+
+  def translate(
+    root: RootContainer,
+    logger: Riddl.Logger,
+    config: Option[Path]
+  ): Seq[File] = {
+    val cfg = getConfig(logger, config)
+    cfg.map(translate(root, logger, _)).getOrElse(Seq.empty[File])
+  }
+
+  def translate(
+    root: RootContainer,
+    logger: Riddl.Logger,
+    config: CONF
+  ): Seq[File]
+
+  def run(
+    inputFile: Path,
+    logger: Riddl.Logger,
+    configFile: Option[Path]
+  ): Seq[File] = {
+    getConfig(logger, configFile) match {
+      case Some(config) =>
+        parseValidateTranslateFile(inputFile, logger, config)
+      case None =>
+        Seq.empty[File]
+    }
+  }
 }
