@@ -4,16 +4,15 @@ import fastparse._
 import NoWhitespace._
 import com.yoppworks.ossum.riddl.language.AST.LiteralString
 import com.yoppworks.ossum.riddl.language.AST.Location
+import com.yoppworks.ossum.riddl.language.Terminals.CharacterSets
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 
 /** Parser rules that should not collect white space */
 trait NoWhiteSpaceParsers extends ParsingContext {
 
-  final val specialLineChars: String =
-    "~`!@#$%^&*()_-+=[]\"':;<>,.?/"
-
   def markdownPredicate(c: Char): Boolean = {
-    c.isLetterOrDigit | c.isSpaceChar | specialLineChars.contains(c)
+    c.isLetterOrDigit | c.isSpaceChar |
+      CharacterSets.markdownAcceptedChars.contains(c)
   }
 
   def markdownLine[_: P]: P[LiteralString] = {

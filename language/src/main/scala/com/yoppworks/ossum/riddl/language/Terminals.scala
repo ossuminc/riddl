@@ -3,6 +3,11 @@ package com.yoppworks.ossum.riddl.language
 /** Terminal symbol definitions in various categories */
 object Terminals {
 
+  object CharacterSets {
+    final val markdownAcceptedChars: String =
+      """~`!@#$%^&*()_-+=[]"':;<>,.?/"""
+  }
+
   object Punctuation {
     val asterisk = "*"
     val comma = ","
@@ -223,6 +228,7 @@ object Terminals {
     final val from = "from"
     final val is = "is"
     final val of = "of"
+    final val on = "on"
     final val to = "to"
 
     val all: Seq[String] = Seq(
@@ -234,6 +240,7 @@ object Terminals {
       from,
       is,
       of,
+      on,
       to
     ).sorted.distinct
   }
