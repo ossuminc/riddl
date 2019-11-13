@@ -10,3 +10,5 @@ state.  Entities have a globally unique immutable persistent identifier,
 type `Id`, which provides the means to reference the entity in its context or
 between contexts.  
 
+@@@ index
+

@@ -290,6 +290,7 @@ object AST {
   case class SoftwareEntityKind(loc: Location) extends EntityKind("software")
   case class DeviceEntityKind(loc: Location) extends EntityKind("device")
   case class PersonEntityKind(loc: Location) extends EntityKind("person")
+  case class UserEntityKind(loc: Location) extends EntityKind("role")
 
   case class EntityRef(
     loc: Location,
@@ -330,12 +331,12 @@ object AST {
     def contents: Seq[Definition] = examples
   }
 
-  case class ActionRef(
+  case class FunctionRef(
     loc: Location,
     id: PathIdentifier
   ) extends Reference
 
-  case class Action(
+  case class Function(
     loc: Location,
     id: Identifier,
     input: Option[TypeExpression],
@@ -467,14 +468,14 @@ object AST {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     consumers: Seq[Consumer] = Seq.empty[Consumer],
     features: Seq[Feature] = Seq.empty[Feature],
-    actions: Seq[Action] = Seq.empty[Action],
+    functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     description: Option[Description] = None
   ) extends Container
       with ContextDefinition {
 
     def contents: Seq[Definition] =
-      features ++ actions ++ invariants
+      features ++ functions ++ invariants
   }
 
   trait TranslationRule extends Definition {
@@ -543,38 +544,22 @@ object AST {
     *
     * @param loc Where in the input the Scenario is defined
     * @param id The name of the scenario
-    * @param roles The roles defined for the interaction
     * @param actions The actions that constitute the interaction
     */
   case class Interaction(
     loc: Location,
     id: Identifier,
-    roles: Seq[Role] = Seq.empty[Role],
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     description: Option[Description] = None
   ) extends Container
       with DomainDefinition
       with ContextDefinition {
-    def contents: Seq[Definition] = roles ++ actions
+    def contents: Seq[Definition] = actions
   }
 
   sealed trait RoleOption extends RiddlValue
   case class HumanOption(loc: Location) extends RoleOption
   case class DeviceOption(loc: Location) extends RoleOption
-
-  case class Role(
-    loc: Location,
-    id: Identifier,
-    options: Seq[RoleOption] = Seq.empty[RoleOption],
-    responsibilities: Seq[LiteralString] = Seq.empty[LiteralString],
-    capacities: Seq[LiteralString] = Seq.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends Definition
-
-  case class RoleRef(
-    loc: Location,
-    id: PathIdentifier
-  ) extends Reference
 
   sealed trait ActionDefinition extends Definition {
     def reactions: Seq[Reaction]
@@ -587,10 +572,15 @@ object AST {
     loc: Location,
     id: Identifier,
     entity: EntityRef,
-    function: ActionRef,
+    function: FunctionRef,
     arguments: Seq[LiteralString],
     description: Option[Description] = None
   ) extends DefinitionClause
+
+  case class ReactionRef(
+    loc: Location,
+    id: PathIdentifier
+  ) extends Reference
 
   type Actions = Seq[ActionDefinition]
 
@@ -618,25 +608,6 @@ object AST {
     reactions: Seq[Reaction],
     description: Option[Description] = None
   ) extends ActionDefinition
-
-  /** A directive from an actor (Role) towards some entity. You can think of
-    * this like external input, coming from outside the system.
-    */
-  case class DirectiveAction(
-    loc: Location,
-    id: Identifier,
-    options: Seq[MessageOption] = Seq.empty[MessageOption],
-    role: RoleRef,
-    entity: EntityRef,
-    message: MessageReference,
-    reactions: Seq[Reaction],
-    description: Option[Description] = None
-  ) extends ActionDefinition
-
-  case class ReactionRef(
-    loc: Location,
-    id: PathIdentifier
-  ) extends Reference
 
   case class DomainRef(
     loc: Location,

@@ -99,6 +99,7 @@ lazy val translator = (project in file("translator"))
     scalacOptions ++= standardScalaCOptions(scalaVersion.value == "2.13.1"),
     buildInfoPackage := "com.yoppworks.ossum.riddl.translator",
     libraryDependencies ++= Seq(
+      "org.jfree" % "jfreesvg" % "3.4",
       "org.scalactic" %% "scalactic" % "3.0.8",
       "org.scalatest" %% "scalatest" % "3.0.8" % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",

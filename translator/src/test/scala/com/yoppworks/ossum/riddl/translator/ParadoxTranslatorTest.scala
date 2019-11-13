@@ -27,9 +27,9 @@ class ParadoxTranslatorTest extends ParsingTest {
   }
 
   // TODO: Fix FormatTranslator so this works again
-  "FormatTranslator" should {
+  "ParadoxTranslator" should {
     "translate everything.riddl" in {
-      pending //runOne("everything.riddl")
+      runOne("everything.riddl")
     }
     "translate rbbq.riddl" in {
       runOne("rbbq.riddl")

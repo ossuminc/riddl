@@ -25,6 +25,7 @@ Here are the main concepts the language supports:
 * [Types](types.md)
 * [Interaction](interactions.md)
 * [Adaptor](adaptors.md)
+* [Functions](functions.md)
 * [Messages](messages.md)
 * [Topics](topics.md)
 * [Projections](projections.md)

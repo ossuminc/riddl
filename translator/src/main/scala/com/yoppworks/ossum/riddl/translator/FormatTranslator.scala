@@ -172,6 +172,7 @@ class FormatTranslator extends Translator {
         case TimeStamp(_)   => "TimeStamp"
         case URL(_)         => "URL"
         case LatLong(_)     => "LatLong"
+        case Nothing(_)     => "Nothing"
         case TypeRef(_, id) => id.value.mkString(".")
         case AST.Enumeration(_, of, add) =>
           def doTypex(t: Option[TypeExpression]): String = {
@@ -437,10 +438,6 @@ class FormatTranslator extends Translator {
           // TODO: fix this
           state.open(s"action ${action.id.value} is {")
           state.close(m)
-        case d: DirectiveAction =>
-          // TODO: fix this
-          state.open(s"action ${action.id.value} is {")
-          state.close(d)
       }
     }
 
@@ -453,7 +450,7 @@ class FormatTranslator extends Translator {
     override def doFunction(
       state: FormatState,
       container: Container,
-      function: Action
+      function: Function
     ): FormatState = { state }
 
     override def doInvariant(
@@ -461,14 +458,6 @@ class FormatTranslator extends Translator {
       container: Container,
       invariant: Invariant
     ): FormatState = { state }
-
-    override def doRole(
-      state: FormatState,
-      container: Container,
-      role: Role
-    ): FormatState = {
-      state
-    }
 
     override def doPredefinedType(
       state: FormatState,

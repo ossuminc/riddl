@@ -10,28 +10,11 @@ import Terminals.Punctuation
 /** Parsing rules for context interactions */
 trait InteractionParser extends CommonParser {
 
-  def roleRef[_: P]: P[RoleRef] = {
-    P(location ~ "role" ~/ pathIdentifier)
-      .map(tpl => (RoleRef.apply _).tupled(tpl))
-  }
-
   def roleOptions[_: P]: P[Seq[RoleOption]] = {
     options(StringIn("human", "device").!) {
       case (loc, "human")  => HumanOption(loc)
       case (loc, "device") => DeviceOption(loc)
       case _               => throw new RuntimeException("Impossible case")
-    }
-  }
-
-  def role[_: P]: P[Role] = {
-    P(
-      location ~ Keywords.role ~/ identifier ~ open ~
-        roleOptions ~
-        Keywords.handles ~/ docBlock ~
-        Keywords.requires ~ docBlock ~
-        close ~ description
-    ).map { tpl =>
-      (Role.apply _).tupled(tpl)
     }
   }
 
@@ -72,20 +55,9 @@ trait InteractionParser extends CommonParser {
     }
   }
 
-  def directiveActionDef[_: P]: P[DirectiveAction] = {
-    P(
-      location ~
-        "directive" ~/ identifier ~ messageOptions ~ "from" ~ roleRef ~ "to" ~
-        entityRef ~
-        "as" ~ messageRef ~ causing ~ description
-    ).map { tpl =>
-      (DirectiveAction.apply _).tupled(tpl)
-    }
-  }
-
   def interactions[_: P]: P[Actions] = {
     P(
-      messageActionDef | directiveActionDef
+      messageActionDef
     ).rep(1)
   }
 
@@ -93,13 +65,12 @@ trait InteractionParser extends CommonParser {
     P(
       location ~ Keywords.interaction ~/ identifier ~ is ~
         open ~
-        (undefined.map(_ => Seq.empty[Role] -> Seq.empty[ActionDefinition]) |
-          (role.rep(1) ~ interactions)) ~
+        (undefined.map(_ => Seq.empty[ActionDefinition]) | interactions) ~
         close ~
         description
     ).map {
-      case (loc, id, (roles, interactions), description) =>
-        Interaction(loc, id, roles, interactions, description)
+      case (loc, id, interactions, description) =>
+        Interaction(loc, id, interactions, description)
     }
   }
 }

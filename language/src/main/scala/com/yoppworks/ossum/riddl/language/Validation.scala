@@ -709,15 +709,6 @@ object Validation {
             case (s, reaction) =>
               s.checkRef(reaction.entity)
           }
-        case da: DirectiveAction =>
-          da.reactions.foldLeft(
-            newState
-              .checkRef[Entity](da.entity)
-              .checkRef[MessageDefinition](da.message)
-              .checkRef[Role](da.role)
-          ) {
-            case (s, reaction) => s.checkRef(reaction.entity)
-          }
       }
     }
 
@@ -737,7 +728,7 @@ object Validation {
     override def doFunction(
       state: ValidationState,
       container: Container,
-      function: Action
+      function: Function
     ): ValidationState = {
       state
         .checkDefinition(container, function)
@@ -758,19 +749,6 @@ object Validation {
         .checkDefinition(container, invariant)
         .checkNonEmpty(invariant.expression, "Expression", invariant)
         .checkDescription(invariant, invariant.description)
-    }
-
-    override def doRole(
-      state: ValidationState,
-      container: Container,
-      role: Role
-    ): ValidationState = {
-      state
-        .checkDefinition(container, role)
-        .checkOptions[RoleOption](role.options, role.loc)
-        .checkNonEmpty(role.responsibilities, "Responsibilities", role)
-        .checkNonEmpty(role.capacities, "Capacities", role)
-        .checkDescription(role, role.description)
     }
 
     override def doTranslationRule(

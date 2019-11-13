@@ -52,7 +52,7 @@ object Folding {
         result = entity.consumers.foldLeft(result) { (next, consumer) =>
           f(entity, consumer, next)
         }
-        result = entity.actions.foldLeft(result) { (next, action) =>
+        result = entity.functions.foldLeft(result) { (next, action) =>
           f(entity, action, next)
         }
         result = entity.invariants.foldLeft(result) { (next, invariant) =>
@@ -65,9 +65,6 @@ object Folding {
         result = f(parent, interaction, result)
         interaction.actions.foldLeft(result) { (next, action) =>
           f(interaction, action, next)
-        }
-        interaction.roles.foldLeft(result) { (next, role) =>
-          f(interaction, role, next)
         }
       case feature: Feature =>
         result = f(parent, feature, result)
@@ -174,7 +171,7 @@ object Folding {
               }
             }
             .step { state =>
-              entity.actions.foldLeft(state) { (next, function) =>
+              entity.functions.foldLeft(state) { (next, function) =>
                 doFunction(next, entity, function)
               }
             }
@@ -191,11 +188,6 @@ object Folding {
             .step { state =>
               interaction.actions.foldLeft(state) { (next, action) =>
                 doAction(next, interaction, action)
-              }
-            }
-            .step { state =>
-              interaction.roles.foldLeft(state) { (next, role) =>
-                doRole(next, interaction, role)
               }
             }
             .step { state =>
@@ -278,7 +270,7 @@ object Folding {
     def openTopic(
       state: S,
       container: Container,
-      channel: Topic
+      topic: Topic
     ): S = { state }
 
     def closeTopic(
@@ -374,19 +366,13 @@ object Folding {
     def doFunction(
       state: S,
       container: Container,
-      function: Action
+      function: Function
     ): S = { state }
 
     def doInvariant(
       state: S,
       container: Container,
       invariant: Invariant
-    ): S = { state }
-
-    def doRole(
-      state: S,
-      container: Container,
-      role: Role
     ): S = { state }
 
     def doPredefinedType(

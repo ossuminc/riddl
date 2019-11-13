@@ -80,7 +80,7 @@ trait EntityParser
         val groups = entityDefs.groupBy(_.getClass)
         val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
         val features = mapTo[Feature](groups.get(classOf[Feature]))
-        val actions = mapTo[Action](groups.get(classOf[Action]))
+        val actions = mapTo[Function](groups.get(classOf[Function]))
         val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         Entity(
           kind,

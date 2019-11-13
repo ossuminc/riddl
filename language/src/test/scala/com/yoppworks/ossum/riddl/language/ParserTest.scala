@@ -370,17 +370,8 @@ class ParserTest extends ParsingTest {
     "allow interaction definitions" in {
       val input =
         """interaction dosomething {
-          |  role SomeActor {
-          |    option is human
-          |    handles {
-          |      |Doing stuff
-          |    }
-          |    requires {
-          |      |Skills
-          |    }
-          |  }
-          |  directive 'perform a command' option is async
-          |    from role SomeActor
+          |  message 'perform a command' option is async
+          |    from entity Unicorn
           |    to entity myLittlePony as command DoAThing
           |
           |  message 'handle a thing' option is async
@@ -398,42 +389,33 @@ class ParserTest extends ParsingTest {
               1 -> 1,
               Identifier(1 -> 13, "dosomething"),
               Seq(
-                Role(
+                MessageAction(
                   2 -> 3,
-                  Identifier(2 -> 8, "SomeActor"),
-                  Seq(HumanOption(3 -> 15)),
-                  List(LiteralString(5 -> 8, "Doing stuff")),
-                  List(LiteralString(8 -> 8, "Skills"))
-                )
-              ),
-              Seq(
-                DirectiveAction(
-                  11 -> 3,
-                  Identifier(11 -> 13, "perform a command"),
-                  Seq(AsynchOption(11 -> 43)),
-                  RoleRef(12 -> 10, PathIdentifier(12 -> 15, Seq("SomeActor"))),
+                  Identifier(2 -> 11, "perform a command"),
+                  Seq(AsynchOption(2 -> 41)),
+                  EntityRef(3 -> 10, PathIdentifier(3 -> 17, Seq("Unicorn"))),
                   EntityRef(
-                    13 -> 8,
-                    PathIdentifier(13 -> 15, Seq("myLittlePony"))
+                    4 -> 8,
+                    PathIdentifier(4 -> 15, Seq("myLittlePony"))
                   ),
                   CommandRef(
-                    13 -> 31,
-                    PathIdentifier(13 -> 39, Seq("DoAThing"))
+                    4 -> 31,
+                    PathIdentifier(4 -> 39, Seq("DoAThing"))
                   ),
                   Seq.empty[Reaction]
                 ),
                 MessageAction(
-                  15 -> 3,
-                  Identifier(15 -> 11, "handle a thing"),
-                  Seq(AsynchOption(15 -> 38)),
+                  6 -> 3,
+                  Identifier(6 -> 11, "handle a thing"),
+                  Seq(AsynchOption(6 -> 38)),
                   EntityRef(
-                    16 -> 10,
-                    PathIdentifier(16 -> 17, Seq("myLittlePony"))
+                    7 -> 10,
+                    PathIdentifier(7 -> 17, Seq("myLittlePony"))
                   ),
-                  EntityRef(17 -> 8, PathIdentifier(17 -> 15, Seq("Unicorn"))),
+                  EntityRef(8 -> 8, PathIdentifier(8 -> 15, Seq("Unicorn"))),
                   CommandRef(
-                    17 -> 26,
-                    PathIdentifier(17 -> 34, Seq("HandleAThing"))
+                    8 -> 26,
+                    PathIdentifier(8 -> 34, Seq("HandleAThing"))
                   ),
                   Seq.empty[Reaction]
                 )
