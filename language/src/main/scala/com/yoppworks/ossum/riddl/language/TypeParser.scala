@@ -40,7 +40,8 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
         (location ~ Predefined.URL).map(AST.URL) |
-        (location ~ Predefined.Nothing).map(AST.Nothing)
+        (location ~ Predefined.Nothing).map(AST.Nothing) |
+        (location ~ undefined).map(AST.Nothing)
     )
   }
 

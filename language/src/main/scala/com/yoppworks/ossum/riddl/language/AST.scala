@@ -196,6 +196,7 @@ object AST {
     description: Option[Description] = None
   ) extends TypeDefinition
       with ContextDefinition
+      with EntityDefinition
       with DomainDefinition
 
   case class TopicRef(
@@ -466,6 +467,7 @@ object AST {
     id: Identifier,
     state: Aggregation,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
+    types: Seq[Type] = Seq.empty[Type],
     consumers: Seq[Consumer] = Seq.empty[Consumer],
     features: Seq[Feature] = Seq.empty[Feature],
     functions: Seq[Function] = Seq.empty[Function],

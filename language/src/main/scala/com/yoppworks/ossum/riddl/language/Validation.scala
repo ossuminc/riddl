@@ -504,6 +504,10 @@ object Validation {
         s.checkRef[Topic](consumer.topic)
       }
 
+      result = entity.types.foldLeft(result) { (s, typ) =>
+        s.checkDefinition(entity, typ).checkTypeExpression(typ.typ, typ)
+      }
+
       // TODO: invariant?
 
       if (entity.consumers.isEmpty) {

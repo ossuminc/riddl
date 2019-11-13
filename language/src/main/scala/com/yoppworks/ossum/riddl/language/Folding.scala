@@ -49,6 +49,9 @@ object Folding {
         }
       case entity: Entity =>
         result = f(parent, entity, result)
+        result = entity.types.foldLeft(result) { (next, typ) =>
+          f(entity, typ, next)
+        }
         result = entity.consumers.foldLeft(result) { (next, consumer) =>
           f(entity, consumer, next)
         }
@@ -160,6 +163,11 @@ object Folding {
             }
         case entity: Entity =>
           openEntity(initState, parent, entity)
+            .step { state =>
+              entity.types.foldLeft(state) { (next, typ) =>
+                doType(next, entity, typ)
+              }
+            }
             .step { state =>
               entity.consumers.foldLeft(state) { (next, consumer) =>
                 doConsumer(next, entity, consumer)

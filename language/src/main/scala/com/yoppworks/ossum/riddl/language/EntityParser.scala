@@ -57,7 +57,7 @@ trait EntityParser
 
   def entityDefinition[_: P]: P[EntityDefinition] = {
     P(
-      consumer | feature | action | invariant
+      consumer | feature | action | invariant | typeDef
     )
   }
 
@@ -78,6 +78,7 @@ trait EntityParser
     ).map {
       case (kind, loc, id, (options, state, entityDefs), addendum) =>
         val groups = entityDefs.groupBy(_.getClass)
+        val types = mapTo[Type](groups.get(classOf[Type]))
         val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
         val features = mapTo[Feature](groups.get(classOf[Feature]))
         val actions = mapTo[Function](groups.get(classOf[Function]))
@@ -88,6 +89,7 @@ trait EntityParser
           id,
           state,
           options,
+          types,
           consumers,
           features,
           actions,
