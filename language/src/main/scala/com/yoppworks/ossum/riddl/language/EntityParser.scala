@@ -12,7 +12,7 @@ trait EntityParser
     with TypeParser
     with FeatureParser
     with TopicParser
-    with ActionParser
+    with FunctionParser
     with ConsumerParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
@@ -57,7 +57,7 @@ trait EntityParser
 
   def entityDefinition[_: P]: P[EntityDefinition] = {
     P(
-      consumer | feature | action | invariant | typeDef
+      consumer | feature | function | invariant | typeDef
     )
   }
 
@@ -81,7 +81,7 @@ trait EntityParser
         val types = mapTo[Type](groups.get(classOf[Type]))
         val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
         val features = mapTo[Feature](groups.get(classOf[Feature]))
-        val actions = mapTo[Function](groups.get(classOf[Function]))
+        val functions = mapTo[Function](groups.get(classOf[Function]))
         val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         Entity(
           kind,
@@ -92,7 +92,7 @@ trait EntityParser
           types,
           consumers,
           features,
-          actions,
+          functions,
           invariants,
           addendum
         )

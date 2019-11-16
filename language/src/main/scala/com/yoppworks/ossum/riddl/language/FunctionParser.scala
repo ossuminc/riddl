@@ -8,7 +8,7 @@ import Terminals.Punctuation
 import Terminals.Keywords
 
 /** Unit Tests For FunctionParser */
-trait ActionParser extends CommonParser with TypeParser {
+trait FunctionParser extends CommonParser with TypeParser {
 
   def input[_: P]: P[TypeExpression] = {
     P(
@@ -22,11 +22,12 @@ trait ActionParser extends CommonParser with TypeParser {
     )
   }
 
-  def action[_: P]: P[Function] = {
+  def function[_: P]: P[Function] = {
     P(
-      location ~ IgnoreCase(Keywords.action) ~/ identifier ~ is ~ open ~
-        ((location ~ undefined)
-          .map(loc => (None, Nothing(loc))) | (input.? ~ output)) ~ close ~ description
+      location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~
+        ((location ~ undefined).map(loc => (None, Nothing(loc))) |
+          (input.? ~ output)) ~
+        close ~ description
     ).map {
       case (loc, id, (inp, outp), descr) =>
         Function(loc, id, inp, outp, descr)

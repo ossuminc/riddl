@@ -87,7 +87,7 @@ class ParserTest extends ParsingTest {
           |      state is {}
           |      feature one { ??? }
           |      consumer one for topic foo is { ??? }
-          |      action one { ??? }
+          |      function one { ??? }
           |      invariant one { ??? }
           |    }
           |    adaptor one { ??? }
@@ -274,6 +274,7 @@ class ParserTest extends ParsingTest {
           |      AND "I'm depressed"
           |      WHEN "I go fishing"
           |      THEN "I'll just eat worms"
+          |      ELSE "I'm happy"
           |    }
           |  }
           |}
@@ -343,6 +344,12 @@ class ParserTest extends ParsingTest {
                       Then(
                         13 -> 7,
                         Seq(LiteralString(13 -> 12, "I'll just eat worms"))
+                      )
+                    ),
+                    Seq(
+                      Else(
+                        14 -> 7,
+                        Seq(LiteralString(14 -> 12, "I'm happy"))
                       )
                     )
                   )

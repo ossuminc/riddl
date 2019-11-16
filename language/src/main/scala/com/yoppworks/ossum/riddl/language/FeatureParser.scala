@@ -54,10 +54,26 @@ trait FeatureParser extends CommonParser {
     }
   }
 
+  def elses[_: P]: P[Seq[Else]] = {
+    P(
+      (location ~ IgnoreCase(Keywords.else_) ~/ docBlock).map(
+        tpl => (Else.apply _).tupled(tpl)
+      ) ~
+        (location ~ IgnoreCase(Readability.and) ~/ docBlock)
+          .map(
+            tpl => (Else.apply _).tupled(tpl)
+          )
+          .rep(0)
+    ).map {
+      case (initial, remainder) => initial +: remainder
+    }
+
+  }
+
   def implicitExample[_: P]: P[Example] = {
-    P(location ~ givens ~ whens ~ thens).map {
-      case (loc, g, w, t) =>
-        Example(loc, Identifier(loc, "implicit"), g, w, t, None)
+    P(location ~ givens ~ whens ~ thens ~ elses).map {
+      case (loc, g, w, t, e) =>
+        Example(loc, Identifier(loc, "implicit"), g, w, t, e, None)
     }
   }
 
@@ -65,7 +81,7 @@ trait FeatureParser extends CommonParser {
     P(
       location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/
         givens ~
-        whens ~ thens ~
+        whens ~ thens ~ elses ~
         close ~ description
     ).map { tpl =>
       (Example.apply _).tupled(tpl)

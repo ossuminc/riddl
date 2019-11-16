@@ -40,8 +40,6 @@ object AST {
   case class Identifier(loc: Location, value: String) extends RiddlValue
   case class RiddlOption(loc: Location, name: String) extends RiddlValue
   case class LiteralString(loc: Location, s: String) extends RiddlValue
-  case class LiteralInteger(loc: Location, n: BigInt) extends RiddlValue
-  case class LiteralDecimal(loc: Location, d: BigDecimal) extends RiddlValue
   case class PathIdentifier(loc: Location, value: Seq[String])
       extends RiddlValue {
 
@@ -92,6 +90,8 @@ object AST {
   object RootContainer {
     val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
+
+  //////////////////////////////////////////////////////////// TYPES
 
   sealed trait TypeExpression extends DefinitionValue
 
@@ -199,6 +199,34 @@ object AST {
       with EntityDefinition
       with DomainDefinition
 
+//////////////////////////////////////////////////////////// EXPRESSIONS
+  sealed trait Expression extends RiddlValue
+
+  case class UnknownExpression(loc: Location) extends Expression
+
+  case class FieldExpression(loc: Location, path: PathIdentifier)
+      extends Expression
+
+  case class GroupExpression(loc: Location, expression: Expression)
+      extends Expression
+
+  case class FunctionCallExpression(
+    loc: Location,
+    name: Identifier,
+    arguments: ListMap[Identifier, Expression]
+  ) extends Expression
+
+  case class MathExpression(
+    loc: Location,
+    operator: String,
+    arguments: Seq[Expression]
+  ) extends Expression
+
+  case class LiteralInteger(loc: Location, n: BigInt) extends Expression
+  case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression
+
+  //////////////////////////////////////////////////////////// TOPICS
+
   case class TopicRef(
     loc: Location,
     id: PathIdentifier
@@ -304,6 +332,8 @@ object AST {
       extends FeatureValue
   case class Then(loc: Location, result: Seq[LiteralString])
       extends FeatureValue
+  case class Else(loc: Location, otherwise: Seq[LiteralString])
+      extends FeatureValue
   case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given])
       extends FeatureValue
 
@@ -313,6 +343,7 @@ object AST {
     givens: Seq[Given] = Seq.empty[Given],
     whens: Seq[When] = Seq.empty[When],
     thens: Seq[Then] = Seq.empty[Then],
+    elses: Seq[Else] = Seq.empty[Else],
     description: Option[Description] = None
   ) extends Definition
 
@@ -364,7 +395,7 @@ object AST {
   case class SetStatement(
     loc: Location,
     target: PathIdentifier,
-    value: PathIdentifier,
+    value: Expression,
     description: Option[Description] = None
   ) extends OnClauseStatement
 
@@ -385,7 +416,7 @@ object AST {
   case class SendStatement(
     loc: Location,
     msg: MessageReference,
-    topic: EntityRef,
+    topic: Reference,
     description: Option[Description] = None
   ) extends OnClauseStatement
 
@@ -396,11 +427,23 @@ object AST {
     description: Option[Description] = None
   ) extends OnClauseStatement
 
+  case class ExecuteStatement(
+    loc: Location,
+    id: Identifier,
+    description: Option[Description] = None
+  ) extends OnClauseStatement
+
   sealed trait Condition extends RiddlValue
   case class True(loc: Location) extends Condition
   case class False(loc: Location) extends Condition
   case class Empty(loc: Location, ref: PathIdentifier) extends Condition
   case class NonEmpty(loc: Location, ref: PathIdentifier) extends Condition
+  case class Comparison(
+    loc: Location,
+    left: PathIdentifier,
+    op: String,
+    right: PathIdentifier
+  ) extends Condition
   case class ReferenceCondition(loc: Location, ref: PathIdentifier)
       extends Condition
   case class Miscellaneous(loc: Location, description: Seq[LiteralString])
@@ -442,8 +485,10 @@ object AST {
   case class OnClause(
     loc: Location,
     msg: MessageReference,
-    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement]
+    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
+    description: Option[Description] = None
   ) extends EntityValue
+      with DefinitionClause
 
   case class Consumer(
     loc: Location,

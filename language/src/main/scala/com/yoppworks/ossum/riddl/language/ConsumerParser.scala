@@ -6,12 +6,15 @@ import fastparse._
 import ScalaWhitespace._
 
 /** Unit Tests For ConsumerParser */
-trait ConsumerParser extends CommonParser with ConditionParser {
+trait ConsumerParser
+    extends CommonParser
+    with ConditionParser
+    with ExpressionParser {
 
   def setStmt[_: P](): P[SetStatement] = {
     P(
       Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
-        pathIdentifier ~ description
+        expression ~ description
     ).map { t =>
       (SetStatement.apply _).tupled(t)
     }
@@ -38,7 +41,7 @@ trait ConsumerParser extends CommonParser with ConditionParser {
   def sendStmt[_: P]: P[SendStatement] = {
     P(
       Keywords.send ~/ location ~ messageRef ~ Terminals.Readability.to ~
-        entityRef ~ description
+        (entityRef | topicRef) ~ description
     ).map { t =>
       (SendStatement.apply _).tupled(t)
     }
@@ -53,20 +56,30 @@ trait ConsumerParser extends CommonParser with ConditionParser {
     }
   }
 
+  def doStmt[_: P]: P[ExecuteStatement] = {
+    P(location ~ Keywords.execute ~/ identifier ~ description).map { t =>
+      (ExecuteStatement.apply _).tupled(t)
+    }
+  }
+
   def whenStmt[_: P]: P[WhenStatement] = {
     P(
-      location ~ Keywords.when ~/ condition ~ Keywords.then_ ~
-        Punctuation.curlyOpen ~ onClauseAction.rep ~ Punctuation.curlyClose ~
+      location ~ Keywords.when ~/ condition ~ Keywords.then_.? ~
+        Punctuation.curlyOpen ~/ onClauseAction.rep ~ Punctuation.curlyClose ~
         description
     ).map(t => (WhenStatement.apply _).tupled(t))
   }
 
   def onClauseAction[_: P]: P[OnClauseStatement] = {
-    P(setStmt | appendStmt | removeStmt | sendStmt | publishStmt | whenStmt)
+    P(
+      setStmt | appendStmt | removeStmt | sendStmt | publishStmt | whenStmt |
+        doStmt
+    )
   }
 
   def onClause[_: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~ close
+    Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~
+      close ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def consumer[_: P]: P[Consumer] = {

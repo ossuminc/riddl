@@ -64,7 +64,7 @@ domain Everything {
 
       state is { field:  SomeType }
 
-      action whenUnderTheInfluence {
+      function whenUnderTheInfluence {
         requires: Nothing
         yields: Boolean
       }

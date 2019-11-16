@@ -30,6 +30,16 @@ trait ConditionParser extends CommonParser {
     }
   }
 
+  def comparators[_: P]: P[String] = {
+    ("<=" | "!=" | "==" | ">=" | "<" | ">").!./
+  }
+
+  def comparisonCondition[_: P]: P[Comparison] = {
+    P(location ~ pathIdentifier ~ comparators ~ pathIdentifier).map { x =>
+      (Comparison.apply _).tupled(x)
+    }
+  }
+
   def notCondition[_: P]: P[NotCondition] = {
     P(location ~ Operators.not ~/ condition)
       .map(t => (NotCondition.apply _).tupled(t))
@@ -50,7 +60,10 @@ trait ConditionParser extends CommonParser {
   }
 
   def logicalExpressions[_: P]: P[Condition] = {
-    P(orCondition | andCondition | notCondition)
+    P(
+      comparisonCondition |
+        orCondition | andCondition | notCondition | referenceCondition
+    )
   }
 
   def miscellaneous[_: P]: P[Miscellaneous] = {
@@ -62,8 +75,7 @@ trait ConditionParser extends CommonParser {
 
   def terminalExpressions[_: P]: P[Condition] = {
     P(
-      miscellaneous | trueCondition | falseCondition | emptyCondition |
-        referenceCondition
+      miscellaneous | trueCondition | falseCondition | emptyCondition
     )
   }
 

@@ -5,7 +5,7 @@ object Terminals {
 
   object CharacterSets {
     final val markdownAcceptedChars: String =
-      """~`!@#$%^&*()_-+=[]"':;<>,.?/"""
+      """~`!@#$%^&*()_-+=[]{}"':;<>,.?/"""
   }
 
   object Punctuation {
@@ -93,12 +93,15 @@ object Terminals {
     final val details = "details"
     final val domain = "domain"
     final val each = "each"
+    final val else_ = "else"
     final val entity = "entity"
     final val event = "event"
     final val events = "events"
     final val example = "example"
+    final val execute = "execute"
     final val explained = "explained"
     final val feature = "feature"
+    final val function = "function"
     final val handles = "handles"
     final val include = "include"
     final val input = "input"
@@ -153,6 +156,7 @@ object Terminals {
       example,
       explained,
       feature,
+      function,
       handles,
       input,
       interaction,
