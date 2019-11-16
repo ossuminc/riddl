@@ -90,7 +90,7 @@ class ParserTest extends ParsingTest {
           |      function one { ??? }
           |      invariant one { ??? }
           |    }
-          |    adaptor one { ??? }
+          |    adaptor one for context over.consumption { ??? }
           |  }
           |}
           |""".stripMargin
@@ -361,7 +361,7 @@ class ParserTest extends ParsingTest {
     }
     "allow adaptor definitions" in {
       val input =
-        "adaptor fuzz  { ??? }"
+        "adaptor fuzz for context foo.bar { ??? }"
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -370,7 +370,8 @@ class ParserTest extends ParsingTest {
           content mustBe
             Adaptor(
               1 -> 1,
-              Identifier(1 -> 9, "fuzz")
+              Identifier(1 -> 9, "fuzz"),
+              ContextRef(1 -> 18, PathIdentifier(1 -> 26, Seq("bar", "foo")))
             )
       }
     }

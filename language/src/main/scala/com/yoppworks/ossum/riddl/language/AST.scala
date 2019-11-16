@@ -219,7 +219,7 @@ object AST {
   case class MathExpression(
     loc: Location,
     operator: String,
-    arguments: Seq[Expression]
+    arguments: ListMap[Identifier, Expression]
   ) extends Expression
 
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression
@@ -413,9 +413,13 @@ object AST {
     description: Option[Description] = None
   ) extends OnClauseStatement
 
+  case class MessageConstructor(
+    msg: MessageReference,
+    args: ListMap[Identifier, Expression]
+  )
   case class SendStatement(
     loc: Location,
-    msg: MessageReference,
+    msg: MessageConstructor,
     topic: Reference,
     description: Option[Description] = None
   ) extends OnClauseStatement
@@ -436,18 +440,25 @@ object AST {
   sealed trait Condition extends RiddlValue
   case class True(loc: Location) extends Condition
   case class False(loc: Location) extends Condition
-  case class Empty(loc: Location, ref: PathIdentifier) extends Condition
-  case class NonEmpty(loc: Location, ref: PathIdentifier) extends Condition
+  case class ExpressionCondition(
+    loc: Location,
+    op: Identifier,
+    args: ListMap[Identifier, Expression],
+    description: Option[Description]
+  ) extends Condition
+
   case class Comparison(
     loc: Location,
-    left: PathIdentifier,
     op: String,
-    right: PathIdentifier
+    left: Expression,
+    right: Expression
   ) extends Condition
   case class ReferenceCondition(loc: Location, ref: PathIdentifier)
       extends Condition
-  case class Miscellaneous(loc: Location, description: Seq[LiteralString])
-      extends Condition
+  case class Miscellaneous(
+    loc: Location,
+    description: Seq[LiteralString]
+  ) extends Condition
   abstract class UnaryCondition extends Condition {
     def cond1: Condition
   }
@@ -551,6 +562,7 @@ object AST {
   case class Adaptor(
     loc: Location,
     id: Identifier,
+    toContext: ContextRef,
     description: Option[Description] = None
     // Details TBD
   ) extends Container

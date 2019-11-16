@@ -38,9 +38,14 @@ trait ConsumerParser
     }
   }
 
+  def messageConstructor[_: P]: P[MessageConstructor] = {
+    P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
+  }
+
   def sendStmt[_: P]: P[SendStatement] = {
     P(
-      Keywords.send ~/ location ~ messageRef ~ Terminals.Readability.to ~
+      Keywords.send ~/ location ~ messageConstructor ~
+        Terminals.Readability.to ~
         (entityRef | topicRef) ~ description
     ).map { t =>
       (SendStatement.apply _).tupled(t)

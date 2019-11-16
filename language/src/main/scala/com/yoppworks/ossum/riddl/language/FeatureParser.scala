@@ -64,10 +64,10 @@ trait FeatureParser extends CommonParser {
             tpl => (Else.apply _).tupled(tpl)
           )
           .rep(0)
-    ).map {
-      case (initial, remainder) => initial +: remainder
+    ).?.map {
+      case Some((initial, remainder)) => initial +: remainder
+      case None                       => Seq.empty[Else]
     }
-
   }
 
   def implicitExample[_: P]: P[Example] = {

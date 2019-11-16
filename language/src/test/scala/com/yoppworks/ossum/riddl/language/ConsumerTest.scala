@@ -11,7 +11,8 @@ class ConsumerTest extends ParsingTest {
           |  state is {}
           | consumer FromContainer from topic ContainerTopic {
           |    on event ContainerNestedInContainer {
-          |      when (ContainerNestedInContainer.id == parentContainer) then {
+          |      when ==(ContainerNestedInContainer.id,parentContainer)
+          |      then {
           |        set lastKnownWorkCenter to ContainerNestedInContainer.workCenter
           |      }
           |      // anything else needing to be updated?
@@ -21,20 +22,20 @@ class ConsumerTest extends ParsingTest {
           |    on command CreateItem {
           |      // intent: DistributionItem is created
           |      set journey to PreInducted
-          |      // set id to new Id(DistributionItem) TODO: Support this syntax? Needed?
           |      set trackingId to CreateItem.trackingId
           |      set manifestId to CreateItem.manifestId
           |      set destination to CreatItem.postalCode
-          |      send event ItemPreInducted to topic DistributionItemTopic
+          |      send event ItemPreInducted() to topic DistributionItemTopic
           |    }
           |    on command InductItem {
           |      set timeOfFirstScan to InductItem.originTimeStamp
           |      set journey to Inducted
           |      set lastKnownWorkCenterId to InductItem.workCenter
-          |      // send event ItemInducted to topic DistributionItemTopic //TODO: Should this go to DistributionItemTopic?
+          |      send event ItemInducted() to topic DistributionItemTopic
           |    }
           |    on command SortItem {
-          |      when timeOfFirstScan == empty then { set timeOfFirstScan to
+          |      when empty(timeOfFirstScan) then { set
+          |      timeOfFirstScan to
           |      SortItem.originTimeStamp }
           |      set journey to Sorted
           |      set lastKnownWorkCenter to SortItem.workCenter
@@ -45,19 +46,20 @@ class ConsumerTest extends ParsingTest {
           |      set parentContainer to empty
           |    }
           |    on command NestItem {
-          |      when timeOfFirstScan == empty then { set timeOfFirstScan to
-          |      NestItem.originTimeStamp }
+          |      when empty(timeOfFirstScan) then {
+          |        set timeOfFirstScan to NestItem.originTimeStamp
+          |      }
           |      set parentContainer to NestItem.container
-          |      send command AddItemToContainer to topic ContainerTopic
+          |      send command AddItemToContainer() to topic ContainerTopic
           |    }
           |    on command TransportItem {
-          |      when timeOfFirstScan == empty { set timeOfFirstScan to
+          |      when empty(timeOfFirstScan) { set timeOfFirstScan to
           |      TransportItem.originTimeStamp }
           |      set journey to InTransit(trip = TransportItem.tripId)
           |      set lastKnownWorkCenter to TransportItem.workCenter
           |    }
           |    on command ReceiveItem {
-          |      when timeOfFirstScan == empty { set timeOfFirstScan to
+          |      when empty(timeOfFirstScan)  { set timeOfFirstScan to
           |      ReceiveItem.originTimeStamp }
           |      set journey to AtWorkCenter(
           |        workCenter = ReceiveItem.workCenter

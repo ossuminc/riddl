@@ -12,7 +12,8 @@ trait AdaptorParser extends CommonParser {
 
   def adaptor[_: P]: P[Adaptor] = {
     P(
-      location ~ Keywords.adaptor ~/ identifier ~ open ~
+      location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~
+        contextRef ~ open ~
         undefined ~
         close ~
         description

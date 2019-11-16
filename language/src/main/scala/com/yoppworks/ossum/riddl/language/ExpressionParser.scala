@@ -12,13 +12,25 @@ import scala.collection.immutable.ListMap
 trait ExpressionParser extends CommonParser {
 
   def arguments[_: P]: P[ListMap[Identifier, Expression]] = {
-    P(identifier ~ Punctuation.equals ~ expression).rep(0).map {
-      s: Seq[(Identifier, Expression)] =>
+    P((identifier ~ Punctuation.equals).? ~ expression).rep(0, ",").map {
+      s: Seq[(Option[Identifier], Expression)] =>
         s.foldLeft(ListMap.empty[Identifier, Expression]) {
           case (b, (id, exp)) =>
-            b + (id -> exp)
+            val newId = id match {
+              case Some(value) => value
+              case None        => Identifier(exp.loc, "<unnamed>")
+            }
+            b + (newId -> exp)
         }
     }
+  }
+
+  def argList[_: P]: P[ListMap[Identifier, Expression]] = {
+    P(
+      Punctuation.roundOpen ~/
+        arguments ~
+        Punctuation.roundClose /
+    )
   }
 
   def functionCallExpression[_: P]: P[FunctionCallExpression] = {
@@ -48,13 +60,9 @@ trait ExpressionParser extends CommonParser {
     )
   }
 
-  def argList[_: P]: P[Seq[Expression]] = {
-    P(expression.rep(0, ","))
-  }
-
   def mathExpression[_: P]: P[MathExpression] = {
     P(
-      location ~ operator ~ Punctuation.roundOpen ~/ argList ~ Punctuation.roundClose /
+      location ~ operator ~ argList
     ).map(tpl => (MathExpression.apply _).tupled(tpl))
   }
 
