@@ -184,9 +184,8 @@ class ParadoxTranslator extends Translator {
           s"one { ${of.map(mkTypeExpression).mkString(" or ")} }"
         case AST.Aggregation(_, of, _) =>
           s" {\n${of
-            .map {
-              case (k: Identifier, v: TypeExpression) =>
-                s"  ${k.value} is ${mkTypeExpression(v)}"
+            .map { f: Field =>
+              s"  ${f.id.value}: ${mkTypeExpression(f.typeEx)} ${mkDescription(f.description)}"
             }
             .mkString(s",\n")}\n} "
         case AST.Mapping(_, from, to, _) =>

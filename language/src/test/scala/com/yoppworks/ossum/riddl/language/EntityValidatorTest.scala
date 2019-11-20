@@ -9,11 +9,11 @@ class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
     "catch missing things" in {
-      val input = "entity Hamburger is { state is {field:  SomeType } }"
+      val input = "entity Hamburger is { state foo is {field:  SomeType } }"
       parseAndValidate[Entity](input) {
         case (model: Entity, _: Seq[ValidationMessage]) =>
           val msgs = Validation.validate(model, Validation.defaultOptions)
-          msgs.size mustEqual 4
+          msgs.size mustEqual 5
           msgs.exists(_.message.contains("is not defined")) mustBe true
           msgs.exists(_.message.contains("entity must consume a topic")) mustBe true
           msgs.exists(_.message.contains("should have a description")) mustBe

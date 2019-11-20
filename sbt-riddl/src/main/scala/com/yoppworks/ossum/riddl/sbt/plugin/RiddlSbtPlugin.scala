@@ -44,7 +44,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     log: SbtLogger
   ): Seq[File] = {
     sources.flatMap { source =>
-      log.info(s"Translating RIDDL ${source.getName}")
+      log.info(s"Translating RIDDL to Paradox for ${source.getName}")
       TopLevelParser.parse(source) match {
         case Left(errors) =>
         case Right(root) =>

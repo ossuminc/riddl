@@ -5,7 +5,6 @@ import java.util.regex.PatternSyntaxException
 
 import com.yoppworks.ossum.riddl.language.AST._
 
-import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 
@@ -200,7 +199,7 @@ object Validation {
           checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
-        case e @ Enumeration(_, enumerators: Seq[Enumerator], desc) =>
+        case Enumeration(_, enumerators: Seq[Enumerator], desc) =>
           enumerators.foldLeft(this) {
             case (state, enumerator) =>
               val id = enumerator.id
@@ -225,22 +224,19 @@ object Validation {
                 state.checkTypeExpression(typex, definition)
             }
             .checkDescription(definition, addendum)
-        case Aggregation(
-            loc,
-            of: immutable.ListMap[Identifier, TypeExpression],
-            addendum
-            ) =>
+        case Aggregation(loc, of: Seq[Field], addendum) =>
           of.foldLeft(this) {
-              case (state, (id, typex)) =>
+              case (state, field) =>
                 state
-                  .checkIdentifier(id)
+                  .checkIdentifier(field.id)
                   .check(
-                    id.value.head.isLower,
+                    field.id.value.head.isLower,
                     "Field names should start with a lower case letter",
                     StyleWarning,
                     loc
                   )
-                  .checkTypeExpression(typex, definition)
+                  .checkTypeExpression(field.typeEx, field)
+                  .checkDescription(field, field.description)
             }
             .checkDescription(definition, addendum)
         case Mapping(_, from, to, addendum) =>
@@ -284,7 +280,7 @@ object Validation {
             add(
               ValidationMessage(
                 id.loc,
-                s"'$id' is not defined but should be a ${tc.getSimpleName}",
+                s"'${id.value.mkString(".")}' is not defined but should be a ${tc.getSimpleName}",
                 Error
               )
             )

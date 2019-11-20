@@ -126,13 +126,14 @@ class TypeParserTest extends ParsingTest {
         Identifier(1 -> 6, "agg"),
         Aggregation(
           1 -> 12,
-          ListMap(
-            Identifier(2 -> 3, "key") ->
-              Number(2 -> 8),
-            Identifier(3 -> 3, "id") ->
-              UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]), None),
-            Identifier(4 -> 3, "time") ->
-              TimeStamp(4 -> 9)
+          Seq(
+            Field(2 -> 3, Identifier(2 -> 3, "key"), Number(2 -> 8)),
+            Field(
+              3 -> 3,
+              Identifier(3 -> 3, "id"),
+              UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]), None)
+            ),
+            Field(4 -> 3, Identifier(4 -> 3, "time"), TimeStamp(4 -> 9))
           )
         )
       )
@@ -253,21 +254,29 @@ class TypeParserTest extends ParsingTest {
             Identifier(9 -> 8, "Complex"),
             Aggregation(
               9 -> 19,
-              ListMap(
-                Identifier(10 -> 5, "a") ->
-                  TypeRef(10 -> 8, PathIdentifier(10 -> 8, Seq("Simple"))),
-                Identifier(11 -> 5, "b") ->
-                  TimeStamp(11 -> 8),
-                Identifier(12 -> 5, "c") ->
+              Seq(
+                Field(
+                  10 -> 5,
+                  Identifier(10 -> 5, "a"),
+                  TypeRef(10 -> 8, PathIdentifier(10 -> 8, Seq("Simple")))
+                ),
+                Field(11 -> 5, Identifier(11 -> 5, "b"), TimeStamp(11 -> 8)),
+                Field(
+                  12 -> 5,
+                  Identifier(12 -> 5, "c"),
                   ZeroOrMore(
                     12 -> 22,
                     TypeRef(12 -> 22, PathIdentifier(12 -> 22, Seq("Compound")))
-                  ),
-                Identifier(13 -> 5, "d") ->
+                  )
+                ),
+                Field(
+                  13 -> 5,
+                  Identifier(13 -> 5, "d"),
                   Optional(
                     13 -> 17,
                     TypeRef(13 -> 17, PathIdentifier(13 -> 17, Seq("Choices")))
                   )
+                )
               )
             ),
             None

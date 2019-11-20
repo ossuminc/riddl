@@ -30,8 +30,8 @@ class ASTTest extends WordSpec with MustMatchers {
         Enumeration((0, 0), Seq.empty[Enumerator])
       Alternation((0, 0), Seq.empty[TypeExpression]) mustBe
         Alternation((0, 0), Seq.empty[TypeExpression])
-      Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression]) mustBe
-        Aggregation((0, 0), ListMap.empty[Identifier, TypeExpression])
+      Aggregation((0, 0), Seq.empty[Field]) mustBe
+        Aggregation((0, 0), Seq.empty[Field])
       Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))) mustBe
         Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String"))))
       ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))) mustBe

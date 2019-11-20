@@ -230,13 +230,21 @@ class FormatTranslator extends Translator {
           if (of.isEmpty) {
             this.add("{}")
           } else if (of.size == 1) {
-            val (id, expr) = of.head
-            this.add(s"{ ${id.value}: ").visitTypeExpr(expr)
+            val f: Field = of.head
+            this
+              .add(s"{ ${f.id.value}: ")
+              .visitTypeExpr(f.typeEx)
+              .add(" ")
+              .visitDescription(f.description)
           } else {
             this.add("{\n")
             val result = of.foldLeft(this) {
-              case (s, (id, te)) =>
-                s.add(s"$spc  ${id.value}: ").visitTypeExpr(te).add(",")
+              case (s, f) =>
+                s.add(s"$spc  ${f.id.value}: ")
+                  .visitTypeExpr(f.typeEx)
+                  .add(" ")
+                  .visitDescription(f.description)
+                  .add(",")
             }
             result.lines.deleteCharAt(result.lines.length - 1)
             result.visitDescription(desc)

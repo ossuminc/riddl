@@ -1,7 +1,5 @@
 package com.yoppworks.ossum.riddl.language
 
-import scala.collection.immutable.ListMap
-
 import RiddlParserInput._
 
 /** Unit Tests For ParserTest */
@@ -196,7 +194,7 @@ class ParserTest extends ParsingTest {
             Command(
               2 -> 1,
               Identifier(2 -> 1, "DoThisThing"),
-              Aggregation(2 -> 16, ListMap.empty[Identifier, TypeExpression]),
+              Aggregation(2 -> 16, Seq.empty[Field]),
               Seq(
                 EventRef(2 -> 26, PathIdentifier(2 -> 32, Seq("ThingWasDone")))
               )
@@ -217,7 +215,7 @@ class ParserTest extends ParsingTest {
             Event(
               2 -> 1,
               Identifier(2 -> 1, "ThingWasDone"),
-              Aggregation(2 -> 17, ListMap.empty[Identifier, TypeExpression])
+              Aggregation(2 -> 17, Seq.empty[Field])
             )
       }
     }
@@ -235,7 +233,7 @@ class ParserTest extends ParsingTest {
             Query(
               2 -> 1,
               Identifier(2 -> 1, "FindThisThing"),
-              Aggregation(2 -> 17, ListMap.empty[Identifier, TypeExpression]),
+              Aggregation(2 -> 17, Seq.empty[Field]),
               ResultRef(2 -> 27, PathIdentifier(2 -> 34, Seq("SomeResult")))
             )
       }
@@ -254,7 +252,7 @@ class ParserTest extends ParsingTest {
             Result(
               2 -> 8,
               Identifier(2 -> 8, "ThisQueryResult"),
-              Aggregation(2 -> 26, ListMap.empty[Identifier, TypeExpression])
+              Aggregation(2 -> 26, Seq.empty[Field])
             )
 
       }
@@ -295,7 +293,7 @@ class ParserTest extends ParsingTest {
                 Identifier(3 -> 9, "foo"),
                 Aggregation(
                   3 -> 16,
-                  ListMap(Identifier(3 -> 18, "x") -> Strng(3 -> 21))
+                  Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))
                 ),
                 None
               )

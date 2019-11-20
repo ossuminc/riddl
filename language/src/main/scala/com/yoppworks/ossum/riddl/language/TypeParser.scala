@@ -118,29 +118,23 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def field[_: P]: P[(Identifier, TypeExpression)] = {
-    P(identifier ~ is ~ typeExpression)
+  def field[_: P]: P[Field] = {
+    P(location ~ identifier ~ is ~ typeExpression ~ description)
+      .map(tpl => (Field.apply _).tupled(tpl))
   }
 
-  def fields[_: P]: P[Seq[(Identifier, TypeExpression)]] = {
+  def fields[_: P]: P[Seq[Field]] = {
     P(
       field.rep(min = 0, comma) |
-        Punctuation.undefined.!.map(
-          _ => Seq.empty[(Identifier, TypeExpression)]
-        )
+        Punctuation.undefined.!.map(_ => Seq.empty[Field])
     )
   }
 
   def aggregation[_: P]: P[Aggregation] = {
     P(
       location ~ open ~ fields ~ close ~ description
-    ).map {
-      case (loc, types, addendum) =>
-        Aggregation(
-          loc,
-          ListMap[Identifier, TypeExpression](types: _*),
-          addendum
-        )
+    ).map { tpl =>
+      (Aggregation.apply _).tupled(tpl)
     }
   }
 

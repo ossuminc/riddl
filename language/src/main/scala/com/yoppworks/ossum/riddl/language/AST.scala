@@ -69,7 +69,6 @@ object AST {
 
   sealed trait Definition extends DefinitionClause {
     def id: Identifier
-    def kind: String
     def identify: String = s"$kind '${id.value}'"
   }
 
@@ -126,10 +125,16 @@ object AST {
     description: Option[Description] = None
   ) extends TypeExpression
 
+  case class Field(
+    loc: Location,
+    id: Identifier,
+    typeEx: TypeExpression,
+    description: Option[Description] = None
+  ) extends Definition
+
   case class Aggregation(
     loc: Location,
-    of: ListMap[Identifier, TypeExpression] =
-      ListMap.empty[Identifier, TypeExpression],
+    fields: Seq[Field] = Seq.empty[Field],
     description: Option[Description] = None
   ) extends TypeExpression
       with EntityValue

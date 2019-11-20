@@ -74,8 +74,8 @@ case class SymbolTable(container: Container) {
             addToSymTab(s.id.value, e -> parent)
           }
         case m: MessageDefinition =>
-          m.typ.of.foreach {
-            case (id, _) =>
+          m.typ.fields.foreach {
+            case Field(_, id, _, _) =>
               addToSymTab(id.value, m -> parent)
           }
         case t: Type =>
@@ -85,8 +85,8 @@ case class SymbolTable(container: Container) {
                 addToSymTab(etor.id.value, t -> parent)
                 etor.value match {
                   case Some(agg) =>
-                    agg.of.foreach {
-                      case (id, _) =>
+                    agg.fields.foreach {
+                      case Field(_, id, _, _) =>
                         addToSymTab(id.value, t -> parent)
                     }
                   case None =>
