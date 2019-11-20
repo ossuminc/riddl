@@ -498,8 +498,10 @@ object Validation {
     ): ValidationState = {
       var result = state
         .checkDefinition(container, entity)
-        .checkTypeExpression(entity.state, entity)
         .checkOptions[EntityOption](entity.options, entity.loc)
+      result = entity.states.foldLeft(result) { (next, state) =>
+        next.checkTypeExpression(state.typeEx, state)
+      }
       result = entity.consumers.foldLeft(result) { (s, consumer) =>
         s.checkRef[Topic](consumer.topic)
       }

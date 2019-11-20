@@ -23,38 +23,11 @@ trait Translator {
     def addFile(file: File): State
   }
 
-  def parseValidateTranslateFile(
-    path: Path,
-    logger: Riddl.Logger,
-    config: CONF
-  ): Seq[File] = {
-    Riddl.parseAndValidate(path, logger, config) match {
-      case Some(root) =>
-        translate(root, logger, config)
-      case None =>
-        Seq.empty[File]
-    }
-  }
-
-  def parseValidateTranslate(
-    input: RiddlParserInput,
-    logger: Riddl.Logger,
-    config: CONF
-  ): Seq[File] = {
-
-    Riddl.parseAndValidate(input, logger, config) match {
-      case Some(root) =>
-        translate(root, logger, config)
-      case None =>
-        Seq.empty[File]
-    }
-  }
-
   def loadConfig(path: Path): ConfigReader.Result[CONF]
 
   def defaultConfig: CONF
 
-  def getConfig(
+  protected final def getConfig(
     logger: Riddl.Logger,
     path: Option[Path]
   ): Option[CONF] = {
@@ -81,19 +54,46 @@ trait Translator {
   def translate(
     root: RootContainer,
     logger: Riddl.Logger,
+    config: CONF
+  ): Seq[File]
+
+  final def translate(
+    root: RootContainer,
+    logger: Riddl.Logger,
     config: Option[Path]
   ): Seq[File] = {
     val cfg = getConfig(logger, config)
     cfg.map(translate(root, logger, _)).getOrElse(Seq.empty[File])
   }
 
-  def translate(
-    root: RootContainer,
+  final def parseValidateTranslateFile(
+    path: Path,
     logger: Riddl.Logger,
     config: CONF
-  ): Seq[File]
+  ): Seq[File] = {
+    Riddl.parseAndValidate(path, logger, config) match {
+      case Some(root) =>
+        translate(root, logger, config)
+      case None =>
+        Seq.empty[File]
+    }
+  }
 
-  def run(
+  final def parseValidateTranslate(
+    input: RiddlParserInput,
+    logger: Riddl.Logger,
+    config: CONF
+  ): Seq[File] = {
+
+    Riddl.parseAndValidate(input, logger, config) match {
+      case Some(root) =>
+        translate(root, logger, config)
+      case None =>
+        Seq.empty[File]
+    }
+  }
+
+  final def run(
     inputFile: Path,
     logger: Riddl.Logger,
     configFile: Option[Path]

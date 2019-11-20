@@ -109,6 +109,7 @@ object AST {
   case class Enumerator(
     loc: Location,
     id: Identifier,
+    enumVal: Option[LiteralInteger] = None,
     value: Option[Aggregation] = None,
     description: Option[Description] = None
   ) extends Definition
@@ -169,7 +170,11 @@ object AST {
     def loc: Location
   }
 
-  case class Strng(loc: Location) extends PredefinedType {
+  case class Strng(
+    loc: Location,
+    min: Option[LiteralInteger] = None,
+    max: Option[LiteralInteger] = None
+  ) extends PredefinedType {
     override def kind: String = "String"
   }
   case class Bool(loc: Location) extends PredefinedType {
@@ -183,7 +188,9 @@ object AST {
   case class Time(loc: Location) extends PredefinedType
   case class DateTime(loc: Location) extends PredefinedType
   case class TimeStamp(loc: Location) extends PredefinedType
-  case class URL(loc: Location) extends PredefinedType
+  case class Duration(loc: Location) extends PredefinedType
+  case class URL(loc: Location, scheme: Option[LiteralString] = None)
+      extends PredefinedType
   case class LatLong(loc: Location) extends PredefinedType
   case class Nothing(loc: Location) extends PredefinedType
 
@@ -509,20 +516,31 @@ object AST {
     description: Option[Description] = None
   ) extends EntityDefinition
 
+  case class State(
+    loc: Location,
+    id: Identifier,
+    typeEx: TypeExpression,
+    description: Option[Description] = None
+  ) extends EntityDefinition
+
   /** Definition of an Entity
     *
     * @param options The options for the entity
     * @param loc The location in the input
     * @param id The name of the entity
-    * @param state The type of the entity's real time state value
+    * @param states The state values of the entity
+    * @param types Type definitions useful internally to the entity definition
     * @param consumers A reference to the topic from which the entity consumes
+    * @param features Feature definitions of the entity
+    * @param functions Utility functions defined for the entity
+    * @param invariants Invariant properties of the entity
     */
   case class Entity(
     entityKind: EntityKind,
     loc: Location,
     id: Identifier,
-    state: Aggregation,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
+    states: Seq[State] = Seq.empty[State],
     types: Seq[Type] = Seq.empty[Type],
     consumers: Seq[Consumer] = Seq.empty[Consumer],
     features: Seq[Feature] = Seq.empty[Feature],
@@ -532,8 +550,9 @@ object AST {
   ) extends Container
       with ContextDefinition {
 
-    def contents: Seq[Definition] =
-      features ++ functions ++ invariants
+    def contents: Seq[Definition] = {
+      states ++ types ++ consumers ++ features ++ functions ++ invariants
+    }
   }
 
   trait TranslationRule extends Definition {
@@ -563,12 +582,17 @@ object AST {
     loc: Location,
     id: Identifier,
     toContext: ContextRef,
+    mappings: Seq[AdaptorMapping],
     description: Option[Description] = None
     // Details TBD
   ) extends Container
       with ContextDefinition {
     def contents: Seq[Definition] = Seq.empty[Definition]
   }
+
+  case class AdaptorMapping(
+    loc: Location
+  ) extends RiddlValue
 
   sealed trait ContextOption extends RiddlValue
   case class WrapperOption(loc: Location) extends ContextOption

@@ -51,13 +51,16 @@ trait EntityParser
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
-  def state[_: P]: P[Aggregation] = {
-    P(Keywords.state ~/ is ~ aggregation)
+  def state[_: P]: P[State] = {
+    P(
+      location ~ Keywords.state ~/ identifier ~ is ~
+        typeExpression ~ description
+    ).map(tpl => (State.apply _).tupled(tpl))
   }
 
   def entityDefinition[_: P]: P[EntityDefinition] = {
     P(
-      consumer | feature | function | invariant | typeDef
+      consumer | feature | function | invariant | typeDef | state
     )
   }
 
@@ -67,18 +70,17 @@ trait EntityParser
         ((location ~ undefined).map { loc: Location =>
           (
             Seq.empty[EntityOption],
-            Aggregation(loc),
             Seq.empty[EntityDefinition]
           )
         } | (
           entityOptions ~
-            state ~
             entityDefinition.rep
         )) ~ close ~ description
     ).map {
-      case (kind, loc, id, (options, state, entityDefs), addendum) =>
+      case (kind, loc, id, (options, entityDefs), addendum) =>
         val groups = entityDefs.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
+        val states = mapTo[State](groups.get(classOf[State]))
         val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
         val features = mapTo[Feature](groups.get(classOf[Feature]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
@@ -87,8 +89,8 @@ trait EntityParser
           kind,
           loc,
           id,
-          state,
           options,
+          states,
           types,
           consumers,
           features,

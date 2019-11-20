@@ -127,9 +127,7 @@ domain ReactiveBBQ {
     type MenuItemRef is refer to entity MenuItem
     entity Menu is {
       option is aggregate
-      state {
-         items: many MenuItemRef
-      }
+      state items is many MenuItemRef
       consumer foo of topic Inputs {}
     }
   }
@@ -145,7 +143,7 @@ domain ReactiveBBQ {
       date is Date
     }
     entity Location is {
-      state is { foo:  String }
+      state foo is String
       consumer foo of topic Inputs {}
     } explained as {
       brief "This is a retail store Location"
@@ -153,7 +151,7 @@ domain ReactiveBBQ {
 
     entity Reservation {
      options ( aggregate )
-     state { reservation: ReservationValue }
+     state reservation is ReservationValue
      consumer ofInputs of topic Inputs {}
     }
   }

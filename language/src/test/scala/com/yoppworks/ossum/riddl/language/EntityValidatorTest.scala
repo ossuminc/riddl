@@ -31,7 +31,7 @@ class EntityValidatorTest extends ValidatingTest {
           |context bar {
           |  entity Hamburger  is {
           |    options (aggregate persistent)
-          |    state { field: SomeType }
+          |    state field is  SomeType
           |    consumer foo of topic EntityChannel {}
           |  }
           |}

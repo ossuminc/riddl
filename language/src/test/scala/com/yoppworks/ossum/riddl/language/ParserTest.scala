@@ -263,7 +263,7 @@ class ParserTest extends ParsingTest {
       val input: String =
         """entity Hamburger is {
           |  options ( persistent aggregate )
-          |  state { x: String }
+          |  state foo is { x: String }
           |  consumer foo of topic EntityChannel {}
           |  feature AnAspect {
           |    BACKGROUND {
@@ -288,11 +288,18 @@ class ParserTest extends ParsingTest {
             SoftwareEntityKind(1 -> 1),
             1 -> 1,
             Identifier(1 -> 8, "Hamburger"),
-            Aggregation(
-              3 -> 9,
-              ListMap(Identifier(3 -> 11, "x") -> Strng(3 -> 14))
-            ),
             Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),
+            Seq(
+              State(
+                3 -> 3,
+                Identifier(3 -> 9, "foo"),
+                Aggregation(
+                  3 -> 16,
+                  ListMap(Identifier(3 -> 18, "x") -> Strng(3 -> 21))
+                ),
+                None
+              )
+            ),
             consumers = Seq(
               Consumer(
                 4 -> 12,
@@ -371,7 +378,8 @@ class ParserTest extends ParsingTest {
             Adaptor(
               1 -> 1,
               Identifier(1 -> 9, "fuzz"),
-              ContextRef(1 -> 18, PathIdentifier(1 -> 26, Seq("bar", "foo")))
+              ContextRef(1 -> 18, PathIdentifier(1 -> 26, Seq("bar", "foo"))),
+              Seq.empty[AdaptorMapping]
             )
       }
     }

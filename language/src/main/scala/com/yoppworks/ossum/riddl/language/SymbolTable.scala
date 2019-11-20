@@ -70,9 +70,8 @@ case class SymbolTable(container: Container) {
       addToSymTab(child.id.value, child -> parent)
       child match {
         case e: Entity =>
-          e.state.of.foreach {
-            case (id, _) =>
-              addToSymTab(id.value, e -> parent)
+          e.states.foreach { s: State =>
+            addToSymTab(s.id.value, e -> parent)
           }
         case m: MessageDefinition =>
           m.typ.of.foreach {

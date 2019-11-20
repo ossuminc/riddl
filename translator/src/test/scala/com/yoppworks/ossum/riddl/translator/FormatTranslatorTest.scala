@@ -43,7 +43,7 @@ class FormatTranslatorTest extends ParsingTest {
   // TODO: Fix FormatTranslator so this works again
   "FormatTranslator" should {
     "reflect everything.riddl" in {
-      pending //runOne("everything.riddl")
+      pending // runOne("everything.riddl")
     }
     "reflect rbbq.riddl" in {
       pending // runOne("rbbq.riddl")

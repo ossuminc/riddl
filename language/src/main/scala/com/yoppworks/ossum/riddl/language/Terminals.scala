@@ -194,6 +194,7 @@ object Terminals {
     final val Date = "Date"
     final val DateTime = "DateTime"
     final val Decimal = "Decimal"
+    final val Duration = "Duration"
     final val Id = "Id"
     final val Integer = "Integer"
     final val LatLong = "LatLong"
@@ -217,6 +218,7 @@ object Terminals {
       Time,
       DateTime,
       TimeStamp,
+      Duration,
       URL,
       Pattern,
       UniqueId

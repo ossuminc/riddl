@@ -148,7 +148,19 @@ class ParadoxTranslator extends Translator {
 
     def mkTypeExpression(typeEx: AST.TypeExpression): String = {
       typeEx match {
-        case Strng(_)       => "String"
+        case Strng(_, min, max) =>
+          (min, max) match {
+            case (Some(n), Some(x)) =>
+              s"String($n,$x"
+            case (None, Some(x)) =>
+              s"String(,$x"
+            case (Some(n), None) =>
+              s"String($n)"
+            case (None, None) =>
+              s"String"
+          }
+        case URL(_, scheme) =>
+          s"URL${scheme.map(s => "\"" + s.s + "\"")}"
         case Bool(_)        => "Boolean"
         case Number(_)      => "Number"
         case Integer(_)     => "Integer"
@@ -157,7 +169,6 @@ class ParadoxTranslator extends Translator {
         case Time(_)        => "Time"
         case DateTime(_)    => "DateTime"
         case TimeStamp(_)   => "TimeStamp"
-        case URL(_)         => "URL"
         case LatLong(_)     => "LatLong"
         case Nothing(_)     => "Nothing"
         case TypeRef(_, id) => id.value.mkString(".")
@@ -300,6 +311,11 @@ class ParadoxTranslator extends Translator {
     ): ParadoxState = {
       val indexFile =
         mkContainerPath(container).resolve(entity.id.value).resolve("index.md")
+      val states = entity.states.map(
+        s =>
+          "* " + s.id.value + ": " +
+            mkTypeExpression(s.typeEx).mkString("\n")
+      )
       writeFile(
         indexFile,
         s"""
@@ -308,8 +324,8 @@ class ParadoxTranslator extends Translator {
            |## Options
            |${entity.options.map(_.toString).mkString(", ")}
            |
-           |# State
-           |${mkTypeExpression(entity.state)}
+           |# States
+           |$states
            |
            |@@toc { depth=2 }
            |
