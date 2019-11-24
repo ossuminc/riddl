@@ -10,10 +10,6 @@ before_script:
   - apt-get install sbt -y
   - sbt sbtVersion
 
-stages:
-  - build
-  - deploy
-
 build:
   tags:
     - kubernetes
