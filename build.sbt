@@ -2,6 +2,7 @@ import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
 import org.jetbrains.sbtidea.Keys._
+import sbt.addSbtPlugin
 
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
@@ -138,7 +139,6 @@ lazy val idea = (project in file("idea-plugin"))
 lazy val ideaRunner = createRunnerProject(idea, "ideaRunner")
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl"))
-  .enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-riddl",
     sbtPlugin := true,
@@ -146,4 +146,6 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl"))
     scalacOptions ++= standardScalaCOptions(false),
     buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
   )
+  .enablePlugins(SbtPlugin)
+  .enablePlugins(ParadoxPlugin)
   .dependsOn(translator)

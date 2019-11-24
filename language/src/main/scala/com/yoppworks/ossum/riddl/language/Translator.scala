@@ -53,27 +53,30 @@ trait Translator {
 
   def translate(
     root: RootContainer,
+    outputRoot: Option[Path],
     logger: Riddl.Logger,
     config: CONF
   ): Seq[File]
 
   final def translate(
     root: RootContainer,
+    outputRoot: Option[Path],
     logger: Riddl.Logger,
     config: Option[Path]
   ): Seq[File] = {
     val cfg = getConfig(logger, config)
-    cfg.map(translate(root, logger, _)).getOrElse(Seq.empty[File])
+    cfg.map(translate(root, outputRoot, logger, _)).getOrElse(Seq.empty[File])
   }
 
   final def parseValidateTranslateFile(
     path: Path,
+    outputRoot: Option[Path],
     logger: Riddl.Logger,
     config: CONF
   ): Seq[File] = {
     Riddl.parseAndValidate(path, logger, config) match {
       case Some(root) =>
-        translate(root, logger, config)
+        translate(root, outputRoot, logger, config)
       case None =>
         Seq.empty[File]
     }
@@ -81,13 +84,14 @@ trait Translator {
 
   final def parseValidateTranslate(
     input: RiddlParserInput,
+    outputRoot: Option[Path],
     logger: Riddl.Logger,
     config: CONF
   ): Seq[File] = {
 
     Riddl.parseAndValidate(input, logger, config) match {
       case Some(root) =>
-        translate(root, logger, config)
+        translate(root, outputRoot, logger, config)
       case None =>
         Seq.empty[File]
     }
@@ -95,12 +99,13 @@ trait Translator {
 
   final def run(
     inputFile: Path,
+    outputRoot: Option[Path],
     logger: Riddl.Logger,
     configFile: Option[Path]
   ): Seq[File] = {
     getConfig(logger, configFile) match {
       case Some(config) =>
-        parseValidateTranslateFile(inputFile, logger, config)
+        parseValidateTranslateFile(inputFile, outputRoot, logger, config)
       case None =>
         Seq.empty[File]
     }

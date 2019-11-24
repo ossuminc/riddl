@@ -73,16 +73,20 @@ object RIDDL {
           Riddl.timer(stage = "translate", options.showTimes) {
             options.outputKind match {
               case Kinds.Prettify =>
+                val outputRoot = options.outputDir.map(_.toPath)
                 val trans = new FormatTranslator
                 trans.translate(
                   root,
+                  outputRoot,
                   Riddl.SysLogger,
                   options.configFile.map(_.toPath)
                 )
               case Kinds.Paradox =>
+                val outputRoot = options.outputDir.map(_.toPath)
                 val trans = new ParadoxTranslator
                 trans.translate(
                   root,
+                  outputRoot,
                   Riddl.SysLogger,
                   options.configFile.map(_.toPath)
                 )

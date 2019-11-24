@@ -48,6 +48,7 @@ class FormatTranslator extends Translator {
 
   def translate(
     root: RootContainer,
+    outputRoot: Option[Path],
     log: Riddl.Logger,
     configuration: FormatConfig
   ): Seq[File] = {

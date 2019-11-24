@@ -23,8 +23,7 @@ class ParadoxTranslator extends Translator {
     showWarnings: Boolean = true,
     showMissingWarnings: Boolean = false,
     showStyleWarnings: Boolean = false,
-    inputPath: Option[Path] = None,
-    outputRoot: Path = Path.of("target")
+    inputPath: Option[Path] = None
   ) extends Configuration
 
   type CONF = ParadoxConfig
@@ -49,12 +48,14 @@ class ParadoxTranslator extends Translator {
 
   def translate(
     root: RootContainer,
+    outputRoot: Option[Path],
     logger: Riddl.Logger,
     config: CONF
   ): Seq[File] = {
     val state: ParadoxState = ParadoxState(config, Seq.empty[File])
     val symtab: SymbolTable = SymbolTable(root)
-    val dispatcher = ParadoxFolding(root, root, state, symtab, logger)
+    val dispatcher =
+      ParadoxFolding(root, root, state, symtab, outputRoot, logger)
     dispatcher.foldLeft(root, root, state).generatedFiles
   }
 
@@ -63,11 +64,16 @@ class ParadoxTranslator extends Translator {
     definition: Definition,
     state: ParadoxState,
     symTab: SymbolTable,
+    outputRoot: Option[Path],
     log: Riddl.Logger
   ) extends Folding.Folding[ParadoxState] {
 
-    private val rootDir: Path =
-      state.config.outputRoot.resolve("riddl-paradox")
+    private val rootDir: Path = {
+      val out: Path =
+        outputRoot.getOrElse(new File("./target").getCanonicalFile.toPath)
+      out.resolve("riddl-paradox")
+    }
+
     Files.createDirectories(rootDir)
 
     private def mkContainerPath(container: Container): Path = {
