@@ -1,13 +1,11 @@
 build:
   tags:
-    - jvm
-    - sbt
+    - kubernetes
   script:
     - sbt compile
 
 test:
   tags:
-    - jvm
-    - sbt
+    - kubernetes
   script:
     - sbt clean test
