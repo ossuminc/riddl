@@ -3,11 +3,6 @@ package com.yoppworks.ossum.riddl.language
 /** Terminal symbol definitions in various categories */
 object Terminals {
 
-  object CharacterSets {
-    final val markdownAcceptedChars: String =
-      """~`!@#$%^&*()_-+=[]{}"':;<>,.?/"""
-  }
-
   object Punctuation {
     val asterisk = "*"
     val comma = ","

@@ -18,11 +18,14 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(literalString.rep(1))
   }
 
+  def markdownLines[_: P]: P[Seq[LiteralString]] = {
+    P(markdownLine.rep(1))
+  }
+
   def docBlock[_: P]: P[Seq[LiteralString]] = {
     P(
-      literalString.map(Seq(_)) |
-        (open ~ literalStrings ~ close) |
-        (open ~ markdownLine.rep ~ close)
+      (open ~ (markdownLines | literalStrings) ~ close) |
+        literalString.map(Seq(_))
     )
   }
 
@@ -31,25 +34,28 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def brief[_: P]: P[Seq[LiteralString]] = {
-    (Keywords.brief ~ docBlock).?.map(_.getOrElse(Seq.empty[LiteralString]))
+    (Keywords.brief ~/ (literalString.map(Seq(_)) | docBlock)).?.map(
+      _.getOrElse(Seq.empty[LiteralString])
+    )
   }
 
   def details[_: P]: P[Seq[LiteralString]] = {
-    (Keywords.details ~ docBlock).?.map(
+    (Keywords.details ~/
+      (literalString.map(Seq(_)) | docBlock)).?.map(
       _.getOrElse(Seq.empty[LiteralString])
     )
   }
 
   def items[_: P]: P[Map[Identifier, Seq[LiteralString]]] = {
     P(
-      Keywords.items ~ open ~
-        (identifier ~ Punctuation.colon ~ docBlock).rep.map(_.toMap) ~
+      Keywords.items ~/ open ~
+        (identifier ~ is ~ docBlock).rep.map(_.toMap) ~
         close
     ).?.map(_.getOrElse(Map.empty[Identifier, Seq[LiteralString]]))
   }
 
   def citations[_: P]: P[Seq[LiteralString]] = {
-    P(Keywords.see ~ docBlock).?.map(
+    P(Keywords.see ~/ docBlock).?.map(
       _.getOrElse(Seq.empty[LiteralString])
     )
   }
@@ -58,30 +64,47 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(Readability.as | Readability.by).?
   }
 
+  case class DescriptionParts(
+    brief: Seq[LiteralString],
+    details: Seq[LiteralString],
+    items: Map[Identifier, Seq[LiteralString]],
+    cites: Seq[LiteralString]
+  )
+
+  def detailedDescription[_: P]: P[DescriptionParts] = {
+    P(brief ~ details ~ items ~ citations)
+      .map(tpl => (DescriptionParts.apply _).tupled(tpl))
+  }
+
+  def literalStringsDescription[_: P]: P[DescriptionParts] = {
+    literalStrings.map { strings =>
+      DescriptionParts(
+        strings,
+        Seq.empty[LiteralString],
+        Map.empty[Identifier, Seq[LiteralString]],
+        Seq.empty[LiteralString]
+      )
+    }
+  }
+
+  def docBlockDescription[_: P]: P[DescriptionParts] = {
+    markdownLine.rep(1).map { block =>
+      DescriptionParts(
+        Seq.empty[LiteralString],
+        block,
+        Map.empty[Identifier, Seq[LiteralString]],
+        Seq.empty[LiteralString]
+      )
+    }
+  }
+
   def description[_: P]: P[Option[Description]] = {
     P(
-      location ~
-        (Keywords.described | Keywords.explained) ~ as ~/
-        (literalString.map(
-          x =>
-            (
-              Seq(x),
-              Seq.empty[LiteralString],
-              Map.empty[Identifier, Seq[LiteralString]],
-              Seq.empty[LiteralString]
-            )
-        ) | docBlock.map(
-          x =>
-            (
-              Seq.empty[LiteralString],
-              x,
-              Map.empty[Identifier, Seq[LiteralString]],
-              Seq.empty[LiteralString]
-            )
-        ) |
-          (open ~/ brief ~ details ~ items ~ citations) ~ close)
+      location ~ (Keywords.described | Keywords.explained) ~ as ~ open ~/ (
+        literalStringsDescription | docBlockDescription | detailedDescription
+      ) ~ close
     ).?.map {
-      case yes @ Some((loc, (brief, details, items, cites))) =>
+      case yes @ Some((loc, DescriptionParts(brief, details, items, cites))) =>
         Some(Description(loc, brief, details, items, cites))
       case no @ None =>
         no
@@ -130,9 +153,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def open[_: P]: P[Unit] = {
-    P(
-      Punctuation.curlyOpen
-    )
+    P(Punctuation.curlyOpen)
   }
 
   def close[_: P]: P[Unit] = {

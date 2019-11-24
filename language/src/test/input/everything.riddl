@@ -71,7 +71,7 @@ domain Everything {
 
       consumer foo of topic AChannel is {
         on command Something {
-          when misc() explained as "inebreiated" then {
+          when misc() explained as { "inebreiated" } then {
             publish event Inebriated to topic AChannel
           }
         }

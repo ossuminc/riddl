@@ -4,11 +4,11 @@ domain ReactiveBBQ {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id() explained as {
+  type CustomerId is Id(Customer.Customer) explained as {
     brief "Unique identifier for a customer"
   }
 
-  type OrderId is Id() described as {
+  type OrderId is Id(Order) described as {
     brief "Unique identifier for a customer's order"
     see "http://www.example.com/show/details/on/OrderId"
   }
@@ -22,6 +22,14 @@ domain ReactiveBBQ {
   }
 
   topic Outputs {  commands {} events {  } queries {} results {} }
+
+  context Customer {
+    entity Customer {
+    state main is { }
+      consumer input of topic Inputs {}
+    }
+  }
+
 
   // #Kitchen
   // The Kitchen context pertains to

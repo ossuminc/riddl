@@ -16,7 +16,7 @@ class ConsumerTest extends ParsingTest {
           |        set lastKnownWorkCenter to ContainerNestedInContainer.workCenter
           |      }
           |      // anything else needing to be updated?
-          |    } explained as "Helps update this item's location"
+          |    } explained as { "Helps update this item's location" }
           |  }
           |  consumer FromDistributionItem for topic DistributionItemTopic {
           |    on command CreateItem {

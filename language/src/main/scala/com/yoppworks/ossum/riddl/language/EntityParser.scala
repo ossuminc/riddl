@@ -46,7 +46,7 @@ trait EntityParser
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
         (undefined.map(_ => Seq.empty[LiteralString]) |
-          docBlock("")) ~
+          docBlock) ~
         close ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }

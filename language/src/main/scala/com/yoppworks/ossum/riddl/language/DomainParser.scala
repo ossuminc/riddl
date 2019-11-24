@@ -14,7 +14,7 @@ trait DomainParser
     with TypeParser {
 
   def domainDefinitions[_: P]: P[Definition] = {
-    P(typeDef | topicDef | interaction | context)
+    P(typeDef | topic | interaction | context)
   }
 
   def domainInclude[_: P]: P[Seq[DomainDefinition]] = {
@@ -28,7 +28,7 @@ trait DomainParser
   def domainContent[_: P]: P[Seq[DomainDefinition]] = {
     P(
       typeDef.map(Seq(_)) |
-        topicDef.map(Seq(_)) |
+        topic.map(Seq(_)) |
         interaction.map(Seq(_)) |
         context.map(Seq(_)) |
         domain.map(Seq(_)) |

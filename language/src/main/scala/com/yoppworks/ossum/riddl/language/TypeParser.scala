@@ -4,11 +4,7 @@ import com.yoppworks.ossum.riddl.language.AST._
 import fastparse._
 import ScalaWhitespace._
 
-import scala.collection.immutable.ListMap
-import Terminals.Keywords
-import Terminals.Predefined
-import Terminals.Punctuation
-import Terminals.Readability
+import Terminals._
 import Terminals.Punctuation._
 
 /** Parsing rules for Type definitions */
@@ -92,10 +88,11 @@ trait TypeParser extends CommonParser {
   }
 
   def enumerator[_: P]: P[Enumerator] = {
-    P(identifier ~ enumValue ~ aggregation.? ~ description).map {
-      case (id, enumVal, typex, desc) =>
-        Enumerator(id.loc, id, enumVal, typex, desc)
-    }
+    P(identifier ~ enumValue ~ aggregationWithoutDescription.? ~ description)
+      .map {
+        case (id, enumVal, typex, desc) =>
+          Enumerator(id.loc, id, enumVal, typex, desc)
+      }
   }
 
   def enumeration[_: P]: P[Enumeration] = {
@@ -130,12 +127,16 @@ trait TypeParser extends CommonParser {
     )
   }
 
+  def aggregationWithoutDescription[_: P]: P[Aggregation] = {
+    P(
+      location ~ open ~ fields ~ close
+    ).map { case (loc, fields) => Aggregation(loc, fields, None) }
+  }
+
   def aggregation[_: P]: P[Aggregation] = {
     P(
-      location ~ open ~ fields ~ close ~ description
-    ).map { tpl =>
-      (Aggregation.apply _).tupled(tpl)
-    }
+      aggregationWithoutDescription ~ description
+    ).map { case (agg, desc) => agg.copy(description = desc) }
   }
 
   def mapping[_: P]: P[Mapping] = {

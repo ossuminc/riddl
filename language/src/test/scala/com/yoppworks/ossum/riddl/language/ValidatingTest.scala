@@ -15,7 +15,7 @@ abstract class ValidatingTest extends ParsingTest {
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
-        val msg = errors.map(_.format).mkString
+        val msg = errors.map(_.format).mkString("\n")
         fail(msg)
       case Right(model: D @unchecked) =>
         val msgs = Validation.validate(model)
@@ -29,8 +29,9 @@ abstract class ValidatingTest extends ParsingTest {
     val directory = "language/src/test/input/"
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
-      case Left(error) =>
-        fail(s"$label:$error")
+      case Left(errors) =>
+        val msgs = errors.map(_.format).mkString("\n")
+        fail(s"In $label:\n$msgs")
       case Right(root) =>
         val messages = Validation.validate(root)
         validation(root, messages)
