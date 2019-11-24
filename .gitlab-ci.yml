@@ -1,4 +1,7 @@
 build:
+  tags:
+    - jvm
+    - sbt
   script:
     - sbt compile
 
