@@ -109,35 +109,6 @@ lazy val translator = (project in file("translator"))
   )
   .dependsOn(language % "test->test;compile->compile")
 
-lazy val idea = (project in file("idea-plugin"))
-  .enablePlugins(SbtIdeaPlugin)
-  .dependsOn(language)
-  .settings(
-    name := "riddl-idea-plugin",
-    intellijPlatform := IntelliJPlatform.IdeaCommunity,
-    intellijDownloadSources := true,
-    packageLibraryMappings := Seq.empty, // allow scala-library
-    packageMethod := PackagingMethod.Standalone(),
-    patchPluginXml := pluginXmlOptions { xml =>
-      xml.version = version.value
-      xml.sinceBuild = intellijBuild.value
-      xml.untilBuild = "193.*"
-    },
-    scalaVersion := "2.12.10",
-    javacOptions in Global ++= Seq("-source", "1.8", "-target", "1.8"),
-    scalacOptions in Global ++= Seq(
-      "-target:jvm-1.8",
-      "-deprecation",
-      "-feature",
-      "-unchecked",
-      "-Xfatal-warnings"
-    ),
-    buildInfoPackage := "com.yoppworks.ossum.riddl.idea.plugin",
-    buildInfoOptions := Seq(ToMap, BuildTime)
-  )
-
-lazy val ideaRunner = createRunnerProject(idea, "ideaRunner")
-
 lazy val `sbt-riddl` = (project in file("sbt-riddl"))
   .settings(
     name := "sbt-riddl",
