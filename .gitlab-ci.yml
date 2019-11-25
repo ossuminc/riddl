@@ -1,4 +1,5 @@
-image: java:8
+image:
+  name: "hub.docker.com/repository/docker/yoppworks/alpine-sbt:latest"
 
 before_script:
   - apt-get update -y
