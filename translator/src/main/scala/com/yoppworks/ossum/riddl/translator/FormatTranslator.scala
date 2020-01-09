@@ -162,11 +162,14 @@ class FormatTranslator extends Translator {
                   s.add(s.spc + "|" + line.s + "\n")
               }
               .outdent
-              .addLine(s"}\n${spc}items {")
+              .addLine(s"}\n${spc}items")
+              .add[LiteralString](desc.nameOfItems)(
+                ls => "(\"" + ls.s + "\") {"
+              )
               .indent
           }
           .step { s: FormatState =>
-            desc.fields
+            desc.items
               .foldLeft(s) {
                 case (s, (id, desc)) =>
                   s.addLine(s"$id: " + q + desc + q)

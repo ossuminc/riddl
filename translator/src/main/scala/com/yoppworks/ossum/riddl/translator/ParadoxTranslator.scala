@@ -77,17 +77,19 @@ class ParadoxTranslator extends Translator {
     Files.createDirectories(rootDir)
 
     private def mkContainerPath(container: Container): Path = {
-      symTab.parentsOf(container).foldRight(rootDir) {
-        case (c, p) =>
-          p.resolve(c.id.value)
+      val result = container match {
+        case rc: RootContainer =>
+          rootDir.resolve(rc.id.value)
+        case c: Container =>
+          symTab.parentsOf(c).foldRight(rootDir) {
+            case (p_of_c, p) =>
+              p.resolve(p_of_c.id.value)
+          }
       }
+      result
     }
 
-    def writeFile(path: Path, content: StringBuilder): ParadoxState = {
-      writeFile(path, content.toString)
-    }
-
-    def writeFile(path: Path, content: String): ParadoxState = {
+    def writeFile(path: Path)(content: => String): ParadoxState = {
       try {
         val directory = path.getParent
         Files.createDirectories(directory)
@@ -102,7 +104,6 @@ class ParadoxTranslator extends Translator {
           log.error(s"Error writing file $path: ${xcptn.getMessage}")
           state
       }
-
     }
 
     def mkRef(ref: Reference): String = {
@@ -118,11 +119,15 @@ class ParadoxTranslator extends Translator {
       }
     }
 
-    def mkDescription(desc: Option[Description]): String = {
+    def mkDescription(
+      desc: Option[Description]
+    ): String = {
       desc match {
         case None =>
           "No description.\n"
         case Some(d) =>
+          val itemsName: String =
+            d.nameOfItems.map(_.s).getOrElse("Items")
           s"""
           |## Briefly
           |${d.brief.map(_.s).mkString("\n")}
@@ -130,7 +135,7 @@ class ParadoxTranslator extends Translator {
           |## Details
           |${d.details.map(_.s).mkString("\n")}
           |
-          |${mkFields("Fields", d.fields)}
+          |${mkFields(itemsName, d.items)}
           |
           |## See Also
           |${d.citations.map(x => "* " + x.s).mkString("\n")}
@@ -230,8 +235,7 @@ class ParadoxTranslator extends Translator {
     ): ParadoxState = {
       val indexFile =
         mkContainerPath(container).resolve(domain.id.value).resolve("index.md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile) {
         s"""
            |# Domain `${domain.id.value}`
            |${mkDescription(domain.description)}
@@ -248,7 +252,7 @@ class ParadoxTranslator extends Translator {
            |@@@
            |
            |""".stripMargin
-      )
+      }
     }
 
     override def openContext(
@@ -258,8 +262,7 @@ class ParadoxTranslator extends Translator {
     ): ParadoxState = {
       val indexFile =
         mkContainerPath(container).resolve(context.id.value).resolve("index.md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Context `${context.id.value}`
            |${mkDescription(context.description)}
@@ -289,8 +292,7 @@ class ParadoxTranslator extends Translator {
     ): ParadoxState = {
       val indexFile =
         mkContainerPath(container).resolve(topic.id.value).resolve("index.md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Topic `${topic.id.value}`
            |${mkDescription(topic.description)}
@@ -321,8 +323,7 @@ class ParadoxTranslator extends Translator {
           "* " + s.id.value + ": " +
             mkTypeExpression(s.typeEx).mkString("\n")
       )
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Entity `${entity.id.value}`
            |${mkDescription(entity.description)}
@@ -356,8 +357,7 @@ class ParadoxTranslator extends Translator {
         mkContainerPath(container)
           .resolve(interaction.id.value)
           .resolve("index.md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Interaction `${interaction.id.value}`
            |${mkDescription(interaction.description)}
@@ -401,12 +401,11 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(typ.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Type `${typ.id.value}`
            |## Expression
-           |${mkTypeExpression(typ.typ)}
+           |```${mkTypeExpression(typ.typ)}```
            |${mkDescription(typ.description)}
            |""".stripMargin
       )
@@ -422,8 +421,7 @@ class ParadoxTranslator extends Translator {
         .resolve(action.id.value + ".md")
       action match {
         case ma: MessageAction =>
-          writeFile(
-            indexFile,
+          writeFile(indexFile)(
             s"""
                |# Action `${action.id.value}`
                |* From: ${ma.sender.id.format}
@@ -447,8 +445,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(command.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Command `${command.id.value}`
            |${mkDescription(command.description)}
@@ -468,8 +465,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(consumer.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Consumer `${consumer.id.value}`
            |${mkDescription(consumer.description)}
@@ -489,8 +485,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(event.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Event `${event.id.value}`
            |${mkDescription(event.description)}
@@ -508,8 +503,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(example.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Command `${example.id.value}`
            |${mkDescription(example.description)}
@@ -537,8 +531,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(function.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Function `${function.id.value}`
            |## Inputs
@@ -559,8 +552,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(invariant.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Invariant `${invariant.id.value}`
            |${mkDescription(invariant.description)}
@@ -578,8 +570,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(query.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Command `${query.id.value}`
            |${mkDescription(query.description)}
@@ -599,15 +590,12 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(result.id.value + ".md")
-      writeFile(
-        indexFile,
-        s"""
-           |# Command `${result.id.value}`
-           |${mkDescription(result.description)}
-           |## Value Object
-           |${mkTypeExpression(result.typ)}
-           |""".stripMargin
-      )
+      writeFile(indexFile)(s"""
+                              |# Command `${result.id.value}`
+                              |${mkDescription(result.description)}
+                              |## Value Object
+                              |${mkTypeExpression(result.typ)}
+                              |""".stripMargin)
 
     }
 
@@ -619,8 +607,7 @@ class ParadoxTranslator extends Translator {
       val indexFile = mkContainerPath(container)
         .resolve(container.id.value)
         .resolve(rule.id.value + ".md")
-      writeFile(
-        indexFile,
+      writeFile(indexFile)(
         s"""
            |# Rule `${rule.id.value}`
            |${mkDescription(rule.description)}

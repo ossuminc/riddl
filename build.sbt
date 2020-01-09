@@ -53,6 +53,7 @@ lazy val riddlc = (project in file("riddlc"))
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
     // paradoxTheme := Some(builtinParadoxTheme("generic")),
+    paradoxRoots := List("index.md"),
     Compile / paradoxMaterialTheme := {
       ParadoxMaterialTheme()
         .withColor("blue", "grey")

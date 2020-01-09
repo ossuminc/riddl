@@ -1,8 +1,8 @@
 import sbt.Resolver
 
 resolvers in ThisBuild ++= Seq(
-  "Artima Maven Repository" at "https://repo.artima.com/releases",
-  "jetbrains-sbt" at "https://dl.bintray.com/jetbrains/sbt-plugins"
+  "Artima Maven Repository" at "https://repo.artima.com/releases"
+  // , "jetbrains-sbt" at "https://dl.bintray.com/jetbrains/sbt-plugins"
 )
 
 addSbtPlugin("org.jetbrains" % "sbt-idea-plugin" % "3.3.2")

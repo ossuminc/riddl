@@ -98,23 +98,16 @@ object Folding {
   trait Folding[S <: State[S]] {
 
     final def foldLeft(
-      root: RootContainer,
-      state: S
-    ): S = {
-      root.contents.foldLeft(state) {
-        case (s, content) =>
-          foldLeft(root, content, s)
-      }
-    }
-
-    final def foldLeft(
       parent: Container,
       container: Container,
       initState: S
     ): S = {
       container match {
         case root: RootContainer =>
-          foldLeft(root, initState)
+          root.contents.foldLeft(initState) {
+            case (s, content) =>
+              foldLeft(root, content, s)
+          }
         case domain: Domain =>
           openDomain(initState, parent, domain)
             .step { state =>

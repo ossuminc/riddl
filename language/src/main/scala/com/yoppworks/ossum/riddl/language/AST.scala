@@ -52,7 +52,8 @@ object AST {
     loc: Location = 0 -> 0,
     brief: Seq[LiteralString] = Seq.empty[LiteralString],
     details: Seq[LiteralString] = Seq.empty[LiteralString],
-    fields: Map[Identifier, Seq[LiteralString]] =
+    nameOfItems: Option[LiteralString] = None,
+    items: Map[Identifier, Seq[LiteralString]] =
       Map.empty[Identifier, Seq[LiteralString]],
     citations: Seq[LiteralString] = Seq.empty[LiteralString]
   )

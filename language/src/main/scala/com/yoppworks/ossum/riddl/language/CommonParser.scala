@@ -46,12 +46,15 @@ trait CommonParser extends NoWhiteSpaceParsers {
     )
   }
 
-  def items[_: P]: P[Map[Identifier, Seq[LiteralString]]] = {
+  def items[_: P]
+    : P[(Option[LiteralString], Map[Identifier, Seq[LiteralString]])] = {
     P(
-      Keywords.items ~/ open ~
+      Keywords.items ~/ (Punctuation.roundOpen ~
+        literalString ~ Punctuation.roundClose).? ~/
+        open ~
         (identifier ~ is ~ docBlock).rep.map(_.toMap) ~
         close
-    ).?.map(_.getOrElse(Map.empty[Identifier, Seq[LiteralString]]))
+    ).?.map(_.getOrElse(None -> Map.empty[Identifier, Seq[LiteralString]]))
   }
 
   def citations[_: P]: P[Seq[LiteralString]] = {
@@ -67,7 +70,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   case class DescriptionParts(
     brief: Seq[LiteralString],
     details: Seq[LiteralString],
-    items: Map[Identifier, Seq[LiteralString]],
+    items: (Option[LiteralString], Map[Identifier, Seq[LiteralString]]),
     cites: Seq[LiteralString]
   )
 
@@ -81,7 +84,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
       DescriptionParts(
         strings,
         Seq.empty[LiteralString],
-        Map.empty[Identifier, Seq[LiteralString]],
+        None -> Map.empty[Identifier, Seq[LiteralString]],
         Seq.empty[LiteralString]
       )
     }
@@ -92,7 +95,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
       DescriptionParts(
         Seq.empty[LiteralString],
         block,
-        Map.empty[Identifier, Seq[LiteralString]],
+        None -> Map.empty[Identifier, Seq[LiteralString]],
         Seq.empty[LiteralString]
       )
     }
@@ -104,8 +107,10 @@ trait CommonParser extends NoWhiteSpaceParsers {
         literalStringsDescription | docBlockDescription | detailedDescription
       ) ~ close
     ).?.map {
-      case yes @ Some((loc, DescriptionParts(brief, details, items, cites))) =>
-        Some(Description(loc, brief, details, items, cites))
+      case yes @ Some(
+            (loc, DescriptionParts(brief, details, (itemsName, items), cites))
+          ) =>
+        Some(Description(loc, brief, details, itemsName, items, cites))
       case no @ None =>
         no
     }
