@@ -30,5 +30,6 @@ Domains may contain the following constructs:
 * [Topics](topics.md)
 * [Contexts](contexts.md)
 * [Interactions](interactions.md)
+* [Include](includes.md)
 
 @@@

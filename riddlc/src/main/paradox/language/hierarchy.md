@@ -6,6 +6,7 @@ basic structure of any Riddl specification. The list below also serves as a
 
 # The hierarchy of containers and leaves
 Here is how RIDDL nesting can be structured:
+
 * Root (top level)
   * [Domain](domains.md) - the root definition of any riddl document
     * [Domain](domains.md) - domains can be nested to form sub-domains
