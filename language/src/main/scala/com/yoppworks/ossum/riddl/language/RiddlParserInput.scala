@@ -76,9 +76,15 @@ case class StringParserInput(data: String, origin: String = "internal")
 }
 
 case class FileParserInput(file: File) extends RiddlParserInput {
-  val source: Source = Source.fromFile(file)
-  val data: String = source.getLines().mkString("\n")
-  source.close()
+
+  val data: String = {
+    val source: Source = Source.fromFile(file)
+    try {
+      source.getLines().mkString("\n")
+    } finally {
+      source.close()
+    }
+  }
   val root: File = file.getParentFile
   def origin: String = file.getName
   def this(path: Path) = this(path.toFile)
@@ -86,8 +92,12 @@ case class FileParserInput(file: File) extends RiddlParserInput {
 
 case class SourceParserInput(source: Source, origin: String)
     extends RiddlParserInput {
-  val data: String = source.getLines().mkString("\n")
-  source.close()
+
+  val data: String = try {
+    source.getLines().mkString("\n")
+  } finally {
+    source.close()
+  }
   val root: File = new File(System.getProperty("user.dir"))
 }
 
