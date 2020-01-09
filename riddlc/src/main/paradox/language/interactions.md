@@ -2,7 +2,7 @@
 
 ## Introduction
 An Interaction evolves from the concepts inherent in a [UML Sequence Diagram](https://en.wikipedia.org/wiki/Sequence_diagram).
-Instead of specifying those concepts in a visual way, as in UML, Riddl 
+Instead of specifying those concepts in a visual way, as in UML, RIDDL 
 specifies them in a textual way. The purpose of an interaction is to specify
 an important way in which the system components communicate and cooperate to
 accomplish a task that is valuable to the stakeholders of the system. 

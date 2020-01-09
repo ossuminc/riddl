@@ -20,6 +20,7 @@ cat Smudge is {
 }
 ```
 Here is an explanation of each of these tokens:
+
 * `cat` is the  kind of concept that the author wants to define
 * `Smudge` is the name the author wants to assign to this `cat` concept
 * `is` is a required keyword for readability
@@ -43,7 +44,7 @@ Definitions that may not contain other definitions are called "leaves"
 because, like tree leaves, they occur at the extremity (most nested) part of
 the definitions.
 
-# Work In Progress
+## Work In Progress
 Modelling a domain can be hard work. New ideas come up that must be flushed
 out.  Sometimes things get left undefined. That's okay! Riddl uses a special
 construct, `???` to mean "we don't know yet". It can be used as the body of
@@ -51,4 +52,22 @@ any definition. For example it is entirely legal to write:
 ```text
 entity Thing_A_Ma_Bob { ??? }
 ```
-# Descriptions, or Explanation
+
+## Descriptions, or Explanation
+A definition may also be accompanied by some text to describe or explain the
+purpose of the entity.  The description may include a number of optional
+properties including: 
+
+* `brief` is a simple text description of the definition
+* `details` is a longer textual description enclosed in a block `{ }`, 
+avoiding the need to quote the text.  This property may include Markdown 
+directives that will be rendered in any generated documentation.
+* `items` is a means of including references to other entities or definitions 
+is also enclosed withing a block `{ }`.  
+* `see` is a block where additional resources supporting the description may 
+be listed.
+ 
+A description can be included using either the `description` or `explained` 
+keyword.  See the @ref:[Quick Start](quickstart.md) for various examples 
+of definition descriptions. 
+
