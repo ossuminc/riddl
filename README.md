@@ -81,3 +81,7 @@ we hope it will do all of the following:
  Architecture, DDD, REST, DCOM, gRPC, etc. 
 * Support for Read Projections and Read Models (plugins for databases)
 * Support for graphQL and gRPC
+
+## Dependencies
+
+This codebase targets Java 11.  

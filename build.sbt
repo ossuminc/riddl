@@ -118,5 +118,5 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl"))
     buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
   )
   .enablePlugins(SbtPlugin)
-  .enablePlugins(ParadoxPlugin)
+//  .enablePlugins(ParadoxPlugin)
   .dependsOn(translator)
