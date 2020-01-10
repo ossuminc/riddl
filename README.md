@@ -16,7 +16,7 @@ awesome reactive systems.
 For more details, please read the paradox documentation:
 
 * `sbt paradox`
-* `open target/paradox/html/main/index.html`
+* `open riddlc/target/paradox/html/main/index.html`
 
 ## Usage
 To get the most recent options, run `riddlc --help`. As of version 0.1.1, that 
