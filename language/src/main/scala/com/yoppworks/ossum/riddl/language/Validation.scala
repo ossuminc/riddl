@@ -14,7 +14,7 @@ object Validation {
   def validate[C <: Container](
     root: C,
     options: ValidationOptions = defaultOptions
-  ): Seq[ValidationMessage] = {
+  ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, options)
     val folding = new ValidationFolding
@@ -76,7 +76,7 @@ object Validation {
   object ValidationMessages {
 
     def apply(): ValidationMessages = {
-      List[ValidationMessage]()
+      NoValidationMessages
     }
 
     def apply(msg: ValidationMessage): ValidationMessages = {
@@ -158,17 +158,32 @@ object Validation {
       }
     }
 
-    def checkIdentifier(id: Identifier): ValidationState = {
-      if (id.value.length <= 2) {
+    def checkIdentifierLength[T <: Definition](
+      d: T,
+      min: Int = 3
+    ): ValidationState = {
+      if (d.id.value.length < min) {
         add(
           ValidationMessage(
-            id.loc,
-            "Identifier is too short. Identifiers must be at least 3 characters",
+            d.id.loc,
+            s"${d.kind} identifier '${d.id.value}' is too short. Identifiers should be at least $min characters.",
             StyleWarning
           )
         )
+      } else {
+        this
       }
-      this
+    }
+
+    def checkPattern(p: Pattern): ValidationState = {
+      try {
+        val compound = p.pattern.map(_.s).reduce(_ + _)
+        java.util.regex.Pattern.compile(compound)
+        this
+      } catch {
+        case x: PatternSyntaxException =>
+          add(ValidationMessage(p.loc, x.getMessage))
+      }
     }
 
     def checkTypeExpression(
@@ -176,15 +191,8 @@ object Validation {
       definition: Definition
     ): ValidationState = {
       typ match {
-        case Pattern(loc, pattern, addendum) =>
-          try {
-            val compound = pattern.map(_.s).reduce(_ + _)
-            java.util.regex.Pattern.compile(compound)
-          } catch {
-            case x: PatternSyntaxException =>
-              add(ValidationMessage(loc, x.getMessage))
-          }
-          this.checkDescription(definition, addendum)
+        case p @ Pattern(_, _, addendum) =>
+          checkPattern(p).checkDescription(definition, addendum)
         case UniqueId(_, entityName, addendum) =>
           this
             .checkRef[Entity](entityName)
@@ -204,7 +212,7 @@ object Validation {
             case (state, enumerator) =>
               val id = enumerator.id
               val s = state
-                .checkIdentifier(id)
+                .checkIdentifierLength(enumerator)
                 .check(
                   id.value.head.isUpper,
                   s"Enumerator '${id.value}' must start with lower case",
@@ -228,7 +236,7 @@ object Validation {
           of.foldLeft(this) {
               case (state, field) =>
                 state
-                  .checkIdentifier(field.id)
+                  .checkIdentifierLength(field)
                   .check(
                     field.id.value.head.isLower,
                     "Field names should start with a lower case letter",
@@ -354,12 +362,7 @@ object Validation {
         Error,
         definition.loc
       )
-      result = result.check(
-        definition.id.value.length > 2,
-        s"${definition.identify} has a name that is too short.",
-        StyleWarning,
-        definition.loc
-      )
+      result = result.checkIdentifierLength(definition)
       val path = symbolTable.pathOf(definition)
       val matches =
         result.lookup[Definition](path)
@@ -516,7 +519,7 @@ object Validation {
         result = result.add(
           ValidationMessage(
             entity.loc,
-            s"Entity `${entity.id.value}` has only empty topic consumers",
+            s"Entity '${entity.id.value}' has only empty topic consumers",
             MissingWarning
           )
         )

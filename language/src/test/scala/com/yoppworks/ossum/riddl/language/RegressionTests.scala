@@ -1,8 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Description
 import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.Event
 import com.yoppworks.ossum.riddl.language.AST.Topic
 import com.yoppworks.ossum.riddl.language.AST.Type
 

@@ -3,6 +3,7 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Entity
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
 class EntityValidatorTest extends ValidatingTest {
@@ -11,13 +12,19 @@ class EntityValidatorTest extends ValidatingTest {
     "catch missing things" in {
       val input = "entity Hamburger is { state foo is {field:  SomeType } }"
       parseAndValidate[Entity](input) {
-        case (model: Entity, _: Seq[ValidationMessage]) =>
-          val msgs = Validation.validate(model, Validation.defaultOptions)
+        case (_: Entity, msgs: ValidationMessages) =>
           msgs.size mustEqual 5
-          msgs.exists(_.message.contains("is not defined")) mustBe true
-          msgs.exists(_.message.contains("entity must consume a topic")) mustBe true
-          msgs.exists(_.message.contains("should have a description")) mustBe
-            true
+          assertValidationMessage(msgs, Validation.Error, "is not defined")
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "entity must consume a topic"
+          )
+          assertValidationMessage(
+            msgs,
+            Validation.MissingWarning,
+            "should have a description"
+          )
       }
     }
     "error on persistent entity with no event producer" in {
@@ -38,10 +45,12 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate[Domain](input) {
-        case (_: Domain, msgs: Seq[ValidationMessage]) =>
-          val errors = msgs.filter(_.kind.isError)
-          errors mustNot be(empty)
-          msgs.exists { _.message.contains("has only empty topic") } mustBe true
+        case (_: Domain, msgs: ValidationMessages) =>
+          assertValidationMessage(
+            msgs,
+            Validation.MissingWarning,
+            "has only empty topic"
+          )
       }
     }
   }

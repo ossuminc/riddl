@@ -25,7 +25,7 @@ domain ReactiveBBQ {
 
   context Customer {
     entity Customer {
-    state main is { }
+      state main is { }
       consumer input of topic Inputs {}
     }
   }
