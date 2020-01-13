@@ -161,7 +161,6 @@ object Riddl {
     }
   }
 }
-
 /** Private implementation details which allow for more testability */
 private[language] object RiddlImpl {
 
@@ -183,13 +182,13 @@ private[language] object RiddlImpl {
     * @return The result of running `f`
     */
   def timer[T](
-    clock: Clock,
-    out: PrintStream,
-    stage: String,
-    show: Boolean
-  )(
-    f: => T
-  ): T = {
+                clock: Clock,
+                out: PrintStream,
+                stage: String,
+                show: Boolean
+              )(
+                f: => T
+              ): T = {
     if (show) {
       val start = clock.millis()
       val result = f
@@ -204,3 +203,4 @@ private[language] object RiddlImpl {
     }
   }
 }
+
