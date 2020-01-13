@@ -18,3 +18,5 @@ addSbtPlugin("com.wanari" % "sbt-paradox-diagrams" % "0.1.3")
 addSbtPlugin("com.lightbend.paradox" % "sbt-paradox-apidoc" % "0.4")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
+
