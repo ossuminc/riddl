@@ -14,7 +14,11 @@ class EntityValidatorTest extends ValidatingTest {
       parseAndValidate[Entity](input) {
         case (_: Entity, msgs: ValidationMessages) =>
           msgs.size mustEqual 5
-          assertValidationMessage(msgs, Validation.Error, "is not defined")
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "'SomeType' is not defined"
+          )
           assertValidationMessage(
             msgs,
             Validation.Error,
@@ -27,7 +31,25 @@ class EntityValidatorTest extends ValidatingTest {
           )
       }
     }
-    "error on persistent entity with no event producer" in {
+
+    "identify when an entity consumer references a topic that doesn't exist" in {
+      val input =
+        """
+          |entity Hamburger  is {
+          |  consumer foo of topic EntityChannel {}
+          |}
+          |""".stripMargin
+      parseAndValidate[Entity](input) {
+        case (_: Entity, msgs: ValidationMessages) =>
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "'EntityChannel' is not defined but should be a Topic"
+          )
+      }
+    }
+
+    "produce an error for persistent entity with no event producer" in {
       val input =
         """
           |domain foo {

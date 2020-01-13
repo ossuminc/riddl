@@ -501,16 +501,6 @@ object Validation {
       result = entity.states.foldLeft(result) { (next, state) =>
         next.checkTypeExpression(state.typeEx, state)
       }
-      result = entity.consumers.foldLeft(result) { (s, consumer) =>
-        s.checkRef[Topic](consumer.topic)
-      }
-
-      result = entity.types.foldLeft(result) { (s, typ) =>
-        s.checkDefinition(entity, typ).checkTypeExpression(typ.typ, typ)
-      }
-
-      // TODO: invariant?
-
       if (entity.consumers.isEmpty) {
         result = result.add(
           ValidationMessage(entity.loc, "An entity must consume a topic")
@@ -525,6 +515,29 @@ object Validation {
         )
       }
       result
+    }
+
+    override def doConsumer(
+      state: ValidationState,
+      container: Container,
+      consumer: Consumer
+    ): ValidationState = {
+      var result = state.checkRef[Topic](consumer.topic)
+      consumer.clauses.foldLeft(result) { (state, onClause) =>
+        doOnClause(state, consumer, onClause)
+      }
+    }
+
+    def doOnClause(
+      state: ValidationState,
+      parent: Consumer,
+      onClause: OnClause
+    ): ValidationState = {
+      // TODO: validate the following:
+      // referential and type integrity of messages
+      // referential integrity of state fields
+      // etc
+      state
     }
 
     override def closeEntity(
@@ -586,7 +599,6 @@ object Validation {
       feature.background.foldLeft(state2) {
         case (s, bg) => s.checkNonEmpty(bg.givens, "Background", feature)
       }
-
     }
 
     override def closeFeature(
