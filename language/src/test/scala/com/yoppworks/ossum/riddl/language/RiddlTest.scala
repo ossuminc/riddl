@@ -4,7 +4,8 @@ import java.time.Instant
 
 import com.yoppworks.test.AdjustableClock
 import com.yoppworks.test.StringBuildingPrintStream
-import org.scalatest.{MustMatchers, WordSpec}
+import org.scalatest.MustMatchers
+import org.scalatest.WordSpec
 
 class RiddlTest extends WordSpec with MustMatchers {
 
@@ -29,10 +30,11 @@ class RiddlTest extends WordSpec with MustMatchers {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl.timer(clock, printStream, "MyStage", show = false) {
-        clock.updateInstant(_.plusSeconds(2))
-        123
-      }
+      val result =
+        RiddlImpl.timer(clock, printStream, "MyStage", show = false) {
+          clock.updateInstant(_.plusSeconds(2))
+          123
+        }
 
       result mustBe 123
 
