@@ -55,19 +55,6 @@ object Terminals {
     final val software = "software"
     final val sync = "sync"
     final val wrapper = "wrapper"
-    final val all: Seq[String] = Seq(
-      aggregate,
-      async,
-      available,
-      consistent,
-      device,
-      function,
-      gateway,
-      persistent,
-      person,
-      reply,
-      software
-    ).sorted.distinct
   }
 
   object Keywords {
@@ -129,59 +116,6 @@ object Terminals {
     final val value = "value"
     final val when = "when"
     final val yields = "yields"
-    final val all_keywords = Seq(
-      action,
-      adaptor,
-      any,
-      all,
-      background,
-      brief,
-      call,
-      causing,
-      command,
-      commands,
-      consumer,
-      context,
-      described,
-      details,
-      domain,
-      entity,
-      event,
-      events,
-      example,
-      explained,
-      feature,
-      function,
-      handles,
-      input,
-      interaction,
-      invariant,
-      items,
-      many,
-      mapping,
-      on,
-      one,
-      option,
-      options,
-      optional,
-      output,
-      query,
-      queries,
-      range,
-      remove,
-      requires,
-      result,
-      results,
-      role,
-      see,
-      send,
-      set,
-      state,
-      then_,
-      topic,
-      value,
-      when
-    ).sorted.distinct
   }
 
   object Predefined {
@@ -202,22 +136,6 @@ object Terminals {
     final val TimeStamp = "TimeStamp"
     final val UniqueId = "UniqueId"
     final val URL = "URL"
-    final val all = Seq(
-      String,
-      Nothing,
-      Number,
-      Integer,
-      Decimal,
-      Real,
-      Date,
-      Time,
-      DateTime,
-      TimeStamp,
-      Duration,
-      URL,
-      Pattern,
-      UniqueId
-    ).sorted.distinct
   }
 
   object Readability {
@@ -231,19 +149,6 @@ object Terminals {
     final val of = "of"
     final val on = "on"
     final val to = "to"
-
-    val all: Seq[String] = Seq(
-      and,
-      are,
-      as,
-      by,
-      for_,
-      from,
-      is,
-      of,
-      on,
-      to
-    ).sorted.distinct
   }
 
   object Operators {
@@ -255,15 +160,5 @@ object Terminals {
     final val times = "*"
     final val div = "/"
     final val mod = "%"
-    final val all: Seq[String] = Seq(
-      and,
-      or,
-      not,
-      plus,
-      minus,
-      times,
-      div,
-      mod
-    )
   }
 }
