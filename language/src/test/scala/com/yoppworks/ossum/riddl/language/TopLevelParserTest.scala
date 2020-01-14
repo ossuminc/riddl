@@ -1,18 +1,14 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.io.File
-import java.io.FileReader
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Identifier
-import com.yoppworks.ossum.riddl.language.AST.Location
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import org.scalatest.MustMatchers
-import org.scalatest.WordSpec
 
 import scala.io.Source
 
-class TopLevelParserTest extends WordSpec with MustMatchers {
+class TopLevelParserTest extends ParsingTestBase {
 
   val simpleDomainFile = new File(
     "language/src/test/input/domains/simpleDomain.riddl"
