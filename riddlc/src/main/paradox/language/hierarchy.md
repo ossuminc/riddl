@@ -15,7 +15,6 @@ Here is how RIDDL nesting can be structured:
       * @ref:[Command](commands.md)
       * @ref:[Event](events.md)
       * @ref:[Query](queries.md)
-      * @ref:[Result](results.md)
     * @ref:[Context](contexts.md)
       * @ref:[Type](types.md)
       * @ref:[Entity](entities.md)
