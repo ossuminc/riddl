@@ -6,14 +6,16 @@ import AST.Definition
 import AST.RiddlNode
 import AST._
 import fastparse._
-import org.scalatest.MustMatchers
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers._
 
 import scala.reflect._
 
+trait ParsingTestBase extends AnyWordSpec with must.Matchers
+
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input)
-    with MustMatchers {
+    with must.Matchers {
   stack.push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
@@ -86,7 +88,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 }
 
 /** Unit Tests For ParsingTest */
-class ParsingTest extends WordSpec with MustMatchers {
+class ParsingTest extends ParsingTestBase {
 
   def parse[T <: RiddlNode, U <: RiddlNode](
     input: RiddlParserInput,
