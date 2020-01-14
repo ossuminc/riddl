@@ -272,6 +272,15 @@ object Validation {
       }
     }
 
+    def checkMessageRef[R <: MessageReference](ref: R): ValidationState = {
+      ref match {
+        case CommandRef(_, id) => checkRef[Command](id)
+        case EventRef(_, id)   => checkRef[Event](id)
+        case QueryRef(_, id)   => checkRef[Query](id)
+        case ResultRef(_, id)  => checkRef[Result](id)
+      }
+    }
+
     def checkRef[T <: Definition: ClassTag](
       reference: Reference
     ): ValidationState = {
@@ -293,6 +302,7 @@ object Validation {
               )
             )
           case d :: Nil =>
+            // TODO: this case is only reachable where T is a more general type than the reference (rarely the case)
             check(
               tc.isAssignableFrom(d.getClass),
               s"'${id.value}' was expected to be ${tc.getSimpleName}" +
@@ -503,7 +513,10 @@ object Validation {
       }
       if (entity.consumers.isEmpty) {
         result = result.add(
-          ValidationMessage(entity.loc, "An entity must consume a topic")
+          ValidationMessage(
+            entity.loc,
+            s"Entity '${entity.id.value}' must consume a topic"
+          )
         )
       } else if (!entity.consumers.exists(_.clauses.nonEmpty)) {
         result = result.add(
@@ -522,7 +535,7 @@ object Validation {
       container: Container,
       consumer: Consumer
     ): ValidationState = {
-      var result = state.checkRef[Topic](consumer.topic)
+      val result = state.checkRef[Topic](consumer.topic)
       consumer.clauses.foldLeft(result) { (state, onClause) =>
         doOnClause(state, consumer, onClause)
       }
@@ -533,11 +546,33 @@ object Validation {
       parent: Consumer,
       onClause: OnClause
     ): ValidationState = {
+      val result = state.checkMessageRef(onClause.msg)
+      onClause.actions.foldLeft(result) { (state, action) =>
+        doClauseStatement(state, onClause, action)
+      }
       // TODO: validate the following:
-      // referential and type integrity of messages
       // referential integrity of state fields
       // etc
-      state
+    }
+
+    // TODO: WIP
+    def doClauseStatement(
+      state: ValidationState,
+      parent: OnClause,
+      clauseStatement: OnClauseStatement
+    ): ValidationState = {
+      clauseStatement match {
+        case set @ SetStatement(_, path, _, _) =>
+          // TODO:  not working (state fields are not captured as references)
+          state.checkRef[Field](path)
+        // validate state changes
+        case remove @ RemoveStatement(_, _, _, _)   => state
+        case append @ AppendStatement(_, _, _, _)   => state
+        case send @ SendStatement(_, _, _, _)       => state
+        case execute @ ExecuteStatement(_, _, _)    => state
+        case publish @ PublishStatement(_, _, _, _) => state
+        case when @ WhenStatement(_, _, _, _)       => state
+      }
     }
 
     override def closeEntity(

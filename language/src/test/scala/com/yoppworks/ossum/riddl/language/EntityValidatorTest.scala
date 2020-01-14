@@ -17,34 +17,17 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Validation.Error,
-            "'SomeType' is not defined"
+            "'SomeType' is not defined but should be a Type"
           )
           assertValidationMessage(
             msgs,
             Validation.Error,
-            "entity must consume a topic"
+            "Entity 'Hamburger' must consume a topic"
           )
           assertValidationMessage(
             msgs,
             Validation.MissingWarning,
-            "should have a description"
-          )
-      }
-    }
-
-    "identify when an entity consumer references a topic that doesn't exist" in {
-      val input =
-        """
-          |entity Hamburger  is {
-          |  consumer foo of topic EntityChannel {}
-          |}
-          |""".stripMargin
-      parseAndValidate[Entity](input) {
-        case (_: Entity, msgs: ValidationMessages) =>
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'EntityChannel' is not defined but should be a Topic"
+            "Entity 'Hamburger' should have a description"
           )
       }
     }
@@ -71,7 +54,7 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Validation.MissingWarning,
-            "has only empty topic"
+            "Entity 'Hamburger' has only empty topic consumers"
           )
       }
     }
