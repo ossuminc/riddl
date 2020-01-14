@@ -345,11 +345,11 @@ class FormatTranslator extends Translator {
           entity.options.size match {
             case 1 =>
               st.addLine(
-                s"option is ${entity.options.head.id.value}"
+                s"option is ${entity.options.head}"
               )
             case x: Int if x > 1 =>
               st.addLine(s"options {")
-                .addLine(entity.options.map(_.id.value).mkString(" "))
+                .addLine(entity.options.iterator.map(_.name).mkString(" "))
                 .addLine(" }")
             case _ =>
               st

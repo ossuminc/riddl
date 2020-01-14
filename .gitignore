@@ -7,3 +7,5 @@
 !.idea/dictionaries
 target
 **/target
+.DS_Store
+

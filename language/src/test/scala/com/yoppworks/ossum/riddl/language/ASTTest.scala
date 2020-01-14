@@ -40,4 +40,48 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL"))))
     }
   }
+
+  "PathIdentifier" should {
+    "format" in {
+      PathIdentifier(Location(), Nil).format mustBe "<empty>"
+      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe "foo.bar.baz"
+      PathIdentifier(Location(), List("foo")).format mustBe "foo"
+    }
+  }
+
+  "RootContainer" should {
+    "be at location 0,0" in {
+      RootContainer(Nil).loc mustBe Location()
+    }
+    "have no description" in {
+      RootContainer(Nil).description mustBe None
+    }
+  }
+
+  "String" should {
+    "have kind 'String'" in {
+      Strng(Location()).kind mustBe "String"
+    }
+  }
+  "Bool" should {
+    "have kind 'Boolean'" in {
+      Bool(Location()).kind mustBe "Boolean"
+    }
+  }
+
+  "Topic" should {
+    "empty topic" should {
+      "have empty contents" in {
+        Topic(Location(), Identifier(Location(), "foo")).contents mustBe Nil
+      }
+    }
+  }
+  "EntityAggregate" should {
+    "have correct name" in {
+      EntityAggregate(Location()).name mustBe "aggregate"
+      EntityPersistent(Location()).name mustBe "persistent"
+      EntityConsistent(Location()).name mustBe "consistent"
+      EntityAvailable(Location()).name mustBe "available"
+    }
+  }
 }

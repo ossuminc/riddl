@@ -257,7 +257,7 @@ object AST {
       with DomainDefinition {
 
     def contents: Seq[Definition] =
-      commands ++ events ++ queries ++ results
+      (commands.iterator ++ events ++ queries ++ results).toList
   }
 
   sealed trait MessageReference extends Reference
@@ -317,18 +317,15 @@ object AST {
 
   sealed trait EntityValue extends RiddlValue
 
-  sealed abstract class EntityOption(name: String) extends EntityValue {
-    def id: Identifier = Identifier(loc, name)
-  }
+  sealed abstract class EntityOption(val name: String) extends EntityValue
 
   case class EntityAggregate(loc: Location) extends EntityOption("aggregate")
   case class EntityPersistent(loc: Location) extends EntityOption("persistent")
   case class EntityConsistent(loc: Location) extends EntityOption("consistent")
   case class EntityAvailable(loc: Location) extends EntityOption("available")
 
-  sealed abstract class EntityKind(name: String) extends EntityValue {
-    def id: Identifier = Identifier(loc, name)
-  }
+  sealed abstract class EntityKind(name: String) extends EntityValue
+
   case class SoftwareEntityKind(loc: Location) extends EntityKind("software")
   case class DeviceEntityKind(loc: Location) extends EntityKind("device")
   case class PersonEntityKind(loc: Location) extends EntityKind("person")
@@ -556,9 +553,8 @@ object AST {
   ) extends Container
       with ContextDefinition {
 
-    def contents: Seq[Definition] = {
-      states ++ types ++ consumers ++ features ++ functions ++ invariants
-    }
+    def contents: Seq[Definition] =
+      (states.iterator ++ types ++ consumers ++ features ++ functions ++ invariants).toList
   }
 
   trait TranslationRule extends Definition {
@@ -716,6 +712,6 @@ object AST {
       with DomainDefinition {
 
     def contents: Seq[DomainDefinition] =
-      types ++ topics ++ contexts ++ interactions
+      (types.iterator ++ topics ++ contexts ++ interactions).toList
   }
 }
