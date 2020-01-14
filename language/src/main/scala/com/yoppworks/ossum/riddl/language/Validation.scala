@@ -272,7 +272,7 @@ object Validation {
       }
     }
 
-    def checkMessageRef[R <: MessageReference](ref: R): ValidationState = {
+    def checkMessageRef(ref: MessageReference): ValidationState = {
       ref match {
         case CommandRef(_, id) => checkRef[Command](id)
         case EventRef(_, id)   => checkRef[Event](id)
