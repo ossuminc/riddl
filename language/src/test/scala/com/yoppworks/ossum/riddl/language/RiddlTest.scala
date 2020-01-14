@@ -9,10 +9,8 @@ import java.util.UUID
 
 import com.yoppworks.test.InMemoryLogger
 import com.yoppworks.test.Logging.Lvl
-import org.scalatest.MustMatchers
-import org.scalatest.WordSpec
 
-class RiddlTest extends WordSpec with MustMatchers {
+class RiddlTest extends ParsingTestBase {
 
   "timer" should {
     "measure the correct time" in {

@@ -5,7 +5,7 @@ resolvers in ThisBuild ++= Seq(
   // , "jetbrains-sbt" at "https://dl.bintray.com/jetbrains/sbt-plugins"
 )
 
-addSbtPlugin("org.jetbrains" % "sbt-idea-plugin" % "3.3.2")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.0")
 addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "1.0.0")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.4")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.2.0")
@@ -19,4 +19,3 @@ addSbtPlugin("com.lightbend.paradox" % "sbt-paradox-apidoc" % "0.4")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
-

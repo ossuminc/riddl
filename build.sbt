@@ -1,8 +1,6 @@
 import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
-import org.jetbrains.sbtidea.Keys._
-import sbt.addSbtPlugin
 
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
@@ -23,9 +21,8 @@ buildInfoKeys in ThisBuild := Seq[BuildInfoKey](
   scalaVersion,
   sbtVersion
 )
-intellijPluginName := name.value
 
-def standardScalaCOptions(is2_13: => Boolean) = {
+def standardScalaCOptions(is2_13: => Boolean): Seq[String] = {
   Seq(
     "-encoding",
     "utf8",
@@ -42,7 +39,7 @@ def standardScalaCOptions(is2_13: => Boolean) = {
 
 lazy val riddl = (project in file("."))
   .settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc, /*idea,*/ `sbt-riddl`)
+  .aggregate(language, translator, riddlc, `sbt-riddl`)
 
 lazy val riddlc = (project in file("riddlc"))
   .enablePlugins(ParadoxPlugin)
@@ -85,12 +82,12 @@ lazy val language = (project in file("language")).settings(
   scalacOptions ++= standardScalaCOptions(scalaVersion.value == "2.13.1"),
   buildInfoPackage := "com.yoppworks.ossum.riddl.language",
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-core" % "2.0.0",
-    "com.lihaoyi" %% "fastparse" % "2.1.3",
-    "com.github.pureconfig" %% "pureconfig" % "0.12.1",
-    "org.scalactic" %% "scalactic" % "3.0.8",
-    "org.scalatest" %% "scalatest" % "3.0.8" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+    "org.typelevel" %% "cats-core" % "2.1.0",
+    "com.lihaoyi" %% "fastparse" % "2.2.3",
+    "com.github.pureconfig" %% "pureconfig" % "0.12.2",
+    "org.scalactic" %% "scalactic" % "3.1.0",
+    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
   )
 )
 
@@ -102,10 +99,10 @@ lazy val translator = (project in file("translator"))
     buildInfoPackage := "com.yoppworks.ossum.riddl.translator",
     libraryDependencies ++= Seq(
       "org.jfree" % "jfreesvg" % "3.4",
-      "org.scalactic" %% "scalactic" % "3.0.8",
-      "org.scalatest" %% "scalatest" % "3.0.8" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
-      "com.github.pureconfig" %% "pureconfig" % "0.12.1"
+      "org.scalactic" %% "scalactic" % "3.1.0",
+      "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
+      "com.github.pureconfig" %% "pureconfig" % "0.12.2"
     )
   )
   .dependsOn(language % "test->test;compile->compile")

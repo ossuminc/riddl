@@ -1,11 +1,11 @@
 package com.yoppworks.ossum.riddl.language
 
 import org.scalatest._
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers._
 
-import scala.collection.immutable.ListMap
-
-/** Unit Tests For TypeSpec */
-class ASTTest extends WordSpec with MustMatchers {
+/** Unit Tests For Abstract Syntax Tree */
+class ASTTest extends AnyWordSpec with must.Matchers {
   import AST._
 
   "Types" should {
