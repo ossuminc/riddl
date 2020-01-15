@@ -9,18 +9,18 @@ domain MyDomain is { ??? }
 ``` 
 
 ## Notes
-@@@note
+@@@ note
 
 Whenever an important point needs to be identified it will be introduced as a
 note like this paragraph
 
-@@@note 
+@@@ 
 
 ## Warnings
 
-@@@warning
+@@@ warning
 
 Whenever a potentially dangerous point needs to be made, it will be
  introduced as a warning like this paragraph.
 
-@@@warning 
+@@@ 
