@@ -16,15 +16,25 @@ class ValidateExamplesTest extends ValidatingTest {
         validateFile(label, fileName) {
           case (_, messages) =>
             val errors = messages.filter(_.kind.isError)
-            val warnings = messages
+            val warnings = messages.iterator
               .filter(_.kind.isWarning)
               .filterNot(_.kind == MissingWarning)
               .filterNot(_.kind == StyleWarning)
-            info(errors.map(_.format(fileName)).mkString("\n"))
-            info(warnings.map(_.format(fileName)).mkString("\n"))
+              .toList
+            info(errors.iterator.map(_.format(fileName)).mkString("\n"))
+            info(warnings.iterator.map(_.format(fileName)).mkString("\n"))
             errors mustBe empty
             warnings mustBe empty
         }
+      }
+    }
+  }
+
+  "Enumerations" should {
+    "enforce Enumerators to start with lower case" in {
+      validateFile("t0001", "enumerations/t0001.riddl") {
+        case (_, messages) =>
+          assert(messages.exists(msg => msg.kind.isStyle))
       }
     }
   }

@@ -32,7 +32,7 @@ abstract class ValidatingTest extends ParsingTest {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
       case Left(errors) =>
-        val msgs = errors.map(_.format).mkString("\n")
+        val msgs = errors.iterator.map(_.format).mkString("\n")
         fail(s"In $label:\n$msgs")
       case Right(root) =>
         val messages = Validation.validate(root)

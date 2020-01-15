@@ -73,21 +73,6 @@ object Validation {
   val NoValidationMessages: List[ValidationMessage] =
     List.empty[ValidationMessage]
 
-  object ValidationMessages {
-
-    def apply(): ValidationMessages = {
-      NoValidationMessages
-    }
-
-    def apply(msg: ValidationMessage): ValidationMessages = {
-      apply() :+ msg
-    }
-
-    def apply(msgs: ValidationMessage*): ValidationMessages = {
-      apply() ++ msgs
-    }
-  }
-
   trait ValidationOptions extends Riddl.Options
 
   val defaultOptions: ValidationOptions = new ValidationOptions {
@@ -215,7 +200,7 @@ object Validation {
                 .checkIdentifierLength(enumerator)
                 .check(
                   id.value.head.isUpper,
-                  s"Enumerator '${id.value}' must start with lower case",
+                  s"Enumerator '${id.value}' must start with upper case",
                   StyleWarning,
                   id.loc
                 )
