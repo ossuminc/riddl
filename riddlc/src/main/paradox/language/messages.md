@@ -1,11 +1,11 @@
 # Messages
 
 Messages are how entities, contexts, and services interact. There are three
-kinds of messages: Commands, Events, and Queries.
+kinds of messages: Commands, Events, Queries, and Results.
 
-![cqrs](images/cqrs.png "Entities")
+![cqrs](images/results.png "Entities")
 
-Commands, Events, and Queries are the messages in a Reactive System.
+Commands, Events, Queries, and Results are the messages in a Reactive System.
 They form the API for a Bounded Context or Microservice.
 
 @@@ index
@@ -13,5 +13,6 @@ They form the API for a Bounded Context or Microservice.
 * [Command](commands.md)
 * [Events](events.md)
 * [Query](queries.md)
+* [Result](results.md)
 
 @@@
