@@ -18,6 +18,3 @@ they are the same entity.
 Entities can also contain business Logic. Actors in Akka, Entities in Lagom. 
 Contrary to Value Objects, an Entity's immutable identity conveys equivalence.
 Individual pieces of attribute of entity can change.
-
-
- 
