@@ -7,6 +7,7 @@ import com.yoppworks.test.StringBuildingPrintStream
 import java.io.File
 import java.util.UUID
 
+import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
 import com.yoppworks.test.InMemoryLogger
 import com.yoppworks.test.Logging.Lvl
 
@@ -80,6 +81,93 @@ class RiddlTest extends ParsingTestBase {
         logger.lines().exists(_.level == Lvl.Error),
         "When failing to parse, an error should be logged."
       )
+    }
+  }
+
+  /** Executes a function while capturing system's stderr, return the result of the function and the captured output.
+    * Switches stderr back once code block finishes or throws exception
+    * e.g.
+    * {{{
+    *   val result = capturingStdErr { () =>
+    *     System.err.println("hi there!")
+    *     123
+    *   }
+    *
+    *   assert(result == (123, "hi there!\n")
+    * }}}
+    * */
+  def capturingStdErr[A](f: () => A): (A, String) = {
+    val out = System.err
+    val printStream = StringBuildingPrintStream()
+    var result: (A, String) = null
+    try {
+      System.setErr(printStream)
+      val a = f()
+      val output = printStream.mkString()
+      result = (a, output)
+
+    } finally {
+      System.setErr(out)
+    }
+    result
+  }
+
+  /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
+    * Switches stdout back once code block finishes or throws exception
+    * e.g.
+    * {{{
+    *   val result = capturingStdErr { () =>
+    *     System.out.println("hi there!")
+    *     123
+    *   }
+    *
+    *   assert(result == (123, "hi there!\n")
+    * }}}
+    * */
+  def capturingStdOut[A](f: () => A): (A, String) = {
+    val out = System.out
+    val printStream = StringBuildingPrintStream()
+    var result: (A, String) = null
+    try {
+      System.setOut(printStream)
+      val a = f()
+      val output = printStream.mkString()
+      result = (a, output)
+    } finally {
+      System.setOut(out)
+    }
+    result
+  }
+
+  "SysLogger" should {
+    "print error message" in {
+      capturingStdErr(() => SysLogger.error("asdf"))._2 mustBe "[error] asdf\n"
+    }
+    "print severe message" in {
+      capturingStdErr(() => SysLogger.severe("asdf"))._2 mustBe "[severe] asdf\n"
+    }
+    "print warn message" in {
+      capturingStdErr(() => SysLogger.warn("asdf"))._2 mustBe "[warning] asdf\n"
+    }
+    "print info message" in {
+      capturingStdErr(() => SysLogger.info("asdf"))._2 mustBe "[info] asdf\n"
+    }
+    "print many message" in {
+      capturingStdErr { () =>
+        SysLogger.error("a")
+        SysLogger.info("b")
+        SysLogger.info("c")
+        SysLogger.warn("d")
+        SysLogger.severe("e")
+        SysLogger.error("f")
+      }._2 mustBe
+        """[error] a
+          |[info] b
+          |[info] c
+          |[warning] d
+          |[severe] e
+          |[error] f
+          |""".stripMargin
     }
   }
 }
