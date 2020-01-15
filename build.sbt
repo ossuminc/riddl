@@ -33,6 +33,7 @@ def standardScalaCOptions(is2_13: => Boolean): Seq[String] = {
     "-language:higherKinds",
     "-language:existentials",
     "-language:postfixOps",
+    "-J--illegal-access=warn",
     { if (is2_13) "-Wdead-code" else "" }
   )
 }
