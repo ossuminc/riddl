@@ -7,7 +7,7 @@ domain Everything {
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
   topic AChannel is {
-    command DoThisThing is {} yields event ThingWasDone
+    command DoThisThing is { thingField: Integer } yields event ThingWasDone
     event ThingWasDone is {}
     query FindThisThing is {} yields result ThisQueryResult
     result ThisQueryResult is {}
@@ -62,7 +62,9 @@ domain Everything {
     entity Something is {
       options (aggregate persistent)
 
-      state is { field:  SomeType }
+      type somethingDate is Date
+
+      state someState is { field:  SomeType }
 
       function whenUnderTheInfluence {
         requires: Nothing
@@ -71,15 +73,15 @@ domain Everything {
 
       consumer foo of topic AChannel is {
         on command Something {
-          when misc() explained as { "inebreiated" } then {
+          when misc() explained as { "inebriated" } then {
             publish event Inebriated to topic AChannel
           }
         }
       }
     }
 
-    entity SomeOtherThing {
-      state is { field: SomeType }
+    entity SomeOtherThing is {
+      state otherThingState is { field: SomeType }
     }
   }
 }

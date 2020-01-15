@@ -31,7 +31,7 @@ class ConsumerValidatorTest extends ValidatingTest {
           |topic EntityChannel {}
           |context EntityContext {
           |entity Hamburger  is {
-          |  state is { field1: Number, field2: String }
+          |  state HamburgerState = { field1: Number, field2: String }
           |  consumer foo of topic EntityChannel {
           |    on command EntityCommand { set field1 to 445 }
           |    on event EntityEvent { set field1 to 678 }
@@ -65,7 +65,7 @@ class ConsumerValidatorTest extends ValidatingTest {
           |}
           |context EntityContext {
           |entity Hamburger  is {
-          |  state is { field1: Number }
+          |  state HamburgerState = { field1: Number }
           |  consumer foo of topic EntityChannel {
           |    on event Incoming { set field1 to 678 }
           |  }
@@ -93,8 +93,8 @@ class ConsumerValidatorTest extends ValidatingTest {
           |  commands { EntityCommand is {} yields event bar }
           |}
           |context EntityContext  {
-          |entity Hamburger  is {
-          |  state is { field1: Number }
+          |entity Hamburger is {
+          |  state HamburgerState = { field1: Number }
           |  consumer foo of topic EntityChannel {
           |    on command EntityCommand { set nonExistingField to 123 }
           |  }
