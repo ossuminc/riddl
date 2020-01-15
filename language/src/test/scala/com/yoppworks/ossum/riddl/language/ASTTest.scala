@@ -84,4 +84,22 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       EntityAvailable(Location()).name mustBe "available"
     }
   }
+
+  "Domain" should {
+    "empty domain should have empty contents" in {
+      Domain(Location(), Identifier(Location(), "test")).contents mustBe empty
+    }
+    "non-empty domain should have non-empty contents" in {
+      val types =
+        List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
+      val topics = List(Topic(Location(), Identifier(Location(), "foo")))
+      Domain(
+        Location(),
+        Identifier(Location(), "test"),
+        types = types,
+        topics = topics
+      ).contents mustBe (types ++ topics)
+    }
+  }
+
 }
