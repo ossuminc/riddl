@@ -139,6 +139,11 @@ trait TypeParser extends CommonParser {
     ).map { case (agg, desc) => agg.copy(description = desc) }
   }
 
+  /** Parses mappings, i.e.
+    * ```
+    *   mapping { from Integer to String }
+    * ```
+    * */
   def mapping[_: P]: P[Mapping] = {
     P(
       location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~
@@ -148,6 +153,11 @@ trait TypeParser extends CommonParser {
     }
   }
 
+  /** Parses ranges, i.e.
+    * ```
+    *   range { from 1 to 2 }
+    * ```
+    *  */
   def range[_: P]: P[RangeType] = {
     P(
       location ~ "range" ~ open ~

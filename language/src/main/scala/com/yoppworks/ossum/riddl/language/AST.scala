@@ -106,6 +106,17 @@ object AST {
   case class OneOrMore(loc: Location, texp: TypeExpression)
       extends TypeExpression
 
+  /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
+    *
+    * @param id the identifier (name) of the Enumerator
+    * @param enumVal the optional int value
+    * @param value enumerators can optionally define an aggregation type, such as `Keyboard` in:
+    *              {{{
+    *                type Device is any of { Keyboard { locale: Locale } Mouse Monitor}
+    *              }}}
+    * @param description the description of the enumerator. Each Enumerator in an enumeration may define independent
+    *                    descriptions
+    */
   case class Enumerator(
     loc: Location,
     id: Identifier,

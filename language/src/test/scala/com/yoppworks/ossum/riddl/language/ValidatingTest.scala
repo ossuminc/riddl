@@ -5,6 +5,7 @@ import java.io.File
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
+import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
 import org.scalatest.Assertion
 
 import scala.reflect._
@@ -25,7 +26,11 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def validateFile(label: String, fileName: String)(
+  def validateFile(
+    label: String,
+    fileName: String,
+    options: ValidationOptions = Validation.defaultOptions
+  )(
     validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val directory = "language/src/test/input/"
@@ -35,7 +40,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.iterator.map(_.format).mkString("\n")
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root)
+        val messages = Validation.validate(root, options)
         validation(root, messages)
     }
   }

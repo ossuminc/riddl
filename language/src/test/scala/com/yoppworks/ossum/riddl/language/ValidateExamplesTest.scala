@@ -2,6 +2,10 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.Validation.MissingWarning
 import com.yoppworks.ossum.riddl.language.Validation.StyleWarning
+import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+
+import scala.collection.immutable.HashMap
+import scala.util.hashing.Hashing
 
 /** Validate files */
 class ValidateExamplesTest extends ValidatingTest {
@@ -37,5 +41,93 @@ class ValidateExamplesTest extends ValidatingTest {
           assert(messages.exists(msg => msg.kind.isStyle))
       }
     }
+    "allow enumerators with values" in {
+      validateFile("t0002", "enumerations/t0002.riddl") {
+        case (result, messages) => assert(!messages.exists(_.kind.isError))
+      }
+    }
   }
+  "Mappings" should {
+    "allow ranges" in {
+      validateFile("t0001", "mappings/t0001.riddl") {
+        case (result, messages) => assert(!messages.exists(_.kind.isError))
+      }
+    }
+  }
+
+  "Ranges" should {
+    "allow ranges" in {
+      validateFile("t0001", "ranges/t0001.riddl") {
+        case (result, messages) => assert(!messages.exists(_.kind.isError))
+      }
+    }
+  }
+
+  "options.showStyleWarnings" should {
+    "determine if style warnings are returned from validation" in {
+      validateFile(
+        "badstyle",
+        "domains/badstyle.riddl",
+        options = new ValidationOptions {
+          override def showTimes: Boolean = false
+          override def showWarnings: Boolean = true
+          override def showMissingWarnings: Boolean = true
+          override def showStyleWarnings: Boolean = false
+        }
+      ) {
+        case (result, messages) =>
+          assert(!messages.exists(_.kind.isError))
+          assert(!messages.exists(_.kind.isStyle))
+          assert(messages.exists(_.kind.isMissing))
+      }
+      validateFile(
+        "badstyle",
+        "domains/badstyle.riddl",
+        options = new ValidationOptions {
+          override def showTimes: Boolean = false
+          override def showWarnings: Boolean = true
+          override def showMissingWarnings: Boolean = true
+          override def showStyleWarnings: Boolean = true
+        }
+      ) {
+        case (result, messages) =>
+          assert(!messages.exists(_.kind.isError))
+          assert(messages.exists(_.kind.isStyle))
+          assert(messages.exists(_.kind.isMissing))
+      }
+    }
+  }
+  "options.showMissingWarnings" should {
+    "determine if missing warnings are returned from validation" in {
+      validateFile(
+        "badstyle",
+        "domains/badstyle.riddl",
+        options = new ValidationOptions {
+          override def showTimes: Boolean = false
+          override def showWarnings: Boolean = true
+          override def showMissingWarnings: Boolean = false
+          override def showStyleWarnings: Boolean = false
+        }
+      ) {
+        case (result, messages) =>
+          assert(!messages.exists(_.kind.isError))
+          assert(!messages.exists(_.kind.isMissing))
+      }
+      validateFile(
+        "badstyle",
+        "domains/badstyle.riddl",
+        options = new ValidationOptions {
+          override def showTimes: Boolean = false
+          override def showWarnings: Boolean = true
+          override def showMissingWarnings: Boolean = true
+          override def showStyleWarnings: Boolean = true
+        }
+      ) {
+        case (result, messages) =>
+          assert(!messages.exists(_.kind.isError))
+          assert(messages.exists(_.kind.isMissing))
+      }
+    }
+  }
+
 }
