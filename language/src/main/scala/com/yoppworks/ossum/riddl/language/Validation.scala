@@ -30,30 +30,30 @@ object Validation {
   }
 
   case object MissingWarning extends ValidationMessageKind {
-    override def isWarning = true
+    override def isWarning: Boolean = true
     override def isMissing: Boolean = true
     override def toString: String = "Missing"
   }
 
   case object StyleWarning extends ValidationMessageKind {
-    override def isWarning = true
+    override def isWarning: Boolean = true
     override def isStyle: Boolean = true
     override def toString: String = "Style"
   }
 
   case object Warning extends ValidationMessageKind {
-    override def isWarning = true
+    override def isWarning: Boolean = true
     override def toString: String = "Warning"
   }
 
   case object Error extends ValidationMessageKind {
-    override def isError = true
+    override def isError: Boolean = true
     override def toString: String = "Error"
   }
 
   case object SevereError extends ValidationMessageKind {
-    override def isError = true
-    override def isSevereError = true
+    override def isError: Boolean = true
+    override def isSevereError: Boolean = true
     override def toString: String = "Severe"
   }
 
@@ -116,14 +116,17 @@ object Validation {
     def add(msg: ValidationMessage): ValidationState = {
       msg.kind match {
         case StyleWarning =>
-          if (isReportStyleWarnings)
+          if (isReportStyleWarnings) {
             this.copy(msgs = msgs :+ msg)
-          else
+          } else {
             this
+          }
         case MissingWarning =>
-          if (isReportMissingWarnings)
+          if (isReportMissingWarnings) {
             this.copy(msgs = msgs :+ msg)
-          else this
+          } else {
+            this
+          }
 
         case _ =>
           this.copy(msgs = msgs :+ msg)
@@ -171,6 +174,95 @@ object Validation {
       }
     }
 
+    def checkEnumeration(
+      definition: Definition,
+      enumerators: Seq[Enumerator],
+      desc: Option[Description]
+    ): ValidationState = {
+      enumerators.foldLeft(this) {
+        case (state, enumerator) =>
+          val id = enumerator.id
+          val s = state
+            .checkIdentifierLength(enumerator)
+            .check(
+              id.value.head.isUpper,
+              s"Enumerator '${id.value}' must start with upper case",
+              StyleWarning,
+              id.loc
+            )
+          if (enumerator.value.nonEmpty) {
+            s.checkTypeExpression(enumerator.value.get, definition)
+              .checkDescription(definition, desc)
+          } else {
+            s.checkDescription(definition, desc)
+          }
+      }
+
+    }
+
+    def checkAlternation(
+      definition: Definition,
+      alternation: AST.Alternation
+    ): ValidationState = {
+      alternation.of
+        .foldLeft(this) {
+          case (state, typex) =>
+            state.checkTypeExpression(typex, definition)
+        }
+        .checkDescription(definition, alternation.description)
+    }
+
+    def checkRangeType(
+      definition: Definition,
+      rt: RangeType
+    ): ValidationState = {
+      this
+        .check(
+          rt.min.n >= BigInt.long2bigInt(Long.MinValue),
+          "Minimum value might be too small to store in a Long",
+          Warning,
+          rt.loc
+        )
+        .check(
+          rt.max.n <= BigInt.long2bigInt(Long.MaxValue),
+          "Maximum value might be too large to store in a Long",
+          Warning,
+          rt.loc
+        )
+        .checkDescription(definition, rt.description)
+    }
+
+    def checkAggregation(
+      definition: Definition,
+      agg: Aggregation
+    ): ValidationState = {
+      agg.fields
+        .foldLeft(this) {
+          case (state, field) =>
+            state
+              .checkIdentifierLength(field)
+              .check(
+                field.id.value.head.isLower,
+                "Field names should start with a lower case letter",
+                StyleWarning,
+                field.loc
+              )
+              .checkTypeExpression(field.typeEx, field)
+              .checkDescription(field, field.description)
+        }
+        .checkDescription(definition, agg.description)
+    }
+
+    def checkMapping(
+      definition: AST.Definition,
+      mapping: AST.Mapping
+    ): ValidationState = {
+      this
+        .checkTypeExpression(mapping.from, definition)
+        .checkTypeExpression(mapping.to, definition)
+        .checkDescription(definition, mapping.description)
+    }
+
     def checkTypeExpression(
       typ: TypeExpression,
       definition: Definition
@@ -193,65 +285,15 @@ object Validation {
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
         case Enumeration(_, enumerators: Seq[Enumerator], desc) =>
-          enumerators.foldLeft(this) {
-            case (state, enumerator) =>
-              val id = enumerator.id
-              val s = state
-                .checkIdentifierLength(enumerator)
-                .check(
-                  id.value.head.isUpper,
-                  s"Enumerator '${id.value}' must start with upper case",
-                  StyleWarning,
-                  id.loc
-                )
-              if (enumerator.value.nonEmpty) {
-                s.checkTypeExpression(enumerator.value.get, definition)
-                  .checkDescription(definition, desc)
-              } else {
-                s.checkDescription(definition, desc)
-              }
-          }
-        case Alternation(_, of, addendum) =>
-          of.foldLeft(this) {
-              case (state, typex) =>
-                state.checkTypeExpression(typex, definition)
-            }
-            .checkDescription(definition, addendum)
-        case Aggregation(loc, of: Seq[Field], addendum) =>
-          of.foldLeft(this) {
-              case (state, field) =>
-                state
-                  .checkIdentifierLength(field)
-                  .check(
-                    field.id.value.head.isLower,
-                    "Field names should start with a lower case letter",
-                    StyleWarning,
-                    loc
-                  )
-                  .checkTypeExpression(field.typeEx, field)
-                  .checkDescription(field, field.description)
-            }
-            .checkDescription(definition, addendum)
-        case Mapping(_, from, to, addendum) =>
-          this
-            .checkTypeExpression(from, definition)
-            .checkTypeExpression(to, definition)
-            .checkDescription(definition, addendum)
-        case RangeType(loc, min, max, addendum) =>
-          this
-            .check(
-              min.n >= BigInt.long2bigInt(Long.MinValue),
-              "Minimum value might be too small to store in a Long",
-              Warning,
-              loc
-            )
-            .check(
-              max.n <= BigInt.long2bigInt(Long.MaxValue),
-              "Maximum value might be too large to store in a Long",
-              Warning,
-              loc
-            )
-            .checkDescription(definition, addendum)
+          checkEnumeration(definition, enumerators, desc)
+        case alt: Alternation =>
+          checkAlternation(definition, alt)
+        case agg: Aggregation =>
+          checkAggregation(definition, agg)
+        case mapping: Mapping =>
+          checkMapping(definition, mapping)
+        case rt: RangeType =>
+          checkRangeType(definition, rt)
         case ReferenceType(_, entity: EntityRef, addendum) =>
           this.checkRef[Entity](entity).checkDescription(definition, addendum)
       }
@@ -287,7 +329,8 @@ object Validation {
               )
             )
           case d :: Nil =>
-            // TODO: this case is only reachable where T is a more general type than the reference (rarely the case)
+            // TODO: this case is only reachable where T is a more general
+            // TODO: type than the reference (rarely the case)
             check(
               tc.isAssignableFrom(d.getClass),
               s"'${id.value}' was expected to be ${tc.getSimpleName}" +
@@ -547,16 +590,16 @@ object Validation {
       clauseStatement: OnClauseStatement
     ): ValidationState = {
       clauseStatement match {
-        case set @ SetStatement(_, path, _, _) =>
+        case SetStatement(_, path, _, _) =>
           // TODO:  not working (state fields are not captured as references)
           state.checkRef[Field](path)
         // validate state changes
-        case remove @ RemoveStatement(_, _, _, _)   => state
-        case append @ AppendStatement(_, _, _, _)   => state
-        case send @ SendStatement(_, _, _, _)       => state
-        case execute @ ExecuteStatement(_, _, _)    => state
-        case publish @ PublishStatement(_, _, _, _) => state
-        case when @ WhenStatement(_, _, _, _)       => state
+        case RemoveStatement(_, _, _, _)  => state
+        case AppendStatement(_, _, _, _)  => state
+        case SendStatement(_, _, _, _)    => state
+        case ExecuteStatement(_, _, _)    => state
+        case PublishStatement(_, _, _, _) => state
+        case WhenStatement(_, _, _, _)    => state
       }
     }
 

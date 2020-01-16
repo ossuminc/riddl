@@ -38,6 +38,8 @@ def standardScalaCOptions(is2_13: => Boolean): Seq[String] = {
   )
 }
 
+lazy val compilecheck = taskKey[Unit]("compile and then scalastyle")
+
 lazy val riddl = (project in file("."))
   .settings(publish := {}, publishLocal := {})
   .aggregate(language, translator, riddlc, `sbt-riddl`)
@@ -106,7 +108,15 @@ lazy val language = (project in file("language")).settings(
     "org.scalactic" %% "scalactic" % "3.1.0",
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
-  )
+  ),
+  compilecheck in Compile := {
+    Def
+      .sequential(
+        compile in Compile,
+        (scalastyle in Compile).toTask("")
+      )
+      .value
+  }
 )
 
 lazy val translator = (project in file("translator"))

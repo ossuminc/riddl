@@ -38,7 +38,7 @@ class FormatTranslator extends Translator {
     outputPath: Option[Path] = None
   ) extends Configuration
 
-  val defaultConfig = FormatConfig()
+  val defaultConfig: FormatConfig = FormatConfig()
 
   type CONF = FormatConfig
 
@@ -190,21 +190,89 @@ class FormatTranslator extends Translator {
       }
     }
 
+    def emitString(s: Strng): FormatState = {
+      (s.min, s.max) match {
+        case (Some(n), Some(x)) =>
+          this.add(s"String($n,$x")
+        case (None, Some(x)) =>
+          this.add(s"String(,$x")
+        case (Some(n), None) =>
+          this.add(s"String($n)")
+        case (None, None) =>
+          this.add(s"String")
+      }
+    }
+
+    def emitEnumeration(enumeration: AST.Enumeration): FormatState = {
+      this.add(s"any of {\n")
+      enumeration.of
+        .foldLeft(this) { (s, e) =>
+          s.add(e.id.value)
+          e.value.map(visitTypeExpr).getOrElse(s)
+        }
+        .visitDescription(enumeration.description)
+    }
+
+    def emitAlternation(alternation: AST.Alternation): FormatState = {
+      val s = this.add(s"one of {\n").visitTypeExpr(alternation.of.head)
+      alternation.of.tail
+        .foldLeft(s) { (s, te) =>
+          s.add(" or ").visitTypeExpr(te)
+        }
+        .visitDescription(alternation.description)
+    }
+
+    def emitAggregation(aggregation: AST.Aggregation): FormatState = {
+      val of = aggregation.fields
+      if (of.isEmpty) {
+        this.add("{}")
+      } else if (of.size == 1) {
+        val f: Field = of.head
+        this
+          .add(s"{ ${f.id.value}: ")
+          .visitTypeExpr(f.typeEx)
+          .add(" ")
+          .visitDescription(f.description)
+      } else {
+        this.add("{\n")
+        val result = of.foldLeft(this) {
+          case (s, f) =>
+            s.add(s"$spc  ${f.id.value}: ")
+              .visitTypeExpr(f.typeEx)
+              .add(" ")
+              .visitDescription(f.description)
+              .add(",")
+        }
+        result.lines.deleteCharAt(result.lines.length - 1)
+        result.visitDescription(aggregation.description)
+      }
+    }
+
+    def emitMapping(mapping: AST.Mapping): FormatState = {
+      this
+        .add(s"mapping from ")
+        .visitTypeExpr(mapping.from)
+        .add(" to ")
+        .visitTypeExpr(mapping.to)
+        .visitDescription(mapping.description)
+    }
+
+    def emitPattern(pattern: AST.Pattern): FormatState = {
+      val line = if (pattern.pattern.size == 1) {
+        "Pattern(\"" +
+          pattern.pattern.head.s +
+          "\"" + s") "
+      } else {
+        s"Pattern(\n" +
+          pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
+        s"\n) "
+      }
+      this.add(line).visitDescription(pattern.description)
+    }
+
     def visitTypeExpr(typEx: AST.TypeExpression): FormatState = {
       typEx match {
-        case Strng(_, min, max) =>
-          (min, max) match {
-            case (Some(n), Some(x)) =>
-              this.add(s"String($n,$x")
-            case (None, Some(x)) =>
-              this.add(s"String(,$x")
-            case (Some(n), None) =>
-              this.add(s"String($n)")
-            case (None, None) =>
-              this.add(s"String")
-          }
-        case URL(_, scheme) =>
-          this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
+        case string: Strng  => emitString(string)
         case Bool(_)        => this.add("Boolean")
         case Number(_)      => this.add("Number")
         case Integer(_)     => this.add("Integer")
@@ -216,77 +284,30 @@ class FormatTranslator extends Translator {
         case LatLong(_)     => this.add("LatLong")
         case Nothing(_)     => this.add("Nothing")
         case TypeRef(_, id) => this.add(id.value.mkString("."))
-        case AST.Enumeration(_, of, desc) =>
-          this.add(s"any of {\n")
-          of.foldLeft(this) { (s, e) =>
-              s.add(e.id.value)
-              e.value.map(visitTypeExpr).getOrElse(s)
-            }
-            .visitDescription(desc)
-        case AST.Alternation(_, of, desc) =>
-          val s = this.add(s"one of {\n").visitTypeExpr(of.head)
-          of.tail
-            .foldLeft(s) { (s, te) =>
-              s.add(" or ").visitTypeExpr(te)
-            }
-            .visitDescription(desc)
-        case AST.Aggregation(_, of, desc) =>
-          if (of.isEmpty) {
-            this.add("{}")
-          } else if (of.size == 1) {
-            val f: Field = of.head
-            this
-              .add(s"{ ${f.id.value}: ")
-              .visitTypeExpr(f.typeEx)
-              .add(" ")
-              .visitDescription(f.description)
-          } else {
-            this.add("{\n")
-            val result = of.foldLeft(this) {
-              case (s, f) =>
-                s.add(s"$spc  ${f.id.value}: ")
-                  .visitTypeExpr(f.typeEx)
-                  .add(" ")
-                  .visitDescription(f.description)
-                  .add(",")
-            }
-            result.lines.deleteCharAt(result.lines.length - 1)
-            result.visitDescription(desc)
-          }
-        case AST.Mapping(_, from, to, desc) =>
-          this
-            .add(s"mapping from ")
-            .visitTypeExpr(from)
-            .add(" to ")
-            .visitTypeExpr(to)
-            .visitDescription(desc)
-        case AST.RangeType(_, min, max, desc) =>
+        case URL(_, scheme) =>
+          this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
+        case enumeration: Enumeration =>
+          emitEnumeration(enumeration)
+        case alternation: Alternation =>
+          emitAlternation(alternation)
+        case aggregation: Aggregation =>
+          emitAggregation(aggregation)
+        case mapping: Mapping =>
+          emitMapping(mapping)
+        case RangeType(_, min, max, desc) =>
           this.add(s"range from $min to $max ").visitDescription(desc)
-        case AST.ReferenceType(_, id, desc) =>
+        case ReferenceType(_, id, desc) =>
           this.add(s"reference to $id").visitDescription(desc)
-        case Pattern(_, pat, desc) =>
-          val line = if (pat.size == 1) {
-            "Pattern(\"" +
-              pat.head.s +
-              "\"" + s") "
-          } else {
-            s"Pattern(\n" +
-              pat.map(l => spc + "  \"" + l.s + "\"\n")
-            s"\n) "
-          }
-          this.add(line).visitDescription(desc)
+        case pattern: Pattern =>
+          emitPattern(pattern)
         case UniqueId(_, id, desc) =>
           this.add(s"Id(${id.value}) ").visitDescription(desc)
-
         case Optional(_, typex) =>
           this.visitTypeExpr(typex).add("?")
-
         case ZeroOrMore(_, typex) =>
           this.visitTypeExpr(typex).add("*")
-
         case OneOrMore(_, typex) =>
           this.visitTypeExpr(typex).add("+")
-
         case x: TypeExpression =>
           require(requirement = false, s"Unknown type $x")
           this

@@ -5,4 +5,4 @@ test:
   tags:
     - kubernetes
   script:
-    - sbt clean test paradox
+    - sbt clean test scalastyle paradox
