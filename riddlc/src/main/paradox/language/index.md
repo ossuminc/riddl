@@ -19,17 +19,6 @@ Here are the main concepts the language supports:
 * [Conventions](conventions.md)
 * [Quick Start](quickstart.md)
 * [Hierarchy](hierarchy.md)
-* [Domains](domains.md)
-* [Contexts](contexts.md)
-* [Entities](entities.md)
-* [Types](types.md)
-* [Interaction](interactions.md)
-* [Adaptor](adaptors.md)
-* [Functions](functions.md)
-* [Messages](messages.md)
-* [Topics](topics.md)
-* [Projections](projections.md)
-* [Action](actions.md)
 
 @@@
 
