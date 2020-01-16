@@ -9,11 +9,14 @@ arranged on any line.  RIDDL supports the definition of a
 variety of concepts taken directly from Domain Driven Design
 and the Unified Modeling Language. 
 
-## Definitions and References
-The language is simply a declaration of definitions and references. 
-A definition introduces a named instance of some concept and a
-specification of that thing. If RIDDL supported the concept of a
-Cat (it doesn't), then you might specify it like this:
+## Definitions And References
+The language is simply a hierarchically nested set of definitions and
+containers of definitions.  A definition introduces a named instance of some
+concept in the RIDDL meta-model. The specification of that definition
+proceeds directly following the `is` keyword.
+
+If RIDDL supported the concept of a Cat and its owner  (it doesn't), then you
+might specify a cat named "Smudge" with an owner named "Reid" like this:
 ```text
 cat Smudge is {
   owner is entity Reid
@@ -32,17 +35,20 @@ Here is an explanation of each of these tokens:
   are always made in this way, by name with a prefix for the kind of concept.
 * `}` completes the definition of Smudge the cat.
 
-This is a simple convention used throughout the language for various 
-concept definitions.
+This is a simple convention used throughout the language for all 
+concept definitions and references to them. 
 
-## Definitions can be nested
-Definitions need not only contain the properties of the concept being defined.
-Between the `{` and the `}`, other, nested, definitions may be defined. This is
-only true of some concepts like `domain`, `context` and `entity`.  We call 
-these definitions "containers" because they contain other definitions. 
+## Containers
+Containers are definitions that contain other, nested, definitions. Between the
+`{` and the `}` that define the boundaries of a definition, you may place other
+definitions. Such nested definitions are deemed to be **contained**. 
+Not every definition is a container as it only applies to concepts
+like `domain`, `context` and `entity`.   
+
+## Leaves
 Definitions that may not contain other definitions are called "leaves"
 because, like tree leaves, they occur at the extremity (most nested) part of
-the definitions.
+the definitional hierarchy. 
 
 ## Work In Progress
 Modelling a domain can be hard work. New ideas come up that must be flushed
@@ -50,13 +56,60 @@ out.  Sometimes things get left undefined. That's okay! Riddl uses a special
 construct, `???` to mean "we don't know yet". It can be used as the body of
 any definition. For example it is entirely legal to write:
 ```text
-entity Thing_A_Ma_Bob { ??? }
+cat Smudge is { ??? }
+```
+If we aren't sure of the characteristics of the cat named "Smudge"
+ 
+## Descriptions (Explanations)
+A definition may also be accompanied by some text or markup at its end to
+describe or explain the purpose of that definition. We call these
+ **descriptions** or **explanations** because this is the text that is
+used to describe or explain the RIDDL definition and it is used to generate
+documentation for the definition.  A description occurs directly after the
+definition's closing curly bracket and is preceded using
+either the `described as` or `explained as` keyword phrase. Essentially it 
+looks like this:
+```text
+cat Smudge is { ??? } explained as "TBD but owned by Reid"
+```  
+See the @ref:[Quick Start](quickstart.md) for more examples 
+of definition descriptions.  
+
+What occurs within a description/explanation can be one of three things:
+
+* A single literal string in quotations: `"this string"`, as shown above.
+* A curly brace enclosed list of "docblock" lines which consists of a group
+  of lines, each preceded by a vertical bar. The bar denotes the left margin.
+  Markdown syntax is accepted. 
+* A curly brace enclosed list of four sections: `brief`, `details`, 
+  `items` and `see`
+
+Each of these is explained in more detail in the sections that follow. 
+
+### Single Literal String
+Pretty simple, like this:
+```riddl
+domain SomeDomain is { ??? } explained as "Not very helpful"
 ```
 
-## Descriptions, or Explanation
-A definition may also be accompanied by some text to describe or explain the
-purpose of the entity.  The description may include a number of optional
-properties including: 
+### Documentation Block
+Allowing markdown syntax, like this:
+```riddl
+domain SomeDomain is { ??? } explained as {
+  |## Overview
+  |This domain is rather vague, it has no content.
+  |## Utility
+  |The utility of this domain is dubious because:
+  |* It has no content
+  |* Its name is not useful
+  |* It is only an example of RIDDL syntax
+}
+```
+
+### Separate Sections
+When more formal documentation is required for major definitions (domains,
+contexts, entities), then you should use the sectioned style to group
+your documentation into standard sections, like this: 
 
 * `brief` is a simple text description of the definition
 * `details` is a longer textual description enclosed in a block `{ }`, 
@@ -66,8 +119,24 @@ directives that will be rendered in any generated documentation.
 is also enclosed withing a block `{ }`.  
 * `see` is a block where additional resources supporting the description may 
 be listed.
+
+All of these nested blocks can use markdown in a doc block or simple literal
+strings depending on your needs. For example:
+```riddl
+domain SomeDomain is { ??? } explained as {
+  brief { "this domain is rather vague, it has no content" } 
+  description {
+    |The utility of this domain is dubious because:
+  }
+  items("Aspects Of Utility") {
+    |* It has no content
+    |* Its name is not useful
+    |* It is only an example of RIDDL syntax
+  
+  }
+}
+```
+
+
  
-A description can be included using either the `description` or `explained` 
-keyword.  See the @ref:[Quick Start](quickstart.md) for various examples 
-of definition descriptions. 
 
