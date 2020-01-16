@@ -13,7 +13,7 @@ object Validation {
 
   def validate[C <: Container](
     root: C,
-    options: ValidationOptions = defaultOptions
+    options: ValidationOptions = ValidationOptions.Default
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, options)
@@ -75,16 +75,33 @@ object Validation {
 
   trait ValidationOptions extends Riddl.Options
 
-  val defaultOptions: ValidationOptions = new ValidationOptions {
-    override def showTimes: Boolean = true
-    override def showWarnings: Boolean = true
-    override def showMissingWarnings: Boolean = true
-    override def showStyleWarnings: Boolean = true
+  object ValidationOptions {
+    private final case class ValidationOptionsImpl(
+      showTimes: Boolean,
+      showWarnings: Boolean,
+      showMissingWarnings: Boolean,
+      showStyleWarnings: Boolean
+    ) extends ValidationOptions
+
+    def apply(
+      showTimes: Boolean = false,
+      showWarnings: Boolean = true,
+      showMissingWarnings: Boolean = true,
+      showStyleWarnings: Boolean = true
+    ): ValidationOptions =
+      ValidationOptionsImpl(
+        showTimes,
+        showWarnings,
+        showMissingWarnings,
+        showStyleWarnings
+      )
+
+    val Default: ValidationOptions = apply()
   }
 
   case class ValidationState(
     symbolTable: SymbolTable,
-    options: ValidationOptions = defaultOptions,
+    options: ValidationOptions = ValidationOptions.Default,
     msgs: ValidationMessages = NoValidationMessages
   ) extends Folding.State[ValidationState] {
     def step(f: ValidationState => ValidationState): ValidationState = f(this)

@@ -68,12 +68,12 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         "badstyle",
         "domains/badstyle.riddl",
-        options = new ValidationOptions {
-          override def showTimes: Boolean = false
-          override def showWarnings: Boolean = true
-          override def showMissingWarnings: Boolean = true
-          override def showStyleWarnings: Boolean = false
-        }
+        options = ValidationOptions(
+          showTimes = false,
+          showWarnings = true,
+          showMissingWarnings = true,
+          showStyleWarnings = false
+        )
       ) {
         case (result, messages) =>
           assert(!messages.exists(_.kind.isError))
@@ -83,12 +83,12 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         "badstyle",
         "domains/badstyle.riddl",
-        options = new ValidationOptions {
-          override def showTimes: Boolean = false
-          override def showWarnings: Boolean = true
-          override def showMissingWarnings: Boolean = true
-          override def showStyleWarnings: Boolean = true
-        }
+        options = ValidationOptions(
+          showTimes = false,
+          showWarnings = true,
+          showMissingWarnings = true,
+          showStyleWarnings = true
+        )
       ) {
         case (result, messages) =>
           assert(!messages.exists(_.kind.isError))
@@ -102,12 +102,12 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         "badstyle",
         "domains/badstyle.riddl",
-        options = new ValidationOptions {
-          override def showTimes: Boolean = false
-          override def showWarnings: Boolean = true
-          override def showMissingWarnings: Boolean = false
-          override def showStyleWarnings: Boolean = false
-        }
+        options = ValidationOptions(
+          showTimes = false,
+          showWarnings = true,
+          showMissingWarnings = false,
+          showStyleWarnings = true
+        )
       ) {
         case (result, messages) =>
           assert(!messages.exists(_.kind.isError))
@@ -116,12 +116,12 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         "badstyle",
         "domains/badstyle.riddl",
-        options = new ValidationOptions {
-          override def showTimes: Boolean = false
-          override def showWarnings: Boolean = true
-          override def showMissingWarnings: Boolean = true
-          override def showStyleWarnings: Boolean = true
-        }
+        options = ValidationOptions(
+          showTimes = false,
+          showWarnings = true,
+          showMissingWarnings = true,
+          showStyleWarnings = true
+        )
       ) {
         case (result, messages) =>
           assert(!messages.exists(_.kind.isError))

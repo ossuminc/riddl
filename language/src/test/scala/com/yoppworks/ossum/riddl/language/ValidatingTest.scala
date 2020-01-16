@@ -29,7 +29,7 @@ abstract class ValidatingTest extends ParsingTest {
   def validateFile(
     label: String,
     fileName: String,
-    options: ValidationOptions = Validation.defaultOptions
+    options: ValidationOptions = ValidationOptions.Default
   )(
     validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
