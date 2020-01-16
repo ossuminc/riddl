@@ -50,7 +50,7 @@ lazy val riddlc = (project in file("riddlc"))
   .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-    paradoxNavigationDepth := 5,
+    paradoxNavigationDepth := 6,
     //Determines depth of TOC for page navigation.
     /*
   val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
