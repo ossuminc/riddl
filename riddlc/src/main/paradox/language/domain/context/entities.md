@@ -18,3 +18,18 @@ they are the same entity.
 Entities can also contain business Logic. Actors in Akka, Entities in Lagom. 
 Contrary to Value Objects, an Entity's immutable identity conveys equivalence.
 Individual pieces of attribute of entity can change.
+
+@@toc { depth = 2 }
+
+@@@ index
+
+* [Action](entity/actions.md)
+* [Consumer](entity/consumers.md)
+* [Feature](entity/features.md)
+* [Function](entity/functions.md)
+* [Include](../../includes.md)
+* [Invariant](entity/invariants.md)
+* [State](entity/state.md)
+* [Type](../../types.md)
+
+@@@

@@ -13,11 +13,11 @@ Contexts encapsulate all the definitions of a DDD bounded context, specifically:
 
 @@@ index
 
-* @ref:[Messages](messages.md)
-* @ref:[Entities](entities.md)
-* @ref:[Projections](projections.md)
-* @ref:[Interactions](interactions.md)
-* @ref:[Types](types.md)
-* @ref:[Adaptors](adaptors.md)
+* @ref:[Adaptors](context/adaptors.md)
+* @ref:[Entities](context/entities.md)
+* @ref:[Include](../includes.md)
+* @ref:[Interactions](../interactions.md)
+* @ref:[Projections](context/projections.md)
+* @ref:[Types](../types.md)
 
 @@@

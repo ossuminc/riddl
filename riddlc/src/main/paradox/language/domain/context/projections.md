@@ -8,4 +8,4 @@ Logs are string and text. To retrieving meaningful information out of logs,
 logs are transformed into a more query-friendly format and stored in queriable
 repository or DB.
 
-![CQRS/ES](images/cqrs-es.png "CQRS/ES")
+![CQRS/ES](../../images/cqrs-es.png "CQRS/ES")

@@ -21,15 +21,15 @@ subdomains of interest: Cars, Trucks and Repairs.
 
 Domains may contain the following constructs:
 
-@@toc { depth=1 }
+@@toc { depth=3 }
 
 
 @@@ index
 
-* @ref:[Types](types.md)
-* @ref:[Topics](topics.md)
-* @ref:[Contexts](contexts.md)
+* @ref:[Contexts](domain/contexts.md)
 * @ref:[Interactions](interactions.md)
 * @ref:[Include](includes.md)
+* @ref:[Topics](domain/topics.md)
+* @ref:[Types](types.md)
 
 @@@

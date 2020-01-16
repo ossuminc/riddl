@@ -50,8 +50,25 @@ lazy val riddlc = (project in file("riddlc"))
   .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-    // paradoxTheme := Some(builtinParadoxTheme("generic")),
-    // paradoxRoots := List("index.md"),
+    paradoxNavigationDepth := 5,
+    //Determines depth of TOC for page navigation.
+    /*
+  val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
+  val paradoxNavigationIncludeHeaders = settingKey[Boolean]("Whether to include headers in the navigation.")
+  val paradoxRoots = settingKey[List[String]]("Which ToC roots (pages without parent) to expect.")
+  val paradoxLeadingBreadcrumbs = settingKey[List[(String, String)]]("Any leading breadcrumbs (label -> url)")
+  val paradoxIllegalLinkPath = settingKey[Regex]("Path pattern to fail site creation (eg. to protect against missing `@ref` for links).")
+  val paradoxOrganization = settingKey[String]("Paradox dependency organization (for theme dependencies).")
+  val paradoxSourceSuffix = settingKey[String]("Source file suffix for markdown files [default = \".md\"].")
+  val paradoxTargetSuffix = settingKey[String]("Target file suffix for HTML files [default = \".html\"].")
+  val paradoxTheme = settingKey[Option[ModuleID]]("Web module name of the paradox theme, otherwise local template.")
+  val paradoxOverlayDirectories = settingKey[Seq[File]]("Directory containing common source files for configuration.")
+  val paradoxDefaultTemplateName = settingKey[String]("Name of default template for generating pages.")
+  val paradoxVersion = settingKey[String]("Paradox plugin version.")
+  val paradoxGroups = settingKey[Map[String, Seq[String]]]("Paradox groups.")
+  val paradoxValidationIgnorePaths = settingKey[List[Regex]]("List of regular expressions to apply to paths to determine if they should be ignored.")
+  val paradoxValidationSiteBasePath = settingKey[Option[String]]("The base path that the documentation is deployed to, allows validating links on the docs site that are outside of the documentation root tree")
+     */
     Compile / paradoxMaterialTheme := {
       ParadoxMaterialTheme()
         .withColor("blue", "grey")
