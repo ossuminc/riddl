@@ -7,9 +7,13 @@ import com.yoppworks.test.StringBuildingPrintStream
 import java.io.File
 import java.util.UUID
 
+import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
 import com.yoppworks.test.InMemoryLogger
 import com.yoppworks.test.Logging.Lvl
+
+import scala.io.Source
 
 class RiddlTest extends ParsingTestBase {
 
@@ -168,6 +172,56 @@ class RiddlTest extends ParsingTestBase {
           |[severe] e
           |[error] f
           |""".stripMargin
+    }
+  }
+
+  "parseAndValidate" should {
+    "parse and validate a simple domain from path" in {
+      val result = Riddl.parseAndValidate(
+        new File("language/src/test/input/domains/simpleDomain.riddl").toPath,
+        new InMemoryLogger,
+        RiddlTest.DefaultOptions
+      )
+      result must matchPattern {
+        case Some(RootContainer(Seq(_: Domain))) =>
+      }
+    }
+    "parse and validate nonsense file as invalid" in {
+      val logger = new InMemoryLogger
+      val result = Riddl.parseAndValidate(
+        new File("language/src/test/input/invalid.riddl").toPath,
+        logger,
+        RiddlTest.DefaultOptions
+      )
+      result mustBe None
+      assert(logger.lines().exists(_.level == Lvl.Error))
+    }
+    "parse and validate a simple domain from input" in {
+      val content: String = {
+        val source = Source.fromFile(
+          new File("language/src/test/input/domains/simpleDomain.riddl")
+        )
+        try source.mkString
+        finally source.close()
+      }
+      val result = Riddl.parseAndValidate(
+        RiddlParserInput(content),
+        new InMemoryLogger,
+        RiddlTest.DefaultOptions
+      )
+      result must matchPattern {
+        case Some(RootContainer(Seq(_: Domain))) =>
+      }
+    }
+    "parse and validate nonsense input as invalid" in {
+      val logger = new InMemoryLogger
+      val result = Riddl.parseAndValidate(
+        RiddlParserInput("I am not valid riddl (hopefully)."),
+        logger,
+        RiddlTest.DefaultOptions
+      )
+      result mustBe None
+      assert(logger.lines().exists(_.level == Lvl.Error))
     }
   }
 }

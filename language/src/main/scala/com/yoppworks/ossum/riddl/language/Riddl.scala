@@ -94,43 +94,39 @@ object Riddl {
 
   def validate(
     source: String,
-    root: Option[RootContainer],
+    root: RootContainer,
     log: Logger,
     options: Options
   ): Option[RootContainer] = {
-    root match {
-      case None => None
-      case Some(rootContainer) =>
-        val messages: Seq[ValidationMessage] =
-          Validation.validate[RootContainer](rootContainer)
-        if (messages.nonEmpty) {
-          val (warns, errs) = messages.partition(_.kind.isWarning)
-          val (severe, errors) = errs.partition(_.kind.isSevereError)
-          val missing = warns.filter(_.kind.isMissing)
-          val style = warns.filter(_.kind.isStyle)
-          val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
-          if (options.showMissingWarnings) {
-            missing.map(_.format(source)).foreach(log.warn(_))
-          }
-          if (options.showStyleWarnings) {
-            style.map(_.format(source)).foreach(log.warn(_))
-          }
-          if (options.showWarnings) {
-            warnings.map(_.format(source)).foreach(log.warn(_))
-          }
-          log.info(s"""Validation Warnings: ${warns.length}""")
-          errors.map(_.format(source)).foreach(log.error(_))
-          log.info(s"""Validation Errors: ${errors.length} errors""")
-          severe.map(_.format(source)).foreach(log.severe(_))
-          log.info(s"""Severe Errors: ${errors.length} errors""")
-          if (errs.nonEmpty) {
-            None
-          } else {
-            Some(rootContainer)
-          }
-        } else {
-          root
-        }
+    val messages: Seq[ValidationMessage] =
+      Validation.validate[RootContainer](root)
+    if (messages.nonEmpty) {
+      val (warns, errs) = messages.partition(_.kind.isWarning)
+      val (severe, errors) = errs.partition(_.kind.isSevereError)
+      val missing = warns.filter(_.kind.isMissing)
+      val style = warns.filter(_.kind.isStyle)
+      val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
+      if (options.showMissingWarnings) {
+        missing.map(_.format(source)).foreach(log.warn(_))
+      }
+      if (options.showStyleWarnings) {
+        style.map(_.format(source)).foreach(log.warn(_))
+      }
+      if (options.showWarnings) {
+        warnings.map(_.format(source)).foreach(log.warn(_))
+      }
+      log.info(s"""Validation Warnings: ${warns.length}""")
+      errors.map(_.format(source)).foreach(log.error(_))
+      log.info(s"""Validation Errors: ${errors.length} errors""")
+      severe.map(_.format(source)).foreach(log.severe(_))
+      log.info(s"""Severe Errors: ${errors.length} errors""")
+      if (errs.nonEmpty) {
+        None
+      } else {
+        Some(root)
+      }
+    } else {
+      Some(root)
     }
   }
 
@@ -141,7 +137,7 @@ object Riddl {
   ): Option[RootContainer] = {
     parse(input, logger, options) match {
       case Some(root) =>
-        validate(input.origin, Some(root), logger, options)
+        validate(input.origin, root, logger, options)
       case None =>
         None
     }
@@ -155,7 +151,7 @@ object Riddl {
     parse(path, logger, options) match {
       case Some(root) =>
         val source = path.toString
-        validate(source, Some(root), logger, options)
+        validate(source, root, logger, options)
       case None =>
         None
     }
