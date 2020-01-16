@@ -1,6 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.EntityAggregate
+import com.yoppworks.ossum.riddl.language.AST.EntityPersistent
 import com.yoppworks.ossum.riddl.language.AST.Identifier
 import com.yoppworks.ossum.riddl.language.AST.Location
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
@@ -38,6 +40,41 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
 
           ValidationState(SymbolTable(domain))
             .parentOf(topic) mustBe RootContainer.empty
+        }
+        "checkNonEmpty" in {
+          ValidationState(SymbolTable(RootContainer.empty))
+            .checkNonEmpty(Nil, "foo", RootContainer.empty)
+            .msgs mustBe List(
+            ValidationMessage(
+              Location(),
+              "foo in RootContainer 'root' should not be empty",
+              Validation.Error
+            )
+          )
+          ValidationState(SymbolTable(RootContainer.empty))
+            .checkNonEmpty(List(1, 2, 3), "foo", RootContainer.empty)
+            .msgs mustBe Nil
+        }
+        "checkOptions" in {
+          ValidationState(SymbolTable(RootContainer.empty))
+            .checkOptions(
+              List(
+                EntityAggregate(Location()),
+                EntityPersistent(Location()),
+                EntityAggregate(Location())
+              ),
+              Location()
+            )
+            .msgs mustBe List(
+            ValidationMessage(
+              Location(),
+              "Options should not be repeated",
+              Validation.Error
+            )
+          )
+          ValidationState(SymbolTable(RootContainer.empty))
+            .checkOptions(List(1, 2, 3), Location())
+            .msgs mustBe Nil
         }
       }
     }
