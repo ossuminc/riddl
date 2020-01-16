@@ -257,6 +257,22 @@ class ParserTest extends ParsingTest {
 
       }
     }
+    "allow invariant definitions" in {
+      val input: String =
+        """invariant large is { "x is greater or equal to 10" }"""
+      parseDefinition[Invariant](input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+        case Right(content) =>
+          content mustBe Invariant(
+            Location(1, 11),
+            Identifier(Location(1, 11), "large"),
+            Seq(LiteralString(Location(1, 22), "x is greater or equal to 10")),
+            None
+          )
+      }
+    }
     "allow entity definitions in contexts" in {
       val input: String =
         """entity Hamburger is {

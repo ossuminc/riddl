@@ -42,6 +42,12 @@ trait EntityParser
     }
   }
 
+  /** Parses an invariant of an entity, i.e.
+    *
+    * {{{
+    *   invariant large is { "x is greater or equal to 10" }
+    * }}}
+    */
   def invariant[_: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ open ~

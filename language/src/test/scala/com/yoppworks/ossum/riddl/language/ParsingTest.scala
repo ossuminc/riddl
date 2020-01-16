@@ -40,6 +40,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Entity]      => entity(_)
       case x if x == classOf[AST.Adaptor]     => adaptor(_)
       case x if x == classOf[AST.Topic]       => topic(_)
+      case x if x == classOf[AST.Invariant]   => invariant(_)
       case _                                  => domain(_)
     }
     parser.asInstanceOf[P[_] => P[T]]

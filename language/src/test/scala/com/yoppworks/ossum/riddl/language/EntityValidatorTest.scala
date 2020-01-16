@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Entity
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.AST.Feature
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
@@ -56,6 +56,31 @@ class EntityValidatorTest extends ValidatingTest {
             Validation.MissingWarning,
             "Entity 'Hamburger' has only empty topic consumers"
           )
+      }
+    }
+    "validating examples" in {
+      parseAndValidate[Feature]("""
+                                  |  feature AnAspect {
+                                  |    BACKGROUND {
+                                  |      Given "Nobody loves me"
+                                  |    }
+                                  |    EXAMPLE foo {
+                                  |      GIVEN "everybody hates me"
+                                  |      AND "I'm depressed"
+                                  |      WHEN "I go fishing"
+                                  |      THEN "I'll just eat worms"
+                                  |      ELSE "I'm happy"
+                                  |    } described as {
+                                  |     brief "description"
+                                  |     details "description"
+                                  |    }
+                                  |  }
+                                  |""".stripMargin) {
+        case (a, b) =>
+          a.id.value mustBe "AnAspect"
+          assert(a.background.get.givens.nonEmpty)
+          assert(a.examples.nonEmpty)
+          assert(b.isEmpty)
       }
     }
   }
