@@ -19,13 +19,11 @@ Here is how RIDDL nesting can be structured:
       * @ref:[Type](types.md)
       * @ref:[Entity](entities.md)
         * [State](state.md)
-        * [Feature](features.md)
-        * [Consumer](consumers.md)
-          * onClause
-            * 
+        * @ref:[Function](functions.md)
+        * @ref:[Feature](features.md)
+        * @ref:[Consumer](consumers.md)
         * @ref:[Action](actions.md)
-        * [Invariant](invariants.md)
+        * @ref:[Invariant](invariants.md)
       * @ref:[Interaction](interactions.md)
       * @ref:[Adaptor](adaptors.md)
     * @ref:[Interaction](interactions.md)
-      * Action
