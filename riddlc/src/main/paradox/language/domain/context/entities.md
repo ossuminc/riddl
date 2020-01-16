@@ -13,7 +13,7 @@ between contexts.  For example, If two instances of the same object have differe
 Thus, entities are the single source of truth for a particular id. 
 they are the same entity.
 
-![Entities](images/entities.png "Entities")
+![Entities](../../images/entities.png "Entities")
 
 Entities can also contain business Logic. Actors in Akka, Entities in Lagom. 
 Contrary to Value Objects, an Entity's immutable identity conveys equivalence.

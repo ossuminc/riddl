@@ -13,7 +13,7 @@ bounded contexts, and services interact. There are four kinds of messages:
 Commands, Events, Queries, and Results, as per DDD and reactive manifesto. 
 Messages form the API for a bounded context. 
 
-![cqrs](images/results.png "Entities")
+![cqrs](../images/results.png "Entities")
 
 @@@ index
 
