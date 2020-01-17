@@ -2,6 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import scala.collection.immutable.ListMap
 
+// scalastyle:off number.of.methods
+
 /** Abstract Syntax Tree
   * This object defines the model for processing IDDL and producing a
   * raw AST from it. This raw AST has no referential integrity, it just
