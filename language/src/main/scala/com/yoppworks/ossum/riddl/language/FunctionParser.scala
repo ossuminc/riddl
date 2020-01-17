@@ -22,6 +22,15 @@ trait FunctionParser extends CommonParser with TypeParser {
     )
   }
 
+  /** Parses function literals, i.e.
+    *
+    * {{{
+    *   function myFunction is {
+    *     requires is Boolean
+    *     yields is Integer
+    *   }
+    * }}}
+    */
   def function[_: P]: P[Function] = {
     P(
       location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~

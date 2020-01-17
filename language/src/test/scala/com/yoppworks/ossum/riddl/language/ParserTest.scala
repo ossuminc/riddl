@@ -453,5 +453,31 @@ class ParserTest extends ParsingTest {
             )
       }
     }
+
+    "allow functions" in {
+      val input =
+        """
+          |function foo is {
+          |  requires is Boolean
+          |  yields is Integer
+          |}
+          |""".stripMargin
+
+      parseDefinition[Function](RiddlParserInput(input)) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+        case Right(content) =>
+          content must matchPattern {
+            case Function(
+                _,
+                Identifier(_, "foo"),
+                Some(Bool(_)),
+                Integer(_),
+                None
+                ) =>
+          }
+      }
+    }
   }
 }

@@ -41,7 +41,11 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Adaptor]     => adaptor(_)
       case x if x == classOf[AST.Topic]       => topic(_)
       case x if x == classOf[AST.Invariant]   => invariant(_)
-      case _                                  => domain(_)
+      case x if x == classOf[AST.Function]    => function(_)
+      case _ =>
+        throw new RuntimeException(
+          s"No parser defined for class ${classTag[T].runtimeClass}"
+        )
     }
     parser.asInstanceOf[P[_] => P[T]]
   }
