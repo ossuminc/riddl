@@ -102,4 +102,86 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     }
   }
 
+  "Entity" should {
+    "contents" should {
+      "contain all contents" in {
+        val options = Seq(
+          EntityAggregate(Location()),
+          EntityPersistent(Location())
+        )
+        val states = Seq(
+          State(
+            Location(),
+            Identifier(Location(), "bar"),
+            RangeType(
+              Location(),
+              LiteralInteger(Location(), BigInt(0)),
+              LiteralInteger(Location(), BigInt(0))
+            )
+          )
+        )
+        val consumers = Seq(
+          Consumer(
+            Location(),
+            Identifier(Location(), "con"),
+            TopicRef(
+              Location(),
+              PathIdentifier(Location(), Seq("path", "to", "the", "consumer_"))
+            )
+          )
+        )
+        val features = Seq(
+          Feature(
+            Location(),
+            id = Identifier(Location(), "the_feature1"),
+            background = None,
+            examples = Nil,
+            description = None
+          ),
+          Feature(
+            Location(),
+            id = Identifier(Location(), "the_feature2"),
+            background = None,
+            examples = Nil,
+            description = None
+          )
+        )
+
+        val functions = Seq(
+          Function(
+            Location(),
+            Identifier(Location(), "my_func"),
+            None,
+            Bool(Location()),
+            None
+          )
+        )
+
+        val invariants = Seq(
+          Invariant(Location(), Identifier(Location(), "my_id"), Nil, None)
+        )
+        val types = Seq(
+          Type(Location(), Identifier(Location(), "mytype"), Bool(Location())),
+          Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))
+        )
+        val entity = AST.Entity(
+          entityKind = SoftwareEntityKind(Location()),
+          loc = Location(),
+          id = Identifier(Location(), "foo"),
+          options = options,
+          states = states,
+          types = types,
+          consumers = consumers,
+          features = features,
+          functions = functions,
+          invariants = invariants,
+          description = None
+        )
+
+        entity.contents.toSet mustBe
+          (states.iterator ++ consumers ++ features ++ functions ++ invariants ++ types).toSet
+      }
+    }
+  }
+
 }
