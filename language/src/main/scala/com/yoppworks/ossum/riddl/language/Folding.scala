@@ -107,6 +107,7 @@ object Folding {
 
   trait Folding[S <: State[S]] {
 
+    //noinspection ScalaStyle
     final def foldLeft(
       parent: Container,
       container: Container,
@@ -162,6 +163,11 @@ object Folding {
               }
             }
             .step { state =>
+              context.interactions.foldLeft(state) { (next, in) =>
+                foldLeft(context, in, next)
+              }
+            }
+            .step { state =>
               closeContext(state, parent, context)
             }
         case entity: Entity =>
@@ -189,6 +195,11 @@ object Folding {
             .step { state =>
               entity.invariants.foldLeft(state) { (next, invariant) =>
                 doInvariant(next, entity, invariant)
+              }
+            }
+            .step { state =>
+              entity.states.foldLeft(state) { (next, s) =>
+                foldLeft(entity, s, next)
               }
             }
             .step { state =>

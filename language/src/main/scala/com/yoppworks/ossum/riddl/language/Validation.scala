@@ -385,19 +385,6 @@ object Validation {
       )
     }
 
-    def checkLiteralString(
-      litStr: LiteralString,
-      name: String,
-      thing: Definition
-    ): ValidationState = {
-      check(
-        litStr.s.nonEmpty,
-        s"$name in ${thing.identify} should not be empty",
-        MissingWarning,
-        thing.loc
-      )
-    }
-
     def checkOptions[T](options: Seq[T], loc: Location): ValidationState = {
       check(
         options.size == options.distinct.size,
