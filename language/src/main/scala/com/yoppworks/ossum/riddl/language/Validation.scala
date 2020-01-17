@@ -705,61 +705,69 @@ object Validation {
       state.checkDescription(adaptor, adaptor.description)
     }
 
-    override def doCommand(
+    override def openMessage(
+      state: ValidationState,
+      container: Container,
+      message: MessageDefinition
+    ): ValidationState = {
+      val result = state
+        .checkDefinition(container, message)
+        .checkDescription(message, message.description)
+        .checkTypeExpression(message.typ, container)
+      super.openMessage(result, container, message)
+    }
+
+    override def closeMessage(
+      state: ValidationState,
+      container: Container,
+      message: MessageDefinition
+    ): ValidationState = {
+      val result = state.checkDescription(message, message.description)
+      super.openMessage(result, container, message)
+    }
+
+    override def openCommand(
       state: ValidationState,
       container: Container,
       command: Command
     ): ValidationState = {
-      val result =
-        state
-          .checkDefinition(container, command)
-          .checkDescription(command, command.description)
-          .checkTypeExpression(command.typ, container)
       if (command.events.isEmpty) {
-        result.add(
+        state.add(
           ValidationMessage(
             command.loc,
             "Commands must always yield at least one event"
           )
         )
       } else {
-        command.events.foldLeft(result) {
+        command.events.foldLeft(state) {
           case (st, eventRef) =>
             st.checkRef[Event](eventRef)
         }
       }
     }
 
-    override def doEvent(
+    override def openEvent(
       state: ValidationState,
       container: Container,
       event: Event
     ): ValidationState = {
       state
-        .checkTypeExpression(event.typ, container)
-        .checkDescription(event, event.description)
     }
 
-    override def doQuery(
+    override def openQuery(
       state: ValidationState,
       container: Container,
       query: Query
     ): ValidationState = {
-      state
-        .checkDefinition(container, query)
-        .checkTypeExpression(query.typ, container)
-        .checkRef[Result](query.result.id)
-        .checkDescription(query, query.description)
+      state.checkRef[Result](query.result.id)
     }
 
-    override def doResult(
+    override def openResult(
       state: ValidationState,
       container: Container,
       result: Result
     ): ValidationState = {
       state
-        .checkTypeExpression(result.typ, container)
-        .checkDescription(result, result.description)
     }
 
     override def doType(

@@ -49,20 +49,21 @@ object Folding {
         }
       case entity: Entity =>
         result = f(parent, entity, result)
-        result = entity.types.foldLeft(result) { (next, typ) =>
-          f(entity, typ, next)
+        val reducables = (
+          entity.types.iterator ++
+            entity.consumers ++
+            entity.functions ++
+            entity.invariants
+        ).toList
+        result = reducables.foldLeft(result) { (next, r) =>
+          f(entity, r, next)
         }
-        result = entity.consumers.foldLeft(result) { (next, consumer) =>
-          f(entity, consumer, next)
-        }
-        result = entity.functions.foldLeft(result) { (next, action) =>
-          f(entity, action, next)
-        }
-        result = entity.invariants.foldLeft(result) { (next, invariant) =>
-          f(entity, invariant, next)
-        }
-        entity.features.foldLeft(result) { (next, feature) =>
-          foldEachDefinition[S](entity, feature, next)(f)
+        val foldables = (
+          entity.features.iterator ++
+            entity.states
+        ).toList
+        foldables.foldLeft(result) { (next, foldable) =>
+          foldEachDefinition[S](entity, foldable, next)(f)
         }
       case interaction: Interaction =>
         result = f(parent, interaction, result)
@@ -76,22 +77,31 @@ object Folding {
         }
       case adaptor: Adaptor =>
         f(parent, adaptor, result)
-
       case topic: Topic =>
         result = f(parent, topic, result)
-        result = topic.commands.foldLeft(result) { (next, command) =>
-          f(topic, command, next)
+        val foldables: List[MessageDefinition] = (
+          topic.commands.iterator ++
+            topic.events ++
+            topic.queries ++
+            topic.results
+        ).toList
+        foldables.foldLeft(result) { (next, message) =>
+          foldEachDefinition(topic, message, next)(f)
         }
-        result = topic.events.foldLeft(result) { (next, event) =>
-          f(topic, event, next)
+      case message: MessageDefinition =>
+        result = f(parent, message, result)
+        message.contents.foldLeft(result) { (next, field) =>
+          f(message, field, next)
         }
-        result = topic.queries.foldLeft(result) { (next, query) =>
-          f(topic, query, next)
+      case st: AST.State =>
+        result = f(parent, st, result)
+        st.typeEx match {
+          case agg: Aggregation =>
+            agg.fields.foldLeft(result) { (next, field) =>
+              f(st, field, next)
+            }
+          case _ => state
         }
-        result = topic.results.foldLeft(result) { (next, result) =>
-          f(topic, result, next)
-        }
-        result
     }
   }
 
@@ -207,28 +217,35 @@ object Folding {
         case topic: Topic =>
           openTopic(initState, parent, topic)
             .step { state =>
-              topic.commands.foldLeft(state) { (next, command) =>
-                doCommand(next, topic, command)
-              }
-            }
-            .step { state =>
-              topic.events.foldLeft(state) { (next, event) =>
-                doEvent(next, topic, event)
-              }
-            }
-            .step { state =>
-              topic.queries.foldLeft(state) { (next, query) =>
-                doQuery(next, topic, query)
-              }
-            }
-            .step { state =>
-              topic.results.foldLeft(state) { (next, result) =>
-                doResult(next, topic, result)
+              val foldables: List[MessageDefinition] =
+                (topic.commands.iterator ++ topic.events ++ topic.queries ++ topic.results).toList
+              foldables.foldLeft(state) { (next, message) =>
+                foldLeft(topic, message, next)
               }
             }
             .step { state =>
               closeTopic(state, parent, topic)
             }
+        case message: MessageDefinition =>
+          openMessage(initState, parent, message)
+            .step { state =>
+              message.typ.fields.foldLeft(state) { (next, field) =>
+                doField(next, message, field)
+              }
+            }
+            .step { state =>
+              closeMessage(state, parent, message)
+            }
+        case st: AST.State =>
+          openState(initState, parent, st).step { state =>
+            st.typeEx match {
+              case agg: Aggregation =>
+                agg.fields.foldLeft(state) { (next, field) =>
+                  doField(next, st, field)
+                }
+              case _ => state
+            }
+          }
       }
     }
 
@@ -266,6 +283,18 @@ object Folding {
       state: S,
       container: Container,
       entity: Entity
+    ): S = { state }
+
+    def openState(
+      state: S,
+      container: Container,
+      s: AST.State
+    ): S = { state }
+
+    def closeState(
+      state: S,
+      container: Container,
+      s: AST.State
     ): S = { state }
 
     def openTopic(
@@ -322,28 +351,84 @@ object Folding {
       typ: Type
     ): S = { state }
 
-    def doCommand(
+    def openMessage(
+      state: S,
+      container: Container,
+      message: MessageDefinition
+    ): S = {
+      message match {
+        case e: Event   => openEvent(state, container, e)
+        case c: Command => openCommand(state, container, c)
+        case q: Query   => openQuery(state, container, q)
+        case r: Result  => openResult(state, container, r)
+      }
+    }
+
+    def openCommand(
       state: S,
       container: Container,
       command: Command
     ): S = { state }
 
-    def doEvent(
+    def openEvent(
       state: S,
       container: Container,
       event: Event
     ): S = { state }
 
-    def doQuery(
+    def openQuery(
       state: S,
       container: Container,
       query: Query
     ): S = { state }
 
-    def doResult(
+    def openResult(
       state: S,
       container: Container,
       rslt: Result
+    ): S = { state }
+
+    def closeMessage(
+      state: S,
+      container: Container,
+      message: MessageDefinition
+    ): S = {
+      message match {
+        case e: Event   => closeEvent(state, container, e)
+        case c: Command => closeCommand(state, container, c)
+        case q: Query   => closeQuery(state, container, q)
+        case r: Result  => closeResult(state, container, r)
+      }
+    }
+
+    def closeCommand(
+      state: S,
+      container: Container,
+      command: Command
+    ): S = { state }
+
+    def closeEvent(
+      state: S,
+      container: Container,
+      event: Event
+    ): S = { state }
+
+    def closeQuery(
+      state: S,
+      container: Container,
+      query: Query
+    ): S = { state }
+
+    def closeResult(
+      state: S,
+      container: Container,
+      rslt: Result
+    ): S = { state }
+
+    def doField(
+      state: S,
+      container: Container,
+      field: Field
     ): S = { state }
 
     def doConsumer(

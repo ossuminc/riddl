@@ -437,7 +437,7 @@ class ParadoxTranslator extends Translator {
       }
     }
 
-    override def doCommand(
+    override def openCommand(
       state: ParadoxState,
       container: Container,
       command: Command
@@ -477,7 +477,7 @@ class ParadoxTranslator extends Translator {
       )
     }
 
-    override def doEvent(
+    override def openEvent(
       state: ParadoxState,
       container: Container,
       event: Event
@@ -562,7 +562,7 @@ class ParadoxTranslator extends Translator {
       )
     }
 
-    override def doQuery(
+    override def openQuery(
       state: ParadoxState,
       container: Container,
       query: Query
@@ -582,7 +582,7 @@ class ParadoxTranslator extends Translator {
       )
     }
 
-    override def doResult(
+    override def openResult(
       state: ParadoxState,
       container: Container,
       result: Result

@@ -456,7 +456,7 @@ class FormatTranslator extends Translator {
       state.close(interaction)
     }
 
-    override def doCommand(
+    override def openCommand(
       state: FormatState,
       container: Container,
       command: Command
@@ -471,7 +471,7 @@ class FormatTranslator extends Translator {
         .add("\n")
     }
 
-    override def doEvent(
+    override def openEvent(
       state: FormatState,
       container: Container,
       event: Event
@@ -482,7 +482,7 @@ class FormatTranslator extends Translator {
         .add("\n")
     }
 
-    override def doQuery(
+    override def openQuery(
       state: FormatState,
       container: Container,
       query: Query
@@ -494,7 +494,7 @@ class FormatTranslator extends Translator {
         .add("\n")
     }
 
-    override def doResult(
+    override def openResult(
       state: FormatState,
       container: Container,
       result: Result

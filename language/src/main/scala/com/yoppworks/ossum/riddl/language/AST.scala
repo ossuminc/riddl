@@ -272,8 +272,9 @@ object AST {
   }
 
   sealed trait MessageReference extends Reference
-  sealed trait MessageDefinition extends Definition {
+  sealed trait MessageDefinition extends Container {
     def typ: Aggregation
+    override def contents: Seq[Definition] = typ.fields
   }
 
   case class CommandRef(
@@ -536,6 +537,12 @@ object AST {
     typeEx: TypeExpression,
     description: Option[Description] = None
   ) extends EntityDefinition
+      with Container {
+    override def contents: Seq[Definition] = typeEx match {
+      case Aggregation(_, fs, _) => fs
+      case _                     => Seq.empty[Definition]
+    }
+  }
 
   /** Definition of an Entity
     *
