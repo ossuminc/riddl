@@ -216,7 +216,7 @@ class ParsingTest extends ParsingTestBase {
     extract: Context => TO
   ): Either[Seq[ParserError], TO] = {
     val tp = TestParser(
-      RiddlParserInput(s"context foo {\n${input.data}\n}")
+      RiddlParserInput(s"context foo is {\n${input.data}\n}")
     )
     tp.parseContextDefinition[TO](extract)
   }
@@ -227,7 +227,7 @@ class ParsingTest extends ParsingTestBase {
   ): Unit = {
     cases.foreach {
       case (statement: String, expected: TO @unchecked) =>
-        val input = s"context foo {\n$statement\n}"
+        val input = s"context foo is {\n$statement\n}"
         val tp = TestParser(RiddlParserInput(input))
         tp.parseContextDefinition(extract) match {
           case Right(content) =>

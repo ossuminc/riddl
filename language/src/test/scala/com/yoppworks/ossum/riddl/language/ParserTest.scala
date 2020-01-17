@@ -19,7 +19,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow an empty funky-name domain" in {
-      val input = "domain 'foo-fah|roo' { }"
+      val input = "domain 'foo-fah|roo' is { }"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -31,8 +31,8 @@ class ParserTest extends ParsingTest {
     }
     "allow nested domains" in {
       val input =
-        """domain foo {
-          |domain bar { }
+        """domain foo is {
+          |domain bar is { }
           |}
           |""".stripMargin
       parseTopLevelDomains(input) match {
@@ -54,8 +54,8 @@ class ParserTest extends ParsingTest {
     }
     "allow multiple domains" in {
       val input =
-        """domain foo { }
-          |domain bar { }
+        """domain foo is { }
+          |domain bar is { }
           |""".stripMargin
       parseTopLevelDomains(input) match {
         case Left(errors) =>
@@ -73,20 +73,20 @@ class ParserTest extends ParsingTest {
     }
     "allow major definitions to be stubbed with ???" in {
       val input =
-        """domain one { ??? }
-          |domain two {
-          |  topic one { ??? }
-          |  interaction one { ??? }
-          |  context one { ??? }
-          |  context two {
-          |    interaction two { ??? }
-          |    entity one { ??? }
-          |    entity two {
-          |      state is {}
-          |      feature one { ??? }
+        """domain one is { ??? }
+          |domain two is {
+          |  topic one is { ??? }
+          |  interaction one is { ??? }
+          |  context one is { ??? }
+          |  context two is {
+          |    interaction two is { ??? }
+          |    entity one is { ??? }
+          |    entity two is {
+          |      state entityState is {}
+          |      feature one is { ??? }
           |      consumer one for topic foo is { ??? }
-          |      function one { ??? }
-          |      invariant one { ??? }
+          |      function one is { ??? }
+          |      invariant one is { ??? }
           |    }
           |    adaptor one for context over.consumption { ??? }
           |  }
@@ -102,19 +102,19 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow context definitions in domains" in {
-      val input = "domain foo { context bar { } }"
+      val input = "domain foo is { context bar is { } }"
       parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
           content mustBe
-            Context(1 -> 14, id = Identifier(1 -> 22, "bar"))
+            Context(1 -> 17, id = Identifier(1 -> 25, "bar"))
       }
     }
     "allow options on context definitions" in {
       val input =
-        "context bar { options (function wrapper gateway ) }"
+        "context bar is { options (function wrapper gateway ) }"
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -125,9 +125,9 @@ class ParserTest extends ParsingTest {
               1 -> 1,
               Identifier(1 -> 9, "bar"),
               Seq(
-                FunctionOption(1 -> 24),
-                WrapperOption(1 -> 33),
-                GatewayOption(1 -> 41)
+                FunctionOption(1 -> 27),
+                WrapperOption(1 -> 36),
+                GatewayOption(1 -> 44)
               )
             )
       }
@@ -135,9 +135,9 @@ class ParserTest extends ParsingTest {
     "allow topic definitions in domains" in {
       val input =
         """
-          |domain foo {
+          |domain foo is {
           |
-          |    topic bar { commands{} events{} queries{} results{} }
+          |    topic bar is { commands{} events{} queries{} results{} }
           |}
           |""".stripMargin
       parseDomainDefinition[Topic](input, _.topics.head) match {
@@ -181,7 +181,7 @@ class ParserTest extends ParsingTest {
     }
     "allow command definitions in topics" in {
       val input =
-        """domain bar { topic foo is { commands {
+        """domain bar is { topic foo is { commands {
           |DoThisThing is {} yields event ThingWasDone
           |} } }
           |""".stripMargin
@@ -202,7 +202,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow event definitions in contexts" in {
-      val input = """domain bar { topic foo is { events {
+      val input = """domain bar is { topic foo is { events {
                     |ThingWasDone is {}
                     |} } }
                     |""".stripMargin
@@ -220,7 +220,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow query definitions in topics" in {
-      val input = """domain bar { topic foo is { queries {
+      val input = """domain bar is { topic foo is { queries {
                     |FindThisThing = {} yields result SomeResult
                     |} } }
                     |""".stripMargin
@@ -239,7 +239,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow result definitions in topics" in {
-      val input = """domain bar { topic foo is {
+      val input = """domain bar is { topic foo is {
                     |result ThisQueryResult = {}
                     |} }
                     |""".stripMargin
@@ -278,8 +278,8 @@ class ParserTest extends ParsingTest {
         """entity Hamburger is {
           |  options ( persistent aggregate )
           |  state foo is { x: String }
-          |  consumer foo of topic EntityChannel {}
-          |  feature AnAspect {
+          |  consumer foo of topic EntityChannel is {}
+          |  feature AnAspect is {
           |    BACKGROUND {
           |      Given "Nobody loves me"
           |    }
@@ -399,7 +399,7 @@ class ParserTest extends ParsingTest {
     }
     "allow interaction definitions" in {
       val input =
-        """interaction dosomething {
+        """interaction dosomething is {
           |  message 'perform a command' option is async
           |    from entity Unicorn
           |    to entity myLittlePony as command DoAThing

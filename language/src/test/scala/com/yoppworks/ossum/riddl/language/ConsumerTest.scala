@@ -7,9 +7,9 @@ class ConsumerTest extends ParsingTest {
   "Consumers" should {
     "handle actions" in {
       val input =
-        """entity DistributionItem {
-          |  state is {}
-          | consumer FromContainer from topic ContainerTopic {
+        """entity DistributionItem is {
+          |  state DistributionState is {}
+          | consumer FromContainer from topic ContainerTopic is {
           |    on event ContainerNestedInContainer {
           |      when ==(ContainerNestedInContainer.id,parentContainer)
           |      then {
@@ -18,7 +18,7 @@ class ConsumerTest extends ParsingTest {
           |      // anything else needing to be updated?
           |    } explained as { "Helps update this item's location" }
           |  }
-          |  consumer FromDistributionItem for topic DistributionItemTopic {
+          |  consumer FromDistributionItem for topic DistributionItemTopic is {
           |    on command CreateItem {
           |      // intent: DistributionItem is created
           |      set journey to PreInducted

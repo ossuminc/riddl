@@ -1,6 +1,6 @@
 // #everything
 // RIDDL is about defining domains so ...
-domain Everything {
+domain Everything is {
 
   type SomeType is String
 
@@ -21,7 +21,7 @@ domain Everything {
   }
 
   // Domains are composed of bounded contexts so ...
-  context full {
+  context full is {
     // Contexts can contain many kinds of definitions
 
     // 8 pre-defined types, shown as re-names
@@ -66,7 +66,7 @@ domain Everything {
 
       state someState is { field:  SomeType }
 
-      function whenUnderTheInfluence {
+      function whenUnderTheInfluence is {
         requires: Nothing
         yields: Boolean
       }

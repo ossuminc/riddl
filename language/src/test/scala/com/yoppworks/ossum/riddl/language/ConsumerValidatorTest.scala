@@ -10,8 +10,8 @@ class ConsumerValidatorTest extends ValidatingTest {
     "produce an error when consumer topic reference does not exist" in {
       val input =
         """
-          |entity Hamburger  is {
-          |  consumer foo of topic EntityChannel {}
+          |entity Hamburger is {
+          |  consumer foo of topic EntityChannel is {}
           |}
           |""".stripMargin
       parseAndValidate[Entity](input) {
@@ -27,12 +27,12 @@ class ConsumerValidatorTest extends ValidatingTest {
     "produce an error when on clause references a command that does not exist" in {
       val input =
         """
-          |domain entityTest {
-          |topic EntityChannel {}
-          |context EntityContext {
-          |entity Hamburger  is {
+          |domain entityTest is {
+          |topic EntityChannel is {}
+          |context EntityContext is {
+          |entity Hamburger is {
           |  state HamburgerState = { field1: Number, field2: String }
-          |  consumer foo of topic EntityChannel {
+          |  consumer foo of topic EntityChannel is {
           |    on command EntityCommand { set field1 to 445 }
           |    on event EntityEvent { set field1 to 678 }
           |  }
@@ -58,15 +58,15 @@ class ConsumerValidatorTest extends ValidatingTest {
     "produce an error when on clause references a message of the wrong type" in {
       val input =
         """
-          |domain entityTest {
-          |topic EntityChannel {
+          |domain entityTest is {
+          |topic EntityChannel is {
           |  commands { Incoming is {} yields event bar }
           |  events { bar is {} }
           |}
-          |context EntityContext {
-          |entity Hamburger  is {
+          |context EntityContext is {
+          |entity Hamburger is {
           |  state HamburgerState = { field1: Number }
-          |  consumer foo of topic EntityChannel {
+          |  consumer foo of topic EntityChannel is {
           |    on event Incoming { set field1 to 678 }
           |  }
           |}
@@ -87,15 +87,15 @@ class ConsumerValidatorTest extends ValidatingTest {
     "produce an error when on clause references a state field that does not exist" in {
       val input =
         """
-          |domain entityTest {
-          |topic EntityChannel {
+          |domain entityTest is {
+          |topic EntityChannel is {
           |  events { bar is {} }
           |  commands { EntityCommand is {} yields event bar }
           |}
-          |context EntityContext  {
+          |context EntityContext is {
           |entity Hamburger is {
           |  state HamburgerState = { field1: Number }
-          |  consumer foo of topic EntityChannel {
+          |  consumer foo of topic EntityChannel is {
           |    on command EntityCommand { set nonExistingField to 123 }
           |  }
           |}

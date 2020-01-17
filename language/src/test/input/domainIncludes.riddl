@@ -1,3 +1,3 @@
-domain IncludeCheck {
+domain IncludeCheck is {
 include "domainIncluded"
 }

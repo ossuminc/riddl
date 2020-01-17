@@ -35,16 +35,16 @@ class EntityValidatorTest extends ValidatingTest {
     "produce an error for persistent entity with no event producer" in {
       val input =
         """
-          |domain foo {
-          |topic EntityChannel {
+          |domain foo is {
+          |topic EntityChannel is {
           |  commands { Foo is {} yields event bar }
           |  events { bar is {} } queries {} results {}
           |}
-          |context bar {
+          |context bar is {
           |  entity Hamburger  is {
           |    options (aggregate persistent)
           |    state field is  SomeType
-          |    consumer foo of topic EntityChannel {}
+          |    consumer foo of topic EntityChannel is {}
           |  }
           |}
           |}
@@ -60,7 +60,7 @@ class EntityValidatorTest extends ValidatingTest {
     }
     "validating examples" in {
       parseAndValidate[Feature]("""
-                                  |  feature AnAspect {
+                                  |  feature AnAspect is {
                                   |    BACKGROUND {
                                   |      Given "Nobody loves me"
                                   |    }

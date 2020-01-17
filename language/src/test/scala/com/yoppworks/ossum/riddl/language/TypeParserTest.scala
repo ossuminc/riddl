@@ -228,7 +228,7 @@ class TypeParserTest extends ParsingTest {
     "allow complex nested type definitions" in {
       val input =
         """
-          |domain foo {
+          |domain foo is {
           |  type Simple = String
           |  type Compound is {
           |    s: Simple,

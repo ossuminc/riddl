@@ -1,5 +1,5 @@
-domain ContextIncludeCheck {
-  context foo {
+domain ContextIncludeCheck is {
+  context foo is {
     include "contextIncluded"
   }
 }

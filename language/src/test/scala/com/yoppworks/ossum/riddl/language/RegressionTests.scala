@@ -9,7 +9,7 @@ class RegressionTests extends ParsingTest {
   "Regressions" should {
     "allow descriptions as a single string" in {
       val input =
-        """domain foo {
+        """domain foo is {
           |} explained as { "foo" }
           |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
@@ -27,7 +27,7 @@ class RegressionTests extends ParsingTest {
     }
     "allow descriptions as a doc block" in {
       val input =
-        """domain foo {
+        """domain foo is {
           |} explained as {
           |  |ladeedah
           |}
@@ -49,7 +49,7 @@ class RegressionTests extends ParsingTest {
 
     "allow simple descriptions" in {
       val input =
-        """domain foo {
+        """domain foo is {
           |type DeliveryInstruction is any of {
           |  FrontDoor(20), SideDoor(21), Garage(23), FrontDesk(24), DeliverToPostOffice(25)
           |} explained as {
@@ -80,7 +80,7 @@ class RegressionTests extends ParsingTest {
 
     "handle descriptions in fields of messages" in {
       val input =
-        """topic TrackServices {
+        """topic TrackServices is {
           |  events {
           |    PreInducted is {
           |      expectedDeliveryTimeStamp: TimeStamp described by {

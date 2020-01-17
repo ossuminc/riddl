@@ -1,6 +1,6 @@
 // #everything
 // #domains
-domain ReactiveBBQ {
+domain ReactiveBBQ is {
 // #domains
 
   // Create some types with better names than just "Id"
@@ -13,7 +13,7 @@ domain ReactiveBBQ {
     see "http://www.example.com/show/details/on/OrderId"
   }
 
-  topic Inputs {
+  topic Inputs is {
     commands {
       foo is {} yields event root.ReactiveBBQ.Inputs.bar
     } events {
@@ -21,26 +21,26 @@ domain ReactiveBBQ {
     } queries {} results {}
   }
 
-  topic Outputs {  commands {} events {  } queries {} results {} }
+  topic Outputs is {  commands {} events {  } queries {} results {} }
 
-  context Customer {
-    entity Customer {
+  context Customer is {
+    entity Customer is {
       state main is { }
-      consumer input of topic Inputs {}
+      consumer input of topic Inputs is {}
     }
   }
 
 
   // #Kitchen
   // The Kitchen context pertains to
-  context Kitchen {
+  context Kitchen is {
     type IP4Address is { a: Number, b: Number, c: Number, d: Number}
     type OrderViewType is {
       address is IP4Address
     }
-    device entity OrderViewer {
-     state is { field: OrderViewType }
-     consumer input of topic Inputs {}
+    device entity OrderViewer is {
+     state OrderState is { field: OrderViewType }
+     consumer input of topic Inputs is {}
     } explained as {
       brief "This is an OrderViewer"
       details {
@@ -72,7 +72,7 @@ domain ReactiveBBQ {
   // #Kitchen
 
   // #Loyalty
-  context Loyalty {
+  context Loyalty is {
     type AccrualEvent is {
       when is TimeStamp,
       who is CustomerId,
@@ -87,62 +87,62 @@ domain ReactiveBBQ {
     }
     type RewardEvent is one of { AccrualEvent or AwardEvent }
     entity RewardsAccount is {
-      state is {
+      state RewardState is {
         id is CustomerId,
         points is Number,
         rewardEvents is many optional RewardEvent
       }
-      consumer ofInputs of topic Inputs {}
+      consumer ofInputs of topic Inputs is {}
     }
   }
   // #Loyalty
 
   // #Order
-  context Order {
-    entity Order {
+  context Order is {
+    entity Order is {
       option is aggregate
-      state is {
+      state OrderState is {
         orderId is OrderId,
         customerId is CustomerId
       }
-      consumer foo of topic Inputs {}
+      consumer foo of topic Inputs is {}
     }
   }
   // #Order
 
   // #Payment
-  context Payment {
-    entity Payment {
+  context Payment is {
+    entity Payment is {
       option is aggregate
-      state is {
+      state PaymentState is {
         orderId is Id(),
         amount is Number,
         cardToken is String
       }
-      consumer foo of topic Inputs {}
+      consumer foo of topic Inputs is {}
     }
   }
   // #Payment
 
   // #Menu
-  context Menu {
-    entity MenuItem {
-      state is {
+  context Menu is {
+    entity MenuItem is {
+      state MenuState is {
         something: String
       }
-      consumer foo of topic Inputs {}
+      consumer foo of topic Inputs is {}
     }
     type MenuItemRef is refer to entity MenuItem
     entity Menu is {
       option is aggregate
       state items is many MenuItemRef
-      consumer foo of topic Inputs {}
+      consumer foo of topic Inputs is {}
     }
   }
   // #Menu
 
   // #Reservation
-  context Reservation {
+  context Reservation is {
     type ReservationValue is {
       partyName is String,
       phoneNumber is String,
@@ -152,15 +152,15 @@ domain ReactiveBBQ {
     }
     entity Location is {
       state foo is String
-      consumer foo of topic Inputs {}
+      consumer foo of topic Inputs is {}
     } explained as {
       brief "This is a retail store Location"
     }
 
-    entity Reservation {
+    entity Reservation is {
      options ( aggregate )
      state reservation is ReservationValue
-     consumer ofInputs of topic Inputs {}
+     consumer ofInputs of topic Inputs is {}
     }
   }
   // #Reservation

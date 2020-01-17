@@ -154,7 +154,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[_: P]: P[Unit] = {
-    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./.?
+    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
   }
 
   def open[_: P]: P[Unit] = {
