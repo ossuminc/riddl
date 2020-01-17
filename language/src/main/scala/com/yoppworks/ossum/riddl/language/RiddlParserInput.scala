@@ -94,7 +94,7 @@ case class SourceParserInput(source: Source, origin: String)
     extends RiddlParserInput {
 
   val data: String = try {
-    source.getLines().mkString("\n")
+    source.mkString
   } finally {
     source.close()
   }
