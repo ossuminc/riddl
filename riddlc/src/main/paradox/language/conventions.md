@@ -45,6 +45,16 @@ definitions. Such nested definitions are deemed to be **contained**.
 Not every definition is a container as it only applies to concepts
 like `domain`, `context` and `entity`.   
 
+The full list of all Container types is as follows:
+
+* `topic`
+* `feature`
+* `entity`
+* `adaptor`
+* `context`
+* `interaction`
+* `domain`
+
 ## Leaves
 Definitions that may not contain other definitions are called "leaves"
 because, like tree leaves, they occur at the extremity (most nested) part of
