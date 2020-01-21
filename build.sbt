@@ -105,7 +105,6 @@ lazy val language = (project in file("language")).settings(
     "org.typelevel" %% "cats-core" % "2.1.0",
     "com.lihaoyi" %% "fastparse" % "2.2.4",
     "com.github.pureconfig" %% "pureconfig" % "0.12.2",
-    "org.scalactic" %% "scalactic" % "3.1.0",
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
   ),
@@ -116,7 +115,8 @@ lazy val language = (project in file("language")).settings(
         (scalastyle in Compile).toTask("")
       )
       .value
-  }
+  },
+  (parallelExecution in test) := false,
 )
 
 lazy val translator = (project in file("translator"))
