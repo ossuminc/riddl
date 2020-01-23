@@ -199,7 +199,7 @@ object Validation {
       enumerators.foldLeft(this) {
         case (state, enumerator) =>
           val id = enumerator.id
-          val s = state
+          var s = state
             .checkIdentifierLength(enumerator)
             .check(
               id.value.head.isUpper,
@@ -207,14 +207,36 @@ object Validation {
               StyleWarning,
               id.loc
             )
-          if (enumerator.value.nonEmpty) {
-            s.checkTypeExpression(enumerator.value.get, definition)
-              .checkDescription(definition, desc)
-          } else {
-            s.checkDescription(definition, desc)
+          s = enumerator.typeRef match {
+            case Some(typeRef) =>
+              lookup[Type](typeRef.id) match {
+                case Nil =>
+                  s.check(
+                    false,
+                    s"Enumeration references a non-existent type: ${typeRef.id.value}",
+                    Error,
+                    typeRef.id.loc
+                  )
+                case singleRef +: Nil =>
+                  s.check(
+                    singleRef.typ.isInstanceOf[Aggregation],
+                    s"Enumeration references a non-aggregation type: ${typeRef.id.value}",
+                    Error,
+                    typeRef.id.loc
+                  )
+                case head +: tail =>
+                  s.check(
+                    false,
+                    s"Enumeration references an ambiguous type: ${typeRef.id.value}.  " +
+                      s"Resolved references include: ${(head +: tail).map(_.id.value)}",
+                    Error,
+                    typeRef.id.loc
+                  )
+              }
+            case _ => s
           }
+          s.checkDescription(definition, desc)
       }
-
     }
 
     def checkAlternation(

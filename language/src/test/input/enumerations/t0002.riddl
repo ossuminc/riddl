@@ -1,3 +1,4 @@
 domain test is {
-    type foo is any of { A { i: Integer} B }
+    type aType is { i: Integer }
+    type foo is any of { A is type aType B }
 }

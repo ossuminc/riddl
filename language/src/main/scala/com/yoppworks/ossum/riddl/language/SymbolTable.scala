@@ -82,14 +82,7 @@ case class SymbolTable(container: Container) {
             case e: Enumeration =>
               e.of.foreach { etor =>
                 addToSymTab(etor.id.value, t -> parent)
-                etor.value match {
-                  case Some(agg) =>
-                    agg.fields.foreach {
-                      case Field(_, id, _, _) =>
-                        addToSymTab(id.value, t -> parent)
-                    }
-                  case None =>
-                }
+              // type reference and identifier relations must be handled by semantic validation
               }
             case _ =>
           }

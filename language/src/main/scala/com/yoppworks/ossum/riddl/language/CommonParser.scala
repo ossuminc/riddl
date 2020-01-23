@@ -219,6 +219,10 @@ trait CommonParser extends NoWhiteSpaceParsers {
       .map(tpl => (TopicRef.apply _).tupled(tpl))
   }
 
+  def typeRef[_: P]: P[TypeRef] = {
+    P(location ~ pathIdentifier).map(tpl => (TypeRef.apply _).tupled(tpl))
+  }
+
   def actionRef[_: P]: P[FunctionRef] = {
     P(location ~ Keywords.action ~/ pathIdentifier)
       .map(tpl => (FunctionRef.apply _).tupled(tpl))

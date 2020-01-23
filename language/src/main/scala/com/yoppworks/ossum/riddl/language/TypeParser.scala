@@ -10,13 +10,6 @@ import Terminals.Punctuation._
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
 
-  def typeRef[_: P]: P[TypeRef] = {
-    P(location ~ pathIdentifier).map {
-      case (location, identifier) =>
-        TypeRef(location, identifier)
-    }
-  }
-
   def referToType[_: P]: P[ReferenceType] = {
     P(location ~ "refer" ~ "to" ~/ entityRef ~ description).map { tpl =>
       (ReferenceType.apply _).tupled(tpl)
@@ -88,11 +81,17 @@ trait TypeParser extends CommonParser {
   }
 
   def enumerator[_: P]: P[Enumerator] = {
-    P(identifier ~ enumValue ~ aggregationWithoutDescription.? ~ description)
-      .map {
-        case (id, enumVal, typex, desc) =>
-          Enumerator(id.loc, id, enumVal, typex, desc)
-      }
+    P(identifier ~ enumValue ~ isTypeRef.? ~ description).map {
+      case (id, enumVal, typeRef, desc) =>
+        Enumerator(id.loc, id, enumVal, typeRef, desc)
+    }
+  }
+
+  /**
+    * Type reference parser that requires the 'type' keyword qualifier
+    */
+  def isTypeRef[_: P]: P[TypeRef] = {
+    P(is ~/ Keywords.`type` ~/ typeRef)
   }
 
   def enumeration[_: P]: P[Enumeration] = {
@@ -208,7 +207,7 @@ trait TypeParser extends CommonParser {
 
   def typeDef[_: P]: P[Type] = {
     P(
-      location ~ "type" ~/ identifier ~ is ~ typeExpression ~ description
+      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ description
     ).map { tpl =>
       (Type.apply _).tupled(tpl)
     }

@@ -113,6 +113,7 @@ object Terminals {
     final val state = "state"
     final val then_ = "then"
     final val topic = "topic"
+    final val `type` = "type"
     final val value = "value"
     final val when = "when"
     final val yields = "yields"

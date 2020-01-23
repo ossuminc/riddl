@@ -35,7 +35,8 @@ domain Everything is {
     type url is URL
 
     // Enumerations have a value chosen from a list of identifiers
-    type enum is any of { Apple Pear Peach{a: Int} Persimmon }
+    type PeachType is { a: Integer }
+    type enum is any of { Apple Pear Peach is type PeachType Persimmon }
 
     // Alternations select one type from a list of types
     type alt is one of { enum or stamp or url }

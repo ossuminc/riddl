@@ -208,7 +208,7 @@ class FormatTranslator extends Translator {
       enumeration.of
         .foldLeft(this) { (s, e) =>
           s.add(e.id.value)
-          e.value.map(visitTypeExpr).getOrElse(s)
+          e.typeRef.map(visitTypeRef).getOrElse(s)
         }
         .visitDescription(enumeration.description)
     }
@@ -268,6 +268,10 @@ class FormatTranslator extends Translator {
         s"\n) "
       }
       this.add(line).visitDescription(pattern.description)
+    }
+
+    def visitTypeRef(typeRef: TypeRef): FormatState = {
+      this.add(s" is type ${typeRef.id.value}")
     }
 
     def visitTypeExpr(typEx: AST.TypeExpression): FormatState = {

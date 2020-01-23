@@ -14,7 +14,11 @@ class InteractionValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate[Context](input) { (content, msgs) =>
-        assertValidationMessage(msgs, Validation.Error, "Actions in Interaction 'dosomething' should not be empty")
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "Actions in Interaction 'dosomething' should not be empty"
+        )
         content.interactions.length mustBe 1
       }
     }
@@ -36,7 +40,10 @@ class InteractionValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate[Context](input) { (content, msgs) =>
-        msgs.filter(m => m.kind.isError && m.message.startsWith("Interaction 'dosomething'")) mustBe empty
+        msgs.filter(
+          m =>
+            m.kind.isError && m.message.startsWith("Interaction 'dosomething'")
+        ) mustBe empty
         content.interactions.length mustBe 1
         val interaction = content.interactions.head
 

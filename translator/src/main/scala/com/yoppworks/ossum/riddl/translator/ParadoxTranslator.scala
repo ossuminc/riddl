@@ -184,13 +184,13 @@ class ParadoxTranslator extends Translator {
         case Nothing(_)     => "Nothing"
         case TypeRef(_, id) => id.value.mkString(".")
         case AST.Enumeration(_, of, _) =>
-          def doTypex(t: Option[TypeExpression]): String = {
+          def doMaybeRef(t: Option[TypeRef]): String = {
             t match {
-              case None        => ""
-              case Some(typex) => mkTypeExpression(typex)
+              case None          => ""
+              case Some(typeRef) => mkRef(typeRef)
             }
           }
-          s"any { ${of.map(e => e.id.value + doTypex(e.value)).mkString(" ")} }"
+          s"any { ${of.map(e => e.id.value + doMaybeRef(e.typeRef)).mkString(" ")} }"
         case AST.Alternation(_, of, _) =>
           s"one { ${of.map(mkTypeExpression).mkString(" or ")} }"
         case AST.Aggregation(_, of, _) =>
