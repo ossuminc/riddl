@@ -10,8 +10,8 @@ class FunctionValidatorTest extends ValidatingTest {
       parseAndValidate[Entity]("""
                                  |entity user is {
                                  |  function foo is {
-                                 |    requires is Boolean
-                                 |    yields is Integer
+                                 |    requires Boolean
+                                 |    yields Integer
                                  |  }
                                  |}
                                  |""".stripMargin) { (e, msgs) =>

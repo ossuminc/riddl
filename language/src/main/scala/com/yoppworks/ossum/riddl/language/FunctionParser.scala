@@ -12,13 +12,13 @@ trait FunctionParser extends CommonParser with TypeParser {
 
   def input[_: P]: P[TypeExpression] = {
     P(
-      Keywords.requires ~ is ~ typeExpression
+      Keywords.requires ~ typeExpression
     )
   }
 
   def output[_: P]: P[TypeExpression] = {
     P(
-      Keywords.yields ~ is ~ typeExpression
+      Keywords.yields ~ typeExpression
     )
   }
 

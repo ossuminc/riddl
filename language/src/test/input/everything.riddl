@@ -68,8 +68,8 @@ domain Everything is {
       state someState is { field:  SomeType }
 
       function whenUnderTheInfluence is {
-        requires: Nothing
-        yields: Boolean
+        requires Nothing
+        yields Boolean
       }
 
       consumer foo of topic AChannel is {

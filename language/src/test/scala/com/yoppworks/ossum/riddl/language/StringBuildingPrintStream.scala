@@ -1,4 +1,4 @@
-package com.yoppworks.test
+package com.yoppworks.ossum.riddl.language
 
 import java.io.OutputStream
 import java.io.PrintStream

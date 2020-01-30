@@ -1,5 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
+import com.yoppworks.ossum.riddl.language.AST.Aggregation
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Topic
 import com.yoppworks.ossum.riddl.language.AST.Type
@@ -98,7 +99,13 @@ class RegressionTests extends ParsingTest {
         case Right(topic: Topic @unchecked) =>
           info(topic.toString)
           val evt = topic.events.head
-          evt.typ.fields.head.description.nonEmpty mustBe true
+          evt.typ match {
+            case a: Aggregation =>
+              a.fields.head.description.nonEmpty mustBe true
+            case _ =>
+              succeed
+          }
+
       }
     }
   }

@@ -1,17 +1,13 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.time.Instant
-
-import com.yoppworks.test.AdjustableClock
-import com.yoppworks.test.StringBuildingPrintStream
 import java.io.File
 import java.util.UUID
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
+import com.yoppworks.ossum.riddl.language.Logging.Lvl
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
-import com.yoppworks.test.InMemoryLogger
-import com.yoppworks.test.Logging.Lvl
 
 import scala.io.Source
 
@@ -103,17 +99,14 @@ class RiddlTest extends ParsingTestBase {
   def capturingStdErr[A](f: () => A): (A, String) = {
     val out = System.err
     val printStream = StringBuildingPrintStream()
-    var result: (A, String) = null
     try {
       System.setErr(printStream)
       val a = f()
       val output = printStream.mkString()
-      result = (a, output)
-
+      (a, output)
     } finally {
       System.setErr(out)
     }
-    result
   }
 
   /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
@@ -131,16 +124,14 @@ class RiddlTest extends ParsingTestBase {
   def capturingStdOut[A](f: () => A): (A, String) = {
     val out = System.out
     val printStream = StringBuildingPrintStream()
-    var result: (A, String) = null
     try {
       System.setOut(printStream)
       val a = f()
       val output = printStream.mkString()
-      result = (a, output)
+      (a, output)
     } finally {
       System.setOut(out)
     }
-    result
   }
 
   "SysLogger" should {

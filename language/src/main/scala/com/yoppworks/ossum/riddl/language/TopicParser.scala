@@ -10,7 +10,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def commandDef[_: P]: P[Command] = {
     P(
-      location ~ identifier ~ is ~ aggregationWithoutDescription ~
+      location ~ identifier ~ is ~ typeExpression ~
         Keywords.yields ~
         eventRefsForCommandDefs ~ description
     ).map(
@@ -33,7 +33,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def eventDef[_: P]: P[Event] = {
     P(
-      location ~ identifier ~ is ~ aggregationWithoutDescription ~ description
+      location ~ identifier ~ is ~ typeExpression ~ description
     ).map(
       tpl => (Event.apply _).tupled(tpl)
     )
@@ -42,7 +42,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def queryDef[_: P]: P[Query] = {
     P(
-      location ~ identifier ~ is ~ aggregationWithoutDescription ~
+      location ~ identifier ~ is ~ typeExpression ~
         Keywords.yields ~ resultRef ~ description
     ).map(
       tpl => (Query.apply _).tupled(tpl)
@@ -52,7 +52,7 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def resultDef[_: P]: P[Result] = {
     P(
-      location ~ identifier ~ is ~ aggregationWithoutDescription ~ description
+      location ~ identifier ~ is ~ typeExpression ~ description
     ).map(
       tpl => (Result.apply _).tupled(tpl)
     )

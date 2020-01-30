@@ -276,8 +276,11 @@ object AST {
 
   sealed trait MessageReference extends Reference
   sealed trait MessageDefinition extends Container {
-    def typ: Aggregation
-    override def contents: Seq[Definition] = typ.fields
+    def typ: TypeExpression
+    override def contents: Seq[Definition] = typ match {
+      case a: Aggregation => a.fields
+      case _              => Seq.empty[Definition]
+    }
   }
 
   case class CommandRef(
@@ -287,7 +290,7 @@ object AST {
   case class Command(
     loc: Location,
     id: Identifier,
-    typ: Aggregation,
+    typ: TypeExpression,
     events: EventRefs,
     description: Option[Description] = None
   ) extends MessageDefinition
@@ -302,7 +305,7 @@ object AST {
   case class Event(
     loc: Location,
     id: Identifier,
-    typ: Aggregation,
+    typ: TypeExpression,
     description: Option[Description] = None
   ) extends MessageDefinition
 
@@ -314,7 +317,7 @@ object AST {
   case class Query(
     loc: Location,
     id: Identifier,
-    typ: Aggregation,
+    typ: TypeExpression,
     result: ResultRef,
     description: Option[Description] = None
   ) extends MessageDefinition
@@ -326,7 +329,7 @@ object AST {
   case class Result(
     loc: Location,
     id: Identifier,
-    typ: Aggregation,
+    typ: TypeExpression,
     description: Option[Description] = None
   ) extends MessageDefinition
 

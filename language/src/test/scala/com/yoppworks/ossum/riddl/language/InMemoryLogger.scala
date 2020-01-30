@@ -1,7 +1,7 @@
-package com.yoppworks.test
+package com.yoppworks.ossum.riddl.language
 
+import com.yoppworks.ossum.riddl.language.Logging.Lvl
 import com.yoppworks.ossum.riddl.language.Riddl.Logger
-import com.yoppworks.test.Logging.Lvl
 
 import scala.collection.mutable.ArrayBuffer
 

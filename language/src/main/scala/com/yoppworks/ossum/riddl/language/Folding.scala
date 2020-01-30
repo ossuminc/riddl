@@ -240,8 +240,13 @@ object Folding {
         case message: MessageDefinition =>
           openMessage(initState, parent, message)
             .step { state =>
-              message.typ.fields.foldLeft(state) { (next, field) =>
-                doField(next, message, field)
+              message.typ match {
+                case a: Aggregation =>
+                  a.fields.foldLeft(state) { (next, field) =>
+                    doField(next, message, field)
+                  }
+                case _ =>
+                  state
               }
             }
             .step { state =>
