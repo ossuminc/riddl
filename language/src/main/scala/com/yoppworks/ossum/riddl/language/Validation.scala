@@ -363,7 +363,7 @@ object Validation {
             add(
               ValidationMessage(
                 id.loc,
-                s"'${id.value.mkString(".")}' is not defined but should be a ${tc.getSimpleName}",
+                s"'${id.format}' is not defined but should be a ${tc.getSimpleName}",
                 Error
               )
             )
@@ -372,7 +372,7 @@ object Validation {
             // TODO: type than the reference (rarely the case)
             check(
               tc.isAssignableFrom(d.getClass),
-              s"'${id.value}' was expected to be ${tc.getSimpleName}" +
+              s"'${id.format}' was expected to be ${tc.getSimpleName}" +
                 s" but is ${d.getClass.getSimpleName} instead",
               Error,
               id.loc

@@ -44,7 +44,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(Location(), Nil).format mustBe "<empty>"
-      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe "foo.bar.baz"
+      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe "baz.bar.foo"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
     }
   }

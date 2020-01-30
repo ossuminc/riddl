@@ -46,7 +46,7 @@ object AST {
       extends RiddlValue {
 
     def format: String = {
-      if (value.isEmpty) "<empty>" else value.mkString(".")
+      if (value.isEmpty) "<empty>" else value.reverse.mkString(".")
     }
   }
 
