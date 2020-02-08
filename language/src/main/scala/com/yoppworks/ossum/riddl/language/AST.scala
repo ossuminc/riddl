@@ -18,18 +18,30 @@ object AST {
   /** The root trait of all things RIDDL AST */
   sealed trait RiddlNode
 
+  final val defaultSourceName = "default"
+
   /** A location of an item in the input  */
-  case class Location(line: Int = 0, col: Int = 0) {
+  case class Location(
+    line: Int = 0,
+    col: Int = 0,
+    source: String = defaultSourceName
+  ) {
     override def toString: String = {
-      s"($line:$col)"
+      s"$source($line:$col)"
     }
   }
 
   object Location {
     val empty: Location = Location()
 
-    implicit def apply(pair: (Int, Int)): Location = {
-      Location(pair._1, pair._2)
+    implicit def apply(
+      pair: (Int, Int)
+    ): Location = {
+      Location(pair._1, pair._2, defaultSourceName)
+    }
+
+    implicit def apply(triple: (Int, Int, String)): Location = {
+      Location(triple._1, triple._2, triple._3)
     }
   }
 
@@ -434,21 +446,22 @@ object AST {
     description: Option[Description] = None
   ) extends OnClauseStatement
 
-  case class PublishStatement(
-    loc: Location,
-    msg: MessageReference,
-    entity: TopicRef,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
-
   case class MessageConstructor(
     msg: MessageReference,
     args: ListMap[Identifier, Expression]
   )
+
+  case class PublishStatement(
+    loc: Location,
+    msg: MessageConstructor,
+    topic: TopicRef,
+    description: Option[Description] = None
+  ) extends OnClauseStatement
+
   case class SendStatement(
     loc: Location,
     msg: MessageConstructor,
-    topic: Reference,
+    entity: EntityRef,
     description: Option[Description] = None
   ) extends OnClauseStatement
 

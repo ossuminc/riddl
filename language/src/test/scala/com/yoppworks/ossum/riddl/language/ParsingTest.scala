@@ -250,6 +250,7 @@ class ParsingTest extends ParsingTestBase {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
+        fail()
       case Right(model) =>
         model
     }

@@ -25,8 +25,8 @@ class ValidateExamplesTest extends ValidatingTest {
               .filterNot(_.kind == MissingWarning)
               .filterNot(_.kind == StyleWarning)
               .toList
-            info(errors.iterator.map(_.format(fileName)).mkString("\n"))
-            info(warnings.iterator.map(_.format(fileName)).mkString("\n"))
+            info(errors.iterator.map(_.format).mkString("\n"))
+            info(warnings.iterator.map(_.format).mkString("\n"))
             errors mustBe empty
             warnings mustBe empty
         }

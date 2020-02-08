@@ -51,10 +51,10 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  def location(index: Int): Location = {
+  def location(index: Int, origin: String = ""): Location = {
     val line = lineOf(index)
     val col = index - lineNumberLookup(line)
-    Location(line + 1, col + 1)
+    Location(line + 1, col + 1, origin)
   }
 
   def prettyIndex(index: Int): String = {
@@ -70,8 +70,10 @@ abstract class RiddlParserInput extends ParserInput {
   }
 }
 
-case class StringParserInput(data: String, origin: String = "internal")
-    extends RiddlParserInput {
+case class StringParserInput(
+  data: String,
+  origin: String = AST.defaultSourceName
+) extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
 }
 

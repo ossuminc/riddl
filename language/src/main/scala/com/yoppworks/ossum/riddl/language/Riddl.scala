@@ -93,7 +93,6 @@ object Riddl {
   }
 
   def validate(
-    source: String,
     root: RootContainer,
     log: Logger,
     options: Options
@@ -107,18 +106,18 @@ object Riddl {
       val style = warns.filter(_.kind.isStyle)
       val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
       if (options.showMissingWarnings) {
-        missing.map(_.format(source)).foreach(log.warn(_))
+        missing.map(_.format).foreach(log.warn(_))
       }
       if (options.showStyleWarnings) {
-        style.map(_.format(source)).foreach(log.warn(_))
+        style.map(_.format).foreach(log.warn(_))
       }
       if (options.showWarnings) {
-        warnings.map(_.format(source)).foreach(log.warn(_))
+        warnings.map(_.format).foreach(log.warn(_))
       }
       log.info(s"""Validation Warnings: ${warns.length}""")
-      errors.map(_.format(source)).foreach(log.error(_))
+      errors.map(_.format).foreach(log.error(_))
       log.info(s"""Validation Errors: ${errors.length} errors""")
-      severe.map(_.format(source)).foreach(log.severe(_))
+      severe.map(_.format).foreach(log.severe(_))
       log.info(s"""Severe Errors: ${errors.length} errors""")
       if (errs.nonEmpty) {
         None
@@ -137,7 +136,7 @@ object Riddl {
   ): Option[RootContainer] = {
     parse(input, logger, options) match {
       case Some(root) =>
-        validate(input.origin, root, logger, options)
+        validate(root, logger, options)
       case None =>
         None
     }
@@ -150,8 +149,7 @@ object Riddl {
   ): Option[RootContainer] = {
     parse(path, logger, options) match {
       case Some(root) =>
-        val source = path.toString
-        validate(source, root, logger, options)
+        validate(root, logger, options)
       case None =>
         None
     }

@@ -25,13 +25,13 @@ class ConsumerTest extends ParsingTest {
           |      set trackingId to CreateItem.trackingId
           |      set manifestId to CreateItem.manifestId
           |      set destination to CreatItem.postalCode
-          |      send event ItemPreInducted() to topic DistributionItemTopic
+          |      publish event ItemPreInducted() to topic DistributionItemTopic
           |    }
           |    on command InductItem {
           |      set timeOfFirstScan to InductItem.originTimeStamp
           |      set journey to Inducted
           |      set lastKnownWorkCenterId to InductItem.workCenter
-          |      send event ItemInducted() to topic DistributionItemTopic
+          |      publish event ItemInducted() to topic DistributionItemTopic
           |    }
           |    on command SortItem {
           |      when empty(timeOfFirstScan) then { set
@@ -50,7 +50,7 @@ class ConsumerTest extends ParsingTest {
           |        set timeOfFirstScan to NestItem.originTimeStamp
           |      }
           |      set parentContainer to NestItem.container
-          |      send command AddItemToContainer() to topic ContainerTopic
+          |      publish command AddItemToContainer() to topic ContainerTopic
           |    }
           |    on command TransportItem {
           |      when empty(timeOfFirstScan) { set timeOfFirstScan to

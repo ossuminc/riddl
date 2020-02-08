@@ -13,9 +13,9 @@ class IncludesTest extends ParsingTest {
       val domain = checkFile("Domain Includes", "domainIncludes.riddl")
       domain.contents.head.asInstanceOf[Domain].types.head mustBe (
         Type(
-          1 -> 1,
-          Identifier(1 -> 6, "foo"),
-          Strng(1 -> 13),
+          (1, 1, "domainIncluded.riddl"),
+          Identifier((1, 6, "domainIncluded.riddl"), "foo"),
+          Strng((1, 13, "domainIncluded.riddl")),
           None
         )
       )
@@ -29,9 +29,9 @@ class IncludesTest extends ParsingTest {
         .types
         .head mustBe (
         Type(
-          1 -> 1,
-          Identifier(1 -> 6, "foo"),
-          Strng(1 -> 12),
+          (1, 1, "contextIncluded.riddl"),
+          Identifier((1, 6, "contextIncluded.riddl"), "foo"),
+          Strng((1, 12, "contextIncluded.riddl")),
           None
         )
       )

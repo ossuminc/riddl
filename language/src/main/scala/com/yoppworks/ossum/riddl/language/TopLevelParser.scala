@@ -45,9 +45,10 @@ object TopLevelParser {
   }
 
   def parse(
-    input: String
+    input: String,
+    origin: String = AST.defaultSourceName
   ): Either[Seq[ParserError], RootContainer] = {
-    val sp = StringParserInput(input)
+    val sp = StringParserInput(input, origin)
     val tlp = new TopLevelParser(sp)
     tlp.expect(tlp.fileRoot(_))
   }

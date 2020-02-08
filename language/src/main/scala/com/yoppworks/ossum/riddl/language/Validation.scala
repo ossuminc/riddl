@@ -63,8 +63,8 @@ object Validation {
     kind: ValidationMessageKind = Error
   ) {
 
-    def format(source: String): String = {
-      s"$kind: $source$loc: $message"
+    def format: String = {
+      s"$kind: $loc: $message"
     }
   }
 
@@ -130,7 +130,9 @@ object Validation {
       symbolTable.lookup[T](id)
     }
 
-    def add(msg: ValidationMessage): ValidationState = {
+    def add(
+      msg: ValidationMessage
+    ): ValidationState = {
       msg.kind match {
         case StyleWarning =>
           if (isReportStyleWarnings) {

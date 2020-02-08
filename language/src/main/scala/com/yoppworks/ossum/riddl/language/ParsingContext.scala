@@ -37,7 +37,8 @@ trait ParsingContext {
   }
 
   def location[_: P]: P[Location] = {
-    P(Index).map(current.location)
+    val cur = current
+    P(Index).map(idx => cur.location(idx, cur.origin))
   }
 
   def doInclude[T](str: LiteralString, empty: T)(rule: P[_] => P[T]): T = {

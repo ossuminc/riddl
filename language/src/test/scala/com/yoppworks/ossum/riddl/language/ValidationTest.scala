@@ -17,9 +17,7 @@ import org.scalatest.matchers.must
 class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationMessage#format" should {
     "produce a correct string" in {
-      ValidationMessage(Location(1, 2), "the_message", Warning)
-        .format("the_source") mustBe
-        s"Warning: the_source(1:2): the_message"
+      ValidationMessage(Location(1, 2, "the_source"), "the_message", Warning).format mustBe s"Warning: the_source(1:2): the_message"
     }
 
     "ValidationState" should {

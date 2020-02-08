@@ -5,6 +5,8 @@ import Terminals._
 import fastparse._
 import ScalaWhitespace._
 
+import scala.collection.immutable.ListMap
+
 /** Unit Tests For ConsumerParser */
 trait ConsumerParser
     extends CommonParser
@@ -29,24 +31,31 @@ trait ConsumerParser
     }
   }
 
+  def messageConstructor[_: P]: P[MessageConstructor] = {
+    P(
+      messageRef ~ argList.?
+    ).map(tpl => {
+      val args = tpl._2 match {
+        case None    => ListMap.empty[Identifier, Expression]
+        case Some(a) => a
+      }
+      MessageConstructor(tpl._1, args)
+    })
+  }
+
   def publishStmt[_: P]: P[PublishStatement] = {
     P(
-      Keywords.publish ~/ location ~ messageRef ~ Terminals.Readability.to ~
-        topicRef ~ description
+      (Keywords.yields | Keywords.publish) ~/ location ~ messageConstructor ~
+        Terminals.Readability.to ~ topicRef ~ description
     ).map { t =>
       (PublishStatement.apply _).tupled(t)
     }
   }
 
-  def messageConstructor[_: P]: P[MessageConstructor] = {
-    P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
-  }
-
   def sendStmt[_: P]: P[SendStatement] = {
     P(
-      Keywords.send ~/ location ~ messageConstructor ~
-        Terminals.Readability.to ~
-        (entityRef | topicRef) ~ description
+      Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~
+        entityRef ~ description
     ).map { t =>
       (SendStatement.apply _).tupled(t)
     }
@@ -61,7 +70,7 @@ trait ConsumerParser
     }
   }
 
-  def doStmt[_: P]: P[ExecuteStatement] = {
+  def executeStmt[_: P]: P[ExecuteStatement] = {
     P(location ~ Keywords.execute ~/ identifier ~ description).map { t =>
       (ExecuteStatement.apply _).tupled(t)
     }
@@ -78,7 +87,7 @@ trait ConsumerParser
   def onClauseAction[_: P]: P[OnClauseStatement] = {
     P(
       setStmt | appendStmt | removeStmt | sendStmt | publishStmt | whenStmt |
-        doStmt
+        executeStmt
     )
   }
 

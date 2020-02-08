@@ -10,15 +10,17 @@ import scala.io.Source
 
 class TopLevelParserTest extends ParsingTestBase {
 
+  val origin = "simpleDomain.riddl"
+
   val simpleDomainFile = new File(
-    "language/src/test/input/domains/simpleDomain.riddl"
+    s"language/src/test/input/domains/$origin"
   )
 
   val simpleDomain = RootContainer(
     List(
       Domain(
-        (1, 1),
-        Identifier((1, 8), "foo"),
+        (1, 1, origin),
+        Identifier((1, 8, origin), "foo"),
         List(),
         List(),
         List(),
@@ -45,7 +47,7 @@ class TopLevelParserTest extends ParsingTestBase {
       val source = Source.fromFile(simpleDomainFile)
       try {
         val stringContents = source.mkString
-        TopLevelParser.parse(stringContents) mustBe Right(simpleDomain)
+        TopLevelParser.parse(stringContents, origin) mustBe Right(simpleDomain)
       } finally {
         source.close()
       }
