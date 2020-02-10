@@ -383,10 +383,9 @@ object Validation {
             add(
               ValidationMessage(
                 id.loc,
-                s"""'${id.value}' is not uniquely defined. Other
-                   |definitions are:
-                   |${tail.map(_.loc.toString).mkString("  \n")}",
-                   |""".stripMargin,
+                s"""'${id.value}' is not uniquely defined.
+                   |Other definitions are:
+                   |${formatDefinitions(tail)}""".stripMargin,
                 Error
               )
             )
@@ -394,6 +393,14 @@ object Validation {
       } else {
         this
       }
+    }
+
+    private def formatDefinitions[T <: Definition](list: List[T]): String = {
+      list
+        .map { dfntn =>
+          "  " + dfntn.id.value + " (" + dfntn.loc + ")"
+        }
+        .mkString("\n")
     }
 
     def checkNonEmpty(

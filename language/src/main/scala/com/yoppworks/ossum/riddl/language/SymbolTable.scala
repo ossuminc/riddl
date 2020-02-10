@@ -43,6 +43,7 @@ case class SymbolTable(container: Container) {
           recurse(newList, parent)
       }
     }
+
     recurse(List.empty[Container], definition)
   }
 
@@ -131,4 +132,28 @@ case class SymbolTable(container: Container) {
         List.empty[D]
     }
   }
+
+  /*
+
+  def lookup[D <: Definition: ClassTag](
+    id: Seq[String],
+    context: Definition
+  ): List[D] = {
+    lookup[D](id) match {
+      case Nil =>
+        Nil
+      case definition :: Nil =>
+        List(definition)
+      case head :: tail =>
+        if (head == id.head) {
+          tail.find { d =>
+          }
+          if (id.tail == (tail)) {}
+        } else {
+          Nil
+        }
+    }
+  }
+
+ */
 }
