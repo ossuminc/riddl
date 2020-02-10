@@ -1,4 +1,4 @@
-image: yoppworks/alpine-sbt-graphviz:1
+image: yoppworks/sbt-alpine-graphviz:1
 
 test:
   stage: test
