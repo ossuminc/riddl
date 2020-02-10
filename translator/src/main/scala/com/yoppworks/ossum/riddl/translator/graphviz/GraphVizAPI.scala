@@ -146,7 +146,7 @@ case class GraphVizAPI(config: GraphVizAPIConfig) {
       config.dotPath.resolve(config.dotProgramName.toString).toString
     val command = program + s" -T${config.outputType} -Gdpi=${config.imageDPI}"
 
-    val dotInput = getDotSource.getBytes(Charset.forName(charsetName = "UTF-8"))
+    val dotInput = getDotSource.getBytes(Charset.forName("UTF-8"))
     val input = new ByteArrayInputStream(dotInput)
     val stdout = new StringBuilder
     val stderr = new StringBuilder
