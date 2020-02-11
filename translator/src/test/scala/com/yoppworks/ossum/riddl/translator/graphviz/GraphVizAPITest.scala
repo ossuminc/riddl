@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl.translator.graphviz
 
+import java.nio.file.Path
+
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,6 +12,15 @@ import org.scalatest.wordspec.AnyWordSpec
 /** Unit Tests For GraphVizAPITest */
 class GraphVizAPITest extends AnyWordSpec with must.Matchers {
 
+  private final val binPathForOS: Path = {
+    val osName = System.getProperty("os.name").replaceAll("\\s", "")
+    osName match {
+      case "MacOSX" =>
+        Path.of("/usr/local/bin")
+      case _ =>
+        Path.of("/usr/bin")
+    }
+  }
   private final val simpleDiagram =
     """graph {
       |    a -- b;
@@ -20,10 +31,16 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
       |    e -- a;
       |}""".stripMargin
 
+  val basicConfig =
+    GraphVizAPIConfig().copy(
+      dotPath = binPathForOS,
+      dotProgramName = dot,
+      outputType = svg
+    )
+
   "GraphVizAPITest" should {
     "draw a simple diagram in dot" in {
-      val config =
-        GraphVizAPIConfig().copy(dotProgramName = circo, outputType = dot_)
+      val config = basicConfig.copy(dotProgramName = circo, outputType = dot_)
       val graphviz = GraphVizAPI(config)
       graphviz.add(simpleDiagram).addln
       val resultF: Future[(Int, String, String)] = graphviz.runDot
@@ -34,9 +51,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
     }
 
     "draw a simple diagram in SVG" in {
-      val config =
-        GraphVizAPIConfig().copy(dotProgramName = dot, outputType = svg)
-      val graphviz = GraphVizAPI(config)
+      val graphviz = GraphVizAPI(basicConfig)
       graphviz.add(simpleDiagram).addln
       val resultF: Future[(Int, String, String)] = graphviz.runDot
       val result = Await.result(resultF, 1.minute)
