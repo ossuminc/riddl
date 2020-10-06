@@ -1,11 +1,9 @@
-.idea/*.*
-.idea/libraries/
-.idea/codeStyles/
-.idea/modules/
-.idea/shelf
+.idea/
 !.idea/runConfigurations/
 !.idea/dictionaries
 target
 **/target
 .DS_Store
 
+*.dot
+*.png
