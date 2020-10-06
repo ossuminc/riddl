@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.riddl.translator.graphviz
+package com.yoppworks.ossum.riddl.translator.graph
 
 import java.nio.file.Path
 import java.io._
@@ -94,50 +94,129 @@ object GraphVizAPI {
     }
   }
 
-  def apply(): GraphVizAPI = {
+  def apply(sb: StringBuilder): GraphVizAPI = {
     val config = getConfiguration match {
       case Left(failures) =>
         throw new RuntimeException(failures.prettyPrint())
       case Right(config) =>
         config
     }
-    new GraphVizAPI(config)
+    new GraphVizAPI(config, sb)
+  }
+
+  @volatile private var clusterNum = 0
+
+  implicit class StringBuilderExtras(sb: StringBuilder) {
+
+    def nl: StringBuilder = {
+      sb.append('\n')
+    }
+
+    private def fmtattr(a: (String, String)): String = {
+      s"${a._1}=${a._2}"
+    }
+
+    def attrs(attributes: Seq[(String, String)]): StringBuilder = {
+      sb.append(attributes.map(fmtattr).mkString(";\n")).append(";").nl
+    }
+
+    def node(attributes: Seq[(String, String)]): StringBuilder = {
+      sb.append("node [")
+        .append(attributes.map(fmtattr).mkString(", "))
+        .append("];")
+        .nl
+    }
+
+    def edge(attributes: Seq[(String, String)]): StringBuilder = {
+      sb.append("edge [")
+        .append(attributes.map(fmtattr).mkString(", "))
+        .append("];")
+        .nl
+    }
+
+    def node(name: String, attributes: Seq[(String, String)]): StringBuilder = {
+      sb.append(name)
+        .append(" [")
+        .append(attributes.map(fmtattr).mkString(", "))
+        .append("];")
+        .nl
+    }
+
+    def relation(from: String, to: String): StringBuilder = {
+      sb.append(s"$from -> $to ;").nl
+    }
+
+    def relation3(from: String, to: String, andThen: String): StringBuilder = {
+      sb.append(s"$from -> $to -> $andThen ;").nl
+    }
+
+    def multiway(from: String, tos: String*): StringBuilder = {
+      tos.foldLeft(sb) { (sb, to) =>
+        sb.append(s"$from -> $to ;").nl
+      }
+    }
+
+    def subgraph(
+      name: String
+    )(content: StringBuilder => StringBuilder): StringBuilder = {
+      sb.append(s"subgraph $name {")
+        .nl
+        .append(content(new StringBuilder).mkString.indent(2))
+        .append("}")
+        .nl
+    }
+
+    def cluster(
+      name: String
+    )(content: StringBuilder => StringBuilder): StringBuilder = {
+      clusterNum = clusterNum + 1
+      subgraph(s"cluster${clusterNum}") { sb =>
+        sb.attrs(Seq("label" -> name)).append(content(sb))
+      }
+    }
+
+    def digraph(
+      name: String
+    )(content: StringBuilder => StringBuilder): StringBuilder = {
+      sb.append(s"digraph $name {")
+        .nl
+        .append(content(new StringBuilder).mkString.indent(2))
+        .append("}")
+        .nl
+    }
+
+    def expand[T](
+      list: Seq[T]
+    )(f: (StringBuilder, T) => StringBuilder): StringBuilder = {
+      list.foldLeft(new StringBuilder) { (sb, it) =>
+        f(sb, it)
+      }
+    }
+
+    /** Adds a string to the graph's source (without newline). */
+    def add(line: String): StringBuilder = {
+      sb.append(line)
+    }
+
+    /** Adds a string to the graph's source (with newline).  */
+    def addln(line: String): StringBuilder = {
+      sb.append(line + "\n")
+    }
+
+    /** Adds a newline to the graph's source. */
+    def addln: StringBuilder = {
+      sb.append('\n')
+    }
   }
 }
 
-case class GraphVizAPI(config: GraphVizAPIConfig) {
-
-  /**
-    * The source of the graph written in dot language.
-    */
-  private final val graph: StringBuilder = new StringBuilder()
+case class GraphVizAPI(config: GraphVizAPIConfig, buffer: StringBuilder) {
 
   /**
     * Returns the graph's source description in dot language.
     * @return Source of the graph in dot language.
     */
-  def getDotSource: String = this.graph.toString()
-
-  /** Adds a string to the graph's source (without newline). */
-  def add(line: String): GraphVizAPI = {
-    graph.append(line)
-    this
-  }
-
-  /** Adds a string to the graph's source (with newline).  */
-  def addln(line: String): GraphVizAPI = {
-    graph.append(line + "\n")
-    this
-  }
-
-  /** Adds a newline to the graph's source. */
-  def addln: GraphVizAPI = {
-    graph.append('\n')
-    this
-  }
-
-  /** Resets the graph to empty */
-  def clearGraph(): GraphVizAPI = { graph.clear(); this }
+  def getDotSource: String = this.buffer.toString()
 
   def runDot(implicit ec: ExecutionContext): Future[(Int, String, String)] = {
     import scala.sys.process._

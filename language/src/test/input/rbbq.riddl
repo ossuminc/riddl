@@ -15,7 +15,7 @@ domain ReactiveBBQ is {
 
   topic Inputs is {
     commands {
-      foo is {} yields event root.ReactiveBBQ.Inputs.bar
+      foo is {} yields event Inputs.bar
     } events {
       bar is {}
     } queries {} results {}

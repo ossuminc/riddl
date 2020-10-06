@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.riddl.translator.graphviz
+package com.yoppworks.ossum.riddl.translator.graph
 
 import java.nio.file.Path
 
@@ -31,6 +31,10 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
       |    e -- a;
       |}""".stripMargin
 
+  import GraphVizAPI._
+
+  private final val buffer = new StringBuilder(simpleDiagram).addln
+
   val basicConfig =
     GraphVizAPIConfig().copy(
       dotPath = binPathForOS,
@@ -41,8 +45,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
   "GraphVizAPITest" should {
     "draw a simple diagram in dot" in {
       val config = basicConfig.copy(dotProgramName = circo, outputType = dot_)
-      val graphviz = GraphVizAPI(config)
-      graphviz.add(simpleDiagram).addln
+      val graphviz = GraphVizAPI(config, buffer)
       val resultF: Future[(Int, String, String)] = graphviz.runDot
       val result = Await.result(resultF, 1.minute)
       result._1 mustBe 0
@@ -51,8 +54,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
     }
 
     "draw a simple diagram in SVG" in {
-      val graphviz = GraphVizAPI(basicConfig)
-      graphviz.add(simpleDiagram).addln
+      val graphviz = GraphVizAPI(basicConfig, buffer)
       val resultF: Future[(Int, String, String)] = graphviz.runDot
       val result = Await.result(resultF, 1.minute)
       result._1 mustBe 0
