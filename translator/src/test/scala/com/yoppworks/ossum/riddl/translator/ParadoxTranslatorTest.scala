@@ -19,7 +19,7 @@ class ParadoxTranslatorTest extends ParsingTest {
         fail(msg)
       case Right(root) =>
         val trans = new ParadoxTranslator
-        val config = trans.ParadoxConfig()
+        val config = ParadoxConfig()
         trans.translate(root, None, Riddl.SysLogger, config)
     }
     succeed
@@ -31,8 +31,6 @@ class ParadoxTranslatorTest extends ParsingTest {
       // runOne("everything.riddl")
       pending
     }
-    "translate rbbq.riddl" in {
-      runOne("rbbq.riddl")
-    }
+    "translate rbbq.riddl" in { runOne("rbbq.riddl") }
   }
 }

@@ -10,11 +10,12 @@ import org.scalatest.Assertion
 
 import scala.reflect._
 
-/** Convenience functions for tests that do validation*/
+/** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidate[D <: Container: ClassTag](input: String)(
-    validation: (D, ValidationMessages) => Assertion
+  def parseAndValidate[D <: Container: ClassTag](
+    input: String
+  )(validation: (D, ValidationMessages) => Assertion
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
@@ -30,8 +31,7 @@ abstract class ValidatingTest extends ParsingTest {
     label: String,
     fileName: String,
     options: ValidationOptions = ValidationOptions.Default
-  )(
-    validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val directory = "language/src/test/input/"
     val file = new File(directory + fileName)
@@ -50,8 +50,8 @@ abstract class ValidatingTest extends ParsingTest {
     expectedKind: ValidationMessageKind,
     messageSnippet: String
   ): Assertion = {
-    msgs.exists(
-      m => m.message.contains(messageSnippet) && m.kind == expectedKind
+    msgs.exists(m =>
+      m.message.contains(messageSnippet) && m.kind == expectedKind
     ) mustBe true
   }
 }

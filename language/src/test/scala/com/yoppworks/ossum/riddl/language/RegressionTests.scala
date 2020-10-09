@@ -9,41 +9,34 @@ import com.yoppworks.ossum.riddl.language.AST.Type
 class RegressionTests extends ParsingTest {
   "Regressions" should {
     "allow descriptions as a single string" in {
-      val input =
-        """domain foo is {
-          |} explained as { "foo" }
-          |""".stripMargin
+      val input = """domain foo is {
+                    |} explained as { "foo" }
+                    |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) =>
-          domain.description match {
-            case Some(desc) =>
-              succeed
-            case None =>
-              fail("no description")
+        case Right(domain) => domain.description match {
+            case Some(desc) => succeed
+            case None       => fail("no description")
           }
       }
     }
     "allow descriptions as a doc block" in {
-      val input =
-        """domain foo is {
-          |} explained as {
-          |  |ladeedah
-          |}
-          |""".stripMargin
+      val input = """domain foo is {
+                    |} explained as {
+                    |  |ladeedah
+                    |}
+                    |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) =>
-          domain.description match {
+        case Right(domain) => domain.description match {
             case Some(desc) =>
               desc.details.nonEmpty mustBe true
               desc.details.head.s mustEqual ("ladeedah")
-            case None =>
-              fail("no description")
+            case None => fail("no description")
           }
       }
     }
@@ -100,10 +93,9 @@ class RegressionTests extends ParsingTest {
           info(topic.toString)
           val evt = topic.events.head
           evt.typ match {
-            case a: Aggregation =>
-              a.fields.head.description.nonEmpty mustBe true
-            case _ =>
-              succeed
+            case a: Aggregation => a.fields.head.description.nonEmpty mustBe
+                true
+            case _ => succeed
           }
 
       }

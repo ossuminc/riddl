@@ -14,8 +14,7 @@ import scala.reflect._
 trait ParsingTestBase extends AnyWordSpec with must.Matchers
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
-    extends TopLevelParser(input)
-    with must.Matchers {
+    extends TopLevelParser(input) with must.Matchers {
   stack.push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
@@ -23,10 +22,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extract: T => U
   ): Either[Seq[ParserError], U] = {
     expect(parser) match {
-      case Right(content) =>
-        Right(extract(content))
-      case Left(errors) =>
-        Left(errors)
+      case Right(content) => Right(extract(content))
+      case Left(errors)   => Left(errors)
     }
   }
 
@@ -42,8 +39,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Topic]       => topic(_)
       case x if x == classOf[AST.Invariant]   => invariant(_)
       case x if x == classOf[AST.Function]    => function(_)
-      case _ =>
-        throw new RuntimeException(
+      case _ => throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"
         )
     }
@@ -58,10 +54,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extract: RootContainer => TO
   ): Either[Seq[ParserError], TO] = {
     expect[RootContainer](fileRoot(_)) match {
-      case Right(content) =>
-        Right(extract(content))
-      case Left(msg) =>
-        Left(msg)
+      case Right(content) => Right(extract(content))
+      case Left(msg)      => Left(msg)
     }
   }
 
@@ -73,23 +67,20 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     result.map(extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag]
-    : Either[Seq[ParserError], FROM] = {
+  def parseDefinition[
+    FROM <: Definition: ClassTag
+  ]: Either[Seq[ParserError], FROM] = {
     val parser = parserFor[FROM]
     expect[FROM](parser)
   }
 
   def parseDomainDefinition[TO <: RiddlNode](
     extract: Domain => TO
-  ): Either[Seq[ParserError], TO] = {
-    parse[Domain, TO](domain(_), extract)
-  }
+  ): Either[Seq[ParserError], TO] = { parse[Domain, TO](domain(_), extract) }
 
   def parseContextDefinition[TO <: RiddlNode](
     extract: Context => TO
-  ): Either[Seq[ParserError], TO] = {
-    parse[Context, TO](context(_), extract)
-  }
+  ): Either[Seq[ParserError], TO] = { parse[Context, TO](context(_), extract) }
 }
 
 /** Unit Tests For ParsingTest */
@@ -131,17 +122,15 @@ class ParsingTest extends ParsingTestBase {
     cases: Map[String, TO],
     extract: Domain => TO
   ): Unit = {
-    cases foreach {
-      case (statement, expected) =>
-        val input = s"domain foo {\n$statement\n}"
-        val tp = TestParser(RiddlParserInput(input))
-        tp.parseDomainDefinition(extract) match {
-          case Right(content) =>
-            content mustBe expected
-          case Left(errors) =>
-            val msg = errors.map(_.format).mkString
-            fail(msg)
-        }
+    cases foreach { case (statement, expected) =>
+      val input = s"domain foo {\n$statement\n}"
+      val tp = TestParser(RiddlParserInput(input))
+      tp.parseDomainDefinition(extract) match {
+        case Right(content) => content mustBe expected
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+      }
     }
   }
 
@@ -193,8 +182,7 @@ class ParsingTest extends ParsingTestBase {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(content) =>
-        content mustBe expected
+      case Right(content) => content mustBe expected
     }
   }
 
@@ -202,16 +190,14 @@ class ParsingTest extends ParsingTestBase {
     cases: Map[String, TO],
     extract: FROM => TO
   ): Unit = {
-    cases.foreach {
-      case (statement: String, expected: TO @unchecked) =>
-        val rip = RiddlParserInput(statement)
-        TestParser(rip).parseDefinition[FROM] match {
-          case Left(errors) =>
-            val msg = errors.map(_.format).mkString
-            fail(msg)
-          case Right(content) =>
-            content mustBe expected
-        }
+    cases.foreach { case (statement: String, expected: TO @unchecked) =>
+      val rip = RiddlParserInput(statement)
+      TestParser(rip).parseDefinition[FROM] match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+        case Right(content) => content mustBe expected
+      }
     }
   }
 
@@ -219,9 +205,7 @@ class ParsingTest extends ParsingTestBase {
     input: RiddlParserInput,
     extract: Context => TO
   ): Either[Seq[ParserError], TO] = {
-    val tp = TestParser(
-      RiddlParserInput(s"context foo is {\n${input.data}\n}")
-    )
+    val tp = TestParser(RiddlParserInput(s"context foo is {\n${input.data}\n}"))
     tp.parseContextDefinition[TO](extract)
   }
 
@@ -229,17 +213,15 @@ class ParsingTest extends ParsingTestBase {
     cases: Map[String, TO],
     extract: Context => TO
   ): Unit = {
-    cases.foreach {
-      case (statement: String, expected: TO @unchecked) =>
-        val input = s"context foo is {\n$statement\n}"
-        val tp = TestParser(RiddlParserInput(input))
-        tp.parseContextDefinition(extract) match {
-          case Right(content) =>
-            content mustBe expected
-          case Left(errors) =>
-            val msg = errors.map(_.format).mkString
-            fail(msg)
-        }
+    cases.foreach { case (statement: String, expected: TO @unchecked) =>
+      val input = s"context foo is {\n$statement\n}"
+      val tp = TestParser(RiddlParserInput(input))
+      tp.parseContextDefinition(extract) match {
+        case Right(content) => content mustBe expected
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+      }
     }
   }
 
@@ -251,8 +233,7 @@ class ParsingTest extends ParsingTestBase {
         val msg = errors.map(_.format).mkString
         fail(msg)
         fail()
-      case Right(model) =>
-        model
+      case Right(model) => model
     }
   }
 }

@@ -4,6 +4,7 @@ import java.io.File
 
 import com.yoppworks.ossum.riddl.language.Riddl
 import scopt.OParserBuilder
+import scala.language.postfixOps
 
 /** Command Line Options for Riddl compiler program */
 case class RiddlOptions(
@@ -18,8 +19,8 @@ case class RiddlOptions(
   inputFile: Option[File] = None,
   outputDir: Option[File] = None,
   configFile: Option[File] = None,
-  outputKind: Kinds.Kinds = Kinds.Paradox
-) extends Riddl.Options
+  outputKind: Kinds.Kinds = Kinds.Paradox)
+    extends Riddl.Options
 
 object Kinds extends Enumeration {
   type Kinds = Value
@@ -29,8 +30,8 @@ object Kinds extends Enumeration {
 object RiddlOptions {
   import scopt.OParser
 
-  implicit val kindsRead: scopt.Read[Kinds.Value] =
-    scopt.Read.reads(Kinds withName)
+  implicit val kindsRead: scopt.Read[Kinds.Value] = scopt.Read
+    .reads(Kinds withName)
 
   sealed trait Command
   case object Unspecified extends Command
@@ -38,8 +39,8 @@ object RiddlOptions {
   case object Translate extends Command
   case object Validate extends Command
 
-  val builder: OParserBuilder[RiddlOptions] =
-    scopt.OParser.builder[RiddlOptions]
+  val builder: OParserBuilder[RiddlOptions] = scopt.OParser
+    .builder[RiddlOptions]
 
   val parser: OParser[Unit, RiddlOptions] = {
     import builder._
@@ -61,40 +62,29 @@ object RiddlOptions {
         .action((_, c) => c.copy(showStyleWarnings = false)),
       opt[Unit]('t', name = "show-times")
         .action((_, c) => c.copy(showTimes = true)),
-      cmd("parse")
-        .action((_, c) => c.copy(command = Parse))
+      cmd("parse").action((_, c) => c.copy(command = Parse))
         .text("Parse the input for syntactic compliance with riddl language")
         .children(
-          opt[File]('i', "input-file")
-            .required()
+          opt[File]('i', "input-file").required()
             .action((x, c) => c.copy(inputFile = Some(x)))
             .text("required riddl input file to compile")
         ),
-      cmd("validate")
-        .action((_, c) => c.copy(command = Validate))
-        .children(
-          opt[File]('i', "input-file")
-            .required()
-            .action((x, c) => c.copy(inputFile = Some(x)))
-            .text("required riddl input file to compile")
-        ),
-      cmd("translate")
-        .action((_, c) => c.copy(command = Translate))
-        .text("translate riddl as specified in configuration file ")
-        .children(
-          arg[Kinds.Kinds]("kind")
-            .action((k, c) => c.copy(outputKind = k))
+      cmd("validate").action((_, c) => c.copy(command = Validate)).children(
+        opt[File]('i', "input-file").required()
+          .action((x, c) => c.copy(inputFile = Some(x)))
+          .text("required riddl input file to compile")
+      ),
+      cmd("translate").action((_, c) => c.copy(command = Translate))
+        .text("translate riddl as specified in configuration file ").children(
+          arg[Kinds.Kinds]("kind").action((k, c) => c.copy(outputKind = k))
             .text("The kind of output to generate during translation"),
-          opt[File]('i', "input-file")
-            .required()
+          opt[File]('i', "input-file").required()
             .action((x, c) => c.copy(inputFile = Some(x)))
             .text("required riddl input file to compile"),
-          opt[File]('c', "configuration-file")
-            .required()
+          opt[File]('c', "configuration-file").required()
             .action((v, c) => c.copy(configFile = Some(v)))
             .text("configuration that specifies how to do the translation"),
-          opt[Boolean]('d', "dry-run")
-            .hidden()
+          opt[Boolean]('d', "dry-run").hidden()
             .action((_, c) => c.copy(dryRun = true))
             .text("go through the motions but don't write any changes")
         )

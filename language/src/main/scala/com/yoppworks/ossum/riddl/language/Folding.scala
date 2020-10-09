@@ -10,15 +10,18 @@ object Folding {
 
   type SimpleDispatch[S] = (Container, Definition, S) => S
 
-  def foldEachDefinition[S](parent: Container, container: Container, state: S)(
-    f: SimpleDispatch[S]
+  def foldEachDefinition[S](
+    parent: Container,
+    container: Container,
+    state: S
+  )(f: SimpleDispatch[S]
   ): S = {
     var result = state
     container match {
-      case root: RootContainer =>
-        root.contents.foldLeft(result) { (next, container) =>
-          foldEachDefinition[S](root, container, next)(f)
-        }
+      case root: RootContainer => root.contents
+          .foldLeft(result) { (next, container) =>
+            foldEachDefinition[S](root, container, next)(f)
+          }
       case domain: Domain =>
         result = f(parent, domain, result)
         result = domain.types.foldLeft(result) { (next, ty) =>
@@ -49,19 +52,11 @@ object Folding {
         }
       case entity: Entity =>
         result = f(parent, entity, result)
-        val reducables = (
-          entity.types.iterator ++
-            entity.consumers ++
-            entity.functions ++
-            entity.invariants
-        ).toList
-        result = reducables.foldLeft(result) { (next, r) =>
-          f(entity, r, next)
-        }
-        val foldables = (
-          entity.features.iterator ++
-            entity.states
-        ).toList
+        val reducables =
+          (entity.types.iterator ++ entity.consumers ++ entity.functions ++
+            entity.invariants).toList
+        result = reducables.foldLeft(result) { (next, r) => f(entity, r, next) }
+        val foldables = (entity.features.iterator ++ entity.states).toList
         foldables.foldLeft(result) { (next, foldable) =>
           foldEachDefinition[S](entity, foldable, next)(f)
         }
@@ -75,16 +70,12 @@ object Folding {
         feature.examples.foldLeft(result) { (next, example) =>
           f(feature, example, next)
         }
-      case adaptor: Adaptor =>
-        f(parent, adaptor, result)
+      case adaptor: Adaptor => f(parent, adaptor, result)
       case topic: Topic =>
         result = f(parent, topic, result)
-        val foldables: List[MessageDefinition] = (
-          topic.commands.iterator ++
-            topic.events ++
-            topic.queries ++
-            topic.results
-        ).toList
+        val foldables: List[MessageDefinition] =
+          (topic.commands.iterator ++ topic.events ++ topic.queries ++
+            topic.results).toList
         foldables.foldLeft(result) { (next, message) =>
           foldEachDefinition(topic, message, next)(f)
         }
@@ -96,10 +87,8 @@ object Folding {
       case st: AST.State =>
         result = f(parent, st, result)
         st.typeEx match {
-          case agg: Aggregation =>
-            agg.fields.foldLeft(result) { (next, field) =>
-              f(st, field, next)
-            }
+          case agg: Aggregation => agg.fields
+              .foldLeft(result) { (next, field) => f(st, field, next) }
           case _ => state
         }
     }
@@ -114,151 +103,108 @@ object Folding {
       initState: S
     ): S = {
       container match {
-        case root: RootContainer =>
-          root.contents.foldLeft(initState) {
-            case (s, content) =>
+        case root: RootContainer => root.contents
+            .foldLeft(initState) { case (s, content) =>
               foldLeft(root, content, s)
-          }
-        case domain: Domain =>
-          openDomain(initState, parent, domain)
+            }
+        case domain: Domain => openDomain(initState, parent, domain)
             .step { state =>
               domain.types.foldLeft(state) { (next, ty) =>
                 doType(next, domain, ty)
               }
-            }
-            .step { state =>
+            }.step { state =>
               domain.topics.foldLeft(state) { (next, topic) =>
                 foldLeft(domain, topic, next)
               }
-            }
-            .step { state =>
+            }.step { state =>
               domain.contexts.foldLeft(state) { (next, context) =>
                 foldLeft(domain, context, next)
               }
-            }
-            .step { state =>
+            }.step { state =>
               domain.interactions.foldLeft(state) { (next, interaction) =>
                 foldLeft(domain, interaction, next)
               }
-            }
-            .step { state =>
-              closeDomain(state, parent, domain)
-            }
+            }.step { state => closeDomain(state, parent, domain) }
 
-        case context: Context =>
-          openContext(initState, parent, context)
+        case context: Context => openContext(initState, parent, context)
             .step { state =>
               context.types.foldLeft(state) { (next, ty) =>
                 doType(next, context, ty)
               }
-            }
-            .step { state =>
+            }.step { state =>
               context.adaptors.foldLeft(state) { (next, adaptor) =>
                 foldLeft(context, adaptor, next)
               }
-            }
-            .step { state =>
+            }.step { state =>
               context.entities.foldLeft(state) { (next, entity) =>
                 foldLeft(context, entity, next)
               }
-            }
-            .step { state =>
+            }.step { state =>
               context.interactions.foldLeft(state) { (next, in) =>
                 foldLeft(context, in, next)
               }
-            }
-            .step { state =>
-              closeContext(state, parent, context)
-            }
-        case entity: Entity =>
-          openEntity(initState, parent, entity)
+            }.step { state => closeContext(state, parent, context) }
+        case entity: Entity => openEntity(initState, parent, entity)
             .step { state =>
               entity.types.foldLeft(state) { (next, typ) =>
                 doType(next, entity, typ)
               }
-            }
-            .step { state =>
+            }.step { state =>
               entity.consumers.foldLeft(state) { (next, consumer) =>
                 doConsumer(next, entity, consumer)
               }
-            }
-            .step { state =>
+            }.step { state =>
               entity.features.foldLeft(state) { (next, feature) =>
                 foldLeft(entity, feature, next)
               }
-            }
-            .step { state =>
+            }.step { state =>
               entity.functions.foldLeft(state) { (next, function) =>
                 doFunction(next, entity, function)
               }
-            }
-            .step { state =>
+            }.step { state =>
               entity.invariants.foldLeft(state) { (next, invariant) =>
                 doInvariant(next, entity, invariant)
               }
-            }
-            .step { state =>
+            }.step { state =>
               entity.states.foldLeft(state) { (next, s) =>
                 foldLeft(entity, s, next)
               }
-            }
-            .step { state =>
-              closeEntity(state, parent, entity)
-            }
+            }.step { state => closeEntity(state, parent, entity) }
         case interaction: Interaction =>
-          openInteraction(initState, parent, interaction)
+          openInteraction(initState, parent, interaction).step { state =>
+            interaction.actions.foldLeft(state) { (next, action) =>
+              doAction(next, interaction, action)
+            }
+          }.step { state => closeInteraction(state, parent, interaction) }
+        case feature: Feature => openFeature(initState, parent, feature)
             .step { state =>
-              interaction.actions.foldLeft(state) { (next, action) =>
-                doAction(next, interaction, action)
+              feature.examples.foldLeft(state) { (next, example) =>
+                doExample(next, feature, example)
               }
             }
-            .step { state =>
-              closeInteraction(state, parent, interaction)
+        case adaptor: Adaptor => openAdaptor(initState, parent, adaptor)
+            .step { state => closeAdaptor(state, parent, adaptor) }
+        case topic: Topic => openTopic(initState, parent, topic).step { state =>
+            val foldables: List[MessageDefinition] =
+              (topic.commands.iterator ++ topic.events ++ topic.queries ++
+                topic.results).toList
+            foldables.foldLeft(state) { (next, message) =>
+              foldLeft(topic, message, next)
             }
-        case feature: Feature =>
-          openFeature(initState, parent, feature).step { state =>
-            feature.examples.foldLeft(state) { (next, example) =>
-              doExample(next, feature, example)
-            }
-          }
-        case adaptor: Adaptor =>
-          openAdaptor(initState, parent, adaptor).step { state =>
-            closeAdaptor(state, parent, adaptor)
-          }
-        case topic: Topic =>
-          openTopic(initState, parent, topic)
-            .step { state =>
-              val foldables: List[MessageDefinition] =
-                (topic.commands.iterator ++ topic.events ++ topic.queries ++ topic.results).toList
-              foldables.foldLeft(state) { (next, message) =>
-                foldLeft(topic, message, next)
-              }
-            }
-            .step { state =>
-              closeTopic(state, parent, topic)
-            }
+          }.step { state => closeTopic(state, parent, topic) }
         case message: MessageDefinition =>
-          openMessage(initState, parent, message)
-            .step { state =>
-              message.typ match {
-                case a: Aggregation =>
-                  a.fields.foldLeft(state) { (next, field) =>
-                    doField(next, message, field)
-                  }
-                case _ =>
-                  state
-              }
-            }
-            .step { state =>
-              closeMessage(state, parent, message)
-            }
-        case st: AST.State =>
-          openState(initState, parent, st).step { state =>
-            st.typeEx match {
-              case agg: Aggregation =>
-                agg.fields.foldLeft(state) { (next, field) =>
-                  doField(next, st, field)
+          openMessage(initState, parent, message).step { state =>
+            message.typ match {
+              case a: Aggregation => a.fields.foldLeft(state) { (next, field) =>
+                  doField(next, message, field)
                 }
+              case _ => state
+            }
+          }.step { state => closeMessage(state, parent, message) }
+        case st: AST.State => openState(initState, parent, st).step { state =>
+            st.typeEx match {
+              case agg: Aggregation => agg.fields
+                  .foldLeft(state) { (next, field) => doField(next, st, field) }
               case _ => state
             }
           }

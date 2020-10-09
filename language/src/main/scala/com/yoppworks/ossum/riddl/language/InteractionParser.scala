@@ -35,9 +35,7 @@ trait InteractionParser extends CommonParser {
   }
 
   def reactions[_: P]: P[Seq[Reaction]] = {
-    P(
-      open ~ reaction.rep(0, Punctuation.comma) ~ close
-    )
+    P(open ~ reaction.rep(0, Punctuation.comma) ~ close)
   }
 
   def causing[_: P]: P[Seq[Reaction]] = {
@@ -46,31 +44,21 @@ trait InteractionParser extends CommonParser {
 
   def messageActionDef[_: P]: P[MessageAction] = {
     P(
-      location ~
-        "message" ~/ identifier ~ messageOptions ~ "from" ~/ entityRef ~ "to" ~/
-        entityRef ~
-        "as" ~ messageRef ~ causing ~ description
-    ).map { tpl =>
-      (MessageAction.apply _).tupled(tpl)
-    }
+      location ~ "message" ~/ identifier ~ messageOptions ~ "from" ~/
+        entityRef ~ "to" ~/ entityRef ~ "as" ~ messageRef ~ causing ~
+        description
+    ).map { tpl => (MessageAction.apply _).tupled(tpl) }
   }
 
-  def interactions[_: P]: P[Actions] = {
-    P(
-      messageActionDef
-    ).rep(1)
-  }
+  def interactions[_: P]: P[Actions] = { P(messageActionDef).rep(1) }
 
   def interaction[_: P]: P[Interaction] = {
     P(
-      location ~ Keywords.interaction ~/ identifier ~ is ~
-        open ~
+      location ~ Keywords.interaction ~/ identifier ~ is ~ open ~
         (undefined.map(_ => Seq.empty[ActionDefinition]) | interactions) ~
-        close ~
-        description
-    ).map {
-      case (loc, id, interactions, description) =>
-        Interaction(loc, id, interactions, description)
+        close ~ description
+    ).map { case (loc, id, interactions, description) =>
+      Interaction(loc, id, interactions, description)
     }
   }
 }

@@ -32,8 +32,7 @@ class FormatTranslatorTest extends ParsingTest {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")
                 fail("On Second Generation: " + message)
-              case Right(_) =>
-                output mustEqual output2
+              case Right(_) => output mustEqual output2
             }
         }
     }
@@ -48,8 +47,6 @@ class FormatTranslatorTest extends ParsingTest {
     "reflect rbbq.riddl" in {
       pending // runOne("rbbq.riddl")
     }
-    "error out on nestedInvalid.riddl" in {
-      pending
-    }
+    "error out on nestedInvalid.riddl" in { pending }
   }
 }

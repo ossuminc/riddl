@@ -8,15 +8,13 @@ class ConsumerValidatorTest extends ValidatingTest {
 
   "Consumer validation" should {
     "produce an error when consumer topic reference does not exist" in {
-      val input =
-        """
-          |entity Hamburger is {
-          |  consumer foo of topic EntityChannel is {}
-          |}
-          |""".stripMargin
+      val input = """
+                    |entity Hamburger is {
+                    |  consumer foo of topic EntityChannel is {}
+                    |}
+                    |""".stripMargin
       parseAndValidate[Entity](input) {
-        case (_: Entity, msgs: ValidationMessages) =>
-          assertValidationMessage(
+        case (_: Entity, msgs: ValidationMessages) => assertValidationMessage(
             msgs,
             Validation.Error,
             "'EntityChannel' is not defined but should be a Topic"
@@ -25,21 +23,20 @@ class ConsumerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause references a command that does not exist" in {
-      val input =
-        """
-          |domain entityTest is {
-          |topic EntityChannel is {}
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  state HamburgerState = { field1: Number, field2: String }
-          |  consumer foo of topic EntityChannel is {
-          |    on command EntityCommand { set field1 to 445 }
-          |    on event EntityEvent { set field1 to 678 }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
+      val input = """
+                    |domain entityTest is {
+                    |topic EntityChannel is {}
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  state HamburgerState = { field1: Number, field2: String }
+                    |  consumer foo of topic EntityChannel is {
+                    |    on command EntityCommand { set field1 to 445 }
+                    |    on event EntityEvent { set field1 to 678 }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
       parseAndValidate[Domain](input) {
         case (d: Domain, msgs: ValidationMessages) =>
           assertValidationMessage(
@@ -56,31 +53,29 @@ class ConsumerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause references a message of the wrong type" in {
-      val input =
-        """
-          |domain entityTest is {
-          |topic EntityChannel is {
-          |  commands { Incoming is {} yields event bar }
-          |  events { bar is {} }
-          |}
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  state HamburgerState = { field1: Number }
-          |  consumer foo of topic EntityChannel is {
-          |    on event Incoming { set field1 to 678 }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
-      parseAndValidate[Domain](input) {
-        case (_, msgs: ValidationMessages) =>
-          // TODO:  ideally this would indicate the def does exist but the wrong type
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'Incoming' is not defined but should be a Event"
-          )
+      val input = """
+                    |domain entityTest is {
+                    |topic EntityChannel is {
+                    |  commands { Incoming is {} yields event bar }
+                    |  events { bar is {} }
+                    |}
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  state HamburgerState = { field1: Number }
+                    |  consumer foo of topic EntityChannel is {
+                    |    on event Incoming { set field1 to 678 }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+        // TODO:  ideally this would indicate the def does exist but the wrong type
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'Incoming' is not defined but should be a Event"
+        )
       }
     }
 
@@ -102,13 +97,12 @@ class ConsumerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) {
-        case (_, msgs: ValidationMessages) =>
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'nonExistingField' is not defined but should be a Field"
-          )
+      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'nonExistingField' is not defined but should be a Field"
+        )
       }
     }
 

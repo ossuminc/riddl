@@ -19,6 +19,7 @@ object Riddl {
   }
 
   case object SysLogger extends Logger {
+
     override def severe(s: => String): Unit = {
       System.err.println("[severe] " + s)
     }
@@ -58,8 +59,8 @@ object Riddl {
     *
     * @return The result of running `f`
     */
-  def timer[T](stage: String, show: Boolean = true)(f: => T): T =
-    RiddlImpl.timer(Clock.systemUTC(), System.out, stage, show)(f)
+  def timer[T](stage: String, show: Boolean = true)(f: => T): T = RiddlImpl
+    .timer(Clock.systemUTC(), System.out, stage, show)(f)
 
   def parse(
     path: Path,
@@ -86,8 +87,7 @@ object Riddl {
           errors.map(_.format).foreach(logger.error(_))
           logger.info(s"Syntax Errors: ${errors.length}")
           None
-        case Right(root) =>
-          Some(root)
+        case Right(root) => Some(root)
       }
     }
   }
@@ -97,8 +97,8 @@ object Riddl {
     log: Logger,
     options: Options
   ): Option[RootContainer] = {
-    val messages: Seq[ValidationMessage] =
-      Validation.validate[RootContainer](root)
+    val messages: Seq[ValidationMessage] = Validation
+      .validate[RootContainer](root)
     if (messages.nonEmpty) {
       val (warns, errs) = messages.partition(_.kind.isWarning)
       val (severe, errors) = errs.partition(_.kind.isSevereError)
@@ -111,22 +111,15 @@ object Riddl {
       if (options.showStyleWarnings) {
         style.map(_.format).foreach(log.warn(_))
       }
-      if (options.showWarnings) {
-        warnings.map(_.format).foreach(log.warn(_))
-      }
+      if (options.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
       log.info(s"""Validation Warnings: ${warns.length}""")
       errors.map(_.format).foreach(log.error(_))
       log.info(s"""Validation Errors: ${errors.length} errors""")
       severe.map(_.format).foreach(log.severe(_))
       log.info(s"""Severe Errors: ${errors.length} errors""")
-      if (errs.nonEmpty) {
-        None
-      } else {
-        Some(root)
-      }
-    } else {
-      Some(root)
-    }
+      if (errs.nonEmpty) { None }
+      else { Some(root) }
+    } else { Some(root) }
   }
 
   def parseAndValidate(
@@ -135,10 +128,8 @@ object Riddl {
     options: Options
   ): Option[RootContainer] = {
     parse(input, logger, options) match {
-      case Some(root) =>
-        validate(root, logger, options)
-      case None =>
-        None
+      case Some(root) => validate(root, logger, options)
+      case None       => None
     }
   }
 
@@ -148,10 +139,8 @@ object Riddl {
     options: Options
   ): Option[RootContainer] = {
     parse(path, logger, options) match {
-      case Some(root) =>
-        validate(root, logger, options)
-      case None =>
-        None
+      case Some(root) => validate(root, logger, options)
+      case None       => None
     }
   }
 }
@@ -181,8 +170,7 @@ private[language] object RiddlImpl {
     out: PrintStream,
     stage: String,
     show: Boolean
-  )(
-    f: => T
+  )(f: => T
   ): T = {
     if (show) {
       val start = clock.millis()
@@ -193,8 +181,6 @@ private[language] object RiddlImpl {
       val milliseconds = delta % 1000
       out.println(f"Stage '$stage': $seconds.$milliseconds%03d seconds")
       result
-    } else {
-      f
-    }
+    } else { f }
   }
 }

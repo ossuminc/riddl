@@ -25,14 +25,14 @@ trait ParsingContext {
   def root: File = new File(System.getProperty("user.dir"))
 
   protected val stack: InputStack = InputStack()
-  protected val errors: mutable.ListBuffer[ParserError] =
-    mutable.ListBuffer.empty[ParserError]
+
+  protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer
+    .empty[ParserError]
 
   def current: RiddlParserInput = {
     stack.current match {
       case Some(rpi) => rpi
-      case None =>
-        throw new RuntimeException("Parse Input Stack Underflow")
+      case None      => throw new RuntimeException("Parse Input Stack Underflow")
     }
   }
 
@@ -50,10 +50,8 @@ trait ParsingContext {
     } else {
       stack.push(file)
       val result = this.expect[T](rule) match {
-        case Left(errors) =>
-          empty
-        case Right(result) =>
-          result
+        case Left(errors)  => empty
+        case Right(result) => result
       }
       stack.pop
       result
@@ -68,18 +66,14 @@ trait ParsingContext {
   def expect[T](parser: P[_] => P[T]): Either[Seq[ParserError], T] = {
     fastparse.parse(current, parser(_)) match {
       case Success(content, _) =>
-        if (errors.nonEmpty) {
-          Left(errors)
-        } else {
-          Right(content)
-        }
+        if (errors.nonEmpty) { Left(errors.toSeq) }
+        else { Right(content) }
       case failure @ Failure(_, index, _) =>
         val trace = failure.trace()
-        val msg =
-          s"""Parse failed:
-             |${trace.longAggregateMsg}""".stripMargin
+        val msg = s"""Parse failed:
+                     |${trace.longAggregateMsg}""".stripMargin
         error(current.location(index), msg)
-        Left(errors)
+        Left(errors.toSeq)
     }
   }
 }

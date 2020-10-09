@@ -10,56 +10,40 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def commandDef[_: P]: P[Command] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~
-        Keywords.yields ~
+      location ~ identifier ~ is ~ typeExpression ~ Keywords.yields ~
         eventRefsForCommandDefs ~ description
-    ).map(
-      tpl => (Command.apply _).tupled(tpl)
-    )
+    ).map(tpl => (Command.apply _).tupled(tpl))
   }
 
   def eventRefsForCommandDefs[_: P]: P[EventRefs] = {
     P(
       eventRef.map(Seq(_)) |
-        Keywords.events ~/ open ~
-          (location ~ pathIdentifier)
-            .map { tpl =>
-              (EventRef.apply _).tupled(tpl)
-            }
-            .rep(2) ~
-          close
+        Keywords.events ~/ open ~ (location ~ pathIdentifier).map { tpl =>
+          (EventRef.apply _).tupled(tpl)
+        }.rep(2) ~ close
     )
   }
 
   def eventDef[_: P]: P[Event] = {
-    P(
-      location ~ identifier ~ is ~ typeExpression ~ description
-    ).map(
-      tpl => (Event.apply _).tupled(tpl)
-    )
+    P(location ~ identifier ~ is ~ typeExpression ~ description)
+      .map(tpl => (Event.apply _).tupled(tpl))
 
   }
 
   def queryDef[_: P]: P[Query] = {
     P(
-      location ~ identifier ~ is ~ typeExpression ~
-        Keywords.yields ~ resultRef ~ description
-    ).map(
-      tpl => (Query.apply _).tupled(tpl)
-    )
+      location ~ identifier ~ is ~ typeExpression ~ Keywords.yields ~
+        resultRef ~ description
+    ).map(tpl => (Query.apply _).tupled(tpl))
 
   }
 
   def resultDef[_: P]: P[Result] = {
-    P(
-      location ~ identifier ~ is ~ typeExpression ~ description
-    ).map(
-      tpl => (Result.apply _).tupled(tpl)
-    )
+    P(location ~ identifier ~ is ~ typeExpression ~ description)
+      .map(tpl => (Result.apply _).tupled(tpl))
   }
 
-  type TopicDefinitions =
-    (Seq[Command], Seq[Event], Seq[Query], Seq[Result])
+  type TopicDefinitions = (Seq[Command], Seq[Event], Seq[Query], Seq[Result])
 
   def topicDefinitions[_: P]: P[TopicDefinitions] = {
     P(
@@ -84,22 +68,17 @@ trait TopicParser extends CommonParser with TypeParser {
 
   def topic[_: P]: P[Topic] = {
     P(
-      location ~ Keywords.topic ~/ identifier ~ is ~
-        open ~/
-        (undefined.map(
-          _ =>
-            (
-              Seq.empty[Command],
-              Seq.empty[Event],
-              Seq.empty[Query],
-              Seq.empty[Result]
-            )
-        ) | topicDefinitions)
-        ~
-          close ~/ description
-    ).map {
-      case (loc, id, (commands, events, queries, results), addendum) =>
-        Topic(loc, id, commands, events, queries, results, addendum)
+      location ~ Keywords.topic ~/ identifier ~ is ~ open ~/
+        (undefined.map(_ =>
+          (
+            Seq.empty[Command],
+            Seq.empty[Event],
+            Seq.empty[Query],
+            Seq.empty[Result]
+          )
+        ) | topicDefinitions) ~ close ~/ description
+    ).map { case (loc, id, (commands, events, queries, results), addendum) =>
+      Topic(loc, id, commands, events, queries, results, addendum)
     }
   }
 

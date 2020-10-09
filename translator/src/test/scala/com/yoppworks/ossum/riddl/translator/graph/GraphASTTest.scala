@@ -7,13 +7,12 @@ class GraphASTTest extends ParsingTest {
 
   "GraphASTTest" should {
     "draw a simple domain" in {
-      val input =
-        """domain d_1 is { ??? }
-          |domain d_2 is {
-          |  context c_3 is { ??? }
-          |  context c_4 is { ??? }
-          |}
-          |""".stripMargin
+      val input = """domain d_1 is { ??? }
+                    |domain d_2 is {
+                    |  context c_3 is { ??? }
+                    |  context c_4 is { ??? }
+                    |}
+                    |""".stripMargin
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString

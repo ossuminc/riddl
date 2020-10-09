@@ -3,7 +3,7 @@ package com.yoppworks.ossum.riddl.language
 import AST.LiteralString
 import AST.Location
 
-/** Unit Tests For CommonParser  */
+/** Unit Tests For CommonParser */
 class CommonParserTest extends ParsingTest {
 
   "CommonParserTest" should {
@@ -13,11 +13,10 @@ class CommonParserTest extends ParsingTest {
       loc.col mustBe 1
     }
     "literal strings can handle any chars except \"" in {
-      val input =
-        """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
-          | regular chars: abcdefghijklmnopqrstuvwxyz 0123456789
-          | tab and newline chars:
-          |"""".stripMargin
+      val input = """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
+                    | regular chars: abcdefghijklmnopqrstuvwxyz 0123456789
+                    | tab and newline chars:
+                    |"""".stripMargin
       parse[LiteralString, LiteralString](
         input,
         StringParser("").literalString(_),
@@ -26,8 +25,7 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) =>
-          content mustBe
+        case Right(content) => content mustBe
             LiteralString((1, 1), input.drop(1).dropRight(1))
 
       }

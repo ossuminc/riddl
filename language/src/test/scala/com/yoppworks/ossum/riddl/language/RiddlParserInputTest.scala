@@ -57,22 +57,18 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
           11 -> (11, 13),
           12 -> (11, 13),
           15 -> (13, 18)
-        ).foreach {
-          case (in, out) =>
-            input.rangeOf(in) mustBe out
-        }
+        ).foreach { case (in, out) => input.rangeOf(in) mustBe out }
       }
     }
   }
 
   "SourceParserInput" should {
     "read data from a source" in {
-      val string =
-        """
-          |hello I
-          |am a
-          |String
-          |""".stripMargin
+      val string = """
+                     |hello I
+                     |am a
+                     |String
+                     |""".stripMargin
       SourceParserInput(Source.fromString(string), "string").data mustBe string
     }
   }

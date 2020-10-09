@@ -43,11 +43,9 @@ abstract class RiddlParserInput extends ParserInput {
   def rangeOf(loc: Location): (Int, Int) = {
     require(loc.line > 0)
     val start = lineNumberLookup(loc.line - 1)
-    val end = if (lineNumberLookup.length == 1) {
-      data.length
-    } else {
-      lineNumberLookup(loc.line)
-    }
+    val end =
+      if (lineNumberLookup.length == 1) { data.length }
+      else { lineNumberLookup(loc.line) }
     start -> end
   }
 
@@ -57,9 +55,7 @@ abstract class RiddlParserInput extends ParserInput {
     Location(line + 1, col + 1, origin)
   }
 
-  def prettyIndex(index: Int): String = {
-    location(index).toString
-  }
+  def prettyIndex(index: Int): String = { location(index).toString }
 
   val nl: String = System.getProperty("line.separator")
 
@@ -72,8 +68,8 @@ abstract class RiddlParserInput extends ParserInput {
 
 case class StringParserInput(
   data: String,
-  origin: String = AST.defaultSourceName
-) extends RiddlParserInput {
+  origin: String = AST.defaultSourceName)
+    extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
 }
 
@@ -81,11 +77,8 @@ case class FileParserInput(file: File) extends RiddlParserInput {
 
   val data: String = {
     val source: Source = Source.fromFile(file)
-    try {
-      source.getLines().mkString("\n")
-    } finally {
-      source.close()
-    }
+    try { source.getLines().mkString("\n") }
+    finally { source.close() }
   }
   val root: File = file.getParentFile
   def origin: String = file.getName
@@ -95,24 +88,20 @@ case class FileParserInput(file: File) extends RiddlParserInput {
 case class SourceParserInput(source: Source, origin: String)
     extends RiddlParserInput {
 
-  val data: String = try {
-    source.mkString
-  } finally {
-    source.close()
-  }
+  val data: String =
+    try { source.mkString }
+    finally { source.close() }
   val root: File = new File(System.getProperty("user.dir"))
 }
 
 object RiddlParserInput {
+
   implicit def apply(
     data: String
-  ): RiddlParserInput = {
-    StringParserInput(data)
-  }
+  ): RiddlParserInput = { StringParserInput(data) }
+
   implicit def apply(source: Source): RiddlParserInput = {
     SourceParserInput(source, source.descr)
   }
-  implicit def apply(file: File): RiddlParserInput = {
-    FileParserInput(file)
-  }
+  implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
 }

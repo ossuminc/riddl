@@ -37,9 +37,7 @@ object DiagramTranslator {
     g2.drawString(c.id.value, x, y)
     g2
   }
-  private def drawDomain(g2: SVGGraphics2D, d: Domain): SVGGraphics2D = {
-    g2
-  }
+  private def drawDomain(g2: SVGGraphics2D, d: Domain): SVGGraphics2D = { g2 }
 
   def makeNestingDiagram(file: File, root: RootContainer): Unit = {
     val g2: SVGGraphics2D = new SVGGraphics2D(1600, 900)
@@ -47,10 +45,7 @@ object DiagramTranslator {
     g2.draw(new Rectangle(10, 10, 280, 180))
     val svgElement: String = g2.getSVGElement
     val pw = new PrintWriter(file)
-    try {
-      pw.write(svgElement)
-    } finally {
-      pw.close()
-    }
+    try { pw.write(svgElement) }
+    finally { pw.close() }
   }
 }

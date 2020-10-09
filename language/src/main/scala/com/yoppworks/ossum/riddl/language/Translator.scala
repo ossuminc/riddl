@@ -8,20 +8,18 @@ import com.yoppworks.ossum.riddl.language.Riddl.Options
 import pureconfig._
 import pureconfig.error._
 
+trait TranslatorConfiguration extends Options {
+  def inputPath: Option[Path]
+}
+
+trait TranslatorState {
+  def config: TranslatorConfiguration
+  def generatedFiles: Seq[File]
+  def addFile(file: File): TranslatorState
+}
+
 /** Unit Tests For Translator */
-trait Translator {
-
-  trait Configuration extends Options {
-    def inputPath: Option[Path]
-  }
-
-  type CONF <: Configuration
-
-  trait State {
-    def config: Configuration
-    def generatedFiles: Seq[File]
-    def addFile(file: File): State
-  }
+trait Translator[CONF <: TranslatorConfiguration] {
 
   def loadConfig(path: Path): ConfigReader.Result[CONF]
 
@@ -33,8 +31,7 @@ trait Translator {
   ): Option[CONF] = {
     path match {
       case None => Some(defaultConfig)
-      case Some(p) =>
-        loadConfig(p) match {
+      case Some(p) => loadConfig(p) match {
           case Left(failures: ConfigReaderFailures) =>
             failures.toList.foreach { crf: ConfigReaderFailure =>
               val location = crf.location match {
@@ -45,8 +42,7 @@ trait Translator {
               logger.error(crf.description)
             }
             None
-          case Right(configuration) =>
-            Some(configuration)
+          case Right(configuration) => Some(configuration)
         }
     }
   }
@@ -75,10 +71,8 @@ trait Translator {
     config: CONF
   ): Seq[File] = {
     Riddl.parseAndValidate(path, logger, config) match {
-      case Some(root) =>
-        translate(root, outputRoot, logger, config)
-      case None =>
-        Seq.empty[File]
+      case Some(root) => translate(root, outputRoot, logger, config)
+      case None       => Seq.empty[File]
     }
   }
 
@@ -90,10 +84,8 @@ trait Translator {
   ): Seq[File] = {
 
     Riddl.parseAndValidate(input, logger, config) match {
-      case Some(root) =>
-        translate(root, outputRoot, logger, config)
-      case None =>
-        Seq.empty[File]
+      case Some(root) => translate(root, outputRoot, logger, config)
+      case None       => Seq.empty[File]
     }
   }
 
@@ -106,8 +98,7 @@ trait Translator {
     getConfig(logger, configFile) match {
       case Some(config) =>
         parseValidateTranslateFile(inputFile, outputRoot, logger, config)
-      case None =>
-        Seq.empty[File]
+      case None => Seq.empty[File]
     }
   }
 }

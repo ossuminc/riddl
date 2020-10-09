@@ -7,6 +7,7 @@ import com.yoppworks.ossum.riddl.language.Terminals.Operators
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 
 import scala.collection.immutable.ListMap
+import scala.language.postfixOps
 
 /** Parser rules for value expressions */
 trait ExpressionParser extends CommonParser {
@@ -26,20 +27,14 @@ trait ExpressionParser extends CommonParser {
   }
 
   def argList[_: P]: P[ListMap[Identifier, Expression]] = {
-    P(
-      Punctuation.roundOpen ~/
-        arguments ~
-        Punctuation.roundClose /
-    )
+    P(Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose /)
   }
 
   def functionCallExpression[_: P]: P[FunctionCallExpression] = {
     P(
-      location ~ identifier ~ Punctuation.roundOpen ~
-        arguments ~ Punctuation.roundClose
-    ).map { tpl =>
-      (FunctionCallExpression.apply _).tupled(tpl)
-    }
+      location ~ identifier ~ Punctuation.roundOpen ~ arguments ~
+        Punctuation.roundClose
+    ).map { tpl => (FunctionCallExpression.apply _).tupled(tpl) }
   }
 
   def fieldExpression[_: P]: P[FieldExpression] = {
@@ -55,20 +50,19 @@ trait ExpressionParser extends CommonParser {
   def operator[_: P]: P[String] = {
     P(
       Operators.plus.! | Operators.minus.! | Operators.times.! |
-        Operators.div.! | Operators.mod.! |
-        CharsWhile(x => x >= 'a' && x < 'z').!
+        Operators.div.! | Operators.mod.! | CharsWhile(x => x >= 'a' && x < 'z')
+          .!
     )
   }
 
   def mathExpression[_: P]: P[MathExpression] = {
-    P(
-      location ~ operator ~ argList
-    ).map(tpl => (MathExpression.apply _).tupled(tpl))
+    P(location ~ operator ~ argList)
+      .map(tpl => (MathExpression.apply _).tupled(tpl))
   }
 
   def expression[_: P]: P[Expression] = {
-    mathExpression | functionCallExpression | groupExpression |
-      literalInteger | literalDecimal | fieldExpression |
-      (location ~ Punctuation.undefined).map(loc => UnknownExpression(loc))
+    mathExpression | functionCallExpression | groupExpression | literalInteger |
+      literalDecimal | fieldExpression | (location ~ Punctuation.undefined)
+        .map(loc => UnknownExpression(loc))
   }
 }

@@ -10,10 +10,11 @@ import java.time.ZoneId
   */
 final class AdjustableClock(
   private var inst: Instant,
-  zone: ZoneId = ZoneId.of("UTC")
-) extends Clock {
+  zone: ZoneId = ZoneId.of("UTC"))
+    extends Clock {
 
   override def getZone(): ZoneId = zone
+
   override def withZone(zone: ZoneId): Clock =
     new AdjustableClock(instant(), zone)
   override def instant(): Instant = inst

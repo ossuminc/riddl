@@ -14,10 +14,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       Domain((0, 0), Identifier((1, 1), "foo"), Seq.empty[Type])
     }
     "support all type constructs" in {
-      TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe TypeRef(
-        0 -> 0,
-        PathIdentifier(0 -> 0, Seq("Foo"))
-      )
+      TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe
+        TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo")))
 
       Strng mustBe Strng
       Bool mustBe Bool
@@ -32,11 +30,20 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         Alternation((0, 0), Seq.empty[TypeExpression])
       Aggregation((0, 0), Seq.empty[Field]) mustBe
         Aggregation((0, 0), Seq.empty[Field])
-      Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))) mustBe
+      Optional(
+        (0, 0),
+        TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))
+      ) mustBe
         Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String"))))
-      ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))) mustBe
+      ZeroOrMore(
+        (0, 0),
+        TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))
+      ) mustBe
         ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time"))))
-      OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL")))) mustBe
+      OneOrMore(
+        (0, 0),
+        TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL")))
+      ) mustBe
         OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL"))))
     }
   }
@@ -44,29 +51,22 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(Location(), Nil).format mustBe "<empty>"
-      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe "baz.bar.foo"
+      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe
+        "baz.bar.foo"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
     }
   }
 
   "RootContainer" should {
-    "be at location 0,0" in {
-      RootContainer(Nil).loc mustBe Location()
-    }
-    "have no description" in {
-      RootContainer(Nil).description mustBe None
-    }
+    "be at location 0,0" in { RootContainer(Nil).loc mustBe Location() }
+    "have no description" in { RootContainer(Nil).description mustBe None }
   }
 
   "String" should {
-    "have kind 'String'" in {
-      Strng(Location()).kind mustBe "String"
-    }
+    "have kind 'String'" in { Strng(Location()).kind mustBe "String" }
   }
   "Bool" should {
-    "have kind 'Boolean'" in {
-      Bool(Location()).kind mustBe "Boolean"
-    }
+    "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" }
   }
 
   "Topic" should {
@@ -105,31 +105,25 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "Entity" should {
     "contents" should {
       "contain all contents" in {
-        val options = Seq(
-          EntityAggregate(Location()),
-          EntityPersistent(Location())
-        )
-        val states = Seq(
-          State(
+        val options =
+          Seq(EntityAggregate(Location()), EntityPersistent(Location()))
+        val states = Seq(State(
+          Location(),
+          Identifier(Location(), "bar"),
+          RangeType(
             Location(),
-            Identifier(Location(), "bar"),
-            RangeType(
-              Location(),
-              LiteralInteger(Location(), BigInt(0)),
-              LiteralInteger(Location(), BigInt(0))
-            )
+            LiteralInteger(Location(), BigInt(0)),
+            LiteralInteger(Location(), BigInt(0))
           )
-        )
-        val consumers = Seq(
-          Consumer(
+        ))
+        val consumers = Seq(Consumer(
+          Location(),
+          Identifier(Location(), "con"),
+          TopicRef(
             Location(),
-            Identifier(Location(), "con"),
-            TopicRef(
-              Location(),
-              PathIdentifier(Location(), Seq("path", "to", "the", "consumer_"))
-            )
+            PathIdentifier(Location(), Seq("path", "to", "the", "consumer_"))
           )
-        )
+        ))
         val features = Seq(
           Feature(
             Location(),
@@ -147,19 +141,16 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           )
         )
 
-        val functions = Seq(
-          Function(
-            Location(),
-            Identifier(Location(), "my_func"),
-            None,
-            Bool(Location()),
-            None
-          )
-        )
+        val functions = Seq(Function(
+          Location(),
+          Identifier(Location(), "my_func"),
+          None,
+          Bool(Location()),
+          None
+        ))
 
-        val invariants = Seq(
-          Invariant(Location(), Identifier(Location(), "my_id"), Nil, None)
-        )
+        val invariants =
+          Seq(Invariant(Location(), Identifier(Location(), "my_id"), Nil, None))
         val types = Seq(
           Type(Location(), Identifier(Location(), "mytype"), Bool(Location())),
           Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))
@@ -179,7 +170,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         )
 
         entity.contents.toSet mustBe
-          (states.iterator ++ consumers ++ features ++ functions ++ invariants ++ types).toSet
+          (states.iterator ++ consumers ++ features ++ functions ++
+            invariants ++ types).toSet
       }
     }
   }

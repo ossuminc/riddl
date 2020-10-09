@@ -12,30 +12,23 @@ class TopLevelParserTest extends ParsingTestBase {
 
   val origin = "simpleDomain.riddl"
 
-  val simpleDomainFile = new File(
-    s"language/src/test/input/domains/$origin"
-  )
+  val simpleDomainFile = new File(s"language/src/test/input/domains/$origin")
 
-  val simpleDomain = RootContainer(
-    List(
-      Domain(
-        (1, 1, origin),
-        Identifier((1, 8, origin), "foo"),
-        List(),
-        List(),
-        List(),
-        List(),
-        List(),
-        None
-      )
-    )
-  )
+  val simpleDomain = RootContainer(List(Domain(
+    (1, 1, origin),
+    Identifier((1, 8, origin), "foo"),
+    List(),
+    List(),
+    List(),
+    List(),
+    List(),
+    None
+  )))
 
   "parse" should {
     "parse RiddlParserInput" in {
-      TopLevelParser.parse(RiddlParserInput(simpleDomainFile)) mustBe Right(
-        simpleDomain
-      )
+      TopLevelParser.parse(RiddlParserInput(simpleDomainFile)) mustBe
+        Right(simpleDomain)
     }
     "parse File" in {
       TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomain)
@@ -48,9 +41,7 @@ class TopLevelParserTest extends ParsingTestBase {
       try {
         val stringContents = source.mkString
         TopLevelParser.parse(stringContents, origin) mustBe Right(simpleDomain)
-      } finally {
-        source.close()
-      }
+      } finally { source.close() }
     }
     "parse empty String" in {
       TopLevelParser.parse("") mustBe Right(RootContainer.empty)

@@ -9,32 +9,24 @@ import scala.collection.immutable.ListMap
 
 /** Unit Tests For ConsumerParser */
 trait ConsumerParser
-    extends CommonParser
-    with ConditionParser
-    with ExpressionParser {
+    extends CommonParser with ConditionParser with ExpressionParser {
 
   def setStmt[_: P](): P[SetStatement] = {
     P(
       Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
         expression ~ description
-    ).map { t =>
-      (SetStatement.apply _).tupled(t)
-    }
+    ).map { t => (SetStatement.apply _).tupled(t) }
   }
 
   def appendStmt[_: P]: P[AppendStatement] = {
     P(
       Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
         identifier ~ description
-    ).map { t =>
-      (AppendStatement.apply _).tupled(t)
-    }
+    ).map { t => (AppendStatement.apply _).tupled(t) }
   }
 
   def messageConstructor[_: P]: P[MessageConstructor] = {
-    P(
-      messageRef ~ argList.?
-    ).map(tpl => {
+    P(messageRef ~ argList.?).map(tpl => {
       val args = tpl._2 match {
         case None    => ListMap.empty[Identifier, Expression]
         case Some(a) => a
@@ -47,27 +39,21 @@ trait ConsumerParser
     P(
       (Keywords.yields | Keywords.publish) ~/ location ~ messageConstructor ~
         Terminals.Readability.to ~ topicRef ~ description
-    ).map { t =>
-      (PublishStatement.apply _).tupled(t)
-    }
+    ).map { t => (PublishStatement.apply _).tupled(t) }
   }
 
   def sendStmt[_: P]: P[SendStatement] = {
     P(
       Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~
         entityRef ~ description
-    ).map { t =>
-      (SendStatement.apply _).tupled(t)
-    }
+    ).map { t => (SendStatement.apply _).tupled(t) }
   }
 
   def removeStmt[_: P](): P[RemoveStatement] = {
     P(
       Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~
         pathIdentifier ~ description
-    ).map { t =>
-      (RemoveStatement.apply _).tupled(t)
-    }
+    ).map { t => (RemoveStatement.apply _).tupled(t) }
   }
 
   def executeStmt[_: P]: P[ExecuteStatement] = {
@@ -92,8 +78,8 @@ trait ConsumerParser
   }
 
   def onClause[_: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~
-      close ~ description
+    Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~ close ~
+      description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def consumer[_: P]: P[Consumer] = {

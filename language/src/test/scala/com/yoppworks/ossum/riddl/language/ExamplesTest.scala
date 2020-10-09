@@ -12,9 +12,7 @@ class ExamplesTest extends ParsingTest {
 
   "Examples" should {
     "all compile" in {
-      for ((label, fileName) <- files) yield {
-        checkFile(label, fileName)
-      }
+      for ((label, fileName) <- files) yield { checkFile(label, fileName) }
       succeed
     }
   }

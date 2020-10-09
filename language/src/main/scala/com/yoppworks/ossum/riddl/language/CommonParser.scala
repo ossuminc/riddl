@@ -6,21 +6,16 @@ import com.yoppworks.ossum.riddl.language.AST._
 import Terminals.Keywords
 import Terminals.Punctuation
 import Terminals.Readability
+import scala.language.postfixOps
 
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
-  def undefined[_: P]: P[Unit] = {
-    P(Punctuation.undefined /)
-  }
+  def undefined[_: P]: P[Unit] = { P(Punctuation.undefined /) }
 
-  def literalStrings[_: P]: P[Seq[LiteralString]] = {
-    P(literalString.rep(1))
-  }
+  def literalStrings[_: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  def markdownLines[_: P]: P[Seq[LiteralString]] = {
-    P(markdownLine.rep(1))
-  }
+  def markdownLines[_: P]: P[Seq[LiteralString]] = { P(markdownLine.rep(1)) }
 
   def docBlock[_: P]: P[Seq[LiteralString]] = {
     P(
@@ -34,45 +29,36 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def brief[_: P]: P[Seq[LiteralString]] = {
-    (Keywords.brief ~/ (literalString.map(Seq(_)) | docBlock)).?.map(
-      _.getOrElse(Seq.empty[LiteralString])
-    )
+    (Keywords.brief ~/ (literalString.map(Seq(_)) | docBlock)).?
+      .map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
   def details[_: P]: P[Seq[LiteralString]] = {
-    (Keywords.details ~/
-      (literalString.map(Seq(_)) | docBlock)).?.map(
-      _.getOrElse(Seq.empty[LiteralString])
-    )
+    (Keywords.details ~/ (literalString.map(Seq(_)) | docBlock)).?
+      .map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
-  def items[_: P]
-    : P[(Option[LiteralString], Map[Identifier, Seq[LiteralString]])] = {
+  def items[
+    _: P
+  ]: P[(Option[LiteralString], Map[Identifier, Seq[LiteralString]])] = {
     P(
-      Keywords.items ~/ (Punctuation.roundOpen ~
-        literalString ~ Punctuation.roundClose).? ~/
-        open ~
-        (identifier ~ is ~ docBlock).rep.map(_.toMap) ~
-        close
+      Keywords.items ~/
+        (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).? ~/
+        open ~ (identifier ~ is ~ docBlock).rep.map(_.toMap) ~ close
     ).?.map(_.getOrElse(None -> Map.empty[Identifier, Seq[LiteralString]]))
   }
 
   def citations[_: P]: P[Seq[LiteralString]] = {
-    P(Keywords.see ~/ docBlock).?.map(
-      _.getOrElse(Seq.empty[LiteralString])
-    )
+    P(Keywords.see ~/ docBlock).?.map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
-  def as[_: P]: P[Unit] = {
-    P(Readability.as | Readability.by).?
-  }
+  def as[_: P]: P[Unit] = { P(Readability.as | Readability.by).? }
 
   case class DescriptionParts(
     brief: Seq[LiteralString],
     details: Seq[LiteralString],
     items: (Option[LiteralString], Map[Identifier, Seq[LiteralString]]),
-    cites: Seq[LiteralString]
-  )
+    cites: Seq[LiteralString])
 
   def detailedDescription[_: P]: P[DescriptionParts] = {
     P(brief ~ details ~ items ~ citations)
@@ -103,16 +89,14 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def description[_: P]: P[Option[Description]] = {
     P(
-      location ~ (Keywords.described | Keywords.explained) ~ as ~ open ~/ (
-        literalStringsDescription | docBlockDescription | detailedDescription
-      ) ~ close
+      location ~ (Keywords.described | Keywords.explained) ~ as ~ open ~/
+        (literalStringsDescription | docBlockDescription |
+          detailedDescription) ~ close
     ).?.map {
       case yes @ Some(
             (loc, DescriptionParts(brief, details, (itemsName, items), cites))
-          ) =>
-        Some(Description(loc, brief, details, itemsName, items, cites))
-      case no @ None =>
-        no
+          ) => Some(Description(loc, brief, details, itemsName, items, cites))
+      case no @ None => None
     }
   }
 
@@ -123,12 +107,11 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def literalDecimal[_: P]: P[LiteralDecimal] = {
     P(
-      location ~
-        CharIn("+\\-").?.! ~ CharIn("0-9").rep(1).! ~
+      location ~ CharIn("+\\-").?.! ~ CharIn("0-9").rep(1).! ~
         (Punctuation.dot ~ CharIn("0-9").rep(0)).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
-    ).map {
-      case (loc, a, b, c, d) => LiteralDecimal(loc, BigDecimal(a + b + c + d))
+    ).map { case (loc, a, b, c, d) =>
+      LiteralDecimal(loc, BigDecimal(a + b + c + d))
     }
   }
 
@@ -154,27 +137,23 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[_: P]: P[Unit] = {
-    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
+    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)
+      ./
   }
 
-  def open[_: P]: P[Unit] = {
-    P(Punctuation.curlyOpen)
-  }
+  def open[_: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
-  def close[_: P]: P[Unit] = {
-    P(Punctuation.curlyClose)
-  }
+  def close[_: P]: P[Unit] = { P(Punctuation.curlyClose) }
 
   def options[_: P, TY <: RiddlValue](
     validOptions: => P[String]
-  )(mapper: => (Location, String) => TY): P[Seq[TY]] = {
+  )(mapper: => (Location, String) => TY
+  ): P[Seq[TY]] = {
     P(
       (Keywords.options ~/ Punctuation.roundOpen ~ (location ~ validOptions)
-        .rep(1)
-        .map(_.map(mapper.tupled(_))) ~ Punctuation.roundClose) |
-        (Keywords.option ~ is ~/ (location ~ validOptions).map(
-          tpl => Seq(mapper.tupled(tpl))
-        ))
+        .rep(1).map(_.map(mapper.tupled(_))) ~ Punctuation.roundClose) |
+        (Keywords.option ~ is ~/ (location ~ validOptions)
+          .map(tpl => Seq(mapper.tupled(tpl))))
     ).?.map {
       case Some(x) => x
       case None    => Seq.empty[TY]

@@ -17,13 +17,13 @@ class FunctionValidatorTest extends ValidatingTest {
                                  |""".stripMargin) { (e, msgs) =>
         e.functions must matchPattern {
           case Seq(
-              AST.Function(
-                _,
-                Identifier(_, "foo"),
-                Some(AST.Bool(_)),
-                AST.Integer(_),
-                None
-              )
+                AST.Function(
+                  _,
+                  Identifier(_, "foo"),
+                  Some(AST.Bool(_)),
+                  AST.Integer(_),
+                  None
+                )
               ) =>
         }
         assert(

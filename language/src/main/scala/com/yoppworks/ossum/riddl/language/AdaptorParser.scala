@@ -14,12 +14,9 @@ trait AdaptorParser extends CommonParser {
   def adaptor[_: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~
-        contextRef ~ is ~ open ~
-        undefined.map(_ => Seq.empty[AdaptorMapping])
-        ~ close ~ description
-    ).map { tpl =>
-      (Adaptor.apply _).tupled(tpl)
-    }
+        contextRef ~ is ~ open ~ undefined.map(_ => Seq.empty[AdaptorMapping]) ~
+        close ~ description
+    ).map { tpl => (Adaptor.apply _).tupled(tpl) }
   }
 
 }

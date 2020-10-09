@@ -34,8 +34,8 @@ class RiddlTest extends ParsingTestBase {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result =
-        RiddlImpl.timer(clock, printStream, "MyStage", show = false) {
+      val result = RiddlImpl
+        .timer(clock, printStream, "MyStage", show = false) {
           clock.updateInstant(_.plusSeconds(2))
           123
         }
@@ -95,7 +95,7 @@ class RiddlTest extends ParsingTestBase {
     *
     *   assert(result == (123, "hi there!\n")
     * }}}
-    * */
+    */
   def capturingStdErr[A](f: () => A): (A, String) = {
     val out = System.err
     val printStream = StringBuildingPrintStream()
@@ -104,9 +104,7 @@ class RiddlTest extends ParsingTestBase {
       val a = f()
       val output = printStream.mkString()
       (a, output)
-    } finally {
-      System.setErr(out)
-    }
+    } finally { System.setErr(out) }
   }
 
   /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
@@ -120,7 +118,7 @@ class RiddlTest extends ParsingTestBase {
     *
     *   assert(result == (123, "hi there!\n")
     * }}}
-    * */
+    */
   def capturingStdOut[A](f: () => A): (A, String) = {
     val out = System.out
     val printStream = StringBuildingPrintStream()
@@ -129,9 +127,7 @@ class RiddlTest extends ParsingTestBase {
       val a = f()
       val output = printStream.mkString()
       (a, output)
-    } finally {
-      System.setOut(out)
-    }
+    } finally { System.setOut(out) }
   }
 
   "SysLogger" should {
@@ -139,7 +135,8 @@ class RiddlTest extends ParsingTestBase {
       capturingStdErr(() => SysLogger.error("asdf"))._2 mustBe "[error] asdf\n"
     }
     "print severe message" in {
-      capturingStdErr(() => SysLogger.severe("asdf"))._2 mustBe "[severe] asdf\n"
+      capturingStdErr(() => SysLogger.severe("asdf"))._2 mustBe
+        "[severe] asdf\n"
     }
     "print warn message" in {
       capturingStdErr(() => SysLogger.warn("asdf"))._2 mustBe "[warning] asdf\n"
@@ -155,14 +152,13 @@ class RiddlTest extends ParsingTestBase {
         SysLogger.warn("d")
         SysLogger.severe("e")
         SysLogger.error("f")
-      }._2 mustBe
-        """[error] a
-          |[info] b
-          |[info] c
-          |[warning] d
-          |[severe] e
-          |[error] f
-          |""".stripMargin
+      }._2 mustBe """[error] a
+                    |[info] b
+                    |[info] c
+                    |[warning] d
+                    |[severe] e
+                    |[error] f
+                    |""".stripMargin
     }
   }
 
@@ -173,9 +169,7 @@ class RiddlTest extends ParsingTestBase {
         new InMemoryLogger,
         RiddlTest.DefaultOptions
       )
-      result must matchPattern {
-        case Some(RootContainer(Seq(_: Domain))) =>
-      }
+      result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
     "parse and validate nonsense file as invalid" in {
       val logger = new InMemoryLogger
@@ -189,9 +183,9 @@ class RiddlTest extends ParsingTestBase {
     }
     "parse and validate a simple domain from input" in {
       val content: String = {
-        val source = Source.fromFile(
-          new File("language/src/test/input/domains/simpleDomain.riddl")
-        )
+        val source = Source.fromFile(new File(
+          "language/src/test/input/domains/simpleDomain.riddl"
+        ))
         try source.mkString
         finally source.close()
       }
@@ -200,9 +194,7 @@ class RiddlTest extends ParsingTestBase {
         new InMemoryLogger,
         RiddlTest.DefaultOptions
       )
-      result must matchPattern {
-        case Some(RootContainer(Seq(_: Domain))) =>
-      }
+      result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
     "parse and validate nonsense input as invalid" in {
       val logger = new InMemoryLogger

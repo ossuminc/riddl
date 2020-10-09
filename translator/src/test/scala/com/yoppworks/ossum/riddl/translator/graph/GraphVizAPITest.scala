@@ -15,32 +15,25 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
   private final val binPathForOS: Path = {
     val osName = System.getProperty("os.name").replaceAll("\\s", "")
     osName match {
-      case "MacOSX" =>
-        Path.of("/usr/local/bin")
-      case _ =>
-        Path.of("/usr/bin")
+      case "MacOSX" => Path.of("/usr/local/bin")
+      case _        => Path.of("/usr/bin")
     }
   }
-  private final val simpleDiagram =
-    """graph {
-      |    a -- b;
-      |    b -- c;
-      |    a -- c;
-      |    d -- c;
-      |    e -- c;
-      |    e -- a;
-      |}""".stripMargin
+  private final val simpleDiagram = """graph {
+                                      |    a -- b;
+                                      |    b -- c;
+                                      |    a -- c;
+                                      |    d -- c;
+                                      |    e -- c;
+                                      |    e -- a;
+                                      |}""".stripMargin
 
   import GraphVizAPI._
 
   private final val buffer = new StringBuilder(simpleDiagram).addln
 
-  val basicConfig =
-    GraphVizAPIConfig().copy(
-      dotPath = binPathForOS,
-      dotProgramName = dot,
-      outputType = svg
-    )
+  val basicConfig = GraphVizAPIConfig()
+    .copy(dotPath = binPathForOS, dotProgramName = dot, outputType = svg)
 
   "GraphVizAPITest" should {
     "draw a simple diagram in dot" in {

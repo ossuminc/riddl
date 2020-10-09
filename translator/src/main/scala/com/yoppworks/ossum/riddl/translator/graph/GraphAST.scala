@@ -11,8 +11,7 @@ case class NodeConfig(
   style: String = "filled",
   fontSize: Double = 12.0,
   url: Option[String] = None,
-  layer: Option[String] = None
-) {
+  layer: Option[String] = None) {
 
   def format: Seq[(String, String)] = {
     Seq(
@@ -29,14 +28,12 @@ case class GraphASTConfig(
   root: NodeConfig = NodeConfig(),
   domain: NodeConfig = NodeConfig(fillColor = "aquamarine"),
   context: NodeConfig = NodeConfig(fillColor = "yellow"),
-  entity: NodeConfig = NodeConfig(fillColor = "green")
-)
+  entity: NodeConfig = NodeConfig(fillColor = "green"))
 
-/** Provides Graphing of AST nodes via GraphVizAPI  */
+/** Provides Graphing of AST nodes via GraphVizAPI */
 case class GraphAST(
   node: Definition,
-  config: GraphASTConfig
-) {
+  config: GraphASTConfig) {
 
   private final val bufferCapacity: Int = 1024
 
@@ -51,8 +48,8 @@ case class GraphAST(
     buffer.digraph(nameOf(root)) { sb =>
       sb.expand[Container](root.contents) { (sb, container) =>
         container match {
-          case domain: Domain =>
-            sb.append(drawDomain(domain).mkString.indent(2))
+          case domain: Domain => sb
+              .append(drawDomain(domain).mkString.indent(2))
           case _ => sb
         }
       }

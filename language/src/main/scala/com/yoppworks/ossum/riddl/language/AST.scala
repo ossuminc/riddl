@@ -20,15 +20,12 @@ object AST {
 
   final val defaultSourceName = "default"
 
-  /** A location of an item in the input  */
+  /** A location of an item in the input */
   case class Location(
     line: Int = 0,
     col: Int = 0,
-    source: String = defaultSourceName
-  ) {
-    override def toString: String = {
-      s"$source($line:$col)"
-    }
+    source: String = defaultSourceName) {
+    override def toString: String = { s"$source($line:$col)" }
   }
 
   object Location {
@@ -36,16 +33,15 @@ object AST {
 
     implicit def apply(
       pair: (Int, Int)
-    ): Location = {
-      Location(pair._1, pair._2, defaultSourceName)
-    }
+    ): Location = { Location(pair._1, pair._2, defaultSourceName) }
 
     implicit def apply(triple: (Int, Int, String)): Location = {
       Location(triple._1, triple._2, triple._3)
     }
   }
 
-  /**  */
+  /**
+    */
   sealed trait RiddlValue extends RiddlNode {
     def loc: Location
     def kind: String = this.getClass.getSimpleName
@@ -54,6 +50,7 @@ object AST {
   case class Identifier(loc: Location, value: String) extends RiddlValue
   case class RiddlOption(loc: Location, name: String) extends RiddlValue
   case class LiteralString(loc: Location, s: String) extends RiddlValue
+
   case class PathIdentifier(loc: Location, value: Seq[String])
       extends RiddlValue {
 
@@ -67,10 +64,9 @@ object AST {
     brief: Seq[LiteralString] = Seq.empty[LiteralString],
     details: Seq[LiteralString] = Seq.empty[LiteralString],
     nameOfItems: Option[LiteralString] = None,
-    items: Map[Identifier, Seq[LiteralString]] =
-      Map.empty[Identifier, Seq[LiteralString]],
-    citations: Seq[LiteralString] = Seq.empty[LiteralString]
-  )
+    items: Map[Identifier, Seq[LiteralString]] = Map
+      .empty[Identifier, Seq[LiteralString]],
+    citations: Seq[LiteralString] = Seq.empty[LiteralString])
 
   sealed trait Reference extends RiddlValue {
     def id: PathIdentifier
@@ -110,13 +106,14 @@ object AST {
   sealed trait TypeExpression extends DefinitionValue
 
   case class TypeRef(loc: Location, id: PathIdentifier)
-      extends Reference
-      with TypeExpression {}
+      extends Reference with TypeExpression {}
 
   case class Optional(loc: Location, texp: TypeExpression)
       extends TypeExpression
+
   case class ZeroOrMore(loc: Location, texp: TypeExpression)
       extends TypeExpression
+
   case class OneOrMore(loc: Location, texp: TypeExpression)
       extends TypeExpression
 
@@ -137,66 +134,65 @@ object AST {
     id: Identifier,
     enumVal: Option[LiteralInteger] = None,
     typeRef: Option[TypeRef] = None,
-    description: Option[Description] = None
-  ) extends Definition
+    description: Option[Description] = None)
+      extends Definition
 
   case class Enumeration(
     loc: Location,
     of: Seq[Enumerator],
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   case class Alternation(
     loc: Location,
     of: Seq[TypeExpression],
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   case class Field(
     loc: Location,
     id: Identifier,
     typeEx: TypeExpression,
-    description: Option[Description] = None
-  ) extends Definition
+    description: Option[Description] = None)
+      extends Definition
 
   case class Aggregation(
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field],
-    description: Option[Description] = None
-  ) extends TypeExpression
-      with EntityValue
+    description: Option[Description] = None)
+      extends TypeExpression with EntityValue
 
   case class Mapping(
     loc: Location,
     from: TypeExpression,
     to: TypeExpression,
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   case class RangeType(
     loc: Location,
     min: LiteralInteger,
     max: LiteralInteger,
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   case class ReferenceType(
     loc: Location,
     entity: EntityRef,
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   case class Pattern(
     loc: Location,
     pattern: Seq[LiteralString],
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   case class UniqueId(
     loc: Location,
     entityPath: PathIdentifier,
-    description: Option[Description] = None
-  ) extends TypeExpression
+    description: Option[Description] = None)
+      extends TypeExpression
 
   abstract class PredefinedType extends TypeExpression {
     def loc: Location
@@ -205,10 +201,11 @@ object AST {
   case class Strng(
     loc: Location,
     min: Option[LiteralInteger] = None,
-    max: Option[LiteralInteger] = None
-  ) extends PredefinedType {
+    max: Option[LiteralInteger] = None)
+      extends PredefinedType {
     override def kind: String = "String"
   }
+
   case class Bool(loc: Location) extends PredefinedType {
     override def kind: String = "Boolean"
   }
@@ -221,6 +218,7 @@ object AST {
   case class DateTime(loc: Location) extends PredefinedType
   case class TimeStamp(loc: Location) extends PredefinedType
   case class Duration(loc: Location) extends PredefinedType
+
   case class URL(loc: Location, scheme: Option[LiteralString] = None)
       extends PredefinedType
   case class LatLong(loc: Location) extends PredefinedType
@@ -232,8 +230,8 @@ object AST {
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
-    description: Option[Description] = None
-  ) extends TypeDefinition
+    description: Option[Description] = None)
+      extends TypeDefinition
       with ContextDefinition
       with EntityDefinition
       with DomainDefinition
@@ -252,14 +250,14 @@ object AST {
   case class FunctionCallExpression(
     loc: Location,
     name: Identifier,
-    arguments: ListMap[Identifier, Expression]
-  ) extends Expression
+    arguments: ListMap[Identifier, Expression])
+      extends Expression
 
   case class MathExpression(
     loc: Location,
     operator: String,
-    arguments: ListMap[Identifier, Expression]
-  ) extends Expression
+    arguments: ListMap[Identifier, Expression])
+      extends Expression
 
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression
   case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression
@@ -268,8 +266,8 @@ object AST {
 
   case class TopicRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   case class Topic(
     loc: Location,
@@ -278,17 +276,18 @@ object AST {
     events: Seq[Event] = Seq.empty[Event],
     queries: Seq[Query] = Seq.empty[Query],
     results: Seq[Result] = Seq.empty[Result],
-    description: Option[Description] = None
-  ) extends Container
-      with DomainDefinition {
+    description: Option[Description] = None)
+      extends Container with DomainDefinition {
 
     def contents: Seq[Definition] =
       (commands.iterator ++ events ++ queries ++ results).toList
   }
 
   sealed trait MessageReference extends Reference
+
   sealed trait MessageDefinition extends Container {
     def typ: TypeExpression
+
     override def contents: Seq[Definition] = typ match {
       case a: Aggregation => a.fields
       case _              => Seq.empty[Definition]
@@ -297,20 +296,21 @@ object AST {
 
   case class CommandRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends MessageReference
+    id: PathIdentifier)
+      extends MessageReference
+
   case class Command(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
     events: EventRefs,
-    description: Option[Description] = None
-  ) extends MessageDefinition
+    description: Option[Description] = None)
+      extends MessageDefinition
 
   case class EventRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends MessageReference
+    id: PathIdentifier)
+      extends MessageReference
 
   type EventRefs = Seq[EventRef]
 
@@ -318,32 +318,33 @@ object AST {
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
-    description: Option[Description] = None
-  ) extends MessageDefinition
+    description: Option[Description] = None)
+      extends MessageDefinition
 
   case class QueryRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends MessageReference
+    id: PathIdentifier)
+      extends MessageReference
 
   case class Query(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
     result: ResultRef,
-    description: Option[Description] = None
-  ) extends MessageDefinition
+    description: Option[Description] = None)
+      extends MessageDefinition
 
   case class ResultRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends MessageReference
+    id: PathIdentifier)
+      extends MessageReference
+
   case class Result(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
-    description: Option[Description] = None
-  ) extends MessageDefinition
+    description: Option[Description] = None)
+      extends MessageDefinition
 
   sealed trait EntityValue extends RiddlValue
 
@@ -363,17 +364,21 @@ object AST {
 
   case class EntityRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   sealed trait FeatureValue extends RiddlValue
   case class Given(loc: Location, fact: Seq[LiteralString]) extends FeatureValue
+
   case class When(loc: Location, situation: Seq[LiteralString])
       extends FeatureValue
+
   case class Then(loc: Location, result: Seq[LiteralString])
       extends FeatureValue
+
   case class Else(loc: Location, otherwise: Seq[LiteralString])
       extends FeatureValue
+
   case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given])
       extends FeatureValue
 
@@ -384,49 +389,48 @@ object AST {
     whens: Seq[When] = Seq.empty[When],
     thens: Seq[Then] = Seq.empty[Then],
     elses: Seq[Else] = Seq.empty[Else],
-    description: Option[Description] = None
-  ) extends Definition
+    description: Option[Description] = None)
+      extends Definition
 
   case class FeatureRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   case class Feature(
     loc: Location,
     id: Identifier,
     background: Option[Background] = None,
     examples: Seq[Example] = Seq.empty[Example],
-    description: Option[Description] = None
-  ) extends Container
-      with EntityDefinition {
+    description: Option[Description] = None)
+      extends Container with EntityDefinition {
     def contents: Seq[Definition] = examples
   }
 
   case class FunctionRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   case class Function(
     loc: Location,
     id: Identifier,
     input: Option[TypeExpression],
     output: TypeExpression,
-    description: Option[Description]
-  ) extends EntityDefinition {}
+    description: Option[Description])
+      extends EntityDefinition {}
 
   case class InvariantRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   case class Invariant(
     loc: Location,
     id: Identifier,
     expression: Seq[LiteralString],
-    description: Option[Description] = None
-  ) extends EntityDefinition {}
+    description: Option[Description] = None)
+      extends EntityDefinition {}
 
   sealed trait OnClauseStatement extends RiddlValue {
     def description: Option[Description]
@@ -436,70 +440,73 @@ object AST {
     loc: Location,
     target: PathIdentifier,
     value: Expression,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   case class AppendStatement(
     loc: Location,
     value: PathIdentifier,
     target: Identifier,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   case class MessageConstructor(
     msg: MessageReference,
-    args: ListMap[Identifier, Expression]
-  )
+    args: ListMap[Identifier, Expression])
 
   case class PublishStatement(
     loc: Location,
     msg: MessageConstructor,
     topic: TopicRef,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   case class SendStatement(
     loc: Location,
     msg: MessageConstructor,
     entity: EntityRef,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   case class RemoveStatement(
     loc: Location,
     id: PathIdentifier,
     from: PathIdentifier,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   case class ExecuteStatement(
     loc: Location,
     id: Identifier,
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   sealed trait Condition extends RiddlValue
   case class True(loc: Location) extends Condition
   case class False(loc: Location) extends Condition
+
   case class ExpressionCondition(
     loc: Location,
     op: Identifier,
     args: ListMap[Identifier, Expression],
-    description: Option[Description]
-  ) extends Condition
+    description: Option[Description])
+      extends Condition
 
   case class Comparison(
     loc: Location,
     op: String,
     left: Expression,
-    right: Expression
-  ) extends Condition
+    right: Expression)
+      extends Condition
+
   case class ReferenceCondition(loc: Location, ref: PathIdentifier)
       extends Condition
+
   case class Miscellaneous(
     loc: Location,
-    description: Seq[LiteralString]
-  ) extends Condition
+    description: Seq[LiteralString])
+      extends Condition
+
   abstract class UnaryCondition extends Condition {
     def cond1: Condition
   }
@@ -513,50 +520,51 @@ object AST {
 
   case class AndCondition(loc: Location, cond1: Condition, cond2: Condition)
       extends BinaryCondition
+
   case class OrCondition(loc: Location, cond1: Condition, cond2: Condition)
       extends BinaryCondition
+
   case class EqualityCondition(
     loc: Location,
     cond1: Condition,
-    cond2: Condition
-  ) extends BinaryCondition
+    cond2: Condition)
+      extends BinaryCondition
 
   case class InequalityCondition(
     loc: Location,
     cond1: Condition,
-    cond2: Condition
-  ) extends BinaryCondition
+    cond2: Condition)
+      extends BinaryCondition
 
   case class WhenStatement(
     loc: Location,
     condition: Condition,
     actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
-    description: Option[Description] = None
-  ) extends OnClauseStatement
+    description: Option[Description] = None)
+      extends OnClauseStatement
 
   case class OnClause(
     loc: Location,
     msg: MessageReference,
     actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
-    description: Option[Description] = None
-  ) extends EntityValue
-      with DefinitionClause
+    description: Option[Description] = None)
+      extends EntityValue with DefinitionClause
 
   case class Consumer(
     loc: Location,
     id: Identifier,
     topic: TopicRef,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
-    description: Option[Description] = None
-  ) extends EntityDefinition
+    description: Option[Description] = None)
+      extends EntityDefinition
 
   case class State(
     loc: Location,
     id: Identifier,
     typeEx: TypeExpression,
-    description: Option[Description] = None
-  ) extends EntityDefinition
-      with Container {
+    description: Option[Description] = None)
+      extends EntityDefinition with Container {
+
     override def contents: Seq[Definition] = typeEx match {
       case Aggregation(_, fs, _) => fs
       case _                     => Seq.empty[Definition]
@@ -586,12 +594,12 @@ object AST {
     features: Seq[Feature] = Seq.empty[Feature],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
-    description: Option[Description] = None
-  ) extends Container
-      with ContextDefinition {
+    description: Option[Description] = None)
+      extends Container with ContextDefinition {
 
     def contents: Seq[Definition] =
-      (states.iterator ++ types ++ consumers ++ features ++ functions ++ invariants).toList
+      (states.iterator ++ types ++ consumers ++ features ++ functions ++
+        invariants).toList
   }
 
   trait TranslationRule extends Definition {
@@ -605,8 +613,8 @@ object AST {
     input: String,
     output: String,
     rule: String,
-    description: Option[Description] = None
-  ) extends TranslationRule
+    description: Option[Description] = None)
+      extends TranslationRule
 
   /** Definition of an Adaptor
     * Adaptors are defined in Contexts to convert messaging from one Context to
@@ -624,14 +632,13 @@ object AST {
     mappings: Seq[AdaptorMapping],
     description: Option[Description] = None
     // Details TBD
-  ) extends Container
-      with ContextDefinition {
+  ) extends Container with ContextDefinition {
     def contents: Seq[Definition] = Seq.empty[Definition]
   }
 
   case class AdaptorMapping(
-    loc: Location
-  ) extends RiddlValue
+    loc: Location)
+      extends RiddlValue
 
   sealed trait ContextOption extends RiddlValue
   case class WrapperOption(loc: Location) extends ContextOption
@@ -640,8 +647,8 @@ object AST {
 
   case class ContextRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   case class Context(
     loc: Location,
@@ -651,12 +658,11 @@ object AST {
     entities: Seq[Entity] = Seq.empty[Entity],
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
-    description: Option[Description] = None
-  ) extends Container
-      with DomainDefinition {
+    description: Option[Description] = None)
+      extends Container with DomainDefinition {
 
-    def contents: Seq[Definition] =
-      types ++ entities ++ adaptors ++ interactions
+    def contents: Seq[Definition] = types ++ entities ++ adaptors ++
+      interactions
   }
 
   /** Definition of an Interaction
@@ -672,10 +678,8 @@ object AST {
     loc: Location,
     id: Identifier,
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
-    description: Option[Description] = None
-  ) extends Container
-      with DomainDefinition
-      with ContextDefinition {
+    description: Option[Description] = None)
+      extends Container with DomainDefinition with ContextDefinition {
     def contents: Seq[Definition] = actions
   }
 
@@ -696,13 +700,13 @@ object AST {
     entity: EntityRef,
     function: FunctionRef,
     arguments: Seq[LiteralString],
-    description: Option[Description] = None
-  ) extends DefinitionClause
+    description: Option[Description] = None)
+      extends DefinitionClause
 
   case class ReactionRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   type Actions = Seq[ActionDefinition]
 
@@ -728,13 +732,13 @@ object AST {
     receiver: EntityRef,
     message: MessageReference,
     reactions: Seq[Reaction],
-    description: Option[Description] = None
-  ) extends ActionDefinition
+    description: Option[Description] = None)
+      extends ActionDefinition
 
   case class DomainRef(
     loc: Location,
-    id: PathIdentifier
-  ) extends Reference
+    id: PathIdentifier)
+      extends Reference
 
   case class Domain(
     loc: Location,
@@ -744,9 +748,8 @@ object AST {
     contexts: Seq[Context] = Seq.empty[Context],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     domains: Seq[Domain] = Seq.empty[Domain],
-    description: Option[Description] = None
-  ) extends Container
-      with DomainDefinition {
+    description: Option[Description] = None)
+      extends Container with DomainDefinition {
 
     def contents: Seq[DomainDefinition] =
       (types.iterator ++ topics ++ contexts ++ interactions).toList

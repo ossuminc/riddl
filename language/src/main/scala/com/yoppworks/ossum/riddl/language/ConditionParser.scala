@@ -10,8 +10,8 @@ import ScalaWhitespace._
 trait ConditionParser extends ExpressionParser {
 
   def referenceCondition[_: P]: P[ReferenceCondition] = {
-    P(location ~ pathIdentifier).map {
-      case (loc, pid) => ReferenceCondition(loc, pid)
+    P(location ~ pathIdentifier).map { case (loc, pid) =>
+      ReferenceCondition(loc, pid)
     }
   }
 
@@ -31,15 +31,12 @@ trait ConditionParser extends ExpressionParser {
     P(
       location ~ comparator ~ Punctuation.roundOpen ~/ expression ~
         Punctuation.comma ~ expression ~ Punctuation.roundClose./
-    ).map { x =>
-      (Comparison.apply _).tupled(x)
-    }
+    ).map { x => (Comparison.apply _).tupled(x) }
   }
 
   def expressionCondition[_: P]: P[ExpressionCondition] = {
-    P(
-      location ~ identifier ~ argList ~ description
-    ).map(tpl => (ExpressionCondition.apply _).tupled(tpl))
+    P(location ~ identifier ~ argList ~ description)
+      .map(tpl => (ExpressionCondition.apply _).tupled(tpl))
   }
 
   def notCondition[_: P]: P[NotCondition] = {
@@ -75,14 +72,10 @@ trait ConditionParser extends ExpressionParser {
   }
 
   def terminalExpressions[_: P]: P[Condition] = {
-    P(
-      trueCondition | falseCondition
-    )
+    P(trueCondition | falseCondition)
   }
 
   def condition[_: P]: P[Condition] = {
-    P(
-      terminalExpressions | grouping | logicalExpressions | referenceCondition
-    )
+    P(terminalExpressions | grouping | logicalExpressions | referenceCondition)
   }
 }
