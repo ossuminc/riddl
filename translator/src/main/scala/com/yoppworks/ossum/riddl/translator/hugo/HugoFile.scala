@@ -60,11 +60,11 @@ case class HugoFile(
     this.indent
   }
 
-  /*
-  def close(definition: AST.Definition): this.type = {
-    this.outdent.add(s"$spc}").visitDescription(definition.description).add(nl)
+  def close(): this.type = {
+    this.outdent
+    lines.append("$spc")
+    this
   }
-   */
 
   def indent: this.type = {
     require(indentLevel < 80, "runaway indents")
@@ -78,7 +78,7 @@ case class HugoFile(
     this
   }
 
-  def close(): Unit = {
+  def write(): Unit = {
     import java.nio.file.Files
     import java.nio.charset.StandardCharsets
     Files.write(path, lines.result().getBytes(StandardCharsets.UTF_8))
