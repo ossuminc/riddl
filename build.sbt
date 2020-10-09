@@ -132,3 +132,11 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl")).settings(
 //  .enablePlugins(ParadoxPlugin)
   .dependsOn(translator)
  */
+
+(Global / excludeLintKeys) ++= Set(
+  buildInfoPackage,
+  buildInfoKeys,
+  buildInfoOptions,
+  mainClass,
+  paradoxNavigationDepth
+)
