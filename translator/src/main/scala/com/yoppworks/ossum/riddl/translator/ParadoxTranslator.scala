@@ -44,7 +44,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
 
   type CONF = ParadoxConfig
 
-  val defaultConfig = ParadoxConfig()
+  val defaultConfig: ParadoxConfig = ParadoxConfig()
 
   override def loadConfig(path: Path): ConfigReader.Result[ParadoxConfig] = {
     ConfigSource.file(path).load[ParadoxConfig]
@@ -258,7 +258,8 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |${context.types.map(mkDefRef).mkString("\n")}
                               |${context.entities.map(mkDefRef).mkString("\n")}
                               |${context.adaptors.map(mkDefRef).mkString("\n")}
-                              |${context.interactions.map(mkDefRef).mkString("\n")}
+                              |${context.interactions.map(mkDefRef)
+        .mkString("\n")}
                               |
                               |@@@
                               |
@@ -341,7 +342,8 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |
                               |@@@ index
                               |
-                              |${interaction.actions.map(mkDefRef).mkString("\n")}
+                              |${interaction.actions.map(mkDefRef)
+        .mkString("\n")}
                               |
                               |@@@
                               |
@@ -384,15 +386,23 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
         .resolve(action.id.value + ".md")
       action match {
         case ma: MessageAction => writeFile(indexFile)(s"""
-                                                          |# Action `${action.id.value}`
-                                                          |* From: ${ma.sender.id.format}
-                                                          |* To: ${ma.receiver.id.format}
-                                                          |* Message: ${ma.message}
+                                                          |# Action `${action.id
+            .value}`
+                                                          |* From: ${ma.sender
+            .id.format}
+                                                          |* To: ${ma.receiver
+            .id.format}
+                                                          |* Message: ${ma
+            .message}
                                                           |## Options
-                                                          |${ma.options.mkString(", ")}
+                                                          |${ma.options
+            .mkString(", ")}
                                                           |## Reactions
-                                                          |${ma.reactions.map(x => "* " + x).mkString("\n")}
-                                                          |${mkDescription(action.description)}
+                                                          |${ma.reactions
+            .map(x => "* " + x).mkString("\n")}
+                                                          |${mkDescription(
+            action.description
+          )}
                                                           |""".stripMargin)
       }
     }
@@ -410,7 +420,8 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |## Value Object
                               |${mkTypeExpression(command.typ)}
                               |## Events Generated
-                              |${command.events.map(x => "* " + mkRef(x).mkString("\n"))}"
+                              |${command.events
+        .map(x => "* " + mkRef(x).mkString("\n"))}"
                               |""".stripMargin)
     }
 
@@ -458,15 +469,18 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |${mkDescription(example.description)}
                               |## Givens
                               |
-                              |${example.givens.map(g => "* " + g.fact.mkString("\n  "))}
+                              |${example.givens
+        .map(g => "* " + g.fact.mkString("\n  "))}
                               |
                               |## Whens
                               |
-                              |${example.whens.map(g => "* " + g.situation.mkString("\n  "))}
+                              |${example.whens
+        .map(g => "* " + g.situation.mkString("\n  "))}
                               |
                               |## Thens
                               |
-                              |${example.thens.map(g => "* " + g.result.mkString("\n  "))}
+                              |${example.thens
+        .map(g => "* " + g.result.mkString("\n  "))}
                               |""".stripMargin)
 
     }

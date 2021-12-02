@@ -204,6 +204,7 @@ object Validation {
                   Error,
                   typeRef.id.loc
                 )
+              case _ => throw new IllegalStateException("Bad List[T] match")
             }
           case _ => s
         }

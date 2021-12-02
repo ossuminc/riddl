@@ -17,7 +17,9 @@ object Logging {
   final case class Line(level: Lvl, msg: String)
 }
 
-/** A Logger which captures logged lines into an in-memory buffer, useful for testing purposes. */
+/** A Logger which captures logged lines into an in-memory buffer, useful for
+  * testing purposes.
+  */
 final class InMemoryLogger extends Logger {
   private[this] val buffer = ArrayBuffer[Logging.Line]()
 

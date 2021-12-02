@@ -20,7 +20,7 @@ trait ContextParser
       case (loc, Options.wrapper)  => WrapperOption(loc)
       case (loc, Options.function) => FunctionOption(loc)
       case (loc, Options.gateway)  => GatewayOption(loc)
-      case (_, _)                  => throw new RuntimeException("Impossible case")
+      case (_, _) => throw new RuntimeException("Impossible case")
     }
   }
 

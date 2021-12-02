@@ -44,8 +44,8 @@ object Riddl {
     def showStyleWarnings: Boolean
   }
 
-  /** Runs a code block and returns its result, and prints its execution time to stdout.
-    * Execution time is only written if `show` is set to `true`.
+  /** Runs a code block and returns its result, and prints its execution time to
+    * stdout. Execution time is only written if `show` is set to `true`.
     *
     * e.g.
     *
@@ -53,11 +53,15 @@ object Riddl {
     *
     * prints: Stage 'my-stage': 0.000 seconds
     *
-    * @param stage The name of the stage, is included in output message
-    * @param show if `true`, then message is printed, otherwise not
-    * @param f the code block to execute
+    * @param stage
+    *   The name of the stage, is included in output message
+    * @param show
+    *   if `true`, then message is printed, otherwise not
+    * @param f
+    *   the code block to execute
     *
-    * @return The result of running `f`
+    * @return
+    *   The result of running `f`
     */
   def timer[T](stage: String, show: Boolean = true)(f: => T): T = RiddlImpl
     .timer(Clock.systemUTC(), System.out, stage, show)(f)
@@ -148,8 +152,9 @@ object Riddl {
 /** Private implementation details which allow for more testability */
 private[language] object RiddlImpl {
 
-  /** Runs a code block and returns its result, while recording its execution time, according to the passed clock.
-    * Execution time is written to `out`, if `show` is set to `true`.
+  /** Runs a code block and returns its result, while recording its execution
+    * time, according to the passed clock. Execution time is written to `out`,
+    * if `show` is set to `true`.
     *
     * e.g.
     *
@@ -157,13 +162,19 @@ private[language] object RiddlImpl {
     *
     * prints: Stage 'my-stage': 0.000 seconds
     *
-    * @param clock the clock that provides the start/end times to compute execution time
-    * @param out the PrintStream to write execution time information to
-    * @param stage The name of the stage, is included in output message
-    * @param show if `true`, then message is printed, otherwise not
-    * @param f the code block to execute
+    * @param clock
+    *   the clock that provides the start/end times to compute execution time
+    * @param out
+    *   the PrintStream to write execution time information to
+    * @param stage
+    *   The name of the stage, is included in output message
+    * @param show
+    *   if `true`, then message is printed, otherwise not
+    * @param f
+    *   the code block to execute
     *
-    * @return The result of running `f`
+    * @return
+    *   The result of running `f`
     */
   def timer[T](
     clock: Clock,

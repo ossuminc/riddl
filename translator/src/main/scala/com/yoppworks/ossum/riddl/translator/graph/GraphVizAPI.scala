@@ -9,22 +9,19 @@ import scala.concurrent.Future
 import pureconfig._
 import pureconfig.generic.auto._
 
-/** GraphVizAPI
-  * ##############################################################
-  * #                    Linux Configurations                    #
-  * ##############################################################
-  * # The dir. where temporary files will be created.
-  * tempDirForLinux = /tmp
-  * # Where is your dot program located? It will be called externally.
-  * dotForLinux = /usr/bin/dot
+/** GraphVizAPI ############################################################## #
+  * Linux Configurations #
+  * ############################################################## # The dir.
+  * where temporary files will be created. tempDirForLinux = /tmp # Where is
+  * your dot program located? It will be called externally. dotForLinux =
+  * /usr/bin/dot
   *
-  * ##############################################################
-  * #                   Windows Configurations                   #
-  * ##############################################################
-  * # The dir. where temporary files will be created.
-  * tempDirForWindows = c:/temp
-  * # Where is your dot program located? It will be called externally.
-  * dotForWindows = "c:/Program Files (x86)/Graphviz 2.28/bin/dot.exe"
+  * ############################################################## # Windows
+  * Configurations #
+  * ############################################################## # The dir.
+  * where temporary files will be created. tempDirForWindows = c:/temp # Where
+  * is your dot program located? It will be called externally. dotForWindows =
+  * "c:/Program Files (x86)/Graphviz 2.28/bin/dot.exe"
   */
 sealed trait DotProgramName {
   override def toString: String = { this.getClass.getSimpleName.dropRight(1) }
@@ -152,7 +149,7 @@ object GraphVizAPI {
     )(content: StringBuilder => StringBuilder
     ): StringBuilder = {
       clusterNum = clusterNum + 1
-      subgraph(s"cluster${clusterNum}") { sb =>
+      subgraph(s"cluster$clusterNum") { sb =>
         sb.attrs(Seq("label" -> name)).append(content(sb))
       }
     }
@@ -186,7 +183,8 @@ object GraphVizAPI {
 case class GraphVizAPI(config: GraphVizAPIConfig, buffer: StringBuilder) {
 
   /** Returns the graph's source description in dot language.
-    * @return Source of the graph in dot language.
+    * @return
+    *   Source of the graph in dot language.
     */
   def getDotSource: String = this.buffer.toString()
 

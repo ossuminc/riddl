@@ -84,9 +84,9 @@ class RiddlTest extends ParsingTestBase {
     }
   }
 
-  /** Executes a function while capturing system's stderr, return the result of the function and the captured output.
-    * Switches stderr back once code block finishes or throws exception
-    * e.g.
+  /** Executes a function while capturing system's stderr, return the result of
+    * the function and the captured output. Switches stderr back once code block
+    * finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.err.println("hi there!")
@@ -107,9 +107,9 @@ class RiddlTest extends ParsingTestBase {
     } finally { System.setErr(out) }
   }
 
-  /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
-    * Switches stdout back once code block finishes or throws exception
-    * e.g.
+  /** Executes a function while capturing system's stdout, return the result of
+    * the function and the captured output. Switches stdout back once code block
+    * finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.out.println("hi there!")

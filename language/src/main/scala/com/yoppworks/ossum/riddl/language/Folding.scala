@@ -96,7 +96,7 @@ object Folding {
 
   trait Folding[S <: State[S]] {
 
-    //noinspection ScalaStyle
+    // noinspection ScalaStyle
     final def foldLeft(
       parent: Container,
       container: Container,

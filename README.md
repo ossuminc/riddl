@@ -84,4 +84,4 @@ we hope it will do all of the following:
 
 ## Dependencies
 
-This codebase targets Java 11.  
+This codebase targets Java 17 and Scala 3.0  

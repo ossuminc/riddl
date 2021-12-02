@@ -10,8 +10,8 @@ import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 
-/** This is a translator to convert a RIDDL AST to a full documentation
-  * web site using Hugo.
+/** This is a translator to convert a RIDDL AST to a full documentation web site
+  * using Hugo.
   */
 class HugoTranslator extends Translator[HugoConfig] {
 

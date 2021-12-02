@@ -28,7 +28,7 @@ trait EntityParser
       case (loc, Options.persistent) => EntityPersistent(loc)
       case (loc, Options.consistent) => EntityConsistent(loc)
       case (loc, Options.available)  => EntityAvailable(loc)
-      case _                         => throw new RuntimeException("Impossible case")
+      case _ => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -38,7 +38,7 @@ trait EntityParser
       case (loc, Some(Options.person))   => PersonEntityKind(loc)
       case (loc, Some(Options.software)) => SoftwareEntityKind(loc)
       case (loc, None)                   => SoftwareEntityKind(loc)
-      case _                             => throw new RuntimeException("Impossible case")
+      case _ => throw new RuntimeException("Impossible case")
     }
   }
 

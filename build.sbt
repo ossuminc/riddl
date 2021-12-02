@@ -3,14 +3,14 @@ import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / versionScheme := Some("semver-spec")
 
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator  := "-"
 ThisBuild / scalafmtOnCompile := true
 ThisBuild / organization := "com.yoppworks"
-ThisBuild / scalaVersion := "2.13.3"
+ThisBuild / scalaVersion := "2.13.7"
 buildInfoOptions := Seq(ToMap, BuildTime)
 buildInfoKeys := Seq[BuildInfoKey](
   name,
@@ -27,8 +27,10 @@ buildInfoKeys := Seq[BuildInfoKey](
 )
 
 scalacOptions := Seq(
-  s"-target:11",
+  "-target:17",
+  "-Xsource:3",
   "-Wdead-code",
+  "-deprecation",
   // "-Woctal-literal", <-- that warning is broken, it warns on:  val x: Int = 0
   // "-Xdev",
   // "-Wunused:imports",   // Warn if an import selector is not referenced.
@@ -66,7 +68,9 @@ lazy val doc = project
     publishTo := Some(Resolver.defaultLocal)
   )
 
-lazy val riddlc = (project in file("riddlc")).enablePlugins(ParadoxPlugin)
+lazy val riddlc = project
+  .in(file("riddlc"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
@@ -105,23 +109,27 @@ lazy val riddlc = (project in file("riddlc")).enablePlugins(ParadoxPlugin)
       "com.typesafe" % "config" % "1.4.0"
     ),
     buildInfoPackage := "com.yoppworks.ossum.riddl"
-  ).dependsOn(translator).aggregate(language, translator)
+  )
+  .dependsOn(translator, language)
 
-lazy val language = (project in file("language")).settings(
-  name := "riddl-languge",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.language",
-  libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-core" % "2.1.0",
-    "com.lihaoyi" %% "fastparse" % "2.2.4",
-    "com.github.pureconfig" %% "pureconfig" % "0.12.2",
-    "org.scalactic" %% "scalactic" % "3.1.0",
-    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
-  ),
-  Compile/compilecheck := {
-    Def.sequential(Compile/compile, (Compile/scalastyle).toTask("")).value
-  }
-)
+lazy val language = project
+  .in(file("language"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "riddl-languge",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.language",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % "2.1.0",
+      "com.lihaoyi" %% "fastparse" % "2.2.4",
+      "com.github.pureconfig" %% "pureconfig" % "0.12.2",
+      "org.scalactic" %% "scalactic" % "3.1.0",
+      "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
+    ),
+    Compile/compilecheck := {
+      Def.sequential(Compile/compile, (Compile/scalastyle).toTask("")).value
+    }
+  )
 
 lazy val translator = (project in file("translator")).settings(
   name := "riddl-translator",

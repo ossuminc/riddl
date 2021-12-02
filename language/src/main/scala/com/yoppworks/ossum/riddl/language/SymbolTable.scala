@@ -6,10 +6,9 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.reflect._
 
-/** Symbol Table for Validation
-  * This symbol table is built from the AST model after syntactic parsing
-  * is complete. It will also work for any sub-tree of the model that is
-  * rooted by a Container node.
+/** Symbol Table for Validation This symbol table is built from the AST model
+  * after syntactic parsing is complete. It will also work for any sub-tree of
+  * the model that is rooted by a Container node.
   */
 case class SymbolTable(container: Container) {
   type Parentage = Map[Definition, Container]

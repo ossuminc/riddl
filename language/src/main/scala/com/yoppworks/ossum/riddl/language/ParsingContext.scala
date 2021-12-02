@@ -32,7 +32,7 @@ trait ParsingContext {
   def current: RiddlParserInput = {
     stack.current match {
       case Some(rpi) => rpi
-      case None      => throw new RuntimeException("Parse Input Stack Underflow")
+      case None => throw new RuntimeException("Parse Input Stack Underflow")
     }
   }
 
@@ -74,6 +74,10 @@ trait ParsingContext {
                      |${trace.longAggregateMsg}""".stripMargin
         error(current.location(index), msg)
         Left(errors.toSeq)
+      case _ => throw new IllegalStateException(
+          "Parsed[T] should have matched Success or Failure"
+        )
+
     }
   }
 }

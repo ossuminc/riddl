@@ -23,7 +23,7 @@ trait InteractionParser extends CommonParser {
       case (loc, Options.sync)  => SynchOption(loc)
       case (loc, Options.async) => AsynchOption(loc)
       case (loc, Options.reply) => ReplyOption(loc)
-      case _                    => throw new RuntimeException("invalid message option")
+      case _ => throw new RuntimeException("invalid message option")
     }
   }
 

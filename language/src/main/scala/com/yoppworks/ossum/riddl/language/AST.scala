@@ -4,10 +4,9 @@ import scala.collection.immutable.ListMap
 
 // scalastyle:off number.of.methods
 
-/** Abstract Syntax Tree
-  * This object defines the model for processing IDDL and producing a
-  * raw AST from it. This raw AST has no referential integrity, it just
-  * results from applying the parsing rules to the input. The RawAST models
+/** Abstract Syntax Tree This object defines the model for processing IDDL and
+  * producing a raw AST from it. This raw AST has no referential integrity, it
+  * just results from applying the parsing rules to the input. The RawAST models
   * produced from parsing are syntactically correct but have no semantic
   * validation. The Transformation passes convert RawAST model to AST model
   * which is referentially and semantically consistent (or the user gets an
@@ -40,8 +39,7 @@ object AST {
     }
   }
 
-  /**
-    */
+  /** */
   sealed trait RiddlValue extends RiddlNode {
     def loc: Location
     def kind: String = this.getClass.getSimpleName
@@ -101,7 +99,7 @@ object AST {
     val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
 
-  //////////////////////////////////////////////////////////// TYPES
+  // ////////////////////////////////////////////////////////// TYPES
 
   sealed trait TypeExpression extends DefinitionValue
 
@@ -117,17 +115,23 @@ object AST {
   case class OneOrMore(loc: Location, texp: TypeExpression)
       extends TypeExpression
 
-  /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
+  /** Represents one variant among (one or) many variants that comprise an
+    * [[Enumeration]]
     *
-    * @param id the identifier (name) of the Enumerator
-    * @param enumVal the optional int value
-    * @param typeRef enumerators can optionally refer to an aggregation type, such as `Keyboard` in:
-    *              {{{
+    * @param id
+    *   the identifier (name) of the Enumerator
+    * @param enumVal
+    *   the optional int value
+    * @param typeRef
+    *   enumerators can optionally refer to an aggregation type, such as
+    *   `Keyboard` in:
+    * {{{
     *                 type KeyboardType is { locale: Locale }
-    *                type Device is any of { Keyboard is type KeyboardType Mouse Monitor}
-    *              }}}
-    * @param description the description of the enumerator. Each Enumerator in an enumeration may define independent
-    *                    descriptions
+    *                 type Device is any of { Keyboard is type KeyboardType Mouse Monitor}
+    * }}}
+    * @param description
+    *   the description of the enumerator. Each Enumerator in an enumeration may
+    *   define independent descriptions
     */
   case class Enumerator(
     loc: Location,
@@ -262,7 +266,7 @@ object AST {
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression
   case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression
 
-  //////////////////////////////////////////////////////////// TOPICS
+  // ////////////////////////////////////////////////////////// TOPICS
 
   case class TopicRef(
     loc: Location,
@@ -573,15 +577,24 @@ object AST {
 
   /** Definition of an Entity
     *
-    * @param options The options for the entity
-    * @param loc The location in the input
-    * @param id The name of the entity
-    * @param states The state values of the entity
-    * @param types Type definitions useful internally to the entity definition
-    * @param consumers A reference to the topic from which the entity consumes
-    * @param features Feature definitions of the entity
-    * @param functions Utility functions defined for the entity
-    * @param invariants Invariant properties of the entity
+    * @param options
+    *   The options for the entity
+    * @param loc
+    *   The location in the input
+    * @param id
+    *   The name of the entity
+    * @param states
+    *   The state values of the entity
+    * @param types
+    *   Type definitions useful internally to the entity definition
+    * @param consumers
+    *   A reference to the topic from which the entity consumes
+    * @param features
+    *   Feature definitions of the entity
+    * @param functions
+    *   Utility functions defined for the entity
+    * @param invariants
+    *   Invariant properties of the entity
     */
   case class Entity(
     entityKind: EntityKind,
@@ -616,14 +629,15 @@ object AST {
     description: Option[Description] = None)
       extends TranslationRule
 
-  /** Definition of an Adaptor
-    * Adaptors are defined in Contexts to convert messaging from one Context to
-    * another. Adaptors translate incoming events from other Contexts into
-    * commands or events that its owning context can understand. There should be
-    * one Adaptor for each external Context
+  /** Definition of an Adaptor Adaptors are defined in Contexts to convert
+    * messaging from one Context to another. Adaptors translate incoming events
+    * from other Contexts into commands or events that its owning context can
+    * understand. There should be one Adaptor for each external Context
     *
-    * @param loc Location in the parsing input
-    * @param id Name of the adaptor
+    * @param loc
+    *   Location in the parsing input
+    * @param id
+    *   Name of the adaptor
     */
   case class Adaptor(
     loc: Location,
@@ -665,14 +679,16 @@ object AST {
       interactions
   }
 
-  /** Definition of an Interaction
-    * Interactions define an exemplary interaction between the system being
-    * designed and other actors. The basic ideas of an Interaction are much
-    * like UML Sequence Diagram.
+  /** Definition of an Interaction Interactions define an exemplary interaction
+    * between the system being designed and other actors. The basic ideas of an
+    * Interaction are much like UML Sequence Diagram.
     *
-    * @param loc Where in the input the Scenario is defined
-    * @param id The name of the scenario
-    * @param actions The actions that constitute the interaction
+    * @param loc
+    *   Where in the input the Scenario is defined
+    * @param id
+    *   The name of the scenario
+    * @param actions
+    *   The actions that constitute the interaction
     */
   case class Interaction(
     loc: Location,
@@ -691,8 +707,8 @@ object AST {
     def reactions: Seq[Reaction]
   }
 
-  /** Used to capture reactions to actions. Actions include reactions in
-    * their definition to model the precipitating reactions to the action.
+  /** Used to capture reactions to actions. Actions include reactions in their
+    * definition to model the precipitating reactions to the action.
     */
   case class Reaction(
     loc: Location,
@@ -717,12 +733,18 @@ object AST {
 
   /** An Interaction based on entity messaging between two entities in the
     * system.
-    * @param options Options for the message
-    * @param loc Where the message is located in the input
-    * @param id The displayable text that describes the interaction
-    * @param sender A reference to the entity sending the message
-    * @param receiver A reference to the entity receiving the message
-    * @param message A reference to the kind of message sent & received
+    * @param options
+    *   Options for the message
+    * @param loc
+    *   Where the message is located in the input
+    * @param id
+    *   The displayable text that describes the interaction
+    * @param sender
+    *   A reference to the entity sending the message
+    * @param receiver
+    *   A reference to the entity receiving the message
+    * @param message
+    *   A reference to the kind of message sent & received
     */
   case class MessageAction(
     loc: Location,
