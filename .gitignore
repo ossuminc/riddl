@@ -4,6 +4,7 @@
 target
 **/target
 .DS_Store
-
 *.dot
 *.png
+doc/hugo/.hugo_build.lock
+doc/hugo/resources/_gen/

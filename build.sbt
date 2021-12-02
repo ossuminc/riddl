@@ -2,12 +2,15 @@ import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
+ThisBuild / versionScheme := Some("early-semver")
+
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
-dynverSeparator in ThisBuild := "-"
-scalafmtOnCompile in ThisBuild := true
-organization in ThisBuild := "com.yoppworks"
-scalaVersion in ThisBuild := "2.13.3"
+ThisBuild / dynverSeparator  := "-"
+ThisBuild / scalafmtOnCompile := true
+ThisBuild / organization := "com.yoppworks"
+ThisBuild / scalaVersion := "2.13.3"
 buildInfoOptions := Seq(ToMap, BuildTime)
 buildInfoKeys := Seq[BuildInfoKey](
   name,
@@ -49,14 +52,24 @@ lazy val compilecheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file("."))
   .settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc /*, `sbt-riddl`*/ )
+  .aggregate(language, translator, riddlc, doc /*, `sbt-riddl`*/ )
+
+lazy val doc = project
+  .in(file("doc"))
+  .enablePlugins(SitePlugin)
+  .enablePlugins(HugoPlugin)
+  .enablePlugins(SiteScaladocPlugin)
+  .settings(
+    name := "riddl-doc",
+    Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+    publishSite,
+    publishTo := Some(Resolver.defaultLocal)
+  )
 
 lazy val riddlc = (project in file("riddlc")).enablePlugins(ParadoxPlugin)
-  .enablePlugins(ParadoxSitePlugin).enablePlugins(ParadoxMaterialThemePlugin)
-  .enablePlugins(BuildInfoPlugin).settings(
+  .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-    paradoxNavigationDepth := 6,
     //Determines depth of TOC for page navigation.
     /*
   val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
@@ -74,7 +87,6 @@ lazy val riddlc = (project in file("riddlc")).enablePlugins(ParadoxPlugin)
   val paradoxGroups = settingKey[Map[String, Seq[String]]]("Paradox groups.")
   val paradoxValidationIgnorePaths = settingKey[List[Regex]]("List of regular expressions to apply to paths to determine if they should be ignored.")
   val paradoxValidationSiteBasePath = settingKey[Option[String]]("The base path that the documentation is deployed to, allows validating links on the docs site that are outside of the documentation root tree")
-     */
     Compile / paradoxMaterialTheme := {
       ParadoxMaterialTheme().withColor("blue", "grey")
         .withLogoIcon("yw-elephant")
@@ -87,6 +99,7 @@ lazy val riddlc = (project in file("riddlc")).enablePlugins(ParadoxPlugin)
       // .withFavicon("assets/images/riddl-favicon.png")
       // .withLogo("assets/images/riddl-logo.png")
     },
+     */
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.0-RC2",
       "com.typesafe" % "config" % "1.4.0"
@@ -105,8 +118,8 @@ lazy val language = (project in file("language")).settings(
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
   ),
-  compilecheck in Compile := {
-    Def.sequential(compile in Compile, (scalastyle in Compile).toTask("")).value
+  Compile/compilecheck := {
+    Def.sequential(Compile/compile, (Compile/scalastyle).toTask("")).value
   }
 )
 
