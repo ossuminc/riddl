@@ -1,5 +1,5 @@
 default:
-  image: yoppworks/gitlab-runner-scala-sbt:latest
+  image: yoppworks/gitlab-runner-sbt-scala:latest
 
 # DinD service is required for Testcontainers
 services:
