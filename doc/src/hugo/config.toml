@@ -1,4 +1,0 @@
-baseURL = 'http://localhost/'
-languageCode = 'en-us'
-title = 'RIDDL Documentatin'
-theme = "hugo-theme-learn"

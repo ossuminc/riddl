@@ -1,5 +1,6 @@
 ---
 title: "Results"
+type: page
 ---
 
 # Introduction

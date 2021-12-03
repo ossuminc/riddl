@@ -1,5 +1,6 @@
 ---
 title: "Topic"
+type: page
 ---
 
 # Introduction

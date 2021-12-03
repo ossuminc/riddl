@@ -1,4 +1,8 @@
-# Explanation Of Reactive BBQ Example
+---
+title: "Explanation"
+type: page
+weight: 20
+---
 
 ## The Code
 Here's the entire listing of the code for the Reactive BBQ

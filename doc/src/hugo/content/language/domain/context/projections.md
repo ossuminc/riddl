@@ -1,5 +1,6 @@
 ---
 title: "Projections"
+type: page
 ---
 
 # Introduction

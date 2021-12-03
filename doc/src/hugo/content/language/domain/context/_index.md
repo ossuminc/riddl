@@ -1,6 +1,6 @@
 ---
 title: "Bounded Contexts"
-draft: true
+type: page
 ---
 # Introduction
 DDD defines the notion of a **bounded context** which is portion of the domain

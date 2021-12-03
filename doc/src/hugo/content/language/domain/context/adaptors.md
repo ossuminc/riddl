@@ -1,5 +1,6 @@
 ---
 title: "Adaptors"
+type: page
 ---
 # Introduction
 Adaptors are translators between contexts and domains. 

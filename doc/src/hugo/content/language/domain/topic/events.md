@@ -1,5 +1,7 @@
 ---
 title: "Events"
+type: page
+
 ---
 
 # Introduction

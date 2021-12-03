@@ -1,5 +1,6 @@
 ---
 title: Invariants
+type: page
 ---
 # Introduction
 

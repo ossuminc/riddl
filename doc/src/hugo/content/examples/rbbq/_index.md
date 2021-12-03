@@ -1,5 +1,8 @@
-# Reactive BBQ Example
-
+---
+title: "Reactive BBQ Example"
+type: page
+weight: 20
+---
 ## Introduction
 The Reactive BBQ domain is a familiar one for those who have
 taken the Lightbend Reactive Architecture Professional course.

@@ -1,5 +1,6 @@
 ---
 title: "State"
+type: page
 ---
 
 # Introduction

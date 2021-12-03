@@ -1,6 +1,6 @@
 ---
 title: "Entities"
-draft: true
+type: page
 ---
 
 # Introduction

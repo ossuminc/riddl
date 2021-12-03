@@ -1,5 +1,7 @@
 ---
 title: Actions
+type: page
+
 ---
 # Introduction
 

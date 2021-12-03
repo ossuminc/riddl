@@ -1,5 +1,7 @@
 ---
 title: "Queries"
+type: page
+
 ---
 
 # Introduction

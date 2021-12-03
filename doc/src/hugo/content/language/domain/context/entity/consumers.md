@@ -1,5 +1,6 @@
 ---
 title: Consumers
+type: page
 ---
 # Introduction
 

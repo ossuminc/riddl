@@ -1,0 +1,66 @@
+baseURL: http://localhost:1313/
+languageCode: "en-us"
+defaultContentLanguage: "en"
+defaultContentLanguageInSubdir: false
+enableMissingTranslationPlaceholders: false
+title: "RIDDL Documentation"
+theme: "hugo-theme-docdock"
+pygmentsCodeFences:  true
+pygmentsStyle:  "monokailight"
+
+# [Languages]
+# [Languages.en]
+# title = "Documentation for Hugo docDock"
+# weight = 1
+# languageName = "English"
+#
+# [Languages.fr]
+# title = "Documentation du thème docDock"
+# weight = 2
+# languageName = "Français"
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    anchorLineNos: false
+    codeFences: true
+    guessSyntax: false
+    hl_Lines: ""
+    lineAnchors: ""
+    lineNoStart: 1
+    lineNos: false
+    lineNumbersInTable: true
+    noClasses: true
+    style: monokai
+    tabWidth: 2
+
+params:
+  editURL: "https://gitlab.com/yoppworks/ossum/riddl/edit/master/doc/src/hugo2"
+  showVisitedLinks: true # default is false
+  themeStyle: "flex" # "original" or "flex" # default "flex"
+  themeVariant: "blue" # choose theme variant "green", "gold" , "gray", "blue"
+  ordersectionsby: "weight" # ordersectionsby = "title"
+  disableHomeIcon: false # default is false
+  disableSearch: false # default is false
+  disableNavChevron: false # set true to hide next/prev chevron, default is false
+  highlightClientSide: false # set true to use highlight.pack.js instead of the default hugo chroma highlighter
+  menushortcutsnewtab: false # set true to open shortcuts links to a new tab/window
+  enableGitInfo: true
+
+
+outputs:
+  home: [ "HTML", "RSS", "JSON"]
+
+menu:
+  shortcuts:
+    - pre: "<h3>More</h3>"
+      name: "<i class='fa fa-github'></i> <label>GitLab</label>"
+      identifier: "ds"
+      url: "https://gitlab.com/yoppworks/ossum/riddl"
+      weight: 10
+    - name: "<i class='fa fa-bookmark'></i> <label>Hugo Docs</label>"
+      identifier: "hugodoc"
+      url: "https://gohugo.io/"
+      weight: 20

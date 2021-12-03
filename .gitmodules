@@ -1,3 +1,9 @@
 [submodule "doc/hugo/themes/hugo-theme-learn"]
 	path = doc/hugo/themes/hugo-theme-learn
 	url = https://github.com/matcornic/hugo-theme-learn.git
+[submodule "doc/src/hugo/themes/redislabs-docs"]
+	path = doc/src/hugo/themes/redislabs-docs
+	url = https://github.com/RedisLabs/redislabs-docs
+[submodule "doc/src/hugo/themes/hugo-theme-docdock"]
+	path = doc/src/hugo/themes/hugo-theme-docdock
+	url = https://github.com/vjeantet/hugo-theme-docdock

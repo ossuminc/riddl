@@ -1,6 +1,9 @@
 ---
-title: "Conventions"
+title: "Language Conventions"
+weight: 10
 ---
+
+# Introduction
 
 Syntax conventions of RIDDL are very simple and lenient. 
 The intended audience is business owners, business analysts, domain engineers,
@@ -9,16 +12,55 @@ readable. The language is free in its formatting. It does
 not require indentation and its various constructs can be
 arranged on any line.  RIDDL supports the definition of a
 variety of concepts taken directly from Domain Driven Design
-and the Unified Modeling Language. 
+and the Unified Modeling Language as well as software architecture. 
 
+The following language conventions are adhered to throughout the language for
+ease of use (special cases and rule contraventions cause confusion). 
+
+# Language Consistency
+Most things in RIDDL are consistent throughout the language. We believe this 
+makes learning the language easier since there are no exceptions to fundamental constructs.
+The sections below define the consistent language features.
+
+# Everything Is A Definition
+The language is declarative. You don't say how to do something, you specify the end
+result you want to see. The language aims to capture a detailed and concise definition
+of the abstractions a complex system will require. It does not specify how those
+abstractions should be built. That is for an engineer to implement.
+
+# Every Definition Can Be Documented
+Every thing you can define can have a `described by` suffix which lets you document
+the definition using markdown.
+
+# Many Definitions Are Containers
+A container is a definition that contains other definitions. For example, 
+a domain definition is a recursively nested definition:
+```riddl
+domain root is {
+  domain branch is {
+    domain leaf {
+    }
+  }
+}
+```
+That is domains are definitions that can contain the definition oof (sub)
+domains. Similarly `context` can define `entity` 
+```riddl
+context foo is {
+  entity bar is {
+    ...
+  }
+}
+```
 ## Definitions And References
 The language is simply a hierarchically nested set of definitions and
 containers of definitions.  A definition introduces a named instance of some
 concept in the RIDDL meta-model. The specification of that definition
 proceeds directly following the `is` keyword.
 
-If RIDDL supported the concept of a Cat and its owner  (it doesn't), then you
-might specify a cat named "Smudge" with an owner named "Reid" like this:
+If RIDDL supported the concept of a Cat and its owner  (it doesn't in both 
+those cases), then you might specify a cat named "Smudge" with an owner 
+named "Reid" like this:
 ```text
 cat Smudge is {
   owner is entity Reid

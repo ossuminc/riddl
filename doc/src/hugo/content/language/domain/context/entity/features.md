@@ -1,5 +1,6 @@
 ---
 title: Features
+type: page
 ---
 # Introduction
 

@@ -1,9 +1,11 @@
 ---
-title: "Examples"
+title: "RIDDL Examples"
+type: page
+weight: 1
 ---
 
 # Overview
-This section provides some examples of how the RIDDL can be 
-used.  
+This section provides some examples of how RIDDL can be 
+used:
 
-* [Reactive BBQ](rbbq/_index.md)
+{{% children %}}

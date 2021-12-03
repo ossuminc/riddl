@@ -1,4 +1,7 @@
-# Scenario
+---
+title: "RBBQ Scenarios"
+weight: 30
+---
 
 ## Case Study
 The Reactive BBQ restaurant chain has determined that their

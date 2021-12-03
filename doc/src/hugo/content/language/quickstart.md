@@ -1,5 +1,6 @@
 ---
 title: "Quick Start"
+weight: 20
 ---
 Some people learn faster from examples than by reading 
 the documentation. For those of you like that style of learning, 

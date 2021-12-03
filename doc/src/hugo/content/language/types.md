@@ -1,5 +1,6 @@
 ---
 title: "Types"
+weight: 30
 ---
 
 # Introduction
