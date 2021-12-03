@@ -2,9 +2,9 @@ package com.yoppworks.ossum.riddl.language
 
 import java.net.URI
 import java.util.regex.PatternSyntaxException
-
 import com.yoppworks.ossum.riddl.language.AST._
 
+import scala.annotation.unused
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 
@@ -186,8 +186,9 @@ object Validation {
         s = enumerator.typeRef match {
           case Some(typeRef) => lookup[Type](typeRef.id) match {
               case Nil => s.check(
-                  false,
-                  s"Enumeration references a non-existent type: ${typeRef.id.value}",
+                  predicate = false,
+                  message =
+                    s"Enumeration references a non-existent type: ${typeRef.id.value}",
                   Error,
                   typeRef.id.loc
                 )
@@ -198,9 +199,17 @@ object Validation {
                   typeRef.id.loc
                 )
               case head +: tail => s.check(
-                  false,
-                  s"Enumeration references an ambiguous type: ${typeRef.id.value}.  " +
-                    s"Resolved references include: ${(head +: tail).map(_.id.value)}",
+                  predicate = false,
+                  message =
+                    s"Enumeration references an ambiguous type: ${typeRef.id.value}.  " +
+                      s"Resolved references include: ${(head +: tail).map(_.id.value)}",
+                  Error,
+                  typeRef.id.loc
+                )
+              case List(_) => s.check(
+                  predicate = false,
+                  message =
+                    s"Enumeration references a non-existent type: ${typeRef.id.value}",
                   Error,
                   typeRef.id.loc
                 )
@@ -400,6 +409,7 @@ object Validation {
 
     def checkDescription(
       definition: Definition,
+      @unused
       description: Option[Description]
     ): ValidationState = {
       if (definition.description.isEmpty) {
@@ -515,6 +525,7 @@ object Validation {
 
     def doOnClause(
       state: ValidationState,
+      @unused
       parent: Consumer,
       onClause: OnClause
     ): ValidationState = {

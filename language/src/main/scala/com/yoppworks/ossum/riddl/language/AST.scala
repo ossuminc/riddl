@@ -1,6 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import scala.collection.immutable.ListMap
+import scala.languageFeature.implicitConversions
 
 // scalastyle:off number.of.methods
 
@@ -29,6 +30,10 @@ object AST {
 
   object Location {
     val empty: Location = Location()
+
+    implicit def apply(line: Int): Location = {
+      Location(line, 0, defaultSourceName)
+    }
 
     implicit def apply(
       pair: (Int, Int)
