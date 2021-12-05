@@ -29,14 +29,14 @@ An entity is the fundamental processor of work in a reactive system. They are
 most often implemented in software as an actor or a class.
 
 
-# Definition Syntax
+# Syntax
 {{% panel theme="success" header="Entity Definition" %}}
 An entity is defined with the `entity` keyword using this syntax:
 ```ebnf
 entity = entity kind, "entity", "is", "{",  
     entity options, entity definitions, "}", description ;
 
-entity kind = "device" | "person" | "concept" ;
+entity kind = [ "device" | "actor" | "concept"] ;
 
 entity options = single option | multi options ;
 
@@ -57,26 +57,46 @@ For example:
 device entity Printer is {
   options(value, available)
   // ...
+}
 ```
+The optional entity kind prefix is a directive that suggests how the entity 
+might handle its state and received messages. In the example above, we 
+expect the "Printer" entity to be a physical device. An "actor" entity in
+of the same name could be expected to be a person who prints. 
 
-Entities have several aspects in RIDDL:
-* __Kind__ - A directive that indicates how the entity handles its state
-* __State__ - The information retained by the entity through its lifecycle
-* __Handler__ - A specification of how the entity processes commands and
+The options available suggest how the entity might handle its state and 
+message input:
+* _event sourced_ - indicates that event sourcing is used in the persistence 
+  of the entity's states, storing a log of change events
+* _value_ - indicates that only the current value of the entity's state is 
+  persisted, recording no history off the change events 
+* _aggregate_ - indicates this entity is an 'aggregate root entity' as 
+  defined by DDD.
+* _persistent_ - indicates that this entity should persist its state to 
+  stable sotrage.
+* _consistent_ - indicates that this entity tends towards Consistency as 
+  defined by the CAP theorem.
+* _available_ - indicates that this entity tends towards Availability as 
+  defined by the CAP theorem.
+
+Entities also have several contained definitions which will be described in 
+the sections below:
+* [_State_](state) - The information retained by the entity through its 
+  lifecycle
+* [_Handler_]() - A specification of how the entity processes commands and
   queries, generating events and results, correspondingly
-* __Functions__ - Auxilliary functions definitions to implement the
+* [_Functions_](functions) - Auxiliary functions definitions to implement the
   frequently used business logic referenced from the Handler definition
-* __Invariants__ - Logical assertions that must always be true through an
+* [_Invariants_](invariants) - Logical assertions that must always be true 
+  through an
   entity's lifecycle.
-* __Adaptor__ - An adaptor converts the events from another entity into
+* [_Adaptor_]() - An adaptor converts the events from another entity into
   commands to this entity. This is how an entity reacts to its environment.
-* 
-
-Defining an entity involves 
 
 
-Entities are consumers and producers of messages (commands, events, queries, 
-and results). They also hold state, whether persistent or not. Entities use 
+# Consumption 
+Entities consume commands and queries and produce events and results, 
+correspondingly. They also hold state, whether persistent or not. Entities use 
 event sourcing to keep track of the entire history of changes to the entity's
 state.  Entities have a globally unique immutable persistent identifier, 
 type `Id`, which provides the means to reference the entity in its context or

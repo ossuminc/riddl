@@ -1,0 +1,158 @@
+
+(* Terminal symbol definitions in various categories *)
+Terminals = Punctuation | Options | Keywords | Predefined |
+  Readability | Operators;
+
+Punctuation = asterisk | comma | colon | curlyOpen | curlyClose | dot |
+  equals | ellipsis | ellipsisQuestion | plus | question | quote | roundOpen |
+  roundClose | squareOpen | squareClose | undefined | verticalBar ;
+
+asterisk = "*";
+comma = ",";
+colon = ":";
+curlyOpen = "{";
+curlyClose = "}";
+dot = ".";
+equals = "=";
+ellipsis = "...";
+ellipsisQuestion = "...?";
+plus = "+";
+question = "?";
+quote = "\"";
+roundOpen = "(";
+roundClose = ")";
+squareOpen = "[";
+squareClose = "]";
+undefined = "???";
+verticalBar = "|";
+
+Options = actor |aggregate | async | available | consistent | device
+  eventSourced | function | gateway | persistent | reply | concept | sync
+  value | wrapper ;
+
+actor = "actor";
+aggregate = "aggregate";
+async = "async";
+available = "available";
+consistent = "consistent";
+device = "device";
+eventSourced = "event sourced";
+function = "function";
+gateway = "gateway";
+persistent = "persistent";
+reply = "reply";
+concept = "concept";
+sync = "sync";
+value = "value";
+wrapper = "wrapper";
+
+Keywords = action | adaptor | all | any | append | background | brief | call |
+  causing | command | commands | consumer | context | described | details |
+ domain | each | else_ | entity | event | events | example | execute |
+ explained | feature | function | handles | include | input | interaction |
+ invariant | items | many | mapping | on | one | option | optional | options |
+ output | publish | query | queries | range | remove | requires | result |
+ results | role | see | send | set | state | then_ | topic | type | value |
+ when | yields
+
+action = "action";
+adaptor = "adaptor";
+all = "all";
+any = "any";
+append = "append";
+background = "background";
+brief = "brief";
+call = "call";
+causing = "causing";
+command = "command";
+commands = "commands";
+consumer = "consumer";
+context = "context";
+described = "described";
+details = "details";
+domain = "domain";
+each = "each";
+else_ = "else";
+entity = "entity";
+event = "event";
+events = "events";
+example = "example";
+execute = "execute";
+explained = "explained";
+feature = "feature";
+function = "function";
+handles = "handles";
+include = "include";
+input = "input";
+interaction = "interaction";
+invariant = "invariant";
+items = "items";
+many = "many";
+mapping = "mapping";
+on = "on";
+one = "one";
+option = "option";
+optional = "optional";
+options = "options";
+output = "output";
+publish = "publish";
+query = "query";
+queries = "queries";
+range = "range";
+remove = "remove";
+requires = "requires";
+result = "result";
+results = "results";
+role = "role";
+see = "see";
+send = "send";
+set = "set";
+state = "state";
+then_ = "then";
+topic = "topic";
+type = "type";
+value = "value";
+when = "when";
+yields = "yields";
+
+Predefined = Boolean | Date | DateTime | Decimal | Duration | Id | Integer |
+  LatLong | Nothing | Number | Pattern | Real | String | Time | TimeStamp |
+  UniqueId | URL ;
+
+Boolean = "Boolean";
+Date = "Date";
+DateTime = "DateTime";
+Decimal = "Decimal";
+Duration = "Duration";
+Id = "Id";
+Integer = "Integer";
+LatLong = "LatLong";
+Nothing = "Nothing";
+Number = "Number";
+Pattern = "Pattern";
+Real = "Real";
+String = "String";
+Time = "Time";
+TimeStamp = "TimeStamp";
+UniqueId = "UniqueId";
+URL = "URL";
+
+Readability = and | are | as | by | for | from | is | of | on | to ;
+and = "and";
+are = "are";
+as = "as";
+by = "by";
+for = "for";
+from = "from";
+is = "is";
+of = "of";
+on = "on";
+to = "to";
+
+Operators = and | or | not | plus | minus | times | div | mod  ;
+not = "not";
+plus = "+";
+minus = "-";
+times = "*";
+div = "/";
+mod = "%";

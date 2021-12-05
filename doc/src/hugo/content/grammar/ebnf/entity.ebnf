@@ -1,0 +1,21 @@
+(* RIDDL EBNF Grammar For Entity definition *)
+
+entity = entity kind, "entity", "is", "{",
+    entity options, entity definitions,
+  "}", description ;
+
+entity kind = [ "device" | "actor" | "concept"] ;
+
+entity options = single option | multi options ;
+
+single-option = "option", "is", entity option kinds;
+
+multi-option = "options", "(", { entity option kinds },  ")";
+
+entity option kinds = "event sourced" | "value" | "aggregate" | "persistent" |
+   "consistent" | "available";
+
+entity definition =
+    consumer | feature | function | invariant | typeDef | state;
+
+entity definitions =  entity definition { entity definition } ;

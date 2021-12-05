@@ -1,0 +1,90 @@
+(* Common RIDDL EBNF Grammar Productions *)
+
+(******************************************************************** COMMON *)
+
+any char = ? any UTF-8 character ? ;
+
+any but newline = any char - ( "\n" | "\r" ) ;
+
+nonquote = any char - '"' ;
+
+digits = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+literalInteger = digits
+
+literalString = quote nonquote quote ;
+
+literalStrings = literalString { literalString } ;
+
+markdownLine = verticalBar, any but newline, newline ;
+
+markdownLines= markdownLine { markdownLine.rep(1)) } ;
+
+docBlock = (open,  (markdownLines | literalStrings), close) | literalString ;
+
+optionalNestedContent(content) = open [ content ] close ;
+
+brief = "brief", [ ( literalString | docBlock ) ] ;
+
+details = "details", [ (literalString | docBlock) ] ;
+
+items = "items", [ "(", literalString ")" ],
+    open,  { identifier, "is", docBlock), close ;
+
+citations = "see", docBlock ;
+
+as = "as" | "by";
+
+detailedDescription = brief, details, items, citations ;
+
+literalStringsDescription = literalStrings ;
+
+docBlockDescription = markdownLine ;
+
+description = ( "described" | "explained" ), as, open,
+  (literalStringDescription | docBlockDescription | detailedDescription),
+  close ;
+
+literalDecimal = plusOrMinus, digits{digits}, "." {digits} ;
+
+idHeadChars = ? upper and lower case letters ? ;
+idTailChars = ? letters digits and underscore ? ;
+
+simpleIdentifier =  idHeadChars, { idTailChars } ;
+
+quotedIdentifier = "'", any char { any char }, "'" ;
+
+identifier = simpleIdentifier | quotedIdentifier ;
+
+pathIdentifier = identifier { ".", identifier } ;
+
+is = "is" | "are" | ":" | "=" ) ;
+
+open = "{" ;
+
+close = "}" ;
+
+options(validOptions) = "options", "(" validOptions{validOptinos} ")" |
+   "option", "is", validOptions ;
+
+commandRef = "command", pathIdentifier ;
+
+eventRef = "event", pathIdentifier ;
+
+queryRef = "query", pathIdentifier ;
+
+resultRef = "result",  pathIdentifier ;
+
+messageRef =  commandRef | eventRef | queryRef | resultRef ;
+
+entityRef = "entity", pathIdentifier ;
+
+topicRef = "topic", pathIdentifier ;
+
+typeRef = "type", pathIdentifier;
+
+actionRef = "action",  pathIdentifier ;
+
+contextRef = "context", pathIdentifier ;
+
+domainRef = "domain", pathIdentifier;
