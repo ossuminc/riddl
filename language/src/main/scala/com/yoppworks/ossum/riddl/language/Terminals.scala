@@ -42,18 +42,20 @@ object Terminals {
   }
 
   object Options {
+    final val actor = "actor"
     final val aggregate = "aggregate"
     final val async = "async"
     final val available = "available"
     final val consistent = "consistent"
     final val device = "device"
+    final val eventSourced = "event sourced"
     final val function = "function"
     final val gateway = "gateway"
     final val persistent = "persistent"
-    final val person = "person"
     final val reply = "reply"
-    final val software = "software"
+    final val concept = "concept"
     final val sync = "sync"
+    final val value = "value"
     final val wrapper = "wrapper"
   }
 

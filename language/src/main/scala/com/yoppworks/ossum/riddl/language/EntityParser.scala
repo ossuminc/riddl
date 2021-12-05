@@ -18,26 +18,30 @@ trait EntityParser
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
       StringIn(
+        Options.eventSourced,
+        Options.value,
         Options.aggregate,
         Options.persistent,
         Options.consistent,
         Options.available
       ).!
     ) {
-      case (loc, Options.aggregate)  => EntityAggregate(loc)
-      case (loc, Options.persistent) => EntityPersistent(loc)
-      case (loc, Options.consistent) => EntityConsistent(loc)
-      case (loc, Options.available)  => EntityAvailable(loc)
+      case (loc, Options.eventSourced) => EntityAggregate(loc)
+      case (loc, Options.value)        => EntityValueOption(loc)
+      case (loc, Options.aggregate)    => EntityAggregate(loc)
+      case (loc, Options.persistent)   => EntityPersistent(loc)
+      case (loc, Options.consistent)   => EntityConsistent(loc)
+      case (loc, Options.available)    => EntityAvailable(loc)
       case _ => throw new RuntimeException("Impossible case")
     }
   }
 
   def entityKind[X: P]: P[EntityKind] = {
-    P(location ~ (Options.device | Options.software | Options.person).!.?).map {
-      case (loc, Some(Options.device))   => DeviceEntityKind(loc)
-      case (loc, Some(Options.person))   => PersonEntityKind(loc)
-      case (loc, Some(Options.software)) => SoftwareEntityKind(loc)
-      case (loc, None)                   => SoftwareEntityKind(loc)
+    P(location ~ (Options.device | Options.concept | Options.actor).!.?).map {
+      case (loc, Some(Options.device))  => DeviceEntityKind(loc)
+      case (loc, Some(Options.actor))   => ActorEntityKind(loc)
+      case (loc, Some(Options.concept)) => ConceptEntityKind(loc)
+      case (loc, None)                  => ConceptEntityKind(loc)
       case _ => throw new RuntimeException("Impossible case")
     }
   }

@@ -262,7 +262,7 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-            SoftwareEntityKind(1 -> 1),
+            ConceptEntityKind(1 -> 1),
             1 -> 1,
             Identifier(1 -> 8, "Hamburger"),
             Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),

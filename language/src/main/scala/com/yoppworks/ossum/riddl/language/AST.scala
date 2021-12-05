@@ -359,6 +359,9 @@ object AST {
 
   sealed abstract class EntityOption(val name: String) extends EntityValue
 
+  case class EntityEventSourced(loc: Location)
+      extends EntityOption("event sourced")
+  case class EntityValueOption(loc: Location) extends EntityOption("value")
   case class EntityAggregate(loc: Location) extends EntityOption("aggregate")
   case class EntityPersistent(loc: Location) extends EntityOption("persistent")
   case class EntityConsistent(loc: Location) extends EntityOption("consistent")
@@ -366,9 +369,9 @@ object AST {
 
   sealed abstract class EntityKind(name: String) extends EntityValue
 
-  case class SoftwareEntityKind(loc: Location) extends EntityKind("software")
+  case class ConceptEntityKind(loc: Location) extends EntityKind("concept")
   case class DeviceEntityKind(loc: Location) extends EntityKind("device")
-  case class PersonEntityKind(loc: Location) extends EntityKind("person")
+  case class ActorEntityKind(loc: Location) extends EntityKind("actor")
   case class UserEntityKind(loc: Location) extends EntityKind("role")
 
   case class EntityRef(

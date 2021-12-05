@@ -156,7 +156,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))
         )
         val entity = AST.Entity(
-          entityKind = SoftwareEntityKind(Location()),
+          entityKind = ConceptEntityKind(Location()),
           loc = Location(),
           id = Identifier(Location(), "foo"),
           options = options,

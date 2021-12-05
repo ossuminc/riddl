@@ -118,7 +118,7 @@ If we aren't sure of the characteristics of the cat named "Smudge"
 A definition may also be accompanied by some text or markup at its end to
 describe or explain the purpose of that definition. We call these
  **descriptions** or **explanations** because this is the text that is
-used to describe or explain the RIDDL definition and it is used to generate
+used to describe or explain the RIDDL definition, and it is used to generate
 documentation for the definition.  A description occurs directly after the
 definition's closing curly bracket and is preceded using
 either the `described as` or `explained as` keyword phrase. Essentially it 
@@ -128,6 +128,20 @@ cat Smudge is { ??? } explained as "TBD but owned by Reid"
 ```  
 See the @ref:[Quick Start](quickstart.md) for more examples 
 of definition descriptions.  
+
+The grammar for a definition is this:
+```ebnf
+<description> ::= ("described" | "explained") "as" "{" <description-body> "}"
+
+<description-body> ::= <literal-string-description> | <doc-block-description>
+
+<literal-string-description> ::= <literal-string>+
+
+<literal-string> ::= "\"" 
+
+<doc-block-description> ::=  
+
+```
 
 What occurs within a description/explanation can be one of three things:
 
