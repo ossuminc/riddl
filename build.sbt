@@ -1,13 +1,16 @@
 import sbt.Keys.scalaVersion
+
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
+
+import java.net.URI
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Some("semver-spec")
 
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
-ThisBuild / dynverSeparator  := "-"
+ThisBuild / dynverSeparator := "-"
 ThisBuild / scalafmtOnCompile := true
 ThisBuild / organization := "com.yoppworks"
 ThisBuild / scalaVersion := "2.13.7"
@@ -50,31 +53,26 @@ scalacOptions := Seq(
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
-lazy val compilecheck = taskKey[Unit]("compile and then scalastyle")
+lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file("."))
   .settings(publish := {}, publishLocal := {})
   .aggregate(language, translator, riddlc, doc /*, `sbt-riddl`*/ )
 
-lazy val doc = project
-  .in(file("doc"))
-  .enablePlugins(SitePlugin)
-  .enablePlugins(HugoPlugin)
-  .enablePlugins(SiteScaladocPlugin)
-  .settings(
+lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
+  .enablePlugins(HugoPlugin).enablePlugins(SiteScaladocPlugin).settings(
     name := "riddl-doc",
+    publishTo := Some(Resolver.defaultLocal),
     Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    publishSite,
-    publishTo := Some(Resolver.defaultLocal)
+    minimumHugoVersion := "0.89.4",
+    publishSite
   )
 
-lazy val riddlc = project
-  .in(file("riddlc"))
-  .enablePlugins(BuildInfoPlugin)
+lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
   .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-    //Determines depth of TOC for page navigation.
+    // Determines depth of TOC for page navigation.
     /*
   val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
   val paradoxNavigationIncludeHeaders = settingKey[Boolean]("Whether to include headers in the navigation.")
@@ -109,12 +107,9 @@ lazy val riddlc = project
       "com.typesafe" % "config" % "1.4.0"
     ),
     buildInfoPackage := "com.yoppworks.ossum.riddl"
-  )
-  .dependsOn(translator, language)
+  ).dependsOn(translator, language)
 
-lazy val language = project
-  .in(file("language"))
-  .enablePlugins(BuildInfoPlugin)
+lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   .settings(
     name := "riddl-languge",
     buildInfoPackage := "com.yoppworks.ossum.riddl.language",
@@ -126,8 +121,8 @@ lazy val language = project
       "org.scalatest" %% "scalatest" % "3.1.0" % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
     ),
-    Compile/compilecheck := {
-      Def.sequential(Compile/compile, (Compile/scalastyle).toTask("")).value
+    Compile / compileCheck := {
+      Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
     }
   )
 
