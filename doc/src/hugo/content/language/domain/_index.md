@@ -1,6 +1,7 @@
 ---
 title: "Domains"
 type: page
+weight: 40
 ---
 
 A domain is the top definitional level in RIDDL. Domains in RIDDL are
@@ -24,4 +25,4 @@ subdomains of interest: Cars, Trucks and Repairs.
 
 # Contents
 Domains may contain the following constructs:
-{{% children %}}
+{{% children depth=999 sort=weight %}}

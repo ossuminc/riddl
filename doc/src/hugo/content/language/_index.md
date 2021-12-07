@@ -16,4 +16,5 @@ specific. It does not attempt to solve every kind of computing problem
 nor even every kind of knowledge domain.  
 
 # Contents
-{{% children %}}
+{{% children depth=1 sort=weight %}}
+

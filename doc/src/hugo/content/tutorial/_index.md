@@ -2,9 +2,9 @@
 title: "Tutorial"
 summary: "A tutorial "
 type: page
-order: 30
+order: 40
 ---
 
 This section provides tutorials, tips & tricks, and how-to articles 
 
-git{{% children depth=999 %}}
+{{% children depth=999 %}}

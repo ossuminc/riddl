@@ -1,5 +1,5 @@
 ---
-title: "Language Conventions"
+title: "Conventions"
 weight: 10
 ---
 

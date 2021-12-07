@@ -1,6 +1,7 @@
 ---
 title: "Entities"
 type: page
+weight: 10
 ---
 
 # Introduction
@@ -28,6 +29,8 @@ There are three main aspects to this definition of entity:
 An entity is the fundamental processor of work in a reactive system. They are
 most often implemented in software as an actor or a class.
 
+# Contents
+{{% children depth=999 sort=weight %}}
 
 # Syntax
 {{% panel theme="success" header="Entity Definition" %}}

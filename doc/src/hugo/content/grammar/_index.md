@@ -1,7 +1,7 @@
 ---
 title: "Grammar"
 draft: false
-weight: 25
+weight: 50
 ---
 
 # Overview
@@ -10,22 +10,6 @@ This form can be quite technical and is intended for those who are familiar with
 EBNF format.  For a more descriptive introduction to the language, please 
 refer to the [Tutorial](../tutorial) section.
 
-## Contents
+# Contents
+{{% children depth=999 sort=weight %}}
 
-
-# Terminals
-This file shows the definition of the terminal symbols, as productions, and 
-groups in categories:
-
-{{% code file=grammar/ebnf/terminals.ebnf language=ebnf %}}
-
-# Common
-A number of frequently used productions are useful to understand in the 
-sections that follow.
-
-{{% code file=grammar/ebnf/common.ebnf language=ebnf %}}
-
-# Containers
-
-## Entity
-{{% code file=grammar/ebnf/entity.ebnf language=ebnf %}}

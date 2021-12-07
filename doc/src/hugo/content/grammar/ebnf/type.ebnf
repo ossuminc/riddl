@@ -1,0 +1,146 @@
+(* RIDDL Grammar For Types *)
+
+string type = "String" {
+  roundOpen, [ literalInteger ],  comma, [ literalInteger], roundClose
+  }
+
+urlType = "URL" [ roundOpen, literalString, roundClose ]
+
+simplePredefinedTypes = stringType | urlType |
+  "Boolean" |"Number" | "Integer" | "Decimal" | "Real" | "Duration" |
+   "LatLong" | "DateTime" | "Date" | "TimeStamp" | "Time" | "Nothing" | "???"
+
+patternType = "Pattern", roundOpen, (literalStrings | "???"), roundClose,
+   description
+
+uniqueIdType = "Id", roundOpen, [pathIdentifier],  roundClose, description
+
+enumValue  = {
+    P(Punctuation.roundOpen ~ literalInteger ~ Punctuation.roundClose).?
+  }
+
+  def enumerator[_: P]: P[Enumerator] = {
+    P(identifier ~ enumValue ~ isTypeRef.? ~ description).map {
+      case (id, enumVal, typeRef, desc) =>
+        Enumerator(id.loc, id, enumVal, typeRef, desc)
+    }
+  }
+
+  def enumeration[_: P]: P[Enumeration] = {
+    P(
+      location ~ Keywords.any ~ Readability.of.? ~ open ~/
+        (enumerator.rep(1, sep = comma.?) |
+          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close ~
+        description
+    ).map(enums => (Enumeration.apply _).tupled(enums))
+  }
+
+  def alternation[_: P]: P[Alternation] = {
+    P(
+      location ~ Keywords.one ~ Readability.of.? ~/ open ~
+        (typeExpression.rep(2, P("or" | "|" | ",")) |
+          Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close ~
+        description
+    ).map { x => (Alternation.apply _).tupled(x) }
+  }
+
+  def field[_: P]: P[Field] = {
+    P(location ~ identifier ~ is ~ typeExpression ~ description)
+      .map(tpl => (Field.apply _).tupled(tpl))
+  }
+
+  def fields[_: P]: P[Seq[Field]] = {
+    P(
+      field.rep(min = 0, comma) |
+        Punctuation.undefined.!.map(_ => Seq.empty[Field])
+    )
+  }
+
+  def aggregationWithoutDescription[_: P]: P[Aggregation] = {
+    P(location ~ open ~ fields ~ close).map { case (loc, fields) =>
+      Aggregation(loc, fields, None)
+    }
+  }
+
+  def aggregation[_: P]: P[Aggregation] = {
+    P(aggregationWithoutDescription ~ description).map { case (agg, desc) =>
+      agg.copy(description = desc)
+    }
+  }
+
+  /** Parses mappings, i.e.
+    * ```
+    *   mapping { from Integer to String }
+    * ```
+    */
+  def mapping[_: P]: P[Mapping] = {
+    P(
+      location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~
+        typeExpression ~ close ~ description
+    ).map { tpl => (Mapping.apply _).tupled(tpl) }
+  }
+
+  /** Parses ranges, i.e.
+    * ```
+    *   range { from 1 to 2 }
+    * ```
+    */
+  def range[_: P]: P[RangeType] = {
+    P(
+      location ~ "range" ~ open ~ "from" ~/ literalInteger ~ "to" ~
+        literalInteger ~ close ~ description
+    ).map { tpl => (RangeType.apply _).tupled(tpl) }
+  }
+
+  def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
+    P(
+      Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~
+        (question.! | asterisk.! | plus.! | ellipsisQuestion.! | ellipsis.!).?
+    ).map {
+      case (None, None, loc, typ, Some("?"))          => Optional(loc, typ)
+      case (None, None, loc, typ, Some("+"))          => OneOrMore(loc, typ)
+      case (None, None, loc, typ, Some("*"))          => ZeroOrMore(loc, typ)
+      case (None, None, loc, typ, Some("...?"))       => ZeroOrMore(loc, typ)
+      case (None, None, loc, typ, Some("..."))        => OneOrMore(loc, typ)
+      case (Some(_), None, loc, typ, None)            => OneOrMore(loc, typ)
+      case (None, Some(_), loc, typ, None)            => Optional(loc, typ)
+      case (Some(_), Some(_), loc, typ, None)         => ZeroOrMore(loc, typ)
+      case (None, Some(_), loc, typ, Some("?"))       => Optional(loc, typ)
+      case (Some(_), None, loc, typ, Some("+"))       => OneOrMore(loc, typ)
+      case (Some(_), Some(_), loc, typ, Some("*"))    => ZeroOrMore(loc, typ)
+      case (Some(_), Some(_), loc, typ, Some("...?")) => ZeroOrMore(loc, typ)
+      case (Some(_), None, loc, typ, Some("..."))     => OneOrMore(loc, typ)
+      case (None, None, _, typ, None)                 => typ
+      case (_, _, loc, typ, _) =>
+        error(loc, s"Cannot determine cardinality for $typ")
+        typ
+    }
+  }
+
+  def typeExpression[_: P]: P[TypeExpression] = {
+    P(cardinality(P(
+      simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+        alternation | referToType | aggregation | mapping | range | typeRef
+    )))
+  }
+
+  def typeDef[_: P]: P[Type] = {
+    P(
+      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~
+        description
+    ).map { tpl => (Type.apply _).tupled(tpl) }
+  }
+
+    /** Type reference parser that requires the 'type' keyword qualifier
+      */
+    def isTypeRef[_: P]: P[TypeRef] = { P(is ~/ Keywords.`type` ~/ typeRef) }
+
+    def referToType[_: P]: P[ReferenceType] = {
+      P(location ~ "refer" ~ "to" ~/ entityRef ~ description).map { tpl =>
+        (ReferenceType.apply _).tupled(tpl)
+      }
+    }
+
+
+
+}

@@ -10,11 +10,7 @@ taken the Lightbend Reactive Architecture Professional course.
 This example is used throughout the course so it makes a good
 example for RIDDL too. 
 
-@@toc { depth=2 }
+{{% code file=content/examples/rbbq.riddl language=riddl %}}
 
-@@@ index
-
-* [Scenario](scenario.md)
-* [Explanation](explanation.md)
-
-@@@
+## Contents
+{{% children depth=999 sort=weight %}}
