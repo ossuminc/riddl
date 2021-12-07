@@ -4,8 +4,10 @@ import fastparse._
 import ScalaWhitespace._
 import com.yoppworks.ossum.riddl.language.AST._
 import Terminals.Keywords
+import Terminals.Operators
 import Terminals.Punctuation
 import Terminals.Readability
+
 import scala.language.postfixOps
 
 /** Common Parsing Rules */
@@ -101,14 +103,16 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def literalInteger[_: P]: P[LiteralInteger] = {
-    P(location ~ CharIn("0-9").rep(1).!.map(_.toInt))
-      .map(s => LiteralInteger(s._1, BigInt(s._2)))
+    P(
+      location ~ (Operators.plus | Operators.minus).? ~ CharIn("0-9").rep(1)
+        .!.map(_.toInt)
+    ).map(s => LiteralInteger(s._1, BigInt(s._2)))
   }
 
   def literalDecimal[_: P]: P[LiteralDecimal] = {
     P(
-      location ~ CharIn("+\\-").?.! ~ CharIn("0-9").rep(1).! ~
-        (Punctuation.dot ~ CharIn("0-9").rep(0)).?.! ~
+      location ~ (Operators.plus | Operators.minus).?.! ~ CharIn("0-9").rep(1)
+        .! ~ (Punctuation.dot ~ CharIn("0-9").rep(0)).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
     ).map { case (loc, a, b, c, d) =>
       LiteralDecimal(loc, BigDecimal(a + b + c + d))

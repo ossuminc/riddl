@@ -147,8 +147,8 @@ trait TypeParser extends CommonParser {
     */
   def range[_: P]: P[RangeType] = {
     P(
-      location ~ "range" ~ open ~ "from" ~/ literalInteger ~ "to" ~
-        literalInteger ~ close ~ description
+      location ~ "range" ~ roundOpen ~/ literalInteger ~ comma ~
+        literalInteger ~ roundClose ~ description
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 
@@ -157,20 +157,16 @@ trait TypeParser extends CommonParser {
       Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~
         (question.! | asterisk.! | plus.! | ellipsisQuestion.! | ellipsis.!).?
     ).map {
-      case (None, None, loc, typ, Some("?"))          => Optional(loc, typ)
-      case (None, None, loc, typ, Some("+"))          => OneOrMore(loc, typ)
-      case (None, None, loc, typ, Some("*"))          => ZeroOrMore(loc, typ)
-      case (None, None, loc, typ, Some("...?"))       => ZeroOrMore(loc, typ)
-      case (None, None, loc, typ, Some("..."))        => OneOrMore(loc, typ)
-      case (Some(_), None, loc, typ, None)            => OneOrMore(loc, typ)
-      case (None, Some(_), loc, typ, None)            => Optional(loc, typ)
-      case (Some(_), Some(_), loc, typ, None)         => ZeroOrMore(loc, typ)
-      case (None, Some(_), loc, typ, Some("?"))       => Optional(loc, typ)
-      case (Some(_), None, loc, typ, Some("+"))       => OneOrMore(loc, typ)
-      case (Some(_), Some(_), loc, typ, Some("*"))    => ZeroOrMore(loc, typ)
-      case (Some(_), Some(_), loc, typ, Some("...?")) => ZeroOrMore(loc, typ)
-      case (Some(_), None, loc, typ, Some("..."))     => OneOrMore(loc, typ)
-      case (None, None, _, typ, None)                 => typ
+      case (None, None, loc, typ, Some("?"))       => Optional(loc, typ)
+      case (None, None, loc, typ, Some("+"))       => OneOrMore(loc, typ)
+      case (None, None, loc, typ, Some("*"))       => ZeroOrMore(loc, typ)
+      case (Some(_), None, loc, typ, None)         => OneOrMore(loc, typ)
+      case (None, Some(_), loc, typ, None)         => Optional(loc, typ)
+      case (Some(_), Some(_), loc, typ, None)      => ZeroOrMore(loc, typ)
+      case (None, Some(_), loc, typ, Some("?"))    => Optional(loc, typ)
+      case (Some(_), None, loc, typ, Some("+"))    => OneOrMore(loc, typ)
+      case (Some(_), Some(_), loc, typ, Some("*")) => ZeroOrMore(loc, typ)
+      case (None, None, _, typ, None)              => typ
       case (_, _, loc, typ, _) =>
         error(loc, s"Cannot determine cardinality for $typ")
         typ
