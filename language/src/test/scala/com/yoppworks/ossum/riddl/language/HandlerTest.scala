@@ -2,14 +2,14 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Entity
 
-/** Unit Tests For ConsumerTest */
-class ConsumerTest extends ParsingTest {
-  "Consumers" should {
+/** Unit Tests For HandlerTest */
+class HandlerTest extends ParsingTest {
+  "Handlers" should {
     "handle actions" in {
       val input =
         """entity DistributionItem is {
           |  state DistributionState is {}
-          | consumer FromContainer from topic ContainerTopic is {
+          | handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      when ==(ContainerNestedInContainer.id,parentContainer)
           |      then {
@@ -18,7 +18,7 @@ class ConsumerTest extends ParsingTest {
           |      // anything else needing to be updated?
           |    } explained as { "Helps update this item's location" }
           |  }
-          |  consumer FromDistributionItem for topic DistributionItemTopic is {
+          |  handler FromDistributionItem  is {
           |    on command CreateItem {
           |      // intent: DistributionItem is created
           |      set journey to PreInducted

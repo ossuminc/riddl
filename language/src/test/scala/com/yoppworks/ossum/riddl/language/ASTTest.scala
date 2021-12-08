@@ -116,14 +116,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
             LiteralInteger(Location(), BigInt(0))
           )
         ))
-        val consumers = Seq(Consumer(
-          Location(),
-          Identifier(Location(), "con"),
-          TopicRef(
-            Location(),
-            PathIdentifier(Location(), Seq("path", "to", "the", "consumer_"))
-          )
-        ))
+        val handlers = Seq(Handler(Location(), Identifier(Location(), "con")))
         val features = Seq(
           Feature(
             Location(),
@@ -162,7 +155,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           options = options,
           states = states,
           types = types,
-          consumers = consumers,
+          handlers = handlers,
           features = features,
           functions = functions,
           invariants = invariants,
@@ -170,8 +163,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         )
 
         entity.contents.toSet mustBe
-          (states.iterator ++ consumers ++ features ++ functions ++
-            invariants ++ types).toSet
+          (states.iterator ++ handlers ++ features ++ functions ++ invariants ++
+            types).toSet
       }
     }
   }

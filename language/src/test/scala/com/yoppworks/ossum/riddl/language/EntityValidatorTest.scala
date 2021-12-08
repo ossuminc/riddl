@@ -22,7 +22,7 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Validation.Error,
-            "Entity 'Hamburger' must consume a topic"
+            "Entity 'Hamburger' must define a handler"
           )
           assertValidationMessage(
             msgs,
@@ -35,15 +35,11 @@ class EntityValidatorTest extends ValidatingTest {
     "produce an error for persistent entity with no event producer" in {
       val input = """
                     |domain foo is {
-                    |topic EntityChannel is {
-                    |  commands { Foo is {} yields event bar }
-                    |  events { bar is {} } queries {} results {}
-                    |}
                     |context bar is {
                     |  entity Hamburger  is {
                     |    options (aggregate persistent)
                     |    state field is  SomeType
-                    |    consumer foo of topic EntityChannel is {}
+                    |    handler foo is {}
                     |  }
                     |}
                     |}
@@ -52,7 +48,7 @@ class EntityValidatorTest extends ValidatingTest {
         case (_: Domain, msgs: ValidationMessages) => assertValidationMessage(
             msgs,
             Validation.MissingWarning,
-            "Entity 'Hamburger' has only empty topic consumers"
+            "Entity 'Hamburger' has only empty handler"
           )
       }
     }

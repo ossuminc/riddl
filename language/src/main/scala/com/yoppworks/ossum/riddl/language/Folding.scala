@@ -53,7 +53,7 @@ object Folding {
       case entity: Entity =>
         result = f(parent, entity, result)
         val reducables =
-          (entity.types.iterator ++ entity.consumers ++ entity.functions ++
+          (entity.types.iterator ++ entity.handlers ++ entity.functions ++
             entity.invariants).toList
         result = reducables.foldLeft(result) { (next, r) => f(entity, r, next) }
         val foldables = (entity.features.iterator ++ entity.states).toList
@@ -150,8 +150,8 @@ object Folding {
                 doType(next, entity, typ)
               }
             }.step { state =>
-              entity.consumers.foldLeft(state) { (next, consumer) =>
-                doConsumer(next, entity, consumer)
+              entity.handlers.foldLeft(state) { (next, handler) =>
+                doHandler(next, entity, handler)
               }
             }.step { state =>
               entity.features.foldLeft(state) { (next, feature) =>
@@ -393,10 +393,10 @@ object Folding {
       field: Field
     ): S = { state }
 
-    def doConsumer(
+    def doHandler(
       state: S,
       container: Container,
-      consumer: Consumer
+      consumer: Handler
     ): S = { state }
 
     def doAction(

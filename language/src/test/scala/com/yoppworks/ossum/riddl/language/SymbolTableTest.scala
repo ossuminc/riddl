@@ -75,8 +75,8 @@ class SymbolTableTest extends ParsingTest {
         "Something"
       )
 
-      assertRefWithParent[Consumer, Entity](
-        st.lookup[Consumer](Seq("foo")).headOption,
+      assertRefWithParent[Handler, Entity](
+        st.lookup[Handler](Seq("foo")).headOption,
         "Something"
       )
 

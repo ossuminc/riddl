@@ -4,24 +4,9 @@ import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Entity
 import com.yoppworks.ossum.riddl.language.Validation._
 
-class ConsumerValidatorTest extends ValidatingTest {
+class HandlerValidatorTest extends ValidatingTest {
 
-  "Consumer validation" should {
-    "produce an error when consumer topic reference does not exist" in {
-      val input = """
-                    |entity Hamburger is {
-                    |  consumer foo of topic EntityChannel is {}
-                    |}
-                    |""".stripMargin
-      parseAndValidate[Entity](input) {
-        case (_: Entity, msgs: ValidationMessages) => assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'EntityChannel' is not defined but should be a Topic"
-          )
-      }
-    }
-
+  "Handler Validation" should {
     "produce an error when on clause references a command that does not exist" in {
       val input = """
                     |domain entityTest is {
@@ -29,7 +14,7 @@ class ConsumerValidatorTest extends ValidatingTest {
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  state HamburgerState = { field1: Number, field2: String }
-                    |  consumer foo of topic EntityChannel is {
+                    |  handler foo is {
                     |    on command EntityCommand { set field1 to 445 }
                     |    on event EntityEvent { set field1 to 678 }
                     |  }
@@ -55,14 +40,10 @@ class ConsumerValidatorTest extends ValidatingTest {
     "produce an error when on clause references a message of the wrong type" in {
       val input = """
                     |domain entityTest is {
-                    |topic EntityChannel is {
-                    |  commands { Incoming is {} yields event bar }
-                    |  events { bar is {} }
-                    |}
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  state HamburgerState = { field1: Number }
-                    |  consumer foo of topic EntityChannel is {
+                    |  handler foo is {
                     |    on event Incoming { set field1 to 678 }
                     |  }
                     |}
@@ -83,14 +64,10 @@ class ConsumerValidatorTest extends ValidatingTest {
       val input =
         """
           |domain entityTest is {
-          |topic EntityChannel is {
-          |  events { bar is {} }
-          |  commands { EntityCommand is {} yields event bar }
-          |}
           |context EntityContext is {
           |entity Hamburger is {
           |  state HamburgerState = { field1: Number }
-          |  consumer foo of topic EntityChannel is {
+          |  handler foo is {
           |    on command EntityCommand { set nonExistingField to 123 }
           |  }
           |}

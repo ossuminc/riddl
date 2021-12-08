@@ -50,8 +50,11 @@ abstract class ValidatingTest extends ParsingTest {
     expectedKind: ValidationMessageKind,
     messageSnippet: String
   ): Assertion = {
-    msgs.exists(m =>
-      m.message.contains(messageSnippet) && m.kind == expectedKind
-    ) mustBe true
+    assert(
+      msgs.exists(m =>
+        m.message.contains(messageSnippet) && m.kind == expectedKind
+      ),
+      s"Expected but didn't find '${messageSnippet}' in:\n${msgs.mkString("\n")}"
+    )
   }
 }

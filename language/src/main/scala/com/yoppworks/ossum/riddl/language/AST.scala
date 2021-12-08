@@ -570,6 +570,13 @@ object AST {
     description: Option[Description] = None)
       extends EntityDefinition
 
+  case class Handler(
+    loc: Location,
+    id: Identifier,
+    clauses: Seq[OnClause] = Seq.empty[OnClause],
+    description: Option[Description] = None)
+      extends EntityDefinition
+
   case class State(
     loc: Location,
     id: Identifier,
@@ -611,7 +618,7 @@ object AST {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     states: Seq[State] = Seq.empty[State],
     types: Seq[Type] = Seq.empty[Type],
-    consumers: Seq[Consumer] = Seq.empty[Consumer],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     features: Seq[Feature] = Seq.empty[Feature],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
@@ -619,7 +626,7 @@ object AST {
       extends Container with ContextDefinition {
 
     def contents: Seq[Definition] =
-      (states.iterator ++ types ++ consumers ++ features ++ functions ++
+      (states.iterator ++ types ++ handlers ++ features ++ functions ++
         invariants).toList
   }
 

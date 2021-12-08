@@ -69,7 +69,7 @@ class ParserTest extends ParsingTest {
                     |    entity two is {
                     |      state entityState is {}
                     |      feature one is { ??? }
-                    |      consumer one for topic foo is { ??? }
+                    |      handler one  is { ??? }
                     |      function one is { ??? }
                     |      invariant one is { ??? }
                     |    }
@@ -242,7 +242,7 @@ class ParserTest extends ParsingTest {
       val input: String = """entity Hamburger is {
                             |  options ( persistent aggregate )
                             |  state foo is { x: String }
-                            |  consumer foo of topic EntityChannel is {}
+                            |  handler foo is {}
                             |  feature AnAspect is {
                             |    BACKGROUND {
                             |      Given "Nobody loves me"
@@ -275,11 +275,7 @@ class ParserTest extends ParsingTest {
               ),
               None
             )),
-            consumers = Seq(Consumer(
-              4 -> 12,
-              Identifier(4 -> 12, "foo"),
-              TopicRef(4 -> 19, PathIdentifier(4 -> 25, Seq("EntityChannel")))
-            )),
+            handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
             features = Seq(Feature(
               5 -> 3,
               Identifier(5 -> 11, "AnAspect"),

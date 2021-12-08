@@ -8,7 +8,7 @@ import Terminals.Keywords
 /** Unit Tests For ChannelParser */
 trait TopicParser extends CommonParser with TypeParser {
 
-  def commandDef[_: P]: P[Command] = {
+  def commandDefBody[_: P]: P[Command] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~ Keywords.yields ~
         eventRefsForCommandDefs ~ description
@@ -24,37 +24,41 @@ trait TopicParser extends CommonParser with TypeParser {
     )
   }
 
-  def eventDef[_: P]: P[Event] = {
+  def commandDef[_: P]: P[Command] = { P(Keywords.command ~ commandDefBody) }
+
+  def eventDefBody[_: P]: P[Event] = {
     P(location ~ identifier ~ is ~ typeExpression ~ description)
       .map(tpl => (Event.apply _).tupled(tpl))
-
   }
 
-  def queryDef[_: P]: P[Query] = {
+  def eventDef[_: P]: P[Event] = { P(Keywords.event ~ eventDefBody) }
+
+  def queryDefBody[_: P]: P[Query] = {
     P(
       location ~ identifier ~ is ~ typeExpression ~ Keywords.yields ~
         resultRef ~ description
     ).map(tpl => (Query.apply _).tupled(tpl))
-
   }
 
-  def resultDef[_: P]: P[Result] = {
+  def queryDef[_: P]: P[Query] = { P(Keywords.query ~ queryDefBody) }
+
+  def resultDefBody[_: P]: P[Result] = {
     P(location ~ identifier ~ is ~ typeExpression ~ description)
       .map(tpl => (Result.apply _).tupled(tpl))
   }
+
+  def resultDef[_: P]: P[Result] = { P(Keywords.result ~ resultDefBody) }
 
   type TopicDefinitions = (Seq[Command], Seq[Event], Seq[Query], Seq[Result])
 
   def topicDefinitions[_: P]: P[TopicDefinitions] = {
     P(
-      Keywords.commands ~/ open ~ commandDef.rep ~ close |
-        Keywords.events ~/ open ~ eventDef.rep ~ close |
-        Keywords.queries ~/ open ~ queryDef.rep ~ close |
-        Keywords.results ~/ open ~ resultDef.rep ~ close |
-        Keywords.command ~/ commandDef.map(Seq(_))./ |
-        Keywords.event ~/ eventDef.map(Seq(_))./ |
-        Keywords.query ~/ queryDef.map(Seq(_))./ |
-        Keywords.result ~/ resultDef.map(Seq(_))
+      Keywords.commands ~/ open ~ commandDefBody.rep ~ close |
+        Keywords.events ~/ open ~ eventDefBody.rep ~ close |
+        Keywords.queries ~/ open ~ queryDefBody.rep ~ close |
+        Keywords.results ~/ open ~ resultDefBody.rep ~ close |
+        commandDef.map(Seq(_))./ | eventDef.map(Seq(_))./ |
+        queryDef.map(Seq(_))./ | resultDef.map(Seq(_))
     ).rep(0).map { seq =>
       val groups = seq.flatten.groupBy(_.getClass)
       (

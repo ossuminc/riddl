@@ -305,8 +305,8 @@ class FormatTranslator extends Translator[FormatConfig] {
           case _ => st
         }
       }.step { st =>
-        entity.consumers.foldLeft(st) { case (s, consumer) =>
-          s.addLine(s"consumes topic ${consumer.id.value}")
+        entity.handlers.foldLeft(st) { case (s, handler) =>
+          s.addLine(s"handler ${handler.id.value} is")
         }
       }
     }

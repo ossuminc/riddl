@@ -50,7 +50,7 @@ domain Everything is {
 
     // Types can have cardinality requirements similar to regular expressions
     type oneOrMore is many agg
-    type zeroOrMore is agg...?
+    type zeroOrMore is agg*
     type optional is agg?
 
     // Commands, Events, Queries and Results are defined in terms of some
@@ -72,7 +72,7 @@ domain Everything is {
         yields Boolean
       }
 
-      consumer foo of topic AChannel is {
+      handler foo is {
         on command Something {
           when misc() explained as { "inebriated" } then {
             publish event Inebriated to topic AChannel

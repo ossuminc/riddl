@@ -123,14 +123,14 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow range of values" in {
-      val input = "type r1 = range { from 21 to 42 }"
+      val input = "type r1 = range(21,  42)"
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "r1"),
         RangeType(
           1 -> 11,
-          LiteralInteger(1 -> 24, BigInt(21)),
-          LiteralInteger(1 -> 30, BigInt(42))
+          LiteralInteger(1 -> 17, BigInt(21)),
+          LiteralInteger(1 -> 22, BigInt(42))
         )
       )
       checkDefinition[Type, Type](input, expected, identity)
@@ -144,18 +144,6 @@ class TypeParserTest extends ParsingTest {
         OneOrMore(
           1 -> 24,
           TypeRef(1 -> 24, PathIdentifier(1 -> 24, Seq("agg")))
-        )
-      )
-      checkDefinition[Type, Type](input, expected, identity)
-    }
-    "allow one or more in simple style" in {
-      val input = "type oneOrMoreC = agg..."
-      val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "oneOrMoreC"),
-        OneOrMore(
-          1 -> 19,
-          TypeRef(1 -> 19, PathIdentifier(1 -> 19, Seq("agg")))
         )
       )
       checkDefinition[Type, Type](input, expected, identity)

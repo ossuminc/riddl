@@ -13,7 +13,7 @@ trait EntityParser
     with FeatureParser
     with TopicParser
     with FunctionParser
-    with ConsumerParser {
+    with HandlerParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -68,7 +68,7 @@ trait EntityParser
   }
 
   def entityDefinition[_: P]: P[EntityDefinition] = {
-    P(consumer | feature | function | invariant | typeDef | state)
+    P(handler | feature | function | invariant | typeDef | state)
   }
 
   def entity[_: P]: P[Entity] = {
@@ -81,7 +81,7 @@ trait EntityParser
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val states = mapTo[State](groups.get(classOf[State]))
-      val consumers = mapTo[Consumer](groups.get(classOf[Consumer]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val features = mapTo[Feature](groups.get(classOf[Feature]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
@@ -92,7 +92,7 @@ trait EntityParser
         options,
         states,
         types,
-        consumers,
+        handlers,
         features,
         functions,
         invariants,

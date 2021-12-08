@@ -29,7 +29,7 @@ domain ReactiveBBQ is {
   context Customer is {
     entity Customer is {
       state main is { }
-      consumer input of topic Inputs is {}
+      handler input is {}
     }
   }
 
@@ -43,7 +43,7 @@ domain ReactiveBBQ is {
     }
     device entity OrderViewer is {
      state OrderState is { field: OrderViewType }
-     consumer input of topic Inputs is {}
+     handler input is {}
     } explained as {
       brief "This is an OrderViewer"
       details {
@@ -95,7 +95,7 @@ domain ReactiveBBQ is {
         points is Number,
         rewardEvents is many optional RewardEvent
       }
-      consumer ofInputs of topic Inputs is {}
+      handler Inputs is {}
     }
   }
   // #Loyalty
@@ -108,7 +108,7 @@ domain ReactiveBBQ is {
         orderId is OrderId,
         customerId is CustomerId
       }
-      consumer foo of topic Inputs is {}
+      handler foo  is {}
     }
   }
   // #Order
@@ -122,7 +122,7 @@ domain ReactiveBBQ is {
         amount is Number,
         cardToken is String
       }
-      consumer foo of topic Inputs is {}
+      handler foo is {}
     }
   }
   // #Payment
@@ -133,13 +133,13 @@ domain ReactiveBBQ is {
       state MenuState is {
         something: String
       }
-      consumer foo of topic Inputs is {}
+      handler foo is {}
     }
     type MenuItemRef is refer to entity MenuItem
     entity Menu is {
       option is aggregate
       state items is many MenuItemRef
-      consumer foo of topic Inputs is {}
+      handler foo is {}
     }
   }
   // #Menu
@@ -155,7 +155,7 @@ domain ReactiveBBQ is {
     }
     entity Location is {
       state foo is String
-      consumer foo of topic Inputs is {}
+      handler foo is {}
     } explained as {
       brief "This is a retail store Location"
     }
@@ -163,7 +163,7 @@ domain ReactiveBBQ is {
     entity Reservation is {
      options ( aggregate )
      state reservation is ReservationValue
-     consumer ofInputs of topic Inputs is {}
+     handler ofInputs is {}
     }
   }
   // #Reservation

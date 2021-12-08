@@ -314,7 +314,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |
                               |@@@ index
                               |
-                              |${entity.consumers.map(mkDefRef).mkString("\n")}
+                              |${entity.handlers.map(mkDefRef).mkString("\n")}
                               |${entity.functions.map(mkDefRef).mkString("\n")}
                               |${entity.features.map(mkDefRef).mkString("\n")}
                               |${entity.invariants.map(mkDefRef).mkString("\n")}
@@ -425,20 +425,18 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |""".stripMargin)
     }
 
-    override def doConsumer(
+    override def doHandler(
       state: ParadoxTranslatorState,
       container: Container,
-      consumer: Consumer
+      handler: Handler
     ): ParadoxTranslatorState = {
       val indexFile = mkContainerPath(container).resolve(container.id.value)
-        .resolve(consumer.id.value + ".md")
+        .resolve(handler.id.value + ".md")
       writeFile(indexFile)(s"""
-                              |# Consumer `${consumer.id.value}`
-                              |${mkDescription(consumer.description)}
-                              |## Topic
-                              |${consumer.topic.id.format}
-                              |## Reactions
-                              |${consumer.clauses.map(_.toString).mkString("\n")}
+                              |# Handler `${handler.id.value}`
+                              |${mkDescription(handler.description)}
+                              |## Clauses
+                              |${handler.clauses.map(_.toString).mkString("\n")}
                               |""".stripMargin)
     }
 

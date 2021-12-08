@@ -7,8 +7,8 @@ import ScalaWhitespace._
 
 import scala.collection.immutable.ListMap
 
-/** Unit Tests For ConsumerParser */
-trait ConsumerParser
+/** Parser for an entity handler definition */
+trait HandlerParser
     extends CommonParser with ConditionParser with ExpressionParser {
 
   def setStmt[_: P](): P[SetStatement] = {
@@ -82,12 +82,11 @@ trait ConsumerParser
       description
   }.map(t => (OnClause.apply _).tupled(t))
 
-  def consumer[_: P]: P[Consumer] = {
+  def handler[_: P]: P[Handler] = {
     P(
-      Keywords.consumer ~/ location ~ identifier ~
-        (Readability.of | Readability.for_ | Readability.from) ~ topicRef ~ is ~
+      Keywords.handler ~/ location ~ identifier ~ is ~
         ((open ~ undefined ~ close).map(_ => Seq.empty[OnClause]) |
           optionalNestedContent(onClause)) ~ description
-    ).map(t => (Consumer.apply _).tupled(t))
+    ).map(t => (Handler.apply _).tupled(t))
   }
 }

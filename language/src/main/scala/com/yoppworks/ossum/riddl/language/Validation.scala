@@ -497,36 +497,35 @@ object Validation {
       result = entity.states.foldLeft(result) { (next, state) =>
         next.checkTypeExpression(state.typeEx, state)
       }
-      if (entity.consumers.isEmpty) {
+      if (entity.handlers.isEmpty) {
         result = result.add(ValidationMessage(
           entity.loc,
-          s"Entity '${entity.id.value}' must consume a topic"
+          s"Entity '${entity.id.value}' must define a handler"
         ))
-      } else if (!entity.consumers.exists(_.clauses.nonEmpty)) {
+      } else if (!entity.handlers.exists(_.clauses.nonEmpty)) {
         result = result.add(ValidationMessage(
           entity.loc,
-          s"Entity '${entity.id.value}' has only empty topic consumers",
+          s"Entity '${entity.id.value}' has only empty handlers",
           MissingWarning
         ))
       }
       result
     }
 
-    override def doConsumer(
+    override def doHandler(
       state: ValidationState,
       container: Container,
-      consumer: Consumer
+      handler: Handler
     ): ValidationState = {
-      val result = state.checkRef[Topic](consumer.topic)
-      consumer.clauses.foldLeft(result) { (state, onClause) =>
-        doOnClause(state, consumer, onClause)
+      handler.clauses.foldLeft(state) { (state, onClause) =>
+        doOnClause(state, handler, onClause)
       }
     }
 
     def doOnClause(
       state: ValidationState,
       @unused
-      parent: Consumer,
+      parent: Handler,
       onClause: OnClause
     ): ValidationState = {
       val result = state.checkMessageRef(onClause.msg)
