@@ -1,3 +1,5 @@
 /public/*
 !/public/.gitkeep
 .hugo_build.lock
+resources/
+

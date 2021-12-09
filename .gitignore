@@ -3,8 +3,5 @@
 !.idea/dictionaries
 target
 **/target
+**/.DS_Store
 .DS_Store
-*.dot
-*.png
-doc/hugo/.hugo_build.lock
-doc/hugo/resources/_gen/
