@@ -1,5 +1,6 @@
 ---
 title: "Grammar"
+type: "docs"
 draft: false
 weight: 50
 ---
