@@ -1,7 +1,7 @@
 ---
 title: "Introduction"
 summary: "An introduction to the RIDDL language and tools"
-type: "page"
+type: "docs"
 date: "2021-12-01T15:34:22-05:00"
 draft: true
 weight: 1

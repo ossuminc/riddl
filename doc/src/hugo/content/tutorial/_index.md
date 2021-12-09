@@ -1,7 +1,7 @@
 ---
 title: "Tutorial"
 description: "A tutorial "
-type: page
+type: "docs"
 order: 40
 ---
 

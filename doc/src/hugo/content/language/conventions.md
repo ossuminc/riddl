@@ -3,7 +3,7 @@ title: "Conventions"
 weight: 10
 ---
 
-# Introduction
+### Introduction
 
 Syntax conventions of RIDDL are very simple and lenient. 
 The intended audience is business owners, business analysts, domain engineers,
@@ -17,24 +17,26 @@ and the Unified Modeling Language as well as software architecture.
 The following language conventions are adhered to throughout the language for
 ease of use (special cases and rule contraventions cause confusion). 
 
-# Language Consistency
+### Language Consistency
 Most things in RIDDL are consistent throughout the language. We believe this 
 makes learning the language easier since there are no exceptions to fundamental constructs.
 The sections below define the consistent language features.
 
-# Everything Is A Definition
+### Declarative Definitions
 The language is declarative. You don't say how to do something, you specify the end
 result you want to see. The language aims to capture a detailed and concise definition
-of the abstractions a complex system will require. It does not specify how those
-abstractions should be built. That is for an engineer to implement.
+of the abstractions that a complex system will require. It does not specify how those
+abstractions should be built. RIDDL is not a programming language, but its compiler 
+can generate structurally sound code that can be implemented by a software engineer.
 
-# Every Definition Can Be Documented
-Every thing you can define can have a `described by` suffix which lets you document
-the definition using markdown.
+### Every Definition Can Be Documented
+Every thing you can define can have a `described by` or `explained by` suffix which 
+lets you document the definition using markdown. Ther
 
-# Many Definitions Are Containers
-A container is a definition that contains other definitions. For example, 
-a domain definition is a recursively nested definition:
+### Hierarchy Of Definitions
+Definitions are specified in a [strict containment hierarchy](./hierarchy). Definitions that can 
+contain other definitions are known as _containers_. For example, 
+a domain definition is a recursively nested definition, as follows:
 ```riddl
 domain root is {
   domain branch is {
@@ -43,7 +45,7 @@ domain root is {
   }
 }
 ```
-That is domains are definitions that can contain the definition oof (sub)
+That is, domains are definitions that can contain the definition of (sub)
 domains. Similarly `context` can define `entity` 
 ```riddl
 context foo is {
@@ -52,10 +54,9 @@ context foo is {
   }
 }
 ```
-## Definitions And References
-The language is simply a hierarchically nested set of definitions and
-containers of definitions.  A definition introduces a named instance of some
-concept in the RIDDL meta-model. The specification of that definition
+### Definitions And References
+A definition introduces a named instance of some RIDDL concept at its point. The 
+specification of that definition
 proceeds directly following the `is` keyword.
 
 If RIDDL supported the concept of a Cat and its owner  (it doesn't in both 
@@ -82,7 +83,7 @@ Here is an explanation of each of these tokens:
 This is a simple convention used throughout the language for all 
 concept definitions and references to them. 
 
-## Containers
+### Containers
 Containers are definitions that contain other, nested, definitions. Between the
 `{` and the `}` that define the boundaries of a definition, you may place other
 definitions. Such nested definitions are deemed to be **contained**. 
@@ -99,12 +100,12 @@ The full list of all Container types is as follows:
 * `interaction`
 * `domain`
 
-## Leaves
+### Leaves
 Definitions that may not contain other definitions are called "leaves"
 because, like tree leaves, they occur at the extremity (most nested) part of
 the definitional hierarchy. 
 
-## Work In Progress
+### Work In Progress
 Modelling a domain can be hard work. New ideas come up that must be flushed
 out.  Sometimes things get left undefined. That's okay! Riddl uses a special
 construct, `???` to mean "we don't know yet". It can be used as the body of
@@ -114,7 +115,7 @@ cat Smudge is { ??? }
 ```
 If we aren't sure of the characteristics of the cat named "Smudge"
  
-## Descriptions (Explanations)
+### Descriptions (Explanations)
 A definition may also be accompanied by some text or markup at its end to
 describe or explain the purpose of that definition. We call these
  **descriptions** or **explanations** because this is the text that is
@@ -147,13 +148,13 @@ What occurs within a description/explanation can be one of three things:
 
 Each of these is explained in more detail in the sections that follow. 
 
-### Single Literal String
+#### Single Literal String
 Pretty simple, like this:
 ```riddl
 domain SomeDomain is { ??? } explained as "Not very helpful"
 ```
 
-### Documentation Block
+#### Documentation Block
 Allowing markdown syntax, like this:
 ```riddl
 domain SomeDomain is { ??? } explained as {
@@ -167,7 +168,7 @@ domain SomeDomain is { ??? } explained as {
 }
 ```
 
-### Separate Sections
+#### Separate Sections
 When more formal documentation is required for major definitions (domains,
 contexts, entities), then you should use the sectioned style to group
 your documentation into standard sections, like this: 

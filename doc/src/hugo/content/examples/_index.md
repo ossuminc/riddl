@@ -1,6 +1,6 @@
 ---
 title: "Examples"
-type: page
+type: "docs"
 weight: 40
 summary: "A list of examples of RiDDL syntax and language usage"
 ---

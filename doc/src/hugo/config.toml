@@ -10,7 +10,7 @@ pygmentsStyle=  "monokailight"
 
 # hugo outputs
 [outputs]
-home = [ "HTML", "JSON"]
+home = [ "HTML", "JSON", "RSS"]
 
 # render unsafe html
 [markup.goldmark.renderer]
