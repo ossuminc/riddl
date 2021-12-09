@@ -83,7 +83,8 @@ Entities also have several contained definitions which will be described in
 the sections below:
 * [_State_](state) - The information retained by the entity through its 
   lifecycle
-* [_Handler_]() - A specification of how the entity processes commands and
+* [_Handler_](handler) - A specification of how the entity processes 
+  commands and
   queries, generating events and results, correspondingly
 * [_Functions_](functions) - Auxiliary functions definitions to implement the
   frequently used business logic referenced from the Handler definition
@@ -107,7 +108,7 @@ type `Id`, which provides the means to reference the entity in its context or
 between contexts.  For example, If two instances of the same object have different attribute values, but same identity value, 
 Thus, entities are the single source of truth for a particular id. 
 they are the same entity.
-![Entities](../../../../../static/images/entities.png "Entities")
+![Entities](../../../../../../static/images/entities.png "Entities")
 
 Entities can also contain business Logic. Actors in Akka, Entities in Lagom. 
 Contrary to Value Objects, an Entity's immutable identity conveys equivalence.
