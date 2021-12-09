@@ -1,0 +1,267 @@
+######################## basic configuration ####################
+baseURL = "https://riddl.yoppworks.com/"
+title = "RIDDL Documentation"
+theme = "godocs-hugo/themes/godocs-3"
+author= "Reid Spencer"
+# googleAnalytics = "" # example : UA-123-45
+disableLanguages = [] # desable language from here
+pygmentsCodeFences=  true
+pygmentsStyle=  "monokailight"
+
+# hugo outputs
+[outputs]
+home = [ "HTML", "JSON"]
+
+# render unsafe html
+[markup.goldmark.renderer]
+unsafe = true
+
+# Configure code highlighting
+[markup.highlight]
+anchorLineNos = false
+codeFences= true
+guessSyntax= false
+hl_Lines= ""
+lineAnchors= ""
+lineNoStart= 1
+lineNos= false
+lineNumbersInTable= true
+noClasses= true
+tabWidth= 2
+
+############################# Plugins ##############################
+
+# CSS Plugins
+[[params.plugins.css]]
+link = "plugins/bootstrap/bootstrap.min.css"
+[[params.plugins.css]]
+link = "plugins/search/auto-complete.css"
+[[params.plugins.css]]
+link = "plugins/featherlight/featherlight.min.css"
+
+# JS Plugins
+[[params.plugins.js]]
+link = "plugins/jQuery/jquery.min.js"
+[[params.plugins.js]]
+link = "plugins/bootstrap/bootstrap.min.js"
+[[params.plugins.js]]
+link = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/js/all.min.js"
+attributes = "crossorigin='anonymous' defer='defer' data-search-pseudo-elements"
+[[params.plugins.js]]
+link = "plugins/masonry/masonry.min.js"
+[[params.plugins.js]]
+link = "plugins/featherlight/featherlight.min.js"
+[[params.plugins.js]]
+link = "plugins/clipboard/clipboard.min.js"
+[[params.plugins.js]]
+link = "plugins/search/auto-complete.js"
+[[params.plugins.js]]
+link = "plugins/search/search.js"
+[[params.plugins.js]]
+link = "plugins/search/lunr.min.js"
+[[params.plugins.js]]
+link = "plugins/search/fuse.min.js"
+[[params.plugins.js]]
+link = "plugins/search/mark.js"
+[[params.plugins.js]]
+link = "plugins/search/search-page.js"
+
+# site variables
+[params.variables]
+# Color Variables
+primary_color = "#07324e"
+text_color = "#333"
+text_color_dark = "#222"
+text_color_light = "#999"
+body_color = "#fff"
+border_color = "#0d90cb"
+black = "#000"
+white = "#fff"
+light = "#EBEBEB"
+
+# Font Variables
+#primary_font = "Montserrat:wght@300;400;500;600;700;800"
+primary_font = "Nuninto Sans"
+primary_font_type = "sans-serif" # [serif/sans-serif]
+secondary_font = "Nuninto Sans Bold"
+secondary_font_type = "sans-serif" # [serif/sans-serif]
+icon_font = "Font Awesome 5 Free"
+# base font size for full website
+font_size = "12px" # default is 16px
+font_scale = "1.25" # default is "majorThird": 1.25
+
+#################### GoDocs parameters ################################
+[params]
+logo = "images/YWLogo-60px-high.png"
+favicon = "images/favicon.png"
+# Meta data
+description = "This is meta description"
+author = "Yoppworks Inc."
+# contact form action
+contact_form_action = "#" # contact form works with https://formspree.io
+navigation_button_solid= true
+
+editURL= "https=//gitlab.com/yoppworks/ossum/riddl/edit/master/doc/src/hugo2"
+#showVisitedLinks= true # default is false
+#themeStyle= "flex" # "original" or "flex" # default "flex"
+#themeVariant= "blue" # choose theme variant "green", "gold" , "gray", "blue"
+#ordersectionsby= "weight" # ordersectionsby = "title"
+#disableHomeIcon= false # default is false
+#disableSearch= false # default is false
+#disableNavChevron= false # set true to hide next/prev chevron, default is false
+#highlightClientSide= false # set true to use highlight.pack.js instead of the default hugo chroma highlighter
+#menushortcutsnewtab= false # set true to open shortcuts links to a new tab/window
+#enableGitInfo= true
+
+# Preloader
+[params.preloader]
+enable = false
+
+# Navigation button
+[[params.nav_button]]
+style = "outline" # available style: solid, outline
+label = "changelog"
+link = "changelog"
+
+[[params.nav_button]]
+style = "solid" # available style: solid, outline
+label = "Contact"
+link = "contact"
+
+
+############################# social site ########################
+[[params.social]]
+title = "facebook"
+icon = "fab fa-facebook" # fontawesome icon : https://fontawesome.com/icons
+link = "#"
+
+[[params.social]]
+title = "twitter"
+icon = "fab fa-twitter" # fontawesome icon : https://fontawesome.com/icons
+link = "#"
+
+[[params.social]]
+title = "github"
+icon = "fab fa-github" # fontawesome icon : https://fontawesome.com/icons
+link = "#"
+
+[[params.social]]
+title = "linkedin"
+icon = "fab fa-linkedin" # fontawesome icon : https://fontawesome.com/icons
+link = "#"
+
+
+################################### English language #####################################
+[Languages.en]
+languageName = "En"
+languageCode = "en-us"
+weight = 1
+# copyright
+copyright = "(c) 2021 Yoppworks Inc. All Rights Reserved."
+
+# banner
+[Languages.en.banner]
+title = "Documentation For Yoppworks' RIDDL"
+subtitle = ""
+image = "images/banner.jpg"
+
+# call to action
+[Languages.en.call_to_action]
+enable = false
+title = "Didn't Find What You're Looking For?"
+image = "images/cta-illustration.jpg"
+content = "Just click the button and we will get back to you"
+
+  # call to action button
+  [Languages.en.call_to_action.button]
+  enable = "true"
+  label = "Contact Us"
+  link = "contact"
+
+
+############## English navigation ###############
+# main menu
+[[Languages.en.menu.main]]
+name = "Home"
+url = ""
+weight = 1
+
+[[Languages.en.menu.main]]
+name = "GitLab"
+url = "https://gitlab.com/yoppworks/ossum/riddl"
+weight = 2
+
+
+# footer menu
+[[Languages.en.menu.footer]]
+name = "Changelog"
+url = "changelog"
+weight = 1
+
+[[Languages.en.menu.footer]]
+name = "Contact"
+url = "contact"
+weight = 2
+
+[[Languages.en.menu.footer]]
+name = "GitLab"
+url = "https://gitlab.com/yoppworks/ossum/riddl"
+weight = 3
+
+
+################################### French language #####################################
+[Languages.fr]
+languageName = "Fr"
+languageCode = "fr-fr"
+weight = 2
+# copyright
+copyright = "(c) 2021 Yoppworks Inc. All Rights Reserved."
+
+# banner
+[Languages.fr.banner]
+title = "Documentation Theme By Themefisher Team"
+subtitle = "Lorem ipsum dolor amet, consetetur sadiffspscing elitr, diam nonumy invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua At."
+image = "images/banner.jpg"
+
+# call to action
+[Languages.fr.call_to_action]
+enable = true
+title = "Still Didn't Find Your Answer?"
+image = "images/cta-illustration.jpg"
+content = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam <br> nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
+
+  # call to action button
+  [Languages.fr.call_to_action.button]
+  enable = "true"
+  label = "Submit a ticket"
+  link = "contact"
+
+
+############## French navigation ###############
+# main menu
+[[Languages.fr.menu.main]]
+name = "Home"
+url = ""
+weight = 1
+
+[[Languages.fr.menu.main]]
+name = "Github"
+url = "https://github.com/themefisher/"
+weight = 2
+
+
+# footer menu
+[[Languages.fr.menu.footer]]
+name = "Changelog"
+url = "changelog"
+weight = 1
+
+[[Languages.fr.menu.footer]]
+name = "contact"
+url = "contact"
+weight = 2
+
+[[Languages.fr.menu.footer]]
+name = "Github"
+url = "https://github.com/themefisher/"
+weight = 3

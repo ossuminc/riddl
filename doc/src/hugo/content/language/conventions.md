@@ -126,21 +126,14 @@ looks like this:
 ```text
 cat Smudge is { ??? } explained as "TBD but owned by Reid"
 ```  
-See the @ref:[Quick Start](quickstart.md) for more examples 
-of definition descriptions.  
 
-The grammar for a definition is this:
+The grammar for a description is this:
 ```ebnf
-<description> ::= ("described" | "explained") "as" "{" <description-body> "}"
-
-<description-body> ::= <literal-string-description> | <doc-block-description>
-
-<literal-string-description> ::= <literal-string>+
-
-<literal-string> ::= "\"" 
-
-<doc-block-description> ::=  
-
+description = ("described" | "explained"), "as", "{", description body, "}" ;
+description body = literal string description | doc block description ;
+literal string description =  (literal string)+ ;
+literal string = "\"" ;
+doc-block-description = ... tbd  
 ```
 
 What occurs within a description/explanation can be one of three things:

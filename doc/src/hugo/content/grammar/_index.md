@@ -9,7 +9,3 @@ This section defines the RIDDL syntax grammar using [EBNF](https://en.wikipedia.
 This form can be quite technical and is intended for those who are familiar with
 EBNF format.  For a more descriptive introduction to the language, please 
 refer to the [Tutorial](../tutorial) section.
-
-# Contents
-{{% children depth=999 sort=weight %}}
-

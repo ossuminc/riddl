@@ -4,9 +4,11 @@ defaultContentLanguage: "en"
 defaultContentLanguageInSubdir: false
 enableMissingTranslationPlaceholders: false
 title: "RIDDL Documentation"
-theme: "hugo-theme-docdock"
+#theme: "hugo-theme-docdock"
+#theme: "godocs-1"
 pygmentsCodeFences:  true
 pygmentsStyle:  "monokailight"
+author: "Reid Spencer"
 
 # [Languages]
 # [Languages.en]
@@ -48,6 +50,7 @@ params:
   highlightClientSide: false # set true to use highlight.pack.js instead of the default hugo chroma highlighter
   menushortcutsnewtab: false # set true to open shortcuts links to a new tab/window
   enableGitInfo: true
+  navigationButtonSolid: true
 
 
 outputs:

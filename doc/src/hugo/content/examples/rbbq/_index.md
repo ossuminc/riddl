@@ -11,6 +11,3 @@ This example is used throughout the course so it makes a good
 example for RIDDL too. 
 
 {{% code file=content/examples/rbbq.riddl language=riddl %}}
-
-## Contents
-{{% children depth=999 sort=weight %}}

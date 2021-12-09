@@ -31,7 +31,3 @@ or Eric Evans' original tome **[Domain Driven Design](https://www.amazon.com/Dom
 
 RIDDL is one of the Ossum tools. Ossum is a collection of tools for making
 awesome software systems based on reactive architecture.
-
-## Contents
-{{% children depth=999 %}}
-
