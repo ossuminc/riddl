@@ -77,11 +77,11 @@ object AST {
 
   sealed trait DefinitionValue extends RiddlValue
 
-  sealed trait DefinitionClause extends DefinitionValue {
+  sealed trait DefinitionWithDescription extends DefinitionValue {
     def description: Option[Description]
   }
 
-  sealed trait Definition extends DefinitionClause {
+  sealed trait Definition extends DefinitionWithDescription {
     def id: Identifier
     def identify: String = s"$kind '${id.value}'"
   }
@@ -560,7 +560,7 @@ object AST {
     msg: MessageReference,
     actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
     description: Option[Description] = None)
-      extends EntityValue with DefinitionClause
+      extends EntityValue with DefinitionWithDescription
 
   case class Consumer(
     loc: Location,
@@ -602,8 +602,8 @@ object AST {
     *   The state values of the entity
     * @param types
     *   Type definitions useful internally to the entity definition
-    * @param consumers
-    *   A reference to the topic from which the entity consumes
+    * @param handlers
+    *   A set of event handlers
     * @param features
     *   Feature definitions of the entity
     * @param functions
@@ -732,7 +732,7 @@ object AST {
     function: FunctionRef,
     arguments: Seq[LiteralString],
     description: Option[Description] = None)
-      extends DefinitionClause
+      extends DefinitionWithDescription
 
   case class ReactionRef(
     loc: Location,

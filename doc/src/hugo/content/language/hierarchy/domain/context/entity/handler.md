@@ -43,25 +43,14 @@ domain Foo { context Bar { entity Example {
 }}}    
 ```
 Notes:
-* `Path.To.Context.ThingThatHappend` is known as a path identifier
+* `Path.To.Context.ThingThatHappend` is known as a 
+  [path identifier](../../../../hierarchy#Path_Identifiers).
 
 ## Query Handler
-
-## Example
-## syntax
-Handlers are introduced into an entity with the `on` keyword.
+A query handler associates a query message to the result message that the query returns along 
+with the SQL statement that yields the result set. 
 ```riddl
-entity AnEntity is {
-    type JustDoIt = command { id: Id(AnEntity), encouragement: String }
-    type JustDidIt = event { id: Id(AnEntity), encouragement: String }
-    on command JustDoIt yields JustDidIt
-    
-    on event JustDidIt update state EntityState
-    
-    on event OtherEntity.SomeEvent react with JustDoIt
-    
-    type JustGetIt = query { id: Id(AnEntity) }
-    type JustGotIt = response { id: Id(AnEntity), count: Integer }
-    on query JustGetIt return JustGotIt
-}
+type JustGetIt = query { id: Id(AnEntity) }
+type JustGotIt = response { id: Id(AnEntity), count: Integer }
+on query JustGetIt return JustGotIt from "SELECT id, count FROM AnEntity WHERE id = %id"
 ```

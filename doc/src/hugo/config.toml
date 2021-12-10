@@ -16,6 +16,15 @@ home = [ "HTML", "JSON", "RSS"]
 [markup.goldmark.renderer]
 unsafe = true
 
+[markup.goldmark.extensions]
+definitionList = true
+footnote = true
+linkify = true
+strikethrough = true
+table = true
+taskList = true
+typographer = true
+
 # Configure code highlighting
 [markup.highlight]
 anchorLineNos = false
@@ -73,11 +82,18 @@ primary_color = "#07324e"
 text_color = "#333"
 text_color_dark = "#222"
 text_color_light = "#999"
-body_color = "#fff"
+body_color = "#f8f8f8"
 border_color = "#0d90cb"
 black = "#000"
 white = "#fff"
 light = "#EBEBEB"
+paragraph_font_size = "14px"
+h1_font_size = "28px"
+h2_font_size = "24px"
+h3_font_size = "22px"
+h4_font_size = "20px"
+h5_font_size = "18px"
+h6_font_size = "16px"
 
 # Font Variables
 #primary_font = "Montserrat:wght@300;400;500;600;700;800"
@@ -87,7 +103,7 @@ secondary_font = "Nuninto Sans Bold"
 secondary_font_type = "sans-serif" # [serif/sans-serif]
 icon_font = "Font Awesome 5 Free"
 # base font size for full website
-font_size = "12px" # default is 16px
+font_size = "14px" # default is 16px
 font_scale = "1.25" # default is "majorThird": 1.25
 
 #################### GoDocs parameters ################################
@@ -130,25 +146,21 @@ link = "contact"
 
 
 ############################# social site ########################
-[[params.social]]
-title = "facebook"
-icon = "fab fa-facebook" # fontawesome icon : https://fontawesome.com/icons
-link = "#"
 
 [[params.social]]
 title = "twitter"
 icon = "fab fa-twitter" # fontawesome icon : https://fontawesome.com/icons
-link = "#"
+link = "https://twitter.com/yoppworks"
 
 [[params.social]]
 title = "github"
 icon = "fab fa-github" # fontawesome icon : https://fontawesome.com/icons
-link = "#"
+link = "https://github.com/yoppworks"
 
 [[params.social]]
 title = "linkedin"
 icon = "fab fa-linkedin" # fontawesome icon : https://fontawesome.com/icons
-link = "#"
+link = "https://linkedin.com/company/yoppworks"
 
 
 ################################### English language #####################################
@@ -194,19 +206,24 @@ weight = 2
 
 # footer menu
 [[Languages.en.menu.footer]]
+name = "Home"
+url = ""
+weight = 1
+
+[[Languages.en.menu.footer]]
 name = "Changelog"
 url = "changelog"
-weight = 1
+weight = 2
 
 [[Languages.en.menu.footer]]
 name = "Contact"
 url = "contact"
-weight = 2
+weight = 3
 
 [[Languages.en.menu.footer]]
 name = "GitLab"
 url = "https://gitlab.com/yoppworks/ossum/riddl"
-weight = 3
+weight = 4
 
 
 ################################### French language #####################################

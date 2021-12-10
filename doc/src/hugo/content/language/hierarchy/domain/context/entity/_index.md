@@ -4,7 +4,6 @@ type: page
 weight: 10
 ---
 
-# Introduction
 An entity in RIDDL is the same as it is in DDD which defines it this way:
 {{% panel theme="success" header="Entity Definition" %}}
 > _An object primarily defined by its identity is called an Entity._ 
@@ -13,7 +12,6 @@ and
 
 > _Many objects are not fundamentally defined by their attributes, but_ 
 > _rather by a thread of **continuity** and **identity**._
-
 {{% /panel %}}
  
 There are three main aspects to this definition of entity:
@@ -26,32 +24,34 @@ There are three main aspects to this definition of entity:
 * Entities are continuous; they have a lifecycle, evolving from creation, 
   through their useful lifespan, to destruction. 
 
-An entity is the fundamental processor of work in a reactive system. They are
-most often implemented in software as an actor or a class.
+An entity is the fundamental processor of work in a reactive system and in a RIDDL specification.  
+Entities are most often implemented in software as an actor or a OOP class.
 
-# Syntax
-{{% panel theme="success" header="Entity Definition" %}}
-An entity is defined with the `entity` keyword using this syntax:
-```ebnf
-entity = entity kind, "entity", "is", "{",  
-    entity options, entity definitions, "}", description ;
+### Identity
+Entities have a unique immutable persistent identifier, much like people have names except our 
+personal names are not unique. The unique identifier is used to locate the entity in a computing 
+system and for other computing purposes. These immutable and unique identifiers convey 
+equivalence. That is when two values of an identifier are the same, then by definition, they 
+must refer to the same entity.  Changing the state of the entity does not break this equivalence. 
+type `Id`, which provides the means to reference the entity in its context or
+between contexts. an Entity's immutable identity conveys equivalence.
+Individual pieces of attribute of entity can change.
 
-entity kind = [ "device" | "actor" | "concept"] ;
+Entities can also contain business Logic. Actors in Akka, Entities in Lagom.
+Contrary to Value Objects, 
 
-entity options = single option | multi options ;
+# Consumption
+Entities consume commands and queries and produce events and results,
+correspondingly. They also hold state, whether persistent or not. Entities use
+event sourcing to keep track of the entire history of changes to the entity's
+state.   For example, If two instances of the same object have different attribute values, but same identity value,
+Thus, entities are the single source of truth for a particular id.
+they are the same entity.
+![Entities](../../../../../../static/images/entities.png "Entities")
 
-single-option = "option", "is", entity option kinds;
 
-multi-option = "options", "(", { entity option kinds },  ")";
 
-entity option kinds = "event sourced" | "value" | "aggregate" | "persistent" |
-   "consistent" | "available";
 
-entity definition = consumer | feature | function | invariant | typeDef | state;
-  
-entity definitions =  entity definition { entity definition } ;
-```
-{{% /panel %}}
 For example:
 ```riddl
 device entity Printer is {
@@ -59,57 +59,23 @@ device entity Printer is {
   // ...
 }
 ```
-The optional entity kind prefix is a directive that suggests how the entity 
-might handle its state and received messages. In the example above, we 
-expect the "Printer" entity to be a physical device. An "actor" entity in
-of the same name could be expected to be a person who prints. 
 
-The options available suggest how the entity might handle its state and 
-message input:
-* _event sourced_ - indicates that event sourcing is used in the persistence 
-  of the entity's states, storing a log of change events
-* _value_ - indicates that only the current value of the entity's state is 
-  persisted, recording no history off the change events 
-* _aggregate_ - indicates this entity is an 'aggregate root entity' as 
-  defined by DDD.
-* _persistent_ - indicates that this entity should persist its state to 
-  stable sotrage.
-* _consistent_ - indicates that this entity tends towards Consistency as 
-  defined by the CAP theorem.
-* _available_ - indicates that this entity tends towards Availability as 
-  defined by the CAP theorem.
-
-Entities also have several contained definitions which will be described in 
-the sections below:
-* [_State_](state) - The information retained by the entity through its 
+### Aspects
+Entities also have several contained definitions which specify various aspects of the entity. 
+These aspects are detailed on the following pages: 
+* [_Options_](options) - Various
+* [_States_](state) - The information retained by the entity through its 
   lifecycle
-* [_Handler_](handler) - A specification of how the entity processes 
-  commands and
-  queries, generating events and results, correspondingly
-* [_Functions_](functions) - Auxiliary functions definitions to implement the
-  frequently used business logic referenced from the Handler definition
+* [_Handlers_](handler) - A specification of how the entity processes 
+  commands, events, queries, and reactions to events from other entities in the same bounded 
+  context.
+* [_Functions_](function) - Auxiliary function definitions to implement the
+  frequently used business logic referenced from the Handler definitions
 * [_Invariants_](invariants) - Logical assertions that must always be true 
-  through an
-  entity's lifecycle.
-* [_Adaptor_]() - An adaptor converts the events from another entity into
-  commands to this entity. This is how an entity reacts to its environment.
+  through an entity's lifecycle to enforce business rules
+* [_Features_](features) - High level descriptions of features as an outline for both developing 
+  the system and to test the entity functionality. 
+* [_Adaptors_]() - An adaptor converts events from another bounded context into
+  commands to this entity. This is how an entity reacts to its external environment while the 
+  handler provides a way to react to events within the internal environment (its bounded context).
 
-## Contained Definitions
-### State
-### Handler
-### Features
-### Invariants
-# Consumption 
-Entities consume commands and queries and produce events and results, 
-correspondingly. They also hold state, whether persistent or not. Entities use 
-event sourcing to keep track of the entire history of changes to the entity's
-state.  Entities have a globally unique immutable persistent identifier, 
-type `Id`, which provides the means to reference the entity in its context or
-between contexts.  For example, If two instances of the same object have different attribute values, but same identity value, 
-Thus, entities are the single source of truth for a particular id. 
-they are the same entity.
-![Entities](../../../../../../static/images/entities.png "Entities")
-
-Entities can also contain business Logic. Actors in Akka, Entities in Lagom. 
-Contrary to Value Objects, an Entity's immutable identity conveys equivalence.
-Individual pieces of attribute of entity can change.

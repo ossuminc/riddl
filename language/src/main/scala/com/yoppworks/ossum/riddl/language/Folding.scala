@@ -18,7 +18,9 @@ object Folding {
   ): S = {
     var result = state
     container match {
-      case root: RootContainer => root.contents
+      case root: RootContainer =>
+        root
+          .contents
           .foldLeft(result) { (next, container) =>
             foldEachDefinition[S](root, container, next)(f)
           }

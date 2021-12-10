@@ -98,7 +98,7 @@ brew install hugo
 ```
 Then run the hugo server:
 ```shell
-cd doc/hugo
+cd doc/src/hugo
 hugo server --disableFastRender -D
 ```
 The hugo server command will ensure that writes to the source files will cause
