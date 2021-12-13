@@ -18,10 +18,13 @@ message input:
 * _aggregate_ - indicates this entity is an 'aggregate root entity' as
   defined by DDD.
 * _persistent_ - indicates that this entity should persist its state to
-  stable sotrage.
+  stable storage.
 * _consistent_ - indicates that this entity tends towards Consistency as
   defined by the CAP theorem and therefore uses sharding and the single writer principle to 
   ensure a consistent view on state changes 
 * _available_ - indicates that this entity tends towards Availability as
   defined by the CAP theorem and therefore replicates its entity state to multiple locations or 
   even across data centers using CRDTs (conflict-free replicated data types).
+* _grpc_ - indicates that the entity should be accessible via gRPC api invocations
+* _mq_ - indicates that commands and queries may be sent by a message queue such as Kafka, 
+  Pulsar, or Google Pub Sub

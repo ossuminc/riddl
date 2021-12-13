@@ -75,9 +75,9 @@ Here is an explanation of each of these tokens:
 * `{` starts the definition of Smudge the cat
 * `owner` is the name of a property that all "cat" concepts have
 * `is` is another keyword required for readability
-* `entity Reid` is a reference to an instance of a concept. The concept is an
- `entity` and the name of it is `Reid`. References to many kinds of concepts
-  are always made in this way, by name with a prefix for the kind of concept.
+* `entity Reid` is a reference to an instance of a concept, an entity, of type `Reid`. 
+  References to many kinds of RIDDL concepts are made in this way, by name (type) with a prefix
+  for the kind of concept.
 * `}` completes the definition of Smudge the cat.
 
 This is a simple convention used throughout the language for all 
@@ -115,6 +115,44 @@ cat Smudge is { ??? }
 ```
 If we aren't sure of the characteristics of the cat named "Smudge"
  
+### Directives
+RIDDL supports the notion of directives that are specified as a complete line whose first 
+character is the hash mark. The directive extends to the end of that line. Hash marks at other 
+locations on a line are not recognized as directives.  The sub-sections below define the kinds 
+of directives supported by RIDDL's compiler.
+
+#### Substitutions
+For example:
+```riddl
+#define x = expialidocious
+```
+defines a symbol x that has the value 2. Wherever `$x` is seen in the input it will be replaced
+with `expialidocious` before being lexically interpreted by the compiler.
+
+#### File Inclusion
+RIDDL allows source input to be included, inline, from other files. That is, the parser
+will substitute the text of an included file, replacing the `include` directive. This is much 
+like the C preprocessor `#include` directive. RIDDL always parses the entire specification but 
+the `include` directive allows you to organize that specification into many (even nested) files. 
+Note that include directives are not permitted only within container definitions so as not to 
+allow fragments of definitions to be separated into individual files.
+For example, this is allowed:
+```riddl
+domain ThingAmaJig {
+#include "thingamajig/thing-context"
+#include "thingamajig/ama-topic"
+#include "thingamajig/jig-context"
+}
+```
+while this is not:
+```riddl
+domain
+#include "ThingAmaJig-domain"
+```
+because it is not specified within the contained portion of a container. A `domain` is a 
+container, but it needs a name and that name cannot be buried in an include file. As a rule of 
+thumb, you can always use `#include` right after an opening curly brace of a container definition.  
+
 ### Descriptions (Explanations)
 A definition may also be accompanied by some text or markup at its end to
 describe or explain the purpose of that definition. We call these

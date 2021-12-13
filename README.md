@@ -75,10 +75,10 @@ we hope it will do all of the following:
   reactive systems.
 * Be designed to be used with event storming
 * Designed for a fully reactive implementation with messaging between
- contexts
+  contexts
 * Support pluggable code generators for targeting different execution
  environments.
-* Potential executors: Lagom microservices, Lightbend Pipelines, Cloudstate.io
+* Potential executors:  Akka Data Pipelines, Akka Serverless, Akka/Scala
 * Incorporate the best interface language ideas from CORBA, Reactive
  Architecture, DDD, REST, DCOM, gRPC, etc. 
 * Support for Read Projections and Read Models (plugins for databases)

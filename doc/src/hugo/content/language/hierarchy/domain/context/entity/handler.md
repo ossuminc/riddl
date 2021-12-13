@@ -29,7 +29,8 @@ on event NameWasUpdated { replace name with newName }
 ```
 ## Reaction Handler
 A reaction handler is used to specify how an entity converts a foreign event 
-(from another entity) into a command for altering its own state. This is also
+(from another entity in the same bounded context) into a command for altering 
+its own state. This is also
 how we avoid corruption of the entity's ubiquitous language by converting 
 another bounded context's concept into the handler's entity's concept. 
 ```riddl

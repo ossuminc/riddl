@@ -37,4 +37,3 @@ Feature "Guess the word" is {
 }
 ```
 
-Content: TBD
