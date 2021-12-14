@@ -1,7 +1,7 @@
 ---
 title: "Hugo Docs"
 type: "page"
-weight: 10
+weight: 20
 ---
 
 One of the main features of the RIDDL compiler is generating HTML documentation. The documentation 

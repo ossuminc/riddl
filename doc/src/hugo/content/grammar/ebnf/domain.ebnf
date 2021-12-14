@@ -1,1 +1,7 @@
 (* RIDDL EBNF Grammar for knowledge domains *)
+
+domain include = "include", literalString
+
+domain content = typeDef | topic | interaction | context | domain | domainInclude
+
+domain = "domain", identifier, "is", "{", (undefined | domainContent), "}", description

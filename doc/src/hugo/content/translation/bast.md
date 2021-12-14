@@ -1,7 +1,7 @@
 ---
 title: "Binary AST"
-type: "section"
-weight: 40
+type: "page"
+weight: 30
 ---
 
 When the `riddlc` compiler parses a RIDDL document, it translates it to an Abstract 
@@ -11,4 +11,10 @@ format that is stored for later usage.  Saving the BAST format and then reading 
 the compiler avoids the time to both parse the RIDDL document and validate it for consistency.
 
 Consequently, the `riddlc` offers a translator from validated AST to BAST format and the ability 
-to read BAST files instead of RIDDL files. 
+to read BAST files instead of RIDDL files. The content of a BAST file must contain a valid
+`domain` definition from which portions can be imported with the `import` 
+keyword like this:
+
+```riddl
+import domain Kitchen from "rbbq.bast"
+```

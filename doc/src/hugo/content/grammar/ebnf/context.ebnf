@@ -1,1 +1,12 @@
 (* RIDDL EBNF Grammar for bounded contexts *)
+
+context options = options("wrapper" | "gateway" | "function")
+
+context include = "include", literalString
+
+context definitions = typedef | entity | adaptor | interaction | contextInclude
+
+context = "context",  identifier, is, open,
+  (undefined | context options, context definitions),
+  close, description
+}

@@ -16,7 +16,7 @@ entity option kinds = "event sourced" | "value" | "aggregate" | "persistent" |
    "consistent" | "available";
 
 entity definition =
-    consumer | feature | function | invariant | typeDef | state;
+    handler | feature | function | invariant | typeDef | state;
 
 entity definitions =  entity definition { entity definition } ;
 
