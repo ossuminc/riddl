@@ -23,8 +23,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe
-            Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"))
+        case Right(content) => content mustBe Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"))
       }
     }
     "allow nested domains" in {
@@ -92,8 +91,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe
-            Context(1 -> 17, id = Identifier(1 -> 25, "bar"))
+        case Right(content) => content mustBe Context(1 -> 17, id = Identifier(1 -> 25, "bar"))
       }
     }
     "allow options on context definitions" in {
@@ -105,28 +103,22 @@ class ParserTest extends ParsingTest {
         case Right(content) => content mustBe Context(
             1 -> 1,
             Identifier(1 -> 9, "bar"),
-            Seq(
-              FunctionOption(1 -> 27),
-              WrapperOption(1 -> 36),
-              GatewayOption(1 -> 44)
-            )
+            Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 36), GatewayOption(1 -> 44))
           )
       }
     }
     "allow topic definitions in domains" in {
-      val input =
-        """
-          |domain foo is {
-          |
-          |    topic bar is { commands{} events{} queries{} results{} }
-          |}
-          |""".stripMargin
+      val input = """
+                    |domain foo is {
+                    |
+                    |    topic bar is { commands{} events{} queries{} results{} }
+                    |}
+                    |""".stripMargin
       parseDomainDefinition[Topic](input, _.topics.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe
-            Topic(4 -> 5, Identifier(4 -> 11, "bar"))
+        case Right(content) => content mustBe Topic(4 -> 5, Identifier(4 -> 11, "bar"))
       }
     }
     "allow type definitions in contexts" in {
@@ -224,8 +216,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow invariant definitions" in {
-      val input: String =
-        """invariant large is { "x is greater or equal to 10" }"""
+      val input: String = """invariant large is { "x is greater or equal to 10" }"""
       parseDefinition[Invariant](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -269,10 +260,7 @@ class ParserTest extends ParsingTest {
             Seq(State(
               3 -> 3,
               Identifier(3 -> 9, "foo"),
-              Aggregation(
-                3 -> 16,
-                Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))
-              ),
+              Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
               None
             )),
             handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
@@ -281,27 +269,17 @@ class ParserTest extends ParsingTest {
               Identifier(5 -> 11, "AnAspect"),
               Some(Background(
                 6 -> 5,
-                Seq(
-                  Given(7 -> 7, Seq(LiteralString(7 -> 13, "Nobody loves me")))
-                )
+                Seq(Given(7 -> 7, Seq(LiteralString(7 -> 13, "Nobody loves me"))))
               )),
               Seq(Example(
                 9 -> 5,
                 Identifier(9 -> 13, "foo"),
                 Seq(
-                  Given(
-                    10 -> 7,
-                    Seq(LiteralString(10 -> 13, "everybody hates me"))
-                  ),
+                  Given(10 -> 7, Seq(LiteralString(10 -> 13, "everybody hates me"))),
                   Given(11 -> 7, Seq(LiteralString(11 -> 11, "I'm depressed")))
                 ),
-                Seq(
-                  When(12 -> 7, Seq(LiteralString(12 -> 12, "I go fishing")))
-                ),
-                Seq(Then(
-                  13 -> 7,
-                  Seq(LiteralString(13 -> 12, "I'll just eat worms"))
-                )),
+                Seq(When(12 -> 7, Seq(LiteralString(12 -> 12, "I go fishing")))),
+                Seq(Then(13 -> 7, Seq(LiteralString(13 -> 12, "I'll just eat worms")))),
                 Seq(Else(14 -> 7, Seq(LiteralString(14 -> 12, "I'm happy"))))
               ))
             ))
@@ -354,15 +332,9 @@ class ParserTest extends ParsingTest {
                 6 -> 3,
                 Identifier(6 -> 11, "handle a thing"),
                 Seq(AsynchOption(6 -> 38)),
-                EntityRef(
-                  7 -> 10,
-                  PathIdentifier(7 -> 17, Seq("myLittlePony"))
-                ),
+                EntityRef(7 -> 10, PathIdentifier(7 -> 17, Seq("myLittlePony"))),
                 EntityRef(8 -> 8, PathIdentifier(8 -> 15, Seq("Unicorn"))),
-                CommandRef(
-                  8 -> 26,
-                  PathIdentifier(8 -> 34, Seq("HandleAThing"))
-                ),
+                CommandRef(8 -> 26, PathIdentifier(8 -> 34, Seq("HandleAThing"))),
                 Seq.empty[Reaction]
               )
             )
@@ -383,13 +355,7 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content must matchPattern {
-            case Function(
-                  _,
-                  Identifier(_, "foo"),
-                  Some(Bool(_)),
-                  Integer(_),
-                  None
-                ) =>
+            case Function(_, Identifier(_, "foo"), Some(Bool(_)), Integer(_), None) =>
           }
       }
     }

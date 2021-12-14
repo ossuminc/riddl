@@ -18,8 +18,7 @@ class ValidateExamplesTest extends ValidatingTest {
         validateFile(label, fileName) { case (_, messages) =>
           val errors = messages.filter(_.kind.isError)
           val warnings = messages.iterator.filter(_.kind.isWarning)
-            .filterNot(_.kind == MissingWarning)
-            .filterNot(_.kind == StyleWarning).toList
+            .filterNot(_.kind == MissingWarning).filterNot(_.kind == StyleWarning).toList
           info(errors.iterator.map(_.format).mkString("\n"))
           info(warnings.iterator.map(_.format).mkString("\n"))
           errors mustBe empty
@@ -36,8 +35,8 @@ class ValidateExamplesTest extends ValidatingTest {
       }
     }
     "allow enumerators with values" in {
-      validateFile("t0002", "enumerations/t0002.riddl") {
-        case (result, messages) => assert(!messages.exists(_.kind.isError))
+      validateFile("t0002", "enumerations/t0002.riddl") { case (result, messages) =>
+        assert(!messages.exists(_.kind.isError))
       }
     }
   }

@@ -9,19 +9,15 @@ import scala.concurrent.Future
 import pureconfig._
 import pureconfig.generic.auto._
 
-/** GraphVizAPI ############################################################## #
-  * Linux Configurations #
-  * ############################################################## # The dir.
-  * where temporary files will be created. tempDirForLinux = /tmp # Where is
-  * your dot program located? It will be called externally. dotForLinux =
-  * /usr/bin/dot
+/** GraphVizAPI ############################################################## # Linux
+  * Configurations # ############################################################## # The dir. where
+  * temporary files will be created. tempDirForLinux = /tmp # Where is your dot program located? It
+  * will be called externally. dotForLinux = /usr/bin/dot
   *
-  * ############################################################## # Windows
-  * Configurations #
-  * ############################################################## # The dir.
-  * where temporary files will be created. tempDirForWindows = c:/temp # Where
-  * is your dot program located? It will be called externally. dotForWindows =
-  * "c:/Program Files (x86)/Graphviz 2.28/bin/dot.exe"
+  * ############################################################## # Windows Configurations #
+  * ############################################################## # The dir. where temporary files
+  * will be created. tempDirForWindows = c:/temp # Where is your dot program located? It will be
+  * called externally. dotForWindows = "c:/Program Files (x86)/Graphviz 2.28/bin/dot.exe"
   */
 sealed trait DotProgramName {
   override def toString: String = { this.getClass.getSimpleName.dropRight(1) }
@@ -74,16 +70,13 @@ object GraphVizAPI {
 
   /** Detects the client's operating system.
     */
-  final val osName: String = {
-    System.getProperty("os.name").replaceAll("\\s", "")
-  }
+  final val osName: String = { System.getProperty("os.name").replaceAll("\\s", "") }
 
   final val configResourceName: String = "graphviz.conf"
 
   def getConfiguration: ConfigReader.Result[GraphVizAPIConfig] = {
     ConfigSource.default.load[GraphVizAPIConfig] match {
-      case Left(_) => ConfigSource.resources(configResourceName)
-          .load[GraphVizAPIConfig]
+      case Left(_)        => ConfigSource.resources(configResourceName).load[GraphVizAPIConfig]
       case Right(success) => Right(success)
     }
   }
@@ -110,23 +103,18 @@ object GraphVizAPI {
     }
 
     def node(attributes: Seq[(String, String)]): StringBuilder = {
-      sb.append("node [").append(attributes.map(fmtattr).mkString(", "))
-        .append("];").nl
+      sb.append("node [").append(attributes.map(fmtattr).mkString(", ")).append("];").nl
     }
 
     def edge(attributes: Seq[(String, String)]): StringBuilder = {
-      sb.append("edge [").append(attributes.map(fmtattr).mkString(", "))
-        .append("];").nl
+      sb.append("edge [").append(attributes.map(fmtattr).mkString(", ")).append("];").nl
     }
 
     def node(name: String, attributes: Seq[(String, String)]): StringBuilder = {
-      sb.append(name).append(" [")
-        .append(attributes.map(fmtattr).mkString(", ")).append("];").nl
+      sb.append(name).append(" [").append(attributes.map(fmtattr).mkString(", ")).append("];").nl
     }
 
-    def relation(from: String, to: String): StringBuilder = {
-      sb.append(s"$from -> $to ;").nl
-    }
+    def relation(from: String, to: String): StringBuilder = { sb.append(s"$from -> $to ;").nl }
 
     def relation3(from: String, to: String, andThen: String): StringBuilder = {
       sb.append(s"$from -> $to -> $andThen ;").nl
@@ -140,8 +128,8 @@ object GraphVizAPI {
       name: String
     )(content: StringBuilder => StringBuilder
     ): StringBuilder = {
-      sb.append(s"subgraph $name {").nl
-        .append(content(new StringBuilder).mkString.indent(2)).append("}").nl
+      sb.append(s"subgraph $name {").nl.append(content(new StringBuilder).mkString.indent(2))
+        .append("}").nl
     }
 
     def cluster(
@@ -149,25 +137,21 @@ object GraphVizAPI {
     )(content: StringBuilder => StringBuilder
     ): StringBuilder = {
       clusterNum = clusterNum + 1
-      subgraph(s"cluster$clusterNum") { sb =>
-        sb.attrs(Seq("label" -> name)).append(content(sb))
-      }
+      subgraph(s"cluster$clusterNum") { sb => sb.attrs(Seq("label" -> name)).append(content(sb)) }
     }
 
     def digraph(
       name: String
     )(content: StringBuilder => StringBuilder
     ): StringBuilder = {
-      sb.append(s"digraph $name {").nl
-        .append(content(new StringBuilder).mkString.indent(2)).append("}").nl
+      sb.append(s"digraph $name {").nl.append(content(new StringBuilder).mkString.indent(2))
+        .append("}").nl
     }
 
     def expand[T](
       list: Seq[T]
     )(f: (StringBuilder, T) => StringBuilder
-    ): StringBuilder = {
-      list.foldLeft(new StringBuilder) { (sb, it) => f(sb, it) }
-    }
+    ): StringBuilder = { list.foldLeft(new StringBuilder) { (sb, it) => f(sb, it) } }
 
     /** Adds a string to the graph's source (without newline). */
     def add(line: String): StringBuilder = { sb.append(line) }
@@ -191,8 +175,7 @@ case class GraphVizAPI(config: GraphVizAPIConfig, buffer: StringBuilder) {
   def runDot(implicit ec: ExecutionContext): Future[(Int, String, String)] = {
     import scala.sys.process._
 
-    val program = config.dotPath.resolve(config.dotProgramName.toString)
-      .toString
+    val program = config.dotPath.resolve(config.dotProgramName.toString).toString
     val command = program + s" -T${config.outputType} -Gdpi=${config.imageDPI}"
 
     val dotInput = getDotSource.getBytes(Charset.forName("UTF-8"))

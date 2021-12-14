@@ -96,9 +96,8 @@ trait Translator[CONF <: TranslatorConfiguration] {
     configFile: Option[Path]
   ): Seq[File] = {
     getConfig(logger, configFile) match {
-      case Some(config) =>
-        parseValidateTranslateFile(inputFile, outputRoot, logger, config)
-      case None => Seq.empty[File]
+      case Some(config) => parseValidateTranslateFile(inputFile, outputRoot, logger, config)
+      case None         => Seq.empty[File]
     }
   }
 }

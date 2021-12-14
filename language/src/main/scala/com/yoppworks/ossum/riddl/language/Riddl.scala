@@ -20,21 +20,13 @@ object Riddl {
 
   case object SysLogger extends Logger {
 
-    override def severe(s: => String): Unit = {
-      System.err.println("[severe] " + s)
-    }
+    override def severe(s: => String): Unit = { System.err.println("[severe] " + s) }
 
-    override def error(s: => String): Unit = {
-      System.err.println("[error] " + s)
-    }
+    override def error(s: => String): Unit = { System.err.println("[error] " + s) }
 
-    override def warn(s: => String): Unit = {
-      System.err.println("[warning] " + s)
-    }
+    override def warn(s: => String): Unit = { System.err.println("[warning] " + s) }
 
-    override def info(s: => String): Unit = {
-      System.err.println("[info] " + s)
-    }
+    override def info(s: => String): Unit = { System.err.println("[info] " + s) }
   }
 
   trait Options {
@@ -44,8 +36,8 @@ object Riddl {
     def showStyleWarnings: Boolean
   }
 
-  /** Runs a code block and returns its result, and prints its execution time to
-    * stdout. Execution time is only written if `show` is set to `true`.
+  /** Runs a code block and returns its result, and prints its execution time to stdout. Execution
+    * time is only written if `show` is set to `true`.
     *
     * e.g.
     *
@@ -101,20 +93,15 @@ object Riddl {
     log: Logger,
     options: Options
   ): Option[RootContainer] = {
-    val messages: Seq[ValidationMessage] = Validation
-      .validate[RootContainer](root)
+    val messages: Seq[ValidationMessage] = Validation.validate[RootContainer](root)
     if (messages.nonEmpty) {
       val (warns, errs) = messages.partition(_.kind.isWarning)
       val (severe, errors) = errs.partition(_.kind.isSevereError)
       val missing = warns.filter(_.kind.isMissing)
       val style = warns.filter(_.kind.isStyle)
       val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
-      if (options.showMissingWarnings) {
-        missing.map(_.format).foreach(log.warn(_))
-      }
-      if (options.showStyleWarnings) {
-        style.map(_.format).foreach(log.warn(_))
-      }
+      if (options.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
+      if (options.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
       if (options.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
       log.info(s"""Validation Warnings: ${warns.length}""")
       errors.map(_.format).foreach(log.error(_))
@@ -152,9 +139,8 @@ object Riddl {
 /** Private implementation details which allow for more testability */
 private[language] object RiddlImpl {
 
-  /** Runs a code block and returns its result, while recording its execution
-    * time, according to the passed clock. Execution time is written to `out`,
-    * if `show` is set to `true`.
+  /** Runs a code block and returns its result, while recording its execution time, according to the
+    * passed clock. Execution time is written to `out`, if `show` is set to `true`.
     *
     * e.g.
     *

@@ -56,11 +56,9 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
     logger: Riddl.Logger,
     config: CONF
   ): Seq[File] = {
-    val state: ParadoxTranslatorState =
-      ParadoxTranslatorState(config, Seq.empty[File])
+    val state: ParadoxTranslatorState = ParadoxTranslatorState(config, Seq.empty[File])
     val symtab: SymbolTable = SymbolTable(root)
-    val dispatcher =
-      ParadoxFolding(root, root, state, symtab, outputRoot, logger)
+    val dispatcher = ParadoxFolding(root, root, state, symtab, outputRoot, logger)
     dispatcher.foldLeft(root, root, state).generatedFiles
   }
 
@@ -74,8 +72,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
       extends Folding.Folding[ParadoxTranslatorState] {
 
     private val rootDir: Path = {
-      val out: Path = outputRoot
-        .getOrElse(new File("./target").getCanonicalFile.toPath)
+      val out: Path = outputRoot.getOrElse(new File("./target").getCanonicalFile.toPath)
       out.resolve("riddl-paradox")
     }
 
@@ -84,8 +81,8 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
     private def mkContainerPath(container: Container): Path = {
       val result = container match {
         case rc: RootContainer => rootDir.resolve(rc.id.value)
-        case c: Container => symTab.parentsOf(c).foldRight(rootDir) {
-            case (p_of_c, p) => p.resolve(p_of_c.id.value)
+        case c: Container => symTab.parentsOf(c).foldRight(rootDir) { case (p_of_c, p) =>
+            p.resolve(p_of_c.id.value)
           }
       }
       result
@@ -114,8 +111,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
 
     def mkDefRef(definition: Definition): String = {
       definition match {
-        case c: Container =>
-          s"""* [${c.identify}]("${c.id.value.toLowerCase}/index.md")"""
+        case c: Container  => s"""* [${c.identify}]("${c.id.value.toLowerCase}/index.md")"""
         case d: Definition => s"""* [${d.identify}]("${d.id.value}.md")"""
       }
     }
@@ -183,8 +179,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
             }
           }
           s"any { ${of.map(e => e.id.value + doMaybeRef(e.typeRef)).mkString(" ")} }"
-        case AST.Alternation(_, of, _) =>
-          s"one { ${of.map(mkTypeExpression).mkString(" or ")} }"
+        case AST.Alternation(_, of, _) => s"one { ${of.map(mkTypeExpression).mkString(" or ")} }"
         case AST.Aggregation(_, of, _) => s" {\n${of.map { f: Field =>
             s"  ${f.id.value}: ${mkTypeExpression(f.typeEx)} ${mkDescription(f.description)}"
           }.mkString(s",\n")}\n} "
@@ -215,8 +210,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
       container: Container,
       domain: Domain
     ): ParadoxTranslatorState = {
-      val indexFile = mkContainerPath(container).resolve(domain.id.value)
-        .resolve("index.md")
+      val indexFile = mkContainerPath(container).resolve(domain.id.value).resolve("index.md")
       writeFile(indexFile) {
         s"""
            |# Domain `${domain.id.value}`
@@ -242,8 +236,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
       container: Container,
       context: Context
     ): ParadoxTranslatorState = {
-      val indexFile = mkContainerPath(container).resolve(context.id.value)
-        .resolve("index.md")
+      val indexFile = mkContainerPath(container).resolve(context.id.value).resolve("index.md")
       writeFile(indexFile)(s"""
                               |# Context `${context.id.value}`
                               |${mkDescription(context.description)}
@@ -258,8 +251,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |${context.types.map(mkDefRef).mkString("\n")}
                               |${context.entities.map(mkDefRef).mkString("\n")}
                               |${context.adaptors.map(mkDefRef).mkString("\n")}
-                              |${context.interactions.map(mkDefRef)
-        .mkString("\n")}
+                              |${context.interactions.map(mkDefRef).mkString("\n")}
                               |
                               |@@@
                               |
@@ -271,8 +263,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
       container: Container,
       topic: Topic
     ): ParadoxTranslatorState = {
-      val indexFile = mkContainerPath(container).resolve(topic.id.value)
-        .resolve("index.md")
+      val indexFile = mkContainerPath(container).resolve(topic.id.value).resolve("index.md")
       writeFile(indexFile)(s"""
                               |# Topic `${topic.id.value}`
                               |${mkDescription(topic.description)}
@@ -296,11 +287,9 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
       container: Container,
       entity: Entity
     ): ParadoxTranslatorState = {
-      val indexFile = mkContainerPath(container).resolve(entity.id.value)
-        .resolve("index.md")
-      val states = entity.states.map(s =>
-        "* " + s.id.value + ": " + mkTypeExpression(s.typeEx).mkString("\n")
-      )
+      val indexFile = mkContainerPath(container).resolve(entity.id.value).resolve("index.md")
+      val states = entity.states
+        .map(s => "* " + s.id.value + ": " + mkTypeExpression(s.typeEx).mkString("\n"))
       writeFile(indexFile)(s"""
                               |# Entity `${entity.id.value}`
                               |${mkDescription(entity.description)}
@@ -329,8 +318,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
       container: Container,
       interaction: Interaction
     ): ParadoxTranslatorState = {
-      val indexFile = mkContainerPath(container).resolve(interaction.id.value)
-        .resolve("index.md")
+      val indexFile = mkContainerPath(container).resolve(interaction.id.value).resolve("index.md")
       writeFile(indexFile)(s"""
                               |# Interaction `${interaction.id.value}`
                               |${mkDescription(interaction.description)}
@@ -342,8 +330,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |
                               |@@@ index
                               |
-                              |${interaction.actions.map(mkDefRef)
-        .mkString("\n")}
+                              |${interaction.actions.map(mkDefRef).mkString("\n")}
                               |
                               |@@@
                               |
@@ -386,23 +373,15 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
         .resolve(action.id.value + ".md")
       action match {
         case ma: MessageAction => writeFile(indexFile)(s"""
-                                                          |# Action `${action.id
-            .value}`
-                                                          |* From: ${ma.sender
-            .id.format}
-                                                          |* To: ${ma.receiver
-            .id.format}
-                                                          |* Message: ${ma
-            .message}
+                                                          |# Action `${action.id.value}`
+                                                          |* From: ${ma.sender.id.format}
+                                                          |* To: ${ma.receiver.id.format}
+                                                          |* Message: ${ma.message}
                                                           |## Options
-                                                          |${ma.options
-            .mkString(", ")}
+                                                          |${ma.options.mkString(", ")}
                                                           |## Reactions
-                                                          |${ma.reactions
-            .map(x => "* " + x).mkString("\n")}
-                                                          |${mkDescription(
-            action.description
-          )}
+                                                          |${ma.reactions.map(x => "* " + x).mkString("\n")}
+                                                          |${mkDescription(action.description)}
                                                           |""".stripMargin)
       }
     }
@@ -420,8 +399,7 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |## Value Object
                               |${mkTypeExpression(command.typ)}
                               |## Events Generated
-                              |${command.events
-        .map(x => "* " + mkRef(x).mkString("\n"))}"
+                              |${command.events.map(x => "* " + mkRef(x).mkString("\n"))}"
                               |""".stripMargin)
     }
 
@@ -467,18 +445,15 @@ class ParadoxTranslator extends Translator[ParadoxConfig] {
                               |${mkDescription(example.description)}
                               |## Givens
                               |
-                              |${example.givens
-        .map(g => "* " + g.fact.mkString("\n  "))}
+                              |${example.givens.map(g => "* " + g.fact.mkString("\n  "))}
                               |
                               |## Whens
                               |
-                              |${example.whens
-        .map(g => "* " + g.situation.mkString("\n  "))}
+                              |${example.whens.map(g => "* " + g.situation.mkString("\n  "))}
                               |
                               |## Thens
                               |
-                              |${example.thens
-        .map(g => "* " + g.result.mkString("\n  "))}
+                              |${example.thens.map(g => "* " + g.result.mkString("\n  "))}
                               |""".stripMargin)
 
     }

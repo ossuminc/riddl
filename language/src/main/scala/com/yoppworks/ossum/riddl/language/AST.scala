@@ -5,13 +5,11 @@ import scala.languageFeature.implicitConversions
 
 // scalastyle:off number.of.methods
 
-/** Abstract Syntax Tree This object defines the model for processing IDDL and
-  * producing a raw AST from it. This raw AST has no referential integrity, it
-  * just results from applying the parsing rules to the input. The RawAST models
-  * produced from parsing are syntactically correct but have no semantic
-  * validation. The Transformation passes convert RawAST model to AST model
-  * which is referentially and semantically consistent (or the user gets an
-  * error).
+/** Abstract Syntax Tree This object defines the model for processing IDDL and producing a raw AST
+  * from it. This raw AST has no referential integrity, it just results from applying the parsing
+  * rules to the input. The RawAST models produced from parsing are syntactically correct but have
+  * no semantic validation. The Transformation passes convert RawAST model to AST model which is
+  * referentially and semantically consistent (or the user gets an error).
   */
 object AST {
 
@@ -31,9 +29,7 @@ object AST {
   object Location {
     val empty: Location = Location()
 
-    implicit def apply(line: Int): Location = {
-      Location(line, 0, defaultSourceName)
-    }
+    implicit def apply(line: Int): Location = { Location(line, 0, defaultSourceName) }
 
     implicit def apply(
       pair: (Int, Int)
@@ -54,12 +50,9 @@ object AST {
   case class RiddlOption(loc: Location, name: String) extends RiddlValue
   case class LiteralString(loc: Location, s: String) extends RiddlValue
 
-  case class PathIdentifier(loc: Location, value: Seq[String])
-      extends RiddlValue {
+  case class PathIdentifier(loc: Location, value: Seq[String]) extends RiddlValue {
 
-    def format: String = {
-      if (value.isEmpty) "<empty>" else value.reverse.mkString(".")
-    }
+    def format: String = { if (value.isEmpty) "<empty>" else value.reverse.mkString(".") }
   }
 
   case class Description(
@@ -67,8 +60,7 @@ object AST {
     brief: Seq[LiteralString] = Seq.empty[LiteralString],
     details: Seq[LiteralString] = Seq.empty[LiteralString],
     nameOfItems: Option[LiteralString] = None,
-    items: Map[Identifier, Seq[LiteralString]] = Map
-      .empty[Identifier, Seq[LiteralString]],
+    items: Map[Identifier, Seq[LiteralString]] = Map.empty[Identifier, Seq[LiteralString]],
     citations: Seq[LiteralString] = Seq.empty[LiteralString])
 
   sealed trait Reference extends RiddlValue {
@@ -108,35 +100,29 @@ object AST {
 
   sealed trait TypeExpression extends DefinitionValue
 
-  case class TypeRef(loc: Location, id: PathIdentifier)
-      extends Reference with TypeExpression {}
+  case class TypeRef(loc: Location, id: PathIdentifier) extends Reference with TypeExpression {}
 
-  case class Optional(loc: Location, texp: TypeExpression)
-      extends TypeExpression
+  case class Optional(loc: Location, texp: TypeExpression) extends TypeExpression
 
-  case class ZeroOrMore(loc: Location, texp: TypeExpression)
-      extends TypeExpression
+  case class ZeroOrMore(loc: Location, texp: TypeExpression) extends TypeExpression
 
-  case class OneOrMore(loc: Location, texp: TypeExpression)
-      extends TypeExpression
+  case class OneOrMore(loc: Location, texp: TypeExpression) extends TypeExpression
 
-  /** Represents one variant among (one or) many variants that comprise an
-    * [[Enumeration]]
+  /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
     *
     * @param id
     *   the identifier (name) of the Enumerator
     * @param enumVal
     *   the optional int value
     * @param typeRef
-    *   enumerators can optionally refer to an aggregation type, such as
-    *   `Keyboard` in:
+    *   enumerators can optionally refer to an aggregation type, such as `Keyboard` in:
     * {{{
     *                 type KeyboardType is { locale: Locale }
     *                 type Device is any of { Keyboard is type KeyboardType Mouse Monitor}
     * }}}
     * @param description
-    *   the description of the enumerator. Each Enumerator in an enumeration may
-    *   define independent descriptions
+    *   the description of the enumerator. Each Enumerator in an enumeration may define independent
+    *   descriptions
     */
   case class Enumerator(
     loc: Location,
@@ -228,8 +214,7 @@ object AST {
   case class TimeStamp(loc: Location) extends PredefinedType
   case class Duration(loc: Location) extends PredefinedType
 
-  case class URL(loc: Location, scheme: Option[LiteralString] = None)
-      extends PredefinedType
+  case class URL(loc: Location, scheme: Option[LiteralString] = None) extends PredefinedType
   case class LatLong(loc: Location) extends PredefinedType
   case class Nothing(loc: Location) extends PredefinedType
 
@@ -240,21 +225,16 @@ object AST {
     id: Identifier,
     typ: TypeExpression,
     description: Option[Description] = None)
-      extends TypeDefinition
-      with ContextDefinition
-      with EntityDefinition
-      with DomainDefinition
+      extends TypeDefinition with ContextDefinition with EntityDefinition with DomainDefinition
 
 //////////////////////////////////////////////////////////// EXPRESSIONS
   sealed trait Expression extends RiddlValue
 
   case class UnknownExpression(loc: Location) extends Expression
 
-  case class FieldExpression(loc: Location, path: PathIdentifier)
-      extends Expression
+  case class FieldExpression(loc: Location, path: PathIdentifier) extends Expression
 
-  case class GroupExpression(loc: Location, expression: Expression)
-      extends Expression
+  case class GroupExpression(loc: Location, expression: Expression) extends Expression
 
   case class FunctionCallExpression(
     loc: Location,
@@ -288,8 +268,7 @@ object AST {
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[Definition] =
-      (commands.iterator ++ events ++ queries ++ results).toList
+    def contents: Seq[Definition] = (commands.iterator ++ events ++ queries ++ results).toList
   }
 
   sealed trait MessageReference extends Reference
@@ -359,8 +338,7 @@ object AST {
 
   sealed abstract class EntityOption(val name: String) extends EntityValue
 
-  case class EntityEventSourced(loc: Location)
-      extends EntityOption("event sourced")
+  case class EntityEventSourced(loc: Location) extends EntityOption("event sourced")
   case class EntityValueOption(loc: Location) extends EntityOption("value")
   case class EntityAggregate(loc: Location) extends EntityOption("aggregate")
   case class EntityPersistent(loc: Location) extends EntityOption("persistent")
@@ -382,17 +360,13 @@ object AST {
   sealed trait FeatureValue extends RiddlValue
   case class Given(loc: Location, fact: Seq[LiteralString]) extends FeatureValue
 
-  case class When(loc: Location, situation: Seq[LiteralString])
-      extends FeatureValue
+  case class When(loc: Location, situation: Seq[LiteralString]) extends FeatureValue
 
-  case class Then(loc: Location, result: Seq[LiteralString])
-      extends FeatureValue
+  case class Then(loc: Location, result: Seq[LiteralString]) extends FeatureValue
 
-  case class Else(loc: Location, otherwise: Seq[LiteralString])
-      extends FeatureValue
+  case class Else(loc: Location, otherwise: Seq[LiteralString]) extends FeatureValue
 
-  case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given])
-      extends FeatureValue
+  case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given]) extends FeatureValue
 
   case class Example(
     loc: Location,
@@ -511,8 +485,7 @@ object AST {
     right: Expression)
       extends Condition
 
-  case class ReferenceCondition(loc: Location, ref: PathIdentifier)
-      extends Condition
+  case class ReferenceCondition(loc: Location, ref: PathIdentifier) extends Condition
 
   case class Miscellaneous(
     loc: Location,
@@ -523,18 +496,15 @@ object AST {
     def cond1: Condition
   }
 
-  case class NotCondition(loc: Location, cond1: Condition)
-      extends UnaryCondition
+  case class NotCondition(loc: Location, cond1: Condition) extends UnaryCondition
 
   abstract class BinaryCondition extends UnaryCondition {
     def cond2: Condition
   }
 
-  case class AndCondition(loc: Location, cond1: Condition, cond2: Condition)
-      extends BinaryCondition
+  case class AndCondition(loc: Location, cond1: Condition, cond2: Condition) extends BinaryCondition
 
-  case class OrCondition(loc: Location, cond1: Condition, cond2: Condition)
-      extends BinaryCondition
+  case class OrCondition(loc: Location, cond1: Condition, cond2: Condition) extends BinaryCondition
 
   case class EqualityCondition(
     loc: Location,
@@ -626,8 +596,7 @@ object AST {
       extends Container with ContextDefinition {
 
     def contents: Seq[Definition] =
-      (states.iterator ++ types ++ handlers ++ features ++ functions ++
-        invariants).toList
+      (states.iterator ++ types ++ handlers ++ features ++ functions ++ invariants).toList
   }
 
   trait TranslationRule extends Definition {
@@ -644,10 +613,10 @@ object AST {
     description: Option[Description] = None)
       extends TranslationRule
 
-  /** Definition of an Adaptor Adaptors are defined in Contexts to convert
-    * messaging from one Context to another. Adaptors translate incoming events
-    * from other Contexts into commands or events that its owning context can
-    * understand. There should be one Adaptor for each external Context
+  /** Definition of an Adaptor Adaptors are defined in Contexts to convert messaging from one
+    * Context to another. Adaptors translate incoming events from other Contexts into commands or
+    * events that its owning context can understand. There should be one Adaptor for each external
+    * Context
     *
     * @param loc
     *   Location in the parsing input
@@ -690,13 +659,12 @@ object AST {
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[Definition] = types ++ entities ++ adaptors ++
-      interactions
+    def contents: Seq[Definition] = types ++ entities ++ adaptors ++ interactions
   }
 
-  /** Definition of an Interaction Interactions define an exemplary interaction
-    * between the system being designed and other actors. The basic ideas of an
-    * Interaction are much like UML Sequence Diagram.
+  /** Definition of an Interaction Interactions define an exemplary interaction between the system
+    * being designed and other actors. The basic ideas of an Interaction are much like UML Sequence
+    * Diagram.
     *
     * @param loc
     *   Where in the input the Scenario is defined
@@ -722,8 +690,8 @@ object AST {
     def reactions: Seq[Reaction]
   }
 
-  /** Used to capture reactions to actions. Actions include reactions in their
-    * definition to model the precipitating reactions to the action.
+  /** Used to capture reactions to actions. Actions include reactions in their definition to model
+    * the precipitating reactions to the action.
     */
   case class Reaction(
     loc: Location,
@@ -746,8 +714,7 @@ object AST {
   case class AsynchOption(loc: Location) extends MessageOption
   case class ReplyOption(loc: Location) extends MessageOption
 
-  /** An Interaction based on entity messaging between two entities in the
-    * system.
+  /** An Interaction based on entity messaging between two entities in the system.
     * @param options
     *   Options for the message
     * @param loc
@@ -788,7 +755,7 @@ object AST {
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[DomainDefinition] =
-      (types.iterator ++ topics ++ contexts ++ interactions).toList
+    def contents: Seq[DomainDefinition] = (types.iterator ++ topics ++ contexts ++ interactions)
+      .toList
   }
 }

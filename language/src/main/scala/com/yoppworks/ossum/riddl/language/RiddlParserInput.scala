@@ -85,8 +85,7 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   def this(path: Path) = this(path.toFile)
 }
 
-case class SourceParserInput(source: Source, origin: String)
-    extends RiddlParserInput {
+case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
 
   val data: String =
     try { source.mkString }
@@ -100,8 +99,6 @@ object RiddlParserInput {
     data: String
   ): RiddlParserInput = { StringParserInput(data) }
 
-  implicit def apply(source: Source): RiddlParserInput = {
-    SourceParserInput(source, source.descr)
-  }
+  implicit def apply(source: Source): RiddlParserInput = { SourceParserInput(source, source.descr) }
   implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
 }

@@ -34,11 +34,10 @@ class RiddlTest extends ParsingTestBase {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl
-        .timer(clock, printStream, "MyStage", show = false) {
-          clock.updateInstant(_.plusSeconds(2))
-          123
-        }
+      val result = RiddlImpl.timer(clock, printStream, "MyStage", show = false) {
+        clock.updateInstant(_.plusSeconds(2))
+        123
+      }
 
       result mustBe 123
 
@@ -69,13 +68,9 @@ class RiddlTest extends ParsingTestBase {
     }
     "record errors" in {
       val logger = new InMemoryLogger
-      val riddlParserInput: RiddlParserInput =
-        RiddlParserInput(UUID.randomUUID().toString)
-      val result = Riddl.parse(
-        input = riddlParserInput,
-        logger = logger,
-        options = RiddlTest.DefaultOptions
-      )
+      val riddlParserInput: RiddlParserInput = RiddlParserInput(UUID.randomUUID().toString)
+      val result = Riddl
+        .parse(input = riddlParserInput, logger = logger, options = RiddlTest.DefaultOptions)
       result mustBe None
       assert(
         logger.lines().exists(_.level == Lvl.Error),
@@ -84,9 +79,8 @@ class RiddlTest extends ParsingTestBase {
     }
   }
 
-  /** Executes a function while capturing system's stderr, return the result of
-    * the function and the captured output. Switches stderr back once code block
-    * finishes or throws exception e.g.
+  /** Executes a function while capturing system's stderr, return the result of the function and the
+    * captured output. Switches stderr back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.err.println("hi there!")
@@ -107,9 +101,8 @@ class RiddlTest extends ParsingTestBase {
     } finally { System.setErr(out) }
   }
 
-  /** Executes a function while capturing system's stdout, return the result of
-    * the function and the captured output. Switches stdout back once code block
-    * finishes or throws exception e.g.
+  /** Executes a function while capturing system's stdout, return the result of the function and the
+    * captured output. Switches stdout back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.out.println("hi there!")
@@ -135,8 +128,7 @@ class RiddlTest extends ParsingTestBase {
       capturingStdErr(() => SysLogger.error("asdf"))._2 mustBe "[error] asdf\n"
     }
     "print severe message" in {
-      capturingStdErr(() => SysLogger.severe("asdf"))._2 mustBe
-        "[severe] asdf\n"
+      capturingStdErr(() => SysLogger.severe("asdf"))._2 mustBe "[severe] asdf\n"
     }
     "print warn message" in {
       capturingStdErr(() => SysLogger.warn("asdf"))._2 mustBe "[warning] asdf\n"
@@ -183,17 +175,12 @@ class RiddlTest extends ParsingTestBase {
     }
     "parse and validate a simple domain from input" in {
       val content: String = {
-        val source = Source.fromFile(new File(
-          "language/src/test/input/domains/simpleDomain.riddl"
-        ))
+        val source = Source.fromFile(new File("language/src/test/input/domains/simpleDomain.riddl"))
         try source.mkString
         finally source.close()
       }
-      val result = Riddl.parseAndValidate(
-        RiddlParserInput(content),
-        new InMemoryLogger,
-        RiddlTest.DefaultOptions
-      )
+      val result = Riddl
+        .parseAndValidate(RiddlParserInput(content), new InMemoryLogger, RiddlTest.DefaultOptions)
       result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
     "parse and validate nonsense input as invalid" in {

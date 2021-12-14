@@ -22,9 +22,8 @@ case class HugoState(
       case c: AST.Container =>
         require(c.contents.contains(definition), "illegal scoping")
         contextStack.push(definition)
-      case d: AST.Definition => throw new IllegalArgumentException(
-          s"Definition ${d.identify} is not a container"
-        )
+      case d: AST.Definition =>
+        throw new IllegalArgumentException(s"Definition ${d.identify} is not a container")
     }
   }
 

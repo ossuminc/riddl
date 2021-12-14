@@ -38,9 +38,8 @@ class InteractionValidatorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidate[Context](input) { (content, msgs) =>
-        msgs.filter(m =>
-          m.kind.isError && m.message.startsWith("Interaction 'dosomething'")
-        ) mustBe empty
+        msgs.filter(m => m.kind.isError && m.message.startsWith("Interaction 'dosomething'")) mustBe
+          empty
         content.interactions.length mustBe 1
         val interaction = content.interactions.head
 
@@ -49,25 +48,16 @@ class InteractionValidatorTest extends ValidatingTest {
         assert(interaction.actions.exists {
           case m: MessageAction => m.id.value == "perform a command" &&
               (m.sender match {
-                case EntityRef(
-                      _,
-                      PathIdentifier(_, collection.Seq("Unicorn"))
-                    ) => true
-                case _ => false
+                case EntityRef(_, PathIdentifier(_, collection.Seq("Unicorn"))) => true
+                case _                                                          => false
               }) &&
               (m.receiver match {
-                case EntityRef(
-                      _,
-                      PathIdentifier(_, collection.Seq("myLittlePony"))
-                    ) => true
-                case _ => false
+                case EntityRef(_, PathIdentifier(_, collection.Seq("myLittlePony"))) => true
+                case _                                                               => false
               }) &&
               (m.message match {
-                case CommandRef(
-                      _,
-                      PathIdentifier(_, collection.Seq("DoAThing"))
-                    ) => true
-                case _ => false
+                case CommandRef(_, PathIdentifier(_, collection.Seq("DoAThing"))) => true
+                case _                                                            => false
               }) && m.reactions.isEmpty && m.description.isEmpty
           case _ => false
         })

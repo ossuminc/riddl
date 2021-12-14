@@ -30,15 +30,9 @@ class SymbolTableTest extends ParsingTest {
     "capture all expected symbol references and parents" in {
       st.lookup[Domain](Seq("Everything")).headOption mustBe defined
 
-      assertRefWithParent[Type, Domain](
-        st.lookup[Type](Seq("SomeType")).headOption,
-        "Everything"
-      )
+      assertRefWithParent[Type, Domain](st.lookup[Type](Seq("SomeType")).headOption, "Everything")
 
-      assertRefWithParent[Topic, Domain](
-        st.lookup[Topic](Seq("AChannel")).headOption,
-        "Everything"
-      )
+      assertRefWithParent[Topic, Domain](st.lookup[Topic](Seq("AChannel")).headOption, "Everything")
 
       assertRefWithParent[Command, Topic](
         st.lookup[Command](Seq("DoThisThing")).headOption,
@@ -55,30 +49,18 @@ class SymbolTableTest extends ParsingTest {
         "AChannel"
       )
 
-      assertRefWithParent[Context, Domain](
-        st.lookup[Context](Seq("full")).headOption,
-        "Everything"
-      )
+      assertRefWithParent[Context, Domain](st.lookup[Context](Seq("full")).headOption, "Everything")
 
-      assertRefWithParent[Type, Context](
-        st.lookup[Type](Seq("boo")).headOption,
-        "full"
-      )
+      assertRefWithParent[Type, Context](st.lookup[Type](Seq("boo")).headOption, "full")
 
-      assertRefWithParent[Entity, Context](
-        st.lookup[Entity](Seq("Something")).headOption,
-        "full"
-      )
+      assertRefWithParent[Entity, Context](st.lookup[Entity](Seq("Something")).headOption, "full")
 
       assertRefWithParent[Function, Entity](
         st.lookup[Function](Seq("whenUnderTheInfluence")).headOption,
         "Something"
       )
 
-      assertRefWithParent[Handler, Entity](
-        st.lookup[Handler](Seq("foo")).headOption,
-        "Something"
-      )
+      assertRefWithParent[Handler, Entity](st.lookup[Handler](Seq("foo")).headOption, "Something")
 
       assertRefWithParent[Type, Entity](
         st.lookup[Type](Seq("somethingDate")).headOption,
@@ -94,10 +76,7 @@ class SymbolTableTest extends ParsingTest {
     }
 
     "capture expected state reference with appropriate parent" in {
-      assertRefWithParent[State, Entity](
-        st.lookup[State](Seq("someState")).headOption,
-        "Something"
-      )
+      assertRefWithParent[State, Entity](st.lookup[State](Seq("someState")).headOption, "Something")
     }
 
     "capture expected state field references with appropriate parent" in {

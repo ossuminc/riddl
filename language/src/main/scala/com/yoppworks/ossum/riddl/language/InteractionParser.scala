@@ -23,20 +23,16 @@ trait InteractionParser extends CommonParser {
       case (loc, Options.sync)  => SynchOption(loc)
       case (loc, Options.async) => AsynchOption(loc)
       case (loc, Options.reply) => ReplyOption(loc)
-      case _ => throw new RuntimeException("invalid message option")
+      case _                    => throw new RuntimeException("invalid message option")
     }
   }
 
   def reaction[_: P]: P[Reaction] = {
-    P(
-      location ~ identifier ~ Keywords.call ~ entityRef ~/ actionRef ~
-        docBlock ~ description
-    ).map(x => (Reaction.apply _).tupled(x))
+    P(location ~ identifier ~ Keywords.call ~ entityRef ~/ actionRef ~ docBlock ~ description)
+      .map(x => (Reaction.apply _).tupled(x))
   }
 
-  def reactions[_: P]: P[Seq[Reaction]] = {
-    P(open ~ reaction.rep(0, Punctuation.comma) ~ close)
-  }
+  def reactions[_: P]: P[Seq[Reaction]] = { P(open ~ reaction.rep(0, Punctuation.comma) ~ close) }
 
   def causing[_: P]: P[Seq[Reaction]] = {
     P(Keywords.causing ~ reactions).?.map(_.getOrElse(Seq.empty[Reaction]))
@@ -44,9 +40,8 @@ trait InteractionParser extends CommonParser {
 
   def messageActionDef[_: P]: P[MessageAction] = {
     P(
-      location ~ "message" ~/ identifier ~ messageOptions ~ "from" ~/
-        entityRef ~ "to" ~/ entityRef ~ "as" ~ messageRef ~ causing ~
-        description
+      location ~ "message" ~/ identifier ~ messageOptions ~ "from" ~/ entityRef ~ "to" ~/
+        entityRef ~ "as" ~ messageRef ~ causing ~ description
     ).map { tpl => (MessageAction.apply _).tupled(tpl) }
   }
 
@@ -55,8 +50,7 @@ trait InteractionParser extends CommonParser {
   def interaction[_: P]: P[Interaction] = {
     P(
       location ~ Keywords.interaction ~/ identifier ~ is ~ open ~
-        (undefined.map(_ => Seq.empty[ActionDefinition]) | interactions) ~
-        close ~ description
+        (undefined.map(_ => Seq.empty[ActionDefinition]) | interactions) ~ close ~ description
     ).map { case (loc, id, interactions, description) =>
       Interaction(loc, id, interactions, description)
     }

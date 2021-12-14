@@ -16,9 +16,7 @@ class TypeValidatorTest extends ValidatingTest {
                                  |""".stripMargin) {
         case (_: Domain, msgs: Seq[ValidationMessage]) =>
           if (msgs.isEmpty) fail("Type 'bar' should have generated warning")
-          else if (
-            msgs.map(_.message).exists(_.contains("should start with"))
-          ) { succeed }
+          else if (msgs.map(_.message).exists(_.contains("should start with"))) { succeed }
           else { fail("No such message") }
       }
     }
@@ -37,10 +35,7 @@ class TypeValidatorTest extends ValidatingTest {
         case (_: Domain, msgsAndWarnings: Seq[ValidationMessage]) =>
           val errors = msgsAndWarnings.filter(_.kind == Error)
           assert(errors.size == 9, "Should have 9 errors")
-          assert(
-            errors.forall(_.message.contains("not defined")),
-            "Wrong message"
-          )
+          assert(errors.forall(_.message.contains("not defined")), "Wrong message")
       }
     }
 
@@ -49,12 +44,8 @@ class TypeValidatorTest extends ValidatingTest {
                                  |domain foo is {
                                  |type pat is Pattern("[")
                                  |}
-                                 |""".stripMargin) {
-        case (_: Domain, msgs: ValidationMessages) => assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "Unclosed character class"
-          )
+                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
+        assertValidationMessage(msgs, Validation.Error, "Unclosed character class")
       }
     }
 
@@ -64,12 +55,12 @@ class TypeValidatorTest extends ValidatingTest {
                                  |context TypeTest is { ??? }
                                  |type Order is Id(TypeTest)
                                  |}
-                                 |""".stripMargin) {
-        case (_: Domain, msgs: ValidationMessages) => assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'TypeTest' is not defined but should be a Entity"
-          )
+                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'TypeTest' is not defined but should be a Entity"
+        )
       }
     }
   }

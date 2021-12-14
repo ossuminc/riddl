@@ -1,7 +1,10 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.io.File
-
+import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.DomainDefinition
+import com.yoppworks.ossum.riddl.language.AST.DomainRef
+import com.yoppworks.ossum.riddl.language.AST.Identifier
 import com.yoppworks.ossum.riddl.language.AST.LiteralString
 import com.yoppworks.ossum.riddl.language.AST.Location
 import fastparse.Parsed.Failure
@@ -10,8 +13,7 @@ import fastparse._
 
 import scala.collection.mutable
 
-case class ParserError(input: RiddlParserInput, loc: Location, msg: String)
-    extends Throwable {
+case class ParserError(input: RiddlParserInput, loc: Location, msg: String) extends Throwable {
 
   def format: String = {
     val context = input.annotateErrorLine(loc)
@@ -26,19 +28,32 @@ trait ParsingContext {
 
   protected val stack: InputStack = InputStack()
 
-  protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer
-    .empty[ParserError]
+  protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer.empty[ParserError]
 
   def current: RiddlParserInput = {
     stack.current match {
       case Some(rpi) => rpi
-      case None => throw new RuntimeException("Parse Input Stack Underflow")
+      case None      => throw new RuntimeException("Parse Input Stack Underflow")
     }
   }
 
   def location[_: P]: P[Location] = {
     val cur = current
     P(Index).map(idx => cur.location(idx, cur.origin))
+  }
+
+  def doImport(loc: Location, domainRef: DomainRef, fileName: LiteralString): Domain = {
+    val name = fileName.s + ".bast"
+    val file = new File(current.root, name)
+    if (!file.exists()) {
+      error(fileName.loc, s"File '$name` does not exist, can't be imported.")
+      Domain(loc, Identifier(domainRef.loc, domainRef.id.value.last)) // FIXME: id is wrong?
+    } else { importDomain(file) }
+  }
+
+  def importDomain(file: File): Domain = {
+    // TODO: implement importDomain
+    ???
   }
 
   def doInclude[T](str: LiteralString, empty: T)(rule: P[_] => P[T]): T = {
@@ -74,9 +89,7 @@ trait ParsingContext {
                      |${trace.longAggregateMsg}""".stripMargin
         error(current.location(index), msg)
         Left(errors.toSeq)
-      case _ => throw new IllegalStateException(
-          "Parsed[T] should have matched Success or Failure"
-        )
+      case _ => throw new IllegalStateException("Parsed[T] should have matched Success or Failure")
 
     }
   }

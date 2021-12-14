@@ -26,8 +26,7 @@ object RIDDL {
           System.exit(1)
       }
     } catch {
-      case xcptn: Throwable => SysLogger
-          .error(xcptn.getClass.getName + ": " + xcptn.getMessage)
+      case xcptn: Throwable => SysLogger.error(xcptn.getClass.getName + ": " + xcptn.getMessage)
     }
   }
 
@@ -63,23 +62,12 @@ object RIDDL {
               case Kinds.Prettify =>
                 val outputRoot = options.outputDir.map(_.toPath)
                 val trans = new FormatTranslator
-                trans.translate(
-                  root,
-                  outputRoot,
-                  Riddl.SysLogger,
-                  options.configFile.map(_.toPath)
-                )
+                trans.translate(root, outputRoot, Riddl.SysLogger, options.configFile.map(_.toPath))
               case Kinds.Paradox =>
                 val outputRoot = options.outputDir.map(_.toPath)
                 val trans = new ParadoxTranslator
-                trans.translate(
-                  root,
-                  outputRoot,
-                  Riddl.SysLogger,
-                  options.configFile.map(_.toPath)
-                )
-              case x: Kinds.Value =>
-                println(s"Translation $x not yet implemented")
+                trans.translate(root, outputRoot, Riddl.SysLogger, options.configFile.map(_.toPath))
+              case x: Kinds.Value => println(s"Translation $x not yet implemented")
             }
           }
       }

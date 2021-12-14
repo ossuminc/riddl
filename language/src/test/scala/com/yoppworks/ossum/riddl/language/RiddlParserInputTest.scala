@@ -26,9 +26,7 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
             |""".stripMargin
         )
 
-        for (input <- inputs) {
-          RiddlParserInput(input).length mustBe input.length
-        }
+        for (input <- inputs) { RiddlParserInput(input).length mustBe input.length }
 
       }
     }

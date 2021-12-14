@@ -8,20 +8,19 @@ import ScalaWhitespace._
 import scala.collection.immutable.ListMap
 
 /** Parser for an entity handler definition */
-trait HandlerParser
-    extends CommonParser with ConditionParser with ExpressionParser {
+trait HandlerParser extends CommonParser with ConditionParser with ExpressionParser {
 
   def setStmt[_: P](): P[SetStatement] = {
     P(
-      Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
-        expression ~ description
+      Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~ expression ~
+        description
     ).map { t => (SetStatement.apply _).tupled(t) }
   }
 
   def appendStmt[_: P]: P[AppendStatement] = {
     P(
-      Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~
-        identifier ~ description
+      Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~ identifier ~
+        description
     ).map { t => (AppendStatement.apply _).tupled(t) }
   }
 
@@ -43,16 +42,13 @@ trait HandlerParser
   }
 
   def sendStmt[_: P]: P[SendStatement] = {
-    P(
-      Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~
-        entityRef ~ description
-    ).map { t => (SendStatement.apply _).tupled(t) }
+    P(Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~ entityRef ~ description)
+      .map { t => (SendStatement.apply _).tupled(t) }
   }
 
   def removeStmt[_: P](): P[RemoveStatement] = {
     P(
-      Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~
-        pathIdentifier ~ description
+      Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~ pathIdentifier ~ description
     ).map { t => (RemoveStatement.apply _).tupled(t) }
   }
 
@@ -64,22 +60,17 @@ trait HandlerParser
 
   def whenStmt[_: P]: P[WhenStatement] = {
     P(
-      location ~ Keywords.when ~/ condition ~ Keywords.then_.? ~
-        Punctuation.curlyOpen ~/ onClauseAction.rep ~ Punctuation.curlyClose ~
-        description
+      location ~ Keywords.when ~/ condition ~ Keywords.then_.? ~ Punctuation.curlyOpen ~/
+        onClauseAction.rep ~ Punctuation.curlyClose ~ description
     ).map(t => (WhenStatement.apply _).tupled(t))
   }
 
   def onClauseAction[_: P]: P[OnClauseStatement] = {
-    P(
-      setStmt | appendStmt | removeStmt | sendStmt | publishStmt | whenStmt |
-        executeStmt
-    )
+    P(setStmt | appendStmt | removeStmt | sendStmt | publishStmt | whenStmt | executeStmt)
   }
 
   def onClause[_: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~ close ~
-      description
+    Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~ close ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def handler[_: P]: P[Handler] = {

@@ -73,18 +73,17 @@ class RegressionTests extends ParsingTest {
     }
 
     "handle descriptions in fields of messages" in {
-      val input =
-        """topic TrackServices is {
-          |  events {
-          |    PreInducted is {
-          |      expectedDeliveryTimeStamp: TimeStamp described by {
-          |        |EXPECTEDDELIVERYDATE		Character Field Length = 10	CHAR10
-          |        |EXPECTEDDELIVERYTIME		Character field, 8 characters long	CHAR8
-          |      }
-          |    }
-          |  }
-          |}
-          |""".stripMargin
+      val input = """topic TrackServices is {
+                    |  events {
+                    |    PreInducted is {
+                    |      expectedDeliveryTimeStamp: TimeStamp described by {
+                    |        |EXPECTEDDELIVERYDATE		Character Field Length = 10	CHAR10
+                    |        |EXPECTEDDELIVERYTIME		Character field, 8 characters long	CHAR8
+                    |      }
+                    |    }
+                    |  }
+                    |}
+                    |""".stripMargin
       parseDefinition[Topic](RiddlParserInput(input)) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -93,9 +92,8 @@ class RegressionTests extends ParsingTest {
           info(topic.toString)
           val evt = topic.events.head
           evt.typ match {
-            case a: Aggregation => a.fields.head.description.nonEmpty mustBe
-                true
-            case _ => succeed
+            case a: Aggregation => a.fields.head.description.nonEmpty mustBe true
+            case _              => succeed
           }
 
       }

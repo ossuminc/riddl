@@ -110,9 +110,7 @@ case class HugoFile(
     }
   }
 
-  def visitTypeRef(typeRef: AST.TypeRef): HugoFile = {
-    this.add(s" is type ${typeRef.id.value}")
-  }
+  def visitTypeRef(typeRef: AST.TypeRef): HugoFile = { this.add(s" is type ${typeRef.id.value}") }
 
   def emitEnumeration(enumeration: AST.Enumeration): HugoFile = {
     this.add(s"any of {\n")
@@ -124,9 +122,8 @@ case class HugoFile(
 
   def emitAlternation(alternation: AST.Alternation): HugoFile = {
     val s = this.add(s"one of {\n").visitTypeExpr(alternation.of.head)
-    alternation.of.tail.foldLeft(s) { (s, te) =>
-      s.add(" or ").visitTypeExpr(te)
-    }.emitDescription(alternation.description)
+    alternation.of.tail.foldLeft(s) { (s, te) => s.add(" or ").visitTypeExpr(te) }
+      .emitDescription(alternation.description)
   }
 
   def emitAggregation(aggregation: AST.Aggregation): HugoFile = {
@@ -134,8 +131,7 @@ case class HugoFile(
     if (of.isEmpty) { this.add("{}") }
     else if (of.size == 1) {
       val f: AST.Field = of.head
-      this.add(s"{ ${f.id.value}: ").visitTypeExpr(f.typeEx).add(" ")
-        .emitDescription(f.description)
+      this.add(s"{ ${f.id.value}: ").visitTypeExpr(f.typeEx).add(" ").emitDescription(f.description)
     } else {
       this.add("{\n")
       val result = of.foldLeft(this) { case (s, f) =>
@@ -148,15 +144,14 @@ case class HugoFile(
   }
 
   def emitMapping(mapping: AST.Mapping): HugoFile = {
-    this.add(s"mapping from ").visitTypeExpr(mapping.from).add(" to ")
-      .visitTypeExpr(mapping.to).emitDescription(mapping.description)
+    this.add(s"mapping from ").visitTypeExpr(mapping.from).add(" to ").visitTypeExpr(mapping.to)
+      .emitDescription(mapping.description)
   }
 
   def emitPattern(pattern: AST.Pattern): HugoFile = {
     val line =
-      if (pattern.pattern.size == 1) {
-        "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
-      } else {
+      if (pattern.pattern.size == 1) { "Pattern(\"" + pattern.pattern.head.s + "\"" + s") " }
+      else {
         s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
         s"\n) "
       }
@@ -177,22 +172,19 @@ case class HugoFile(
       case AST.LatLong(_)     => this.add("LatLong")
       case AST.Nothing(_)     => this.add("Nothing")
       case AST.TypeRef(_, id) => this.add(id.value.mkString("."))
-      case AST.URL(_, scheme) => this
-          .add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
+      case AST.URL(_, scheme) => this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
       case enumeration: AST.Enumeration => emitEnumeration(enumeration)
       case alternation: AST.Alternation => emitAlternation(alternation)
       case aggregation: AST.Aggregation => emitAggregation(aggregation)
       case mapping: AST.Mapping         => emitMapping(mapping)
-      case AST.RangeType(_, min, max, desc) => this
-          .add(s"range from $min to $max ").emitDescription(desc)
-      case AST.ReferenceType(_, id, desc) => this.add(s"reference to $id")
+      case AST.RangeType(_, min, max, desc) => this.add(s"range from $min to $max ")
           .emitDescription(desc)
-      case pattern: AST.Pattern => emitPattern(pattern)
-      case AST.UniqueId(_, id, desc) => this.add(s"Id(${id.value}) ")
-          .emitDescription(desc)
-      case AST.Optional(_, aType)   => this.visitTypeExpr(aType).add("?")
-      case AST.ZeroOrMore(_, aType) => this.visitTypeExpr(aType).add("*")
-      case AST.OneOrMore(_, aType)  => this.visitTypeExpr(aType).add("+")
+      case AST.ReferenceType(_, id, desc) => this.add(s"reference to $id").emitDescription(desc)
+      case pattern: AST.Pattern           => emitPattern(pattern)
+      case AST.UniqueId(_, id, desc)      => this.add(s"Id(${id.value}) ").emitDescription(desc)
+      case AST.Optional(_, aType)         => this.visitTypeExpr(aType).add("?")
+      case AST.ZeroOrMore(_, aType)       => this.visitTypeExpr(aType).add("*")
+      case AST.OneOrMore(_, aType)        => this.visitTypeExpr(aType).add("+")
       case x: AST.TypeExpression =>
         require(requirement = false, s"Unknown type $x")
         this

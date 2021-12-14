@@ -26,10 +26,8 @@ trait FunctionParser extends CommonParser with TypeParser {
   def function[_: P]: P[Function] = {
     P(
       location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~
-        ((location ~ undefined).map(loc => (None, Nothing(loc))) |
-          (input.? ~ output)) ~ close ~ description
-    ).map { case (loc, id, (inp, outp), descr) =>
-      Function(loc, id, inp, outp, descr)
-    }
+        ((location ~ undefined).map(loc => (None, Nothing(loc))) | (input.? ~ output)) ~ close ~
+        description
+    ).map { case (loc, id, (inp, outp), descr) => Function(loc, id, inp, outp, descr) }
   }
 }

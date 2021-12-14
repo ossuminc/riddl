@@ -28,25 +28,17 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "ident"),
-        UniqueId(
-          1 -> 14,
-          entityPath = PathIdentifier(1 -> 14, Seq.empty[String]),
-          None
-        )
+        UniqueId(1 -> 14, entityPath = PathIdentifier(1 -> 14, Seq.empty[String]), None)
       )
       checkDefinition[Type, Type](input, expected, identity)
 
     }
     "allow renames of 8 literal types" in {
       val cases = Map[String, Type](
-        "type dat = Date" ->
-          Type(1 -> 1, Identifier(1 -> 6, "dat"), Date(1 -> 12)),
-        "type tim = Time" ->
-          Type(1 -> 1, Identifier(1 -> 6, "tim"), Time(1 -> 12)),
-        "type stamp = TimeStamp" ->
-          Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
-        "type url = URL" ->
-          Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
+        "type dat = Date" -> Type(1 -> 1, Identifier(1 -> 6, "dat"), Date(1 -> 12)),
+        "type tim = Time" -> Type(1 -> 1, Identifier(1 -> 6, "tim"), Time(1 -> 12)),
+        "type stamp = TimeStamp" -> Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
+        "type url = URL" -> Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
         "type FirstName = url" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "FirstName"),
@@ -115,11 +107,8 @@ class TypeParserTest extends ParsingTest {
     }
     "allow mappings between two types" in {
       val input = "type m1 = mapping { from String to Number }"
-      val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "m1"),
-        Mapping(1 -> 11, Strng(1 -> 26), Number(1 -> 36))
-      )
+      val expected =
+        Type(1 -> 1, Identifier(1 -> 6, "m1"), Mapping(1 -> 11, Strng(1 -> 26), Number(1 -> 36)))
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow range of values" in {
@@ -127,11 +116,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "r1"),
-        RangeType(
-          1 -> 11,
-          LiteralInteger(1 -> 17, BigInt(21)),
-          LiteralInteger(1 -> 22, BigInt(42))
-        )
+        RangeType(1 -> 11, LiteralInteger(1 -> 17, BigInt(21)), LiteralInteger(1 -> 22, BigInt(42)))
       )
       checkDefinition[Type, Type](input, expected, identity)
 
@@ -141,10 +126,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreA"),
-        OneOrMore(
-          1 -> 24,
-          TypeRef(1 -> 24, PathIdentifier(1 -> 24, Seq("agg")))
-        )
+        OneOrMore(1 -> 24, TypeRef(1 -> 24, PathIdentifier(1 -> 24, Seq("agg"))))
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -153,10 +135,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "oneOrMoreB"),
-        OneOrMore(
-          1 -> 19,
-          TypeRef(1 -> 19, PathIdentifier(1 -> 19, Seq("agg")))
-        )
+        OneOrMore(1 -> 19, TypeRef(1 -> 19, PathIdentifier(1 -> 19, Seq("agg"))))
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -165,10 +144,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "zeroOrMore"),
-        ZeroOrMore(
-          1 -> 33,
-          TypeRef(1 -> 33, PathIdentifier(1 -> 33, Seq("agg")))
-        )
+        ZeroOrMore(1 -> 33, TypeRef(1 -> 33, PathIdentifier(1 -> 33, Seq("agg"))))
       )
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:33),TypeRef((1:33),Identifier((1:33),agg))),None)
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:19),TypeRef((1:33),Identifier((1:33),agg))),None)
@@ -221,18 +197,12 @@ class TypeParserTest extends ParsingTest {
                 Field(
                   12 -> 5,
                   Identifier(12 -> 5, "c"),
-                  ZeroOrMore(
-                    12 -> 22,
-                    TypeRef(12 -> 22, PathIdentifier(12 -> 22, Seq("Compound")))
-                  )
+                  ZeroOrMore(12 -> 22, TypeRef(12 -> 22, PathIdentifier(12 -> 22, Seq("Compound"))))
                 ),
                 Field(
                   13 -> 5,
                   Identifier(13 -> 5, "d"),
-                  Optional(
-                    13 -> 17,
-                    TypeRef(13 -> 17, PathIdentifier(13 -> 17, Seq("Choices")))
-                  )
+                  Optional(13 -> 17, TypeRef(13 -> 17, PathIdentifier(13 -> 17, Seq("Choices"))))
                 )
               )
             ),

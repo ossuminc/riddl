@@ -24,26 +24,15 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       Time mustBe Time
       TimeStamp mustBe TimeStamp
       URL mustBe URL
-      Enumeration((0, 0), Seq.empty[Enumerator]) mustBe
-        Enumeration((0, 0), Seq.empty[Enumerator])
+      Enumeration((0, 0), Seq.empty[Enumerator]) mustBe Enumeration((0, 0), Seq.empty[Enumerator])
       Alternation((0, 0), Seq.empty[TypeExpression]) mustBe
         Alternation((0, 0), Seq.empty[TypeExpression])
-      Aggregation((0, 0), Seq.empty[Field]) mustBe
-        Aggregation((0, 0), Seq.empty[Field])
-      Optional(
-        (0, 0),
-        TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))
-      ) mustBe
+      Aggregation((0, 0), Seq.empty[Field]) mustBe Aggregation((0, 0), Seq.empty[Field])
+      Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))) mustBe
         Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String"))))
-      ZeroOrMore(
-        (0, 0),
-        TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))
-      ) mustBe
+      ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))) mustBe
         ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time"))))
-      OneOrMore(
-        (0, 0),
-        TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL")))
-      ) mustBe
+      OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL")))) mustBe
         OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL"))))
     }
   }
@@ -51,8 +40,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(Location(), Nil).format mustBe "<empty>"
-      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe
-        "baz.bar.foo"
+      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe "baz.bar.foo"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
     }
   }
@@ -62,12 +50,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "have no description" in { RootContainer(Nil).description mustBe None }
   }
 
-  "String" should {
-    "have kind 'String'" in { Strng(Location()).kind mustBe "String" }
-  }
-  "Bool" should {
-    "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" }
-  }
+  "String" should { "have kind 'String'" in { Strng(Location()).kind mustBe "String" } }
+  "Bool" should { "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" } }
 
   "Topic" should {
     "empty topic" should {
@@ -90,23 +74,17 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       Domain(Location(), Identifier(Location(), "test")).contents mustBe empty
     }
     "non-empty domain should have non-empty contents" in {
-      val types =
-        List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
+      val types = List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
       val topics = List(Topic(Location(), Identifier(Location(), "foo")))
-      Domain(
-        Location(),
-        Identifier(Location(), "test"),
-        types = types,
-        topics = topics
-      ).contents mustBe (types ++ topics)
+      Domain(Location(), Identifier(Location(), "test"), types = types, topics = topics)
+        .contents mustBe (types ++ topics)
     }
   }
 
   "Entity" should {
     "contents" should {
       "contain all contents" in {
-        val options =
-          Seq(EntityAggregate(Location()), EntityPersistent(Location()))
+        val options = Seq(EntityAggregate(Location()), EntityPersistent(Location()))
         val states = Seq(State(
           Location(),
           Identifier(Location(), "bar"),
@@ -134,16 +112,10 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           )
         )
 
-        val functions = Seq(Function(
-          Location(),
-          Identifier(Location(), "my_func"),
-          None,
-          Bool(Location()),
-          None
-        ))
+        val functions =
+          Seq(Function(Location(), Identifier(Location(), "my_func"), None, Bool(Location()), None))
 
-        val invariants =
-          Seq(Invariant(Location(), Identifier(Location(), "my_id"), Nil, None))
+        val invariants = Seq(Invariant(Location(), Identifier(Location(), "my_id"), Nil, None))
         val types = Seq(
           Type(Location(), Identifier(Location(), "mytype"), Bool(Location())),
           Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))
@@ -163,8 +135,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         )
 
         entity.contents.toSet mustBe
-          (states.iterator ++ handlers ++ features ++ functions ++ invariants ++
-            types).toSet
+          (states.iterator ++ handlers ++ features ++ functions ++ invariants ++ types).toSet
       }
     }
   }

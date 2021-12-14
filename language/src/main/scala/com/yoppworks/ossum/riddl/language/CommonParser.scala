@@ -13,6 +13,16 @@ import scala.language.postfixOps
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
+  def include[K, _: P](parser: P[_] => P[Seq[K]]): P[Seq[K]] = {
+    P(Keywords.include ~/ literalString).map { str => doInclude(str, Seq.empty[K])(parser) }
+  }
+
+  def importDef[_: P]: P[DomainDefinition] = {
+    P(Keywords.import_ ~ location ~/ domainRef ~/ Readability.from ~ literalString).map { tuple =>
+      doImport(tuple._1, tuple._2, tuple._3)
+    }
+  }
+
   def undefined[_: P]: P[Unit] = { P(Punctuation.undefined /) }
 
   def literalStrings[_: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }

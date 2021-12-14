@@ -88,6 +88,7 @@ object Terminals {
     final val function = "function"
     final val handler = "handler"
     final val handles = "handles"
+    final val import_ = "import"
     final val include = "include"
     final val input = "input"
     final val interaction = "interaction"

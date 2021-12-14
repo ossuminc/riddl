@@ -11,24 +11,19 @@ class EntityValidatorTest extends ValidatingTest {
   "EntityValidator" should {
     "catch missing things" in {
       val input = "entity Hamburger is { state foo is {field:  SomeType } }"
-      parseAndValidate[Entity](input) {
-        case (_: Entity, msgs: ValidationMessages) =>
-          msgs.size mustEqual 5
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'SomeType' is not defined but should be a Type"
-          )
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "Entity 'Hamburger' must define a handler"
-          )
-          assertValidationMessage(
-            msgs,
-            Validation.MissingWarning,
-            "Entity 'Hamburger' should have a description"
-          )
+      parseAndValidate[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
+        msgs.size mustEqual 5
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'SomeType' is not defined but should be a Type"
+        )
+        assertValidationMessage(msgs, Validation.Error, "Entity 'Hamburger' must define a handler")
+        assertValidationMessage(
+          msgs,
+          Validation.MissingWarning,
+          "Entity 'Hamburger' should have a description"
+        )
       }
     }
 
@@ -44,12 +39,12 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) {
-        case (_: Domain, msgs: ValidationMessages) => assertValidationMessage(
-            msgs,
-            Validation.MissingWarning,
-            "Entity 'Hamburger' has only empty handler"
-          )
+      parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
+        assertValidationMessage(
+          msgs,
+          Validation.MissingWarning,
+          "Entity 'Hamburger' has only empty handler"
+        )
       }
     }
     "validating examples" in {

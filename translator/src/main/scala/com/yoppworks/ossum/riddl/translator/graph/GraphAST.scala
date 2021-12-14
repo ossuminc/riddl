@@ -48,9 +48,8 @@ case class GraphAST(
     buffer.digraph(nameOf(root)) { sb =>
       sb.expand[Container](root.contents) { (sb, container) =>
         container match {
-          case domain: Domain => sb
-              .append(drawDomain(domain).mkString.indent(2))
-          case _ => sb
+          case domain: Domain => sb.append(drawDomain(domain).mkString.indent(2))
+          case _              => sb
         }
       }
     }
@@ -78,8 +77,6 @@ case class GraphAST(
 
   def drawEntity(entity: Entity): StringBuilder = {
     val sb = new StringBuilder
-    sb.subgraph(nameOf(entity)) { sb =>
-      sb.node(nameOf(entity), config.entity.format)
-    }
+    sb.subgraph(nameOf(entity)) { sb => sb.node(nameOf(entity), config.entity.format) }
   }
 }

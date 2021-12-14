@@ -32,7 +32,7 @@ trait EntityParser
       case (loc, Options.persistent)   => EntityPersistent(loc)
       case (loc, Options.consistent)   => EntityConsistent(loc)
       case (loc, Options.available)    => EntityAvailable(loc)
-      case _ => throw new RuntimeException("Impossible case")
+      case _                           => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -42,7 +42,7 @@ trait EntityParser
       case (loc, Some(Options.actor))   => ActorEntityKind(loc)
       case (loc, Some(Options.concept)) => ConceptEntityKind(loc)
       case (loc, None)                  => ConceptEntityKind(loc)
-      case _ => throw new RuntimeException("Impossible case")
+      case _                            => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -55,16 +55,13 @@ trait EntityParser
   def invariant[_: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
-        (undefined.map(_ => Seq.empty[LiteralString]) | docBlock) ~ close ~
-        description
+        (undefined.map(_ => Seq.empty[LiteralString]) | docBlock) ~ close ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
   def state[_: P]: P[State] = {
-    P(
-      location ~ Keywords.state ~/ identifier ~ is ~ typeExpression ~
-        description
-    ).map(tpl => (State.apply _).tupled(tpl))
+    P(location ~ Keywords.state ~/ identifier ~ is ~ typeExpression ~ description)
+      .map(tpl => (State.apply _).tupled(tpl))
   }
 
   def entityDefinition[_: P]: P[EntityDefinition] = {

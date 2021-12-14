@@ -22,18 +22,17 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) {
-        case (d: Domain, msgs: ValidationMessages) =>
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'EntityCommand' is not defined but should be a Command"
-          )
-          assertValidationMessage(
-            msgs,
-            Validation.Error,
-            "'EntityEvent' is not defined but should be a Event"
-          )
+      parseAndValidate[Domain](input) { case (d: Domain, msgs: ValidationMessages) =>
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'EntityCommand' is not defined but should be a Command"
+        )
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'EntityEvent' is not defined but should be a Event"
+        )
       }
     }
 
@@ -61,19 +60,18 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause references a state field that does not exist" in {
-      val input =
-        """
-          |domain entityTest is {
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  state HamburgerState = { field1: Number }
-          |  handler foo is {
-          |    on command EntityCommand { set nonExistingField to 123 }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
+      val input = """
+                    |domain entityTest is {
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  state HamburgerState = { field1: Number }
+                    |  handler foo is {
+                    |    on command EntityCommand { set nonExistingField to 123 }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
       parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,

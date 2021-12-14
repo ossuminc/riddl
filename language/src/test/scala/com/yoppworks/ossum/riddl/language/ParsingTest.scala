@@ -39,16 +39,13 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Topic]       => topic(_)
       case x if x == classOf[AST.Invariant]   => invariant(_)
       case x if x == classOf[AST.Function]    => function(_)
-      case _ => throw new RuntimeException(
-          s"No parser defined for class ${classTag[T].runtimeClass}"
-        )
+      case _ =>
+        throw new RuntimeException(s"No parser defined for class ${classTag[T].runtimeClass}")
     }
     parser.asInstanceOf[P[_] => P[T]]
   }
 
-  def parseTopLevelDomains: Either[Seq[ParserError], RootContainer] = {
-    expect(fileRoot(_))
-  }
+  def parseTopLevelDomains: Either[Seq[ParserError], RootContainer] = { expect(fileRoot(_)) }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     extract: RootContainer => TO
@@ -67,9 +64,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     result.map(extract)
   }
 
-  def parseDefinition[
-    FROM <: Definition: ClassTag
-  ]: Either[Seq[ParserError], FROM] = {
+  def parseDefinition[FROM <: Definition: ClassTag]: Either[Seq[ParserError], FROM] = {
     val parser = parserFor[FROM]
     expect[FROM](parser)
   }

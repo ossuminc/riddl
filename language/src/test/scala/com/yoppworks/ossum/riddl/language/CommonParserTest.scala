@@ -25,8 +25,7 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe
-            LiteralString((1, 1), input.drop(1).dropRight(1))
+        case Right(content) => content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
 
       }
     }

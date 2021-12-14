@@ -19,8 +19,8 @@ trait TypeParser extends CommonParser {
   def stringType[_: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~
-        (Punctuation.roundOpen ~ literalInteger.? ~ Punctuation.comma ~
-          literalInteger.? ~ Punctuation.roundClose).?
+        (Punctuation.roundOpen ~ literalInteger.? ~ Punctuation.comma ~ literalInteger.? ~
+          Punctuation.roundClose).?
     ).map {
       case (loc, Some((min, max))) => Strng(loc, min, max)
       case (loc, None)             => Strng(loc, None, None)
@@ -29,8 +29,7 @@ trait TypeParser extends CommonParser {
 
   def urlType[_: P]: P[URL] = {
     P(
-      location ~ Predefined.URL ~
-        (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
+      location ~ Predefined.URL ~ (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
@@ -56,18 +55,15 @@ trait TypeParser extends CommonParser {
   def patternType[_: P]: P[Pattern] = {
     P(
       location ~ Predefined.Pattern ~/ roundOpen ~/
-        (literalStrings |
-          Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
+        (literalStrings | Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
         roundClose ~/ description
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
 
   def uniqueIdType[_: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/
-      description).map {
+    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/ description).map {
       case (loc, Some(id), add) => UniqueId(loc, id, add)
-      case (loc, None, add) =>
-        UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), add)
+      case (loc, None, add)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), add)
     }
   }
 
@@ -76,9 +72,8 @@ trait TypeParser extends CommonParser {
   }
 
   def enumerator[_: P]: P[Enumerator] = {
-    P(identifier ~ enumValue ~ isTypeRef.? ~ description).map {
-      case (id, enumVal, typeRef, desc) =>
-        Enumerator(id.loc, id, enumVal, typeRef, desc)
+    P(identifier ~ enumValue ~ isTypeRef.? ~ description).map { case (id, enumVal, typeRef, desc) =>
+      Enumerator(id.loc, id, enumVal, typeRef, desc)
     }
   }
 
@@ -90,8 +85,7 @@ trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.any ~ Readability.of.? ~ open ~/
         (enumerator.rep(1, sep = comma.?) |
-          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close ~
-        description
+          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close ~ description
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
@@ -99,8 +93,7 @@ trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (typeExpression.rep(2, P("or" | "|" | ",")) |
-          Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close ~
-        description
+          Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close ~ description
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
@@ -110,16 +103,11 @@ trait TypeParser extends CommonParser {
   }
 
   def fields[_: P]: P[Seq[Field]] = {
-    P(
-      field.rep(min = 0, comma) |
-        Punctuation.undefined.!.map(_ => Seq.empty[Field])
-    )
+    P(field.rep(min = 0, comma) | Punctuation.undefined.!.map(_ => Seq.empty[Field]))
   }
 
   def aggregationWithoutDescription[_: P]: P[Aggregation] = {
-    P(location ~ open ~ fields ~ close).map { case (loc, fields) =>
-      Aggregation(loc, fields, None)
-    }
+    P(location ~ open ~ fields ~ close).map { case (loc, fields) => Aggregation(loc, fields, None) }
   }
 
   def aggregation[_: P]: P[Aggregation] = {
@@ -135,8 +123,8 @@ trait TypeParser extends CommonParser {
     */
   def mapping[_: P]: P[Mapping] = {
     P(
-      location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~
-        typeExpression ~ close ~ description
+      location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~ typeExpression ~ close ~
+        description
     ).map { tpl => (Mapping.apply _).tupled(tpl) }
   }
 
@@ -147,8 +135,8 @@ trait TypeParser extends CommonParser {
     */
   def range[_: P]: P[RangeType] = {
     P(
-      location ~ "range" ~ roundOpen ~/ literalInteger ~ comma ~
-        literalInteger ~ roundClose ~ description
+      location ~ "range" ~ roundOpen ~/ literalInteger ~ comma ~ literalInteger ~ roundClose ~
+        description
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 
@@ -175,15 +163,14 @@ trait TypeParser extends CommonParser {
 
   def typeExpression[_: P]: P[TypeExpression] = {
     P(cardinality(P(
-      simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-        alternation | referToType | aggregation | mapping | range | typeRef
+      simplePredefinedTypes | patternType | uniqueIdType | enumeration | alternation | referToType |
+        aggregation | mapping | range | typeRef
     )))
   }
 
   def typeDef[_: P]: P[Type] = {
-    P(
-      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~
-        description
-    ).map { tpl => (Type.apply _).tupled(tpl) }
+    P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ description).map { tpl =>
+      (Type.apply _).tupled(tpl)
+    }
   }
 }

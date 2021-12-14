@@ -12,16 +12,12 @@ import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
   stack.push(rpi)
 
-  def fileRoot[_: P]: P[RootContainer] = {
-    P(Start ~ P(domain).rep(0) ~ End).map(RootContainer(_))
-  }
+  def fileRoot[_: P]: P[RootContainer] = { P(Start ~ P(domain).rep(0) ~ End).map(RootContainer(_)) }
 }
 
-case class FileParser(topFile: File)
-    extends TopLevelParser(RiddlParserInput(topFile))
+case class FileParser(topFile: File) extends TopLevelParser(RiddlParserInput(topFile))
 
-case class StringParser(content: String)
-    extends TopLevelParser(RiddlParserInput(content))
+case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content))
 
 object TopLevelParser {
 

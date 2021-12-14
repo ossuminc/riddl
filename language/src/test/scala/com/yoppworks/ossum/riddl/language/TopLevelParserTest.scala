@@ -27,15 +27,10 @@ class TopLevelParserTest extends ParsingTestBase {
 
   "parse" should {
     "parse RiddlParserInput" in {
-      TopLevelParser.parse(RiddlParserInput(simpleDomainFile)) mustBe
-        Right(simpleDomain)
+      TopLevelParser.parse(RiddlParserInput(simpleDomainFile)) mustBe Right(simpleDomain)
     }
-    "parse File" in {
-      TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomain)
-    }
-    "parse Path" in {
-      TopLevelParser.parse(simpleDomainFile.toPath) mustBe Right(simpleDomain)
-    }
+    "parse File" in { TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomain) }
+    "parse Path" in { TopLevelParser.parse(simpleDomainFile.toPath) mustBe Right(simpleDomain) }
     "parse String" in {
       val source = Source.fromFile(simpleDomainFile)
       try {
@@ -43,9 +38,7 @@ class TopLevelParserTest extends ParsingTestBase {
         TopLevelParser.parse(stringContents, origin) mustBe Right(simpleDomain)
       } finally { source.close() }
     }
-    "parse empty String" in {
-      TopLevelParser.parse("") mustBe Right(RootContainer.empty)
-    }
+    "parse empty String" in { TopLevelParser.parse("") mustBe Right(RootContainer.empty) }
   }
 
 }

@@ -28,11 +28,7 @@ class InvariantValidator extends ValidatingTest {
           |}
           |""".stripMargin
       ) { (_, msgs) =>
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "detailed description should not be empty"
-        )
+        assertValidationMessage(msgs, MissingWarning, "detailed description should not be empty")
       }
     }
   }

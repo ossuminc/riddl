@@ -12,9 +12,8 @@ class DefinitionValidatorTest extends ValidatingTest {
                                  |}
                                  |""".stripMargin) {
         case (_: Domain, msgs: Seq[ValidationMessage]) =>
-          if (msgs.isEmpty) fail(
-            "Identifiers with less than 3 characters should generate a warning"
-          )
+          if (msgs.isEmpty)
+            fail("Identifiers with less than 3 characters should generate a warning")
           else {
             val styleWarnings = msgs.filter(_.kind == StyleWarning)
             styleWarnings.size mustEqual 2
