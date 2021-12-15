@@ -1,0 +1,13 @@
+domain ReactiveBBQ is {
+
+include "restaurant/domain"
+include "backoffice/domain"
+include "corporate/domain"
+
+} explained as {
+ "A domain to encapsulate the entire enterprise named ReactiveBBQ."
+ "It is divided into three subdomains:"
+ "* Restaurant -- handles each of the restaurant locations"
+ "* Back Office -- handles all the back office supplies and menus"
+ "* Corporate -- handles the corporate web site and marketing"
+}

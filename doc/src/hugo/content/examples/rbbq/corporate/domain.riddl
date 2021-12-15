@@ -1,0 +1,5 @@
+domain Corporate is {
+
+include "Marketing"
+
+}
