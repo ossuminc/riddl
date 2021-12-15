@@ -1,4 +1,8 @@
-domain Restaurant {
+domain Restaurant is {
 
-include
+include "Menu"
+include "Loyalty"
+include "kitchen/context"
+include "serving/domain"
+
 }
