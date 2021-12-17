@@ -20,7 +20,8 @@ class ParadoxTranslatorTest extends ParsingTest {
       case Right(root) =>
         val trans = new ParadoxTranslator
         val config = ParadoxConfig()
-        trans.translate(root, None, Riddl.SysLogger, config)
+        val files = trans.translate(root, None, Riddl.SysLogger, config)
+        assert(files.nonEmpty)
     }
     succeed
   }
@@ -28,8 +29,8 @@ class ParadoxTranslatorTest extends ParsingTest {
   // TODO: Fix FormatTranslator so this works again
   "ParadoxTranslator" should {
     "translate everything.riddl" in {
-      // runOne("everything.riddl")
-      pending
+      runOne("everything.riddl")
+      // pending
     }
     "translate rbbq.riddl" in { runOne("rbbq.riddl") }
   }

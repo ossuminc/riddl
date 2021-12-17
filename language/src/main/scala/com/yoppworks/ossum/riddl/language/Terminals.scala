@@ -57,6 +57,7 @@ object Terminals {
     final val sync = "sync"
     final val value = "value"
     final val wrapper = "wrapper"
+    final val stateMachine = "fsm"
   }
 
   object Keywords {
@@ -141,6 +142,7 @@ object Terminals {
     final val TimeStamp = "TimeStamp"
     final val UniqueId = "UniqueId"
     final val URL = "URL"
+    final val UUID = "UUID"
   }
 
   object Readability {

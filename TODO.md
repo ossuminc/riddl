@@ -8,8 +8,8 @@
 * Allow entities and contexts to define functions with Gherkin style specification
 * Support arithmetic numeric computations as part of boolean/logic expressions where ever they 
   occur (e.g. invariants)
-* Allow multiple named state specifications in an entity to allow entities that are finite state 
-  machines with FSM state transitions specified in handlers
+* ~~Allow multiple named state specifications in an entity to allow entities that are finite state 
+  machines with FSM state transitions specified in handlers~~
 
 ## Implement Hugo Site Translator
 * Translate RIDDL AST to Hugo site source as .md files

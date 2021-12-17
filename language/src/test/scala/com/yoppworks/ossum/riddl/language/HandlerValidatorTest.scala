@@ -50,11 +50,29 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
-        // TODO:  ideally this would indicate the def does exist but the wrong type
         assertValidationMessage(
           msgs,
           Validation.Error,
           "'Incoming' is not defined but should be a Event"
+        )
+      }
+      val input2 = """domain entityTest is {
+                     |context EntityContext is {
+                     |entity Hamburger is {
+                     |  type Incoming is String
+                     |  state HamburgerState = { field1: Number }
+                     |  handler foo is {
+                     |    on event Incoming { set field1 to 678 }
+                     |  }
+                     |}
+                     |}
+                     |}
+                     |""".stripMargin
+      parseAndValidate[Domain](input2) { case (_, msgs: ValidationMessages) =>
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "'Incoming' was expected to be Event but is Type instead"
         )
       }
     }

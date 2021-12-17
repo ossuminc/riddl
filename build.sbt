@@ -3,8 +3,6 @@ import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
 
-import java.net.URI
-
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Some("semver-spec")
 
@@ -57,7 +55,7 @@ lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file("."))
   .settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc, doc /*, `sbt-riddl`*/ )
+  .aggregate(language, translator, riddlc, doc, `hugo-generator` /*, `sbt-riddl`*/ )
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
   .enablePlugins(HugoPlugin).enablePlugins(SiteScaladocPlugin).settings(
@@ -107,7 +105,7 @@ lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
       "com.typesafe" % "config" % "1.4.0"
     ),
     buildInfoPackage := "com.yoppworks.ossum.riddl"
-  ).dependsOn(translator, language)
+  ).dependsOn(translator, language, `hugo-generator`)
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   .settings(
@@ -131,6 +129,18 @@ lazy val translator = (project in file("translator")).settings(
   buildInfoPackage := "com.yoppworks.ossum.riddl.translator",
   libraryDependencies ++= Seq(
     "org.jfree" % "jfreesvg" % "3.4",
+    "org.scalactic" %% "scalactic" % "3.1.0",
+    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
+    "com.github.pureconfig" %% "pureconfig" % "0.12.2"
+  )
+).dependsOn(language % "test->test;compile->compile")
+
+lazy val `hugo-generator` = (project in file("hugo-generator")).settings(
+  name := "riddl-hugo-generator",
+  buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
+  Compile / unmanagedResourceDirectories += { baseDirectory.value / "resources" },
+  libraryDependencies ++= Seq(
     "org.scalactic" %% "scalactic" % "3.1.0",
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",

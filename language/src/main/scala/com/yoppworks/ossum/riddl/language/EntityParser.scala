@@ -23,15 +23,17 @@ trait EntityParser
         Options.aggregate,
         Options.persistent,
         Options.consistent,
-        Options.available
+        Options.available,
+        Options.stateMachine
       ).!
     ) {
-      case (loc, Options.eventSourced) => EntityAggregate(loc)
+      case (loc, Options.eventSourced) => EntityEventSourced(loc)
       case (loc, Options.value)        => EntityValueOption(loc)
       case (loc, Options.aggregate)    => EntityAggregate(loc)
       case (loc, Options.persistent)   => EntityPersistent(loc)
       case (loc, Options.consistent)   => EntityConsistent(loc)
       case (loc, Options.available)    => EntityAvailable(loc)
+      case (loc, Options.stateMachine) => EntityFiniteStateMachine(loc)
       case _                           => throw new RuntimeException("Impossible case")
     }
   }
@@ -68,12 +70,18 @@ trait EntityParser
     P(handler | feature | function | invariant | typeDef | state)
   }
 
+  type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
+
+  def noEntityBody[_: P]: P[EntityBody] = P(location ~ undefined).map { _: Location =>
+    (Option.empty[Seq[EntityOption]], Seq.empty[EntityDefinition])
+  }
+
+  def entityBody[_: P]: P[EntityBody] = (entityOptions.? ~ entityDefinition.rep)
+
   def entity[_: P]: P[Entity] = {
     P(
       entityKind ~ location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
-        ((location ~ undefined).map { loc: Location =>
-          (Seq.empty[EntityOption], Seq.empty[EntityDefinition])
-        } | (entityOptions ~ entityDefinition.rep)) ~ close ~ description
+        (noEntityBody | entityBody) ~ close ~ description
     ).map { case (kind, loc, id, (options, entityDefs), addendum) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
@@ -86,7 +94,7 @@ trait EntityParser
         kind,
         loc,
         id,
-        options,
+        options.fold(Seq.empty[EntityOption])(identity),
         states,
         types,
         handlers,

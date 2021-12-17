@@ -9,6 +9,31 @@ import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
+    "handle entity with multiple states" in {
+      val input = """entity MultiState is {
+                    |  options(fsm)
+                    |  state foo is { field: String }
+                    |  state bar is { field2: Number }
+                    |}""".stripMargin
+      parseAndValidate[Entity](input) { case (entity: Entity, _: ValidationMessages) =>
+        assert(entity.states.size == 2)
+      }
+    }
+    "error for finite-state-machine entities without at least two states" in {
+      val input = """entity MultiState is {
+                    |  options(fsm)
+                    |  state foo is { field: String }
+                    |}""".stripMargin
+      parseAndValidate[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
+        msgs.size mustEqual 5
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "Entity 'MultiState' is declared as a finite-state-machine, but does not have " +
+            "at least two states"
+        )
+      }
+    }
     "catch missing things" in {
       val input = "entity Hamburger is { state foo is {field:  SomeType } }"
       parseAndValidate[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>

@@ -193,6 +193,10 @@ object AST {
     def loc: Location
   }
 
+  object PredefinedType {
+    final def unapply(preType: PredefinedType): Option[String] = Some(preType.kind)
+  }
+
   case class Strng(
     loc: Location,
     min: Option[LiteralInteger] = None,
@@ -213,7 +217,7 @@ object AST {
   case class DateTime(loc: Location) extends PredefinedType
   case class TimeStamp(loc: Location) extends PredefinedType
   case class Duration(loc: Location) extends PredefinedType
-
+  case class UUID(loc: Location) extends PredefinedType
   case class URL(loc: Location, scheme: Option[LiteralString] = None) extends PredefinedType
   case class LatLong(loc: Location) extends PredefinedType
   case class Nothing(loc: Location) extends PredefinedType
@@ -344,6 +348,7 @@ object AST {
   case class EntityPersistent(loc: Location) extends EntityOption("persistent")
   case class EntityConsistent(loc: Location) extends EntityOption("consistent")
   case class EntityAvailable(loc: Location) extends EntityOption("available")
+  case class EntityFiniteStateMachine(loc: Location) extends EntityOption("finite state machine")
 
   sealed abstract class EntityKind(name: String) extends EntityValue
 
@@ -597,6 +602,9 @@ object AST {
 
     def contents: Seq[Definition] =
       (states.iterator ++ types ++ handlers ++ features ++ functions ++ invariants).toList
+
+    def hasOption[Op <: EntityOption: scala.reflect.ClassTag]: Boolean = options
+      .exists(_.getClass == implicitly[scala.reflect.ClassTag[Op]].runtimeClass)
   }
 
   trait TranslationRule extends Definition {
