@@ -1,0 +1,12 @@
+processor GetWeatherForecast is {
+  outlet Weather is type Forecast
+} explained as "This is a source for Forecast data"
+
+processor GetCurrentTemperature is {
+  inlet Weather is type Forecast
+  outlet CurrentTemp is type Temperature
+} explained as "This is a Flow for the current temperature, when it changes"
+
+processor AttenuateSensor is {
+  inlet CurrentTemp is type Temperature
+} explained as "This is a Sink for making sensor adjustments based on temperature"

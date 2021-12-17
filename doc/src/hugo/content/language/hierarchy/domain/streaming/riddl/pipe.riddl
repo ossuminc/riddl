@@ -1,0 +1,7 @@
+pipe WeatherForecast is {
+  content = type Forecast
+}
+
+pipe TemperatureChanges is {
+  content = type temperature
+}

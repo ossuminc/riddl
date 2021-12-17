@@ -3,10 +3,10 @@ title: "Pipes"
 weight: 20
 ---
 
-Pipes are conduits for reliably transmitting messages of a particular type
-between publishers and consumers attached at the ends of the conduit.
-Pipes play a large role in the resiliency of a reactive system. Pipes have
-the following characteristics:
+Pipes are uni-directional conduits for reliably transmitting data of a 
+particular type between publishers and consumers attached at the ends of 
+the conduit. Pipes play a large role in the resiliency of a reactive system. 
+Pipes have the following characteristics:
 * _persistent_ - The messages flowing through the pipe are persisted to
   stable, durable storage, so they cannot be lost even in the event of
   system failure or shutdown.
@@ -34,6 +34,6 @@ consumers, each group getting each data item from the pipe.
 ```riddl
 pipe WeatherForecast is {
   options rate(1000), paritions(7), 
-  content = type 
+  content = type Forecast
 }
 ```
