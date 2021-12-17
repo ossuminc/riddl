@@ -22,9 +22,11 @@ on command JustDoIt yields JustDidIt
 ## Event Handler
 An event handler specifies how an event modifies the state of the entity. 
 ```riddl
+state State is { name: String }
+
 type event NameWasUpdated { id: Id(AnEntity), newName: String }
 
-on event NameWasUpdated { replace name with newName }
+on event NameWasUpdated { replace State.name with NameWasUpdated.newName }
  
 ```
 ## Reaction Handler
@@ -34,14 +36,25 @@ its own state. This is also
 how we avoid corruption of the entity's ubiquitous language by converting 
 another bounded context's concept into the handler's entity's concept. 
 ```riddl
-domain Path is { domain To is { context Context is {
-  type ThingThatHappened is event { id: Id(Entity), whatHappened: String }
-}}}
+domain Path is { 
+  domain To is { 
+    context Context is {
+      type ThingThatHappened is event { id: Id(Entity), whatHappened: String }
+    }
+  }
+}
 
-domain Foo { context Bar { entity Example {
-    type ExternalThingHappened = event { id: Id(Example), whatHappened: String }
-    on event Path.To.Context.ThingThatHappened yields ExternalThingHappened
-}}}    
+domain Foo { 
+  context Bar { 
+    entity Example {
+      type ExternalThingHappened = event { 
+        id: Id(Example), 
+        whatHappened: String 
+      }
+      on event Path.To.Context.ThingThatHappened yields ExternalThingHappened
+    }
+  }
+}    
 ```
 Notes:
 * `Path.To.Context.ThingThatHappend` is known as a 
