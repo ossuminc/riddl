@@ -1,6 +1,6 @@
 ---
 title: "Full"
-weight: -20
+draft: false
 ---
 
 #### _Bounded Context_
