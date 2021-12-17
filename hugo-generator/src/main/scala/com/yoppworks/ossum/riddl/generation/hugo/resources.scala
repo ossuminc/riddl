@@ -213,7 +213,7 @@ private object FileUtils {
         }
       }
     }
-    try java.nio.file.Files.walkFileTree(path, visitor)
+    try Files.walkFileTree(path, visitor)
     catch { case ioEx: IOException => println(s"Error deleting temporary files:\n$ioEx") }
   }
 

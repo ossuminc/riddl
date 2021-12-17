@@ -197,7 +197,7 @@ object HugoEntity {
 
   type Options = EntityOption.ValueSet
   object EntityOption extends Enumeration {
-    val none = ValueSet.empty
+    val none: Options = ValueSet.empty
     val EventSourced, ValueType, Aggregate, Persistent, Consistent, Available, FiniteStateMachine =
       Value
   }

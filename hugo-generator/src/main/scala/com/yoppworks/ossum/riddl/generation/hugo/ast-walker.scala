@@ -15,15 +15,14 @@ private object WalkNodeF {
 
 object LukeAstWalker {
 
-  def apply(root: AST.RootContainer): HugoRoot = {
-    val ns = Namespace.emptyRoot
-    root.contents.collect {
-      case dom: AST.Domain  => walkDomain(ns, dom)
-      case ctx: AST.Context => walkContext(ns, ctx)
-      case ent: AST.Entity  => walkEntity(ns, ent)
-    }
-    HugoRoot(ns)
-  }
+  def apply(
+    root: AST.RootContainer
+  ): HugoRoot = HugoRoot(root.contents.foldLeft(Namespace.emptyRoot) {
+    case (ns, dom: AST.Domain)  => walkDomain(ns, dom); ns
+    case (ns, ctx: AST.Context) => walkContext(ns, ctx); ns
+    case (ns, ent: AST.Entity)  => walkEntity(ns, ent); ns
+    case (ns, _)                => ns
+  })
 
   val walkDomain: WalkNodeF[AST.Domain, HugoDomain] = WalkNodeF { (nn, node) =>
     val name = node.id.value
@@ -74,8 +73,7 @@ object LukeAstWalker {
     val types = node.types.map(walkType(entityNs, _))
 
     @inline
-    def mkTypeRef(ns: Namespace, path: AST.PathIdentifier): HugoType.TypeReference = HugoType
-      .TypeReference(ns, path.value)
+    def mkTypeRef(ns: Namespace, path: AST.PathIdentifier) = HugoType.TypeReference(ns, path.value)
 
     @inline
     def handlerOnClause(nn: Namespace, hc: AST.OnClause): HugoEntity.OnClause = hc.msg match {

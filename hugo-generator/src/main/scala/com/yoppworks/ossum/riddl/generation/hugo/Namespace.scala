@@ -8,7 +8,7 @@ sealed trait Namespace {
   def directChildren: Iterable[Namespace]
   def allChildren: Iterable[Namespace]
   def node: Option[HugoRepr]
-  def setNode(value: HugoRepr): Namespace
+  private[hugo] def setNode(value: HugoRepr): Namespace
   def get(name: String): Option[Namespace]
   def getOrCreate(name: String): Namespace
   // Force implementations to handle `toString`
