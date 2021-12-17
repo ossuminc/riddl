@@ -1,0 +1,21 @@
+context Kitchen is {
+
+include "Order"
+
+} explained as {
+  brief "The kitchen is where food is prepared"
+  details {
+    |The kitchen bounded context provides the ability for the kitchen staff
+    |to interact with orders they are preparing. The kitchen is a client of
+    |the orders bounded context and interacts with that context alone for
+    |the outstanding orders to be prepared. Everything else that happens in
+    |the kitchen is out of scope for the restaurant automation software.
+    |Consequently, this bounded context is pretty minimal.
+    |### Subject-Verb-Object Statements
+    |1. Kitchen displays orders
+    |1. Order is sent to Kitchen for display
+    |1. Order sends order status changes to Kitchen
+    |1. Kitchen ignores drink items on order
+    |1.
+  } items { }
+}

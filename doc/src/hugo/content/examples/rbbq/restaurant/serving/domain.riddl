@@ -1,0 +1,8 @@
+domain Serving is {
+
+include "Table"
+include "Server"
+include "Customer"
+include "Reservation"
+
+}

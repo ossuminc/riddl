@@ -220,8 +220,11 @@ class ParsingTest extends ParsingTestBase {
     }
   }
 
-  def checkFile(label: String, fileName: String): RootContainer = {
-    val directory = "language/src/test/input/"
+  def checkFile(
+    label: String,
+    fileName: String,
+    directory: String = "language/src/test/input/"
+  ): RootContainer = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
       case Left(errors) =>

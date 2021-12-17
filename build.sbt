@@ -53,25 +53,23 @@ scalacOptions := Seq(
 
 lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
-lazy val riddl = (project in file("."))
-  .settings(publish := {}, publishLocal := {})
+lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
   .aggregate(language, translator, riddlc, doc, `hugo-generator` /*, `sbt-riddl`*/ )
 
-lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
-  .enablePlugins(HugoPlugin).enablePlugins(SiteScaladocPlugin).settings(
+lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
+  .enablePlugins(SiteScaladocPlugin).settings(
     name := "riddl-doc",
     publishTo := Some(Resolver.defaultLocal),
     Hugo / sourceDirectory := sourceDirectory.value / "hugo",
     minimumHugoVersion := "0.89.4",
     publishSite
-  )
+  ).dependsOn(language % "test->compile;test->test")
 
-lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
-  .settings(
-    name := "riddlc",
-    mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-    // Determines depth of TOC for page navigation.
-    /*
+lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin).settings(
+  name := "riddlc",
+  mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
+  // Determines depth of TOC for page navigation.
+  /*
   val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
   val paradoxNavigationIncludeHeaders = settingKey[Boolean]("Whether to include headers in the navigation.")
   val paradoxRoots = settingKey[List[String]]("Which ToC roots (pages without parent) to expect.")
@@ -99,30 +97,27 @@ lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
       // .withFavicon("assets/images/riddl-favicon.png")
       // .withLogo("assets/images/riddl-logo.png")
     },
-     */
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
-      "com.typesafe" % "config" % "1.4.0"
-    ),
-    buildInfoPackage := "com.yoppworks.ossum.riddl"
-  ).dependsOn(translator, language, `hugo-generator`)
+   */
+  libraryDependencies ++=
+    Seq("com.github.scopt" %% "scopt" % "4.0.0-RC2", "com.typesafe" % "config" % "1.4.0"),
+  buildInfoPackage := "com.yoppworks.ossum.riddl"
+).dependsOn(translator, language, `hugo-generator`)
 
-lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
-  .settings(
-    name := "riddl-languge",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.language",
-    libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % "2.1.0",
-      "com.lihaoyi" %% "fastparse" % "2.2.4",
-      "com.github.pureconfig" %% "pureconfig" % "0.12.2",
-      "org.scalactic" %% "scalactic" % "3.1.0",
-      "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
-    ),
-    Compile / compileCheck := {
-      Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
-    }
-  )
+lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin).settings(
+  name := "riddl-languge",
+  buildInfoPackage := "com.yoppworks.ossum.riddl.language",
+  libraryDependencies ++= Seq(
+    "org.typelevel" %% "cats-core" % "2.1.0",
+    "com.lihaoyi" %% "fastparse" % "2.2.4",
+    "com.github.pureconfig" %% "pureconfig" % "0.12.2",
+    "org.scalactic" %% "scalactic" % "3.1.0",
+    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
+  ),
+  Compile / compileCheck := {
+    Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
+  }
+)
 
 lazy val translator = (project in file("translator")).settings(
   name := "riddl-translator",
@@ -159,10 +154,5 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl")).settings(
   .dependsOn(translator)
  */
 
-(Global / excludeLintKeys) ++= Set(
-  buildInfoPackage,
-  buildInfoKeys,
-  buildInfoOptions,
-  mainClass,
-  paradoxNavigationDepth
-)
+(Global / excludeLintKeys) ++=
+  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, paradoxNavigationDepth)

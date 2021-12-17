@@ -1,0 +1,180 @@
+// #everything
+// #domains
+domain ReactiveBBQ is {
+// #domains
+
+  // Create some types with better names than just "Id"
+  type CustomerId is Id(Customer.Customer) explained as {
+    brief "Unique identifier for a customer"
+  }
+
+  type OrderId is Id(Order) described as {
+    brief "Unique identifier for a customer's order"
+    see "http://www.example.com/show/details/on/OrderId"
+  }
+
+  topic Inputs is {
+    commands {
+      foo is {} yields event Inputs.bar /*implemented("scala") as {
+        def handleFoo: Inputs.bar = {
+        }
+      } */
+    } events {
+      bar is {}
+    } queries {} results {}
+  }
+
+  topic Outputs is {  commands {} events {  } queries {} results {} }
+
+  context Customer is {
+    entity Customer is {
+      state main is { }
+      handler input is {}
+    }
+  }
+
+
+  // #Kitchen
+  // The Kitchen context pertains to
+  context Kitchen is {
+    type IP4Address is { a: Number, b: Number, c: Number, d: Number}
+    type OrderViewType is {
+      address is IP4Address
+    }
+    device entity OrderViewer is {
+     state OrderState is { field: OrderViewType }
+     handler input is {}
+    } explained as {
+      brief "This is an OrderViewer"
+      details {
+        |The OrderViewer is the device in the kitchen, probably a touch screen,
+        |that the cooks use to view the sequence of orders to cook
+     }
+     items {
+
+     }
+     see "http://foo.com/"
+    }
+  } explained as {
+    brief "The kitchen is where food is prepared"
+    details {
+      |The kitchen bounded context provides the ability for the kitchen staff
+      |to interact with orders they are preparing. The kitchen is a client of
+      |the orders bounded context and interacts with that context alone
+      |the outstanding orders to be prepared. Everything else that happens in
+      |the kitchen is out of scope for the restaurant automation software.
+      |Consequently, this bounded context is pretty minimal.
+      |### Subject-Verb-Object Statements
+      |1. Kitchen displays orders
+      |1. Order is sent to Kitchen for display
+      |1. Order sends order status changes to Kitchen
+      |1. Kitchen ignores drink items on order
+      |1.
+    } items { }
+  }
+  // #Kitchen
+
+  // #Loyalty
+  context Loyalty is {
+    type AccrualEvent is {
+      when is TimeStamp,
+      who is CustomerId,
+      pointsAccrued is Number,
+      fromOrder is OrderId
+    }
+    type AwardEvent is {
+      when is TimeStamp,
+      who is CustomerId,
+      pointsAwarded is Number,
+      toOrder is OrderId
+    }
+    type RewardEvent is one of { AccrualEvent or AwardEvent }
+    entity RewardsAccount is {
+      state RewardState is {
+        id is CustomerId,
+        points is Number,
+        rewardEvents is many optional RewardEvent
+      }
+      handler Inputs is {}
+    }
+  }
+  // #Loyalty
+
+  // #Order
+  context Order is {
+    entity Order is {
+      option is aggregate
+      state OrderState is {
+        orderId is OrderId,
+        customerId is CustomerId
+      }
+      handler foo  is {}
+    }
+  }
+  // #Order
+
+  // #Payment
+  context Payment is {
+    entity Payment is {
+      option is aggregate
+      state PaymentState is {
+        orderId is Id(),
+        amount is Number,
+        cardToken is String
+      }
+      handler foo is {}
+    }
+  }
+  // #Payment
+
+  // #Menu
+  context Menu is {
+    entity MenuItem is {
+      state MenuState is {
+        something: String
+      }
+      handler foo is {}
+    }
+    type MenuItemRef is refer to entity MenuItem
+    entity Menu is {
+      option is aggregate
+      state items is many MenuItemRef
+      handler foo is {}
+    }
+  }
+  // #Menu
+
+  // #Reservation
+  context Reservation is {
+    type ReservationValue is {
+      partyName is String,
+      phoneNumber is String,
+      location is Id(Location),
+      time is Time,
+      date is Date
+    }
+    entity Location is {
+      state foo is String
+      handler foo is {}
+    } explained as {
+      brief "This is a retail store Location"
+    }
+
+    entity Reservation is {
+     options ( aggregate )
+     state reservation is ReservationValue
+     handler ofInputs is {}
+    }
+  }
+  // #Reservation
+} explained as {
+  brief "Reactive BBQ Domain Definition"
+  details {
+    |This domain definition is designed to be instructive in the RIDDL language.
+    |It uses the case study from the Lightbend Reactive Architecture course as
+    |the basis for defining the domain. The course uses a set of interviews with
+    |Reactive BBQ employees to define the requirements. This domain specification
+    |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+  }
+}
+// #everything

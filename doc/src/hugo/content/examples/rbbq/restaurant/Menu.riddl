@@ -1,0 +1,14 @@
+entity Menu is {
+  type Amount = Range(0,1000)
+  type CorporateItemId = Pattern("")
+  type Item is {
+    corporateId: CorporateItemId,
+    name: String,
+    description: String
+    price: Amount
+  }
+
+  type AddItem = command { item: Item }
+  type RemoveItem = command { corporateId: CorporateItemId }
+  type MakeItemOutOfStock = command { corporateId: CorporateItemId
+}

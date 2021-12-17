@@ -116,18 +116,8 @@ author = "Yoppworks Inc."
 # contact form action
 contact_form_action = "#" # contact form works with https://formspree.io
 navigation_button_solid= true
-
-editURL= "https=//gitlab.com/yoppworks/ossum/riddl/edit/master/doc/src/hugo2"
-#showVisitedLinks= true # default is false
-#themeStyle= "flex" # "original" or "flex" # default "flex"
-#themeVariant= "blue" # choose theme variant "green", "gold" , "gray", "blue"
-#ordersectionsby= "weight" # ordersectionsby = "title"
-#disableHomeIcon= false # default is false
-#disableSearch= false # default is false
-#disableNavChevron= false # set true to hide next/prev chevron, default is false
-#highlightClientSide= false # set true to use highlight.pack.js instead of the default hugo chroma highlighter
-#menushortcutsnewtab= false # set true to open shortcuts links to a new tab/window
-#enableGitInfo= true
+mermaidInitialize = "{ \"theme\": \"dark\" }"
+editURL= "https=//gitlab.com/yoppworks/ossum/riddl/edit/master/doc/src/hugo"
 
 # Preloader
 [params.preloader]

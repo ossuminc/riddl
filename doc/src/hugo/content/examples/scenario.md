@@ -1,6 +1,6 @@
 ---
 title: "RBBQ Scenarios"
-weight: 30
+weight: 20
 ---
 
 ## Case Study
