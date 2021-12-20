@@ -70,36 +70,7 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(H
 lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin).settings(
   name := "riddlc",
   mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-  // Determines depth of TOC for page navigation.
-  /*
-  val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
-  val paradoxNavigationIncludeHeaders = settingKey[Boolean]("Whether to include headers in the navigation.")
-  val paradoxRoots = settingKey[List[String]]("Which ToC roots (pages without parent) to expect.")
-  val paradoxLeadingBreadcrumbs = settingKey[List[(String, String)]]("Any leading breadcrumbs (label -> url)")
-  val paradoxIllegalLinkPath = settingKey[Regex]("Path pattern to fail site creation (eg. to protect against missing `@ref` for links).")
-  val paradoxOrganization = settingKey[String]("Paradox dependency organization (for theme dependencies).")
-  val paradoxSourceSuffix = settingKey[String]("Source file suffix for markdown files [default = \".md\"].")
-  val paradoxTargetSuffix = settingKey[String]("Target file suffix for HTML files [default = \".html\"].")
-  val paradoxTheme = settingKey[Option[ModuleID]]("Web module name of the paradox theme, otherwise local template.")
-  val paradoxOverlayDirectories = settingKey[Seq[File]]("Directory containing common source files for configuration.")
-  val paradoxDefaultTemplateName = settingKey[String]("Name of default template for generating pages.")
-  val paradoxVersion = settingKey[String]("Paradox plugin version.")
-  val paradoxGroups = settingKey[Map[String, Seq[String]]]("Paradox groups.")
-  val paradoxValidationIgnorePaths = settingKey[List[Regex]]("List of regular expressions to apply to paths to determine if they should be ignored.")
-  val paradoxValidationSiteBasePath = settingKey[Option[String]]("The base path that the documentation is deployed to, allows validating links on the docs site that are outside of the documentation root tree")
-    Compile / paradoxMaterialTheme := {
-      ParadoxMaterialTheme().withColor("blue", "grey")
-        .withLogoIcon("yw-elephant")
-        .withCopyright("Copyright © 2019 Yoppworks Inc.").withSocial(
-          uri("https://github.com/yoppworks"),
-          uri("https://twitter.com/yoppworks"),
-          uri("https://www.linkedin.com/company/yoppworks"),
-          uri("https://www.facebook.com/YoppWorks/")
-        )
-      // .withFavicon("assets/images/riddl-favicon.png")
-      // .withLogo("assets/images/riddl-logo.png")
-    },
-   */
+
   libraryDependencies ++=
     Seq("com.github.scopt" %% "scopt" % "4.0.0-RC2", "com.typesafe" % "config" % "1.4.0"),
   buildInfoPackage := "com.yoppworks.ossum.riddl"
@@ -116,6 +87,7 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin).
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
   ),
+  (parallelExecution in test) := false,
   Compile / compileCheck := {
     Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
   }
