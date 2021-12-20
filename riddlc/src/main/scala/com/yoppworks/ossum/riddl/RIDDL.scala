@@ -4,7 +4,6 @@ import com.yoppworks.ossum.riddl.RiddlOptions._
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Riddl
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
-import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
 import com.yoppworks.ossum.riddl.translator.FormatTranslator
 import scopt.OParser
 
@@ -62,10 +61,6 @@ object RIDDL {
               case Kinds.Prettify =>
                 val outputRoot = options.outputDir.map(_.toPath)
                 val trans = new FormatTranslator
-                trans.translate(root, outputRoot, Riddl.SysLogger, options.configFile.map(_.toPath))
-              case Kinds.Paradox =>
-                val outputRoot = options.outputDir.map(_.toPath)
-                val trans = new ParadoxTranslator
                 trans.translate(root, outputRoot, Riddl.SysLogger, options.configFile.map(_.toPath))
               case x: Kinds.Value => println(s"Translation $x not yet implemented")
             }

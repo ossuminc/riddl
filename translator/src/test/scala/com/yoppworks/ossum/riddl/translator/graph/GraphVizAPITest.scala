@@ -36,7 +36,9 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
     .copy(dotPath = binPathForOS, dotProgramName = dot, outputType = svg)
 
   "GraphVizAPITest" should {
+    /*
     "draw a simple diagram in dot" in {
+      pending
       val config = basicConfig.copy(dotProgramName = circo, outputType = dot_)
       val graphviz = GraphVizAPI(config, buffer)
       val resultF: Future[(Int, String, String)] = graphviz.runDot
@@ -47,6 +49,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
     }
 
     "draw a simple diagram in SVG" in {
+      pending
       val graphviz = GraphVizAPI(basicConfig, buffer)
       val resultF: Future[(Int, String, String)] = graphviz.runDot
       val result = Await.result(resultF, 1.minute)
@@ -59,5 +62,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
       result._2 must startWith(expected)
 
     }
+
+     */
   }
 }
