@@ -22,8 +22,7 @@ class PosNeg extends ValidatingTest {
     label: String,
     fileName: String,
     options: ValidationOptions = ValidationOptions.Default
-  )(
-    validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val file = new File(fileName)
     TopLevelParser.parse(file) match {
@@ -44,50 +43,31 @@ class PosNeg extends ValidatingTest {
         validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
           val errors = msgs.filter(_.kind.isError)
           if (errors.nonEmpty) {
-            fail(
-              s"""Compiler output validation messages:
-                 |${errors.iterator
-                   .map(
-                     _.format(relativeFileName).linesIterator
-                       .mkString("-   ", "\n    ", "")
-                   )
-                   .mkString("\n")}""".stripMargin
-            )
+            fail(s"""Compiler output validation messages:
+                    |${errors.iterator.map(_.format.mkString("-   ", "\n    ", ""))
+              .mkString("\n")}""".stripMargin)
           } else {
-            val msgSet =
-              msgs.iterator
-                .map(
-                  _.format(
-                    file.getParentFile.toPath.relativize(file.toPath).toString
-                  ).trim
-                )
-                .filter(_.nonEmpty)
-                .toSet
+            val msgSet = msgs.iterator.map(_.format).filter(_.nonEmpty).toSet
 
-            if (msgSet == expectedMessages) {
-              succeed
-            } else {
+            if (msgSet == expectedMessages) { succeed }
+            else {
               val missingMsgs = expectedMessages &~ msgSet
               val unexpectedMsgs = msgSet &~ expectedMessages
 
               val errMsg = new StringBuilder()
               if (missingMsgs.nonEmpty) {
-                errMsg.append(
-                  missingMsgs.mkString(
-                    "Expected to find the following messages, but did not:\n\t",
-                    "\n\t",
-                    ""
-                  )
-                )
+                errMsg.append(missingMsgs.mkString(
+                  "Expected to find the following messages, but did not:\n\t",
+                  "\n\t",
+                  ""
+                ))
               }
               if (unexpectedMsgs.nonEmpty) {
-                errMsg.append(
-                  unexpectedMsgs.mkString(
-                    "Found the following messages which were not expected: \n\t",
-                    "\n\t",
-                    ""
-                  )
-                )
+                errMsg.append(unexpectedMsgs.mkString(
+                  "Found the following messages which were not expected: \n\t",
+                  "\n\t",
+                  ""
+                ))
               }
               fail(errMsg.toString())
             }
@@ -106,28 +86,21 @@ class PosNeg extends ValidatingTest {
     files.foreach(file => runForFile(file, Set.empty))
     dirs.foreach { dir =>
       val dirContents = dir.listFiles()
-      val checkFiles =
-        dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".check"))
-      val riddlFiles =
-        dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
+      val checkFiles = dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".check"))
+      val riddlFiles = dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
 
-      if (riddlFiles.isEmpty) {
-        fail(s"No riddl files in directory ${dir.getName}.")
-      } else if (riddlFiles.length > 1) {
+      if (riddlFiles.isEmpty) { fail(s"No riddl files in directory ${dir.getName}.") }
+      else if (riddlFiles.length > 1) {
         fail(
           s"Multiple root-level riddl files in directory ${dir.getName}. Unsure which to validate"
         )
       } else {
         assert(riddlFiles.length == 1)
         val riddlFile = riddlFiles.head
-        import scala.collection.JavaConverters._
-        val checkFileLines = checkFiles.iterator
-          .flatMap { file =>
-            java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
-          }
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .toSet
+        import scala.jdk.CollectionConverters._
+        val checkFileLines = checkFiles.iterator.flatMap { file =>
+          java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
+        }.map(_.trim).filter(_.nonEmpty).toSet
 
         runForFile(riddlFile, checkFileLines)
       }
@@ -145,36 +118,21 @@ class PosNeg extends ValidatingTest {
 
             if (expectedMessages.nonEmpty) {
               errMsg.append(
-                expectedMessages.mkString(
-                  "Expected to find the following messages, but did not:\n\t",
-                  "\n\t",
-                  ""
-                )
+                expectedMessages
+                  .mkString("Expected to find the following messages, but did not:\n\t", "\n\t", "")
               )
             }
             fail(errMsg.toString)
           } else {
-            val msgSet =
-              errors.iterator
-                .map(
-                  _.format(
-                    file.getParentFile.toPath.relativize(file.toPath).toString
-                  ).trim
-                )
-                .filter(_.nonEmpty)
-                .toSet
+            val msgSet = errors.iterator.map(_.format.trim).filter(_.nonEmpty).toSet
 
-            if (expectedMessages.subsetOf(msgSet)) {
-              succeed
-            } else {
+            if (expectedMessages.subsetOf(msgSet)) { succeed }
+            else {
               val missingMsgs = expectedMessages &~ msgSet
 
               fail(
-                missingMsgs.mkString(
-                  "Expected to find the following messages, but did not:\n\t",
-                  "\n\t",
-                  ""
-                )
+                missingMsgs
+                  .mkString("Expected to find the following messages, but did not:\n\t", "\n\t", "")
               )
             }
           }
@@ -194,28 +152,21 @@ class PosNeg extends ValidatingTest {
     files.foreach(file => runForFile(file, Set.empty))
     dirs.foreach { dir =>
       val dirContents = dir.listFiles()
-      val checkFiles =
-        dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".check"))
-      val riddlFiles =
-        dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
+      val checkFiles = dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".check"))
+      val riddlFiles = dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
 
-      if (riddlFiles.isEmpty) {
-        fail(s"No riddl files in directory ${dir.getName}.")
-      } else if (riddlFiles.length > 1) {
+      if (riddlFiles.isEmpty) { fail(s"No riddl files in directory ${dir.getName}.") }
+      else if (riddlFiles.length > 1) {
         fail(
           s"Multiple root-level riddl files in directory ${dir.getName}. Unsure which to validate"
         )
       } else {
         assert(riddlFiles.length == 1)
         val riddlFile = riddlFiles.head
-        import scala.collection.JavaConverters._
-        val checkFileLines = checkFiles.iterator
-          .flatMap { file =>
-            java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
-          }
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .toSet
+        import scala.jdk.CollectionConverters._
+        val checkFileLines = checkFiles.iterator.flatMap { file =>
+          java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
+        }.map(_.trim).filter(_.nonEmpty).toSet
 
         runForFile(riddlFile, checkFileLines)
       }
