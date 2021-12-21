@@ -33,23 +33,21 @@ class AstWalkerTests extends AnyWordSpec with must.Matchers with BeforeAndAfterA
     "generate a non-empty HugoRoot from `everything.riddl` test file" in {
       val root = container
       val hugoRoot = LukeAstWalker(root)
-      val allHugoNodes = hugoRoot.contents.toSeq
+      val allHugoNodes = hugoRoot.allContents.toSeq
       allHugoNodes must have size 21
     }
 
     "properly collect all types from `everything.riddl` test file" in {
       val root = container
       val hugoRoot = LukeAstWalker(root)
-      val collectorRoot = TypeCollector(hugoRoot)
-      val refTypes = TypeCollector.typeReferences(hugoRoot)
-      refTypes must have size 6
-      val collectorNodes = collectorRoot.directChildren.toSeq
-      collectorNodes must have size 23
+      val refTypes = TypeResolver.unresolved(hugoRoot)
+      refTypes must have size 7
 
-      val resolver = TypeResolver(hugoRoot)
-      val resolved = refTypes.zip(resolver.resolveAll(refTypes))
+      val resolvedRoot = TypeResolution(hugoRoot)
+      val unresolved = TypeResolver.unresolved(resolvedRoot)
 
-      resolved.map { case (ref, resolved) => ref must not equal resolved }
+      hugoRoot.allContents must have size resolvedRoot.allContents.size
+      unresolved mustBe empty
     }
   }
 }

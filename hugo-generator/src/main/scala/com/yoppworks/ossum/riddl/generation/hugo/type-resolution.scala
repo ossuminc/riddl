@@ -1,140 +1,232 @@
 package com.yoppworks.ossum.riddl.generation.hugo
 
-import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
+import cats.Eval
+import cats.instances.all._
+import cats.syntax.all._
 
 import scala.annotation.tailrec
-import scala.util.control.TailCalls._
 
-object TypeCollector {
+object TypeResolution {
+  import com.yoppworks.ossum.riddl.generation.hugo.{ RiddlType => RT }
+  private type TypePredicate = RiddlType => Boolean
 
-  def apply(root: HugoRoot): Namespace = makeTypeRoot(root)
+  def apply(root: HugoRoot): HugoRoot = rebuildRoot(Rebuild(TypeResolver(root)), root)
 
-  def typeReferences(root: HugoRoot): Set[HugoType.TypeReference] = makeTypeSet(root)
-    .collect { case tr: HugoType.TypeReference => tr }
+  private case class Rebuild(lookup: TypeResolver) {
 
-  @inline
-  private final def enumOptOf(of: Seq[HugoType.Enumeration.EnumOption]): Set[HugoType] = of
-    .collect { case HugoType.Enumeration.EnumOptionTyped(_, tpe) => tpe }.toSet
+    private def rebuildEnumOptions(
+      opts: Vector[RT.Enumeration.EnumOption]
+    ): Eval[Seq[RT.Enumeration.EnumOption]] = opts.traverse {
+      case RT.Enumeration.EnumOptionTyped(name, subtype) => riddl(subtype)
+          .map(RT.Enumeration.EnumOptionTyped(name, _))
 
-  private def makeTypeSet(root: HugoRoot): Set[HugoType] = {
-    @inline
-    def handleHugoType(
-      tpe: HugoType,
-      toSearch: Seq[HugoRepr],
-      found: Set[HugoType]
-    ): TailRec[Set[HugoType]] = tpe match {
-      case HugoType.Record(_, fields, _) =>
-        tailcall(loopTailRec(toSearch ++ fields.map(_.fieldType), found + tpe))
-      case HugoType.Variant(_, of, _) => tailcall(loopTailRec(toSearch ++ of, found + tpe))
-      case HugoType.Mapping(_, from, to, _) =>
-        tailcall(loopTailRec(toSearch :+ from :+ to, found + tpe))
-      case HugoType.Enumeration(_, of, _) =>
-        tailcall(loopTailRec(toSearch ++ enumOptOf(of), found + tpe))
-      case otherType => tailcall(loopTailRec(toSearch, found + otherType))
+      case other => Eval.now(other)
     }
 
-    def loopTailRec(toSearch: Seq[HugoRepr], found: Set[HugoType]): TailRec[Set[HugoType]] =
-      toSearch match {
-        case HugoRoot(root) +: tail        => tailcall(loopTailRec(tail ++ root.hugoNodes, found))
-        case HugoDomain(_, ns, _) +: tail  => tailcall(loopTailRec(tail ++ ns.hugoNodes, found))
-        case HugoContext(_, ns, _) +: tail => tailcall(loopTailRec(tail ++ ns.hugoNodes, found))
+    private def rebuildVariantOptions(opts: Vector[RiddlType]): Eval[Seq[RiddlType]] = opts
+      .traverse(riddl)
 
-        case HugoEntity(_, ns, _, _, _, _, _, _) +: tail =>
-          tailcall(loopTailRec(tail ++ ns.hugoNodes, found))
+    private def rebuildMapping(from: RiddlType, to: RiddlType): Eval[RT.Mapping] = for {
+      fromFixed <- riddl(from)
+      toFixed <- riddl(to)
+    } yield RT.Mapping(fromFixed, toFixed)
 
-        case (tpe: HugoType) +: tail => handleHugoType(tpe, tail, found)
-
-        case _ +: tail => tailcall(loopTailRec(tail, found))
-        case Nil       => done(found)
+    private def rebuildFields(fields: Set[HugoField]): Eval[Set[HugoField]] = fields
+      .unorderedTraverse { field =>
+        riddl(field.fieldType).map(HugoField(field.name, _, field.description))
       }
 
-    val found = loopTailRec(Seq(root), Set.empty).result
-    found
+    def riddl(riddlType: RiddlType): Eval[RiddlType] = riddlType match {
+      case RT.Alias(inner)             => Eval.defer(riddl(inner)).map(RT.Alias)
+      case RT.Collection(inner, empty) => Eval.defer(riddl(inner)).map(RT.Collection(_, empty))
+      case RT.Optional(inner)          => Eval.defer(riddl(inner)).map(RT.Optional)
+      case RT.Enumeration(of) => Eval.defer(rebuildEnumOptions(of.toVector).map(RT.Enumeration(_)))
+      case RT.Variant(of)     => Eval.defer(rebuildVariantOptions(of.toVector).map(RT.Variant))
+      case RT.Mapping(from, to) => Eval.defer(rebuildMapping(from, to))
+      case RT.UniqueId(inner)   => Eval.defer(riddl(inner)).map(RT.UniqueId)
+      case RT.Record(fields)    => Eval.defer(rebuildFields(fields)).map(RT.Record)
+      case otherType            => Eval.now(lookup.resolve(otherType))
+    }
+
+    def rebuildStates(states: Set[HugoEntity.State]): Eval[Set[HugoEntity.State]] = states
+      .unorderedTraverse { state =>
+        rebuildFields(state.fields).map(HugoEntity.State(state.name, _))
+      }
+
+    def rebuildHandlers(handlers: Set[HugoEntity.Handler]): Eval[Set[HugoEntity.Handler]] = handlers
+      .unorderedTraverse { handler =>
+        import HugoEntity.OnClause
+        handler.clauses.toVector.traverse {
+          case OnClause.Event(onType)   => riddl(onType).map(OnClause.Event)
+          case OnClause.Command(onType) => riddl(onType).map(OnClause.Command)
+          case OnClause.Query(onType)   => riddl(onType).map(OnClause.Query)
+          case OnClause.Action(onType)  => riddl(onType).map(OnClause.Action)
+        } map { clauses => HugoEntity.Handler(handler.name, clauses) }
+      }
+
+    def rebuildFunctions(
+      functions: Set[HugoEntity.Function]
+    ): Eval[Set[HugoEntity.Function]] = functions.unorderedTraverse { function =>
+      for {
+        inputs <- rebuildFields(function.inputs)
+        output <- riddl(function.output)
+      } yield HugoEntity.Function(function.fullName, inputs, output)
+    }
+
   }
 
-  private def makeTypeRoot(root: HugoRoot): Namespace = {
-    def searchRec(nodes: Seq[HugoRepr], builder: Namespace): TailRec[Namespace] = {
-      @inline
-      def goRec(node: RiddlContainer, tail: Seq[HugoRepr], ns: Namespace) = {
-        val childNs = ns.getOrCreate(node.name).setNode(node)
-        searchRec(node.contents.toSeq, childNs).flatMap { _ => searchRec(tail, ns) }
-      }
+  private def rebuildType(ctx: Rebuild, tpe: HugoType, parent: HugoNode): Eval[HugoType] = ctx
+    .riddl(tpe.typeDef).map(HugoType(tpe.name, parent, _, tpe.description))
 
-      @inline
-      def handleEntity(entity: HugoEntity, tail: Seq[HugoRepr], ns: Namespace) = {
-        val entityNs = ns.getOrCreate(entity.name).setNode(entity)
-        searchRec(entity.namespace.hugoNodes.toSeq, entityNs).flatMap(_ => searchRec(tail, ns))
-      }
+  private def rebuildEntity(ctx: Rebuild, entity: HugoEntity, parent: HugoNode): Eval[HugoEntity] =
+    Eval.defer {
+      val entityData = for {
+        states <- ctx.rebuildStates(entity.states)
+        handlers <- ctx.rebuildHandlers(entity.handlers)
+        functions <- ctx.rebuildFunctions(entity.functions)
+      } yield (states, handlers, functions)
 
-      def handleType(tpe: HugoType, tail: Seq[HugoRepr], ns: Namespace) = {
-        @inline
-        def addAndSearch(ht: HugoType, toSearch: Iterable[HugoType]) = {
-          ns.getOrCreate(ht.name).setNode(ht)
-          searchRec(tail ++ toSearch, ns)
+      entityData.map { case (sts, hds, fns) =>
+        entity.copy(parent = parent, states = sts, handlers = hds, functions = fns) { self =>
+          entity.types.toVector.traverse(rebuildType(ctx, _, self)).value
         }
-
-        tpe match {
-          case HugoType.Record(_, fields, _)    => addAndSearch(tpe, fields.map(_.fieldType))
-          case HugoType.Variant(_, of, _)       => addAndSearch(tpe, of)
-          case HugoType.Mapping(_, from, to, _) => addAndSearch(tpe, from :: to :: Nil)
-          case HugoType.Enumeration(_, of, _)   => addAndSearch(tpe, enumOptOf(of))
-          case _                                => addAndSearch(tpe, Seq.empty)
-        }
-      }
-
-      nodes match {
-        case (dom: HugoDomain) +: tail  => tailcall(goRec(dom, tail, builder))
-        case (ctx: HugoContext) +: tail => tailcall(goRec(ctx, tail, builder))
-        case (ent: HugoEntity) +: tail  => tailcall(handleEntity(ent, tail, builder))
-        // Skip type references
-        case (_: HugoType.TypeReference) +: tail => tailcall(searchRec(tail, builder))
-        case (tpe: HugoType) +: tail             => tailcall(handleType(tpe, tail, builder))
-        case Nil                                 => done(builder)
       }
     }
-    searchRec(root.contents.toSeq, Namespace.emptyRoot).result
+
+  private def rebuildContext(
+    ctx: Rebuild,
+    context: HugoContext,
+    parent: HugoNode
+  ): Eval[HugoContext] = Eval.always {
+    HugoContext(context.name, parent, context.description) { self =>
+      val lazyData = for {
+        contexts <- context.entities.toVector.traverse(rebuildEntity(ctx, _, self))
+        types <- context.types.toVector.traverse(rebuildType(ctx, _, self))
+      } yield (contexts, types)
+
+      val (contexts, types) = lazyData.value
+      contexts ++ types
+    }
+  }
+
+  private def rebuildDomain(ctx: Rebuild, domain: HugoDomain, parent: HugoNode): Eval[HugoDomain] =
+    Eval.always {
+      HugoDomain(domain.name, parent, domain.description) { self =>
+        val lazyData = for {
+          contexts <- domain.contexts.toVector.traverse(rebuildContext(ctx, _, self))
+          domains <- domain.domains.toVector.traverse(rebuildDomain(ctx, _, self))
+          types <- domain.types.toVector.traverse(rebuildType(ctx, _, self))
+        } yield (contexts, domains, types)
+
+        val (contexts, domains, types) = lazyData.value
+
+        domains ++ types ++ contexts
+      }
+    }
+
+  private def rebuildRoot(ctx: Rebuild, root: HugoRoot): HugoRoot = HugoRoot { self =>
+    root.contents.toVector.collect { case dom: HugoDomain => rebuildDomain(ctx, dom, self).value }
   }
 
 }
 
-sealed trait TypeResolver {
-  def resolve(ref: HugoType.TypeReference): HugoRepr
-  def resolveAll(refs: Iterable[HugoType.TypeReference]): Iterable[HugoRepr] = refs.map(resolve)
+trait TypeResolver {
+  def resolve(ref: RiddlType): RiddlType
+  def resolveAll(refs: Iterable[RiddlType]): Iterable[RiddlType] = refs.map(resolve)
 }
 
 object TypeResolver {
+  type Unresolved = RiddlType with MustResolve
 
-  def apply(root: HugoRoot): TypeResolver = TypeResolverImpl(TypeCollector(root))
+  def apply(root: HugoRoot): TypeResolver = TypeResolverImpl(root, makeTypeRoot(root))
+  def unresolved(root: HugoRoot): Set[Unresolved] = findUnresolved(root)
 
-  private final case class TypeResolverImpl(types: Namespace) extends TypeResolver {
-    def resolve(ref: HugoType.TypeReference): HugoRepr = {
-      @tailrec
-      def search(nn: Namespace, toFind: Seq[String], found: Set[HugoRepr]): Set[HugoRepr] =
-        if (nn.isRoot) { found }
-        else if (toFind.length == 1) {
-          val foundNode = nn.get(toFind.last).flatMap(_.node)
-          search(nn.parent, toFind, found ++ foundNode)
-        } else {
-          val foundAtNn = toFind.foldLeft(Option(nn)) { case (ns, part) =>
-            ns.fold(Option.empty[Namespace])(_.get(part))
-          }
-          val foundHugo = foundAtNn match {
-            case Some(Namespace(Some(hugo), _, _)) => Some(hugo)
-            case _                                 => None
-          }
-          search(nn.parent, toFind, found ++ foundHugo)
-        }
-
-      val searchNamespace = types.getOrCreate(ref.namespace.fullName)
-      val searchName = ref.fullName.split('.')
-      val found = search(searchNamespace, searchName, Set.empty).toList
-      found match {
-        case Nil        => ref
-        case one :: Nil => one
-        case many       => SysLogger.warn(s"$ref resolved to more than one type"); ref
+  private final case class TypeResolverImpl(root: HugoRoot, lookup: Map[String, RiddlType])
+      extends TypeResolver {
+    @tailrec
+    private def search(ns: HugoNode, name: String, orElse: RiddlType): RiddlType =
+      lookup.get(ns.resolveName(name)) match {
+        case Some(value)        => value
+        case None if !ns.isRoot => search(ns.parent, name, orElse)
+        case None               => orElse
       }
+
+    private def goSearch(namespace: String, fullName: String, orElse: RiddlType) =
+      root.get(namespace) match {
+        case Some(node) => search(node, fullName, orElse)
+        case None       => orElse
+      }
+
+    def resolve(ref: RiddlType): RiddlType = ref match {
+      case RiddlType.TypeReference(ns, fullName)   => goSearch(ns, fullName, ref)
+      case RiddlType.EntityReference(ns, fullName) => goSearch(ns, fullName, ref)
+      case otherRiddlType                          => otherRiddlType
+    }
+  }
+
+  private def makeTypeRoot(root: HugoRoot): Map[String, RiddlType] = {
+    @inline
+    def goType(ht: HugoType): (String, RiddlType) = (ht.fullName, RiddlType.TypeRef(ht))
+
+    @inline
+    def goEntity(entity: HugoEntity): (String, RiddlType) =
+      (entity.fullName, RiddlType.EntityRef(entity))
+
+    def loopTailRec(
+      toSearch: Seq[HugoNode],
+      found: Map[String, RiddlType]
+    ): Eval[Map[String, RiddlType]] = toSearch match {
+      case (root: HugoRoot) +: tail   => Eval.defer(loopTailRec(tail ++ root.contents, found))
+      case (dom: HugoDomain) +: tail  => Eval.defer(loopTailRec(tail ++ dom.contents, found))
+      case (ctx: HugoContext) +: tail => Eval.defer(loopTailRec(tail ++ ctx.contents, found))
+      case (ent: HugoEntity) +: tail => Eval
+          .defer(loopTailRec(tail ++ ent.contents, found + goEntity(ent)))
+      case (tpe: HugoType) +: tail => Eval.defer(loopTailRec(tail, found + goType(tpe)))
+
+      case _ +: tail => Eval.defer(loopTailRec(tail, found))
+      case Nil       => Eval.now(found)
     }
 
+    val found = loopTailRec(Seq(root), Map.empty).value
+    found
+  }
+
+  private def findUnresolved(root: HugoRoot): Set[Unresolved] = {
+    def checkEnumOpts(opts: Seq[RiddlType.Enumeration.EnumOption]): Set[Unresolved] =
+      goRiddlType(opts.collect { case RiddlType.Enumeration.EnumOptionTyped(_, sub) => sub })
+
+    @tailrec
+    def goRiddlType(
+      toSearch: Seq[RiddlType],
+      found: Set[Unresolved] = Set.empty
+    ): Set[Unresolved] = toSearch match {
+      case (ref: RiddlType.TypeReference) +: tail   => goRiddlType(tail, found + ref)
+      case (ref: RiddlType.EntityReference) +: tail => goRiddlType(tail, found + ref)
+      case RiddlType.Alias(inner) +: tail           => goRiddlType(tail :+ inner, found)
+      case RiddlType.Optional(inner) +: tail        => goRiddlType(tail :+ inner, found)
+      case RiddlType.Collection(inner, _) +: tail   => goRiddlType(tail :+ inner, found)
+      case RiddlType.Enumeration(opts) +: tail => goRiddlType(tail, found ++ checkEnumOpts(opts))
+      case RiddlType.Variant(opts) +: tail     => goRiddlType(tail ++ opts, found)
+      case RiddlType.Mapping(from, to) +: tail => goRiddlType(tail :+ from :+ to, found)
+      case RiddlType.UniqueId(inner) +: tail   => goRiddlType(tail :+ inner, found)
+      case RiddlType.Record(fields) +: tail => goRiddlType(tail ++ fields.map(_.fieldType), found)
+      case _ +: tail                        => goRiddlType(tail, found)
+      case Nil                              => found
+    }
+
+    def search(toSearch: Seq[HugoNode], found: Set[Unresolved]): Eval[Set[Unresolved]] =
+      toSearch match {
+        case (root: HugoRoot) +: tail   => Eval.defer(search(tail ++ root.contents, found))
+        case (dom: HugoDomain) +: tail  => Eval.defer(search(tail ++ dom.contents, found))
+        case (ctx: HugoContext) +: tail => Eval.defer(search(tail ++ ctx.contents, found))
+        case (ent: HugoEntity) +: tail  => Eval.defer(search(tail ++ ent.contents, found))
+        case (tpe: HugoType) +: tail => Eval
+            .defer(search(tail, found ++ goRiddlType(Seq(tpe.typeDef))))
+        case _ +: tail => Eval.defer(search(tail, found))
+        case Nil       => Eval.now(found)
+      }
+
+    search(Seq(root), Set.empty).value
   }
 
 }

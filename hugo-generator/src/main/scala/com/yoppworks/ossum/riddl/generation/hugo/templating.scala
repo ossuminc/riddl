@@ -6,7 +6,7 @@ import scala.util.matching.Regex
 
 object Templates {
 
-  final def forHugo(repr: HugoRepr): Either[Throwable, TemplateFile] = Loader.getTemplate(repr)
+  final def forHugo(repr: HugoNode): Either[Throwable, TemplateFile] = Loader.getTemplate(repr)
 
   private sealed trait TemplateSlot
   private case class NotLoaded(resource: String) extends TemplateSlot
@@ -20,7 +20,7 @@ object Templates {
     private[this] val templatesMap: collection.mutable.Map[String, TemplateSlot] = collection
       .mutable.Map(ResourceNames.all: _*).map { case (key, value) => (key, NotLoaded(value)) }
 
-    final def getTemplate(forRepr: HugoRepr): Either[Throwable, TemplateFile] = {
+    final def getTemplate(forRepr: HugoNode): Either[Throwable, TemplateFile] = {
       val name = forRepr match {
         case _: HugoType => "HugoType"
         case _           => forRepr.getClass.getSimpleName.stripSuffix("$")
@@ -57,7 +57,7 @@ object Templates {
 
   private object ResourceNames {
     @inline
-    private final def mkTemplateResource[T <: HugoRepr: ClassTag](name: String): (String, String) =
+    private final def mkTemplateResource[T <: HugoNode: ClassTag](name: String): (String, String) =
       (implicitly[ClassTag[T]].runtimeClass.getSimpleName, s"components/$name")
 
     val context = mkTemplateResource[HugoContext]("context.md")

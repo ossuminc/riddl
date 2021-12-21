@@ -2,14 +2,14 @@ package com.yoppworks.ossum.riddl.generation.hugo
 
 import com.yoppworks.ossum.riddl.language.AST
 
-sealed trait WalkNodeF[In, Out <: HugoRepr] {
-  def apply(nn: Namespace, inputNode: In): Out
+sealed trait WalkNodeF[In, Out <: HugoNode] {
+  def apply(ns: HugoNode, inputNode: In): Out
 }
 
 private object WalkNodeF {
-  final def apply[In, Out <: HugoRepr](f: (Namespace, In) => Out): WalkNodeF[In, Out] =
+  final def apply[In, Out <: HugoNode](f: (HugoNode, In) => Out): WalkNodeF[In, Out] =
     new WalkNodeF[In, Out] {
-      final def apply(nn: Namespace, inputNode: In) = f(nn, inputNode)
+      final def apply(ns: HugoNode, inputNode: In) = f(ns, inputNode)
     }
 }
 
@@ -17,37 +17,32 @@ object LukeAstWalker {
 
   def apply(
     root: AST.RootContainer
-  ): HugoRoot = HugoRoot(root.contents.foldLeft(Namespace.emptyRoot) {
-    case (ns, dom: AST.Domain)  => walkDomain(ns, dom); ns
-    case (ns, ctx: AST.Context) => walkContext(ns, ctx); ns
-    case (ns, ent: AST.Entity)  => walkEntity(ns, ent); ns
-    case (ns, _)                => ns
-  })
-
-  val walkDomain: WalkNodeF[AST.Domain, HugoDomain] = WalkNodeF { (nn, node) =>
-    val name = node.id.value
-    val domainNs = nn.getOrCreate(name)
-    val types = node.types.map(walkType(domainNs, _))
-    val contexts = node.contexts.map(walkContext(domainNs, _))
-    val domains = node.domains.map(walkDomain(domainNs, _))
-    val dom = HugoDomain(name, domainNs, node.description.map(descriptionToHugo))
-    domainNs.setNode(dom)
-    dom
+  ): HugoRoot = HugoRoot { ns =>
+    root.contents.collect {
+      case (dom: AST.Domain)  => walkDomain(ns, dom)
+      case (ctx: AST.Context) => walkContext(ns, ctx)
+      case (ent: AST.Entity)  => walkEntity(ns, ent)
+    }
   }
 
-  val walkContext: WalkNodeF[AST.Context, HugoContext] = WalkNodeF { (nn, node) =>
-    val name = node.id.value
-    val ctxNs = nn.getOrCreate(name)
-    val types = node.types.map(walkType(ctxNs, _))
-    val entities = node.entities.map(walkEntity(ctxNs, _))
-    val ctx = HugoContext(name, ctxNs, node.description.map(descriptionToHugo))
-    ctxNs.setNode(ctx)
-    ctx
+  val walkDomain: WalkNodeF[AST.Domain, HugoDomain] = WalkNodeF { (ns, node) =>
+    HugoDomain(node.id.value, ns) { domain =>
+      node.types.map(walkType(domain, _)) ++ node.contexts.map(walkContext(domain, _)) ++
+        node.domains.map(walkDomain(domain, _))
+    }
   }
 
-  val walkEntity: WalkNodeF[AST.Entity, HugoEntity] = WalkNodeF { (nn, node) =>
+  val walkContext: WalkNodeF[AST.Context, HugoContext] = WalkNodeF { (ns, node) =>
+    HugoContext(node.id.value, ns) { context =>
+      node.types.map(walkType(context, _)) ++ node.entities.map(walkEntity(context, _))
+    }
+  }
+
+  val walkEntity: WalkNodeF[AST.Entity, HugoEntity] = WalkNodeF { (ns, node) =>
     val name = node.id.value
-    val entityNs = nn.getOrCreate(name)
+    val entityName = ns.resolveName(name)
+    def resolveName(n: String) = entityName + s".$n"
+
     val options: HugoEntity.Options = node.options
       .foldLeft(HugoEntity.EntityOption.none) { case (opts, entityOpt) =>
         entityOpt match {
@@ -63,20 +58,22 @@ object LukeAstWalker {
 
     val states = node.states.map { astState =>
       HugoEntity.State(
-        entityNs.resolve(astState.id.value),
+        resolveName(astState.id.value),
         astState.contents.collect { case AST.Field(_, id, typeEx, description) =>
-          HugoField(id.value, handleTypeExpr(entityNs, typeEx), description.map(descriptionToHugo))
+          HugoField(
+            id.value,
+            handleTypeExpr(entityName, typeEx),
+            description.map(descriptionToHugo)
+          )
         }.distinct.toSet
       )
     }
 
-    val types = node.types.map(walkType(entityNs, _))
+    @inline
+    def mkTypeRef(ns: String, path: AST.PathIdentifier) = RiddlType.TypeReference(ns, path.value)
 
     @inline
-    def mkTypeRef(ns: Namespace, path: AST.PathIdentifier) = HugoType.TypeReference(ns, path.value)
-
-    @inline
-    def handlerOnClause(nn: Namespace, hc: AST.OnClause): HugoEntity.OnClause = hc.msg match {
+    def handlerOnClause(nn: String, hc: AST.OnClause): HugoEntity.OnClause = hc.msg match {
       case AST.CommandRef(_, id) => HugoEntity.OnClause.Command(mkTypeRef(nn, id))
       case AST.EventRef(_, id)   => HugoEntity.OnClause.Event(mkTypeRef(nn, id))
       case AST.QueryRef(_, id)   => HugoEntity.OnClause.Query(mkTypeRef(nn, id))
@@ -84,125 +81,114 @@ object LukeAstWalker {
     }
 
     val handlers = node.handlers.map { astHandler =>
-      val handlerName = entityNs.resolve(astHandler.id.value)
-      val clauses = astHandler.clauses.map(handlerOnClause(entityNs, _))
+      val handlerName = resolveName(astHandler.id.value)
+      val clauses = astHandler.clauses.map(handlerOnClause(entityName, _))
       HugoEntity.Handler(handlerName, clauses)
     }
 
     val functions = node.functions.map { astFunction =>
-      val funcName = entityNs.resolve(astFunction.id.value)
+      val funcName = resolveName(astFunction.id.value)
       val inputs = astFunction.input.collect { case AST.Aggregation(_, fields, _) =>
-        fields.map { field => HugoField(field.id.value, handleTypeExpr(entityNs, field.typeEx)) }
+        fields.map { field => HugoField(field.id.value, handleTypeExpr(entityName, field.typeEx)) }
           .distinct.toSet
       }.fold(Set.empty[HugoField])(identity)
-      val output = handleTypeExpr(entityNs, astFunction.output)
+      val output = handleTypeExpr(entityName, astFunction.output)
       HugoEntity.Function(funcName, inputs, output)
     }
 
     val invariants = node.invariants.map { astInvariant =>
       HugoEntity
-        .Invariant(entityNs.resolve(astInvariant.id.value), astInvariant.expression.map(_.s).toList)
+        .Invariant(resolveName(astInvariant.id.value), astInvariant.expression.map(_.s).toList)
     }
 
-    val entity = HugoEntity(
-      entityNs.name,
-      entityNs,
+    HugoEntity(
+      name,
+      ns,
       options,
       states.toSet,
       handlers.toSet,
       functions.toSet,
       invariants.toSet,
       node.description.map(descriptionToHugo)
-    )
-
-    entityNs.setNode(entity)
-    entity
+    )(parent => node.types.map(walkType(parent, _)))
   }
 
-  val walkType: WalkNodeF[AST.Type, HugoType] = WalkNodeF { (nn, node) =>
+  val walkType: WalkNodeF[AST.Type, HugoType] = WalkNodeF { (ns, node) =>
     val name = node.id.value
-    val typeNs = nn.getOrCreate(name)
-    val tpe = handleTypeExpr(typeNs, node.typ) match {
-      case tpe: HugoType.PredefinedType => HugoType.Alias(typeNs.fullName, tpe)
-      case otherwise                    => otherwise
+    val typeDef = handleTypeExpr(ns.fullName, node.typ) match {
+      case tpe: RiddlType.PredefinedType => RiddlType.Alias(tpe)
+      case otherwise                     => otherwise
     }
-    typeNs.setNode(tpe)
-    tpe
+    HugoType(name, ns, typeDef, node.description.map(descriptionToHugo))
   }
 
-  private def handleTypeExpr(nn: Namespace, expr: AST.TypeExpression): HugoType = expr match {
-    case AST.Optional(_, texp) => HugoType.Optional(nn.fullName, handleTypeExpr(nn.parent, texp))
+  private def handleTypeExpr(ns: String, expr: AST.TypeExpression): RiddlType = expr match {
+    case AST.Optional(_, texp) => RiddlType.Optional(handleTypeExpr(ns, texp))
 
-    case AST.ZeroOrMore(_, texp) => HugoType
-        .Collection(nn.fullName, handleTypeExpr(nn.parent, texp), canBeEmpty = true)
+    case AST.ZeroOrMore(_, texp) => RiddlType
+        .Collection(handleTypeExpr(ns, texp), canBeEmpty = true)
 
-    case AST.OneOrMore(_, texp) => HugoType
-        .Collection(nn.fullName, handleTypeExpr(nn.parent, texp), canBeEmpty = false)
+    case AST.OneOrMore(_, texp) => RiddlType
+        .Collection(handleTypeExpr(ns, texp), canBeEmpty = false)
 
-    case AST.Enumeration(_, of, description) =>
-      val opts: Seq[HugoType.Enumeration.EnumOption] = of.map {
-        case AST.Enumerator(_, id, Some(value), None, _) => HugoType.Enumeration
+    case AST.Enumeration(_, of, _) =>
+      val opts: Seq[RiddlType.Enumeration.EnumOption] = of.map {
+        case AST.Enumerator(_, id, Some(value), None, _) => RiddlType.Enumeration
             .EnumOptionValue(id.value, value.n.toInt)
 
-        case AST.Enumerator(_, id, None, Some(ref), _) => HugoType.Enumeration
-            .EnumOptionTyped(id.value, HugoType.TypeReference(nn, ref.id.value))
+        case AST.Enumerator(_, id, None, Some(ref), _) => RiddlType.Enumeration
+            .EnumOptionTyped(id.value, RiddlType.TypeReference(ns, ref.id.value))
 
-        case AST.Enumerator(_, id, _, _, _) => HugoType.Enumeration.EnumOptionNamed(id.value)
+        case AST.Enumerator(_, id, _, _, _) => RiddlType.Enumeration.EnumOptionNamed(id.value)
       }
-      HugoType.Enumeration(nn.fullName, opts, description.map(descriptionToHugo))
+      RiddlType.Enumeration(opts)
 
-    case AST.Alternation(_, of, description) =>
-      val variants = of.map(handleTypeExpr(nn.parent, _))
-      HugoType.Variant(nn.fullName, variants, description.map(descriptionToHugo))
+    case AST.Alternation(_, of, _) =>
+      val variants = of.map(handleTypeExpr(ns, _))
+      RiddlType.Variant(variants)
 
-    case AST.Aggregation(_, fields, description) =>
+    case AST.Aggregation(_, fields, _) =>
       val recFields = fields.map(fld =>
         HugoField(
           fld.id.value,
-          handleTypeExpr(nn, fld.typeEx),
+          handleTypeExpr(ns, fld.typeEx),
           fld.description.map(descriptionToHugo)
         )
       )
-      HugoType.Record(nn.fullName, recFields.distinct.toSet, description.map(descriptionToHugo))
+      RiddlType.Record(recFields.distinct.toSet)
 
-    case AST.Mapping(_, from, to, description) =>
-      val fromType = handleTypeExpr(nn.parent, from)
-      val toType = handleTypeExpr(nn.parent, to)
-      HugoType.Mapping(nn.fullName, fromType, toType, description.map(descriptionToHugo))
+    case AST.Mapping(_, from, to, _) =>
+      val fromType = handleTypeExpr(ns, from)
+      val toType = handleTypeExpr(ns, to)
+      RiddlType.Mapping(fromType, toType)
 
-    case AST.RangeType(_, min, max, description) => HugoType
-        .Range(nn.fullName, min.n.toInt, max.n.toInt, description.map(descriptionToHugo))
+    case AST.RangeType(_, min, max, _) => RiddlType.Range(min.n.toInt, max.n.toInt)
 
-    case AST.Pattern(_, pattern, description) => HugoType
-        .RegexPattern(nn.fullName, pattern.map(_.s), description.map(descriptionToHugo))
+    case AST.Pattern(_, pattern, _) => RiddlType.RegexPattern(pattern.map(_.s))
 
-    case AST.UniqueId(_, entityPath, description) => HugoType.ReferenceType(
-        nn.fullName,
-        HugoType.TypeReference(nn.parent, entityPath.value),
-        description.map(descriptionToHugo)
-      )
+    case AST.UniqueId(_, entityPath, _) => RiddlType.EntityReference(ns, entityPath.value)
 
-    case AST.TypeRef(_, id) => HugoType.TypeReference(nn, id.value.mkString("."))
+    case AST.TypeRef(_, id) => RiddlType.TypeReference(ns, id.value)
 
     /* Predefined types */
-    case AST.PredefinedType("String")    => HugoType.PredefinedType.Text
-    case AST.PredefinedType("Boolean")   => HugoType.PredefinedType.Bool
-    case AST.PredefinedType("Number")    => HugoType.PredefinedType.Number
-    case AST.PredefinedType("Integer")   => HugoType.PredefinedType.Integer
-    case AST.PredefinedType("Decimal")   => HugoType.PredefinedType.Decimal
-    case AST.PredefinedType("Real")      => HugoType.PredefinedType.Real
-    case AST.PredefinedType("Date")      => HugoType.PredefinedType.Date
-    case AST.PredefinedType("Time")      => HugoType.PredefinedType.Time
-    case AST.PredefinedType("DateTime")  => HugoType.PredefinedType.DateTime
-    case AST.PredefinedType("TimeStamp") => HugoType.PredefinedType.Timestamp
-    case AST.PredefinedType("Duration")  => HugoType.PredefinedType.Duration
-    case AST.PredefinedType("UUID")      => HugoType.PredefinedType.UUID
-    case AST.PredefinedType("URL")       => HugoType.PredefinedType.URL
-    case AST.PredefinedType("LatLong")   => HugoType.PredefinedType.LatLong
-    case AST.PredefinedType("Nothing")   => HugoType.PredefinedType.Bottom
+    case AST.PredefinedType("String")    => RiddlType.PredefinedType.Text
+    case AST.PredefinedType("Boolean")   => RiddlType.PredefinedType.Bool
+    case AST.PredefinedType("Number")    => RiddlType.PredefinedType.Number
+    case AST.PredefinedType("Integer")   => RiddlType.PredefinedType.Integer
+    case AST.PredefinedType("Decimal")   => RiddlType.PredefinedType.Decimal
+    case AST.PredefinedType("Real")      => RiddlType.PredefinedType.Real
+    case AST.PredefinedType("Date")      => RiddlType.PredefinedType.Date
+    case AST.PredefinedType("Time")      => RiddlType.PredefinedType.Time
+    case AST.PredefinedType("DateTime")  => RiddlType.PredefinedType.DateTime
+    case AST.PredefinedType("TimeStamp") => RiddlType.PredefinedType.Timestamp
+    case AST.PredefinedType("Duration")  => RiddlType.PredefinedType.Duration
+    case AST.PredefinedType("UUID")      => RiddlType.PredefinedType.UUID
+    case AST.PredefinedType("URL")       => RiddlType.PredefinedType.URL
+    case AST.PredefinedType("LatLong")   => RiddlType.PredefinedType.LatLong
+    case AST.PredefinedType("Nothing")   => RiddlType.PredefinedType.Bottom
 
     /* Default */
-    case _ => HugoType.UnhandledType(nn.fullName)
+    case _ => RiddlType.UnhandledType(expr.toString)
   }
 
   private final def descriptionToHugo(desc: AST.Description): HugoDescription = HugoDescription(

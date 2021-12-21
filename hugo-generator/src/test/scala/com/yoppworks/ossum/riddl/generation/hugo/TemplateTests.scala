@@ -9,7 +9,7 @@ class TemplateTests extends AnyWordSpec with must.Matchers with TryValues {
 
   "Templates" should {
 
-    def testReprTemplate(repr: HugoRepr, token: String): Assertion = {
+    def testReprTemplate(repr: HugoNode, token: String): Assertion = {
       val templateOrError = Templates.forHugo(repr)
       val template = templateOrError.toTry.success.value
       template.replacementTokens must contain(token)
@@ -19,15 +19,15 @@ class TemplateTests extends AnyWordSpec with must.Matchers with TryValues {
     }
 
     "load a valid template for domains" in
-      testReprTemplate(HugoDomain("dummy", Namespace.emptyRoot, None), "domainName")
+      testReprTemplate(HugoDomain.empty("dummy", Namespace.emptyRoot.toNode, None), "domainName")
 
     "load a valid template for contexts" in
-      testReprTemplate(HugoContext("dummy", Namespace.emptyRoot, None), "contextName")
+      testReprTemplate(HugoContext.empty("dummy", Namespace.emptyRoot.toNode, None), "contextName")
 
     "load a valid template for entity" in testReprTemplate(
-      HugoEntity(
+      HugoEntity.empty(
         "dummy",
-        Namespace.emptyRoot,
+        Namespace.emptyRoot.toNode,
         HugoEntity.EntityOption.none,
         Set.empty,
         Set.empty,
@@ -38,8 +38,10 @@ class TemplateTests extends AnyWordSpec with must.Matchers with TryValues {
       "entityName"
     )
 
-    "load a valid template for type" in
-      testReprTemplate(HugoType.PredefinedType.Integer, "typeName")
+    "load a valid template for type" in testReprTemplate(
+      HugoType("name", Namespace.emptyRoot.toNode, RiddlType.PredefinedType.Integer),
+      "typeName"
+    )
 
   }
 

@@ -39,7 +39,7 @@ class PrinterTests extends AnyWordSpec with must.Matchers with BeforeAndAfterAll
 
   private def printSomething: MarkdownPrinter = MarkdownPrinter.empty.println("---")
     .println("title: \"Something\"").println("draft: false").println("---").newline
-    .titleEndo(4)(_.italic("Entity")).newline.title(2)("Description")
+    .titleEndo(4)(_.italic("Entity").n).newline.title(2)("Description")
     .println("Entities are the main objects that contexts define. They can be ")
     .println("persistent (long-lived) or aggregate (they consume commands and queries).").newline
     .title(2)("Options").println("The following flags/options were specified for this entity:")
