@@ -8,6 +8,7 @@ sealed trait RelativePath {
   def toString: String
   def /(name: String): RelativePath = resolve(name)
   def resolve(name: String): RelativePath
+  def pathParts: Seq[String]
 }
 
 object RelativePath {
@@ -46,12 +47,14 @@ object RelativePath {
 
   final case object Root extends RelativePath {
     override def toString: String = ""
-    override def resolve(name: String): RelativePath = Path(List(name))
+    def resolve(name: String): RelativePath = Path(List(name))
+    def pathParts: Seq[String] = Seq.empty
   }
 
   private case class Path(parts: List[String]) extends RelativePath {
     override def toString: String = parts.reverse.mkString("/")
-    override def resolve(name: String): RelativePath = Path(name :: parts)
+    def resolve(name: String): RelativePath = Path(name :: parts)
+    def pathParts: Seq[String] = parts.reverse
   }
 
 }

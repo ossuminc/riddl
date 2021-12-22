@@ -54,13 +54,16 @@ final private class LinePrinter private (
 
   def printLines(lines: Seq[String]): LinePrinter = printLinesInternal(lines.flatMap(splitLines))
 
-  def appendLines(lines: Seq[String]): LinePrinter = printLinesInternal(lines)
+  def appendLines(lines: Seq[String]): LinePrinter = lines match {
+    case Nil => this
+    case heads :+ last => printLinesInternal(heads).printCurrent(last, nl = false)
+  }
 
   /* Internal methods */
   @inline
   private def blankLine: String = if (indentation == 0) "" else " " * indentation
   @inline
-  private def current: Option[String] = if (currentLine.isEmpty) None else Some(currentLine)
+  private def current: Option[String] = if (currentIsBlank) None else Some(currentLine)
 
   private def printCurrent(text: String, nl: Boolean): LinePrinter =
     if (nl && currentLine.nonEmpty) { copy(accumulated :+ currentLine + text, blankLine) }
@@ -122,6 +125,8 @@ trait PrinterEndo {
   def printLines(lines: Iterable[String]): Endo
   def printLines(line: String, lines: String*): Endo
 
+  def ifEndo(predicate: Boolean)(endo: Endo => Endo): Endo
+
   def append(printerEndo: PrinterEndo): Endo
 
   def toString: String
@@ -147,6 +152,8 @@ private abstract class LinePrinterEndo[Contract <: PrinterEndo](printer: LinePri
   def printLines(line: String, lines: String*): Contract =
     if (lines.isEmpty) { copy(printer.println(line)) }
     else { copy(printer.printLines(line +: lines)) }
+
+  def ifEndo(predicate: Boolean)(endo: Contract => Contract): Contract
 
   def append(printerEndo: PrinterEndo): Contract = copy(printer.appendLines(printerEndo.lines))
 
@@ -176,6 +183,8 @@ object PrinterEndo extends PrinterEndoInstances {
       extends LinePrinterEndo[PrinterEndo](printer) with PrinterEndo {
     type Endo = PrinterEndo
     def copy(printer: LinePrinter): PrinterEndoImpl = PrinterEndoImpl(printer)
+    def ifEndo(predicate: Boolean)(endo: PrinterEndo => PrinterEndo): PrinterEndo =
+      if(predicate) { endo(this) } else { this }
   }
 
 }
@@ -217,6 +226,8 @@ private final case class MarkdownPrinterImpl(printer: LinePrinter)
     extends LinePrinterEndo[MarkdownPrinter](printer) with MarkdownPrinter {
 
   def copy(printer: LinePrinter): MarkdownPrinterImpl = MarkdownPrinterImpl(printer)
+  def ifEndo(predicate: Boolean)(endo: MarkdownPrinter => MarkdownPrinter): MarkdownPrinter =
+    if(predicate) { endo(this) } else { this }
 
   def titleEndo(level: Int)(endoFunc: MarkdownPrinter => MarkdownPrinter): MarkdownPrinter =
     endoFunc(print("#".repeat(math.max(1, level))).space)

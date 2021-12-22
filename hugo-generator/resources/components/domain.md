@@ -6,7 +6,7 @@ draft: false
 #### _Domain_
 
 ## Description
-{{contextDescription}}
+{{domainDescription}}
 
 ## Types
 The following types are defined across bounded-contexts within this domain:
