@@ -96,6 +96,8 @@ object AST {
     val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
 
+  case class DefRef[T <: Definition](loc: Location, id: PathIdentifier) extends Reference
+
   // ////////////////////////////////////////////////////////// TYPES
 
   sealed trait TypeExpression extends DefinitionValue
@@ -662,6 +664,72 @@ object AST {
     def contents: Seq[Definition] = types ++ entities ++ adaptors ++ interactions
   }
 
+  case class Pipe(
+    loc: Location,
+    id: Identifier,
+    transmitType: TypeRef,
+    description: Option[Description] = None)
+      extends Definition
+
+  case class PipeRef(
+    loc: Location,
+    id: PathIdentifier)
+      extends Reference
+
+  trait Streamlet extends Definition
+
+  case class Inlet(
+    loc: Location,
+    id: Identifier,
+    type_ : TypeRef,
+    description: Option[Description] = None)
+      extends Streamlet
+
+  case class Outlet(
+    loc: Location,
+    id: Identifier,
+    type_ : TypeRef,
+    description: Option[Description] = None)
+      extends Streamlet
+
+  case class Processor(
+    loc: Location,
+    id: Identifier,
+    inlets: Seq[Inlet],
+    outlets: Seq[Outlet],
+    description: Option[Description] = None)
+      extends Definition
+
+  trait JointDefinition extends Definition
+
+  case class InJoint(
+    loc: Location,
+    id: Identifier,
+    streamLet: DefRef[Inlet],
+    pipe: DefRef[Pipe],
+    description: Option[Description] = None)
+      extends JointDefinition
+
+  case class OutJoint(
+    loc: Location,
+    id: Identifier,
+    streamLet: DefRef[Outlet],
+    pipe: DefRef[Pipe],
+    description: Option[Description] = None)
+      extends JointDefinition
+
+  case class Plant(
+    loc: Location,
+    id: Identifier,
+    pipes: Seq[Pipe] = Seq.empty[Pipe],
+    processors: Seq[Processor] = Seq.empty[Processor],
+    inJoints: Seq[InJoint] = Seq.empty[InJoint],
+    OutJoints: Seq[OutJoint] = Seq.empty[OutJoint],
+    description: Option[Description] = None)
+      extends Container with DomainDefinition {
+    def contents: Seq[Definition] = pipes ++ processors
+  }
+
   /** Definition of an Interaction Interactions define an exemplary interaction between the system
     * being designed and other actors. The basic ideas of an Interaction are much like UML Sequence
     * Diagram.
@@ -751,11 +819,12 @@ object AST {
     topics: Seq[Topic] = Seq.empty[Topic],
     contexts: Seq[Context] = Seq.empty[Context],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
+    plants: Seq[Plant] = Seq.empty[Plant],
     domains: Seq[Domain] = Seq.empty[Domain],
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[DomainDefinition] = (types.iterator ++ topics ++ contexts ++ interactions)
+    def contents: Seq[DomainDefinition] = (types.iterator ++ topics ++ contexts ++ interactions ++ plants)
       .toList
   }
 }

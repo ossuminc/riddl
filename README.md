@@ -6,19 +6,11 @@
 RIDDL, the Reactive Interface to Domain Definition Language, is a tool for
 eliminating the boilerplate from reactive systems designed with Domain
 Driven Design (DDD).   
-It uses a DDD and UML inspired specification language to allow developers to 
-work at a higher level of specification than they would if they
-were coding directly in a programming language. It aims to relieve developers
-of the burden of maintaining infrastructural code through evolution of the
-domain abstractions.
-
-RIDDL is one of the Ossum tools. Ossum is a collection of tools for making
-awesome reactive systems.
-
-For more details, please read the paradox documentation:
-
-* `sbt paradox`
-* `open riddlc/target/paradox/html/main/index.html`
+It uses a DDD inspired specification language to allow subject matter experts 
+and developers alike to work at a higher level of specification than they would
+if they were coding directly in a programming language. It aims to relieve 
+developers of the burden of maintaining infrastructural code through evolution 
+of the domain abstractions.
 
 ## Usage
 To get the most recent options, run `riddlc --help`. As of version 0.1.1, that 
@@ -56,17 +48,15 @@ translate riddl as specified in configuration file
 ``` 
 ## Goals
 This project is currently nascent. It doesn't do anything yet, but eventually
-we hope it will do all of the following:
+we hope it will do all the following things:
 
 * Generate Swagger (OpenAPI) YAML files containing API documentation for 
  REST APIs
-* Generate Lagom based microservices to implement bounded contexts
-* Generate Cloudstate.io based microservices to implement bounded contexts
+* Generate Akka Serverless based microservices to implement bounded contexts
 * Generate Akka/HTTP server stubs
 * Generate Akka/HTTP client library
 * Generate Kafka server stubs
 * Generate Kafka client library
-* Generate Scala.JS based browser client side
 * Generate graphQL based on domain model  
 * Supporting a SaaS system for the generation of the above items working
  something like https://www.websequencediagrams.com/ by allowing direct
@@ -86,7 +76,7 @@ we hope it will do all of the following:
 
 ## Dependencies
 
-This codebase targets Java 17 and Scala 2.14.7 with -XSource:3 in preparation for 
+This codebase targets Java 17 and Scala 2.13.7 with -XSource:3 in preparation for 
 Scala 3.0 code conversion. 
 
 ## Generating Documentation

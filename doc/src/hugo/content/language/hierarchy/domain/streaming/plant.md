@@ -10,13 +10,14 @@ the ability of the RIDDL model to express the sharing of data between the
 plants. This is done deliberately to prevent unintentional contamination of 
 data in large models.  
 
-## Connections
+## Joints
 The purpose of a plant definition is to provide the blueprint for how a set
-of pipes, processors, and entities are connected to flow data end-to-end.
-This is done by using:
+of pipes, processors, and entities are joined together so that data may flow 
+end-to-end. This is done by using:
 * the names and types of inlets in processors
 * the names and types of outlets in processors
 * the names and content types of pipes
+* the definition of a `joint` to connect pipes and processors
 
 For example, consider this complete plant definition:
 {{% code file="content/language/hierarchy/domain/streaming/riddl/plant.riddl"
@@ -60,6 +61,12 @@ name (`Weather` and `CurrentTemperature`).
 ## Entities as Processors
 An [entity](../context/entity) may also be used as a processor under some 
 special circumstances:
-* _as a source_ - An entity may be used as a source of events if a command  
-* _as a sink_ - tbd
-* _as a flow_ - tbd
+* _as a source_ - An entity may be used as a source of events if a command handler 
+  is defined for the entity.   
+* _as a sink_ - An entity may be used as a sink for events if a reaction handler 
+  is defined for the entity.
+* _as a flow_ - An entity may be used as a flow to convert commands into events
+
+## Bulkheads
+
+

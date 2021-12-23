@@ -11,6 +11,7 @@ trait DomainParser
     with TopicParser
     with ContextParser
     with InteractionParser
+    with StreamingParser
     with TypeParser {
 
   def domainInclude[X: P]: P[Seq[DomainDefinition]] = {
@@ -19,7 +20,7 @@ trait DomainParser
 
   def domainContent[_: P]: P[Seq[DomainDefinition]] = {
     P(
-      typeDef.map(Seq(_)) | topic.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) |
+      typeDef.map(Seq(_)) | topic.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) | plant.map(Seq(_)) |
         domain.map(Seq(_)) | domainInclude
     ).rep(0).map(_.flatten)
   }
@@ -35,7 +36,8 @@ trait DomainParser
       val topics = mapTo[Topic](groups.get(classOf[Topic]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
-      Domain(loc, id, types, topics, contexts, interactions, domains, description)
+      val plants = mapTo[Plant](groups.get(classOf[Plant]))
+      Domain(loc, id, types, topics, contexts, interactions, plants, domains, description)
     }
   }
 }
