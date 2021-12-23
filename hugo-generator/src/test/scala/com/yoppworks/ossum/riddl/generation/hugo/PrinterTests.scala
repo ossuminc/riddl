@@ -56,9 +56,9 @@ class PrinterTests extends AnyWordSpec with must.Matchers with BeforeAndAfterAll
           .linkEndo(_.bold("SomeType"), "/everything", "types", "sometype").print(")")
     ).newline.title(5)("Invariants:").listSimple("(none)").newline.title(2)("Functions")
     .println("The following functions are defined for this entity:")
-    .append(printFunction("whenUnderTheInfluence", "(none)", "Nothing", "Boolean"))
+    .append(printFunction("whenUnderTheInfluence", "(none)", "Nothing", "Boolean")).newline
     .title(2)("Handlers").println("The following command handlers are defined for this entity:")
-    .append(printCommandHandler("foo", "(none)", "Something", "Nothing"))
+    .append(printCommandHandler("foo", "(none)", "Something", "Nothing")).newline
     .println("The following event handlers are defined for this entity:").listSimple("(none)")
 
   private def printFunction(

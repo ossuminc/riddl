@@ -23,7 +23,7 @@ The following states were defined within this entity:
 
 {{entityStates}}
 
-##### Invariants:
+## Invariants:
 The following invariants are defined for this entity:
 
 {{entityInvariants}}
@@ -31,7 +31,7 @@ The following invariants are defined for this entity:
 ## Functions
 The following functions are defined for this entity:
 
-{{entityFunctions}
+{{entityFunctions}}
 
 ## Handlers
 The following command handlers are defined for this entity:

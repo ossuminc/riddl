@@ -6,7 +6,8 @@ import scala.util.matching.Regex
 
 object Templates {
 
-  final def forHugo(repr: HugoNode): Either[Throwable, TemplateFile] = Loader.getTemplate(repr)
+  final def forFile(name: String): Either[Throwable, TemplateFile] = Loader.getTemplate(name)
+  final def forHugo(repr: HugoNode): Either[Throwable, TemplateFile] = Loader.getTemplateFor(repr)
 
   private sealed trait TemplateSlot
   private case class NotLoaded(resource: String) extends TemplateSlot
@@ -20,22 +21,24 @@ object Templates {
     private[this] val templatesMap: collection.mutable.Map[String, TemplateSlot] = collection
       .mutable.Map(ResourceNames.all: _*).map { case (key, value) => (key, NotLoaded(value)) }
 
-    final def getTemplate(forRepr: HugoNode): Either[Throwable, TemplateFile] = {
-      val name = forRepr match {
+    final def getTemplateFor(node: HugoNode): Either[Throwable, TemplateFile] = {
+      val name = node match {
         case _: HugoType => "HugoType"
-        case _           => forRepr.getClass.getSimpleName.stripSuffix("$")
+        case _           => node.getClass.getSimpleName.stripSuffix("$")
       }
-      lockBox.synchronized {
-        templatesMap.get(name) match {
-          case Some(NotLoaded(resource)) =>
-            val (slot, result) = loadOrFail(name, resource)
-            templatesMap.update(name, slot)
-            result
+      getTemplate(name)
+    }
 
-          case Some(LoadedTemplate(template)) => Right(template)
-          case Some(FailedToLoad(error))      => Left(error)
-          case None => Left(new NoSuchElementException(s"No template for $name"))
-        }
+    final def getTemplate(name: String): Either[Throwable, TemplateFile] = lockBox.synchronized {
+      templatesMap.get(name) match {
+        case Some(NotLoaded(resource)) =>
+          val (slot, result) = loadOrFail(name, resource)
+          templatesMap.update(name, slot)
+          result
+
+        case Some(LoadedTemplate(template)) => Right(template)
+        case Some(FailedToLoad(error))      => Left(error)
+        case None => Left(new NoSuchElementException(s"No template for $name"))
       }
     }
 
@@ -64,8 +67,9 @@ object Templates {
     val domain = mkTemplateResource[HugoDomain]("domain.md")
     val entity = mkTemplateResource[HugoEntity]("entity.md")
     val types = mkTemplateResource[HugoType]("types.md")
+    val config = ("config", "components/config.toml")
 
-    val all = Seq(context, domain, entity, types)
+    val all = Seq(context, domain, entity, types, config)
   }
 }
 
@@ -96,15 +100,6 @@ final class TemplateFile private (
       }
       new TemplateFile(templateName, updatedLines)(replacements)
     }
-
-  def writeToFile(file: java.io.File): Try[Unit] = Try {
-    import java.io._
-    val printer = new PrintWriter(new FileWriter(file))
-    try {
-      for (line <- lines) { printer.println(line) }
-      printer.flush()
-    } finally { printer.close() }
-  }
 
 }
 

@@ -41,6 +41,19 @@ sealed trait HugoNode extends Namespace {
   final def resolveName(name: String): String = if (name.isEmpty) fullName else s"$fullName.$name"
 }
 
+object HugoNode {
+
+  implicit class HugoNodeExtensions(private val node: HugoNode) extends AnyVal {
+    def hasTypes: Boolean = node match {
+      case dom: HugoDomain  => dom.types.nonEmpty
+      case ctx: HugoContext => ctx.types.nonEmpty
+      case ent: HugoEntity  => ent.types.nonEmpty
+      case _                => false
+    }
+  }
+
+}
+
 sealed abstract class NodeBase[Node <: NodeBase[Node]] private[hugo] extends HugoNode {
   type Self = Node
 
@@ -71,6 +84,9 @@ case class HugoRoot(builder: HugoNode => Seq[HugoNode])
   override val name = "_root_"
   override val fullName = "_root_"
   override val parent = this
+
+  def domains: Iterable[HugoDomain] = contents.collect { case hd: HugoDomain => hd }
+  def hasDomains: Boolean = domains.nonEmpty
 }
 
 sealed abstract class HugoNodeBase[Node <: HugoNodeBase[Node]] private[hugo] (
@@ -103,6 +119,9 @@ final case class HugoDomain(
   def contexts: Iterable[HugoContext] = contents.collect { case hc: HugoContext => hc }
   def domains: Iterable[HugoDomain] = contents.collect { case hd: HugoDomain => hd }
   def types: Iterable[HugoType] = contents.collect { case ht: HugoType => ht }
+
+  def hasContexts: Boolean = contexts.nonEmpty
+  def hasDomains: Boolean = domains.nonEmpty
 }
 
 object HugoDomain {
@@ -121,6 +140,8 @@ final case class HugoContext(
     extends HugoNodeBase[HugoContext](name, builder) {
   def entities: Iterable[HugoEntity] = contents.collect { case he: HugoEntity => he }
   def types: Iterable[HugoType] = contents.collect { case ht: HugoType => ht }
+
+  def hasEntities: Boolean = entities.nonEmpty
 }
 
 object HugoContext {

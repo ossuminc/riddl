@@ -1,5 +1,7 @@
 package com.yoppworks.ossum.riddl.generation.hugo
 
+import cats.Eval
+
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -16,6 +18,7 @@ import scala.annotation.tailrec
 object Resources extends SafeUsingCloseable {
   private val pathSep = System.getProperty("path.separator")
   private val classPath = System.getProperty("java.class.path", ".")
+  private val resourceTemplateName = "template"
   private val jarPath = getClass.getProtectionDomain.getCodeSource.getLocation.toURI.getPath
     .stripSuffix("/")
   private lazy val classPathItems = classPath.split(pathSep).toVector
@@ -71,12 +74,29 @@ object Resources extends SafeUsingCloseable {
     outputDir
   }
 
-  private def createOutputDirectory(output: File, entry: DirectoryEntry): Try[Unit] =
-    Try { output.toPath.resolve(entry.nameOrPath).toFile.mkdirs() }
+  private def createOutputDirectory(
+    output: File,
+    entry: DirectoryEntry
+  ): Try[Unit] = Try {
+    val relDirName = replaceTemplateName(entry.nameOrPath)
+    output.toPath.resolve(relDirName).toFile.mkdirs()
+  }
+
+  @inline
+  private final def replaceTemplateName(nameOrPath: String): String =
+    if (nameOrPath.isEmpty) { nameOrPath }
+    else {
+      val parts = nameOrPath.split('/')
+      val updatedParts =
+        if (parts(0) == resourceTemplateName) { parts.drop(1) }
+        else { parts }
+      updatedParts.mkString("/")
+    }
 
   private final val copyBufferSize = 4096
   private def writeOutputFile(root: File, entry: FileEntry): Try[Unit] = Try {
-    val outputFile = root.toPath.resolve(entry.nameOrPath).toFile
+    val relFileName = replaceTemplateName(entry.nameOrPath)
+    val outputFile = root.toPath.resolve(relFileName).toFile
     // Simulate filesystem "touch"
     new FileOutputStream(outputFile).close()
     outputFile
@@ -177,6 +197,17 @@ private object FileUtils {
     if (dirFile.exists && dirFile.isDirectory) {
       goFilesRec(List(dirFile), Vector.empty, parentDir, matchPredicate)
     } else { Seq.empty[ResourceEntry] }
+  }
+
+  def listFilesRecursive(dirFile: File): Set[File] = {
+    @tailrec
+    def loop(dir: Seq[File], acc: Set[File] = Set.empty): Set[File] = dir match {
+      case d +: ds if d.isFile      => loop(ds, acc + d)
+      case d +: ds if d.isDirectory => loop(ds ++ d.listFiles.toSeq, acc + d)
+      case Nil                      => acc
+    }
+
+    loop(Seq(dirFile))
   }
 
   @tailrec

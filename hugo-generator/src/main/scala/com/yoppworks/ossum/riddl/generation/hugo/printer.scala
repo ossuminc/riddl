@@ -55,7 +55,7 @@ final private class LinePrinter private (
   def printLines(lines: Seq[String]): LinePrinter = printLinesInternal(lines.flatMap(splitLines))
 
   def appendLines(lines: Seq[String]): LinePrinter = lines match {
-    case Nil => this
+    case Nil           => this
     case heads :+ last => printLinesInternal(heads).printCurrent(last, nl = false)
   }
 
@@ -184,7 +184,8 @@ object PrinterEndo extends PrinterEndoInstances {
     type Endo = PrinterEndo
     def copy(printer: LinePrinter): PrinterEndoImpl = PrinterEndoImpl(printer)
     def ifEndo(predicate: Boolean)(endo: PrinterEndo => PrinterEndo): PrinterEndo =
-      if(predicate) { endo(this) } else { this }
+      if (predicate) { endo(this) }
+      else { this }
   }
 
 }
@@ -227,7 +228,8 @@ private final case class MarkdownPrinterImpl(printer: LinePrinter)
 
   def copy(printer: LinePrinter): MarkdownPrinterImpl = MarkdownPrinterImpl(printer)
   def ifEndo(predicate: Boolean)(endo: MarkdownPrinter => MarkdownPrinter): MarkdownPrinter =
-    if(predicate) { endo(this) } else { this }
+    if (predicate) { endo(this) }
+    else { this }
 
   def titleEndo(level: Int)(endoFunc: MarkdownPrinter => MarkdownPrinter): MarkdownPrinter =
     endoFunc(print("#".repeat(math.max(1, level))).space)
@@ -251,7 +253,8 @@ private final case class MarkdownPrinterImpl(printer: LinePrinter)
   def listEndo(lineFuncs: MarkdownPrinter => MarkdownPrinter*): MarkdownPrinter =
     if (lineFuncs.isEmpty) { this }
     else {
-      lineFuncs.foldLeft(indent(2)) { case (printer, func) => func(printer.print("* ")) }.outdent(2)
+      lineFuncs.foldLeft(indent(2)) { case (printer, func) => func(printer.print("* ")).n }
+        .outdent(2)
     }
 
 }

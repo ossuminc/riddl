@@ -166,6 +166,9 @@ object LukeAstWalker {
 
     case AST.Pattern(_, pattern, _) => RiddlType.RegexPattern(pattern.map(_.s))
 
+    /* A `UniqueId` with no link is just a UUID! */
+    case AST.UniqueId(_, e, _) if e.value.isEmpty => RiddlType.PredefinedType.UUID
+
     case AST.UniqueId(_, entityPath, _) => RiddlType.EntityReference(ns, entityPath.value)
 
     case AST.TypeRef(_, id) => RiddlType.TypeReference(ns, id.value)

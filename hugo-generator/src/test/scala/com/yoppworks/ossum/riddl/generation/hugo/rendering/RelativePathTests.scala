@@ -2,33 +2,11 @@ package com.yoppworks.ossum.riddl.generation.hugo.rendering
 
 import com.yoppworks.ossum.riddl.generation.hugo.HugoRoot
 import com.yoppworks.ossum.riddl.generation.hugo.LukeAstWalker
-import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
-import com.yoppworks.ossum.riddl.language.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.TopLevelParser
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.matchers.must
-import org.scalatest.wordspec.AnyWordSpec
+import com.yoppworks.ossum.riddl.generation.hugo.RiddlTest
 
-import java.io.File
+class RelativePathTests extends RiddlTest {
 
-class RelativePathTests extends AnyWordSpec with must.Matchers with BeforeAndAfterAll {
-
-  val testFilePath = s"language/src/test/input/everything.riddl"
-  val input = RiddlParserInput(new File(testFilePath))
-  private[this] var _container: Option[HugoRoot] = None
-
-  private def container: HugoRoot = _container
-    .getOrElse(throw new RuntimeException(s"Could not parse input file: $testFilePath"))
-
-  override def beforeAll(): Unit = {
-    val root = TopLevelParser.parse(input) match {
-      case Left(errors) =>
-        errors.map(_.format).foreach(SysLogger.error(_))
-        None
-      case Right(root) => Some(root)
-    }
-    _container = root.map(LukeAstWalker.apply)
-  }
+  lazy val namespace = LukeAstWalker(container)
 
   val expectedPaths = List(
     "everything/_index.md",
@@ -57,7 +35,7 @@ class RelativePathTests extends AnyWordSpec with must.Matchers with BeforeAndAft
   "RelativePath" should {
 
     "be correctly mapped from `HugoRoot` (Namespace) nodes" in {
-      val nodes = container.allContents.filterNot(_.isInstanceOf[HugoRoot]).toList
+      val nodes = namespace.allContents.filterNot(_.isInstanceOf[HugoRoot]).toList
       val paths = nodes.map(RelativePath.of)
       val comparison = nodes.zip(paths)
       val pathStrings = paths.map(_.toString)
