@@ -4,15 +4,20 @@ import com.yoppworks.ossum.riddl.language.AST._
 import fastparse.IgnoreCase
 import fastparse._
 import ScalaWhitespace._
-import Terminals.Punctuation
 import Terminals.Keywords
+import Terminals.Punctuation
+import Terminals.Readability
 
 /** Unit Tests For FunctionParser */
 trait FunctionParser extends CommonParser with TypeParser {
 
-  def input[_: P]: P[TypeExpression] = { P(Keywords.requires ~ typeExpression) }
+  def input[_: P]: P[TypeExpression] = {
+    P(Keywords.requires ~ Punctuation.colon.? ~ typeExpression)
+  }
 
-  def output[_: P]: P[TypeExpression] = { P(Keywords.yields ~ typeExpression) }
+  def output[_: P]: P[TypeExpression] = {
+    P(Keywords.yields ~ Punctuation.colon.? ~ typeExpression)
+  }
 
   /** Parses function literals, i.e.
     *

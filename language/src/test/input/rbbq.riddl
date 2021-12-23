@@ -97,6 +97,10 @@ domain ReactiveBBQ is {
       }
       handler Inputs is {}
     }
+
+    adaptor PaymentAdapter for context Payment is {
+      ???
+    }
   }
   // #Loyalty
 

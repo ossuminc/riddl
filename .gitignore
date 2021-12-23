@@ -1,5 +1,6 @@
-.idea/
 .bloop/
+/.bsp/
+/.idea/
 !.idea/runConfigurations/
 !.idea/dictionaries
 target

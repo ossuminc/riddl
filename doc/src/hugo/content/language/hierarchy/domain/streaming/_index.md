@@ -21,3 +21,4 @@ concepts which you can visualize as something like this:
 * [Plants](plant) - Plants combine pipes and processors together with 
   support for rich semantics so that arbitrarily complex streams can be 
   modeled in RIDDL.
+

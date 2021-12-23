@@ -3,10 +3,31 @@ title: "Pipes"
 weight: 20
 ---
 
-Pipes are conduits for reliably transmitting messages of a particular type
-between publishers and consumers attached at the ends of the conduit.
-Pipes play a large role in the resiliency of a reactive system. Pipes have
-the following characteristics:
+Pipes are uni-directional conduits for reliably transmitting data of a 
+particular type between the publishers and consumers attached at the ends of 
+the pipe.
+
+## Syntax Example
+```riddl
+pipe WeatherForecast is {
+  options rate(1000), paritions(7), 
+  transmits type Forecast
+}
+```
+In the foregoing, a pipe named `WeatherForecast` is defined to transmit the 
+data type named `Forecast` and with two options:
+* _rate_ - an expected sustained rate of 1000 data points per second
+* _partitions_ - a minimum number of partitions on the data of 7
+
+## Data Transmission Type
+Pipes can transmit any data type that RIDDL can specify. There is only one 
+data type that flows in a pipe.  The transmission type is often used with
+an alternation of message types such as the commands and queries that an
+[entity](../context/entity) might receive.
+
+## Pipe Guarantees
+Pipes play a large role in the resiliency of a reactive system 
+because of the following characteristics:
 * _persistent_ - The messages flowing through the pipe are persisted to
   stable, durable storage, so they cannot be lost even in the event of
   system failure or shutdown.
@@ -20,20 +41,20 @@ the following characteristics:
   partition the consumption so that multiple instances of a consuming
   service can process the messages in parallel.
 
-Pipes can carry any data type that RIDDL can specify and is often used with
-an alternation of message types such as the commands and queries that an
-[entity](../context/entity) might receive.  Pipes are strongly typed,
-however, so whatever
+## Publishers & Consumers
+Attached to the ends of pipes are publishers and consumers. These are 
+[processors](processor.md) of data and may originate, terminate or flow data 
+through them, connecting two pipes together. 
+
+{{<mermaid align="left">}}
+graph LR;
+Producers --> P{{Pipe}} --> Consumers
+
+Source --> P1{{Pipe 1}} --> Flow --> P2{{Pipe 2}} --> Sink
+{{< /mermaid >}}
 
 Pipes may have multiple publishers (writers of data to the pipe) and
 multiple consumers (readers of data from the pipe). In fact, because of the
 _partitioned consumption_ principle, there can be multiple groups of
 consumers, each group getting each data item from the pipe.
 
-## Syntax Example
-```riddl
-pipe WeatherForecast is {
-  options rate(1000), paritions(7), 
-  content = type 
-}
-```

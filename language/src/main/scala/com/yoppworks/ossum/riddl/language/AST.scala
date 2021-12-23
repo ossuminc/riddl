@@ -78,8 +78,9 @@ object AST {
     def identify: String = s"$kind '${id.value}'"
   }
 
-  sealed trait DomainDefinition extends Definition
+  sealed trait AdaptorDefinition extends Definition
   sealed trait ContextDefinition extends Definition
+  sealed trait DomainDefinition extends Definition
   sealed trait EntityDefinition extends Definition
 
   sealed trait Container extends Definition {
@@ -272,7 +273,7 @@ object AST {
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[Definition] = (commands.iterator ++ events ++ queries ++ results).toList
+    lazy val contents: Seq[Definition] = (commands.iterator ++ events ++ queries ++ results).toList
   }
 
   sealed trait MessageReference extends Reference
@@ -395,7 +396,7 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     description: Option[Description] = None)
       extends Container with EntityDefinition {
-    def contents: Seq[Definition] = examples
+    lazy val contents: Seq[Definition] = examples
   }
 
   case class FunctionRef(
@@ -478,7 +479,7 @@ object AST {
 
   case class ExpressionCondition(
     loc: Location,
-    op: Identifier,
+    id: Identifier,
     args: ListMap[Identifier, Expression],
     description: Option[Description])
       extends Condition
@@ -536,6 +537,13 @@ object AST {
     actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
     description: Option[Description] = None)
       extends EntityValue with DefinitionWithDescription
+
+  case class OnMessage(
+    loc: Location,
+    msg: MessageReference,
+    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
+    description: Option[Description] = None)
+      extends EntityValue
 
   case class Consumer(
     loc: Location,
@@ -600,7 +608,7 @@ object AST {
     description: Option[Description] = None)
       extends Container with ContextDefinition {
 
-    def contents: Seq[Definition] =
+    lazy val contents: Seq[Definition] =
       (states.iterator ++ types ++ handlers ++ features ++ functions ++ invariants).toList
 
     def hasOption[Op <: EntityOption: scala.reflect.ClassTag]: Boolean = options
@@ -621,9 +629,9 @@ object AST {
     description: Option[Description] = None)
       extends TranslationRule
 
-  /** Definition of an Adaptor Adaptors are defined in Contexts to convert messaging from one
-    * Context to another. Adaptors translate incoming events from other Contexts into commands or
-    * events that its owning context can understand. There should be one Adaptor for each external
+  /** Definition of an Adapter Adapters are defined in Contexts to convert messaging from one
+    * Context to another. Adapters translate incoming events from other Contexts into commands or
+    * events that its owning context can understand. There should be one Adapter for each external
     * Context
     *
     * @param loc
@@ -634,17 +642,12 @@ object AST {
   case class Adaptor(
     loc: Location,
     id: Identifier,
-    toContext: ContextRef,
-    mappings: Seq[AdaptorMapping],
-    description: Option[Description] = None
-    // Details TBD
-  ) extends Container with ContextDefinition {
-    def contents: Seq[Definition] = Seq.empty[Definition]
+    ref: ContextRef,
+    examples: Seq[Example],
+    description: Option[Description] = None)
+      extends Container with ContextDefinition with AdaptorDefinition {
+    lazy val contents: Seq[Example] = examples
   }
-
-  case class AdaptorMapping(
-    loc: Location)
-      extends RiddlValue
 
   sealed trait ContextOption extends RiddlValue
   case class WrapperOption(loc: Location) extends ContextOption
@@ -666,8 +669,7 @@ object AST {
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     description: Option[Description] = None)
       extends Container with DomainDefinition {
-
-    def contents: Seq[Definition] = types ++ entities ++ adaptors ++ interactions
+    lazy val contents: Seq[Definition] = types ++ entities ++ adaptors ++ interactions
   }
 
   /** Definition of an Interaction Interactions define an exemplary interaction between the system
@@ -687,7 +689,7 @@ object AST {
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     description: Option[Description] = None)
       extends Container with DomainDefinition with ContextDefinition {
-    def contents: Seq[Definition] = actions
+    lazy val contents: Seq[Definition] = actions
   }
 
   sealed trait RoleOption extends RiddlValue
@@ -763,7 +765,7 @@ object AST {
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[DomainDefinition] = (types.iterator ++ topics ++ contexts ++ interactions)
-      .toList
+    lazy val contents: Seq[DomainDefinition] =
+      (types.iterator ++ topics ++ contexts ++ interactions).toList
   }
 }
