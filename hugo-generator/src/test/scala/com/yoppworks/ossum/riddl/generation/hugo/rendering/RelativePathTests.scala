@@ -6,7 +6,7 @@ import com.yoppworks.ossum.riddl.generation.hugo.RiddlTest
 
 class RelativePathTests extends RiddlTest {
 
-  lazy val namespace = LukeAstWalker(container)
+  lazy val namespace: HugoRoot = LukeAstWalker(container)
 
   val expectedPaths = List(
     "everything/_index.md",
@@ -35,6 +35,7 @@ class RelativePathTests extends RiddlTest {
   "RelativePath" should {
 
     "be correctly mapped from `HugoRoot` (Namespace) nodes" in {
+      pending
       val nodes = namespace.allContents.filterNot(_.isInstanceOf[HugoRoot]).toList
       val paths = nodes.map(RelativePath.of)
       val comparison = nodes.zip(paths)

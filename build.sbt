@@ -121,6 +121,7 @@ lazy val `hugo-generator` = (project in file("hugo-generator")).settings(
   name := "riddl-hugo-generator",
   buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
   Compile / unmanagedResourceDirectories += { baseDirectory.value / "resources" },
+  Test / parallelExecution := false,
   libraryDependencies ++= Seq(
     "org.scalactic" %% "scalactic" % "3.1.0",
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
