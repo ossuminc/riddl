@@ -45,7 +45,7 @@ trait FeatureParser extends CommonParser {
   def exampleBody[u: P]: P[(Seq[Given], Seq[When], Seq[Then], Seq[Else])] = {
     P(
       (givens ~ whens ~ thens ~ elses) |
-        undefined.map(_ => (Seq.empty[Given], Seq.empty[When], Seq.empty[Then], Seq.empty[Else]))
+        undefined((Seq.empty[Given], Seq.empty[When], Seq.empty[Then], Seq.empty[Else]))
     )
   }
 

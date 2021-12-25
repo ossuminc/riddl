@@ -6,7 +6,6 @@ import fastparse.*
 import ScalaWhitespace.*
 import Terminals.Keywords
 import Terminals.Punctuation
-import Terminals.Readability
 
 /** Unit Tests For FunctionParser */
 trait FunctionParser extends CommonParser with TypeParser {

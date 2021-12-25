@@ -27,12 +27,9 @@ class ValidateExamplesTest extends ValidatingTest {
 
   "Enumerations" should {
     "enforce Enumerators to start with lower case" in {
-      validateFile(
-        label="t0001",
-        fileName="enumerations/t0001.riddl") {
-          case (_, messages) =>
-            assert(messages.exists(msg => msg.kind.isStyle))
-        }
+      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") { case (_, messages) =>
+        assert(messages.exists(msg => msg.kind.isStyle))
+      }
     }
     "allow enumerators with values" in {
       validateFile("t0002", "enumerations/t0002.riddl") { case (_, messages) =>
@@ -61,9 +58,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidationOptions(
-          showStyleWarnings = false
-        )
+        options = ValidationOptions(showStyleWarnings = false)
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isStyle))
@@ -85,9 +80,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidationOptions(
-          showMissingWarnings = false,
-        )
+        options = ValidationOptions(showMissingWarnings = false)
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isMissing))

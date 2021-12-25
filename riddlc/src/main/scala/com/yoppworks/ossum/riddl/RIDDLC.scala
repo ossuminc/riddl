@@ -1,15 +1,14 @@
 package com.yoppworks.ossum.riddl
 
-import com.yoppworks.ossum.riddl.RiddlOptions.*
-import cats.implicits.*
-import com.yoppworks.ossum.riddl.RiddlOptions.*
-import com.yoppworks.ossum.riddl.generation.hugo.GeneratorOptions
-import com.yoppworks.ossum.riddl.generation.hugo.HugoGenerator
-import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Riddl
-import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
-import com.yoppworks.ossum.riddl.translator.FormatTranslator
+import RiddlOptions.*
+import language.AST.RootContainer
+import language.Riddl
+import language.Riddl.SysLogger
+import translator.FormatTranslator
+import generation.hugo.HugoGenerator
+import generation.hugo.GeneratorOptions
 import scopt.OParser
+import cats.implicits.*
 
 /** RIDDL Main Program
   */

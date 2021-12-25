@@ -54,7 +54,7 @@ lazy val scala2_13_Options = Seq(
 lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc, doc, `sbt-riddl`, hugo-generator)
+  .aggregate(language, translator, `hugo-generator`, riddlc, `sbt-riddl`, doc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(

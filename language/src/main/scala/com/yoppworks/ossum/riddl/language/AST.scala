@@ -354,7 +354,10 @@ object AST {
   case class EntityAvailable(loc: Location) extends EntityOption("available")
   case class EntityFiniteStateMachine(loc: Location) extends EntityOption("finite state machine")
 
-  sealed abstract class EntityKind(@unused name: String) extends EntityValue
+  sealed abstract class EntityKind(
+    @unused
+    name: String)
+      extends EntityValue
 
   case class ConceptEntityKind(loc: Location) extends EntityKind("concept")
   case class DeviceEntityKind(loc: Location) extends EntityKind("device")

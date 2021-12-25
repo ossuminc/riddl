@@ -72,12 +72,11 @@ trait EntityParser
 
   type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
 
-  def noEntityBody[_: P]: P[EntityBody] = P(location ~ undefined).map { _: Location =>
-    (Option.empty[Seq[EntityOption]], Seq.empty[EntityDefinition])
+  def noEntityBody[u: P]: P[EntityBody] = {
+    P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
   }
 
-  def entityBody[_: P]: P[EntityBody] = (entityOptions.? ~ entityDefinition.rep)
-
+  def entityBody[u: P]: P[EntityBody] = entityOptions.? ~ entityDefinition.rep
 
   def entity[u: P]: P[Entity] = {
     P(

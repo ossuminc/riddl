@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Adaptor
-import com.yoppworks.ossum.riddl.language.AST.Entity
 
 /** Unit Tests For ConsumerTest */
 class AdaptorTest extends ParsingTest {
@@ -15,7 +14,7 @@ class AdaptorTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => succeed
+        case Right(_) => succeed
       }
     }
   }
