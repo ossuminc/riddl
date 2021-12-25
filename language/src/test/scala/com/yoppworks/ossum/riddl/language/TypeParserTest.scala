@@ -1,8 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
-
-import scala.collection.immutable.ListMap
+import com.yoppworks.ossum.riddl.language.AST.*
 
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {

@@ -89,7 +89,7 @@ class HandlerTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => succeed
+        case Right(_) => succeed
       }
     }
   }

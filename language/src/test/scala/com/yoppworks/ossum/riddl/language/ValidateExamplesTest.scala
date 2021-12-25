@@ -4,9 +4,6 @@ import com.yoppworks.ossum.riddl.language.Validation.MissingWarning
 import com.yoppworks.ossum.riddl.language.Validation.StyleWarning
 import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
 
-import scala.collection.immutable.HashMap
-import scala.util.hashing.Hashing
-
 /** Validate files */
 class ValidateExamplesTest extends ValidatingTest {
 
@@ -14,7 +11,7 @@ class ValidateExamplesTest extends ValidatingTest {
 
   "ValidateExamples" should {
     "all validate with no errors or warnings" in {
-      val results = for ((label, fileName) <- files) yield {
+      for ((label, fileName) <- files) yield {
         validateFile(label, fileName) { case (_, messages) =>
           val errors = messages.filter(_.kind.isError)
           val warnings = messages.iterator.filter(_.kind.isWarning)
@@ -30,19 +27,22 @@ class ValidateExamplesTest extends ValidatingTest {
 
   "Enumerations" should {
     "enforce Enumerators to start with lower case" in {
-      validateFile("t0001", "enumerations/t0001.riddl") { case (_, messages) =>
-        assert(messages.exists(msg => msg.kind.isStyle))
-      }
+      validateFile(
+        label="t0001",
+        fileName="enumerations/t0001.riddl") {
+          case (_, messages) =>
+            assert(messages.exists(msg => msg.kind.isStyle))
+        }
     }
     "allow enumerators with values" in {
-      validateFile("t0002", "enumerations/t0002.riddl") { case (result, messages) =>
+      validateFile("t0002", "enumerations/t0002.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
     }
   }
   "Mappings" should {
     "allow ranges" in {
-      validateFile("t0001", "mappings/t0001.riddl") { case (result, messages) =>
+      validateFile("t0001", "mappings/t0001.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
     }
@@ -50,7 +50,7 @@ class ValidateExamplesTest extends ValidatingTest {
 
   "Ranges" should {
     "allow ranges" in {
-      validateFile("t0001", "ranges/t0001.riddl") { case (result, messages) =>
+      validateFile("t0001", "ranges/t0001.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
     }
@@ -59,29 +59,21 @@ class ValidateExamplesTest extends ValidatingTest {
   "options.showStyleWarnings" should {
     "determine if style warnings are returned from validation" in {
       validateFile(
-        "badstyle",
-        "domains/badstyle.riddl",
+        label = "badstyle",
+        fileName = "domains/badstyle.riddl",
         options = ValidationOptions(
-          showTimes = false,
-          showWarnings = true,
-          showMissingWarnings = true,
           showStyleWarnings = false
         )
-      ) { case (result, messages) =>
+      ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isStyle))
         assert(messages.exists(_.kind.isMissing))
       }
       validateFile(
-        "badstyle",
-        "domains/badstyle.riddl",
-        options = ValidationOptions(
-          showTimes = false,
-          showWarnings = true,
-          showMissingWarnings = true,
-          showStyleWarnings = true
-        )
-      ) { case (result, messages) =>
+        label = "badstyle",
+        fileName = "domains/badstyle.riddl",
+        options = ValidationOptions()
+      ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isStyle))
         assert(messages.exists(_.kind.isMissing))
@@ -91,28 +83,20 @@ class ValidateExamplesTest extends ValidatingTest {
   "options.showMissingWarnings" should {
     "determine if missing warnings are returned from validation" in {
       validateFile(
-        "badstyle",
-        "domains/badstyle.riddl",
+        label = "badstyle",
+        fileName = "domains/badstyle.riddl",
         options = ValidationOptions(
-          showTimes = false,
-          showWarnings = true,
           showMissingWarnings = false,
-          showStyleWarnings = true
         )
-      ) { case (result, messages) =>
+      ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isMissing))
       }
       validateFile(
-        "badstyle",
-        "domains/badstyle.riddl",
-        options = ValidationOptions(
-          showTimes = false,
-          showWarnings = true,
-          showMissingWarnings = true,
-          showStyleWarnings = true
-        )
-      ) { case (result, messages) =>
+        label = "badstyle",
+        fileName = "domains/badstyle.riddl",
+        options = ValidationOptions()
+      ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isMissing))
       }

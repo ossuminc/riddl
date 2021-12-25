@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl
 
-import com.yoppworks.ossum.riddl.RiddlOptions._
+import com.yoppworks.ossum.riddl.RiddlOptions.*
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Riddl
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
@@ -10,7 +10,7 @@ import scopt.OParser
 
 /** RIDDL Main Program
   */
-object RIDDL {
+object RIDDLC {
 
   final def main(args: Array[String]): Unit = {
     try {

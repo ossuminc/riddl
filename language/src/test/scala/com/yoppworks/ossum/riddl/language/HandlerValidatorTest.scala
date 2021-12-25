@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.Entity
-import com.yoppworks.ossum.riddl.language.Validation._
+import com.yoppworks.ossum.riddl.language.Validation.*
 
 class HandlerValidatorTest extends ValidatingTest {
 
@@ -22,7 +21,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (d: Domain, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,

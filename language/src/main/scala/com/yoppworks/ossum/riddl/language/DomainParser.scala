@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
-import AST._
-import fastparse._
-import ScalaWhitespace._
+import AST.*
+import fastparse.*
+import ScalaWhitespace.*
 import Terminals.Keywords
 
 /** Parsing rules for domains. */
@@ -18,17 +18,17 @@ trait DomainParser
     include[DomainDefinition, X](domainContent(_))
   }
 
-  def domainContent[_: P]: P[Seq[DomainDefinition]] = {
+  def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      typeDef.map(Seq(_)) | topic.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) | plant.map(Seq(_)) |
-        domain.map(Seq(_)) | domainInclude
+      typeDef.map(Seq(_)) | topic.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) |
+        plant.map(Seq(_)) | domain.map(Seq(_)) | domainInclude
     ).rep(0).map(_.flatten)
   }
 
-  def domain[_: P]: P[Domain] = {
+  def domain[u: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
-        (undefined.map(_ => Seq.empty[DomainDefinition]) | domainContent) ~ close ~/ description
+        (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/ description
     ).map { case (loc, id, defs, description) =>
       val groups = defs.groupBy(_.getClass)
       val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))

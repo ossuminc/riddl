@@ -12,11 +12,11 @@ import scala.io.Source
 /** Tests For HugoFile */
 class HugoFileSpec extends AnyWordSpec with Matchers {
 
-  val loc = AST.Location()
-  val container = AST.Domain(loc, AST.Identifier(loc, "test"))
+  val loc: AST.Location = AST.Location()
+  val container: AST.Domain = AST.Domain(loc, AST.Identifier(loc, "test"))
   val fileName = "target/test.txt"
-  val path = Path.of(fileName)
-  var hfile = HugoFile(container, path)
+  val path: Path = Path.of(fileName)
+  var hfile: HugoFile = HugoFile(container, path)
 
   "HugoFile" should {
     "construct" in {
@@ -30,7 +30,7 @@ class HugoFileSpec extends AnyWordSpec with Matchers {
       hfile.addLine("foo")
       hfile.outdent
       hfile.addLine("bar")
-      hfile.lines.result must be("  foo\nbar\n")
+      hfile.lines.result() must be("  foo\nbar\n")
     }
     "writes to file" in {
       hfile.write()

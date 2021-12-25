@@ -41,11 +41,11 @@ object RiddlOptions {
   val builder: OParserBuilder[RiddlOptions] = scopt.OParser.builder[RiddlOptions]
 
   val parser: OParser[Unit, RiddlOptions] = {
-    import builder._
+    import builder.*
     OParser.sequence(
       programName("riddlc"),
       head(
-        "RIDDL Compiler (c) 2019 Yoppworks Inc. All rights reserved.",
+        "RIDDL Compiler (c) 2021 Yoppworks Inc. All rights reserved.",
         "\nVersion: ",
         BuildInfo.version
       ),

@@ -1,9 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.Validation._
+import com.yoppworks.ossum.riddl.language.Validation.*
 import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.Type
-import org.scalatest._
 
 /** Unit Tests For TypeValidationTest */
 class TypeValidatorTest extends ValidatingTest {

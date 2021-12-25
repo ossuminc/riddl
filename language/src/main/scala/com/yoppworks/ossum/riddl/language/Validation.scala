@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl.language
 
 import java.net.URI
 import java.util.regex.PatternSyntaxException
-import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.AST.*
 
 import scala.annotation.unused
 import scala.reflect.ClassTag
@@ -330,7 +330,7 @@ object Validation {
     }
 
     def checkNonEmpty(
-      list: Seq[_],
+      list: Seq[?],
       name: String,
       thing: Definition
     ): ValidationState = {
@@ -500,6 +500,7 @@ object Validation {
     // TODO: WIP
     def doClauseStatement(
       state: ValidationState,
+      @unused
       parent: OnClause,
       clauseStatement: OnClauseStatement
     ): ValidationState = {

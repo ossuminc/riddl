@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
-import fastparse._
-import ScalaWhitespace._
-import com.yoppworks.ossum.riddl.language.AST._
+import fastparse.*
+import ScalaWhitespace.*
+import com.yoppworks.ossum.riddl.language.AST.*
 import Terminals.Keywords
 import Terminals.Operators
 import Terminals.Punctuation
@@ -13,65 +13,70 @@ import scala.language.postfixOps
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
-  def include[K, _: P](parser: P[_] => P[Seq[K]]): P[Seq[K]] = {
+  def include[K, u: P](parser: P[?] => P[Seq[K]]): P[Seq[K]] = {
     P(Keywords.include ~/ literalString).map { str => doInclude(str, Seq.empty[K])(parser) }
   }
 
-  def importDef[_: P]: P[DomainDefinition] = {
+  def importDef[u: P]: P[DomainDefinition] = {
     P(Keywords.import_ ~ location ~/ domainRef ~/ Readability.from ~ literalString).map { tuple =>
       doImport(tuple._1, tuple._2, tuple._3)
     }
   }
 
-  def undefined[_: P]: P[Unit] = { P(Punctuation.undefined /) }
+  def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined /).map(_ => ret) }
 
-  def literalStrings[_: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
+  def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  def markdownLines[_: P]: P[Seq[LiteralString]] = { P(markdownLine.rep(1)) }
+  def markdownLines[u: P]: P[Seq[LiteralString]] = { P(markdownLine.rep(1)) }
 
-  def docBlock[_: P]: P[Seq[LiteralString]] = {
+  def docBlock[u: P]: P[Seq[LiteralString]] = {
     P((open ~ (markdownLines | literalStrings) ~ close) | literalString.map(Seq(_)))
   }
 
-  def optionalNestedContent[_: P, T](parser: => P[T]): P[Seq[T]] = {
+  def optionalNestedContent[u: P, T](parser: => P[T]): P[Seq[T]] = {
     P(open ~ parser.rep.? ~ close).map(_.getOrElse(Seq.empty[T]))
   }
 
-  def brief[_: P]: P[Seq[LiteralString]] = {
+  def brief[u: P]: P[Seq[LiteralString]] = {
     (Keywords.brief ~/ (literalString.map(Seq(_)) | docBlock)).?
       .map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
-  def details[_: P]: P[Seq[LiteralString]] = {
+  def details[u: P]: P[Seq[LiteralString]] = {
     (Keywords.details ~/ (literalString.map(Seq(_)) | docBlock)).?
       .map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
   type ItemDictionary = Map[Identifier, Seq[LiteralString]]
-  def items[_: P]: P[(Option[LiteralString], ItemDictionary)] = {
+  def items[u: P]: P[(Option[LiteralString], ItemDictionary)] = {
     P(
       Keywords.items ~/ (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).? ~/ open ~
         (identifier ~ is ~ docBlock).rep.map(_.toMap) ~ close
     ).?.map(_.getOrElse(None -> Map.empty[Identifier, Seq[LiteralString]]))
   }
 
-  def citations[_: P]: P[Seq[LiteralString]] = {
+  def citations[u: P]: P[Seq[LiteralString]] = {
     P(Keywords.see ~/ docBlock).?.map(_.getOrElse(Seq.empty[LiteralString]))
   }
 
-  def as[_: P]: P[Unit] = { P(Readability.as | Readability.by).? }
+  def as[u: P]: P[Unit] = { P(Readability.as | Readability.by).? }
 
   case class DescriptionParts(
     brief: Seq[LiteralString],
-    details: Seq[LiteralString],
-    items: (Option[LiteralString], Map[Identifier, Seq[LiteralString]]),
-    cites: Seq[LiteralString])
+    details: Seq[LiteralString] = Seq.empty[LiteralString],
+    items: (Option[LiteralString], Map[Identifier, Seq[LiteralString]]) =
+      (None, Map.empty[Identifier, Seq[LiteralString]]),
+    cites: Seq[LiteralString] = Seq.empty[LiteralString])
 
-  def detailedDescription[_: P]: P[DescriptionParts] = {
+  def shortDescription[u: P]: P[DescriptionParts] = {
+    literalString.map { ls => DescriptionParts(Seq(ls)) }
+  }
+
+  def detailedDescription[u: P]: P[DescriptionParts] = {
     P(brief ~ details ~ items ~ citations).map(tpl => (DescriptionParts.apply _).tupled(tpl))
   }
 
-  def literalStringsDescription[_: P]: P[DescriptionParts] = {
+  def literalStringsDescription[u: P]: P[DescriptionParts] = {
     literalStrings.map { strings =>
       DescriptionParts(
         strings,
@@ -82,7 +87,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def docBlockDescription[_: P]: P[DescriptionParts] = {
+  def docBlockDescription[u: P]: P[DescriptionParts] = {
     markdownLine.rep(1).map { block =>
       DescriptionParts(
         Seq.empty[LiteralString],
@@ -93,23 +98,24 @@ trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def description[_: P]: P[Option[Description]] = {
+  def description[u: P]: P[Option[Description]] = {
     P(
-      location ~ (Keywords.described | Keywords.explained) ~ as ~ open ~/
-        (literalStringsDescription | docBlockDescription | detailedDescription) ~ close
+      location ~ (Keywords.described | Keywords.explained) ~ as ~
+        (shortDescription |
+          (open ~/ (literalStringsDescription | docBlockDescription | detailedDescription) ~ close))
     ).?.map {
-      case yes @ Some((loc, DescriptionParts(brief, details, (itemsName, items), cites))) =>
+      case Some((loc, DescriptionParts(brief, details, (itemsName, items), cites))) =>
         Some(Description(loc, brief, details, itemsName, items, cites))
-      case no @ None => None
+      case None => None
     }
   }
 
-  def literalInteger[_: P]: P[LiteralInteger] = {
+  def literalInteger[u: P]: P[LiteralInteger] = {
     P(location ~ (Operators.plus | Operators.minus).? ~ CharIn("0-9").rep(1).!.map(_.toInt))
       .map(s => LiteralInteger(s._1, BigInt(s._2)))
   }
 
-  def literalDecimal[_: P]: P[LiteralDecimal] = {
+  def literalDecimal[u: P]: P[LiteralDecimal] = {
     P(
       location ~ (Operators.plus | Operators.minus).?.! ~ CharIn("0-9").rep(1).! ~
         (Punctuation.dot ~ CharIn("0-9").rep(0)).?.! ~
@@ -117,34 +123,34 @@ trait CommonParser extends NoWhiteSpaceParsers {
     ).map { case (loc, a, b, c, d) => LiteralDecimal(loc, BigDecimal(a + b + c + d)) }
   }
 
-  def simpleIdentifier[_: P]: P[String] = {
+  def simpleIdentifier[u: P]: P[String] = {
     P((CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_").?).!)
   }
 
-  def quotedIdentifier[_: P]: P[String] = {
+  def quotedIdentifier[u: P]: P[String] = {
     P("'" ~/ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
   }
 
-  def anyIdentifier[_: P]: P[String] = { P(simpleIdentifier | quotedIdentifier) }
+  def anyIdentifier[u: P]: P[String] = { P(simpleIdentifier | quotedIdentifier) }
 
-  def identifier[_: P]: P[Identifier] = {
+  def identifier[u: P]: P[Identifier] = {
     P(location ~ anyIdentifier).map(tpl => (Identifier.apply _).tupled(tpl))
   }
 
-  def pathIdentifier[_: P]: P[PathIdentifier] = {
+  def pathIdentifier[u: P]: P[PathIdentifier] = {
     P(location ~ anyIdentifier.repX(1, Punctuation.dot).map(_.reverse))
       .map(tpl => (PathIdentifier.apply _).tupled(tpl))
   }
 
-  def is[_: P]: P[Unit] = {
+  def is[u: P]: P[Unit] = {
     P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
   }
 
-  def open[_: P]: P[Unit] = { P(Punctuation.curlyOpen) }
+  def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
-  def close[_: P]: P[Unit] = { P(Punctuation.curlyClose) }
+  def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
 
-  def options[_: P, TY <: RiddlValue](
+  def options[u: P, TY <: RiddlValue](
     validOptions: => P[String]
   )(mapper: => (Location, String) => TY
   ): P[Seq[TY]] = {
@@ -162,45 +168,45 @@ trait CommonParser extends NoWhiteSpaceParsers {
     seq.map(_.map(_.asInstanceOf[T])).getOrElse(Seq.empty[T])
   }
 
-  def commandRef[_: P]: P[CommandRef] = {
+  def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~/ pathIdentifier).map(tpl => (CommandRef.apply _).tupled(tpl))
   }
 
-  def eventRef[_: P]: P[EventRef] = {
+  def eventRef[u: P]: P[EventRef] = {
     P(location ~ Keywords.event ~/ pathIdentifier).map(tpl => (EventRef.apply _).tupled(tpl))
   }
 
-  def queryRef[_: P]: P[QueryRef] = {
+  def queryRef[u: P]: P[QueryRef] = {
     P(location ~ Keywords.query ~/ pathIdentifier).map(tpl => (QueryRef.apply _).tupled(tpl))
   }
 
-  def resultRef[_: P]: P[ResultRef] = {
+  def resultRef[u: P]: P[ResultRef] = {
     P(location ~ Keywords.result ~/ pathIdentifier).map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
-  def messageRef[_: P]: P[MessageReference] = { P(commandRef | eventRef | queryRef | resultRef) }
+  def messageRef[u: P]: P[MessageReference] = { P(commandRef | eventRef | queryRef | resultRef) }
 
-  def entityRef[_: P]: P[EntityRef] = {
+  def entityRef[u: P]: P[EntityRef] = {
     P(location ~ Keywords.entity ~/ pathIdentifier).map(tpl => (EntityRef.apply _).tupled(tpl))
   }
 
-  def topicRef[_: P]: P[TopicRef] = {
+  def topicRef[u: P]: P[TopicRef] = {
     P(location ~ Keywords.topic ~/ pathIdentifier).map(tpl => (TopicRef.apply _).tupled(tpl))
   }
 
-  def typeRef[_: P]: P[TypeRef] = {
+  def typeRef[u: P]: P[TypeRef] = {
     P(location ~ pathIdentifier).map(tpl => (TypeRef.apply _).tupled(tpl))
   }
 
-  def actionRef[_: P]: P[FunctionRef] = {
+  def actionRef[u: P]: P[FunctionRef] = {
     P(location ~ Keywords.action ~/ pathIdentifier).map(tpl => (FunctionRef.apply _).tupled(tpl))
   }
 
-  def contextRef[_: P]: P[ContextRef] = {
+  def contextRef[u: P]: P[ContextRef] = {
     P(location ~ Keywords.context ~/ pathIdentifier).map(tpl => (ContextRef.apply _).tupled(tpl))
   }
 
-  def domainRef[_: P]: P[DomainRef] = {
+  def domainRef[u: P]: P[DomainRef] = {
     P(location ~ Keywords.domain ~/ pathIdentifier).map(tpl => (DomainRef.apply _).tupled(tpl))
   }
 }

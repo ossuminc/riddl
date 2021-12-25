@@ -2,15 +2,15 @@ package com.yoppworks.ossum.riddl.language
 
 import java.io.File
 import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.DomainDefinition
 import com.yoppworks.ossum.riddl.language.AST.DomainRef
 import com.yoppworks.ossum.riddl.language.AST.Identifier
 import com.yoppworks.ossum.riddl.language.AST.LiteralString
 import com.yoppworks.ossum.riddl.language.AST.Location
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
-import fastparse._
+import fastparse.*
 
+import scala.annotation.unused
 import scala.collection.mutable
 
 case class ParserError(input: RiddlParserInput, loc: Location, msg: String) extends Throwable {
@@ -37,7 +37,7 @@ trait ParsingContext {
     }
   }
 
-  def location[_: P]: P[Location] = {
+  def location[u: P]: P[Location] = {
     val cur = current
     P(Index).map(idx => cur.location(idx, cur.origin))
   }
@@ -51,12 +51,15 @@ trait ParsingContext {
     } else { importDomain(file) }
   }
 
-  def importDomain(file: File): Domain = {
+  def importDomain(
+    @unused
+    file: File
+  ): Domain = {
     // TODO: implement importDomain
     ???
   }
 
-  def doInclude[T](str: LiteralString, empty: T)(rule: P[_] => P[T]): T = {
+  def doInclude[T](str: LiteralString, empty: T)(rule: P[?] => P[T]): T = {
     val name = str.s + ".riddl"
     val file = new File(current.root, name)
     if (!file.exists()) {
@@ -65,7 +68,7 @@ trait ParsingContext {
     } else {
       stack.push(file)
       val result = this.expect[T](rule) match {
-        case Left(errors)  => empty
+        case Left(_)       => empty
         case Right(result) => result
       }
       stack.pop
@@ -78,7 +81,7 @@ trait ParsingContext {
     errors.append(error)
   }
 
-  def expect[T](parser: P[_] => P[T]): Either[Seq[ParserError], T] = {
+  def expect[T](parser: P[?] => P[T]): Either[Seq[ParserError], T] = {
     fastparse.parse(current, parser(_)) match {
       case Success(content, _) =>
         if (errors.nonEmpty) { Left(errors.toSeq) }

@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
-import fastparse._
-import ScalaWhitespace._
+import com.yoppworks.ossum.riddl.language.AST.*
+import fastparse.*
+import ScalaWhitespace.*
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Terminals.Options
 
@@ -52,28 +52,27 @@ trait EntityParser
     *   invariant large is { "x is greater or equal to 10" }
     * }}}
     */
-  def invariant[_: P]: P[Invariant] = {
+  def invariant[u: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
-        (undefined.map(_ => Seq.empty[LiteralString]) | docBlock) ~ close ~ description
+        (undefined(Seq.empty[LiteralString]) | docBlock) ~ close ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
-  def state[_: P]: P[State] = {
+  def state[u: P]: P[State] = {
     P(location ~ Keywords.state ~/ identifier ~ is ~ typeExpression ~ description)
       .map(tpl => (State.apply _).tupled(tpl))
   }
 
-  def entityDefinition[_: P]: P[EntityDefinition] = {
+  def entityDefinition[u: P]: P[EntityDefinition] = {
     P(handler | feature | function | invariant | typeDef | state)
   }
 
-  def entity[_: P]: P[Entity] = {
+  def entity[u: P]: P[Entity] = {
     P(
       entityKind ~ location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
-        ((location ~ undefined).map { loc: Location =>
-          (Seq.empty[EntityOption], Seq.empty[EntityDefinition])
-        } | (entityOptions ~ entityDefinition.rep)) ~ close ~ description
+        (undefined((Seq.empty[EntityOption], Seq.empty[EntityDefinition])) |
+          (entityOptions ~ entityDefinition.rep)) ~ close ~ description
     ).map { case (kind, loc, id, (options, entityDefs), addendum) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))

@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
-import fastparse._
-import ScalaWhitespace._
+import com.yoppworks.ossum.riddl.language.AST.*
+import fastparse.*
+import ScalaWhitespace.*
 import Terminals.Keywords
 import Terminals.Options
 
@@ -22,17 +22,17 @@ trait ContextParser extends AdaptorParser with EntityParser with InteractionPars
     include[ContextDefinition, X](contextDefinitions(_))
   }
 
-  def contextDefinitions[_: P]: P[Seq[ContextDefinition]] = {
+  def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       typeDef.map(Seq(_)) | entity.map(Seq(_)) | adaptor.map(Seq(_)) | interaction.map(Seq(_)) |
         contextInclude
     ).rep(0).map { seq => seq.flatten }
   }
 
-  def context[_: P]: P[Context] = {
+  def context[u: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ is ~ open ~
-        (undefined.map(_ => Seq.empty[ContextOption] -> Seq.empty[ContextDefinition]) |
+        (undefined(Seq.empty[ContextOption] -> Seq.empty[ContextDefinition]) |
           (contextOptions ~ contextDefinitions)) ~ close ~ description
     ).map { case (loc, id, (options, definitions), addendum) =>
       val groups = definitions.groupBy(_.getClass)

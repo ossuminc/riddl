@@ -2,12 +2,12 @@ package com.yoppworks.ossum.riddl.language
 
 import java.io.File
 import java.nio.file.Path
-
 import com.yoppworks.ossum.riddl.language.AST.Location
 import fastparse.ParserInput
 import fastparse.internal.Util
 
 import scala.io.Source
+import scala.language.implicitConversions
 
 /** Same as fastparse.IndexedParserInput but with Location support */
 abstract class RiddlParserInput extends ParserInput {

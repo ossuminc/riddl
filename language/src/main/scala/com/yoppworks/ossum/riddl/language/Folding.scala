@@ -1,10 +1,12 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.AST.*
+
+import scala.annotation.unused
 
 object Folding {
 
-  trait State[S <: State[_]] {
+  trait State[S <: State[?]] {
     def step(f: S => S): S
   }
 
@@ -54,6 +56,9 @@ object Folding {
         foldables.foldLeft(result) { (next, foldable) =>
           foldEachDefinition[S](entity, foldable, next)(f)
         }
+      case plant: Plant =>
+        result = f(parent, plant, result)
+        plant.contents.foldLeft(result) { (next, item) => f(plant, item, next) }
       case interaction: Interaction =>
         result = f(parent, interaction, result)
         interaction.actions.foldLeft(result) { (next, action) => f(interaction, action, next) }
@@ -132,6 +137,13 @@ object Folding {
           }.step { state =>
             entity.states.foldLeft(state) { (next, s) => foldLeft(entity, s, next) }
           }.step { state => closeEntity(state, parent, entity) }
+        case plant: Plant => openPlant(initState, parent, plant).step { state =>
+            plant.pipes.foldLeft(state) { (next, pipe) => doPipe(next, plant, pipe) }
+          }.step { state =>
+            plant.processors.foldLeft(state) { (next, proc) => doProcessor(next, plant, proc) }
+          }.step { state =>
+            plant.joints.foldLeft(state) { (next, joint) => doJoint(next, plant, joint) }
+          }.step { state => closePlant(state, parent, plant) }
         case interaction: Interaction => openInteraction(initState, parent, interaction)
             .step { state =>
               interaction.actions.foldLeft(state) { (next, action) =>
@@ -172,103 +184,152 @@ object Folding {
 
     def openDomain(
       state: S,
+      @unused
       container: Container,
+      @unused
       domain: Domain
     ): S = { state }
 
     def closeDomain(
       state: S,
+      @unused
       container: Container,
+      @unused
       domain: Domain
     ): S = { state }
 
     def openContext(
       state: S,
+      @unused
       container: Container,
+      @unused
       context: Context
     ): S = { state }
 
     def closeContext(
       state: S,
+      @unused
       container: Container,
+      @unused
       context: Context
     ): S = { state }
 
     def openEntity(
       state: S,
+      @unused
       container: Container,
+      @unused
       entity: Entity
     ): S = { state }
 
     def closeEntity(
       state: S,
+      @unused
       container: Container,
+      @unused
       entity: Entity
+    ): S = { state }
+
+    def openPlant(
+      state: S,
+      @unused
+      container: Container,
+      @unused
+      plant: Plant
+    ): S = { state }
+    def closePlant(
+      state: S,
+      @unused
+      container: Container,
+      @unused
+      plant: Plant
     ): S = { state }
 
     def openState(
       state: S,
+      @unused
       container: Container,
+      @unused
       s: AST.State
     ): S = { state }
 
     def closeState(
       state: S,
+      @unused
       container: Container,
+      @unused
       s: AST.State
     ): S = { state }
 
     def openTopic(
       state: S,
+      @unused
       container: Container,
+      @unused
       topic: Topic
     ): S = { state }
 
     def closeTopic(
       state: S,
+      @unused
       container: Container,
+      @unused
       channel: Topic
     ): S = { state }
 
     def openInteraction(
       state: S,
+      @unused
       container: Container,
+      @unused
       interaction: Interaction
     ): S = { state }
 
     def closeInteraction(
       state: S,
+      @unused
       container: Container,
+      @unused
       interaction: Interaction
     ): S = { state }
 
     def openFeature(
       state: S,
+      @unused
       container: Container,
+      @unused
       feature: Feature
     ): S = { state }
 
     def closeFeature(
       state: S,
+      @unused
       container: Container,
+      @unused
       feature: Feature
     ): S = { state }
 
     def openAdaptor(
       state: S,
+      @unused
       container: Container,
+      @unused
       adaptor: Adaptor
     ): S = { state }
 
     def closeAdaptor(
       state: S,
+      @unused
       container: Container,
+      @unused
       adaptor: Adaptor
     ): S = { state }
 
     def doType(
       state: S,
+      @unused
       container: Container,
+      @unused
       typ: Type
     ): S = { state }
 
@@ -287,26 +348,34 @@ object Folding {
 
     def openCommand(
       state: S,
+      @unused
       container: Container,
+      @unused
       command: Command
     ): S = { state }
 
     def openEvent(
       state: S,
+      @unused
       container: Container,
+      @unused
       event: Event
     ): S = { state }
 
     def openQuery(
       state: S,
+      @unused
       container: Container,
+      @unused
       query: Query
     ): S = { state }
 
     def openResult(
       state: S,
+      @unused
       container: Container,
-      rslt: Result
+      @unused
+      result: Result
     ): S = { state }
 
     def closeMessage(
@@ -324,73 +393,119 @@ object Folding {
 
     def closeCommand(
       state: S,
+      @unused
       container: Container,
+      @unused
       command: Command
     ): S = { state }
 
     def closeEvent(
       state: S,
+      @unused
       container: Container,
+      @unused
       event: Event
     ): S = { state }
 
     def closeQuery(
       state: S,
+      @unused
       container: Container,
+      @unused
       query: Query
     ): S = { state }
 
     def closeResult(
       state: S,
+      @unused
       container: Container,
-      rslt: Result
+      @unused
+      result: Result
     ): S = { state }
 
     def doField(
       state: S,
+      @unused
       container: Container,
+      @unused
       field: Field
     ): S = { state }
 
     def doHandler(
       state: S,
+      @unused
       container: Container,
+      @unused
       consumer: Handler
     ): S = { state }
 
     def doAction(
       state: S,
+      @unused
       container: Container,
+      @unused
       action: ActionDefinition
     ): S = { state }
 
     def doExample(
       state: S,
+      @unused
       container: Container,
+      @unused
       example: Example
     ): S = { state }
 
     def doFunction(
       state: S,
+      @unused
       container: Container,
+      @unused
       function: Function
     ): S = { state }
 
     def doInvariant(
       state: S,
+      @unused
       container: Container,
+      @unused
       invariant: Invariant
+    ): S = { state }
+
+    def doPipe(
+      state: S,
+      @unused
+      container: Container,
+      @unused
+      pipe: Pipe
+    ): S = { state }
+    def doProcessor(
+      state: S,
+      @unused
+      container: Container,
+      @unused
+      pipe: Processor
+    ): S = { state }
+    def doJoint(
+      state: S,
+      @unused
+      container: Container,
+      @unused
+      joint: Joint
     ): S = { state }
 
     def doPredefinedType(
       state: S,
+      @unused
       container: Container,
+      @unused
       predef: PredefinedType
     ): S = { state }
 
     def doTranslationRule(
       state: S,
+      @unused
       container: Container,
+      @unused
       rule: TranslationRule
     ): S = { state }
   }

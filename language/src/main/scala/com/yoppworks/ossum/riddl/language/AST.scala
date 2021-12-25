@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
+import scala.annotation.unused
 import scala.collection.immutable.ListMap
-import scala.languageFeature.implicitConversions
+import scala.language.implicitConversions
 
 // scalastyle:off number.of.methods
 
@@ -96,7 +97,7 @@ object AST {
     val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
 
-  case class DefRef[T <: Definition](loc: Location, id: PathIdentifier) extends Reference
+  case class DefRef[+T <: Definition](loc: Location, id: PathIdentifier) extends Reference
 
   // ////////////////////////////////////////////////////////// TYPES
 
@@ -347,7 +348,10 @@ object AST {
   case class EntityConsistent(loc: Location) extends EntityOption("consistent")
   case class EntityAvailable(loc: Location) extends EntityOption("available")
 
-  sealed abstract class EntityKind(name: String) extends EntityValue
+  sealed abstract class EntityKind(
+    @unused
+    name: String)
+      extends EntityValue
 
   case class ConceptEntityKind(loc: Location) extends EntityKind("concept")
   case class DeviceEntityKind(loc: Location) extends EntityKind("device")
@@ -702,18 +706,10 @@ object AST {
 
   trait JointDefinition extends Definition
 
-  case class InJoint(
+  case class Joint(
     loc: Location,
     id: Identifier,
-    streamLet: DefRef[Inlet],
-    pipe: DefRef[Pipe],
-    description: Option[Description] = None)
-      extends JointDefinition
-
-  case class OutJoint(
-    loc: Location,
-    id: Identifier,
-    streamLet: DefRef[Outlet],
+    streamLet: DefRef[Streamlet],
     pipe: DefRef[Pipe],
     description: Option[Description] = None)
       extends JointDefinition
@@ -723,8 +719,7 @@ object AST {
     id: Identifier,
     pipes: Seq[Pipe] = Seq.empty[Pipe],
     processors: Seq[Processor] = Seq.empty[Processor],
-    inJoints: Seq[InJoint] = Seq.empty[InJoint],
-    OutJoints: Seq[OutJoint] = Seq.empty[OutJoint],
+    joints: Seq[Joint] = Seq.empty[Joint],
     description: Option[Description] = None)
       extends Container with DomainDefinition {
     def contents: Seq[Definition] = pipes ++ processors
@@ -824,7 +819,7 @@ object AST {
     description: Option[Description] = None)
       extends Container with DomainDefinition {
 
-    def contents: Seq[DomainDefinition] = (types.iterator ++ topics ++ contexts ++ interactions ++ plants)
-      .toList
+    def contents: Seq[DomainDefinition] =
+      (types.iterator ++ topics ++ contexts ++ interactions ++ plants).toList
   }
 }

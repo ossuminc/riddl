@@ -1,11 +1,11 @@
 package com.yoppworks.ossum.riddl.language
 
-import RiddlParserInput._
+import RiddlParserInput.*
 
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 
-  import AST._
+  import AST.*
 
   "Parser" should {
     "report bad syntax" in {
@@ -14,7 +14,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           errors.map(_.format).foreach(println(_))
           errors must not be empty
-        case Right(content) => fail("Invalid syntax should make an error")
+        case Right(_) => fail("Invalid syntax should make an error")
       }
     }
     "allow an empty funky-name domain" in {
@@ -222,9 +222,9 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Invariant(
-            Location(1, 11),
-            Identifier(Location(1, 11), "large"),
-            Seq(LiteralString(Location(1, 22), "x is greater or equal to 10")),
+            1 -> 11,
+            Identifier(1 -> 11, "large"),
+            Seq(LiteralString(1 -> 22, "x is greater or equal to 10")),
             None
           )
       }

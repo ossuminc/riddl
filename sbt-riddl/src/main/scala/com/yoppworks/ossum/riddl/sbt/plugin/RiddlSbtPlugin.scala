@@ -1,16 +1,11 @@
 package com.yoppworks.ossum.riddl.sbt.plugin
 
-import java.nio.file.Path
-
 import sbt._
 import Keys._
-import com.yoppworks.ossum.riddl.language.Riddl
-import com.yoppworks.ossum.riddl.language.TopLevelParser
-import com.yoppworks.ossum.riddl.language.Validation
-import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
-
-import sbt.plugins.JvmPlugin
 import sbt.internal.util.ManagedLogger
+import sbt.plugins.JvmPlugin
+
+import scala.language.postfixOps
 
 /** A plugin that endows sbt with knowledge of code generation via riddl */
 object RiddlSbtPlugin extends AutoPlugin {
@@ -18,62 +13,103 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   object autoImport {
 
-    val riddl2ParadoxSourceFiles = settingKey[Seq[String]](
-      "names of the .riddl files to translate"
-    )
+    sealed trait RIDDLCOption
+    case object Verbose extends RIDDLCOption
+    case object Quiet extends RIDDLCOption
+    case object SuppressWarnings extends RIDDLCOption
+    case object SuppressMissingWarnings extends RIDDLCOption
+    case object SuppressStyleWarnings extends RIDDLCOption
+    case object ShowTimes extends RIDDLCOption
 
-    val riddl2ParadoxConfigFile = settingKey[File](
-      "Path location of the Paradox translator's config file"
-    )
-
-    val riddl2Paradox = taskKey[Seq[File]](
-      "Task to translate riddl source to Paradox source"
-    )
+    lazy val riddlcPath = settingKey[File]("Path to `riddlc` compiler")
+    lazy val riddlcOptions = settingKey[Seq[RIDDLCOption]]("Options for the riddlc compiler")
+    lazy val fileToTranslate =
+      settingKey[String]("Name of top level file to translate to documentation")
+    lazy val outDir = settingKey[File]("Path to riddlc output directory")
+    lazy val configFile = settingKey[File]("Path to riddlc configuration file")
 
   }
 
   import autoImport._
-
-  override lazy val projectSettings: Seq[Setting[_]] = Seq(
-    (compile in Compile) :=
-      ((compile in Compile) dependsOn riddl2Paradox).value
-  )
-
-  case class SbtLogger(log: ManagedLogger) extends Riddl.Logger {
-    override def severe(s: => String): Unit = log.error(s)
-    override def error(s: => String): Unit = log.error(s)
-    override def warn(s: => String): Unit = log.warn(s)
-    override def info(s: => String): Unit = log.info(s)
+  override lazy val globalSettings: Seq[Setting[_]] = {
+    Seq(
+      riddlcPath := file("riddlc"),
+      riddlcOptions := Seq.empty[RIDDLCOption],
+      fileToTranslate := "top",
+      outDir := (target.value / "riddl" / "doc"),
+      configFile := (Compile / sourceDirectory).value / "riddl" /
+        (fileToTranslate.value + ".config")
+    )
   }
 
-  def paradoxTranslation(
-    sources: Seq[File],
-    targetDir: Path,
-    configFile: File,
-    log: SbtLogger
+  lazy val compileTask = taskKey[Seq[File]]("A task to invoke riddlc compiler")
+
+  override lazy val projectSettings: Seq[Setting[_]] =
+    Seq((Compile / compile) := ((Compile / compile) dependsOn compileTask).value)
+
+  compileTask := {
+    val srcFile = (Compile / sourceDirectory).value / "riddl" / (fileToTranslate.value + ".riddl")
+    val execPath = riddlcPath.value
+    val options = riddlcOptions.value
+    val output = outDir.value
+    val configF: File = configFile.value
+    val log: ManagedLogger = streams.value.log
+    translateToDoc(execPath, options, srcFile, output, configF, log)
+  }
+
+  def translateToDoc(
+    riddlc: sbt.File,
+    options: Seq[RIDDLCOption],
+    src: File,
+    outDir: sbt.File,
+    config: sbt.File,
+    log: ManagedLogger
   ): Seq[File] = {
-    sources.flatMap { source =>
-      log.info(s"Translating RIDDL to Paradox for ${source.getName}")
-      TopLevelParser.parse(source) match {
-        case Left(errors) =>
-        case Right(root) =>
-          val msgs = Validation.validate(root)
-      }
-      val trans = new ParadoxTranslator
-      val fileList =
-        trans.run(source.toPath, Some(targetDir), log, Some(configFile.toPath))
-      fileList
-    }
-  }
+    import sys.process._
+    val flags = options.map {
+      case Verbose                 => "--verbose"
+      case Quiet                   => "--quiet"
+      case SuppressWarnings        => "--suppress-warnings"
+      case SuppressMissingWarnings => "--suppress-missing-warnings"
+      case SuppressStyleWarnings   => "--suppress-style-warnings"
+      case ShowTimes               => "--show-times"
+    }.mkString(" ")
+    val command = riddlc.toString + " " + flags + " translate" + " -i " + src.toString + " -c " +
+      config.toString + " -o " + outDir.toString
+    log.info(s"Executing command: $command")
+    val result: String = command !!
 
-  lazy val riddl2Paradox = Def.task[Seq[File]] {
-    val log = SbtLogger(streams.value.log)
-    val srcDir = (sourceDirectory in Compile).value / "riddl"
-    val sourceFiles: Seq[File] = riddl2ParadoxSourceFiles.value.map { name =>
-      srcDir / name
-    }
-    val targetDir = target.value.toPath
-    val configFile: File = riddl2ParadoxConfigFile.value
-    paradoxTranslation(sourceFiles, targetDir, configFile, log)
+    log.info(s"Command Result:\n$result")
+    Seq[File](outDir)
   }
 }
+
+/*
+riddlc [parse|validate|translate] [options] <args>...
+
+  -h, --help
+  -v, --verbose
+  -q, --quiet
+  -w, --suppress-warnings
+  -m, --suppress-missing-warnings
+  -s, --suppress-style-warnings
+  -t, --show-times
+Command: parse [options]
+Parse the input for syntactic compliance with riddl language
+  -i, --input-file <value>
+                           required riddl input file to compile
+Command: validate [options]
+
+  -i, --input-file <value>
+                           required riddl input file to compile
+Command: translate [options] kind
+translate riddl as specified in configuration file
+  kind                     The kind of output to generate during translation
+  -i, --input-file <value>
+                           required riddl input file to compile
+  -c, --configuration-file <value>
+                           configuration that specifies how to do the translation
+
+Process finished with exit code 0
+
+ */

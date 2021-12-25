@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 
 /** Unit Tests For HugoFolding */
@@ -12,7 +12,7 @@ class HugoFolding extends Folding[HugoState] {
     domain: Domain
   ): HugoState = {
     state.pushContext(container)
-    val hfile = state.openFile("overview.md")
+    val _ = state.openFile("overview.md")
     // hfile.state.open(s"domain ${domain.id.value} {")
     state
   }

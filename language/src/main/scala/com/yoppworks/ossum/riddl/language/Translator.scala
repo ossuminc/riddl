@@ -5,8 +5,8 @@ import java.nio.file.Path
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Riddl.Options
-import pureconfig._
-import pureconfig.error._
+import pureconfig.*
+import pureconfig.error.*
 
 trait TranslatorConfiguration extends Options {
   def inputPath: Option[Path]
@@ -34,9 +34,9 @@ trait Translator[CONF <: TranslatorConfiguration] {
       case Some(p) => loadConfig(p) match {
           case Left(failures: ConfigReaderFailures) =>
             failures.toList.foreach { crf: ConfigReaderFailure =>
-              val location = crf.location match {
-                case Some(cvl) => cvl.description
-                case None      => "unknown location"
+              val location = crf.origin match {
+                case Some(origin) => origin.description
+                case None         => "unknown location"
               }
               logger.error(s"In $location:")
               logger.error(crf.description)

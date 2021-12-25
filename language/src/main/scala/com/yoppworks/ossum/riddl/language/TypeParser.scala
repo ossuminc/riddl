@@ -1,22 +1,22 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
-import fastparse._
-import ScalaWhitespace._
+import com.yoppworks.ossum.riddl.language.AST.*
+import fastparse.*
+import ScalaWhitespace.*
 
-import Terminals._
-import Terminals.Punctuation._
+import Terminals.*
+import Terminals.Punctuation.*
 
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
 
-  def referToType[_: P]: P[ReferenceType] = {
+  def referToType[u: P]: P[ReferenceType] = {
     P(location ~ "refer" ~ "to" ~/ entityRef ~ description).map { tpl =>
       (ReferenceType.apply _).tupled(tpl)
     }
   }
 
-  def stringType[_: P]: P[Strng] = {
+  def stringType[u: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~
         (Punctuation.roundOpen ~ literalInteger.? ~ Punctuation.comma ~ literalInteger.? ~
@@ -27,13 +27,13 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def urlType[_: P]: P[URL] = {
+  def urlType[u: P]: P[URL] = {
     P(
       location ~ Predefined.URL ~ (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
-  def simplePredefinedTypes[_: P]: P[TypeExpression] = {
+  def simplePredefinedTypes[u: P]: P[TypeExpression] = {
     P(
       stringType | urlType |
         (location ~ Predefined.Boolean).map(AST.Bool) |
@@ -48,11 +48,11 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
         (location ~ Predefined.Nothing).map(AST.Nothing) |
-        (location ~ undefined).map(AST.Nothing)
+        (location ~ undefined(())).map(AST.Nothing)
     )
   }
 
-  def patternType[_: P]: P[Pattern] = {
+  def patternType[u: P]: P[Pattern] = {
     P(
       location ~ Predefined.Pattern ~/ roundOpen ~/
         (literalStrings | Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
@@ -60,18 +60,18 @@ trait TypeParser extends CommonParser {
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
 
-  def uniqueIdType[_: P]: P[UniqueId] = {
+  def uniqueIdType[u: P]: P[UniqueId] = {
     (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/ description).map {
       case (loc, Some(id), add) => UniqueId(loc, id, add)
       case (loc, None, add)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), add)
     }
   }
 
-  def enumValue[_: P]: P[Option[LiteralInteger]] = {
+  def enumValue[u: P]: P[Option[LiteralInteger]] = {
     P(Punctuation.roundOpen ~ literalInteger ~ Punctuation.roundClose).?
   }
 
-  def enumerator[_: P]: P[Enumerator] = {
+  def enumerator[u: P]: P[Enumerator] = {
     P(identifier ~ enumValue ~ isTypeRef.? ~ description).map { case (id, enumVal, typeRef, desc) =>
       Enumerator(id.loc, id, enumVal, typeRef, desc)
     }
@@ -79,9 +79,9 @@ trait TypeParser extends CommonParser {
 
   /** Type reference parser that requires the 'type' keyword qualifier
     */
-  def isTypeRef[_: P]: P[TypeRef] = { P(is ~/ Keywords.`type` ~/ typeRef) }
+  def isTypeRef[u: P]: P[TypeRef] = { P(is ~/ Keywords.`type` ~/ typeRef) }
 
-  def enumeration[_: P]: P[Enumeration] = {
+  def enumeration[u: P]: P[Enumeration] = {
     P(
       location ~ Keywords.any ~ Readability.of.? ~ open ~/
         (enumerator.rep(1, sep = comma.?) |
@@ -89,7 +89,7 @@ trait TypeParser extends CommonParser {
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
-  def alternation[_: P]: P[Alternation] = {
+  def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (typeExpression.rep(2, P("or" | "|" | ",")) |
@@ -97,20 +97,20 @@ trait TypeParser extends CommonParser {
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
-  def field[_: P]: P[Field] = {
+  def field[u: P]: P[Field] = {
     P(location ~ identifier ~ is ~ typeExpression ~ description)
       .map(tpl => (Field.apply _).tupled(tpl))
   }
 
-  def fields[_: P]: P[Seq[Field]] = {
+  def fields[u: P]: P[Seq[Field]] = {
     P(field.rep(min = 0, comma) | Punctuation.undefined.!.map(_ => Seq.empty[Field]))
   }
 
-  def aggregationWithoutDescription[_: P]: P[Aggregation] = {
+  def aggregationWithoutDescription[u: P]: P[Aggregation] = {
     P(location ~ open ~ fields ~ close).map { case (loc, fields) => Aggregation(loc, fields, None) }
   }
 
-  def aggregation[_: P]: P[Aggregation] = {
+  def aggregation[u: P]: P[Aggregation] = {
     P(aggregationWithoutDescription ~ description).map { case (agg, desc) =>
       agg.copy(description = desc)
     }
@@ -121,7 +121,7 @@ trait TypeParser extends CommonParser {
     *   mapping { from Integer to String }
     * ```
     */
-  def mapping[_: P]: P[Mapping] = {
+  def mapping[u: P]: P[Mapping] = {
     P(
       location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~ typeExpression ~ close ~
         description
@@ -133,14 +133,14 @@ trait TypeParser extends CommonParser {
     *   range { from 1 to 2 }
     * ```
     */
-  def range[_: P]: P[RangeType] = {
+  def range[u: P]: P[RangeType] = {
     P(
       location ~ "range" ~ roundOpen ~/ literalInteger ~ comma ~ literalInteger ~ roundClose ~
         description
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 
-  def cardinality[_: P](p: => P[TypeExpression]): P[TypeExpression] = {
+  def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
     P(
       Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~
         (question.! | asterisk.! | plus.! | ellipsisQuestion.! | ellipsis.!).?
@@ -161,14 +161,14 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def typeExpression[_: P]: P[TypeExpression] = {
+  def typeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(P(
       simplePredefinedTypes | patternType | uniqueIdType | enumeration | alternation | referToType |
         aggregation | mapping | range | typeRef
     )))
   }
 
-  def typeDef[_: P]: P[Type] = {
+  def typeDef[u: P]: P[Type] = {
     P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ description).map { tpl =>
       (Type.apply _).tupled(tpl)
     }

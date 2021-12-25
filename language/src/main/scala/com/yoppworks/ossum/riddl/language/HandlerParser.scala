@@ -1,30 +1,30 @@
 package com.yoppworks.ossum.riddl.language
 
-import AST._
-import Terminals._
-import fastparse._
-import ScalaWhitespace._
+import AST.*
+import Terminals.*
+import fastparse.*
+import ScalaWhitespace.*
 
 import scala.collection.immutable.ListMap
 
 /** Parser for an entity handler definition */
 trait HandlerParser extends CommonParser with ConditionParser with ExpressionParser {
 
-  def setStmt[_: P](): P[SetStatement] = {
+  def assignStmt[u: P]: P[SetStatement] = {
     P(
       Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~ expression ~
         description
     ).map { t => (SetStatement.apply _).tupled(t) }
   }
 
-  def appendStmt[_: P]: P[AppendStatement] = {
+  def appendStmt[u: P]: P[AppendStatement] = {
     P(
       Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~ identifier ~
         description
     ).map { t => (AppendStatement.apply _).tupled(t) }
   }
 
-  def messageConstructor[_: P]: P[MessageConstructor] = {
+  def messageConstructor[u: P]: P[MessageConstructor] = {
     P(messageRef ~ argList.?).map(tpl => {
       val args = tpl._2 match {
         case None    => ListMap.empty[Identifier, Expression]
@@ -34,50 +34,50 @@ trait HandlerParser extends CommonParser with ConditionParser with ExpressionPar
     })
   }
 
-  def publishStmt[_: P]: P[PublishStatement] = {
+  def publishStmt[u: P]: P[PublishStatement] = {
     P(
       (Keywords.yields | Keywords.publish) ~/ location ~ messageConstructor ~
         Terminals.Readability.to ~ topicRef ~ description
     ).map { t => (PublishStatement.apply _).tupled(t) }
   }
 
-  def sendStmt[_: P]: P[SendStatement] = {
+  def sendStmt[u: P]: P[SendStatement] = {
     P(Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~ entityRef ~ description)
       .map { t => (SendStatement.apply _).tupled(t) }
   }
 
-  def removeStmt[_: P](): P[RemoveStatement] = {
+  def removalStmt[u: P]: P[RemoveStatement] = {
     P(
       Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~ pathIdentifier ~ description
     ).map { t => (RemoveStatement.apply _).tupled(t) }
   }
 
-  def executeStmt[_: P]: P[ExecuteStatement] = {
+  def executeStmt[u: P]: P[ExecuteStatement] = {
     P(location ~ Keywords.execute ~/ identifier ~ description).map { t =>
       (ExecuteStatement.apply _).tupled(t)
     }
   }
 
-  def whenStmt[_: P]: P[WhenStatement] = {
+  def whenStmt[u: P]: P[WhenStatement] = {
     P(
       location ~ Keywords.when ~/ condition ~ Keywords.then_.? ~ Punctuation.curlyOpen ~/
         onClauseAction.rep ~ Punctuation.curlyClose ~ description
     ).map(t => (WhenStatement.apply _).tupled(t))
   }
 
-  def onClauseAction[_: P]: P[OnClauseStatement] = {
-    P(setStmt | appendStmt | removeStmt | sendStmt | publishStmt | whenStmt | executeStmt)
+  def onClauseAction[u: P]: P[OnClauseStatement] = {
+    P(assignStmt | appendStmt | removalStmt | sendStmt | publishStmt | whenStmt | executeStmt)
   }
 
-  def onClause[_: P]: P[OnClause] = {
+  def onClause[u: P]: P[OnClause] = {
     Keywords.on ~/ location ~ messageRef ~ open ~ onClauseAction.rep ~ close ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
-  def handler[_: P]: P[Handler] = {
+  def handler[u: P]: P[Handler] = {
     P(
       Keywords.handler ~/ location ~ identifier ~ is ~
-        ((open ~ undefined ~ close).map(_ => Seq.empty[OnClause]) |
-          optionalNestedContent(onClause)) ~ description
+        ((open ~ undefined(Seq.empty[OnClause]) ~ close) | optionalNestedContent(onClause)) ~
+        description
     ).map(t => (Handler.apply _).tupled(t))
   }
 }

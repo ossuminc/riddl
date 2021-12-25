@@ -1,8 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.graph
 
-import java.lang.reflect.InvocationTargetException
-
-import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.AST.*
 
 case class NodeConfig(
   shape: String = "ellipse",
@@ -15,7 +13,7 @@ case class NodeConfig(
 
   def format: Seq[(String, String)] = {
     Seq(
-      "shape" -> shape.toString,
+      "shape" -> shape,
       "color" -> color,
       "fillcolor" -> fillColor,
       "style" -> style,
@@ -37,7 +35,7 @@ case class GraphAST(
 
   private final val bufferCapacity: Int = 1024
 
-  import com.yoppworks.ossum.riddl.translator.graph.GraphVizAPI._
+  import com.yoppworks.ossum.riddl.translator.graph.GraphVizAPI.*
 
   private final def nameOf(definition: Definition): String = {
     s""""${definition.id.value}(${definition.id.loc})""""

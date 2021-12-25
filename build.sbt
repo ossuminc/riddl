@@ -3,8 +3,6 @@ import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
 
-import java.net.URI
-
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Some("semver-spec")
 
@@ -29,14 +27,14 @@ buildInfoKeys := Seq[BuildInfoKey](
   sbtVersion
 )
 
-scalacOptions := Seq(
+lazy val scala2_13_Options = Seq(
   "-target:17",
   "-Xsource:3",
   "-Wdead-code",
   "-deprecation",
-  // "-Woctal-literal", <-- that warning is broken, it warns on:  val x: Int = 0
-  // "-Xdev",
-  // "-Wunused:imports",   // Warn if an import selector is not referenced.
+  "-feature",
+  "-Werror",
+  "-Wunused:imports",   // Warn if an import selector is not referenced.
   "-Wunused:patvars", // Warn if a variable bound in a pattern is unused.
   "-Wunused:privates", // Warn if a private member is unused.
   "-Wunused:locals", // Warn if a local definition is unused.
@@ -49,100 +47,86 @@ scalacOptions := Seq(
   "-Xlint:valpattern", // Enable pattern checks in val definitions.
   "-Xlint:eta-zero", // Warn on eta-expansion (rather than auto-application) of zero-ary method.
   "-Xlint:eta-sam", // Warn on eta-expansion to meet a Java-defined functional
-  // interface that is not explicitly annotated with @FunctionalInterface.
+                    // interface that is not explicitly annotated with @FunctionalInterface.
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
 lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc, doc /*, `sbt-riddl`*/ )
+  .aggregate(language, translator, riddlc, doc, `sbt-riddl` )
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(
     name := "riddl-doc",
     publishTo := Some(Resolver.defaultLocal),
     Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    minimumHugoVersion := "0.89.4",
+    // minimumHugoVersion := "0.89.4",
     publishSite
   ).dependsOn(language % "test->compile;test->test")
 
-lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin).settings(
-  name := "riddlc",
-  mainClass := Some("com.yoppworks.ossum.riddl.RIDDL"),
-  // Determines depth of TOC for page navigation.
-  /*
-  val paradoxNavigationExpandDepth = settingKey[Option[Int]]("Depth of auto-expanding navigation below the active page.")
-  val paradoxNavigationIncludeHeaders = settingKey[Boolean]("Whether to include headers in the navigation.")
-  val paradoxRoots = settingKey[List[String]]("Which ToC roots (pages without parent) to expect.")
-  val paradoxLeadingBreadcrumbs = settingKey[List[(String, String)]]("Any leading breadcrumbs (label -> url)")
-  val paradoxIllegalLinkPath = settingKey[Regex]("Path pattern to fail site creation (eg. to protect against missing `@ref` for links).")
-  val paradoxOrganization = settingKey[String]("Paradox dependency organization (for theme dependencies).")
-  val paradoxSourceSuffix = settingKey[String]("Source file suffix for markdown files [default = \".md\"].")
-  val paradoxTargetSuffix = settingKey[String]("Target file suffix for HTML files [default = \".html\"].")
-  val paradoxTheme = settingKey[Option[ModuleID]]("Web module name of the paradox theme, otherwise local template.")
-  val paradoxOverlayDirectories = settingKey[Seq[File]]("Directory containing common source files for configuration.")
-  val paradoxDefaultTemplateName = settingKey[String]("Name of default template for generating pages.")
-  val paradoxVersion = settingKey[String]("Paradox plugin version.")
-  val paradoxGroups = settingKey[Map[String, Seq[String]]]("Paradox groups.")
-  val paradoxValidationIgnorePaths = settingKey[List[Regex]]("List of regular expressions to apply to paths to determine if they should be ignored.")
-  val paradoxValidationSiteBasePath = settingKey[Option[String]]("The base path that the documentation is deployed to, allows validating links on the docs site that are outside of the documentation root tree")
-    Compile / paradoxMaterialTheme := {
-      ParadoxMaterialTheme().withColor("blue", "grey")
-        .withLogoIcon("yw-elephant")
-        .withCopyright("Copyright © 2019 Yoppworks Inc.").withSocial(
-          uri("https://github.com/yoppworks"),
-          uri("https://twitter.com/yoppworks"),
-          uri("https://www.linkedin.com/company/yoppworks"),
-          uri("https://www.facebook.com/YoppWorks/")
-        )
-      // .withFavicon("assets/images/riddl-favicon.png")
-      // .withLogo("assets/images/riddl-logo.png")
-    },
-   */
-  libraryDependencies ++=
-    Seq("com.github.scopt" %% "scopt" % "4.0.0-RC2", "com.typesafe" % "config" % "1.4.0"),
-  buildInfoPackage := "com.yoppworks.ossum.riddl"
-).dependsOn(translator, language)
+lazy val riddlc = project.in(file("riddlc"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "riddlc",
+    mainClass := Some("com.yoppworks.ossum.riddl.RIDDLC"),
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.typesafe" % "config" % "1.4.1"
+    ),
+    buildInfoObject := "BuildInfo",
+    buildInfoPackage := "com.yoppworks.ossum.riddl",
+    buildInfoUsePackageAsPath := true
+  ).dependsOn(translator, language)
 
-lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin).settings(
-  name := "riddl-languge",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.language",
-  libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-core" % "2.1.0",
-    "com.lihaoyi" %% "fastparse" % "2.2.4",
-    "com.github.pureconfig" %% "pureconfig" % "0.12.2",
-    "org.scalactic" %% "scalactic" % "3.1.0",
-    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
-  ),
-  Compile / compileCheck := {
-    Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
-  }
-)
-
-lazy val translator = (project in file("translator")).settings(
-  name := "riddl-translator",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.translator",
-  libraryDependencies ++= Seq(
-    "org.jfree" % "jfreesvg" % "3.4",
-    "org.scalactic" %% "scalactic" % "3.1.0",
-    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
-    "com.github.pureconfig" %% "pureconfig" % "0.12.2"
+lazy val language = project.in(file("language"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "riddl-languge",
+    buildInfoObject := "BuildInfo",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.language",
+    buildInfoUsePackageAsPath := true,
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % "2.7.0",
+      "com.lihaoyi" %% "fastparse" % "2.3.3",
+      "com.github.pureconfig" %% "pureconfig" % "0.17.1",
+      "org.scalactic" %% "scalactic" % "3.2.9",
+      "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.15.4" % "test"
+    ),
+    Compile / compileCheck := {
+      Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
+    }
   )
-).dependsOn(language % "test->test;compile->compile")
 
-/*
-lazy val `sbt-riddl` = (project in file("sbt-riddl")).settings(
-  name := "sbt-riddl",
-  sbtPlugin := true,
-  scalaVersion := "2.12.10",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
-).enablePlugins(SbtPlugin)
-//  .enablePlugins(ParadoxPlugin)
-  .dependsOn(translator)
- */
+lazy val translator = (project in file("translator"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "riddl-translator",
+    scalacOptions := scala2_13_Options,
+    buildInfoPackage := "com.yoppworks.ossum.riddl.translator",
+    buildInfoUsePackageAsPath := true,
+    libraryDependencies ++= Seq(
+      "org.jfree" % "jfreesvg" % "3.4.2",
+      "org.scalactic" %% "scalactic" % "3.2.9",
+      "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.15.4" % "test",
+      "com.github.pureconfig" %% "pureconfig" % "0.17.1"
+    )
+  ).dependsOn(language % "test->test;compile->compile")
+
+
+lazy val `sbt-riddl` = (project in file("sbt-riddl"))
+  .enablePlugins(SbtPlugin)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "sbt-riddl",
+    sbtPlugin := true,
+    scalaVersion := "2.12.13",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
+  )
 
 (Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, paradoxNavigationDepth)
+  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass)

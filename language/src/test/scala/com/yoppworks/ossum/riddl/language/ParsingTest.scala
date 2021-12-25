@@ -1,15 +1,14 @@
 package com.yoppworks.ossum.riddl.language
-
 import java.io.File
-
 import AST.Definition
 import AST.RiddlNode
-import AST._
-import fastparse._
+import AST.*
+import fastparse.*
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers._
+import org.scalatest.matchers.*
 
-import scala.reflect._
+import scala.annotation.unused
+import scala.reflect.*
 
 trait ParsingTestBase extends AnyWordSpec with must.Matchers
 
@@ -18,7 +17,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   stack.push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
-    parser: P[_] => P[T],
+    parser: P[?] => P[T],
     extract: T => U
   ): Either[Seq[ParserError], U] = {
     expect(parser) match {
@@ -27,8 +26,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     }
   }
 
-  protected def parserFor[T <: Definition: ClassTag]: P[_] => P[T] = {
-    val parser: P[_] => P[_] = classTag[T].runtimeClass match {
+  protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
+    val parser: P[?] => P[?] = classTag[T].runtimeClass match {
       case x if x == classOf[AST.Type]        => typeDef(_)
       case x if x == classOf[AST.Domain]      => domain(_)
       case x if x == classOf[AST.Context]     => context(_)
@@ -39,10 +38,14 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Topic]       => topic(_)
       case x if x == classOf[AST.Invariant]   => invariant(_)
       case x if x == classOf[AST.Function]    => function(_)
+      case x if x == classOf[AST.Plant]       => plant(_)
+      case x if x == classOf[AST.Processor]   => processor(_)
+      case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
+      case x if x == classOf[AST.Joint]       => joint(_)
       case _ =>
         throw new RuntimeException(s"No parser defined for class ${classTag[T].runtimeClass}")
     }
-    parser.asInstanceOf[P[_] => P[T]]
+    parser.asInstanceOf[P[?] => P[T]]
   }
 
   def parseTopLevelDomains: Either[Seq[ParserError], RootContainer] = { expect(fileRoot(_)) }
@@ -83,7 +86,7 @@ class ParsingTest extends ParsingTestBase {
 
   def parse[T <: RiddlNode, U <: RiddlNode](
     input: RiddlParserInput,
-    parser: P[_] => P[T],
+    parser: P[?] => P[T],
     extraction: T => U
   ): Either[Seq[ParserError], U] = {
     val tp = TestParser(input)
@@ -173,7 +176,7 @@ class ParsingTest extends ParsingTestBase {
     extract: FROM => TO
   ): Unit = {
     val rip = RiddlParserInput(input)
-    TestParser(rip).parseDefinition[FROM] match {
+    TestParser(rip).parseDefinition[FROM, TO](extract) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
@@ -183,6 +186,7 @@ class ParsingTest extends ParsingTestBase {
 
   def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlNode](
     cases: Map[String, TO],
+    @unused
     extract: FROM => TO
   ): Unit = {
     cases.foreach { case (statement: String, expected: TO @unchecked) =>
@@ -221,6 +225,7 @@ class ParsingTest extends ParsingTestBase {
   }
 
   def checkFile(
+    @unused
     label: String,
     fileName: String,
     directory: String = "language/src/test/input/"
@@ -230,7 +235,6 @@ class ParsingTest extends ParsingTestBase {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-        fail()
       case Right(model) => model
     }
   }

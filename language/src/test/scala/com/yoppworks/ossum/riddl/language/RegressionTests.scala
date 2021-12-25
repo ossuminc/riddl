@@ -17,8 +17,8 @@ class RegressionTests extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(domain) => domain.description match {
-            case Some(desc) => succeed
-            case None       => fail("no description")
+            case Some(_) => succeed
+            case None    => fail("no description")
           }
       }
     }
@@ -35,7 +35,7 @@ class RegressionTests extends ParsingTest {
         case Right(domain) => domain.description match {
             case Some(desc) =>
               desc.details.nonEmpty mustBe true
-              desc.details.head.s mustEqual ("ladeedah")
+              desc.details.head.s mustEqual "ladeedah"
             case None => fail("no description")
           }
       }
