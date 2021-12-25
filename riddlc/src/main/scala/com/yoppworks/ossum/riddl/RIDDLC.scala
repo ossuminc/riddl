@@ -1,10 +1,13 @@
 package com.yoppworks.ossum.riddl
 
 import com.yoppworks.ossum.riddl.RiddlOptions.*
+import cats.implicits.*
+import com.yoppworks.ossum.riddl.RiddlOptions.*
+import com.yoppworks.ossum.riddl.generation.hugo.GeneratorOptions
+import com.yoppworks.ossum.riddl.generation.hugo.HugoGenerator
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Riddl
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
-import com.yoppworks.ossum.riddl.translator.ParadoxTranslator
 import com.yoppworks.ossum.riddl.translator.FormatTranslator
 import scopt.OParser
 
@@ -19,6 +22,7 @@ object RIDDLC {
             case Parse       => parse(options)
             case Validate    => validate(options)
             case Translate   => translate(options)
+            case Generate    => generate(options)
             case Unspecified => SysLogger.error(s"A command is required")
           }
         case _ =>
@@ -63,14 +67,35 @@ object RIDDLC {
                 val outputRoot = options.outputDir.map(_.toPath)
                 val trans = new FormatTranslator
                 trans.translate(root, outputRoot, Riddl.SysLogger, options.configFile.map(_.toPath))
-              case Kinds.Paradox =>
-                val outputRoot = options.outputDir.map(_.toPath)
-                val trans = new ParadoxTranslator
-                trans.translate(root, outputRoot, Riddl.SysLogger, options.configFile.map(_.toPath))
               case x: Kinds.Value => println(s"Translation $x not yet implemented")
             }
           }
       }
     }
   }
+
+  def generate(options: RiddlOptions): Unit = {
+    def required[A](opt: Option[A])(errorMsg: String): Option[A] = opt match {
+      case ok @ Some(_) => ok
+      case None =>
+        SysLogger.error(errorMsg)
+        None
+    }
+
+    def printError(error: Throwable): Unit = {
+      SysLogger.error(error.toString)
+      SysLogger.error("Stack Trace:")
+      error.printStackTrace(System.err)
+    }
+
+    for {
+      inputFile <- required(options.inputFile)("No input file specified")
+      outputDir <- required(options.outputDir)("No output directory specified")
+      astRoot <-
+        required(Riddl.parse(inputFile.toPath, SysLogger, options))("Could not parse riddl file")
+      genOpts = GeneratorOptions(outputDir.getAbsolutePath, options.projectName, options.verbose)
+      _ <- HugoGenerator.attempt(astRoot, genOpts).leftMap(printError).toOption
+    } yield SysLogger.info("Hugo documentation generated!")
+  }
+
 }

@@ -72,6 +72,27 @@ case class SymbolTable(container: Container) {
     }
   }
 
+  def lookupSymbol[D <: Definition: ClassTag](
+    id: Seq[String]
+  ): List[(Definition, Option[D])] = {
+    val clazz = classTag[D].runtimeClass
+    val leafName = id.head
+    val containerNames = id.tail
+    symbols.get(leafName) match {
+      case Some(set) => set.filter { case (_: Definition, container: Container) =>
+          val parentNames = (container +: parentsOf(container)).map(_.id.value)
+          containerNames.zip(parentNames).forall { case (containerName, parentName) =>
+            containerName == parentName
+          }
+        }.map { case (d: Definition, _: Container) =>
+          if (clazz.isInstance(d)) { (d, Some(d.asInstanceOf[D])) }
+          else { (d, None) }
+        }.toList
+
+      case None => List.empty
+    }
+  }
+
   def lookup[D <: Definition: ClassTag](
     ref: Reference
   ): List[D] = { lookup[D](ref.id.value) }

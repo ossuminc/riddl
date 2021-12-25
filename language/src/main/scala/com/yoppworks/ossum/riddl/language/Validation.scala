@@ -114,6 +114,11 @@ object Validation {
       id: Seq[String]
     ): List[T] = { symbolTable.lookup[T](id) }
 
+    def addIf(predicate: Boolean)(msg: ValidationMessage): ValidationState = {
+      if (predicate) { add(msg) }
+      else { this }
+    }
+
     def add(
       msg: ValidationMessage
     ): ValidationState = {
@@ -298,29 +303,41 @@ object Validation {
     ): ValidationState = {
       if (id.value.nonEmpty) {
         val tc = classTag[T].runtimeClass
-        symbolTable.lookup[T](id.value) match {
+        symbolTable.lookupSymbol[T](id.value) match {
           case Nil => add(ValidationMessage(
               id.loc,
               s"'${id.format}' is not defined but should be a ${tc.getSimpleName}",
               Error
             ))
-          case d :: Nil =>
-            // TODO: this case is only reachable where T is a more general
-            // TODO: type than the reference (rarely the case)
-            check(
+          // Type mismatch or subtype
+          case (d, None) :: Nil => check(
               tc.isAssignableFrom(d.getClass),
               s"'${id.format}' was expected to be ${tc.getSimpleName}" +
                 s" but is ${d.getClass.getSimpleName} instead",
               Error,
               id.loc
             )
-          case _ :: tail => add(ValidationMessage(
-              id.loc,
-              s"""'${id.value}' is not uniquely defined.
-                 |Other definitions are:
-                 |${formatDefinitions(tail)}""".stripMargin,
-              Error
-            ))
+          // Type match
+          case (_, Some(t)) :: Nil =>
+            assert(t.getClass == tc)
+            this
+          // Too many matches / non-unique
+          case (d, optT) :: tail =>
+            // Handle domain, context, entity same name
+            val definitions = (d :: tail.map { case (d, _) => d })
+            val types = (optT :: tail.map { case (_, t) => t }) collect { case Some(tpe) => tpe }
+            val exactlyOneMatch = types.count(_.getClass == tc) == 1
+            val allDifferent = definitions.map(_.kind).distinct.size == definitions.size
+            if (exactlyOneMatch && allDifferent) { this }
+            else {
+              add(ValidationMessage(
+                id.loc,
+                s"""'${id.value}' is not uniquely defined.
+                   |Definitions are:
+                   |${formatDefinitions(definitions)}""".stripMargin,
+                Error
+              ))
+            }
         }
       } else { this }
     }
@@ -328,6 +345,11 @@ object Validation {
     private def formatDefinitions[T <: Definition](list: List[T]): String = {
       list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }.mkString("\n")
     }
+
+    def checkSequence[A](
+      elements: Seq[A]
+    )(fold: (ValidationState, A) => ValidationState
+    ): ValidationState = elements.foldLeft(this) { case (next, element) => fold(next, element) }
 
     def checkNonEmpty(
       list: Seq[?],
@@ -456,22 +478,27 @@ object Validation {
       container: Container,
       entity: AST.Entity
     ): ValidationState = {
-      var result = state.checkDefinition(container, entity)
-        .checkOptions[EntityOption](entity.options, entity.loc)
-      result = entity.states.foldLeft(result) { (next, state) =>
+      state.checkDefinition(container, entity).checkOptions[EntityOption](
+        entity.options,
+        entity.loc
+      ).checkSequence(entity.states) { (next, state) =>
         next.checkTypeExpression(state.typeEx, state)
-      }
-      if (entity.handlers.isEmpty) {
-        result = result
-          .add(ValidationMessage(entity.loc, s"Entity '${entity.id.value}' must define a handler"))
-      } else if (!entity.handlers.exists(_.clauses.nonEmpty)) {
-        result = result.add(ValidationMessage(
+      }.addIf(entity.handlers.isEmpty) {
+        ValidationMessage(entity.loc, s"Entity '${entity.id.value}' must define a handler")
+      }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
+        ValidationMessage(
           entity.loc,
           s"Entity '${entity.id.value}' has only empty handlers",
           MissingWarning
-        ))
+        )
+      }.addIf(entity.hasOption[EntityFiniteStateMachine] && entity.states.size < 2) {
+        ValidationMessage(
+          entity.loc,
+          s"Entity '${entity.id.value}' is declared as a finite-state-machine, but does not " +
+            s"have at least two states",
+          Error
+        )
       }
-      result
     }
 
     override def doHandler(

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Everything (Domain) on Template Documentation</title>
+    <link>http://localhost:1313/everything/</link>
+    <description>Recent content in Everything (Domain) on Template Documentation</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    
+	<atom:link href="http://localhost:1313/everything/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>SomeType (Type alias)</title>
+      <link>http://localhost:1313/everything/types/sometype/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>http://localhost:1313/everything/types/sometype/</guid>
+      <description>SomeType Type: Alias Description No description provided
+Information The type SomeType is defined as an alias to the primitive type String within the region Everything.
+This alias was defined in the RIDDL source file &amp;lsquo;everything.riddl&amp;rsquo; like so:
+type SomeType is String </description>
+    </item>
+    
+  </channel>
+</rss>

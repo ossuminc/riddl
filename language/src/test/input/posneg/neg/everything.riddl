@@ -1,0 +1,89 @@
+// #everything
+// RIDDL is about defining domains so ...
+domain Everything is {
+
+  type SomeType is String
+
+  // Channels are defined to flow messages between entities. They are defined
+  // in domain scope because they can cross contexts too.
+  topic AChannel is {
+    command DoThisThing is { thingField: Integer } yields event ThingWasDone
+    event ThingWasDone is {}
+    query FindThisThing is {} yields result ThisQueryResult
+    result ThisQueryResult is {}
+  } explained as {
+    brief "An example of a channel"
+    details {
+      |This channel is just an example of how to define messages
+    } see  {
+      |/dev/null
+    }
+  }
+
+  // Domains are composed of bounded contexts so ...
+  context full is {
+    // Contexts can contain many kinds of definitions
+
+    // 8 pre-defined types, shown as re-names
+    type str is String             // Define str as a String
+    type num is Number             // Define num as a Number
+    type boo is Boolean            // Define boo as a Boolean
+    type ident is Id               // Define ident as an Id
+    type dat is Date               // Define dat as a Date
+    type tim is Time               // Define tim as a Time
+    type stamp is TimeStamp        // Define stamp as a TimeStamp
+    type url is URL
+
+    // Enumerations have a value chosen from a list of identifiers
+    type enum is any of { Apple Pear Peach Persimmon }
+
+    // Alternations select one type from a list of types
+    type alt is one of { enum or stamp or url }
+
+    // Aggregations combine several types and give each a field name identifier
+    type agg is {
+      key is Number,
+      id is Id,
+      time is TimeStamp
+    }
+
+    // Types can have cardinality requirements similar to regular expressions
+    type oneOrMore is many agg
+    type zeroOrMore is agg*
+    type optional is agg?
+
+    // Commands, Events, Queries and Results are defined in terms of some
+    // type, previously defined. Commands yield events. Queries yield results.
+
+
+
+    // Entities are the main objects that contexts define. They can be
+    // persistent (long lived) or aggregate (they consume commands and queries)
+    entity Something is {
+      options (aggregate persistent)
+
+      type somethingDate is Date
+
+      state someState is { field:  SomeType }
+
+      function whenUnderTheInfluence is {
+        requires: Nothing
+        yields: Boolean
+      }
+
+      handler foo is {
+        on command Something {
+          when misc() explained as { "inebriated" } then {
+            publish event Inebriated to topic AChannel
+          }
+        }
+      }
+    }
+
+    entity SomeOtherThing is {
+      state otherThingState is { field: SomeType }
+    }
+  }
+}
+
+// #everything

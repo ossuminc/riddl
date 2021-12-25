@@ -47,6 +47,7 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.Date).map(AST.Date) |
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
+        (location ~ Predefined.UUID).map(AST.UUID) |
         (location ~ Predefined.Nothing).map(AST.Nothing) |
         (location ~ undefined(())).map(AST.Nothing)
     )

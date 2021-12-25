@@ -54,7 +54,7 @@ lazy val scala2_13_Options = Seq(
 lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, riddlc, doc, `sbt-riddl` )
+  .aggregate(language, translator, riddlc, doc, `sbt-riddl`, hugo-generator)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(
@@ -78,7 +78,7 @@ lazy val riddlc = project.in(file("riddlc"))
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoUsePackageAsPath := true
-  ).dependsOn(translator, language)
+  ).dependsOn(translator, language, `hugo-generator`)
 
 lazy val language = project.in(file("language"))
   .enablePlugins(BuildInfoPlugin)
@@ -116,6 +116,18 @@ lazy val translator = (project in file("translator"))
       "com.github.pureconfig" %% "pureconfig" % "0.17.1"
     )
   ).dependsOn(language % "test->test;compile->compile")
+
+lazy val `hugo-generator` = (project in file("hugo-generator")).settings(
+  name := "riddl-hugo-generator",
+  buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
+  Compile / unmanagedResourceDirectories += { baseDirectory.value / "resources" },
+  libraryDependencies ++= Seq(
+    "org.scalactic" %% "scalactic" % "3.1.0",
+    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
+    "com.github.pureconfig" %% "pureconfig" % "0.12.2"
+  )
+).dependsOn(language % "test->test;compile->compile")
 
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl"))

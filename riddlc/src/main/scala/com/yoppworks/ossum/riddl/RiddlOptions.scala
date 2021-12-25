@@ -19,7 +19,8 @@ case class RiddlOptions(
   inputFile: Option[File] = None,
   outputDir: Option[File] = None,
   configFile: Option[File] = None,
-  outputKind: Kinds.Kinds = Kinds.Paradox)
+  outputKind: Kinds.Kinds = Kinds.Paradox,
+  projectName: String = "Project")
     extends Riddl.Options
 
 object Kinds extends Enumeration {
@@ -37,6 +38,7 @@ object RiddlOptions {
   case object Parse extends Command
   case object Translate extends Command
   case object Validate extends Command
+  case object Generate extends Command
 
   val builder: OParserBuilder[RiddlOptions] = scopt.OParser.builder[RiddlOptions]
 
@@ -78,6 +80,17 @@ object RiddlOptions {
             .text("configuration that specifies how to do the translation"),
           opt[Boolean]('d', "dry-run").hidden().action((_, c) => c.copy(dryRun = true))
             .text("go through the motions but don't write any changes")
+        ),
+      cmd("generate").action((_, c) => c.copy(command = Generate))
+        .text("generate Hugo documentation from riddl file ").children(
+          opt[File]('i', "input-file").required().action((x, c) => c.copy(inputFile = Some(x)))
+            .text("required riddl input file to parse for documentation generation"),
+          opt[File]('o', "output-dir").required().action((x, c) => c.copy(outputDir = Some(x)))
+            .text("required output directory for the generated documentation"),
+          opt[String]('p', "project-name").optional().action((n, c) => c.copy(projectName = n))
+            .validate(n =>
+              if (n.isBlank) Left("project-name cannot be blank or empty") else Right(())
+            ).text("optional project name for the generated Hugo documentation")
         )
     )
   }

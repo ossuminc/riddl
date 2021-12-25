@@ -36,6 +36,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
     .copy(dotPath = binPathForOS, dotProgramName = dot, outputType = svg)
 
   "GraphVizAPITest" should {
+    /*
     "draw a simple diagram in dot" in {
       pending
       val config = basicConfig.copy(dotProgramName = circo, outputType = dot_)
@@ -61,5 +62,7 @@ class GraphVizAPITest extends AnyWordSpec with must.Matchers {
       result._2 must startWith(expected)
 
     }
+
+     */
   }
 }

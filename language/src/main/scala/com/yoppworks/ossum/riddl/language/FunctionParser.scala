@@ -5,13 +5,19 @@ import fastparse.IgnoreCase
 import fastparse.*
 import ScalaWhitespace.*
 import Terminals.Keywords
+import Terminals.Punctuation
+import Terminals.Readability
 
 /** Unit Tests For FunctionParser */
 trait FunctionParser extends CommonParser with TypeParser {
 
-  def input[u: P]: P[TypeExpression] = { P(Keywords.requires ~ typeExpression) }
+  def input[u: P]: P[TypeExpression] = {
+    P(Keywords.requires ~ Punctuation.colon.? ~ typeExpression)
+  }
 
-  def output[u: P]: P[TypeExpression] = { P(Keywords.yields ~ typeExpression) }
+  def output[u: P]: P[TypeExpression] = {
+    P(Keywords.yields ~ Punctuation.colon.? ~ typeExpression)
+  }
 
   /** Parses function literals, i.e.
     *

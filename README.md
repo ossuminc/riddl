@@ -97,3 +97,67 @@ source the next time they are requested. To view the site in your browser:
 ```shell
 open http://localhost:1313/
 ```
+
+## Testing
+
+In addition to regular ScalaTest unit tests, we also have one special test, PosNeg, which allows you to compile some Riddl code, and compare the output of the compiler against some expected output.
+
+Within source tree of the `language` project, PosNeg tests are located at `src/test/input/posneg/`. The categories of tests are:
+
+* `pos`: 
+    * These files must compile successfully, and emit no messages at level ERROR or higher.
+    * Tests can come in two forms:
+        * `.riddl` file within the `pos` directory. These files will be run, and will error if they emit any ERROR or higher messages, but other messages will be ignored.
+        * directory within `pos` that contains one `.riddl` file and optionally a `.check` file. In addition to checking that the file compiles without ERROR, all warnings emitted by the compiler will be compared against the content of the `.check` file, failing if there are missing or extra warnings.
+* `neg`: These files must NOT compile successfully, they must 
+    * Tests can agaqin come in two forms, but work slightly different to `pos` tests:
+        * `.riddl` file within the `neg` directory. These files will be run, and will error if they DO NOT emit any ERROR or higher messages.
+        * directory within `neg` that contains one `.riddl` file and optionally a `.check` file. In addition to checking that the file compiles with errors, all ERRORS (not warnings) emitted by the compiler will be compared against the content of the `.check` file, failing if there are missing or extra errors.
+
+
+Example tests:
+
+```
+
+posneg/
+    pos/
+        filetest.riddl
+            """
+            domain foo is {
+            
+            } described as {
+                brief "this is the description"
+                details "this is the description"
+            }
+            """
+        directorytest/
+            main.riddl
+                """
+                domain foo is {
+                
+                } described as {
+                    brief "this is the description"
+                }
+                """
+            main.check
+                """
+                Missing: main.riddl(3:3): For Domain 'foo', detailed description should not be empty
+                """
+    neg/
+        filetest.riddl
+            """
+            domain foo is {
+            }
+            """
+        directorytest/
+            main.riddl
+                """
+                domain foo is {
+                }
+                """
+            main.check
+                """
+                Missing: main.riddl(3:3): For Domain 'foo', detailed description should not be empty
+                """
+```
+

@@ -1,3 +1,4 @@
+.bloop/
 /.bsp/
 /.idea/
 !.idea/runConfigurations/

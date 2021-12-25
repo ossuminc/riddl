@@ -42,17 +42,24 @@ trait FeatureParser extends CommonParser {
     }
   }
 
+  def exampleBody[u: P]: P[(Seq[Given], Seq[When], Seq[Then], Seq[Else])] = {
+    P(
+      (givens ~ whens ~ thens ~ elses) |
+        undefined.map(_ => (Seq.empty[Given], Seq.empty[When], Seq.empty[Then], Seq.empty[Else]))
+    )
+  }
+
   def implicitExample[u: P]: P[Example] = {
-    P(location ~ givens ~ whens ~ thens ~ elses).map { case (loc, g, w, t, e) =>
+    P(location ~ exampleBody).map { case (loc, (g, w, t, e)) =>
       Example(loc, Identifier(loc, "implicit"), g, w, t, e, None)
     }
   }
 
   def namedExample[u: P]: P[Example] = {
     P(
-      location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/ givens ~ whens ~ thens ~
-        elses ~ close ~ description
-    ).map { tpl => (Example.apply _).tupled(tpl) }
+      location ~ IgnoreCase(Keywords.example) ~/ identifier ~ open ~/ exampleBody ~ close ~
+        description
+    ).map { case (loc, id, (g, w, t, e), desc) => Example(loc, id, g, w, t, e, desc) }
   }
 
   def examples[u: P]: P[Seq[Example]] = { implicitExample.map(Seq(_)) | namedExample.rep(1) }

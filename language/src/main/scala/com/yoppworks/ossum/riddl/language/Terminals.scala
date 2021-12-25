@@ -57,6 +57,7 @@ object Terminals {
     final val sync = "sync"
     final val value = "value"
     final val wrapper = "wrapper"
+    final val stateMachine = "fsm"
   }
 
   object Keywords {
@@ -71,7 +72,8 @@ object Terminals {
     final val causing = "causing"
     final val command = "command"
     final val commands = "commands"
-    final val consumer = "handler"
+    final val condition = "condition"
+    final val consumer = "consumer"
     final val context = "context"
     final val described = "described"
     final val details = "details"
@@ -98,6 +100,7 @@ object Terminals {
     final val joint = "joint"
     final val many = "many"
     final val mapping = "mapping"
+    final val message = "message"
     final val on = "on"
     final val one = "one"
     final val option = "option"
@@ -123,6 +126,7 @@ object Terminals {
     final val state = "state"
     final val then_ = "then"
     final val topic = "topic"
+    final val transform = "transform"
     final val transmit = "transmit"
     final val `type` = "type"
     final val value = "value"
@@ -148,6 +152,7 @@ object Terminals {
     final val TimeStamp = "TimeStamp"
     final val UniqueId = "UniqueId"
     final val URL = "URL"
+    final val UUID = "UUID"
   }
 
   object Readability {
