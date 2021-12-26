@@ -137,7 +137,7 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl"))
   .settings(
     name := "sbt-riddl",
     sbtPlugin := true,
-    scalaVersion := "2.12.13",
+    scalaVersion := "2.12.15",
     buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
   )
 

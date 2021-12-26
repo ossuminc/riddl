@@ -1,7 +1,7 @@
 ######################## basic configuration ####################
 baseURL = "https://riddl.yoppworks.com/"
 title = "RIDDL Documentation"
-theme = "godocs-hugo/themes/godocs-3"
+theme = "riddl-hugo-theme"
 author= "Reid Spencer"
 # googleAnalytics = "" # example : UA-123-45
 disableLanguages = [] # desable language from here
