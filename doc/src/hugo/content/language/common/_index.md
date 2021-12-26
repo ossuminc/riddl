@@ -4,4 +4,11 @@ weight: 12
 ---
 Some definitions are fundamental to RIDDL and can appear in many RIDDL 
 container definitions. Before exploring the hierarchy of definitions, we 
-will define the common ones first:
+will define some things that are common to many definitions:
+
+* [include](includes) - lexically including files into the current file
+* [descriptions](descriptions) - describing definitions for documentation purposes
+* [types](types) - defining types of information or data
+* [functions](functions) - the syntax of a function body
+* [import](imports) - importing definitions from a previous compilation
+
