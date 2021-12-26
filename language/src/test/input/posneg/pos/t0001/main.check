@@ -1,1 +1,1 @@
-Missing: main.riddl(3:3): For Domain 'foo', detailed description should not be empty
+Missing: main.riddl(1:20): For Domain 'foo', description is declared but empty

@@ -23,90 +23,29 @@ trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
+  def optionalNestedContent[u: P, T](parser: => P[T]): P[Seq[T]] = {
+    P(open ~ parser.rep.? ~ close).map(_.getOrElse(Seq.empty[T]))
+  }
+
   def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined /).map(_ => ret) }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
   def markdownLines[u: P]: P[Seq[LiteralString]] = { P(markdownLine.rep(1)) }
 
-  def docBlock[u: P]: P[Seq[LiteralString]] = {
-    P((open ~ (markdownLines | literalStrings) ~ close) | literalString.map(Seq(_)))
-  }
-
-  def optionalNestedContent[u: P, T](parser: => P[T]): P[Seq[T]] = {
-    P(open ~ parser.rep.? ~ close).map(_.getOrElse(Seq.empty[T]))
-  }
-
-  def brief[u: P]: P[Seq[LiteralString]] = {
-    (Keywords.brief ~/ (literalString.map(Seq(_)) | docBlock)).?
-      .map(_.getOrElse(Seq.empty[LiteralString]))
-  }
-
-  def details[u: P]: P[Seq[LiteralString]] = {
-    (Keywords.details ~/ (literalString.map(Seq(_)) | docBlock)).?
-      .map(_.getOrElse(Seq.empty[LiteralString]))
-  }
-
-  type ItemDictionary = Map[Identifier, Seq[LiteralString]]
-  def items[u: P]: P[(Option[LiteralString], ItemDictionary)] = {
-    P(
-      Keywords.items ~/ (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).? ~/ open ~
-        (identifier ~ is ~ docBlock).rep.map(_.toMap) ~ close
-    ).?.map(_.getOrElse(None -> Map.empty[Identifier, Seq[LiteralString]]))
-  }
-
-  def citations[u: P]: P[Seq[LiteralString]] = {
-    P(Keywords.see ~/ docBlock).?.map(_.getOrElse(Seq.empty[LiteralString]))
-  }
-
   def as[u: P]: P[Unit] = { P(Readability.as | Readability.by).? }
 
-  case class DescriptionParts(
-    brief: Seq[LiteralString],
-    details: Seq[LiteralString] = Seq.empty[LiteralString],
-    items: (Option[LiteralString], Map[Identifier, Seq[LiteralString]]) =
-      (None, Map.empty[Identifier, Seq[LiteralString]]),
-    cites: Seq[LiteralString] = Seq.empty[LiteralString])
-
-  def shortDescription[u: P]: P[DescriptionParts] = {
-    literalString.map { ls => DescriptionParts(Seq(ls)) }
-  }
-
-  def detailedDescription[u: P]: P[DescriptionParts] = {
-    P(brief ~ details ~ items ~ citations).map(tpl => (DescriptionParts.apply _).tupled(tpl))
-  }
-
-  def literalStringsDescription[u: P]: P[DescriptionParts] = {
-    literalStrings.map { strings =>
-      DescriptionParts(
-        strings,
-        Seq.empty[LiteralString],
-        None -> Map.empty[Identifier, Seq[LiteralString]],
-        Seq.empty[LiteralString]
-      )
-    }
-  }
-
-  def docBlockDescription[u: P]: P[DescriptionParts] = {
-    markdownLine.rep(1).map { block =>
-      DescriptionParts(
-        Seq.empty[LiteralString],
-        block,
-        None -> Map.empty[Identifier, Seq[LiteralString]],
-        Seq.empty[LiteralString]
-      )
-    }
+  def docBlock[u: P]: P[Seq[LiteralString]] = {
+    P(
+      (open ~ (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~ close) |
+        literalString.map(Seq(_))
+    )
   }
 
   def description[u: P]: P[Option[Description]] = {
-    P(
-      location ~ (Keywords.described | Keywords.explained) ~ as ~
-        (shortDescription |
-          (open ~/ (literalStringsDescription | docBlockDescription | detailedDescription) ~ close))
-    ).?.map {
-      case Some((loc, DescriptionParts(brief, details, (itemsName, items), cites))) =>
-        Some(Description(loc, brief, details, itemsName, items, cites))
-      case None => None
+    P(location ~ (Keywords.described | Keywords.explained) ~ as ~ docBlock).?.map {
+      case Some((loc, lines)) => Some(Description(loc, lines))
+      case None               => None
     }
   }
 

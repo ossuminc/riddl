@@ -84,20 +84,7 @@ case class HugoFile(
   }
 
   def emitDescription(maybeDescription: Option[AST.Description]): HugoFile = {
-    maybeDescription.map { description =>
-      add(description.brief)
-      addLine("## Details")
-      add(description.details)
-      if (description.nameOfItems.nonEmpty) {
-        addLine(s"## ${description.nameOfItems.get}")
-        for { (head, body) <- description.items } {
-          addLine(s"### $head")
-          addList(body.map(_.s))
-        }
-      }
-      addLine("## See Also")
-      addList(description.citations.map(_.s))
-    }
+    maybeDescription.map { description => addList(description.lines.map(_.s)) }
     this
   }
 

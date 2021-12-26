@@ -33,10 +33,8 @@ class RegressionTests extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(domain) => domain.description match {
-            case Some(desc) =>
-              desc.details.nonEmpty mustBe true
-              desc.details.head.s mustEqual "ladeedah"
-            case None => fail("no description")
+            case Some(desc) => desc.lines.nonEmpty mustBe true
+            case None       => fail("no description")
           }
       }
     }
@@ -47,7 +45,6 @@ class RegressionTests extends ParsingTest {
           |type DeliveryInstruction is any of {
           |  FrontDoor(20), SideDoor(21), Garage(23), FrontDesk(24), DeliverToPostOffice(25)
           |} explained as {
-          |  details {
           |    |20 Front door
           |    |21 Side door
           |    |23 Garage
@@ -58,7 +55,6 @@ class RegressionTests extends ParsingTest {
           |    |23 Garage
           |    |24 Réception ou surveillant
           |    |25 Livrer au bureau de poste
-          |  }
           |}
           |}
           |""".stripMargin

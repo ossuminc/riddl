@@ -12,12 +12,12 @@ domain Everything is {
     query FindThisThing is {} yields result ThisQueryResult
     result ThisQueryResult is {}
   } explained as {
-    brief "An example of a channel"
-    details {
-      |This channel is just an example of how to define messages
-    } see  {
-      |/dev/null
-    }
+    |# brief
+    |An example of a channel
+    |# details
+    |This channel is just an example of how to define messages
+    |# see
+    |/dev/null
   }
 
   // Domains are composed of bounded contexts so ...
@@ -73,7 +73,7 @@ domain Everything is {
 
       handler foo is {
         on command Something {
-          when misc() explained as { "inebriated" } then {
+          when misc() explained as "inebriated" then {
             publish event Inebriated to topic AChannel
           }
         }

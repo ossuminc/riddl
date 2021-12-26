@@ -24,12 +24,10 @@ class InvariantValidator extends ValidatingTest {
       parseAndValidate[AST.Entity](
         """
           |entity user is {
-          | invariant large is { "x must be greater or equal to 10" } described as { "self explanatory!" }
+          | invariant large is { "x must be greater or equal to 10" } described as "self explanatory!"
           |}
           |""".stripMargin
-      ) { (_, msgs) =>
-        assertValidationMessage(msgs, MissingWarning, "detailed description should not be empty")
-      }
+      ) { (_, msgs) => assertValidationMessage(msgs, MissingWarning, "should have a description") }
     }
   }
 

@@ -1,6 +1,5 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.net.URI
 import java.util.regex.PatternSyntaxException
 import com.yoppworks.ossum.riddl.language.AST.*
 
@@ -412,29 +411,12 @@ object Validation {
         )
       } else {
         val desc = definition.description.get
-        val brief = desc.brief
-        val result: ValidationState = this.check(
-          brief.nonEmpty,
-          s"For ${definition.identify}, brief description should not be empty",
-          MissingWarning,
-          desc.loc
-        ).check(
-          desc.details.nonEmpty,
-          s"For ${definition.identify}, detailed description should not be empty",
+        this.check(
+          desc.lines.nonEmpty && desc.lines.exists(_.s.nonEmpty),
+          s"For ${definition.identify}, description is declared but empty",
           MissingWarning,
           desc.loc
         )
-        desc.citations.foldLeft(result) { case (next: ValidationState, citation: LiteralString) =>
-          val uriMsg =
-            try { new URI(citation.s); "" }
-            catch { case x: Exception => x.getMessage }
-          next.check(uriMsg.isEmpty, uriMsg, Error, citation.loc).check(
-            citation.s.nonEmpty,
-            "Citations should not be empty",
-            MissingWarning,
-            citation.loc
-          )
-        }
       }
     }
   }

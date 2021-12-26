@@ -21,14 +21,9 @@ class StreamingParserTest extends ParsingTest {
           Identifier(3 -> 10, "Weather"),
           TypeRef(3 -> 21, PathIdentifier(3 -> 21, List("Forecast")))
         )),
-        Some(Description(
-          4 -> 3,
-          List(LiteralString(4 -> 16, "This is a source for Forecast data")),
-          List(),
-          None,
-          Map(),
-          List()
-        ))
+        Some(
+          Description(4 -> 3, List(LiteralString(4 -> 16, "This is a source for Forecast data")))
+        )
       )
       checkDefinition[Processor, Processor](input, expected, identity)
     }
@@ -112,11 +107,7 @@ class StreamingParserTest extends ParsingTest {
             TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast"))),
             Some(Description(
               20 -> 5,
-              List(LiteralString(20 -> 18, "Carries changes in the current weather forecast")),
-              List(),
-              None,
-              Map(),
-              List()
+              List(LiteralString(20 -> 18, "Carries changes in the current weather forecast"))
             ))
           ),
           Pipe(
@@ -125,11 +116,7 @@ class StreamingParserTest extends ParsingTest {
             TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature"))),
             Some(Description(
               24 -> 5,
-              List(LiteralString(24 -> 18, "Carries changes in the current temperature")),
-              List(),
-              None,
-              Map(),
-              List()
+              List(LiteralString(24 -> 18, "Carries changes in the current temperature"))
             ))
           )
         ),
@@ -146,11 +133,7 @@ class StreamingParserTest extends ParsingTest {
             )),
             Some(Description(
               7 -> 5,
-              List(LiteralString(7 -> 18, "This is a source for Forecast data")),
-              List(),
-              None,
-              Map(),
-              List()
+              List(LiteralString(7 -> 18, "This is a source for Forecast data"))
             ))
           ),
           Processor(
@@ -173,11 +156,7 @@ class StreamingParserTest extends ParsingTest {
               List(LiteralString(
                 12 -> 18,
                 "This is a Flow for the current temperature, when it changes"
-              )),
-              List(),
-              None,
-              Map(),
-              List()
+              ))
             ))
           ),
           Processor(
@@ -195,11 +174,7 @@ class StreamingParserTest extends ParsingTest {
               List(LiteralString(
                 16 -> 18,
                 "This is a Sink for making sensor adjustments based on temperature"
-              )),
-              List(),
-              None,
-              Map(),
-              List()
+              ))
             ))
           )
         ),

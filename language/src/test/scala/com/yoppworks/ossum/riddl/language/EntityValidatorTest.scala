@@ -72,7 +72,7 @@ class EntityValidatorTest extends ValidatingTest {
         )
       }
     }
-    "validating examples" in {
+    "validate examples" in {
       parseAndValidate[Feature]("""
                                   |  feature AnAspect is {
                                   |    BACKGROUND {
@@ -85,8 +85,8 @@ class EntityValidatorTest extends ValidatingTest {
                                   |      THEN "I'll just eat worms"
                                   |      ELSE "I'm happy"
                                   |    } described as {
-                                  |     brief "description"
-                                  |     details "description"
+                                  |     "brief description"
+                                  |     "detailed description"
                                   |    }
                                   |  }
                                   |""".stripMargin) { case (a, b) =>

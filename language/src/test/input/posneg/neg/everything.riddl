@@ -12,12 +12,11 @@ domain Everything is {
     query FindThisThing is {} yields result ThisQueryResult
     result ThisQueryResult is {}
   } explained as {
-    brief "An example of a channel"
-    details {
-      |This channel is just an example of how to define messages
-    } see  {
-      |/dev/null
-    }
+    |# brief An example of a channel
+    |# details
+    |This channel is just an example of how to define messages
+    |# see
+    |/dev/null
   }
 
   // Domains are composed of bounded contexts so ...

@@ -3,7 +3,7 @@ package com.yoppworks.ossum.riddl.translator
 import java.io.File
 import java.nio.file.Path
 
-import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.Folding
 import com.yoppworks.ossum.riddl.language.Riddl
@@ -12,7 +12,7 @@ import com.yoppworks.ossum.riddl.language.TranslatorConfiguration
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 import pureconfig.ConfigReader
 import pureconfig.ConfigSource
-import pureconfig.generic.auto._
+import pureconfig.generic.auto.*
 
 import scala.collection.mutable
 
@@ -75,7 +75,6 @@ class FormatTranslator extends Translator[FormatConfig] {
       extends Folding.State[FormatState] {
     def step(f: FormatState => FormatState): FormatState = f(this)
 
-    private final val q = "\""
     private final val nl = "\n"
 
     def addFile(file: File): FormatState = { this.copy(generatedFiles = generatedFiles :+ file) }
@@ -136,20 +135,8 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def visitDescription(description: Option[Description]): FormatState = {
       description.foldLeft(this) { (s, desc: Description) =>
-        s.step { s: FormatState =>
-          s.add(" described as {\n").indent.addIndent("brief {").indent.add(desc.brief).outdent
-            .add("}\n").addLine(s"details {").indent
-        }.step { s: FormatState =>
-          desc.details.foldLeft(s) { case (s, line) => s.add(s.spc + "|" + line.s + "\n") }.outdent
-            .addLine(s"}\n${spc}items")
-            .add[LiteralString](desc.nameOfItems)(ls => "(\"" + ls.s + "\") {").indent
-        }.step { s: FormatState =>
-          desc.items.foldLeft(s) { case (s, (id, desc)) => s.addLine(s"$id: " + q + desc + q) }
-            .outdent.add(s"$spc}\n").indent
-        }.step { s: FormatState =>
-          desc.citations.foldLeft(s) { case (s, cite) =>
-            s.add(s"${spc}see " + q + cite.s + q + nl)
-          }.outdent.add(s"$spc}\n")
+        s.step { s: FormatState => s.add(" described as {\n").indent }.step { s: FormatState =>
+          desc.lines.foldLeft(s) { case (s, line) => s.add(s.spc + "|" + line.s + "\n") }.outdent
         }
       }
     }

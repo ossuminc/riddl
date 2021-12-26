@@ -51,19 +51,21 @@ class PosNeg extends ValidatingTest {
 
             if (msgSet == expectedMessages) { succeed }
             else {
-              val missingMsgs = expectedMessages &~ msgSet
-              val unexpectedMsgs = msgSet &~ expectedMessages
+              val missingMessages = expectedMessages &~ msgSet
+              val unexpectedMessages = msgSet &~ expectedMessages
 
               val errMsg = new StringBuilder()
-              if (missingMsgs.nonEmpty) {
-                errMsg.append(missingMsgs.mkString(
-                  "Expected to find the following messages, but did not:\n\t",
+              errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
+              errMsg.append("\nBUT\n")
+              if (missingMessages.nonEmpty) {
+                errMsg.append(missingMessages.mkString(
+                  "Expected to find the following messages and did not:\n\t",
                   "\n\t",
                   ""
                 ))
               }
-              if (unexpectedMsgs.nonEmpty) {
-                errMsg.append(unexpectedMsgs.mkString(
+              if (unexpectedMessages.nonEmpty) {
+                errMsg.append(unexpectedMessages.mkString(
                   "Found the following messages which were not expected: \n\t",
                   "\n\t",
                   ""

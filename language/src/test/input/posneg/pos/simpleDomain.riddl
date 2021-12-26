@@ -1,6 +1,6 @@
 domain foo is {
 
 } described as {
-    brief "this is the description"
-    details "this is the description"
+    "this is the brief description"
+    "this is the detailed description"
 }

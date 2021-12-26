@@ -11,7 +11,7 @@ trait NoWhiteSpaceParsers extends ParsingContext {
   def markdownLine[u: P]: P[LiteralString] = {
     P(
       location ~ Punctuation.verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
-        ("\n" | "\r").rep(1)
+        ("\n" | "\r").rep(min = 1, max = 2)
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
 

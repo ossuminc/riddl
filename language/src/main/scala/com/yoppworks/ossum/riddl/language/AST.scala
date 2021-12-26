@@ -58,11 +58,7 @@ object AST {
 
   case class Description(
     loc: Location = 0 -> 0,
-    brief: Seq[LiteralString] = Seq.empty[LiteralString],
-    details: Seq[LiteralString] = Seq.empty[LiteralString],
-    nameOfItems: Option[LiteralString] = None,
-    items: Map[Identifier, Seq[LiteralString]] = Map.empty[Identifier, Seq[LiteralString]],
-    citations: Seq[LiteralString] = Seq.empty[LiteralString])
+    lines: Seq[LiteralString] = Seq.empty[LiteralString])
 
   sealed trait Reference extends RiddlValue {
     def id: PathIdentifier

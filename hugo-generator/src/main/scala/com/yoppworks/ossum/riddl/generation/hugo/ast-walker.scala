@@ -194,10 +194,7 @@ object LukeAstWalker {
     case _ => RiddlType.UnhandledType(expr.toString)
   }
 
-  private final def descriptionToHugo(desc: AST.Description): HugoDescription = HugoDescription(
-    desc.brief.map(_.s).mkString(" "),
-    desc.details.map(_.s).toList,
-    desc.citations.map(_.s).toList
-  )
+  private final def descriptionToHugo(desc: AST.Description): HugoDescription =
+    HugoDescription(desc.lines.map(_.s).toList)
 
 }

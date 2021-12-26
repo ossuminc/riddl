@@ -49,18 +49,7 @@ private object RendererUtils {
   final val none: MarkdownPrinter = MarkdownPrinter.empty.print("(none)")
 
   def renderDescription(desc: HugoDescription): MarkdownPrinter = {
-    val citationsPrinter =
-      if (desc.citations.isEmpty) { MarkdownPrinter.empty }
-      else { MarkdownPrinter.empty.newline.title(4)("Citations").listSimple(desc.citations) }
-
-    val descPrinter = (desc.brief, desc.details) match {
-      case (e, Nil) if e.isEmpty     => MarkdownPrinter.empty.println("(none)")
-      case (brief, Nil)              => MarkdownPrinter.empty.println(brief)
-      case (e, details) if e.isEmpty => MarkdownPrinter.empty.printLines(details)
-      case (brief, details) => MarkdownPrinter.empty.println(brief).newline.printLines(details)
-    }
-
-    descPrinter append citationsPrinter
+    MarkdownPrinter.empty.printLines(desc.lines)
   }
 
   def renderRiddlType(riddl: RiddlType): MarkdownPrinter = {
@@ -121,21 +110,21 @@ private object RendererUtils {
     val RT = RiddlType
 
     riddl match {
-      case pre: RT.PredefinedType     => empty.print(pre.fullName)
-      case ref: RT.EntityRef          => empty.print("Entity Reference")
-      case ref: RT.TypeRef            => empty.print("Type Reference")
-      case als: RT.Alias              => empty.print("Alias")
-      case opt: RT.Optional           => empty.print("Optional")
-      case RT.Collection(cont, true)  => empty.print("Collection")
-      case RT.Collection(cont, false) => empty.print("Non-empty Collection")
-      case enm: RT.Enumeration        => empty.print("Any Of")
-      case vnt: RT.Variant            => empty.print("One Of")
-      case map: RT.Mapping            => empty.print("Mapping")
-      case rng: RT.Range              => empty.print("Range")
-      case _: RT.RegexPattern         => empty.print("Regex")
-      case id: RT.UniqueId            => empty.print("UniqueID")
-      case rec: RT.Record             => empty.print("Record")
-      case _                          => empty.print("Unknown Type")
+      case pre: RT.PredefinedType  => empty.print(pre.fullName)
+      case _: RT.EntityRef         => empty.print("Entity Reference")
+      case _: RT.TypeRef           => empty.print("Type Reference")
+      case _: RT.Alias             => empty.print("Alias")
+      case _: RT.Optional          => empty.print("Optional")
+      case RT.Collection(_, true)  => empty.print("Collection")
+      case RT.Collection(_, false) => empty.print("Non-empty Collection")
+      case _: RT.Enumeration       => empty.print("Any Of")
+      case _: RT.Variant           => empty.print("One Of")
+      case _: RT.Mapping           => empty.print("Mapping")
+      case _: RT.Range             => empty.print("Range")
+      case _: RT.RegexPattern      => empty.print("Regex")
+      case _: RT.UniqueId          => empty.print("UniqueID")
+      case _: RT.Record            => empty.print("Record")
+      case _                       => empty.print("Unknown Type")
     }
   }
 
@@ -143,10 +132,7 @@ private object RendererUtils {
     val fieldPrinter = MarkdownPrinter.empty.bold(field.name).print(": ")
       .append(renderRiddlType(field.fieldType))
     val descPrinter = field.description.fold(MarkdownPrinter.empty) { desc =>
-      val brief = if (desc.brief.isBlank) None else Some(desc.brief)
-      val details = desc.details
-      val links = desc.citations.map(str => s"See: $str")
-      val all = (brief ++ details ++ links).toSeq
+      val all = desc.lines
       MarkdownPrinter.empty.ifEndo(all.nonEmpty)(_.listSimple(all))
     }
     fieldPrinter append descPrinter
@@ -258,7 +244,7 @@ object HugoDomainRenderer extends HugoTemplateRenderer[HugoDomain] {
   }
   replaceList("domainBoundedContexts", _.contexts.toSeq) {
     case ctx @ HugoContext(_, _, Some(desc)) => RendererUtils.makeLinkTo(ctx).print(" - ")
-        .print(desc.brief)
+        .printLines(desc.lines)
     case ctx => RendererUtils.makeLinkTo(ctx)
   }
 }
@@ -272,7 +258,7 @@ object HugoContextRenderer extends HugoTemplateRenderer[HugoContext] {
   }
   replaceList("contextEntities", _.entities.toSeq) {
     case ctx @ HugoEntity(_, _, _, _, _, _, _, Some(desc)) => RendererUtils.makeLinkTo(ctx)
-        .print(" - ").print(desc.brief)
+        .print(" - ").printLines(desc.lines)
     case ctx => RendererUtils.makeLinkTo(ctx)
   }
 }

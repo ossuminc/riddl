@@ -10,7 +10,7 @@ trait NameableFromFullName extends Nameable {
   final lazy val name: String = fullName.split('.').last
 }
 
-final case class HugoDescription(brief: String, details: List[String], citations: List[String])
+final case class HugoDescription(lines: List[String])
 
 final case class HugoField(
   fullName: String,
