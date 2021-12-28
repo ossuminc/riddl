@@ -372,7 +372,7 @@ object AST {
 
   case class Then(loc: Location, result: Seq[LiteralString]) extends FeatureValue
 
-  case class Else(loc: Location, otherwise: Seq[LiteralString]) extends FeatureValue
+  case class But(loc: Location, otherwise: Seq[LiteralString]) extends FeatureValue
 
   case class Background(loc: Location, givens: Seq[Given] = Seq.empty[Given]) extends FeatureValue
 
@@ -382,7 +382,7 @@ object AST {
     givens: Seq[Given] = Seq.empty[Given],
     whens: Seq[When] = Seq.empty[When],
     thens: Seq[Then] = Seq.empty[Then],
-    elses: Seq[Else] = Seq.empty[Else],
+    buts: Seq[But] = Seq.empty[But],
     description: Option[Description] = None)
       extends Definition
 

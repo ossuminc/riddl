@@ -280,7 +280,7 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(When(12 -> 7, Seq(LiteralString(12 -> 12, "I go fishing")))),
                 Seq(Then(13 -> 7, Seq(LiteralString(13 -> 12, "I'll just eat worms")))),
-                Seq(Else(14 -> 7, Seq(LiteralString(14 -> 12, "I'm happy"))))
+                Seq(But(14 -> 7, Seq(LiteralString(14 -> 12, "I'm happy"))))
               ))
             ))
           )

@@ -1,10 +1,9 @@
 import sbt.Keys.scalaVersion
-
-import sbtbuildinfo.BuildInfoOption.BuildTime
-import sbtbuildinfo.BuildInfoOption.ToMap
+import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Some("semver-spec")
+ThisBuild / dynverVTagPrefix := false
 
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
@@ -47,7 +46,7 @@ lazy val scala2_13_Options = Seq(
   "-Xlint:valpattern", // Enable pattern checks in val definitions.
   "-Xlint:eta-zero", // Warn on eta-expansion (rather than auto-application) of zero-ary method.
   "-Xlint:eta-sam", // Warn on eta-expansion to meet a Java-defined functional
-                    // interface that is not explicitly annotated with @FunctionalInterface.
+  // interface that is not explicitly annotated with @FunctionalInterface.
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
@@ -56,14 +55,34 @@ lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
   .aggregate(language, translator, `hugo-generator`, riddlc, `sbt-riddl`, doc)
 
+val themeTask = taskKey[File]("Task to generate theme artifact")
+lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme"))
+  .settings(
+    Compile / packageBin / publishArtifact := false,
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := false,
+    themeTask := {
+      import scala.sys.process._
+      val artifact = Artifact("riddl-hugo-theme", "zip", "zip")
+      val output: File = target.value / (artifact.name + "." + artifact.extension)
+      val inputDir: File = sourceDirectory.value / "main"
+      val command = s"zip -rv9o ${output.toString} riddl-hugo-theme"
+      val pb = Process(command, inputDir)
+      println(command)
+      pb.run
+      output
+    },
+    addArtifact(Artifact("riddl-hugo-theme", "zip", "zip"), themeTask)
+  )
+
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(
-    name := "riddl-doc",
-    publishTo := Some(Resolver.defaultLocal),
-    Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    // minimumHugoVersion := "0.89.4",
-    publishSite
-  ).dependsOn(language % "test->compile;test->test")
+  name := "riddl-doc",
+  publishTo := Some(Resolver.defaultLocal),
+  Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+  // minimumHugoVersion := "0.89.4",
+  publishSite
+).dependsOn(language % "test->compile;test->test")
 
 lazy val riddlc = project.in(file("riddlc"))
   .enablePlugins(BuildInfoPlugin)
