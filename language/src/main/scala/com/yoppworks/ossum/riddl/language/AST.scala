@@ -410,7 +410,8 @@ object AST {
     loc: Location,
     id: Identifier,
     input: Option[TypeExpression],
-    output: TypeExpression,
+    output: Option[TypeExpression],
+    examples: Seq[Example],
     description: Option[Description])
       extends EntityDefinition {}
 

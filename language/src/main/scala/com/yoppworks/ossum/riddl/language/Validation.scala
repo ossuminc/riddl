@@ -1,11 +1,10 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.util.regex.PatternSyntaxException
 import com.yoppworks.ossum.riddl.language.AST.*
 
+import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.reflect.ClassTag
-import scala.reflect.classTag
+import scala.reflect.{ClassTag, classTag}
 
 /** Validates an AST */
 object Validation {
@@ -697,7 +696,7 @@ object Validation {
     ): ValidationState = {
       state.checkDefinition(container, function)
         .checkTypeExpression(function.input.getOrElse(Nothing(function.loc)), function)
-        .checkTypeExpression(function.output, function)
+        .checkTypeExpression(function.output.getOrElse(Nothing(function.loc)), function)
         .checkDescription(function, function.description)
     }
 

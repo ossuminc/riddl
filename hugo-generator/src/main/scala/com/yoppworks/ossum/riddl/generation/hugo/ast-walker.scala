@@ -1,6 +1,7 @@
 package com.yoppworks.ossum.riddl.generation.hugo
 
 import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.AST.Location
 
 sealed trait WalkNodeF[In, Out <: HugoNode] {
   def apply(ns: HugoNode, inputNode: In): Out
@@ -92,7 +93,7 @@ object LukeAstWalker {
         fields.map { field => HugoField(field.id.value, handleTypeExpr(entityName, field.typeEx)) }
           .distinct.toSet
       }.fold(Set.empty[HugoField])(identity)
-      val output = handleTypeExpr(entityName, astFunction.output)
+      val output = handleTypeExpr(entityName, astFunction.output.getOrElse(AST.Nothing(Location())))
       HugoEntity.Function(funcName, inputs, output)
     }
 
