@@ -1,14 +1,12 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import fastparse.IgnoreCase
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation}
 import fastparse.*
-import ScalaWhitespace.*
-import Terminals.Keywords
-import Terminals.Punctuation
+import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For FunctionParser */
-trait FunctionParser extends CommonParser with TypeParser {
+trait FunctionParser extends CommonParser with TypeParser with FeatureParser {
 
   def input[u: P]: P[TypeExpression] = {
     P(Keywords.requires ~ Punctuation.colon.? ~ typeExpression)
@@ -30,8 +28,10 @@ trait FunctionParser extends CommonParser with TypeParser {
   def function[u: P]: P[Function] = {
     P(
       location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~
-        ((location ~ undefined(None)).map { case (l, n) => (n, Nothing(l)) } | (input.? ~ output)) ~
-        close ~ description
-    ).map { case (loc, id, (inp, outp), descr) => Function(loc, id, inp, outp, descr) }
+        (undefined(None).map { n => (n, None) } | (input.? ~ output.?)) ~ examples ~ close ~
+        description
+    ).map { case (loc, id, (inp, outp), examples, descr) =>
+      Function(loc, id, inp, outp, examples, descr)
+    }
   }
 }

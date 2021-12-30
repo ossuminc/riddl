@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.*
+import org.scalatest.wordspec.AnyWordSpec
 
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends AnyWordSpec with must.Matchers {
@@ -111,8 +111,14 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           )
         )
 
-        val functions =
-          Seq(Function(Location(), Identifier(Location(), "my_func"), None, Bool(Location()), None))
+        val functions = Seq(Function(
+          Location(),
+          Identifier(Location(), "my_func"),
+          None,
+          Some(Bool(Location())),
+          Seq.empty[Example],
+          None
+        ))
 
         val invariants = Seq(Invariant(Location(), Identifier(Location(), "my_id"), Nil, None))
         val types = Seq(

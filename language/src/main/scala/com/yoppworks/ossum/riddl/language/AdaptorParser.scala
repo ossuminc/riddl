@@ -1,11 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
+import com.yoppworks.ossum.riddl.language.AST.{Adaptor, Example}
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
-import ScalaWhitespace.*
-import AST.Adaptor
-import AST.Example
-import Terminals.Keywords
-import Terminals.Readability
+import fastparse.ScalaWhitespace.*
 
 /** Parser rules for Adaptors */
 trait AdaptorParser extends FeatureParser {
@@ -13,7 +11,7 @@ trait AdaptorParser extends FeatureParser {
   def adaptor[u: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~ contextRef ~ is ~ open ~
-        (namedExample.rep(1) | undefined(Seq.empty[Example])) ~ close ~ description
+        (undefined(Seq.empty[Example]) | examples) ~ close ~ description
     ).map { tpl => (Adaptor.apply _).tupled(tpl) }
   }
 

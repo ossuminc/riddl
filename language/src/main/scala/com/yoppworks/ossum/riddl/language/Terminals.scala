@@ -80,6 +80,7 @@ object Terminals {
     final val details = "details"
     final val domain = "domain"
     final val each = "each"
+    final val else_ = "else"
     final val entity = "entity"
     final val event = "event"
     final val events = "events"

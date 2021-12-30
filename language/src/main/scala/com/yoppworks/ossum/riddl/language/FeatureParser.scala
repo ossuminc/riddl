@@ -1,10 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
-import AST.*
+import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
-import ScalaWhitespace.*
-import Terminals.Keywords
-import Terminals.Readability
+import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for feature definitions This is based on Cucumber's Gherkin language.
   *
@@ -39,7 +38,8 @@ trait FeatureParser extends CommonParser {
 
   def buts[u: P]: P[Seq[But]] = {
     P(
-      (location ~ IgnoreCase(Keywords.but) ~/ docBlock).map(tpl => (But.apply _).tupled(tpl)) ~
+      (location ~ (IgnoreCase(Keywords.else_) | IgnoreCase(Keywords.but)) ~/ docBlock)
+        .map(tpl => (But.apply _).tupled(tpl)) ~
         (location ~ IgnoreCase(Readability.and) ~/ docBlock).map(tpl => (But.apply _).tupled(tpl))
           .rep(0)
     ).?.map {
@@ -55,14 +55,14 @@ trait FeatureParser extends CommonParser {
     )
   }
 
-  def namedExample[u: P]: P[Example] = {
+  def example[u: P]: P[Example] = {
     P(
       location ~ (IgnoreCase(Keywords.example) | IgnoreCase(Keywords.scenario)) ~/ identifier ~
         open ~/ exampleBody ~ close ~ description
     ).map { case (loc, id, (g, w, t, e), desc) => Example(loc, id, g, w, t, e, desc) }
   }
 
-  def examples[u: P]: P[Seq[Example]] = { namedExample.rep(1) }
+  def examples[u: P]: P[Seq[Example]] = {example.rep(0)}
 
   def background[u: P]: P[Background] = {
     P(location ~ IgnoreCase(Keywords.background) ~/ open ~/ givens ~ close)
@@ -73,6 +73,8 @@ trait FeatureParser extends CommonParser {
     P(
       location ~ IgnoreCase(Keywords.feature) ~/ identifier ~ is ~ open ~
         (undefined((None, Seq.empty[Example])) | (background.? ~ examples)) ~ close ~ description
-    ).map { case (loc, id, (bkgrnd, examples), desc) => Feature(loc, id, bkgrnd, examples, desc) }
+    ).map { case (loc, id, (background, examples), desc) =>
+      Feature(loc, id, background, examples, desc)
+    }
   }
 }

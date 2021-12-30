@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Entity
-import com.yoppworks.ossum.riddl.language.AST.Identifier
+import com.yoppworks.ossum.riddl.language.AST.{Entity, Identifier}
 
 class FunctionValidatorTest extends ValidatingTest {
 
@@ -17,8 +16,15 @@ class FunctionValidatorTest extends ValidatingTest {
                                  |""".stripMargin) { (e, msgs) =>
         e.functions must matchPattern {
           case Seq(
-                AST.Function(_, Identifier(_, "foo"), Some(AST.Bool(_)), AST.Integer(_), None)
-              ) =>
+          AST.Function(
+          _,
+          Identifier(_, "foo"),
+          Some(AST.Bool(_)),
+          Some(AST.Integer(_)),
+          _,
+          None
+          )
+          ) =>
         }
         assert(msgs.exists(_.message == "Function 'foo' should have a description"))
       }
