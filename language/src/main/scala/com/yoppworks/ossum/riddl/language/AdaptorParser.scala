@@ -1,7 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Adaptor, Example}
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
+import com.yoppworks.ossum.riddl.language.AST.Adaptor
+import com.yoppworks.ossum.riddl.language.AST.Example
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 

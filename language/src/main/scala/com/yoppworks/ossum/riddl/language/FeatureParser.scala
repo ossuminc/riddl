@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -62,7 +63,7 @@ trait FeatureParser extends CommonParser {
     ).map { case (loc, id, (g, w, t, e), desc) => Example(loc, id, g, w, t, e, desc) }
   }
 
-  def examples[u: P]: P[Seq[Example]] = {example.rep(0)}
+  def examples[u: P]: P[Seq[Example]] = { example.rep(0) }
 
   def background[u: P]: P[Background] = {
     P(location ~ IgnoreCase(Keywords.background) ~/ open ~/ givens ~ close)

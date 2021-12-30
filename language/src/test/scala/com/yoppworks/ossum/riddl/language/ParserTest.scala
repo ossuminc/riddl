@@ -355,7 +355,7 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content must matchPattern {
-          case Function(_, Identifier(_, "foo"), Some(Bool(_)), Some(Integer(_)), _, None) =>
+            case Function(_, Identifier(_, "foo"), Some(Bool(_)), Some(Integer(_)), _, None) =>
           }
       }
     }

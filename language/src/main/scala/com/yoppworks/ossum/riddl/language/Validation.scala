@@ -4,7 +4,8 @@ import com.yoppworks.ossum.riddl.language.AST.*
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 
 /** Validates an AST */
 object Validation {
@@ -322,7 +323,7 @@ object Validation {
           // Too many matches / non-unique
           case (d, optT) :: tail =>
             // Handle domain, context, entity same name
-            val definitions = (d :: tail.map { case (d, _) => d })
+            val definitions = d :: tail.map { case (d, _) => d }
             val types = (optT :: tail.map { case (_, t) => t }) collect { case Some(tpe) => tpe }
             val exactlyOneMatch = types.count(_.getClass == tc) == 1
             val allDifferent = definitions.map(_.kind).distinct.size == definitions.size
