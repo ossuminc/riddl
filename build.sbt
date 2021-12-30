@@ -1,6 +1,7 @@
 import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
+maintainer := "reid@reactific.com"
 Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Some("semver-spec")
 ThisBuild / dynverVTagPrefix := false
@@ -64,7 +65,7 @@ lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme"))
     themeTask := {
       import scala.sys.process._
       val artifact = Artifact("riddl-hugo-theme", "zip", "zip")
-      val output: File = target.value / (artifact.name + "." + artifact.extension)
+      val output: File = target.value.toPath.toAbsolutePath.toFile / (artifact.name + "." + artifact.extension)
       val inputDir: File = sourceDirectory.value / "main"
       val command = s"zip -rv9o ${output.toString} riddl-hugo-theme"
       val pb = Process(command, inputDir)
@@ -86,6 +87,7 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(H
 
 lazy val riddlc = project.in(file("riddlc"))
   .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(JavaAppPackaging)
   .settings(
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDLC"),
@@ -136,19 +138,63 @@ lazy val translator = (project in file("translator"))
     )
   ).dependsOn(language % "test->test;compile->compile")
 
-lazy val `hugo-generator` = (project in file("hugo-generator")).settings(
-  name := "riddl-hugo-generator",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
-  Compile / unmanagedResourceDirectories += { baseDirectory.value / "resources" },
-  Test / parallelExecution := false,
-  libraryDependencies ++= Seq(
-    "org.scalactic" %% "scalactic" % "3.1.0",
-    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
-    "com.github.pureconfig" %% "pureconfig" % "0.12.2"
-  )
-).dependsOn(language % "test->test;compile->compile")
+lazy val `hugo-generator` = (project in file("hugo-generator"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "riddl-hugo-generator",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
+    Compile / unmanagedResourceDirectories += { baseDirectory.value / "resources" },
+    Test / parallelExecution := false,
+    libraryDependencies ++= Seq(
+      "org.scalactic" %% "scalactic" % "3.1.0",
+      "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
+      "com.github.pureconfig" %% "pureconfig" % "0.12.2"
+    )
+  ).dependsOn(language, translator, `riddl-hugo-theme`)
 
+// lazy val exampleTask = taskKey[File]("Task to generate example hugo docs")
+// lazy val runRiddlc = taskKey[Unit]("Run the riddlc compiler")
+
+lazy val `example` = project.in(file("example"))
+  .settings(
+    name := "riddl-example",
+    Compile / packageBin / publishArtifact := false,
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := false,
+    /*
+    runRiddlc := {
+      val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
+      val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
+      riddlc/Compile/run.inputTaskValue.fullInput(
+        s"translate hugo -i ${inputDir}/rbbq.riddl -c rbbq.conf -o $outDir"
+      ).parsed
+    },
+    exampleTask := {
+      import scala.sys.process._
+      val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
+      // val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
+      // val riddlcPath: File = target.value.getParentFile.getParentFile.getAbsoluteFile / "riddlc" /
+        "target" / "universal" / "scripts" / "bin" / "riddlc"
+      // val cp: Seq[File] = (Runtime/fullClasspath).value.files
+      // val foo = riddlc/Compile/run.value.fullInput("translate hugo -i rbbq.riddl -c rbbq.conf -o $outDir")
+      runRiddlc.value
+      // val pb = Process(command, inputDir)
+      // println(command)
+      // val stdout = pb.!!
+      // println(stdout)
+      val artifact = Artifact("riddl-example", "zip", "zip")
+      val output: File = target.value / (artifact.name + "." + artifact.extension)
+      val zipCommand = s"zip -rv9o ${output.toString} ReactiveBBQ"
+      val zpb = Process(zipCommand, outDir.getParentFile)
+      println(zipCommand)
+      zpb.run
+      output
+    },
+    addArtifact(Artifact("riddl-example", "zip", "zip"), exampleTask)
+     */
+  )
+  .dependsOn(riddlc)
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl"))
   .enablePlugins(SbtPlugin)
@@ -161,4 +207,4 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl"))
   )
 
 (Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass)
+  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)

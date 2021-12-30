@@ -7,10 +7,10 @@ import Terminals.Keywords
 import Terminals.Readability
 
 /** Parsing rules for feature definitions This is based on Cucumber's Gherkin language.
- *
- * @see
- * https://cucumber.io/docs/gherkin/reference/
- */
+  *
+  * @see
+  *   https://cucumber.io/docs/gherkin/reference/
+  */
 trait FeatureParser extends CommonParser {
 
   def givens[u: P]: P[Seq[Given]] = {
@@ -44,7 +44,7 @@ trait FeatureParser extends CommonParser {
           .rep(0)
     ).?.map {
       case Some((initial, remainder)) => initial +: remainder
-      case None => Seq.empty[But]
+      case None                       => Seq.empty[But]
     }
   }
 
@@ -62,7 +62,7 @@ trait FeatureParser extends CommonParser {
     ).map { case (loc, id, (g, w, t, e), desc) => Example(loc, id, g, w, t, e, desc) }
   }
 
-  def examples[u: P]: P[Seq[Example]] = {namedExample.rep(1) }
+  def examples[u: P]: P[Seq[Example]] = { namedExample.rep(1) }
 
   def background[u: P]: P[Background] = {
     P(location ~ IgnoreCase(Keywords.background) ~/ open ~/ givens ~ close)
