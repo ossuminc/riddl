@@ -1,8 +1,21 @@
 domain Restaurant is {
 
-include "Menu"
+type CustomerId is Id(Customer)
+type LocationId is Id(Location)
+type LoyaltyID is Id(Loyalty)
+type ReservationId is Id(Reservation)
+type PaymentId is Id(Payment)
+type ServerId is Id(Server)
+type TableId is Id(Table)
+
+include "Customer"
+include "Kitchen"
+include "Location"
 include "Loyalty"
-include "kitchen/context"
-include "serving/domain"
+include "Menu"
+include "Payment"
+include "Reservation"
+include "Server"
+include "Table"
 
 }

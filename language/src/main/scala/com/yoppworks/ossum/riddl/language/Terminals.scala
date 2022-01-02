@@ -62,6 +62,7 @@ object Terminals {
 
   object Keywords {
     final val action = "action"
+    final val adapt = "adapt"
     final val adaptor = "adaptor"
     final val all = "all"
     final val any = "any"

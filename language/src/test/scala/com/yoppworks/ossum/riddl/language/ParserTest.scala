@@ -296,7 +296,7 @@ class ParserTest extends ParsingTest {
             1 -> 1,
             Identifier(1 -> 9, "fuzz"),
             ContextRef(1 -> 18, PathIdentifier(1 -> 26, Seq("bar", "foo"))),
-            Seq.empty[Example]
+            Seq.empty[Adaptation]
           )
       }
     }

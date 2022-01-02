@@ -245,11 +245,26 @@ object Validation {
       agg.fields.foldLeft(this) { case (state, field) =>
         state.checkIdentifierLength(field).check(
           field.id.value.head.isLower,
-          "Field names should start with a lower case letter",
+          "Field names in aggregates should start with a lower case letter",
           StyleWarning,
           field.loc
         ).checkTypeExpression(field.typeEx, field).checkDescription(field, field.description)
       }.checkDescription(definition, agg.description)
+    }
+
+    def checkMessageType(
+      definition: Definition,
+      mt: MessageType
+    ): ValidationState = {
+      val kind = mt.messageKind.kind
+      mt.fields.foldLeft(this) { case (state, field) =>
+        state.checkIdentifierLength(field).check(
+          field.id.value.head.isLower,
+          s"Field names in $kind messages should start with a lower case letter",
+          StyleWarning,
+          field.loc
+        ).checkTypeExpression(field.typeEx, field).checkDescription(field, field.description)
+      }.checkDescription(definition, mt.description)
     }
 
     def checkMapping(
@@ -277,6 +292,7 @@ object Validation {
           checkEnumeration(definition, enumerators, desc)
         case alt: Alternation => checkAlternation(definition, alt)
         case agg: Aggregation => checkAggregation(definition, agg)
+        case mt: MessageType  => checkMessageType(definition, mt)
         case mapping: Mapping => checkMapping(definition, mapping)
         case rt: RangeType    => checkRangeType(definition, rt)
         case ReferenceType(_, entity: EntityRef, addendum) => this.checkRef[Entity](entity)
@@ -711,12 +727,19 @@ object Validation {
         .checkDescription(invariant, invariant.description)
     }
 
-    override def doTranslationRule(
+    override def doAdaptation(
       state: ValidationState,
       container: Container,
-      rule: TranslationRule
+      adaptation: Adaptation
     ): ValidationState = {
-      state.checkDefinition(container, rule).checkDescription(rule, rule.description)
+      adaptation match {
+        case EventAdaptation(_, _, event, command, _, description) => state
+            .checkDefinition(container, adaptation).checkRef(event).checkRef(command)
+            .checkDescription(adaptation, description)
+        case _ =>
+          require(requirement = false, "Unknown adaptation")
+          state
+      }
     }
   }
 }

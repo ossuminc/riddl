@@ -5,9 +5,9 @@ include "backoffice/domain"
 include "corporate/domain"
 
 } explained as {
- "A domain to encapsulate the entire enterprise named ReactiveBBQ."
+ "A domain to encapsulate the entire enterprise named Reactive BBQ."
  "It is divided into three subdomains:"
  "* Restaurant -- handles each of the restaurant locations"
  "* Back Office -- handles all the back office supplies and menus"
- "* Corporate -- handles the corporate web site and marketing"
+ "* Corporate -- handles the corporate web site, marketing, accounting and HR"
 }

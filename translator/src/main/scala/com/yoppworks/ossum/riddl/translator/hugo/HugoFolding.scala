@@ -3,6 +3,8 @@ package com.yoppworks.ossum.riddl.translator.hugo
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 
+import scala.annotation.unused
+
 /** Unit Tests For HugoFolding */
 class HugoFolding extends Folding[HugoState] {
 
@@ -235,9 +237,11 @@ class HugoFolding extends Folding[HugoState] {
     predef: PredefinedType
   ): HugoState = { state }
 
-  override def doTranslationRule(
+  override def doAdaptation(
     state: HugoState,
+    @unused
     container: Container,
-    rule: TranslationRule
-  ): HugoState = { state }
+    @unused
+    rule: Adaptation
+  ): HugoState = {state}
 }

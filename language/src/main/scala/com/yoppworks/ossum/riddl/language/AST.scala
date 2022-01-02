@@ -6,12 +6,12 @@ import scala.language.implicitConversions
 
 // scalastyle:off number.of.methods
 
-/** Abstract Syntax Tree This object defines the model for processing IDDL and producing a raw AST
-  * from it. This raw AST has no referential integrity, it just results from applying the parsing
-  * rules to the input. The RawAST models produced from parsing are syntactically correct but have
-  * no semantic validation. The Transformation passes convert RawAST model to AST model which is
-  * referentially and semantically consistent (or the user gets an error).
-  */
+/** Abstract Syntax Tree This object defines the model for processing RIDDL and producing a raw AST
+ * from it. This raw AST has no referential integrity, it just results from applying the parsing
+ * rules to the input. The RawAST models produced from parsing are syntactically correct but have
+ * no semantic validation. The Transformation passes convert RawAST model to AST model which is
+ * referentially and semantically consistent (or the user gets an error).
+ */
 object AST {
 
   /** The root trait of all things RIDDL AST */
@@ -102,11 +102,11 @@ object AST {
 
   case class TypeRef(loc: Location, id: PathIdentifier) extends Reference with TypeExpression {}
 
-  case class Optional(loc: Location, texp: TypeExpression) extends TypeExpression
+  case class Optional(loc: Location, typeExp: TypeExpression) extends TypeExpression
 
-  case class ZeroOrMore(loc: Location, texp: TypeExpression) extends TypeExpression
+  case class ZeroOrMore(loc: Location, typeExp: TypeExpression) extends TypeExpression
 
-  case class OneOrMore(loc: Location, texp: TypeExpression) extends TypeExpression
+  case class OneOrMore(loc: Location, typeExp: TypeExpression) extends TypeExpression
 
   /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
     *
@@ -181,13 +181,32 @@ object AST {
     loc: Location,
     pattern: Seq[LiteralString],
     description: Option[Description] = None)
-      extends TypeExpression
+    extends TypeExpression
 
   case class UniqueId(
     loc: Location,
     entityPath: PathIdentifier,
     description: Option[Description] = None)
-      extends TypeExpression
+    extends TypeExpression
+
+  sealed trait MessageKind {
+    def kind: String = this.getClass.getSimpleName.dropRight("Kind".length)
+  }
+
+  case object CommandKind extends MessageKind
+
+  case object EventKind extends MessageKind
+
+  case object QueryKind extends MessageKind
+
+  case object ResultKind extends MessageKind
+
+  case class MessageType(
+    loc: Location,
+    messageKind: MessageKind,
+    fields: Seq[Field] = Seq.empty[Field],
+    description: Option[Description] = None)
+    extends TypeExpression with EntityValue
 
   abstract class PredefinedType extends TypeExpression {
     def loc: Location
@@ -609,28 +628,27 @@ object AST {
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     description: Option[Description] = None)
-      extends Container with ContextDefinition {
+    extends Container with ContextDefinition {
 
     lazy val contents: Seq[Definition] =
       (states.iterator ++ types ++ handlers ++ features ++ functions ++ invariants).toList
 
-    def hasOption[Op <: EntityOption: scala.reflect.ClassTag]: Boolean = options
+    def hasOption[Op <: EntityOption : scala.reflect.ClassTag]: Boolean = options
       .exists(_.getClass == implicitly[scala.reflect.ClassTag[Op]].runtimeClass)
   }
 
-  trait TranslationRule extends Definition {
-    def topic: String
+  trait Adaptation extends AdaptorDefinition {
+    def description: Option[Description]
   }
 
-  case class MessageTranslationRule(
+  case class EventAdaptation(
     loc: Location,
     id: Identifier,
-    topic: String,
-    input: String,
-    output: String,
-    rule: String,
+    event: EventRef,
+    command: CommandRef,
+    example: Option[Example],
     description: Option[Description] = None)
-      extends TranslationRule
+    extends Adaptation
 
   /** Definition of an Adapter Adapters are defined in Contexts to convert messaging from one
     * Context to another. Adapters translate incoming events from other Contexts into commands or
@@ -646,10 +664,10 @@ object AST {
     loc: Location,
     id: Identifier,
     ref: ContextRef,
-    examples: Seq[Example],
+    adaptations: Seq[Adaptation],
     description: Option[Description] = None)
       extends Container with ContextDefinition {
-    lazy val contents: Seq[Example] = examples
+    lazy val contents: Seq[Definition] = adaptations
   }
 
   sealed trait ContextOption extends RiddlValue

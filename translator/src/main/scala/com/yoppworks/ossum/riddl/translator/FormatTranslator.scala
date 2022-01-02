@@ -1,19 +1,14 @@
 package com.yoppworks.ossum.riddl.translator
 
-import java.io.File
-import java.nio.file.Path
-
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.AST
-import com.yoppworks.ossum.riddl.language.Folding
-import com.yoppworks.ossum.riddl.language.Riddl
-import com.yoppworks.ossum.riddl.language.Translator
-import com.yoppworks.ossum.riddl.language.TranslatorConfiguration
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
+import com.yoppworks.ossum.riddl.language.*
+import pureconfig.{ConfigReader, ConfigSource}
 import pureconfig.generic.auto.*
 
+import java.io.File
+import java.nio.file.Path
+import scala.annotation.unused
 import scala.collection.mutable
 
 case class FormatConfig(
@@ -23,7 +18,7 @@ case class FormatConfig(
   showStyleWarnings: Boolean = false,
   inputPath: Option[Path] = None,
   outputPath: Option[Path] = None)
-    extends TranslatorConfiguration
+  extends TranslatorConfiguration
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 class FormatTranslator extends Translator[FormatConfig] {
@@ -415,15 +410,19 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def doPredefinedType(
       state: FormatState,
+      @unused
       container: Container,
+      @unused
       predef: PredefinedType
     ): FormatState = { state }
 
-    override def doTranslationRule(
+    override def doAdaptation(
       state: FormatState,
+      @unused
       container: Container,
-      rule: TranslationRule
-    ): FormatState = { state }
+      @unused
+      adaptation: Adaptation
+    ): FormatState = {state}
   }
 
 }

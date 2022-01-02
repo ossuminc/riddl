@@ -38,9 +38,7 @@ object Folding {
       case context: Context =>
         result = f(parent, context, result)
         result = context.types.foldLeft(result) { (next, ty) => f(context, ty, next) }
-        result = context.adaptors.foldLeft(result) { (next, adaptor) =>
-          foldEachDefinition[S](context, adaptor, next)(f)
-        }
+        result = context.adaptors.foldLeft(result) { (next, adaptor) => f(context, adaptor, next) }
         result = context.entities.foldLeft(result) { (next, entity) =>
           foldEachDefinition[S](context, entity, next)(f)
         }
@@ -90,6 +88,9 @@ object Folding {
   trait Folding[S <: State[S]] {
 
     // noinspection ScalaStyle
+
+    /** Container Traversal This foldLeft allows the hierarchy of containers to be navigated
+     */
     final def foldLeft(
       parent: Container,
       container: Container,
@@ -97,8 +98,8 @@ object Folding {
     ): S = {
       container match {
         case root: RootContainer => root.contents.foldLeft(initState) { case (s, content) =>
-            foldLeft(root, content, s)
-          }
+          foldLeft(root, content, s)
+        }
         case domain: Domain => openDomain(initState, parent, domain).step { state =>
             domain.types.foldLeft(state) { (next, ty) => doType(next, domain, ty) }
           }.step { state =>
@@ -110,7 +111,6 @@ object Folding {
               foldLeft(domain, interaction, next)
             }
           }.step { state => closeDomain(state, parent, domain) }
-
         case context: Context => openContext(initState, parent, context).step { state =>
             context.types.foldLeft(state) { (next, ty) => doType(next, context, ty) }
           }.step { state =>
@@ -156,7 +156,8 @@ object Folding {
             }
           }
         case adaptor: Adaptor => openAdaptor(initState, parent, adaptor).step { state =>
-            closeAdaptor(state, parent, adaptor)
+          adaptor.adaptations.foldLeft(state) { (s, a) => doAdaptation(s, adaptor, a) }
+          closeAdaptor(state, parent, adaptor)
           }
         case topic: Topic => openTopic(initState, parent, topic).step { state =>
             val foldables: List[MessageDefinition] =
@@ -171,6 +172,7 @@ object Folding {
               case _ => state
             }
           }.step { state => closeMessage(state, parent, message) }
+
         case st: AST.State => openState(initState, parent, st).step { state =>
             st.typeEx match {
               case agg: Aggregation => agg.fields.foldLeft(state) { (next, field) =>
@@ -501,13 +503,13 @@ object Folding {
       predef: PredefinedType
     ): S = { state }
 
-    def doTranslationRule(
+    def doAdaptation(
       state: S,
       @unused
       container: Container,
       @unused
-      rule: TranslationRule
-    ): S = { state }
+      rule: Adaptation
+    ): S = {state}
   }
 
 }

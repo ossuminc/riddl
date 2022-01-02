@@ -76,7 +76,9 @@ lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme"))
     addArtifact(Artifact("riddl-hugo-theme", "zip", "zip"), themeTask)
   )
 
-lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
+lazy val doc = project.in(file("doc"))
+  .enablePlugins(SitePlugin)
+  .enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(
   name := "riddl-doc",
   publishTo := Some(Resolver.defaultLocal),
@@ -162,6 +164,7 @@ lazy val `example` = project.in(file("example"))
     Compile / packageBin / publishArtifact := false,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,
+    publishTo := Some(Resolver.defaultLocal),
     /*
     runRiddlc := {
       val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
@@ -194,7 +197,7 @@ lazy val `example` = project.in(file("example"))
     addArtifact(Artifact("riddl-example", "zip", "zip"), exampleTask)
      */
   )
-  .dependsOn(riddlc)
+  .dependsOn(language % "test->compile;test->test", riddlc)
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl"))
   .enablePlugins(SbtPlugin)

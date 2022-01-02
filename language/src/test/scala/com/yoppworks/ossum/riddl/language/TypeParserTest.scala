@@ -103,6 +103,40 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
+    "allow command, event, query, and result message aggregations" in {
+      for { mk <- Seq("command", "event", "query", "result") } {
+        val prefix = s"type mkt = $mk {"
+        val input = prefix + """
+                               |  key: Number,
+                               |  id: Id(),
+                               |  time: TimeStamp
+                               |}
+                               |""".stripMargin
+        val expected = Type(
+          1 -> 1,
+          Identifier(1 -> 6, "mkt"),
+          MessageType(
+            1 -> 12,
+            mk match {
+              case "command" => CommandKind
+              case "event"   => EventKind
+              case "query"   => QueryKind
+              case "result"  => ResultKind
+            },
+            Seq(
+              Field(2 -> 3, Identifier(2 -> 3, "key"), Number(2 -> 8)),
+              Field(
+                3 -> 3,
+                Identifier(3 -> 3, "id"),
+                UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]), None)
+              ),
+              Field(4 -> 3, Identifier(4 -> 3, "time"), TimeStamp(4 -> 9))
+            )
+          )
+        )
+        checkDefinition[Type, Type](input, expected, identity)
+      }
+    }
     "allow mappings between two types" in {
       val input = "type m1 = mapping { from String to Number }"
       val expected =

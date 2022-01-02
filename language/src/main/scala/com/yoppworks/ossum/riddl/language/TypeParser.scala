@@ -1,11 +1,10 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.*
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation.*
 import fastparse.*
-import ScalaWhitespace.*
-
-import Terminals.*
-import Terminals.Punctuation.*
+import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
@@ -117,11 +116,28 @@ trait TypeParser extends CommonParser {
     }
   }
 
+  def messageKind[u: P]: P[MessageKind] = {
+    P(Keywords.command | Keywords.event | Keywords.query | Keywords.result).!.map { mk =>
+      mk.toLowerCase() match {
+        case mk if mk == Keywords.command => CommandKind
+        case mk if mk == Keywords.event => EventKind
+        case mk if mk == Keywords.query => QueryKind
+        case mk if mk == Keywords.result => ResultKind
+      }
+    }
+  }
+
+  def messageType[u: P]: P[MessageType] = {
+    P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
+      MessageType(loc, mk, agg.fields, agg.description)
+    }
+  }
+
   /** Parses mappings, i.e.
-    * ```
-    *   mapping { from Integer to String }
-    * ```
-    */
+   * ```
+   * mapping { from Integer to String }
+   * ```
+   */
   def mapping[u: P]: P[Mapping] = {
     P(
       location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~ typeExpression ~ close ~
@@ -165,7 +181,7 @@ trait TypeParser extends CommonParser {
   def typeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(P(
       simplePredefinedTypes | patternType | uniqueIdType | enumeration | alternation | referToType |
-        aggregation | mapping | range | typeRef
+        aggregation | messageType | mapping | range | typeRef
     )))
   }
 

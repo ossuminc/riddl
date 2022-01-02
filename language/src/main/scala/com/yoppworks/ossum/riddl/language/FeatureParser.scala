@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -51,7 +50,8 @@ trait FeatureParser extends CommonParser {
 
   def exampleBody[u: P]: P[(Seq[Given], Seq[When], Seq[Then], Seq[But])] = {
     P(
-      (givens ~ whens ~ thens ~ buts) |
+      (givens.?.map(_.getOrElse(Seq.empty[Given])) ~ whens ~ thens ~
+        buts.?.map(_.getOrElse(Seq.empty[But]))) |
         undefined((Seq.empty[Given], Seq.empty[When], Seq.empty[Then], Seq.empty[But]))
     )
   }
@@ -59,11 +59,11 @@ trait FeatureParser extends CommonParser {
   def example[u: P]: P[Example] = {
     P(
       location ~ (IgnoreCase(Keywords.example) | IgnoreCase(Keywords.scenario)) ~/ identifier ~
-        open ~/ exampleBody ~ close ~ description
+        is.? ~ open ~/ exampleBody ~ close ~ description
     ).map { case (loc, id, (g, w, t, e), desc) => Example(loc, id, g, w, t, e, desc) }
   }
 
-  def examples[u: P]: P[Seq[Example]] = { example.rep(0) }
+  def examples[u: P]: P[Seq[Example]] = {P(example.rep(0))}
 
   def background[u: P]: P[Background] = {
     P(location ~ IgnoreCase(Keywords.background) ~/ open ~/ givens ~ close)
