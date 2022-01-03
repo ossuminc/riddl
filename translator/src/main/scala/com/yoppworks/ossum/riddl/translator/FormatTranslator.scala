@@ -18,7 +18,7 @@ case class FormatConfig(
   showStyleWarnings: Boolean = false,
   inputPath: Option[Path] = None,
   outputPath: Option[Path] = None)
-  extends TranslatorConfiguration
+    extends TranslatorConfiguration
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 class FormatTranslator extends Translator[FormatConfig] {
