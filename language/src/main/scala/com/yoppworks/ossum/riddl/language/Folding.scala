@@ -90,7 +90,7 @@ object Folding {
     // noinspection ScalaStyle
 
     /** Container Traversal This foldLeft allows the hierarchy of containers to be navigated
-     */
+      */
     final def foldLeft(
       parent: Container,
       container: Container,
