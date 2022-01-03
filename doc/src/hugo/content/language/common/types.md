@@ -79,7 +79,7 @@ the`<regex` then an `InvalidateEstateException` will be generated. For example,
 here's a pattern for extracting the three components of a North American 
 telephone number: 
 ```riddl
-type NATelephoneNumber = Pattern("\(?([0-9]{3})\)?-?([0-9]{3})-?([0-9]{4})")
+type NATelephoneNumber = pattern("\(?([0-9]{3})\)?-?([0-9]{3})-?([0-9]{4})")
 ```
 
 ### Range
@@ -90,7 +90,7 @@ restricted to the `<min>` and `<max>` values provided.  As with [bounded
 strings](./types#Bounded_Strings), the `<min>` and `<max>` values are 
 optional and default to 0 and infinity respectively. For example:
 ```riddl
-type Percent = Range(,100) // only value 0 to 100 inclusive
+type Percent = range(,100) // only value 0 to 100 inclusive
 ```
 
 ### Restricted Scheme URL
@@ -99,7 +99,7 @@ restrict the URL to a specific scheme (e.g. "http", "mailto") then you can
 use the URL type expression. The expression `URL(<scheme>)` specifies a URL 
 that is restricted to the `<scheme>` specified. For example:
 ```riddl
-type HTTPS_URL = URL("https")
+type HTTPS_URL = url("https")
 ```
 
 ### Unique Identifier
@@ -116,7 +116,7 @@ An enumeration defines a type that may take the value of one identifier from a
 closed set of constant identifiers using the `any` keyword and the set of
 identifiers enclosed in square brackets, like this:
 ```
-type Color = any [Red, Orange, Yellow, Green, Blue, Indigo, Violet]
+type Color = any of  [Red, Orange, Yellow, Green, Blue, Indigo, Violet]
 ```
 
 ### Alternation
@@ -136,7 +136,7 @@ value in the aggregation has an identifier (name) and a type separated by a
 colon. For example, here is the type definition for a rectangle located on a 
 Cartesian coordinate system at point (x,y) with a given height and width:
 ```
-type Rectangle = x: Number, y: Number, height: Number, width: Number
+type Rectangle = { x: Number, y: Number, height: Number, width: Number }
 ```
 
 ### Key/Value Mapping
@@ -170,7 +170,7 @@ expressions) that specifies the cardinality of the type, as follows:
 Without the adornment, the cardinality is "required" (exactly one).
 For example, in this:
 ```
-type MyType = ids: Id+, name: String?
+type MyType = { ids: Id+, name: String? }
 ```
 the `MyType` type is an aggregate that contains one or more Id values 
 in the `ids` field and an optional string value in `name`
