@@ -19,7 +19,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: D @unchecked) =>
+      case Right(model: D@unchecked) =>
         val msgs = Validation.validate(model)
         validation(model, msgs)
     }
