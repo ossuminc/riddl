@@ -120,9 +120,9 @@ trait TypeParser extends CommonParser {
     P(Keywords.command | Keywords.event | Keywords.query | Keywords.result).!.map { mk =>
       mk.toLowerCase() match {
         case mk if mk == Keywords.command => CommandKind
-        case mk if mk == Keywords.event => EventKind
-        case mk if mk == Keywords.query => QueryKind
-        case mk if mk == Keywords.result => ResultKind
+        case mk if mk == Keywords.event   => EventKind
+        case mk if mk == Keywords.query   => QueryKind
+        case mk if mk == Keywords.result  => ResultKind
       }
     }
   }
@@ -134,10 +134,10 @@ trait TypeParser extends CommonParser {
   }
 
   /** Parses mappings, i.e.
-   * ```
-   * mapping { from Integer to String }
-   * ```
-   */
+    * ```
+    * mapping { from Integer to String }
+    * ```
+    */
   def mapping[u: P]: P[Mapping] = {
     P(
       location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~ typeExpression ~ close ~
@@ -152,8 +152,10 @@ trait TypeParser extends CommonParser {
     */
   def range[u: P]: P[RangeType] = {
     P(
-      location ~ "range" ~ roundOpen ~/ literalInteger ~ comma ~ literalInteger ~ roundClose ~
-        description
+      location ~ Keywords.range ~ roundOpen ~/
+        literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, 0))) ~ comma ~
+        literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, Int.MaxValue))) ~
+        roundClose ~ description
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 

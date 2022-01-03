@@ -5,9 +5,14 @@ include "backoffice/domain"
 include "corporate/domain"
 
 } explained as {
- "A domain to encapsulate the entire enterprise named Reactive BBQ."
- "It is divided into three subdomains:"
- "* Restaurant -- handles each of the restaurant locations"
- "* Back Office -- handles all the back office supplies and menus"
- "* Corporate -- handles the corporate web site, marketing, accounting and HR"
+|A domain to encapsulate the entire enterprise named Reactive BBQ.
+|It is divided into three subdomains:
+|* Restaurant -- handles each of the restaurant locations
+|* Back Office -- handles all the back office supplies and menus
+|* Corporate -- handles the corporate web site, marketing, accounting and HR
+|This domain definition is designed to be instructive in teh RIDDL language.
+|It uses the case study from the Lightbend Reactive Architecture course as
+|the basis for defining the domain. The course uses a set of interviews with
+|Reactive BBQ employees to define the requirements. This domain specification
+|is a possible result of analyzing that domain: the Reactive BBQ restaurant.
 }

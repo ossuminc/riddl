@@ -1,21 +1,19 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.io.File
-
-import com.yoppworks.ossum.riddl.language.AST._
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessageKind, ValidationMessages, ValidationOptions}
 import org.scalatest.Assertion
 
-import scala.reflect._
+import java.io.File
+import scala.reflect.*
 
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidate[D <: Container: ClassTag](
+  def parseAndValidate[D <: Container : ClassTag](
     input: String
-  )(validation: (D, ValidationMessages) => Assertion
+  )(
+    validation: (D, ValidationMessages) => Assertion
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
@@ -42,6 +40,28 @@ abstract class ValidatingTest extends ParsingTest {
       case Right(root) =>
         val messages = Validation.validate(root, options)
         validation(root, messages)
+    }
+  }
+
+  def parseAndValidateFile(
+    label: String,
+    file: File,
+    options: ValidationOptions = ValidationOptions.Default
+  ): Assertion = {
+    TopLevelParser.parse(file) match {
+      case Left(errors) =>
+        val msgs = errors.iterator.map(_.format).mkString("\n")
+        fail(s"In $label:\n$msgs")
+      case Right(root) =>
+        val messages = Validation.validate(root, options)
+        val errors = messages.filter(_.kind.isError)
+        val warnings = messages.iterator.filter(_.kind.isWarning)
+        info(s"${errors.length} Errors:")
+        info(errors.iterator.map(_.format).mkString("\n"))
+        info(s"${warnings.length} Warnings:")
+        info(warnings.iterator.map(_.format).mkString("\n"))
+        errors mustBe empty
+        warnings mustBe empty
     }
   }
 

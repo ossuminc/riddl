@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.translator
 
+import com.yoppworks.ossum.riddl.language.*
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import com.yoppworks.ossum.riddl.language.*
 import pureconfig.{ConfigReader, ConfigSource}
 import pureconfig.generic.auto.*
 
