@@ -2,13 +2,13 @@ package com.yoppworks.ossum.riddl
 
 import RiddlOptions.*
 import language.AST.RootContainer
+import language.FormatTranslator
 import language.Riddl
 import language.Riddl.SysLogger
-import translator.FormatTranslator
 import generation.hugo.HugoGenerator
 import generation.hugo.GeneratorOptions
 import scopt.OParser
-import cats.implicits.*
+import cats.syntax.all._
 
 /** RIDDL Main Program
   */
@@ -96,5 +96,4 @@ object RIDDLC {
       _ <- HugoGenerator.attempt(astRoot, genOpts).leftMap(printError).toOption
     } yield SysLogger.info("Hugo documentation generated!")
   }
-
 }

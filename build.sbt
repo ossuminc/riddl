@@ -56,7 +56,7 @@ lazy val scala2_13_Options = Seq(
 lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, translator, `hugo-generator`, riddlc, `sbt-riddl`, doc)
+  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, doc)
 
 val themeTask = taskKey[File]("Task to generate theme artifact")
 lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme")).settings(
@@ -92,12 +92,11 @@ lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
     name := "riddlc",
     mainClass := Some("com.yoppworks.ossum.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++=
-      Seq("com.github.scopt" %% "scopt" % "4.0.1", "com.typesafe" % "config" % "1.4.1"),
+    libraryDependencies ++= Seq(Dep.cats_core, Dep.scopt, Dep.config),
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoUsePackageAsPath := true
-  ).dependsOn(translator, language, `hugo-generator`)
+  ).dependsOn(language, `hugo-generator`)
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin).settings(
   name := "riddl-languge",
@@ -105,32 +104,11 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin).
   buildInfoPackage := "com.yoppworks.ossum.riddl.language",
   buildInfoUsePackageAsPath := true,
   scalacOptions := scala2_13_Options,
-  libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-core" % "2.7.0",
-    "com.lihaoyi" %% "fastparse" % "2.3.3",
-    "com.github.pureconfig" %% "pureconfig" % "0.17.1",
-    "org.scalactic" %% "scalactic" % "3.2.9",
-    "org.scalatest" %% "scalatest" % "3.2.9" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.15.4" % "test"
-  ),
+  libraryDependencies ++= Dep.parsing ++ Dep.testing,
   Compile / compileCheck := {
     Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
   }
 )
-
-lazy val translator = (project in file("translator")).enablePlugins(BuildInfoPlugin).settings(
-  name := "riddl-translator",
-  scalacOptions := scala2_13_Options,
-  buildInfoPackage := "com.yoppworks.ossum.riddl.translator",
-  buildInfoUsePackageAsPath := true,
-  libraryDependencies ++= Seq(
-    "org.jfree" % "jfreesvg" % "3.4.2",
-    "org.scalactic" %% "scalactic" % "3.2.9",
-    "org.scalatest" %% "scalatest" % "3.2.9" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.15.4" % "test",
-    "com.github.pureconfig" %% "pureconfig" % "0.17.1"
-  )
-).dependsOn(language % "test->test;compile->compile")
 
 lazy val `hugo-generator` = (project in file("hugo-generator")).enablePlugins(BuildInfoPlugin)
   .settings(
@@ -138,13 +116,8 @@ lazy val `hugo-generator` = (project in file("hugo-generator")).enablePlugins(Bu
     buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
     Compile / unmanagedResourceDirectories += { baseDirectory.value / "resources" },
     Test / parallelExecution := false,
-    libraryDependencies ++= Seq(
-      "org.scalactic" %% "scalactic" % "3.2.9",
-      "org.scalatest" %% "scalatest" % "3.2.9" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.15.4" % "test",
-      "com.github.pureconfig" %% "pureconfig" % "0.17.1"
-    )
-  ).dependsOn(language, translator, `riddl-hugo-theme`)
+    libraryDependencies ++= Seq(Dep.pureconfig, Dep.cats_core) ++ Dep.testing
+  ).dependsOn(language, `riddl-hugo-theme`)
 
 // lazy val exampleTask = taskKey[File]("Task to generate example hugo docs")
 // lazy val runRiddlc = taskKey[Unit]("Run the riddlc compiler")
