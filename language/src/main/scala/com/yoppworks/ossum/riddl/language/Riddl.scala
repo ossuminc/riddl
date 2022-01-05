@@ -4,9 +4,11 @@ import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
-
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.parsing.FileParserInput
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {

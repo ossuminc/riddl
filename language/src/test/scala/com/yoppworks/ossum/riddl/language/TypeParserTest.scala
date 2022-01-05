@@ -1,6 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {

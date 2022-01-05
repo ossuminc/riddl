@@ -1,9 +1,10 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import AST.*
+import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import fastparse.*
-import ScalaWhitespace.*
-import Terminals.Keywords
+import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for domains. */
 trait DomainParser

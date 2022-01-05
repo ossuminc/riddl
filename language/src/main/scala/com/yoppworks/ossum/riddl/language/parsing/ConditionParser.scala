@@ -1,10 +1,10 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import AST.*
-import Terminals.Punctuation
-import Terminals.*
+import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.Operators
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 import fastparse.*
-import ScalaWhitespace.*
+import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For ConditionParser */
 trait ConditionParser extends ExpressionParser {

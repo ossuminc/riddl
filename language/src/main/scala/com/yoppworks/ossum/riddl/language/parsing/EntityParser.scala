@@ -1,10 +1,10 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import fastparse.*
-import ScalaWhitespace.*
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Terminals.Options
+import fastparse.*
+import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
 trait EntityParser

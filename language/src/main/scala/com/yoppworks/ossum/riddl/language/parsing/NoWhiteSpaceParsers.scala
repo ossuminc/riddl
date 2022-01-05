@@ -1,9 +1,9 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import fastparse.*
-import NoWhitespace.*
 import com.yoppworks.ossum.riddl.language.AST.LiteralString
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import fastparse.*
+import fastparse.NoWhitespace.*
 
 /** Parser rules that should not collect white space */
 trait NoWhiteSpaceParsers extends ParsingContext {

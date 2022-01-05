@@ -1,4 +1,4 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords

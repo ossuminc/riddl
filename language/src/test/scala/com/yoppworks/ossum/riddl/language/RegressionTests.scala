@@ -4,6 +4,7 @@ import com.yoppworks.ossum.riddl.language.AST.Aggregation
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Topic
 import com.yoppworks.ossum.riddl.language.AST.Type
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {

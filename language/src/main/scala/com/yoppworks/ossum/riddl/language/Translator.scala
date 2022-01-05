@@ -2,9 +2,9 @@ package com.yoppworks.ossum.riddl.language
 
 import java.io.File
 import java.nio.file.Path
-
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Riddl.Options
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 import pureconfig.*
 import pureconfig.error.*
 

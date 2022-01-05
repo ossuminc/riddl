@@ -1,10 +1,11 @@
 package com.yoppworks.ossum.riddl.language
 
 import java.io.File
-
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.Identifier
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 
 import scala.io.Source
 

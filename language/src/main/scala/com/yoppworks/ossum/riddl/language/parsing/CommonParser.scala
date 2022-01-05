@@ -1,12 +1,12 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import fastparse.*
-import ScalaWhitespace.*
 import com.yoppworks.ossum.riddl.language.AST.*
-import Terminals.Keywords
-import Terminals.Operators
-import Terminals.Punctuation
-import Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Operators
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import fastparse.*
+import fastparse.ScalaWhitespace.*
 
 import scala.language.postfixOps
 

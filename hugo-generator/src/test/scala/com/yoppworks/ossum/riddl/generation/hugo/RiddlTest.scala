@@ -2,8 +2,8 @@ package com.yoppworks.ossum.riddl.generation.hugo
 
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
 import com.yoppworks.ossum.riddl.language.AST
-import com.yoppworks.ossum.riddl.language.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.TopLevelParser
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec

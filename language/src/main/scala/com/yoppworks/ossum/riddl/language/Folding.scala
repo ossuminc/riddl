@@ -98,8 +98,8 @@ object Folding {
     ): S = {
       container match {
         case root: RootContainer => root.contents.foldLeft(initState) { case (s, content) =>
-          foldLeft(root, content, s)
-        }
+            foldLeft(root, content, s)
+          }
         case domain: Domain => openDomain(initState, parent, domain).step { state =>
             domain.types.foldLeft(state) { (next, ty) => doType(next, domain, ty) }
           }.step { state =>
@@ -156,8 +156,8 @@ object Folding {
             }
           }
         case adaptor: Adaptor => openAdaptor(initState, parent, adaptor).step { state =>
-          adaptor.adaptations.foldLeft(state) { (s, a) => doAdaptation(s, adaptor, a) }
-          closeAdaptor(state, parent, adaptor)
+            adaptor.adaptations.foldLeft(state) { (s, a) => doAdaptation(s, adaptor, a) }
+            closeAdaptor(state, parent, adaptor)
           }
         case topic: Topic => openTopic(initState, parent, topic).step { state =>
             val foldables: List[MessageDefinition] =
@@ -509,7 +509,7 @@ object Folding {
       container: Container,
       @unused
       rule: Adaptation
-    ): S = {state}
+    ): S = { state }
   }
 
 }

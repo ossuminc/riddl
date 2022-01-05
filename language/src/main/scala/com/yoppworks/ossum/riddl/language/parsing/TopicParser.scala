@@ -1,9 +1,9 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import fastparse.*
-import ScalaWhitespace.*
-import Terminals.Keywords
+import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For ChannelParser */
 trait TopicParser extends CommonParser with TypeParser {

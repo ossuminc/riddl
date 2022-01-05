@@ -2,10 +2,10 @@ package com.yoppworks.ossum.riddl.language
 
 import java.io.File
 import java.nio.file.Path
-
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 
 //noinspection ScalaStyle

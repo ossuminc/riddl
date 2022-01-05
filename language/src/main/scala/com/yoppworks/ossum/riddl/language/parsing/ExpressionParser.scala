@@ -1,10 +1,10 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import fastparse.*
-import ScalaWhitespace.*
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals.Operators
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import fastparse.*
+import fastparse.ScalaWhitespace.*
 
 import scala.collection.immutable.ListMap
 import scala.language.postfixOps

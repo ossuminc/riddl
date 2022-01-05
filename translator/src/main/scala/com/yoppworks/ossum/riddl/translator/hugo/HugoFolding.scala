@@ -243,5 +243,5 @@ class HugoFolding extends Folding[HugoState] {
     container: Container,
     @unused
     rule: Adaptation
-  ): HugoState = {state}
+  ): HugoState = { state }
 }

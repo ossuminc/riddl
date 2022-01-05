@@ -1,11 +1,12 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import java.io.File
-import java.nio.file.Path
+import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.AST.Location
 import fastparse.ParserInput
 import fastparse.internal.Util
 
+import java.io.File
+import java.nio.file.Path
 import scala.io.Source
 import scala.language.implicitConversions
 

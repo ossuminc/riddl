@@ -1,11 +1,12 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
+
+import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.AST.RootContainer
+import fastparse.*
+import fastparse.ScalaWhitespace.*
 
 import java.io.File
 import java.nio.file.Path
-
-import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import fastparse.*
-import ScalaWhitespace.*
 
 /** Top level parsing rules */
 class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {

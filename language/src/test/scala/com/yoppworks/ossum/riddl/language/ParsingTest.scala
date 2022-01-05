@@ -3,6 +3,9 @@ import java.io.File
 import AST.Definition
 import AST.RiddlNode
 import AST.*
+import com.yoppworks.ossum.riddl.language.parsing.ParserError
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import fastparse.*
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.*

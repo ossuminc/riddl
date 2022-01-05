@@ -1,10 +1,10 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Options
 import fastparse.*
-import ScalaWhitespace.*
-import Terminals.Keywords
-import Terminals.Options
+import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
 trait ContextParser extends AdaptorParser with EntityParser with InteractionParser with TypeParser {

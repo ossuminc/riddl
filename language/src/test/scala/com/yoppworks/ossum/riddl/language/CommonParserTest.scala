@@ -2,6 +2,7 @@ package com.yoppworks.ossum.riddl.language
 
 import AST.LiteralString
 import AST.Location
+import com.yoppworks.ossum.riddl.language.parsing.StringParser
 
 /** Unit Tests For CommonParser */
 class CommonParserTest extends ParsingTest {

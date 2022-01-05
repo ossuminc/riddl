@@ -1,5 +1,6 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
+import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals.*
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation.*

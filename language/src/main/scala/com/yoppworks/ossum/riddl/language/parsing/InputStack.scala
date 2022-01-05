@@ -1,7 +1,6 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
 import java.io.File
-
 import scala.collection.mutable
 
 /** Unit Tests For InputStack */

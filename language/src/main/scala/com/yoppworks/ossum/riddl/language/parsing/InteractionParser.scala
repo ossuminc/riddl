@@ -1,11 +1,11 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import AST.*
+import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Options
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 import fastparse.*
-import ScalaWhitespace.*
-import Terminals.Keywords
-import Terminals.Options
-import Terminals.Punctuation
+import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for context interactions */
 trait InteractionParser extends CommonParser {

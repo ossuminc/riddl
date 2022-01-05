@@ -1,15 +1,11 @@
-package com.yoppworks.ossum.riddl.language
+package com.yoppworks.ossum.riddl.language.parsing
 
-import java.io.File
-import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.DomainRef
-import com.yoppworks.ossum.riddl.language.AST.Identifier
-import com.yoppworks.ossum.riddl.language.AST.LiteralString
-import com.yoppworks.ossum.riddl.language.AST.Location
+import com.yoppworks.ossum.riddl.language.AST.*
+import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
-import fastparse.*
 
+import java.io.File
 import scala.annotation.unused
 import scala.collection.mutable
 
