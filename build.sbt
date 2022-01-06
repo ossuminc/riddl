@@ -1,5 +1,7 @@
 import sbt.Keys.scalaVersion
-import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
+
+import sbtbuildinfo.BuildInfoOption.BuildTime
+import sbtbuildinfo.BuildInfoOption.ToMap
 
 maintainer := "reid@reactific.com"
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -96,17 +98,18 @@ lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
     buildInfoUsePackageAsPath := true
   ).dependsOn(language, `hugo-generator`)
 
-lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin).settings(
-  name := "riddl-languge",
-  buildInfoObject := "BuildInfo",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.language",
-  buildInfoUsePackageAsPath := true,
-  scalacOptions := scala2_13_Options,
-  libraryDependencies ++= Dep.parsing ++ Dep.testing,
-  Compile / compileCheck := {
-    Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
-  }
-)
+lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
+  .configure(C.withCoverage).settings(
+    name := "riddl-languge",
+    buildInfoObject := "BuildInfo",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.language",
+    buildInfoUsePackageAsPath := true,
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Dep.parsing ++ Dep.testing,
+    Compile / compileCheck := {
+      Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
+    }
+  )
 
 lazy val `hugo-generator` = (project in file("hugo-generator")).enablePlugins(BuildInfoPlugin)
   .settings(
@@ -126,9 +129,7 @@ lazy val `example` = project.in(file("example")).settings(
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
   publishTo := Some(Resolver.defaultLocal),
-  libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.2.9" % "test"
-  )
+  libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
   /*
     runRiddlc := {
       val outDir: File = target.value / "riddlc" / "ReactiveBBQ"

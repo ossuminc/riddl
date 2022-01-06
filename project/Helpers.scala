@@ -1,5 +1,10 @@
 import sbt._
 
+import scoverage.ScoverageKeys.coverageEnabled
+import scoverage.ScoverageKeys.coverageFailOnMinimum
+import scoverage.ScoverageKeys.coverageMinimumBranchTotal
+import scoverage.ScoverageKeys.coverageMinimumStmtTotal
+
 /** V - Dependency Versions object */
 object V {
   val cats = "2.7.0"
@@ -24,4 +29,15 @@ object Dep {
   val parsing = Seq(fastparse, pureconfig)
   val testing = Seq(scalactic, scalatest, scalacheck)
 
+}
+
+object C {
+  def withCoverage(p: Project): Project = {
+    p.settings(
+      coverageEnabled := true,
+      coverageFailOnMinimum := true,
+      coverageMinimumStmtTotal := 80,
+      coverageMinimumBranchTotal := 80
+    )
+  }
 }
