@@ -20,4 +20,8 @@ include "Reservation"
 include "Server"
 include "Table"
 
+} explained as {
+|This subdomain pertains to all processes and data associated with a single restaurant location.
+|It includes several bounded contexts, as noted by the include statements above. To make the entity
+|Id's ubiquitous for the domain, their type definitions are defined at the domain level.
 }
