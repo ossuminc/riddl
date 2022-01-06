@@ -1,12 +1,12 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.io.File
-import java.nio.file.Path
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessages, ValidationOptions}
 import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
+
+import java.io.File
+import java.nio.file.Path
 
 //noinspection ScalaStyle
 class PosNeg extends ValidatingTest {
@@ -51,8 +51,8 @@ class PosNeg extends ValidatingTest {
 
             if (msgSet == expectedMessages) { succeed }
             else {
-              val missingMessages = expectedMessages &~ msgSet
-              val unexpectedMessages = msgSet &~ expectedMessages
+              val missingMessages = expectedMessages.diff(msgSet)
+              val unexpectedMessages = msgSet.diff(expectedMessages)
 
               val errMsg = new StringBuilder()
               errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
@@ -61,14 +61,14 @@ class PosNeg extends ValidatingTest {
                 errMsg.append(missingMessages.mkString(
                   "Expected to find the following messages and did not:\n\t",
                   "\n\t",
-                  ""
+                  "\n"
                 ))
               }
               if (unexpectedMessages.nonEmpty) {
                 errMsg.append(unexpectedMessages.mkString(
                   "Found the following messages which were not expected: \n\t",
                   "\n\t",
-                  ""
+                  "\n"
                 ))
               }
               fail(errMsg.toString())
@@ -99,7 +99,7 @@ class PosNeg extends ValidatingTest {
       } else {
         assert(riddlFiles.length == 1)
         val riddlFile = riddlFiles.head
-        import scala.jdk.CollectionConverters._
+        import scala.jdk.CollectionConverters.*
         val checkFileLines = checkFiles.iterator.flatMap { file =>
           java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
         }.map(_.trim).filter(_.nonEmpty).toSet
@@ -165,7 +165,7 @@ class PosNeg extends ValidatingTest {
       } else {
         assert(riddlFiles.length == 1)
         val riddlFile = riddlFiles.head
-        import scala.jdk.CollectionConverters._
+        import scala.jdk.CollectionConverters.*
         val checkFileLines = checkFiles.iterator.flatMap { file =>
           java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
         }.map(_.trim).filter(_.nonEmpty).toSet

@@ -1,7 +1,5 @@
 import sbt.Keys.scalaVersion
-
-import sbtbuildinfo.BuildInfoOption.BuildTime
-import sbtbuildinfo.BuildInfoOption.ToMap
+import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 maintainer := "reid@reactific.com"
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -127,7 +125,10 @@ lazy val `example` = project.in(file("example")).settings(
   Compile / packageBin / publishArtifact := false,
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
-  publishTo := Some(Resolver.defaultLocal)
+  publishTo := Some(Resolver.defaultLocal),
+  libraryDependencies ++= Seq(
+    "org.scalatest" %% "scalatest" % "3.2.9" % "test"
+  )
   /*
     runRiddlc := {
       val outDir: File = target.value / "riddlc" / "ReactiveBBQ"

@@ -1,11 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
+import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind, ValidationMessages,
+  ValidationOptions}
+import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -14,7 +12,7 @@ import scala.reflect.*
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidate[D <: Container: ClassTag](
+  def parseAndValidate[D <: Container : ClassTag](
     input: String
   )(validation: (D, ValidationMessages) => Assertion
   ): Assertion = {
@@ -58,11 +56,14 @@ abstract class ValidatingTest extends ParsingTest {
       case Right(root) =>
         val messages = Validation.validate(root, options)
         val errors = messages.filter(_.kind.isError)
-        val warnings = messages.iterator.filter(_.kind.isWarning)
+        val warnings: Seq[ValidationMessage] = messages.filter(_.kind.isWarning)
         info(s"${errors.length} Errors:")
-        info(errors.iterator.map(_.format).mkString("\n"))
+        if (errors.nonEmpty) {info(errors.map(_.format).mkString("\n"))}
         info(s"${warnings.length} Warnings:")
-        info(warnings.iterator.map(_.format).mkString("\n"))
+        if (warnings.nonEmpty) {
+          val asString = warnings.map(_.format).mkString("\n")
+          info(asString)
+        }
         errors mustBe empty
         warnings mustBe empty
     }

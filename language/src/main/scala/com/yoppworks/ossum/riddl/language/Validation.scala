@@ -4,8 +4,7 @@ import com.yoppworks.ossum.riddl.language.AST.*
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.reflect.ClassTag
-import scala.reflect.classTag
+import scala.reflect.{ClassTag, classTag}
 
 /** Validates an AST */
 object Validation {
@@ -369,9 +368,10 @@ object Validation {
     def checkNonEmpty(
       list: Seq[?],
       name: String,
-      thing: Definition
+      thing: Definition,
+      kind: ValidationMessageKind = Error
     ): ValidationState = {
-      check(list.nonEmpty, s"$name in ${thing.identify} should not be empty", Error, thing.loc)
+      check(list.nonEmpty, s"$name in ${thing.identify} should not be empty", kind, thing.loc)
     }
 
     def checkOptions[T](options: Seq[T], loc: Location): ValidationState = {
@@ -443,7 +443,10 @@ object Validation {
       state: ValidationState,
       container: Container,
       domain: Domain
-    ): ValidationState = { state.checkDefinition(container, domain) }
+    ): ValidationState = {
+      state.checkDefinition(container, domain)
+        .checkNonEmpty(domain.contents, "contents", domain, MissingWarning)
+    }
 
     override def closeDomain(
       state: ValidationState,
