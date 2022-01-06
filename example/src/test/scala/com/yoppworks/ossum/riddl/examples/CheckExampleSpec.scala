@@ -1,11 +1,11 @@
-/** Unit Tests To Check Documentation Examples */
+package com.yoppworks.ossum.riddl.examples
 
 import com.yoppworks.ossum.riddl.language.ValidatingTest
 import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
 
 import java.io.File
 
-/** Tests For CheckExamples */
+/** Unit Tests To Check Documentation Examples */
 class CheckExampleSpec extends ValidatingTest {
 
   "Reactive BBQ Example" should {

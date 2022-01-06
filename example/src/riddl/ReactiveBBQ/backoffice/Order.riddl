@@ -1,0 +1,5 @@
+context Order is {
+} explained as {
+| This context represents the orders that restaurants make to the backoffice
+| warehouses for their food supplies.
+}
