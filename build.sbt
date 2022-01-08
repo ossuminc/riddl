@@ -1,7 +1,5 @@
 import sbt.Keys.scalaVersion
-
-import sbtbuildinfo.BuildInfoOption.BuildTime
-import sbtbuildinfo.BuildInfoOption.ToMap
+import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 maintainer := "reid@reactific.com"
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -100,16 +98,16 @@ lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   .configure(C.withCoverage).settings(
-    name := "riddl-languge",
-    buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.language",
-    buildInfoUsePackageAsPath := true,
-    scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Dep.parsing ++ Dep.testing,
-    Compile / compileCheck := {
-      Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
-    }
-  )
+  name := "riddl-language",
+  buildInfoObject := "BuildInfo",
+  buildInfoPackage := "com.yoppworks.ossum.riddl.language",
+  buildInfoUsePackageAsPath := true,
+  scalacOptions := scala2_13_Options,
+  libraryDependencies ++= Dep.parsing ++ Dep.testing,
+  Compile / compileCheck := {
+    Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
+  }
+)
 
 lazy val `hugo-generator` = (project in file("hugo-generator")).enablePlugins(BuildInfoPlugin)
   .settings(
