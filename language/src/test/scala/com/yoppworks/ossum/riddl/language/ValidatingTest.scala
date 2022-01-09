@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind, ValidationMessages,
-  ValidationOptions}
+import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind,
+  ValidationMessages, ValidationOptions}
 import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import org.scalatest.Assertion
 
@@ -14,13 +14,14 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidate[D <: Container : ClassTag](
     input: String
-  )(validation: (D, ValidationMessages) => Assertion
+  )(
+    validation: (D, ValidationMessages) => Assertion
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: D @unchecked) =>
+      case Right(model: D@unchecked) =>
         val msgs = Validation.validate(model)
         validation(model, msgs)
     }
