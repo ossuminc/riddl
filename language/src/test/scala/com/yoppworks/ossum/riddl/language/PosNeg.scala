@@ -41,38 +41,30 @@ class PosNeg extends ValidatingTest {
 
       s"check $relativeFileName" in {
         validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
-          val errors = msgs.filter(_.kind.isError)
-          if (errors.nonEmpty) {
-            fail(s"""Compiler output validation messages:
-                    |${errors.iterator.map(_.format.mkString("-   ", "\n    ", ""))
-              .mkString("\n")}""".stripMargin)
-          } else {
-            val msgSet = msgs.iterator.map(_.format).filter(_.nonEmpty).toSet
+          val msgSet = msgs.map(_.format).filter(_.nonEmpty).toSet
+          if (msgSet == expectedMessages) {succeed}
+          else {
+            val missingMessages = expectedMessages.diff(msgSet)
+            val unexpectedMessages = msgSet.diff(expectedMessages)
 
-            if (msgSet == expectedMessages) { succeed }
-            else {
-              val missingMessages = expectedMessages.diff(msgSet)
-              val unexpectedMessages = msgSet.diff(expectedMessages)
-
-              val errMsg = new StringBuilder()
-              errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
-              errMsg.append("\nBUT\n")
-              if (missingMessages.nonEmpty) {
-                errMsg.append(missingMessages.mkString(
-                  "Expected to find the following messages and did not:\n\t",
-                  "\n\t",
-                  "\n"
-                ))
-              }
-              if (unexpectedMessages.nonEmpty) {
-                errMsg.append(unexpectedMessages.mkString(
-                  "Found the following messages which were not expected: \n\t",
-                  "\n\t",
-                  "\n"
-                ))
-              }
-              fail(errMsg.toString())
+            val errMsg = new StringBuilder()
+            errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
+            errMsg.append("\nBUT\n")
+            if (missingMessages.nonEmpty) {
+              errMsg.append(missingMessages.mkString(
+                "Expected to find the following messages and did not:\n\t",
+                "\n\t",
+                "\n"
+              ))
             }
+            if (unexpectedMessages.nonEmpty) {
+              errMsg.append(unexpectedMessages.mkString(
+                "Found the following messages which were not expected: \n\t",
+                "\n\t",
+                "\n"
+              ))
+            }
+            fail(errMsg.toString())
           }
         }
       }

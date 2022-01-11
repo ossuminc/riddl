@@ -1,20 +1,20 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Options
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
-trait ContextParser extends AdaptorParser with EntityParser with InteractionParser with TypeParser {
+trait ContextParser
+  extends AdaptorParser with EntityParser with InteractionParser with SagaParser with TypeParser {
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](StringIn(Options.wrapper, Options.function, Options.gateway).!) {
-      case (loc, Options.wrapper)  => WrapperOption(loc)
+      case (loc, Options.wrapper) => WrapperOption(loc)
       case (loc, Options.function) => FunctionOption(loc)
-      case (loc, Options.gateway)  => GatewayOption(loc)
-      case (_, _)                  => throw new RuntimeException("Impossible case")
+      case (loc, Options.gateway) => GatewayOption(loc)
+      case (_, _) => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -25,7 +25,7 @@ trait ContextParser extends AdaptorParser with EntityParser with InteractionPars
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       typeDef.map(Seq(_)) | entity.map(Seq(_)) | adaptor.map(Seq(_)) | interaction.map(Seq(_)) |
-        contextInclude
+        saga.map(Seq(_)) | contextInclude
     ).rep(0).map { seq => seq.flatten }
   }
 
@@ -40,7 +40,8 @@ trait ContextParser extends AdaptorParser with EntityParser with InteractionPars
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
-      Context(loc, id, options, types, entities, adaptors, interactions, addendum)
+      val sagas = mapTo[Saga](groups.get(classOf[Saga]))
+      Context(loc, id, options, types, entities, adaptors, sagas, interactions, addendum)
     }
   }
 }

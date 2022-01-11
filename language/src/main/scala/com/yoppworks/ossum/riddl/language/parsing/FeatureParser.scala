@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -51,8 +50,8 @@ trait FeatureParser extends CommonParser {
 
   def exampleBody[u: P]: P[(Seq[Given], Seq[When], Seq[Then], Seq[But])] = {
     P(
-      (givens.?.map(_.getOrElse(Seq.empty[Given])) ~ whens ~ thens ~
-        buts.?.map(_.getOrElse(Seq.empty[But]))) |
+      (givens.?.map(_.getOrElse(Seq.empty[Given])) ~ whens.?.map(_.getOrElse(Seq.empty[When])) ~
+        thens ~ buts.?.map(_.getOrElse(Seq.empty[But]))) |
         undefined((Seq.empty[Given], Seq.empty[When], Seq.empty[Then], Seq.empty[But]))
     )
   }

@@ -100,6 +100,10 @@ object AST {
 
   sealed trait TypeExpression extends DefinitionValue
 
+  sealed trait TypeContainer extends TypeExpression {
+    def contents: Seq[Definition]
+  }
+
   case class TypeRef(loc: Location, id: PathIdentifier) extends Reference with TypeExpression {}
 
   case class Optional(loc: Location, typeExp: TypeExpression) extends TypeExpression
@@ -136,7 +140,9 @@ object AST {
     loc: Location,
     of: Seq[Enumerator],
     description: Option[Description] = None)
-      extends TypeExpression
+    extends TypeContainer {
+    lazy val contents: Seq[Definition] = of
+  }
 
   case class Alternation(
     loc: Location,
@@ -155,7 +161,9 @@ object AST {
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field],
     description: Option[Description] = None)
-      extends TypeExpression with EntityValue
+    extends TypeContainer with EntityValue {
+    lazy val contents: Seq[Definition] = fields
+  }
 
   case class Mapping(
     loc: Location,
@@ -687,6 +695,7 @@ object AST {
     types: Seq[Type] = Seq.empty[Type],
     entities: Seq[Entity] = Seq.empty[Entity],
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
+    sagas: Seq[Saga] = Seq.empty[Saga],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     description: Option[Description] = None)
       extends Container with DomainDefinition {
@@ -746,32 +755,62 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     joints: Seq[Joint] = Seq.empty[Joint],
     description: Option[Description] = None)
-      extends Container with DomainDefinition {
+    extends Container with DomainDefinition {
     def contents: Seq[Definition] = pipes ++ processors
   }
 
-  /** Definition of an Interaction Interactions define an exemplary interaction between the system
-    * being designed and other actors. The basic ideas of an Interaction are much like UML Sequence
-    * Diagram.
-    *
-    * @param loc
-    *   Where in the input the Scenario is defined
-    * @param id
-    *   The name of the scenario
-    * @param actions
-    *   The actions that constitute the interaction
-    */
+  /** Definition of an Interaction
+   *
+   * Interactions define an exemplary interaction between the system being designed and other
+   * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
+   *
+   * @param loc
+   * Where in the input the Scenario is defined
+   * @param id
+   * The name of the scenario
+   * @param actions
+   * The actions that constitute the interaction
+   */
   case class Interaction(
     loc: Location,
     id: Identifier,
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     description: Option[Description] = None)
-      extends Container with DomainDefinition with ContextDefinition {
+    extends Container with DomainDefinition with ContextDefinition {
     lazy val contents: Seq[Definition] = actions
   }
 
+  case class SagaAction(
+    loc: Location,
+    id: Identifier,
+    entity: EntityRef,
+    doCommand: CommandRef,
+    undoCommand: CommandRef,
+    example: Seq[Example],
+    description: Option[Description] = None)
+    extends Definition
+
+  sealed trait SagaOption extends RiddlValue
+
+  case class SequentialOption(loc: Location) extends SagaOption
+
+  case class ParallelOption(loc: Location) extends SagaOption
+
+  case class Saga(
+    loc: Location,
+    id: Identifier,
+    options: Seq[SagaOption] = Seq.empty[SagaOption],
+    input: Aggregation,
+    sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
+    description: Option[Description] = None)
+    extends Container with ContextDefinition {
+    lazy val contents: Seq[Definition] = sagaActions
+  }
+
   sealed trait RoleOption extends RiddlValue
+
   case class HumanOption(loc: Location) extends RoleOption
+
   case class DeviceOption(loc: Location) extends RoleOption
 
   sealed trait ActionDefinition extends Definition {
@@ -779,7 +818,7 @@ object AST {
   }
 
   /** Used to capture reactions to actions. Actions include reactions in their definition to model
-    * the precipitating reactions to the action.
+   * the precipitating reactions to the action.
     */
   case class Reaction(
     loc: Location,

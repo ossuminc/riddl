@@ -1,0 +1,28 @@
+domain ignore is {
+  context ignore is {
+    type Something = command {}
+    type UndoSomething = command {}
+    type AnotherThing = command {}
+    type UndoAnotherThing = command {}
+    entity blah is { ??? }
+    saga name is {
+      options(parallel)
+      input { p1: String, p2: String }
+      action Step1 for entity blah is {
+        command Something reverted by command undoSomething as {
+          example A is {
+            then "Pass p1 to blah via Something command"
+          }
+        }
+      }
+      action Step2 for entity blah is {
+        command AnotherThing reverted by command undoAnotherThing as {
+          example B is {
+            given "Step A has completed"
+            then "Pass p2 to blah via AnotherThing command"
+          }
+        }
+      }
+    }
+  } described as "ignore"
+} described as "just for testing a saga"
