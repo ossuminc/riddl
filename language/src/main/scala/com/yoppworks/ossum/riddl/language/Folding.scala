@@ -124,9 +124,9 @@ object Folding {
             context.interactions.foldLeft(state) { (next, in) => foldLeft(context, in, next) }
           }.step { state => closeContext(state, parent, context) }
         case entity: Entity => openEntity(initState, parent, entity).step { state =>
-            entity.types.foldLeft(state) { (next, typ) => doType(next, entity, typ) }
-          }.step { state =>
-            entity.handlers.foldLeft(state) { (next, handler) => doHandler(next, entity, handler) }
+          entity.types.foldLeft(state) { (next, typ) => doType(next, entity, typ) }
+        }.step { state =>
+          entity.handlers.foldLeft(state) { (next, handler) => doHandler(next, entity, handler) }
         }.step { state =>
           entity.features.foldLeft(state) { (next, feature) => foldLeft(entity, feature, next) }
         }.step { state =>

@@ -161,7 +161,7 @@ object AST {
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field],
     description: Option[Description] = None)
-    extends TypeContainer with EntityValue {
+      extends TypeContainer with EntityValue {
     lazy val contents: Seq[Definition] = fields
   }
 
@@ -800,7 +800,8 @@ object AST {
     loc: Location,
     id: Identifier,
     options: Seq[SagaOption] = Seq.empty[SagaOption],
-    input: Aggregation,
+    input: Option[TypeExpression],
+    output: Option[TypeExpression],
     sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
     description: Option[Description] = None)
     extends Container with ContextDefinition {

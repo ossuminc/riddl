@@ -53,11 +53,11 @@ inlets and outlets the processor has. These patterns are not declared
 directly in RIDDL but inferred from the `inlet` and `outlet` statements in 
 the definition of a processor.
 
-|# of Inlets|# of Outlets|Pattern| Description                                                 |
-|-----------|------------|-------|-------------------------------------------------------------|
-|0|1|Source| Sources originate their data, and publish it to an outlet   |
-|1|0|Sink| Sinks terminate their data, and consume it from their inlet |
-|1|1|Flow| Flows transform their data from inlet to outlet             |
-|N|1|Fan In| Fans in their data from multiple sources to a single outlet |
-|1|N|Fan Out| Fans out their data from one source to multiple outlets|
+| # of Inlets | # of Outlets |Pattern| Description                                                     |
+|---------|--------|-------|-----------------------------------------------------------------|
+| 0       | 1      |Source| Sources originate their data, and publish it to an outlet       |
+| 1       | 0      |Sink| Sinks terminate their data, and consume it from their inlet     |
+| 1       | 1      |Flow| Flows transform their data from inlet to outlet                 |
+| &gt; 1 | any    |Fan In| Fans in their data from multiple sources to a single outlet     |
+| any     | &gt; 1 |Fan Out| Fans out their data from one source to multiple outlets         |
 

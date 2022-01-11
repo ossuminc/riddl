@@ -20,18 +20,34 @@ describes the context in which Sagas are used:
 > databases owned by different services the application cannot simply use
 > a local ACID transaction.
 
-The goal of a saga is to define a function across multiple entities that 
-must atomically succeed or fail with no state change. So, a saga defines a set
-of commands to send to incur changes on entities, and a set of commands to 
-undo those changes in case it cannot be atomically completed.
+The goal of a saga is to define a function across multiple entities that must atomically succeed or
+fail with no state change. So, a saga defines a set of commands to send to incur changes on
+entities, and a set of commands to undo those changes in case it cannot be atomically completed.
 
-Sagas are very like functions but they are 
+Sagas are very like functions because they have required inputs and yield outputs.
 
 ## Example
+
 ```riddl
 saga AllOrNothing is {
-  action "foo" is <command> to entity thingie reverted by <type>
-  action "bar" is <type> to entity thunkie reverted by <type>   
+  options(parallel)
+  requires { p1: String, p2: String }
+  yields { result: String }
+  action Step1 for entity Thingy is {
+    command DoIt reverted by UnDoIt as {
+      example One is {
+        then "pass p1 to entity Thingy with DoIt"
+      }
+    }
+  }
+  action Step2 for entity Thingy is {
+    command CheckIt reverted by UnCheckIt as {
+      example One is {
+        then "pass p2 to entity Thingy with CheckIt"
+        and "yield the result from the reply from Thingy"
+      }
+    }
+  }
  }
 ```
 defines an api named MyNewAPI that can only be used as a saga. 

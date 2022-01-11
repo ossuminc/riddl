@@ -56,29 +56,36 @@ value is the minimum recommended number of partitions which defaults to 5
 if not specified  
 
 ### `lossy`
+
 By default, pipes provide the guarantee that they will deliver each data item
-_at least once_. The implementation must then arrange for data items to be 
-idempotent so that the effect of running the event two or more times is the 
-same as running it once. To counteract this assumption a pipe can be use the
-`lossy` option which reduces the guarantee to merely _best reasonable effort_,
-which could mean loss of data. This may increase throughput and lower overhead 
-and is warranted in situations where data loss is not catastrophic to the system.
-Some IoT systems can have this characteristic. 
+_at least once_. The implementation must then arrange for data items to be idempotent so that the
+effect of running the event two or more times is the same as running it once. To counteract this
+assumption a pipe can be use the
+`lossy` option which reduces the guarantee to merely _best reasonable effort_, which could mean loss
+of data. This may increase throughput and lower overhead and is warranted in situations where data
+loss is not catastrophic to the system. Some IoT systems can have this characteristic.
 
-## Publishers & Consumers
-Attached to the ends of pipes are publishers and consumers. These are 
-[processors](processor.md) of data and may originate, terminate or flow data 
-through them, connecting two pipes together. 
+## Producers & Consumers
 
-{{<mermaid align="left">}}
-graph LR;
-Producers --> P{{Pipe}} --> Consumers
+Attached to the ends of pipes are producers and consumers. These are
+[processors](processor.md) of data and may originate, terminate or flow data through them,
+connecting two pipes together. Producers provide the data, consumers consume the data. Sometimes we
+call producers *sources* because they originate the data. Sometimes we call consumers *sinks*
+because they terminate the data.
 
-Source --> P1{{Pipe 1}} --> Flow --> P2{{Pipe 2}} --> Sink
-{{< /mermaid >}}
+{{<mermaid align="left">}} graph LR; Producers --> P{{Pipe}} --> Consumers
 
-Pipes may have multiple publishers (writers of data to the pipe) and
-multiple consumers (readers of data from the pipe). In fact, because of the
-_partitioned consumption_ principle, there can be multiple groups of
-consumers, each group getting each data item from the pipe.
+Source --> P1{{Pipe 1}} --> Flow --> P2{{Pipe 2}} --> Sink {{< /mermaid >}}
+
+Pipes may have multiple publishers (writers of data to the pipe) and multiple consumers (readers of
+data from the pipe). In fact, because of the
+_partitioned consumption_ principle, there can be multiple groups of consumers, each group getting
+each data item from the pipe.
+
+## Subscriptions
+
+When a pipe has multiple consumers, they are organized into subscriptions. Each subscription gets
+every datum the pipe carries. Consumers attach to a subscription and there is generally one consumer
+per partition of the subscription. Sometimes subscriptions are known as *consumer groups* as is the
+case for Kafka.
 

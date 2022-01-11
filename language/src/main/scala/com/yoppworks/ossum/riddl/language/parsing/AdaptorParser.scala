@@ -1,15 +1,12 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
-import com.yoppworks.ossum.riddl.language.AST.Adaptation
-import com.yoppworks.ossum.riddl.language.AST.Adaptor
-import com.yoppworks.ossum.riddl.language.AST.EventAdaptation
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.AST.{Adaptation, Adaptor, EventAdaptation}
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parser rules for Adaptors */
-trait AdaptorParser extends FeatureParser {
+trait AdaptorParser extends GherkinParser {
 
   def adaptation[u: P]: P[Adaptation] = {
     P(
