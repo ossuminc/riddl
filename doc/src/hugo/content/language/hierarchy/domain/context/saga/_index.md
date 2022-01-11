@@ -50,4 +50,5 @@ saga AllOrNothing is {
   }
  }
 ```
-defines an api named MyNewAPI that can only be used as a saga. 
+defines saga, `AllOrNothing`, with two input parameters, an output string, and two steps to be done
+in parallel. 
