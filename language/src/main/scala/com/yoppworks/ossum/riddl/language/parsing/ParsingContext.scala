@@ -2,8 +2,7 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import fastparse.*
-import fastparse.Parsed.Failure
-import fastparse.Parsed.Success
+import fastparse.Parsed.{Failure, Success}
 
 import java.io.File
 import scala.annotation.unused
@@ -19,8 +18,6 @@ case class ParserError(input: RiddlParserInput, loc: Location, msg: String) exte
 
 /** Unit Tests For ParsingContext */
 trait ParsingContext {
-
-  def root: File = new File(System.getProperty("user.dir"))
 
   protected val stack: InputStack = InputStack()
 

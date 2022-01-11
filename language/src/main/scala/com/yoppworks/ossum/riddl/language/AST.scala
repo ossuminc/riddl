@@ -140,7 +140,7 @@ object AST {
     loc: Location,
     of: Seq[Enumerator],
     description: Option[Description] = None)
-    extends TypeContainer {
+      extends TypeContainer {
     lazy val contents: Seq[Definition] = of
   }
 
@@ -819,7 +819,7 @@ object AST {
 
   /** Used to capture reactions to actions. Actions include reactions in their definition to model
    * the precipitating reactions to the action.
-    */
+   */
   case class Reaction(
     loc: Location,
     id: Identifier,

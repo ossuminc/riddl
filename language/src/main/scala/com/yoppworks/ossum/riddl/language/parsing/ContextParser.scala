@@ -7,7 +7,7 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
 trait ContextParser
-  extends AdaptorParser with EntityParser with InteractionParser with SagaParser with TypeParser {
+    extends AdaptorParser with EntityParser with InteractionParser with SagaParser with TypeParser {
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](StringIn(Options.wrapper, Options.function, Options.gateway).!) {

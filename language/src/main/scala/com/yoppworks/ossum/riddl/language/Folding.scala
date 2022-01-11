@@ -127,16 +127,16 @@ object Folding {
             entity.types.foldLeft(state) { (next, typ) => doType(next, entity, typ) }
           }.step { state =>
             entity.handlers.foldLeft(state) { (next, handler) => doHandler(next, entity, handler) }
-          }.step { state =>
-            entity.features.foldLeft(state) { (next, feature) => foldLeft(entity, feature, next) }
-          }.step { state =>
-            entity.functions.foldLeft(state) { (next, function) =>
-              doFunction(next, entity, function)
-            }
-          }.step { state =>
-            entity.invariants.foldLeft(state) { (next, invariant) =>
-              doInvariant(next, entity, invariant)
-            }
+        }.step { state =>
+          entity.features.foldLeft(state) { (next, feature) => foldLeft(entity, feature, next) }
+        }.step { state =>
+          entity.functions.foldLeft(state) { (next, function) =>
+            doFunction(next, entity, function)
+          }
+        }.step { state =>
+          entity.invariants.foldLeft(state) { (next, invariant) =>
+            doInvariant(next, entity, invariant)
+          }
         }.step { state =>
           entity.states.foldLeft(state) { (next, s) => foldLeft(entity, s, next) }
         }.step { state => closeEntity(state, parent, entity) }
@@ -501,7 +501,8 @@ object Folding {
       container: Container,
       @unused
       pipe: Pipe
-    ): S = { state }
+    ): S = {state}
+
     def doProcessor(
       state: S,
       @unused
