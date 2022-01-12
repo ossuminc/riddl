@@ -9,3 +9,4 @@ target
 .DS_Store
 **/*.zip
 **/*.gzip
+/chroma-riddl-lexer/go.sum
