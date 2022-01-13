@@ -4,13 +4,13 @@ import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 import org.scalatest.Assertion
 
 import java.io.File
+import java.nio.file.Path
 
-/** Test Generator and Traversal */
-class FormatTranslatorTest extends ParsingTest {
+/** Test The FormatTranslator's ability to generate consistent output */
+class FormatTranslatorTest extends RiddlFilesTestBase {
 
-  def runOne(fileName: String): Assertion = {
-    val fullName = s"language/src/test/input/$fileName"
-    val input = RiddlParserInput(new File(fullName))
+  def checkAFile(rootDir: Path, file: File): Assertion = {
+    val input = RiddlParserInput(file)
     parseTopLevelDomains(input) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
@@ -21,10 +21,8 @@ class FormatTranslatorTest extends ParsingTest {
         parseTopLevelDomains(output) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
-            println(output)
-            fail("On First Generation:\n" + message)
+            fail(s"In '${file.getPath}': on first generation:\n" + message)
           case Right(roots2) =>
-            input mustEqual output
             val trans2 = new FormatTranslator
             val output2 = trans2.translateToString(roots2)
             parseTopLevelDomains(output2) match {
@@ -38,14 +36,14 @@ class FormatTranslatorTest extends ParsingTest {
     succeed
   }
 
-  // TODO: Fix FormatTranslator so this works again
-  "FormatTranslator" should {
-    "reflect everything.riddl" in {
-      pending // runOne("everything.riddl")
-    }
-    "reflect rbbq.riddl" in {
-      pending // runOne("rbbq.riddl")
-    }
-    "error out on nestedInvalid.riddl" in { pending }
-  }
+  val items = Seq(
+    "example/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl" -> false,
+    "doc/src/hugo/content/language/hierarchy/domain/streaming/riddl/plant.riddl" -> false,
+    "language/src/test/input/domains" -> true,
+    "language/src/test/input/enumerations" -> true,
+    "language/src/test/input/mappings" -> true,
+    "language/src/test/input/ranges" -> true
+  )
+
+  "FormatTranslator" should {checkItems(items)}
 }

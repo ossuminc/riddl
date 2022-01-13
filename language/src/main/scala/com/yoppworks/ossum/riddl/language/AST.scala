@@ -755,7 +755,7 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     joints: Seq[Joint] = Seq.empty[Joint],
     description: Option[Description] = None)
-    extends Container with DomainDefinition {
+      extends Container with DomainDefinition {
     def contents: Seq[Definition] = pipes ++ processors
   }
 

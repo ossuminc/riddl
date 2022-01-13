@@ -2,9 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
+import pureconfig.{ConfigReader, ConfigSource}
 import pureconfig.generic.auto.*
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
 
 import java.io.File
 import java.nio.file.Path
@@ -234,7 +233,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Container,
       domain: Domain
-    ): FormatState = { state.open(s"domain ${domain.id.value} {") }
+    ): FormatState = {state.open(s"domain ${domain.id.value} is {")}
 
     override def closeDomain(
       state: FormatState,
@@ -246,7 +245,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Container,
       context: Context
-    ): FormatState = { state.open(s"context ${context.id.value} {") }
+    ): FormatState = {state.open(s"context ${context.id.value} is {")}
 
     override def closeContext(
       state: FormatState,
@@ -259,7 +258,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Container,
       entity: Entity
     ): FormatState = {
-      state.open(s"entity ${entity.id.value} {").addLine(s"state is ").step { st =>
+      state.open(s"entity ${entity.id.value} is {").addLine(s"state is ").step { st =>
         entity.states.foldLeft(st) { (s, state) =>
           s.addLine(s"state ${state.id.value} is").visitTypeExpr(state.typeEx)
         }

@@ -102,6 +102,7 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   buildInfoObject := "BuildInfo",
   buildInfoPackage := "com.yoppworks.ossum.riddl.language",
   buildInfoUsePackageAsPath := true,
+  coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType",
   scalacOptions := scala2_13_Options,
   libraryDependencies ++= Dep.parsing ++ Dep.testing,
   Compile / compileCheck := {

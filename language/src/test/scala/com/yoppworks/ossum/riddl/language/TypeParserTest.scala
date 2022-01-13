@@ -22,7 +22,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(1 -> 1, Identifier(1 -> 6, "boo"), Bool(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow renames of UniqueId" in {
+    "allow renames of Id(path)" in {
       val input = "type ident = Id()"
       val expected = Type(
         1 -> 1,
@@ -30,7 +30,6 @@ class TypeParserTest extends ParsingTest {
         UniqueId(1 -> 14, entityPath = PathIdentifier(1 -> 14, Seq.empty[String]), None)
       )
       checkDefinition[Type, Type](input, expected, identity)
-
     }
     "allow renames of 8 literal types" in {
       val cases = Map[String, Type](

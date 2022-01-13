@@ -6,7 +6,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** SagaParser Implements the parsing of saga definitions in context definitions.
- */
+  */
 trait SagaParser extends FunctionParser {
 
   def sagaAction[u: P]: P[SagaAction] = {

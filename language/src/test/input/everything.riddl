@@ -28,7 +28,7 @@ domain Everything is {
     type str is String             // Define str as a String
     type num is Number             // Define num as a Number
     type boo is Boolean            // Define boo as a Boolean
-    type ident is UUID             // Define ident as an Id
+    type ident is Id(someDef)      // Define ident as an Id
     type dat is Date               // Define dat as a Date
     type tim is Time               // Define tim as a Time
     type stamp is TimeStamp        // Define stamp as a TimeStamp
