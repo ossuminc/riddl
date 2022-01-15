@@ -19,6 +19,31 @@ case class SymbolTable(container: Container) {
     }
   }
 
+  type Symbols = mutable.HashMap[String, mutable.Set[(Definition, Container)]]
+
+  final val symbols = mutable.HashMap.empty[String, mutable.Set[(Definition, Container)]]
+
+  Folding.foldEachDefinition[Unit](container, container, ()) { (parent, child, _) =>
+    addToSymTab(child.id.value, child -> parent)
+    child match {
+      case e: Entity => e.states.foreach { s: State => addToSymTab(s.id.value, s -> e) }
+      case t: Type => t.typ match {
+          case e: Enumeration => e.of.foreach { etor =>
+              addToSymTab(etor.id.value, etor -> parent)
+            // type reference and identifier relations must be handled by semantic validation
+            }
+          case mt: MessageType => mt.fields.foreach { fld =>
+              addToSymTab(fld.id.value, fld -> parent)
+            }
+          case agg: Aggregation => agg.fields.foreach { fld =>
+              addToSymTab(fld.id.value, fld -> parent)
+            }
+          case _ => addToSymTab(t.id.value, t -> parent) // types are definitions too
+        }
+      case _ =>
+    }
+  }
+
   def parentOf(definition: Definition): Option[Container] = { parentage.get(definition) }
 
   def parentsOf(definition: Definition): List[Container] = {
@@ -43,33 +68,10 @@ case class SymbolTable(container: Container) {
     definition.id.value +: parentsOf(definition).map(_.id.value)
   }
 
-  type Symbols = mutable.HashMap[String, mutable.Set[(Definition, Container)]]
-
-  final val symbols = mutable.HashMap.empty[String, mutable.Set[(Definition, Container)]]
-
   private def addToSymTab(name: String, pair: (Definition, Container)): Unit = {
     val extracted = symbols.getOrElse(name, mutable.Set.empty[(Definition, Container)])
     val included = extracted += pair
     symbols.update(name, included)
-  }
-
-  Folding.foldEachDefinition[Unit](container, container, ()) { (parent, child, _) =>
-    addToSymTab(child.id.value, child -> parent)
-    child match {
-      case e: Entity => e.states.foreach { s: State => addToSymTab(s.id.value, s -> e) }
-      case m: MessageDefinition => m.typ match {
-          case a: Aggregation => a.fields.foreach { f: Field => addToSymTab(f.id.value, f -> m) }
-          case _              =>
-        }
-      case t: Type => t.typ match {
-          case e: Enumeration => e.of.foreach { etor =>
-              addToSymTab(etor.id.value, t -> parent)
-            // type reference and identifier relations must be handled by semantic validation
-            }
-          case _ =>
-        }
-      case _ =>
-    }
   }
 
   def lookupSymbol[D <: Definition: ClassTag](

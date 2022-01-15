@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -21,14 +22,14 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
   }
 
   /** Parses function literals, i.e.
-   *
-   * {{{
-   *   function myFunction is {
-   *     requires is Boolean
-   *     yields is Integer
-   *   }
-   * }}}
-   */
+    *
+    * {{{
+    *   function myFunction is {
+    *     requires is Boolean
+    *     yields is Integer
+    *   }
+    * }}}
+    */
   def function[u: P]: P[Function] = {
     P(
       location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~

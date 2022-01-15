@@ -8,7 +8,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for context interactions */
-trait InteractionParser extends CommonParser {
+trait InteractionParser extends ReferenceParser {
 
   def roleOptions[u: P]: P[Seq[RoleOption]] = {
     options(StringIn("human", "device").!) {

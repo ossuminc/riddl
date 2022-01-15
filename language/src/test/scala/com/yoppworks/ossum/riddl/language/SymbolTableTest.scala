@@ -30,24 +30,17 @@ class SymbolTableTest extends ParsingTest {
     "capture all expected symbol references and parents" in {
       st.lookup[Domain](Seq("Everything")).headOption mustBe defined
 
+      assertRefWithParent[Type, Domain](st.lookup[Type](Seq("DoAThing")).headOption, "Everything")
       assertRefWithParent[Type, Domain](st.lookup[Type](Seq("SomeType")).headOption, "Everything")
-
-      assertRefWithParent[Topic, Domain](st.lookup[Topic](Seq("AChannel")).headOption, "Everything")
-
-      assertRefWithParent[Command, Topic](
-        st.lookup[Command](Seq("DoThisThing")).headOption,
-        "AChannel"
+      assertRefWithParent[Plant, Domain](st.lookup[Plant](Seq("APlant")).headOption, "Everything")
+      assertRefWithParent[Pipe, Plant](st.lookup[Pipe](Seq("AChannel")).headOption, "APlant")
+      assertRefWithParent[Processor, Plant](
+        st.lookup[Processor](Seq("Source")).headOption,
+        "APlant"
       )
-
-      assertRefWithParent[Event, Topic](
-        st.lookup[Event](Seq("ThingWasDone")).headOption,
-        "AChannel"
-      )
-
-      assertRefWithParent[Query, Topic](
-        st.lookup[Query](Seq("FindThisThing")).headOption,
-        "AChannel"
-      )
+      assertRefWithParent[Processor, Plant](st.lookup[Processor](Seq("Sink")).headOption, "APlant")
+      assertRefWithParent[Joint, Plant](st.lookup[Joint](Seq("input")).headOption, "APlant")
+      assertRefWithParent[Joint, Plant](st.lookup[Joint](Seq("output")).headOption, "APlant")
 
       assertRefWithParent[Context, Domain](st.lookup[Context](Seq("full")).headOption, "Everything")
 
@@ -65,13 +58,6 @@ class SymbolTableTest extends ParsingTest {
       assertRefWithParent[Type, Entity](
         st.lookup[Type](Seq("somethingDate")).headOption,
         "Something"
-      )
-    }
-
-    "capture expected message field reference with appropriate parent" in {
-      assertRefWithParent[Field, Command](
-        st.lookup[Field](Seq("thingField")).headOption,
-        "DoThisThing"
       )
     }
 

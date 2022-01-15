@@ -57,7 +57,7 @@ class TypeValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'TypeTest' was expected to be Entity but is Context instead"
+          "'TypeTest' was expected to be a Entity but is a Context instead"
         )
       }
     }

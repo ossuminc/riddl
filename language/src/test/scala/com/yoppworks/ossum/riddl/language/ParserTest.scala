@@ -60,7 +60,11 @@ class ParserTest extends ParsingTest {
     "allow major definitions to be stubbed with ???" in {
       val input = """domain one is { ??? }
                     |domain two is {
-                    |  topic one is { ??? }
+                    |  plant one is { ??? }
+                    |  plant two is {
+                    |    pipe a is { ??? }
+                    |    processor b is { ??? }
+                    |  }
                     |  interaction one is { ??? }
                     |  context one is { ??? }
                     |  context two is {
@@ -108,20 +112,6 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow topic definitions in domains" in {
-      val input = """
-                    |domain foo is {
-                    |
-                    |    topic bar is { commands{} events{} queries{} results{} }
-                    |}
-                    |""".stripMargin
-      parseDomainDefinition[Topic](input, _.topics.head) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(content) => content mustBe Topic(4 -> 5, Identifier(4 -> 11, "bar"))
-      }
-    }
     "allow type definitions in contexts" in {
       val input = """type Vikings = any of {
                     |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
@@ -147,73 +137,6 @@ class ParserTest extends ParsingTest {
               )
             )
           )
-      }
-    }
-    "allow command definitions in topics" in {
-      val input = """domain bar is { topic foo is { commands {
-                    |DoThisThing is {} yields event ThingWasDone
-                    |} } }
-                    |""".stripMargin
-      parseDomainDefinition[Command](input, _.topics.head.commands.head) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(content) => content mustBe Command(
-            2 -> 1,
-            Identifier(2 -> 1, "DoThisThing"),
-            Aggregation(2 -> 16, Seq.empty[Field]),
-            Seq(EventRef(2 -> 26, PathIdentifier(2 -> 32, Seq("ThingWasDone"))))
-          )
-      }
-    }
-    "allow event definitions in contexts" in {
-      val input = """domain bar is { topic foo is { events {
-                    |ThingWasDone is {}
-                    |} } }
-                    |""".stripMargin
-      parseDomainDefinition(input, _.topics.head.events.head) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(content) => content mustBe Event(
-            2 -> 1,
-            Identifier(2 -> 1, "ThingWasDone"),
-            Aggregation(2 -> 17, Seq.empty[Field])
-          )
-      }
-    }
-    "allow query definitions in topics" in {
-      val input = """domain bar is { topic foo is { queries {
-                    |FindThisThing = {} yields result SomeResult
-                    |} } }
-                    |""".stripMargin
-      parseDomainDefinition(input, _.topics.head.queries.head) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(content) => content mustBe Query(
-            2 -> 1,
-            Identifier(2 -> 1, "FindThisThing"),
-            Aggregation(2 -> 17, Seq.empty[Field]),
-            ResultRef(2 -> 27, PathIdentifier(2 -> 34, Seq("SomeResult")))
-          )
-      }
-    }
-    "allow result definitions in topics" in {
-      val input = """domain bar is { topic foo is {
-                    |result ThisQueryResult = {}
-                    |} }
-                    |""".stripMargin
-      parseDomainDefinition(input, _.topics.head.results.head) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(content) => content mustBe Result(
-            2 -> 8,
-            Identifier(2 -> 8, "ThisQueryResult"),
-            Aggregation(2 -> 26, Seq.empty[Field])
-          )
-
       }
     }
     "allow invariant definitions" in {

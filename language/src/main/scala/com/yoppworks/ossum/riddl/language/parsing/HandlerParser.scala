@@ -11,7 +11,7 @@ import fastparse.ScalaWhitespace.*
 import scala.collection.immutable.ListMap
 
 /** Parser for an entity handler definition */
-trait HandlerParser extends CommonParser with ConditionParser with ExpressionParser {
+trait HandlerParser extends ReferenceParser with ConditionParser with ExpressionParser {
 
   def assignStmt[u: P]: P[SetStatement] = {
     P(
@@ -40,7 +40,7 @@ trait HandlerParser extends CommonParser with ConditionParser with ExpressionPar
   def publishStmt[u: P]: P[PublishStatement] = {
     P(
       (Keywords.yields | Keywords.publish) ~/ location ~ messageConstructor ~
-        Terminals.Readability.to ~ topicRef ~ description
+        Terminals.Readability.to ~ pipeRef ~ description
     ).map { t => (PublishStatement.apply _).tupled(t) }
   }
 

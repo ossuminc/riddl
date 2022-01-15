@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Options
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -11,10 +12,10 @@ trait ContextParser
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](StringIn(Options.wrapper, Options.function, Options.gateway).!) {
-      case (loc, Options.wrapper) => WrapperOption(loc)
+      case (loc, Options.wrapper)  => WrapperOption(loc)
       case (loc, Options.function) => FunctionOption(loc)
-      case (loc, Options.gateway) => GatewayOption(loc)
-      case (_, _) => throw new RuntimeException("Impossible case")
+      case (loc, Options.gateway)  => GatewayOption(loc)
+      case (_, _)                  => throw new RuntimeException("Impossible case")
     }
   }
 

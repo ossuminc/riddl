@@ -4,7 +4,8 @@ import com.yoppworks.ossum.riddl.language.AST.*
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 
 /** Validates an AST */
 object Validation {
@@ -16,7 +17,7 @@ object Validation {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, options)
     val folding = new ValidationFolding
-    folding.foldLeft(root, root, state).msgs
+    folding.foldLeft(root, root, state).msgs.sortBy(_.loc)
   }
 
   sealed trait ValidationMessageKind {
@@ -58,9 +59,12 @@ object Validation {
   case class ValidationMessage(
     loc: Location,
     message: String,
-    kind: ValidationMessageKind = Error) {
+    kind: ValidationMessageKind = Error)
+      extends Ordered[ValidationMessage] {
 
     def format: String = { s"$kind: $loc: $message" }
+
+    override def compare(that: ValidationMessage): Int = this.loc.compare(that.loc)
   }
 
   type ValidationMessages = List[ValidationMessage]
@@ -280,10 +284,10 @@ object Validation {
     ): ValidationState = {
       typ match {
         case p @ Pattern(_, _, addendum) => checkPattern(p).checkDescription(definition, addendum)
-        case UniqueId(_, entityName, addendum) => this.checkRef[Entity](entityName)
+        case UniqueId(_, entityName, addendum) => this.checkPathRef[Entity](entityName)()
             .checkDescription(definition, addendum)
         case _: AST.PredefinedType                => this
-        case AST.TypeRef(_, id: PathIdentifier)   => checkRef[Type](id)
+        case AST.TypeRef(_, id: PathIdentifier)   => checkPathRef[Type](id)()
         case Optional(_, typex: TypeExpression)   => checkTypeExpression(typex, definition)
         case OneOrMore(_, typex: TypeExpression)  => checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) => checkTypeExpression(typex, definition)
@@ -299,21 +303,85 @@ object Validation {
       }
     }
 
-    def checkMessageRef(ref: MessageReference): ValidationState = {
-      ref match {
-        case CommandRef(_, id) => checkRef[Command](id)
-        case EventRef(_, id)   => checkRef[Event](id)
-        case QueryRef(_, id)   => checkRef[Query](id)
-        case ResultRef(_, id)  => checkRef[Result](id)
+    def checkMessageRef(ref: MessageRef, kind: MessageKind): ValidationState = {
+      symbolTable.lookupSymbol[Type](ref.id.value) match {
+        case Nil => add(ValidationMessage(
+            ref.id.loc,
+            s"'${ref.id.format}' is not defined but should be a ${kind.kind} Type",
+            Error
+          ))
+        case (d, _) :: Nil => d match {
+            case Type(_, _, typ, _) => typ match {
+                case MessageType(loc, mk, _, _) => check(
+                    mk == kind,
+                    s"'${ref.id.format}' was expected to be a ${kind.kind} Type" +
+                      s" but is a ${mk.kind} Type instead",
+                    Error,
+                    loc
+                  )
+                case te: TypeExpression => add(ValidationMessage(
+                    te.loc,
+                    s"'${ref.id.format}' should reference a ${kind.kind} Type but is a ${te.kind} instead",
+                    Error
+                  ))
+              }
+            case _ => add(ValidationMessage(
+                d.loc,
+                s"'${ref.id.format}' was expected to be a ${kind.kind} Type but is a ${d.kind} Type instead",
+                Error
+              ))
+          }
+        case (d, optT) :: tail => handleMultipleResultsCase[Type](ref.id, d, optT, tail)
+        case _                 => this
       }
     }
 
-    def checkRef[T <: Definition: ClassTag](
-      reference: Reference
-    ): ValidationState = { checkRef[T](reference.id) }
+    private type SingleMatchValidationFunction = (
+      ValidationState,
+      Class[?],
+      PathIdentifier,
+      Class[? <: Definition],
+      Definition,
+      Option[Definition]
+    ) => ValidationState
 
-    def checkRef[T <: Definition: ClassTag](
+    private val defaultSingleMatchValidationFunction: SingleMatchValidationFunction =
+      (state, foundClass, id, defClass, _, _) => {
+        state.check(
+          foundClass.isAssignableFrom(defClass),
+          s"'${id.format}' was expected to be a ${foundClass.getSimpleName} but is a ${defClass.getSimpleName} instead",
+          Error,
+          id.loc
+        )
+      }
+
+    private def handleMultipleResultsCase[T <: Definition: ClassTag](
+      id: PathIdentifier,
+      d: Definition,
+      optT: Option[T],
+      tail: List[(Definition, Option[T])]
+    ): ValidationState = {
+      // Handle domain, context, entity same name
+      val tc = classTag[T].runtimeClass
+      val definitions = d :: tail.map { case (d, _) => d }
+      val types = (optT :: tail.map { case (_, t) => t }) collect { case Some(tpe) => tpe }
+      val exactlyOneMatch = types.count(_.getClass == tc) == 1
+      val allDifferent = definitions.map(_.kind).distinct.size == definitions.size
+      if (exactlyOneMatch && allDifferent) { this }
+      else {
+        add(ValidationMessage(
+          id.loc,
+          s"""'${id.value}' is not uniquely defined.
+             |Definitions are:
+             |${formatDefinitions(definitions)}""".stripMargin,
+          Error
+        ))
+      }
+    }
+
+    def checkPathRef[T <: Definition: ClassTag](
       id: PathIdentifier
+    )(validator: SingleMatchValidationFunction = defaultSingleMatchValidationFunction
     ): ValidationState = {
       if (id.value.nonEmpty) {
         val tc = classTag[T].runtimeClass
@@ -323,37 +391,16 @@ object Validation {
               s"'${id.format}' is not defined but should be a ${tc.getSimpleName}",
               Error
             ))
-          // Type mismatch or subtype
-          case (d, None) :: Nil => check(
-              tc.isAssignableFrom(d.getClass),
-              s"'${id.format}' was expected to be ${tc.getSimpleName}" +
-                s" but is ${d.getClass.getSimpleName} instead",
-              Error,
-              id.loc
-            )
-          // Type match
-          case (_, Some(t)) :: Nil =>
-            assert(t.getClass == tc)
-            this
+          // Single match, defer to validation function
+          case (d, optT) :: Nil => validator(this, tc, id, d.getClass, d, optT)
           // Too many matches / non-unique
-          case (d, optT) :: tail =>
-            // Handle domain, context, entity same name
-            val definitions = d :: tail.map { case (d, _) => d }
-            val types = (optT :: tail.map { case (_, t) => t }) collect { case Some(tpe) => tpe }
-            val exactlyOneMatch = types.count(_.getClass == tc) == 1
-            val allDifferent = definitions.map(_.kind).distinct.size == definitions.size
-            if (exactlyOneMatch && allDifferent) { this }
-            else {
-              add(ValidationMessage(
-                id.loc,
-                s"""'${id.value}' is not uniquely defined.
-                   |Definitions are:
-                   |${formatDefinitions(definitions)}""".stripMargin,
-                Error
-              ))
-            }
+          case (d, optT) :: tail => handleMultipleResultsCase[T](id, d, optT, tail)
         }
       } else { this }
+    }
+
+    def checkRef[T <: Definition: ClassTag](reference: Reference): ValidationState = {
+      checkPathRef[T](reference.id)()
     }
 
     private def formatDefinitions[T <: Definition](list: List[T]): String = {
@@ -516,7 +563,7 @@ object Validation {
       parent: Handler,
       onClause: OnClause
     ): ValidationState = {
-      val result = state.checkMessageRef(onClause.msg)
+      val result = state.checkMessageRef(onClause.msg, onClause.msg.messageKind)
       onClause.actions.foldLeft(result) { (state, action) =>
         doClauseStatement(state, onClause, action)
       }
@@ -535,7 +582,7 @@ object Validation {
       clauseStatement match {
         case SetStatement(_, path, _, _) =>
           // TODO:  not working (state fields are not captured as references)
-          state.checkRef[Field](path)
+          state.checkPathRef[Field](path)()
         // validate state changes
         case RemoveStatement(_, _, _, _)  => state
         case AppendStatement(_, _, _, _)  => state
@@ -551,25 +598,6 @@ object Validation {
       container: Container,
       entity: AST.Entity
     ): ValidationState = { state.checkDescription(entity, entity.description) }
-
-    override def openTopic(
-      state: ValidationState,
-      container: Container,
-      topic: Topic
-    ): ValidationState = {
-      state.checkDefinition(container, topic).check(
-        topic.results.size + topic.queries.size + topic.commands.size + topic.events.size > 0,
-        s"${topic.identify} does not define any messages",
-        MissingWarning,
-        topic.loc
-      )
-    }
-
-    override def closeTopic(
-      state: ValidationState,
-      container: Container,
-      topic: Topic
-    ): ValidationState = { state.checkDescription(topic, topic.description) }
 
     override def openInteraction(
       state: ValidationState,
@@ -615,55 +643,6 @@ object Validation {
       adaptor: Adaptor
     ): ValidationState = { state.checkDescription(adaptor, adaptor.description) }
 
-    override def openMessage(
-      state: ValidationState,
-      container: Container,
-      message: MessageDefinition
-    ): ValidationState = {
-      val result = state.checkDefinition(container, message)
-        .checkDescription(message, message.description).checkTypeExpression(message.typ, container)
-      super.openMessage(result, container, message)
-    }
-
-    override def closeMessage(
-      state: ValidationState,
-      container: Container,
-      message: MessageDefinition
-    ): ValidationState = {
-      val result = state.checkDescription(message, message.description)
-      super.openMessage(result, container, message)
-    }
-
-    override def openCommand(
-      state: ValidationState,
-      container: Container,
-      command: Command
-    ): ValidationState = {
-      if (command.events.isEmpty) {
-        state.add(ValidationMessage(command.loc, "Commands must always yield at least one event"))
-      } else {
-        command.events.foldLeft(state) { case (st, eventRef) => st.checkRef[Event](eventRef) }
-      }
-    }
-
-    override def openEvent(
-      state: ValidationState,
-      container: Container,
-      event: Event
-    ): ValidationState = { state }
-
-    override def openQuery(
-      state: ValidationState,
-      container: Container,
-      query: Query
-    ): ValidationState = { state.checkRef[Result](query.result.id) }
-
-    override def openResult(
-      state: ValidationState,
-      container: Container,
-      result: Result
-    ): ValidationState = { state }
-
     override def doType(
       state: ValidationState,
       container: Container,
@@ -688,14 +667,8 @@ object Validation {
       container: Container,
       action: ActionDefinition
     ): ValidationState = {
-      val newState = state.checkDefinition(container, action)
-        .checkDescription(action, action.description)
-      action match {
-        case ma: MessageAction => ma.reactions.foldLeft(
-            newState.checkRef[Entity](ma.receiver).checkRef[Entity](ma.sender)
-              .checkRef[MessageDefinition](ma.message)
-          ) { case (s, reaction) => s.checkRef(reaction.entity) }
-      }
+      state.checkDefinition(container, action).checkDescription(action, action.description)
+      // FIXME: do some validation of action
     }
 
     override def doExample(
@@ -744,5 +717,68 @@ object Validation {
           state
       }
     }
+
+    override def openPlant(
+      state: ValidationState,
+      container: Container,
+      plant: Plant
+    ): ValidationState = state
+
+    override def closePlant(
+      state: ValidationState,
+      container: Container,
+      plant: Plant
+    ): ValidationState = state
+
+    override def openState(
+      state: ValidationState,
+      container: Container,
+      s: State
+    ): ValidationState = state
+
+    override def closeState(
+      state: ValidationState,
+      container: Container,
+      s: State
+    ): ValidationState = state
+
+    override def openSaga(
+      state: ValidationState,
+      container: Container,
+      saga: Saga
+    ): ValidationState = state
+
+    override def closeSaga(
+      state: ValidationState,
+      container: Container,
+      saga: Saga
+    ): ValidationState = state
+
+    override def doField(
+      state: ValidationState,
+      container: Container,
+      field: Field
+    ): ValidationState = state
+
+    override def doPipe(state: ValidationState, container: Container, pipe: Pipe): ValidationState =
+      state
+
+    override def doProcessor(
+      state: ValidationState,
+      container: Container,
+      pipe: Processor
+    ): ValidationState = state
+
+    override def doJoint(
+      state: ValidationState,
+      container: Container,
+      joint: Joint
+    ): ValidationState = state
+
+    override def doSagaAction(
+      state: ValidationState,
+      saga: Saga,
+      definition: Definition
+    ): ValidationState = state
   }
 }

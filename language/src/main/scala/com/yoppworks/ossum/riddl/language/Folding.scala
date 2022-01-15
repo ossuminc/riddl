@@ -26,8 +26,8 @@ object Folding {
       case domain: Domain =>
         result = f(parent, domain, result)
         result = domain.types.foldLeft(result) { (next, ty) => f(domain, ty, next) }
-        result = domain.topics.foldLeft(result) { (next, topic) =>
-          foldEachDefinition[S](domain, topic, next)(f)
+        result = domain.plants.foldLeft(result) { (next, pl) =>
+          foldEachDefinition(domain, pl, next)(f)
         }
         result = domain.contexts.foldLeft(result) { (next, context) =>
           foldEachDefinition[S](domain, context, next)(f)
@@ -35,6 +35,7 @@ object Folding {
         domain.interactions.foldLeft(result) { (next, interaction) =>
           foldEachDefinition[S](domain, interaction, next)(f)
         }
+        domain.domains.foldLeft(result) { (next, dmn) => foldEachDefinition(domain, dmn, next)(f) }
       case context: Context =>
         result = f(parent, context, result)
         result = context.types.foldLeft(result) { (next, ty) => f(context, ty, next) }
@@ -67,16 +68,6 @@ object Folding {
         result = f(parent, feature, result)
         feature.contents.foldLeft(result) { (next, example) => f(feature, example, next) }
       case adaptor: Adaptor => f(parent, adaptor, result)
-      case topic: Topic =>
-        result = f(parent, topic, result)
-        val foldables: List[MessageDefinition] =
-          (topic.commands.iterator ++ topic.events ++ topic.queries ++ topic.results).toList
-        foldables.foldLeft(result) { (next, message) =>
-          foldEachDefinition(topic, message, next)(f)
-        }
-      case message: MessageDefinition =>
-        result = f(parent, message, result)
-        message.contents.foldLeft(result) { (next, field) => f(message, field, next) }
       case st: AST.State =>
         result = f(parent, st, result)
         st.typeEx match {
@@ -106,9 +97,9 @@ object Folding {
         case domain: Domain => openDomain(initState, parent, domain).step { state =>
             domain.types.foldLeft(state) { (next, ty) => doType(next, domain, ty) }
           }.step { state =>
-            domain.topics.foldLeft(state) { (next, topic) => foldLeft(domain, topic, next) }
-          }.step { state =>
             domain.contexts.foldLeft(state) { (next, context) => foldLeft(domain, context, next) }
+          }.step { state =>
+            domain.plants.foldLeft(state) { (next, context) => foldLeft(domain, context, next) }
           }.step { state =>
             domain.interactions.foldLeft(state) { (next, interaction) =>
               foldLeft(domain, interaction, next)
@@ -124,67 +115,53 @@ object Folding {
             context.interactions.foldLeft(state) { (next, in) => foldLeft(context, in, next) }
           }.step { state => closeContext(state, parent, context) }
         case entity: Entity => openEntity(initState, parent, entity).step { state =>
-          entity.types.foldLeft(state) { (next, typ) => doType(next, entity, typ) }
-        }.step { state =>
-          entity.handlers.foldLeft(state) { (next, handler) => doHandler(next, entity, handler) }
-        }.step { state =>
-          entity.features.foldLeft(state) { (next, feature) => foldLeft(entity, feature, next) }
-        }.step { state =>
-          entity.functions.foldLeft(state) { (next, function) =>
-            doFunction(next, entity, function)
-          }
-        }.step { state =>
-          entity.invariants.foldLeft(state) { (next, invariant) =>
-            doInvariant(next, entity, invariant)
-          }
-        }.step { state =>
-          entity.states.foldLeft(state) { (next, s) => foldLeft(entity, s, next) }
-        }.step { state => closeEntity(state, parent, entity) }
-        case plant: Plant => openPlant(initState, parent, plant).step { state =>
-          plant.pipes.foldLeft(state) { (next, pipe) => doPipe(next, plant, pipe) }
-        }.step { state =>
-          plant.processors.foldLeft(state) { (next, proc) => doProcessor(next, plant, proc) }
-        }.step { state =>
-          plant.joints.foldLeft(state) { (next, joint) => doJoint(next, plant, joint) }
-        }.step { state => closePlant(state, parent, plant) }
-        case saga: Saga => openSaga(initState, parent, saga).step { state =>
-          saga.contents.foldLeft(state) { (next, action) => doSagaAction(next, saga, action) }
-        }.step { state => closeSaga(state, parent, saga) }
-        case interaction: Interaction => openInteraction(initState, parent, interaction)
-          .step { state =>
-            interaction.actions.foldLeft(state) { (next, action) =>
-              doAction(next, interaction, action)
+            entity.types.foldLeft(state) { (next, typ) => doType(next, entity, typ) }
+          }.step { state =>
+            entity.handlers.foldLeft(state) { (next, handler) => doHandler(next, entity, handler) }
+          }.step { state =>
+            entity.features.foldLeft(state) { (next, feature) => foldLeft(entity, feature, next) }
+          }.step { state =>
+            entity.functions.foldLeft(state) { (next, function) =>
+              doFunction(next, entity, function)
             }
-          }.step { state => closeInteraction(state, parent, interaction) }
+          }.step { state =>
+            entity.invariants.foldLeft(state) { (next, invariant) =>
+              doInvariant(next, entity, invariant)
+            }
+          }.step { state =>
+            entity.states.foldLeft(state) { (next, s) => foldLeft(entity, s, next) }
+          }.step { state => closeEntity(state, parent, entity) }
+        case plant: Plant => openPlant(initState, parent, plant).step { state =>
+            plant.pipes.foldLeft(state) { (next, pipe) => doPipe(next, plant, pipe) }
+          }.step { state =>
+            plant.processors.foldLeft(state) { (next, proc) => doProcessor(next, plant, proc) }
+          }.step { state =>
+            plant.joints.foldLeft(state) { (next, joint) => doJoint(next, plant, joint) }
+          }.step { state => closePlant(state, parent, plant) }
+        case saga: Saga => openSaga(initState, parent, saga).step { state =>
+            saga.contents.foldLeft(state) { (next, action) => doSagaAction(next, saga, action) }
+          }.step { state => closeSaga(state, parent, saga) }
+        case interaction: Interaction => openInteraction(initState, parent, interaction)
+            .step { state =>
+              interaction.actions.foldLeft(state) { (next, action) =>
+                doAction(next, interaction, action)
+              }
+            }.step { state => closeInteraction(state, parent, interaction) }
         case feature: Feature => openFeature(initState, parent, feature).step { state =>
-          feature.examples.foldLeft(state) { (next, example) =>
-            doExample(next, feature, example)
-          }
+            feature.examples.foldLeft(state) { (next, example) =>
+              doExample(next, feature, example)
+            }
           }
         case adaptor: Adaptor => openAdaptor(initState, parent, adaptor).step { state =>
             adaptor.adaptations.foldLeft(state) { (s, a) => doAdaptation(s, adaptor, a) }
             closeAdaptor(state, parent, adaptor)
           }
-        case topic: Topic => openTopic(initState, parent, topic).step { state =>
-            val foldables: List[MessageDefinition] =
-              (topic.commands.iterator ++ topic.events ++ topic.queries ++ topic.results).toList
-            foldables.foldLeft(state) { (next, message) => foldLeft(topic, message, next) }
-          }.step { state => closeTopic(state, parent, topic) }
-        case message: MessageDefinition => openMessage(initState, parent, message).step { state =>
-            message.typ match {
-              case a: Aggregation => a.fields.foldLeft(state) { (next, field) =>
-                  doField(next, message, field)
+        case state: AST.State => this.openState(initState, parent, state).step { foldingState =>
+            state.typeEx match {
+              case agg: Aggregation => agg.fields.foldLeft(foldingState) { (next, field) =>
+                  doField(next, state, field)
                 }
-              case _ => state
-            }
-          }.step { state => closeMessage(state, parent, message) }
-
-        case st: AST.State => openState(initState, parent, st).step { state =>
-            st.typeEx match {
-              case agg: Aggregation => agg.fields.foldLeft(state) { (next, field) =>
-                  doField(next, st, field)
-                }
-              case _ => state
+              case _ => foldingState
             }
           }
       }
@@ -196,7 +173,7 @@ object Folding {
       container: Container,
       @unused
       domain: Domain
-    ): S = { state }
+    ): S
 
     def closeDomain(
       state: S,
@@ -204,7 +181,7 @@ object Folding {
       container: Container,
       @unused
       domain: Domain
-    ): S = { state }
+    ): S
 
     def openContext(
       state: S,
@@ -212,7 +189,7 @@ object Folding {
       container: Container,
       @unused
       context: Context
-    ): S = { state }
+    ): S
 
     def closeContext(
       state: S,
@@ -220,7 +197,7 @@ object Folding {
       container: Container,
       @unused
       context: Context
-    ): S = { state }
+    ): S
 
     def openEntity(
       state: S,
@@ -228,7 +205,7 @@ object Folding {
       container: Container,
       @unused
       entity: Entity
-    ): S = { state }
+    ): S
 
     def closeEntity(
       state: S,
@@ -236,7 +213,7 @@ object Folding {
       container: Container,
       @unused
       entity: Entity
-    ): S = { state }
+    ): S
 
     def openPlant(
       state: S,
@@ -244,14 +221,15 @@ object Folding {
       container: Container,
       @unused
       plant: Plant
-    ): S = { state }
+    ): S
+
     def closePlant(
       state: S,
       @unused
       container: Container,
       @unused
       plant: Plant
-    ): S = { state }
+    ): S
 
     def openState(
       state: S,
@@ -259,7 +237,7 @@ object Folding {
       container: Container,
       @unused
       s: AST.State
-    ): S = { state }
+    ): S
 
     def closeState(
       state: S,
@@ -267,23 +245,7 @@ object Folding {
       container: Container,
       @unused
       s: AST.State
-    ): S = { state }
-
-    def openTopic(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      topic: Topic
-    ): S = {state}
-
-    def closeTopic(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      channel: Topic
-    ): S = {state}
+    ): S
 
     def openSaga(
       state: S,
@@ -291,7 +253,7 @@ object Folding {
       container: Container,
       @unused
       saga: Saga
-    ): S = {state}
+    ): S
 
     def closeSaga(
       state: S,
@@ -299,7 +261,7 @@ object Folding {
       container: Container,
       @unused
       saga: Saga
-    ): S = {state}
+    ): S
 
     def openInteraction(
       state: S,
@@ -307,7 +269,7 @@ object Folding {
       container: Container,
       @unused
       interaction: Interaction
-    ): S = {state}
+    ): S
 
     def closeInteraction(
       state: S,
@@ -315,7 +277,7 @@ object Folding {
       container: Container,
       @unused
       interaction: Interaction
-    ): S = { state }
+    ): S
 
     def openFeature(
       state: S,
@@ -323,7 +285,7 @@ object Folding {
       container: Container,
       @unused
       feature: Feature
-    ): S = { state }
+    ): S
 
     def closeFeature(
       state: S,
@@ -331,7 +293,7 @@ object Folding {
       container: Container,
       @unused
       feature: Feature
-    ): S = { state }
+    ): S
 
     def openAdaptor(
       state: S,
@@ -339,7 +301,7 @@ object Folding {
       container: Container,
       @unused
       adaptor: Adaptor
-    ): S = { state }
+    ): S
 
     def closeAdaptor(
       state: S,
@@ -347,7 +309,7 @@ object Folding {
       container: Container,
       @unused
       adaptor: Adaptor
-    ): S = { state }
+    ): S
 
     def doType(
       state: S,
@@ -355,97 +317,7 @@ object Folding {
       container: Container,
       @unused
       typ: Type
-    ): S = { state }
-
-    def openMessage(
-      state: S,
-      container: Container,
-      message: MessageDefinition
-    ): S = {
-      message match {
-        case e: Event   => openEvent(state, container, e)
-        case c: Command => openCommand(state, container, c)
-        case q: Query   => openQuery(state, container, q)
-        case r: Result  => openResult(state, container, r)
-      }
-    }
-
-    def openCommand(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      command: Command
-    ): S = { state }
-
-    def openEvent(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      event: Event
-    ): S = { state }
-
-    def openQuery(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      query: Query
-    ): S = { state }
-
-    def openResult(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      result: Result
-    ): S = { state }
-
-    def closeMessage(
-      state: S,
-      container: Container,
-      message: MessageDefinition
-    ): S = {
-      message match {
-        case e: Event   => closeEvent(state, container, e)
-        case c: Command => closeCommand(state, container, c)
-        case q: Query   => closeQuery(state, container, q)
-        case r: Result  => closeResult(state, container, r)
-      }
-    }
-
-    def closeCommand(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      command: Command
-    ): S = { state }
-
-    def closeEvent(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      event: Event
-    ): S = { state }
-
-    def closeQuery(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      query: Query
-    ): S = { state }
-
-    def closeResult(
-      state: S,
-      @unused
-      container: Container,
-      @unused
-      result: Result
-    ): S = { state }
+    ): S
 
     def doField(
       state: S,
@@ -453,7 +325,7 @@ object Folding {
       container: Container,
       @unused
       field: Field
-    ): S = { state }
+    ): S
 
     def doHandler(
       state: S,
@@ -461,7 +333,7 @@ object Folding {
       container: Container,
       @unused
       consumer: Handler
-    ): S = { state }
+    ): S
 
     def doAction(
       state: S,
@@ -469,7 +341,7 @@ object Folding {
       container: Container,
       @unused
       action: ActionDefinition
-    ): S = { state }
+    ): S
 
     def doExample(
       state: S,
@@ -477,7 +349,7 @@ object Folding {
       container: Container,
       @unused
       example: Example
-    ): S = { state }
+    ): S
 
     def doFunction(
       state: S,
@@ -485,7 +357,7 @@ object Folding {
       container: Container,
       @unused
       function: Function
-    ): S = { state }
+    ): S
 
     def doInvariant(
       state: S,
@@ -493,7 +365,7 @@ object Folding {
       container: Container,
       @unused
       invariant: Invariant
-    ): S = { state }
+    ): S
 
     def doPipe(
       state: S,
@@ -501,7 +373,7 @@ object Folding {
       container: Container,
       @unused
       pipe: Pipe
-    ): S = {state}
+    ): S
 
     def doProcessor(
       state: S,
@@ -509,7 +381,7 @@ object Folding {
       container: Container,
       @unused
       pipe: Processor
-    ): S = {state}
+    ): S
 
     def doJoint(
       state: S,
@@ -517,7 +389,7 @@ object Folding {
       container: Container,
       @unused
       joint: Joint
-    ): S = {state}
+    ): S
 
     def doSagaAction(
       state: S,
@@ -525,7 +397,7 @@ object Folding {
       saga: AST.Saga,
       @unused
       definition: AST.Definition
-    ): S = {state}
+    ): S
 
     def doPredefinedType(
       state: S,
@@ -533,7 +405,7 @@ object Folding {
       container: Container,
       @unused
       predef: PredefinedType
-    ): S = {state}
+    ): S
 
     def doAdaptation(
       state: S,
@@ -541,7 +413,6 @@ object Folding {
       container: Container,
       @unused
       rule: Adaptation
-    ): S = { state }
+    ): S
   }
-
 }

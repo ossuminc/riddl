@@ -24,13 +24,13 @@ class HandlerTest extends ParsingTest {
                     |      set trackingId to CreateItem.trackingId
                     |      set manifestId to CreateItem.manifestId
                     |      set destination to CreatItem.postalCode
-                    |      publish event ItemPreInducted() to topic DistributionItemTopic
+                    |      send event ItemPreInducted() to entity DistributionItem
                     |    }
                     |    on command InductItem {
                     |      set timeOfFirstScan to InductItem.originTimeStamp
                     |      set journey to Inducted
                     |      set lastKnownWorkCenterId to InductItem.workCenter
-                    |      publish event ItemInducted() to topic DistributionItemTopic
+                    |      send event ItemInducted() to entity DistributionItem
                     |    }
                     |    on command SortItem {
                     |      when empty(timeOfFirstScan) then { set
@@ -49,7 +49,7 @@ class HandlerTest extends ParsingTest {
                     |        set timeOfFirstScan to NestItem.originTimeStamp
                     |      }
                     |      set parentContainer to NestItem.container
-                    |      publish command AddItemToContainer() to topic ContainerTopic
+                    |      send command AddItemToContainer() to entity DistributionItem
                     |    }
                     |    on command TransportItem {
                     |      when empty(timeOfFirstScan) { set timeOfFirstScan to

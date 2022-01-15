@@ -14,20 +14,6 @@ domain ReactiveBBQ is {
     |# see
     |* [OrderId](http://www.example.com/show/details/on/OrderId)
   }
-
-  topic Inputs is {
-    commands {
-      foo is {} yields event Inputs.bar /*implemented("scala") as {
-        def handleFoo: Inputs.bar = {
-        }
-      } */
-    } events {
-      bar is {}
-    } queries {} results {}
-  }
-
-  topic Outputs is {  commands {} events {  } queries {} results {} }
-
   context Customer is {
     entity Customer is {
       state main is { }
