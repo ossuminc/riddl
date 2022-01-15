@@ -7,7 +7,7 @@ import (
 )
 
 // Riddl variable provides the lexer for Chroma.
-var Riddl = lexers.internal.Register(MustNewLazyLexer(
+var Riddl = lexers.Register(MustNewLazyLexer(
 	&Config{
 		Name:      "Riddl",
 		Aliases:   []string{"RIDDL", "Riddl", "riddl"},
@@ -97,8 +97,8 @@ func riddlRules() Rules {
 			{`\$\{`, LiteralStringInterpol, Push("interpbrace")},
 			{`\\.`, LiteralString, nil},
 		},
-		"interptriplestring": {
-			{`"""(?!")`, LiteralString, Pop(1)},
+		"docblock": {
+			{`|.*?\n`, Comment, Pop(1)},
 			{`"`, LiteralString, nil},
 			Include("interpstringcommon"),
 		},
