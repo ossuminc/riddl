@@ -10,4 +10,4 @@ creatoremail: "reid.spencer@yoppworks.com"
 
 RIDDL, the Reactive Interface to Domain Definition Language, is a tool for
 generating code and documentation from a high level definition based on
-Domain Driven Design (DDD) and software architecture concepts.
+Domain Driven Design (DDD) and reactive software architecture concepts.

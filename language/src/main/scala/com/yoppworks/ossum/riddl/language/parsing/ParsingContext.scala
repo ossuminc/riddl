@@ -2,7 +2,8 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import fastparse.*
-import fastparse.Parsed.{Failure, Success}
+import fastparse.Parsed.Failure
+import fastparse.Parsed.Success
 
 import java.io.File
 import scala.annotation.unused

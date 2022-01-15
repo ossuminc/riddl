@@ -1,18 +1,19 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Options
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
 trait EntityParser
     extends CommonParser
-      with TypeParser
-      with GherkinParser
-      with TopicParser
-      with FunctionParser
-      with HandlerParser {
+    with TypeParser
+    with GherkinParser
+    with TopicParser
+    with FunctionParser
+    with HandlerParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](

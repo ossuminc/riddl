@@ -4,7 +4,8 @@ import com.yoppworks.ossum.riddl.language.AST.*
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 
 /** Validates an AST */
 object Validation {

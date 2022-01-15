@@ -755,28 +755,28 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     joints: Seq[Joint] = Seq.empty[Joint],
     description: Option[Description] = None)
-    extends Container with DomainDefinition {
+      extends Container with DomainDefinition {
     def contents: Seq[Definition] = pipes ++ processors
   }
 
   /** Definition of an Interaction
-   *
-   * Interactions define an exemplary interaction between the system being designed and other
-   * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
-   *
-   * @param loc
-   * Where in the input the Scenario is defined
-   * @param id
-   * The name of the scenario
-   * @param actions
-   * The actions that constitute the interaction
-   */
+    *
+    * Interactions define an exemplary interaction between the system being designed and other
+    * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
+    *
+    * @param loc
+    *   Where in the input the Scenario is defined
+    * @param id
+    *   The name of the scenario
+    * @param actions
+    *   The actions that constitute the interaction
+    */
   case class Interaction(
     loc: Location,
     id: Identifier,
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     description: Option[Description] = None)
-    extends Container with DomainDefinition with ContextDefinition {
+      extends Container with DomainDefinition with ContextDefinition {
     lazy val contents: Seq[Definition] = actions
   }
 
@@ -788,7 +788,7 @@ object AST {
     undoCommand: CommandRef,
     example: Seq[Example],
     description: Option[Description] = None)
-    extends Definition
+      extends Definition
 
   sealed trait SagaOption extends RiddlValue
 
@@ -804,7 +804,7 @@ object AST {
     output: Option[TypeExpression],
     sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
     description: Option[Description] = None)
-    extends Container with ContextDefinition {
+      extends Container with ContextDefinition {
     lazy val contents: Seq[Definition] = sagaActions
   }
 
@@ -819,8 +819,8 @@ object AST {
   }
 
   /** Used to capture reactions to actions. Actions include reactions in their definition to model
-   * the precipitating reactions to the action.
-   */
+    * the precipitating reactions to the action.
+    */
   case class Reaction(
     loc: Location,
     id: Identifier,

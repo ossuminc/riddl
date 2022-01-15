@@ -16,7 +16,7 @@ abstract syntax tree (AST) is produced. Incorrect syntax leads to errors
 without further analysis.
 
 ## Structural Analysis
-The Riddl AST is scanned to identified all the definitions (things with names),
+The Riddl AST is scanned to identify all the definitions (things with names),
 create a symbol table from those names, and deduce the containment hierarchy
 of the model defined by the AST. 
  
@@ -31,7 +31,7 @@ entity MyLittlePachyderm {
 }
 ```
 This defines an entity with a value, `thing`,  in its state of type 
-`SomeType`.  The specification does not defined `SomeType` and it is not 
+`SomeType`.  The specification does not define `SomeType` and it is not 
 recognized as one of the pre-defined types.  Logically then, we don't know
 the type of `thing` so our specification is incomplete. 
 

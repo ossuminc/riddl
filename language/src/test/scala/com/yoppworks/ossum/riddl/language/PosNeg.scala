@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessages, ValidationOptions}
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
+import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
 import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 
@@ -42,7 +43,7 @@ class PosNeg extends ValidatingTest {
       s"check $relativeFileName" in {
         validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
           val msgSet = msgs.map(_.format).filter(_.nonEmpty).toSet
-          if (msgSet == expectedMessages) {succeed}
+          if (msgSet == expectedMessages) { succeed }
           else {
             val missingMessages = expectedMessages.diff(msgSet)
             val unexpectedMessages = msgSet.diff(expectedMessages)

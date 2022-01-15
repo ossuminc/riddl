@@ -1,15 +1,16 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for feature definitions This is based on Cucumber's Gherkin language.
- *
- * @see
- * https://cucumber.io/docs/gherkin/reference/
- */
+  *
+  * @see
+  *   https://cucumber.io/docs/gherkin/reference/
+  */
 trait GherkinParser extends CommonParser {
 
   def givens[u: P]: P[Seq[Given]] = {
