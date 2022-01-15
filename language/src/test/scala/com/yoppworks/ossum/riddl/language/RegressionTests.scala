@@ -1,8 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Aggregation
 import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.Topic
 import com.yoppworks.ossum.riddl.language.AST.Type
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
@@ -66,33 +64,6 @@ class RegressionTests extends ParsingTest {
         case Right(typeDef) =>
           info(typeDef.toString)
           succeed
-      }
-    }
-
-    "handle descriptions in fields of messages" in {
-      val input = """topic TrackServices is {
-                    |  events {
-                    |    PreInducted is {
-                    |      expectedDeliveryTimeStamp: TimeStamp described by {
-                    |        |EXPECTEDDELIVERYDATE		Character Field Length = 10	CHAR10
-                    |        |EXPECTEDDELIVERYTIME		Character field, 8 characters long	CHAR8
-                    |      }
-                    |    }
-                    |  }
-                    |}
-                    |""".stripMargin
-      parseDefinition[Topic](RiddlParserInput(input)) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(topic: Topic @unchecked) =>
-          info(topic.toString)
-          val evt = topic.events.head
-          evt.typ match {
-            case a: Aggregation => a.fields.head.description.nonEmpty mustBe true
-            case _              => succeed
-          }
-
       }
     }
   }

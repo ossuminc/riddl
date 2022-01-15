@@ -7,11 +7,11 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For StreamingParser */
-trait StreamingParser extends CommonParser with TypeParser {
+trait StreamingParser extends ReferenceParser with TypeParser {
 
   def pipeDefinition[u: P]: P[Pipe] = {
-    location ~ Keywords.pipe ~/ identifier ~ is ~ open ~ Keywords.transmit ~/ typeRef ~ close ~
-      description
+    location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
+      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~ close ~ description
   }.map { case (loc, id, typeRef, desc) => Pipe(loc, id, typeRef, desc) }
 
   def inlet[u: P]: P[Inlet] = {
@@ -27,10 +27,11 @@ trait StreamingParser extends CommonParser with TypeParser {
   }
 
   def processorDefinitions[u: P]: P[(Seq[Inlet], Seq[Outlet])] = {
-    P((inlet | outlet).rep(1)).map { seq: Seq[Streamlet] =>
-      val groups = seq.groupBy(_.getClass)
-      mapTo[Inlet](groups.get(classOf[Inlet])) -> mapTo[Outlet](groups.get(classOf[Outlet]))
-    }
+    P(undefined((Seq.empty[Inlet], Seq.empty[Outlet])) | (inlet | outlet).rep(1).map {
+      seq: Seq[Streamlet] =>
+        val groups = seq.groupBy(_.getClass)
+        mapTo[Inlet](groups.get(classOf[Inlet])) -> mapTo[Outlet](groups.get(classOf[Outlet]))
+    })
   }
 
   def processor[u: P]: P[Processor] = P(
@@ -38,16 +39,6 @@ trait StreamingParser extends CommonParser with TypeParser {
       description
   ).map { case (loc, id, (inlets, outlets), description) =>
     Processor(loc, id, inlets, outlets, description)
-  }
-
-  def outletRef[u: P]: P[DefRef[Streamlet]] = { P(location ~ Keywords.outlet ~/ pathIdentifier) }
-    .map { case (loc, pid) => DefRef[Streamlet](loc, pid) }
-
-  def inletRef[u: P]: P[DefRef[Streamlet]] = { P(location ~ Keywords.inlet ~/ pathIdentifier) }
-    .map { case (loc, pid) => DefRef[Streamlet](loc, pid) }
-
-  def pipeRef[u: P]: P[DefRef[Pipe]] = { P(location ~ Keywords.pipe ~/ pathIdentifier) }.map {
-    case (loc, pid) => DefRef[Pipe](loc, pid)
   }
 
   def joint[u: P]: P[Joint] = {

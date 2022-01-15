@@ -52,13 +52,6 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "String" should { "have kind 'String'" in { Strng(Location()).kind mustBe "String" } }
   "Bool" should { "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" } }
 
-  "Topic" should {
-    "empty topic" should {
-      "have empty contents" in {
-        Topic(Location(), Identifier(Location(), "foo")).contents mustBe Nil
-      }
-    }
-  }
   "EntityAggregate" should {
     "have correct name" in {
       EntityAggregate(Location()).name mustBe "aggregate"
@@ -74,9 +67,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     }
     "non-empty domain should have non-empty contents" in {
       val types = List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
-      val topics = List(Topic(Location(), Identifier(Location(), "foo")))
-      Domain(Location(), Identifier(Location(), "test"), types = types, topics = topics)
-        .contents mustBe (types ++ topics)
+      Domain(Location(), Identifier(Location(), "test"), types = types).contents mustBe types
     }
   }
 

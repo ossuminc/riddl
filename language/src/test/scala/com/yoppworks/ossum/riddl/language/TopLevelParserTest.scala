@@ -23,7 +23,6 @@ class TopLevelParserTest extends ParsingTestBase {
     List(),
     List(),
     List(),
-    List(),
     None
   )))
 

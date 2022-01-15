@@ -18,9 +18,8 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def importDef[u: P]: P[DomainDefinition] = {
-    P(Keywords.import_ ~ location ~/ domainRef ~/ Readability.from ~ literalString).map { tuple =>
-      doImport(tuple._1, tuple._2, tuple._3)
-    }
+    P(location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString)
+      .map { tuple => doImport(tuple._1, tuple._2, tuple._3) }
   }
 
   def optionalNestedContent[u: P, T](parser: => P[T]): P[Seq[T]] = {
@@ -107,45 +106,4 @@ trait CommonParser extends NoWhiteSpaceParsers {
     seq.map(_.map(_.asInstanceOf[T])).getOrElse(Seq.empty[T])
   }
 
-  def commandRef[u: P]: P[CommandRef] = {
-    P(location ~ Keywords.command ~/ pathIdentifier).map(tpl => (CommandRef.apply _).tupled(tpl))
-  }
-
-  def eventRef[u: P]: P[EventRef] = {
-    P(location ~ Keywords.event ~/ pathIdentifier).map(tpl => (EventRef.apply _).tupled(tpl))
-  }
-
-  def queryRef[u: P]: P[QueryRef] = {
-    P(location ~ Keywords.query ~/ pathIdentifier).map(tpl => (QueryRef.apply _).tupled(tpl))
-  }
-
-  def resultRef[u: P]: P[ResultRef] = {
-    P(location ~ Keywords.result ~/ pathIdentifier).map(tpl => (ResultRef.apply _).tupled(tpl))
-  }
-
-  def messageRef[u: P]: P[MessageReference] = { P(commandRef | eventRef | queryRef | resultRef) }
-
-  def entityRef[u: P]: P[EntityRef] = {
-    P(location ~ Keywords.entity ~/ pathIdentifier).map(tpl => (EntityRef.apply _).tupled(tpl))
-  }
-
-  def topicRef[u: P]: P[TopicRef] = {
-    P(location ~ Keywords.topic ~/ pathIdentifier).map(tpl => (TopicRef.apply _).tupled(tpl))
-  }
-
-  def typeRef[u: P]: P[TypeRef] = {
-    P(location ~ pathIdentifier).map(tpl => (TypeRef.apply _).tupled(tpl))
-  }
-
-  def actionRef[u: P]: P[FunctionRef] = {
-    P(location ~ Keywords.action ~/ pathIdentifier).map(tpl => (FunctionRef.apply _).tupled(tpl))
-  }
-
-  def contextRef[u: P]: P[ContextRef] = {
-    P(location ~ Keywords.context ~/ pathIdentifier).map(tpl => (ContextRef.apply _).tupled(tpl))
-  }
-
-  def domainRef[u: P]: P[DomainRef] = {
-    P(location ~ Keywords.domain ~/ pathIdentifier).map(tpl => (DomainRef.apply _).tupled(tpl))
-  }
 }

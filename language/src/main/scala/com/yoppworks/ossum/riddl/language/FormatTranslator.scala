@@ -307,18 +307,6 @@ class FormatTranslator extends Translator[FormatConfig] {
       adaptor: Adaptor
     ): FormatState = { state.close(adaptor) }
 
-    override def openTopic(
-      state: FormatState,
-      container: Container,
-      topic: Topic
-    ): FormatState = { state.open(s"topic ${topic.id.value} is {") }
-
-    override def closeTopic(
-      state: FormatState,
-      container: Container,
-      topic: Topic
-    ): FormatState = { state.close(topic) }
-
     override def openInteraction(
       state: FormatState,
       container: Container,
@@ -330,42 +318,6 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Container,
       interaction: Interaction
     ): FormatState = { state.close(interaction) }
-
-    override def openCommand(
-      state: FormatState,
-      container: Container,
-      command: Command
-    ): FormatState = {
-      val keyword = if (command.events.size > 1) "events" else "event"
-      state.addIndent(s"command ${command.id.value} is ").visitTypeExpr(command.typ)
-        .add(s" yields $keyword ${command.events.map(_.id.value.mkString(".")).mkString(", ")}")
-        .add("\n")
-    }
-
-    override def openEvent(
-      state: FormatState,
-      container: Container,
-      event: Event
-    ): FormatState = {
-      state.addIndent(s"event ${event.id.value} is ").visitTypeExpr(event.typ).add("\n")
-    }
-
-    override def openQuery(
-      state: FormatState,
-      container: Container,
-      query: Query
-    ): FormatState = {
-      state.addIndent(s"query ${query.id.value} is ").visitTypeExpr(query.typ)
-        .add(s" yields result ${query.result.id.value.mkString(".")}").add("\n")
-    }
-
-    override def openResult(
-      state: FormatState,
-      container: Container,
-      result: Result
-    ): FormatState = {
-      state.addIndent(s"result ${result.id.value} is ").visitTypeExpr(result.typ).add("\n")
-    }
 
     override def doType(
       state: FormatState,
@@ -422,6 +374,46 @@ class FormatTranslator extends Translator[FormatConfig] {
       @unused
       adaptation: Adaptation
     ): FormatState = { state }
+
+    override def openPlant(state: FormatState, container: Container, plant: Plant): FormatState = {
+      state
+    }
+
+    override def closePlant(state: FormatState, container: Container, plant: Plant): FormatState = {
+      state
+    }
+
+    override def openState(state: FormatState, container: Container, s: State): FormatState = state
+
+    override def closeState(state: FormatState, container: Container, s: State): FormatState = state
+
+    override def openSaga(state: FormatState, container: Container, saga: Saga): FormatState = state
+
+    override def closeSaga(state: FormatState, container: Container, saga: Saga): FormatState =
+      state
+
+    override def doField(state: FormatState, container: Container, field: Field): FormatState =
+      state
+
+    override def doHandler(
+      state: FormatState,
+      container: Container,
+      consumer: Handler
+    ): FormatState = state
+
+    override def doPipe(state: FormatState, container: Container, pipe: Pipe): FormatState = state
+
+    override def doProcessor(
+      state: FormatState,
+      container: Container,
+      pipe: Processor
+    ): FormatState = state
+
+    override def doJoint(state: FormatState, container: Container, joint: Joint): FormatState =
+      state
+
+    override def doSagaAction(state: FormatState, saga: Saga, definition: Definition): FormatState =
+      state
   }
 
 }

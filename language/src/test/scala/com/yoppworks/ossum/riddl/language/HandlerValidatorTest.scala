@@ -9,7 +9,6 @@ class HandlerValidatorTest extends ValidatingTest {
     "produce an error when on clause references a command that does not exist" in {
       val input = """
                     |domain entityTest is {
-                    |topic EntityChannel is {}
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  state HamburgerState = { field1: Number, field2: String }
@@ -25,12 +24,12 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityCommand' is not defined but should be a Command"
+          "'EntityCommand' is not defined but should be a Command Type"
         )
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityEvent' is not defined but should be a Event"
+          "'EntityEvent' is not defined but should be a Event Type"
         )
       }
     }
@@ -52,26 +51,29 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' is not defined but should be a Event"
+          "'Incoming' is not defined but should be a Event Type"
         )
       }
-      val input2 = """domain entityTest is {
-                     |context EntityContext is {
-                     |entity Hamburger is {
-                     |  type Incoming is String
-                     |  state HamburgerState = { field1: Number }
-                     |  handler foo is {
-                     |    on event Incoming { set field1 to 678 }
-                     |  }
-                     |}
-                     |}
-                     |}
-                     |""".stripMargin
-      parseAndValidate[Domain](input2) { case (_, msgs: ValidationMessages) =>
+    }
+
+    "produce an error when on clause doesn't reference a message type" in {
+      val input = """domain entityTest is {
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  type Incoming is String
+                    |  state HamburgerState = { field1: Number }
+                    |  handler foo is {
+                    |    on event Incoming { set field1 to 678 }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' was expected to be Event but is Type instead"
+          "'Incoming' should reference a Event Type but is a String instead"
         )
       }
     }

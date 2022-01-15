@@ -3,21 +3,17 @@
 domain Everything is {
 
   type SomeType is String
+  type DoAThing is command { thingField: Integer }
 
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
-  topic AChannel is {
-    command DoThisThing is { thingField: Integer } yields event ThingWasDone
-    event ThingWasDone is {}
-    query FindThisThing is {} yields result ThisQueryResult
-    result ThisQueryResult is {}
-  } explained as {
-    |# brief
-    |An example of a channel
-    |# details
-    |This channel is just an example of how to define messages
-    |# see
-    |/dev/null
+
+  plant APlant is {
+    processor Source is { outlet Commands is DoAThing } described by "Data Source"
+    processor Sink is { inlet Commands is DoAThing } explained as "Data Sink"
+    pipe AChannel is { transmit DoAThing } explained as "A Channel"
+    joint input is outlet Source.Commands to pipe AChannel
+    joint output is inlet Sink.Commands from pipe AChannel
   }
 
   // Domains are composed of bounded contexts so ...
@@ -75,14 +71,18 @@ domain Everything is {
       handler foo is {
         on command Something {
           when misc() explained as { "inebriated" } then {
-            publish event Inebriated to topic AChannel
+            send event Inebriated to entity Everything.full.SomeOtherThing
           }
         }
       }
     }
 
     entity SomeOtherThing is {
-      state otherThingState is { field: SomeType }
+      type ItHappened is event { field: String }
+      state otherThingState is { field: String }
+      handler fee is {
+        on event ItHappened { set SomeOtherThing.otherThingState.field to ItHappened.field }
+      }
     }
   }
 }

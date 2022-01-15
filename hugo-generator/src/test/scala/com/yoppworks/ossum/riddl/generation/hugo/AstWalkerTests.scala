@@ -8,7 +8,7 @@ class AstWalkerTests extends RiddlTest {
       val root = container
       val hugoRoot = LukeAstWalker(root)
       val allHugoNodes = hugoRoot.allContents.toSeq
-      allHugoNodes must have size 21
+      allHugoNodes must have size 23
     }
 
     "properly collect all types from `everything.riddl` test file" in {

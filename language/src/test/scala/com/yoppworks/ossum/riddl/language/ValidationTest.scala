@@ -1,12 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.EntityAggregate
-import com.yoppworks.ossum.riddl.language.AST.EntityPersistent
-import com.yoppworks.ossum.riddl.language.AST.Identifier
-import com.yoppworks.ossum.riddl.language.AST.Location
-import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.AST.Topic
+import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Validation.SevereError
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 import com.yoppworks.ossum.riddl.language.Validation.ValidationState
@@ -23,17 +17,17 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
 
     "ValidationState" should {
       "parentOf" should {
-        "find the parent of an existant child" in {
-          val topic = Topic(Location(), Identifier(Location(), "bar"))
-          val domain = Domain(Location(), Identifier(Location(), "foo"), topics = topic :: Nil)
+        "find the parent of an existent child" in {
+          val aType = Type(Location(), Identifier(Location(), "bar"), Strng(Location()))
+          val domain = Domain(Location(), Identifier(Location(), "foo"), types = aType :: Nil)
 
-          ValidationState(SymbolTable(domain)).parentOf(topic) mustBe domain
+          ValidationState(SymbolTable(domain)).parentOf(aType) mustBe domain
         }
-        "not find the parent of a non-existant child" in {
-          val topic = Topic(Location(), Identifier(Location(), "bar"))
-          val domain = Domain(Location(), Identifier(Location(), "foo"), topics = Nil)
+        "not find the parent of a non-existent child" in {
+          val aType = Type(Location(), Identifier(Location(), "bar"), Strng(Location()))
+          val domain = Domain(Location(), Identifier(Location(), "foo"), types = Nil)
 
-          ValidationState(SymbolTable(domain)).parentOf(topic) mustBe RootContainer.empty
+          ValidationState(SymbolTable(domain)).parentOf(aType) mustBe RootContainer.empty
         }
         "checkNonEmpty" in {
           ValidationState(SymbolTable(RootContainer.empty))

@@ -2,7 +2,8 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import fastparse.*
-import fastparse.Parsed.{Failure, Success}
+import fastparse.Parsed.Failure
+import fastparse.Parsed.Success
 
 import java.io.File
 import scala.annotation.unused
@@ -35,12 +36,12 @@ trait ParsingContext {
     P(Index).map(idx => cur.location(idx, cur.origin))
   }
 
-  def doImport(loc: Location, domainRef: DomainRef, fileName: LiteralString): Domain = {
+  def doImport(loc: Location, domainName: Identifier, fileName: LiteralString): Domain = {
     val name = fileName.s + ".bast"
     val file = new File(current.root, name)
     if (!file.exists()) {
       error(fileName.loc, s"File '$name` does not exist, can't be imported.")
-      Domain(loc, Identifier(domainRef.loc, domainRef.id.value.last)) // FIXME: id is wrong?
+      Domain(loc, domainName)
     } else { importDomain(file) }
   }
 

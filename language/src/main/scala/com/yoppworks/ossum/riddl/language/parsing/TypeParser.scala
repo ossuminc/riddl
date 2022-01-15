@@ -8,7 +8,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Type definitions */
-trait TypeParser extends CommonParser {
+trait TypeParser extends ReferenceParser {
 
   def referToType[u: P]: P[ReferenceType] = {
     P(location ~ "refer" ~ "to" ~/ entityRef ~ description).map { tpl =>

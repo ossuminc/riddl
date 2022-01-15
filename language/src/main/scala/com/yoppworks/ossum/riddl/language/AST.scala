@@ -3,6 +3,7 @@ package com.yoppworks.ossum.riddl.language
 import scala.annotation.unused
 import scala.collection.immutable.ListMap
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 // scalastyle:off number.of.methods
 
@@ -23,8 +24,16 @@ object AST {
   case class Location(
     line: Int = 0,
     col: Int = 0,
-    source: String = defaultSourceName) {
+    source: String = defaultSourceName)
+      extends Ordered[Location] {
     override def toString: String = { s"$source($line:$col)" }
+
+    override def compare(that: Location): Int = {
+      if (that.line == line) {
+        if (this.col == that.col) { this.source.compare(that.source) }
+        else { this.col - that.col }
+      } else { this.line - that.line }
+    }
   }
 
   object Location {
@@ -52,25 +61,29 @@ object AST {
   case class LiteralString(loc: Location, s: String) extends RiddlValue
 
   case class PathIdentifier(loc: Location, value: Seq[String]) extends RiddlValue {
-
     def format: String = { if (value.isEmpty) "<empty>" else value.reverse.mkString(".") }
   }
 
   case class Description(
     loc: Location = 0 -> 0,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
+      extends RiddlValue
 
   sealed trait Reference extends RiddlValue {
     def id: PathIdentifier
   }
 
-  sealed trait DefinitionValue extends RiddlValue
-
-  sealed trait DefinitionWithDescription extends DefinitionValue {
+  sealed trait DescribedValue extends DefinitionValue {
     def description: Option[Description]
   }
 
-  sealed trait Definition extends DefinitionWithDescription {
+  sealed trait DefinitionValue extends RiddlValue
+
+  sealed trait ContainerValue extends DefinitionValue {
+    def contents: Seq[Definition]
+  }
+
+  sealed trait Definition extends DescribedValue {
     def id: Identifier
     def identify: String = s"$kind '${id.value}'"
   }
@@ -80,9 +93,7 @@ object AST {
   sealed trait DomainDefinition extends Definition
   sealed trait EntityDefinition extends Definition
 
-  sealed trait Container extends Definition {
-    def contents: Seq[Definition]
-  }
+  sealed trait Container extends Definition with ContainerValue
 
   case class RootContainer(contents: Seq[Container]) extends Container {
     def id: Identifier = Identifier((0, 0), "root")
@@ -94,17 +105,44 @@ object AST {
     val empty: RootContainer = RootContainer(Seq.empty[Container])
   }
 
-  case class DefRef[+T <: Definition](loc: Location, id: PathIdentifier) extends Reference
+  trait DefRef[+T <: Definition] extends Reference {
+    def loc: Location
+    def id: PathIdentifier
+  }
 
   // ////////////////////////////////////////////////////////// TYPES
 
   sealed trait TypeExpression extends DefinitionValue
 
-  sealed trait TypeContainer extends TypeExpression {
-    def contents: Seq[Definition]
+  sealed trait TypeContainer extends TypeExpression with ContainerValue
+
+  case class TypeRef(loc: Location, id: PathIdentifier) extends DefRef[Type] with TypeExpression {}
+
+  sealed trait MessageKind {
+    def kind: String = this.getClass.getSimpleName.dropRight("Kind".length + 1)
   }
 
-  case class TypeRef(loc: Location, id: PathIdentifier) extends Reference with TypeExpression {}
+  case object CommandKind extends MessageKind
+  case object EventKind extends MessageKind
+  case object QueryKind extends MessageKind
+  case object ResultKind extends MessageKind
+
+  sealed trait MessageRef extends DefRef[Type] {
+    def messageKind: MessageKind
+  }
+
+  case class CommandRef(loc: Location, id: PathIdentifier) extends MessageRef {
+    def messageKind: MessageKind = CommandKind
+  }
+  case class EventRef(loc: Location, id: PathIdentifier) extends MessageRef {
+    def messageKind: MessageKind = EventKind
+  }
+  case class QueryRef(loc: Location, id: PathIdentifier) extends MessageRef {
+    def messageKind: MessageKind = QueryKind
+  }
+  case class ResultRef(loc: Location, id: PathIdentifier) extends MessageRef {
+    def messageKind: MessageKind = ResultKind
+  }
 
   case class Optional(loc: Location, typeExp: TypeExpression) extends TypeExpression
 
@@ -140,7 +178,7 @@ object AST {
     loc: Location,
     of: Seq[Enumerator],
     description: Option[Description] = None)
-      extends TypeContainer {
+      extends TypeExpression with ContainerValue {
     lazy val contents: Seq[Definition] = of
   }
 
@@ -196,18 +234,6 @@ object AST {
     entityPath: PathIdentifier,
     description: Option[Description] = None)
       extends TypeExpression
-
-  sealed trait MessageKind {
-    def kind: String = this.getClass.getSimpleName.dropRight("Kind".length)
-  }
-
-  case object CommandKind extends MessageKind
-
-  case object EventKind extends MessageKind
-
-  case object QueryKind extends MessageKind
-
-  case object ResultKind extends MessageKind
 
   case class MessageType(
     loc: Location,
@@ -282,88 +308,7 @@ object AST {
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression
   case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression
 
-  // ////////////////////////////////////////////////////////// TOPICS
-
-  case class TopicRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
-
-  case class Topic(
-    loc: Location,
-    id: Identifier,
-    commands: Seq[Command] = Seq.empty[Command],
-    events: Seq[Event] = Seq.empty[Event],
-    queries: Seq[Query] = Seq.empty[Query],
-    results: Seq[Result] = Seq.empty[Result],
-    description: Option[Description] = None)
-      extends Container with DomainDefinition {
-
-    lazy val contents: Seq[Definition] = (commands.iterator ++ events ++ queries ++ results).toList
-  }
-
-  sealed trait MessageReference extends Reference
-
-  sealed trait MessageDefinition extends Container {
-    def typ: TypeExpression
-
-    override def contents: Seq[Definition] = typ match {
-      case a: Aggregation => a.fields
-      case _              => Seq.empty[Definition]
-    }
-  }
-
-  case class CommandRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends MessageReference
-
-  case class Command(
-    loc: Location,
-    id: Identifier,
-    typ: TypeExpression,
-    events: EventRefs,
-    description: Option[Description] = None)
-      extends MessageDefinition
-
-  case class EventRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends MessageReference
-
-  type EventRefs = Seq[EventRef]
-
-  case class Event(
-    loc: Location,
-    id: Identifier,
-    typ: TypeExpression,
-    description: Option[Description] = None)
-      extends MessageDefinition
-
-  case class QueryRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends MessageReference
-
-  case class Query(
-    loc: Location,
-    id: Identifier,
-    typ: TypeExpression,
-    result: ResultRef,
-    description: Option[Description] = None)
-      extends MessageDefinition
-
-  case class ResultRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends MessageReference
-
-  case class Result(
-    loc: Location,
-    id: Identifier,
-    typ: TypeExpression,
-    description: Option[Description] = None)
-      extends MessageDefinition
+  // ////////////////////////////////////////////////////////// Entities
 
   sealed trait EntityValue extends RiddlValue
 
@@ -387,10 +332,7 @@ object AST {
   case class ActorEntityKind(loc: Location) extends EntityKind("actor")
   case class UserEntityKind(loc: Location) extends EntityKind("role")
 
-  case class EntityRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
+  case class EntityRef(loc: Location, id: PathIdentifier) extends DefRef[Entity]
 
   sealed trait FeatureValue extends RiddlValue
   case class Given(loc: Location, fact: Seq[LiteralString]) extends FeatureValue
@@ -413,10 +355,7 @@ object AST {
     description: Option[Description] = None)
       extends Definition
 
-  case class FeatureRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
+  case class FeatureRef(loc: Location, id: PathIdentifier) extends DefRef[Feature]
 
   case class Feature(
     loc: Location,
@@ -428,10 +367,7 @@ object AST {
     lazy val contents: Seq[Definition] = examples
   }
 
-  case class FunctionRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
+  case class FunctionRef(loc: Location, id: PathIdentifier) extends DefRef[Function]
 
   case class Function(
     loc: Location,
@@ -445,7 +381,7 @@ object AST {
   case class InvariantRef(
     loc: Location,
     id: PathIdentifier)
-      extends Reference
+      extends DefRef[Invariant]
 
   case class Invariant(
     loc: Location,
@@ -473,13 +409,13 @@ object AST {
       extends OnClauseStatement
 
   case class MessageConstructor(
-    msg: MessageReference,
+    msg: MessageRef,
     args: ListMap[Identifier, Expression])
 
   case class PublishStatement(
     loc: Location,
     msg: MessageConstructor,
-    topic: TopicRef,
+    pipe: PipeRef,
     description: Option[Description] = None)
       extends OnClauseStatement
 
@@ -563,25 +499,10 @@ object AST {
 
   case class OnClause(
     loc: Location,
-    msg: MessageReference,
+    msg: MessageRef,
     actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
     description: Option[Description] = None)
-      extends EntityValue with DefinitionWithDescription
-
-  case class OnMessage(
-    loc: Location,
-    msg: MessageReference,
-    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
-    description: Option[Description] = None)
-      extends EntityValue
-
-  case class Consumer(
-    loc: Location,
-    id: Identifier,
-    topic: TopicRef,
-    clauses: Seq[OnClause] = Seq.empty[OnClause],
-    description: Option[Description] = None)
-      extends EntityDefinition
+      extends EntityValue with DescribedValue
 
   case class Handler(
     loc: Location,
@@ -641,8 +562,8 @@ object AST {
     lazy val contents: Seq[Definition] =
       (states.iterator ++ types ++ handlers ++ features ++ functions ++ invariants).toList
 
-    def hasOption[Op <: EntityOption: scala.reflect.ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[scala.reflect.ClassTag[Op]].runtimeClass)
+    def hasOption[Op <: EntityOption: ClassTag]: Boolean = options
+      .exists(_.getClass == implicitly[ClassTag[Op]].runtimeClass)
   }
 
   trait Adaptation extends AdaptorDefinition {
@@ -683,10 +604,7 @@ object AST {
   case class FunctionOption(loc: Location) extends ContextOption
   case class GatewayOption(loc: Location) extends ContextOption
 
-  case class ContextRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
+  case class ContextRef(loc: Location, id: PathIdentifier) extends DefRef[Context]
 
   case class Context(
     loc: Location,
@@ -705,14 +623,9 @@ object AST {
   case class Pipe(
     loc: Location,
     id: Identifier,
-    transmitType: TypeRef,
+    transmitType: Option[TypeRef],
     description: Option[Description] = None)
       extends Definition
-
-  case class PipeRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
 
   trait Streamlet extends Definition
 
@@ -740,11 +653,17 @@ object AST {
 
   trait JointDefinition extends Definition
 
+  case class PipeRef(loc: Location, id: PathIdentifier) extends DefRef[Pipe]
+
+  sealed trait StreamletRef extends Reference
+  case class InletRef(loc: Location, id: PathIdentifier) extends StreamletRef with DefRef[Inlet]
+  case class OutletRef(loc: Location, id: PathIdentifier) extends StreamletRef with DefRef[Outlet]
+
   case class Joint(
     loc: Location,
     id: Identifier,
-    streamLet: DefRef[Streamlet],
-    pipe: DefRef[Pipe],
+    streamLet: StreamletRef,
+    pipe: PipeRef,
     description: Option[Description] = None)
       extends JointDefinition
 
@@ -756,27 +675,27 @@ object AST {
     joints: Seq[Joint] = Seq.empty[Joint],
     description: Option[Description] = None)
       extends Container with DomainDefinition {
-    def contents: Seq[Definition] = pipes ++ processors
+    def contents: Seq[Definition] = pipes ++ processors ++ joints
   }
 
   /** Definition of an Interaction
-   *
-   * Interactions define an exemplary interaction between the system being designed and other
-   * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
-   *
-   * @param loc
-   * Where in the input the Scenario is defined
-   * @param id
-   * The name of the scenario
-   * @param actions
-   * The actions that constitute the interaction
-   */
+    *
+    * Interactions define an exemplary interaction between the system being designed and other
+    * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
+    *
+    * @param loc
+    *   Where in the input the Scenario is defined
+    * @param id
+    *   The name of the scenario
+    * @param actions
+    *   The actions that constitute the interaction
+    */
   case class Interaction(
     loc: Location,
     id: Identifier,
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     description: Option[Description] = None)
-    extends Container with DomainDefinition with ContextDefinition {
+      extends Container with DomainDefinition with ContextDefinition {
     lazy val contents: Seq[Definition] = actions
   }
 
@@ -788,7 +707,7 @@ object AST {
     undoCommand: CommandRef,
     example: Seq[Example],
     description: Option[Description] = None)
-    extends Definition
+      extends Definition
 
   sealed trait SagaOption extends RiddlValue
 
@@ -804,7 +723,7 @@ object AST {
     output: Option[TypeExpression],
     sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
     description: Option[Description] = None)
-    extends Container with ContextDefinition {
+      extends Container with ContextDefinition {
     lazy val contents: Seq[Definition] = sagaActions
   }
 
@@ -819,8 +738,8 @@ object AST {
   }
 
   /** Used to capture reactions to actions. Actions include reactions in their definition to model
-   * the precipitating reactions to the action.
-   */
+    * the precipitating reactions to the action.
+    */
   case class Reaction(
     loc: Location,
     id: Identifier,
@@ -828,12 +747,7 @@ object AST {
     function: FunctionRef,
     arguments: Seq[LiteralString],
     description: Option[Description] = None)
-      extends DefinitionWithDescription
-
-  case class ReactionRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
+      extends DescribedValue
 
   type Actions = Seq[ActionDefinition]
 
@@ -862,21 +776,17 @@ object AST {
     options: Seq[MessageOption] = Seq.empty[MessageOption],
     sender: EntityRef,
     receiver: EntityRef,
-    message: MessageReference,
+    message: MessageRef,
     reactions: Seq[Reaction],
     description: Option[Description] = None)
       extends ActionDefinition
 
-  case class DomainRef(
-    loc: Location,
-    id: PathIdentifier)
-      extends Reference
+  case class DomainRef(loc: Location, id: PathIdentifier) extends DefRef[Domain]
 
   case class Domain(
     loc: Location,
     id: Identifier,
     types: Seq[Type] = Seq.empty[Type],
-    topics: Seq[Topic] = Seq.empty[Topic],
     contexts: Seq[Context] = Seq.empty[Context],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     plants: Seq[Plant] = Seq.empty[Plant],
@@ -885,6 +795,6 @@ object AST {
       extends Container with DomainDefinition {
 
     lazy val contents: Seq[DomainDefinition] =
-      (types.iterator ++ topics ++ contexts ++ interactions ++ plants).toList
+      (types.iterator ++ contexts ++ interactions ++ plants).toList
   }
 }

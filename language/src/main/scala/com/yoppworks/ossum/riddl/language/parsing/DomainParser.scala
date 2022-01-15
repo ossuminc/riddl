@@ -9,7 +9,6 @@ import fastparse.ScalaWhitespace.*
 /** Parsing rules for domains. */
 trait DomainParser
     extends CommonParser
-    with TopicParser
     with ContextParser
     with InteractionParser
     with StreamingParser
@@ -21,8 +20,8 @@ trait DomainParser
 
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      typeDef.map(Seq(_)) | topic.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) |
-        plant.map(Seq(_)) | domain.map(Seq(_)) | domainInclude
+      typeDef.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) | plant.map(Seq(_)) |
+        domain.map(Seq(_)) | domainInclude
     ).rep(0).map(_.flatten)
   }
 
@@ -34,11 +33,10 @@ trait DomainParser
       val groups = defs.groupBy(_.getClass)
       val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
-      val topics = mapTo[Topic](groups.get(classOf[Topic]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
-      Domain(loc, id, types, topics, contexts, interactions, plants, domains, description)
+      Domain(loc, id, types, contexts, interactions, plants, domains, description)
     }
   }
 }
