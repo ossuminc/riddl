@@ -8,11 +8,16 @@ import java.io.File
 import scala.annotation.unused
 import scala.collection.mutable
 
-case class ParserError(input: RiddlParserInput, loc: Location, msg: String) extends Throwable {
+case class ParserError(
+  input: RiddlParserInput,
+  loc: Location,
+  msg: String,
+  context: String = "")
+  extends Throwable {
 
   def format: String = {
-    val context = input.annotateErrorLine(loc)
-    s"${input.origin}$loc: $msg\n$context"
+    val errorLine = input.annotateErrorLine(loc)
+    s"Error: ${input.origin}$loc: $msg but got:\n${errorLine}Context: $context"
   }
 }
 
@@ -56,7 +61,7 @@ trait ParsingContext {
     } else {
       stack.push(file)
       val result = this.expect[T](rule) match {
-        case Left(_)       => empty
+        case Left(_) => empty
         case Right(result) => result
       }
       stack.pop
@@ -64,21 +69,30 @@ trait ParsingContext {
     }
   }
 
-  def error(loc: Location, msg: String): Unit = {
-    val error = ParserError(current, loc, msg)
+  def error(loc: Location, msg: String, context: String = ""): Unit = {
+    val error = ParserError(current, loc, msg, context)
     errors.append(error)
+  }
+
+  def makeParseFailureError(failure: Failure): Unit = {
+    val location = current.location(failure.index)
+    val trace = failure.trace()
+    val msg = trace.terminals.value.size match {
+      case 0 => "Unexpected content"
+      case 1 => s"Expected ${trace.terminals.render}"
+      case _ => s"Expected one of ${trace.terminals.render}"
+    }
+    val context = trace.groups.render
+    error(location, msg, context)
   }
 
   def expect[T](parser: P[?] => P[T]): Either[Seq[ParserError], T] = {
     fastparse.parse(current, parser(_)) match {
       case Success(content, _) =>
-        if (errors.nonEmpty) { Left(errors.toSeq) }
-        else { Right(content) }
-      case failure @ Failure(_, index, _) =>
-        val trace = failure.trace()
-        val msg = s"""Parse failed:
-                     |${trace.longAggregateMsg}""".stripMargin
-        error(current.location(index), msg)
+        if (errors.nonEmpty) {Left(errors.toSeq)}
+        else {Right(content)}
+      case failure: Failure =>
+        makeParseFailureError(failure)
         Left(errors.toSeq)
       case _ => throw new IllegalStateException("Parsed[T] should have matched Success or Failure")
 

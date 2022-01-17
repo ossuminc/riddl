@@ -22,8 +22,8 @@ class ParserTest extends ParsingTest {
       val input = "Flerkins are evil but cute"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
-          errors.map(_.format).foreach(println(_))
           errors must not be empty
+          errors.head.msg mustBe ("Expected one of (\"domain\" | end-of-input)")
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
