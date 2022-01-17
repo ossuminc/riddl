@@ -2,8 +2,7 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import fastparse.*
-import fastparse.Parsed.Failure
-import fastparse.Parsed.Success
+import fastparse.Parsed.{Failure, Success}
 
 import java.io.File
 import scala.annotation.unused
@@ -24,12 +23,7 @@ trait ParsingContext {
 
   protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer.empty[ParserError]
 
-  def current: RiddlParserInput = {
-    stack.current match {
-      case Some(rpi) => rpi
-      case None      => throw new RuntimeException("Parse Input Stack Underflow")
-    }
-  }
+  def current: RiddlParserInput = { stack.current }
 
   def location[u: P]: P[Location] = {
     val cur = current
@@ -37,7 +31,7 @@ trait ParsingContext {
   }
 
   def doImport(loc: Location, domainName: Identifier, fileName: LiteralString): Domain = {
-    val name = fileName.s + ".bast"
+    val name = fileName.s
     val file = new File(current.root, name)
     if (!file.exists()) {
       error(fileName.loc, s"File '$name` does not exist, can't be imported.")
@@ -50,7 +44,7 @@ trait ParsingContext {
     file: File
   ): Domain = {
     // TODO: implement importDomain
-    ???
+    Domain(Location(), Identifier(Location(), "NotImplemented"))
   }
 
   def doInclude[T](str: LiteralString, empty: T)(rule: P[?] => P[T]): T = {

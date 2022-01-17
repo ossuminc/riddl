@@ -6,13 +6,12 @@ class InteractionValidatorTest extends ValidatingTest {
 
   "Interaction" should {
     "give error for interactions without actions" in {
-      val input =
-        """domain dodo is { context foo is {
-          |  interaction dosomething is {
-          |   ???
-          |  }
-          |} }
-          |""".stripMargin
+      val input = """domain dodo is { context foo is {
+                    |  interaction dosomething is {
+                    |   ???
+                    |  }
+                    |} }
+                    |""".stripMargin
       parseAndValidate[Domain](input) { (domain, msgs) =>
         assertValidationMessage(
           msgs,
@@ -24,22 +23,21 @@ class InteractionValidatorTest extends ValidatingTest {
       }
     }
     "allow interaction definitions" in {
-      val input =
-        """domain bar is { context foo is {
-          |  entity myLittlePony is {
-          |   ???
-          |  }
-          |  interaction dosomething is {
-          |    message 'perform a command' option is async
-          |      from entity Unicorn
-          |      to entity myLittlePony as command DoAThing
-          |
-          |    message 'handle a thing' option is async
-          |      from entity myLittlePony
-          |      to entity Unicorn as command HandleAThing
-          |  }
-          |}}
-          |""".stripMargin
+      val input = """domain bar is { context foo is {
+                    |  entity myLittlePony is {
+                    |   ???
+                    |  }
+                    |  interaction dosomething is {
+                    |    message 'perform a command' option is async
+                    |      from entity Unicorn
+                    |      to entity myLittlePony as command DoAThing
+                    |
+                    |    message 'handle a thing' option is async
+                    |      from entity myLittlePony
+                    |      to entity Unicorn as command HandleAThing
+                    |  }
+                    |}}
+                    |""".stripMargin
       parseAndValidate[Domain](input) { (domain, msgs) =>
         msgs.filter(m => m.kind.isError && m.message.startsWith("Interaction 'dosomething'")) mustBe
           empty

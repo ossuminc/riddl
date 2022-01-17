@@ -2,8 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.generic.auto.*
 import pureconfig.{ConfigReader, ConfigSource}
+import pureconfig.generic.auto.*
 
 import java.io.File
 import java.nio.file.Path
@@ -77,7 +77,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       this
     }
 
-    def addNL: FormatState = {lines.append(nl); this}
+    def addNL: FormatState = { lines.append(nl); this }
 
     def add(str: String): FormatState = {
       lines.append(s"$str")
@@ -124,11 +124,11 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def closeDef(definition: Definition, withBrace: Boolean = true): FormatState = {
       outdent
-      if (withBrace) {addIndent("} ")}
+      if (withBrace) { addIndent("} ") }
       emitDescription(definition.description).add("\n")
     }
 
-    def indent: FormatState = {indentLevel = indentLevel + 2; this}
+    def indent: FormatState = { indentLevel = indentLevel + 2; this }
 
     def outdent: FormatState = {
       require(indentLevel > 1, "unmatched indents")
@@ -174,7 +174,7 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitFields(of: Seq[Field]): FormatState = {
-      if (of.isEmpty) {this.add("{}")}
+      if (of.isEmpty) { this.add("{}") }
       else if (of.size == 1) {
         val f: Field = of.head
         add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
@@ -199,7 +199,7 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitPattern(pattern: AST.Pattern): FormatState = {
       val line =
-        if (pattern.pattern.size == 1) {"Pattern(\"" + pattern.pattern.head.s + "\"" + s") "}
+        if (pattern.pattern.size == 1) { "Pattern(\"" + pattern.pattern.head.s + "\"" + s") " }
         else {
           s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
           s"\n) "
@@ -217,33 +217,33 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitTypeExpression(typEx: AST.TypeExpression): FormatState = {
       typEx match {
-        case string: Strng => emitString(string)
-        case Bool(_) => this.add("Boolean")
-        case Number(_) => this.add("Number")
-        case Integer(_) => this.add("Integer")
-        case Decimal(_) => this.add("Decimal")
-        case Date(_) => this.add("Date")
-        case Time(_) => this.add("Time")
-        case DateTime(_) => this.add("DateTime")
-        case TimeStamp(_) => this.add("TimeStamp")
-        case LatLong(_) => this.add("LatLong")
-        case Nothing(_) => this.add("Nothing")
+        case string: Strng  => emitString(string)
+        case Bool(_)        => this.add("Boolean")
+        case Number(_)      => this.add("Number")
+        case Integer(_)     => this.add("Integer")
+        case Decimal(_)     => this.add("Decimal")
+        case Date(_)        => this.add("Date")
+        case Time(_)        => this.add("Time")
+        case DateTime(_)    => this.add("DateTime")
+        case TimeStamp(_)   => this.add("TimeStamp")
+        case LatLong(_)     => this.add("LatLong")
+        case Nothing(_)     => this.add("Nothing")
         case TypeRef(_, id) => this.add(id.format)
         case URL(_, scheme) => this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
-        case mapping: Mapping => emitMapping(mapping)
+        case mapping: Mapping         => emitMapping(mapping)
         case RangeType(_, min, max, desc) => this.add(s"range(${min.n},${max.n}) ")
-          .emitDescription(desc)
+            .emitDescription(desc)
         case ReferenceType(_, entityRef, desc) => this.add(s"refer to ${entityRef.format}")
-          .emitDescription(desc)
-        case pattern: Pattern => emitPattern(pattern)
-        case mt: MessageType => emitMessageType(mt)
+            .emitDescription(desc)
+        case pattern: Pattern      => emitPattern(pattern)
+        case mt: MessageType       => emitMessageType(mt)
         case UniqueId(_, id, desc) => this.add(s"Id(${id.format}) ").emitDescription(desc)
-        case Optional(_, typex) => this.emitTypeExpression(typex).add("?")
-        case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
-        case OneOrMore(_, typex) => this.emitTypeExpression(typex).add("+")
+        case Optional(_, typex)    => this.emitTypeExpression(typex).add("?")
+        case ZeroOrMore(_, typex)  => this.emitTypeExpression(typex).add("*")
+        case OneOrMore(_, typex)   => this.emitTypeExpression(typex).add("+")
         case x: TypeExpression =>
           require(requirement = false, s"Unknown type $x")
           this
@@ -290,7 +290,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       this
     }
 
-    def emitUndefined(): FormatState = {add(" ???")}
+    def emitUndefined(): FormatState = { add(" ???") }
 
     def emitOptions(optionDef: OptionsDef[?]): FormatState = {
       if (optionDef.options.nonEmpty) this.addLine(optionDef.format) else this
@@ -303,49 +303,49 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Container[Domain],
       domain: Domain
-    ): FormatState = {state.openDef(domain)}
+    ): FormatState = { state.openDef(domain) }
 
     override def closeDomain(
       state: FormatState,
       container: Container[Domain],
       domain: Domain
-    ): FormatState = {state.closeDef(domain)}
+    ): FormatState = { state.closeDef(domain) }
 
     override def openContext(
       state: FormatState,
       container: Domain,
       context: Context
-    ): FormatState = {state.openDef(context).emitOptions(context)}
+    ): FormatState = { state.openDef(context).emitOptions(context) }
 
     override def closeContext(
       state: FormatState,
       container: Domain,
       context: Context
-    ): FormatState = {state.closeDef(context)}
+    ): FormatState = { state.closeDef(context) }
 
     override def openEntity(
       state: FormatState,
       container: Context,
       entity: Entity
-    ): FormatState = {state.openDef(entity).emitOptions(entity)}
+    ): FormatState = { state.openDef(entity).emitOptions(entity) }
 
     override def closeEntity(
       state: FormatState,
       container: Context,
       entity: Entity
-    ): FormatState = {state.closeDef(entity)}
+    ): FormatState = { state.closeDef(entity) }
 
     override def openFeature(
       state: FormatState,
       container: Container[Feature],
       feature: Feature
-    ): FormatState = {state.openDef(feature)}
+    ): FormatState = { state.openDef(feature) }
 
     override def closeFeature(
       state: FormatState,
       container: Container[Feature],
       feature: Feature
-    ): FormatState = {state.closeDef(feature)}
+    ): FormatState = { state.closeDef(feature) }
 
     override def openAdaptor(
       state: FormatState,
@@ -354,8 +354,8 @@ class FormatTranslator extends Translator[FormatConfig] {
     ): FormatState = {
       val s = state.addIndent(adaptor.kind).add(" ").add(adaptor.id.format).add(" for ")
         .add(adaptor.ref.format).add(" is {\n").indent
-      if (adaptor.adaptations.isEmpty) {s.add(s.spc).emitUndefined()}
-      else {s}
+      if (adaptor.adaptations.isEmpty) { s.add(s.spc).emitUndefined() }
+      else { s }
     }
 
     override def doAdaptation(
@@ -364,34 +364,34 @@ class FormatTranslator extends Translator[FormatConfig] {
       adaptation: Adaptation
     ): FormatState = adaptation match {
       case Adaptation(_, _, event, command, examples, description) => state
-        .addIndent(s"adapt ${adaptation.id.format} is {\n").indent.addIndent("from ")
-        .emitMessageRef(event).add(" to ").emitMessageRef(command).add(" as {\n").indent
-        .emitExamples(examples).outdent.add("\n").addIndent("} ").emitDescription(description)
+          .addIndent(s"adapt ${adaptation.id.format} is {\n").indent.addIndent("from ")
+          .emitMessageRef(event).add(" to ").emitMessageRef(command).add(" as {\n").indent
+          .emitExamples(examples).outdent.add("\n").addIndent("} ").emitDescription(description)
     }
 
     override def closeAdaptor(
       state: FormatState,
       container: Context,
       adaptor: Adaptor
-    ): FormatState = {state.closeDef(adaptor)}
+    ): FormatState = { state.closeDef(adaptor) }
 
     override def openInteraction(
       state: FormatState,
       container: Container[Interaction],
       interaction: Interaction
-    ): FormatState = {state.openDef(interaction).emitOptions(interaction)}
+    ): FormatState = { state.openDef(interaction).emitOptions(interaction) }
 
     override def closeInteraction(
       state: FormatState,
       container: Container[Interaction],
       interaction: Interaction
-    ): FormatState = {state.closeDef(interaction)}
+    ): FormatState = { state.closeDef(interaction) }
 
     override def doType(
       state: FormatState,
       container: Container[Definition],
       typeDef: Type
-    ): FormatState = {state.emitType(typeDef)}
+    ): FormatState = { state.emitType(typeDef) }
 
     override def doAction(
       state: FormatState,
@@ -410,7 +410,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Container[Example],
       example: Example
-    ): FormatState = {state.emitExample(example)}
+    ): FormatState = { state.emitExample(example) }
 
     override def doInvariant(
       state: FormatState,
@@ -426,7 +426,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Container[Field],
       field: Field
-    ): FormatState = {state}
+    ): FormatState = { state }
 
     override def closeState(state: FormatState, container: Entity, s: State): FormatState = {
       state.closeDef(s, withBrace = false)
@@ -436,19 +436,19 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Container[Saga],
       saga: Saga
-    ): FormatState = {state.openDef(saga)}
+    ): FormatState = { state.openDef(saga) }
 
     override def doSagaAction(
       state: FormatState,
       container: Saga,
       action: SagaAction
-    ): FormatState = {state}
+    ): FormatState = { state }
 
     override def closeSaga(
       state: FormatState,
       container: Container[Saga],
       saga: Saga
-    ): FormatState = {state.closeDef(saga)}
+    ): FormatState = { state.closeDef(saga) }
 
     override def doHandler(
       state: FormatState,
@@ -471,7 +471,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state.openDef(pipe).step { state =>
         pipe.transmitType match {
           case Some(typ) => state.addIndent("transmit ").emitTypeExpression(typ)
-          case None => state.add(state.spc).emitUndefined()
+          case None      => state.add(state.spc).emitUndefined()
         }
       }.closeDef(pipe)
     }
@@ -480,9 +480,9 @@ class FormatTranslator extends Translator[FormatConfig] {
       val s = state.addIndent(s"${joint.kind} ${joint.id.format} is ")
       joint.streamletRef match {
         case InletRef(_, id) => s.addIndent(s"inlet ${id.format} from")
-          .add(s" pipe ${joint.pipe.id.format}\n")
+            .add(s" pipe ${joint.pipe.id.format}\n")
         case OutletRef(_, id) => s.addIndent(s"outlet ${id.format} to")
-          .add(s" pipe ${joint.pipe.id.format}\n")
+            .add(s" pipe ${joint.pipe.id.format}\n")
       }
     }
 
@@ -510,7 +510,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Domain,
       plant: Plant
-    ): FormatState = {state.closeDef(plant)}
+    ): FormatState = { state.closeDef(plant) }
 
     override def openFunction(
       state: FormatState,
@@ -528,7 +528,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Entity,
       function: Function
-    ): FormatState = {state.closeDef(function)}
+    ): FormatState = { state.closeDef(function) }
   }
 
 }

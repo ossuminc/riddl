@@ -1,0 +1,3 @@
+domain foo is {
+  import domain NotImplemented from "NotImplemented.bast"
+}

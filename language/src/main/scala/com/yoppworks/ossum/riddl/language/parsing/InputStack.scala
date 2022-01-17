@@ -15,5 +15,8 @@ case class InputStack(
 
   def pop: RiddlParserInput = { inputs.pop() }
 
-  def current: Option[RiddlParserInput] = { inputs.headOption }
+  def current: RiddlParserInput = {
+    require(inputs.nonEmpty, "No current input available")
+    inputs.head
+  }
 }

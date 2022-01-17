@@ -25,7 +25,7 @@ abstract class RiddlParserInput extends ParserInput {
 
   def checkTraceable(): Unit = ()
 
-  private[this] lazy val lineNumberLookup = Util.lineNumberLookup(data)
+  private[this] lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
   private def lineOf(index: Int): Int = {
     lineNumberLookup.indexWhere(_ > index) match {

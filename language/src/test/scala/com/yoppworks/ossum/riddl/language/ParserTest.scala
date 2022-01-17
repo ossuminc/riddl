@@ -8,6 +8,15 @@ class ParserTest extends ParsingTest {
 
   import AST.*
 
+  "ParserContext" should {
+    "throw on underflow" in {
+      val riddlParserInput = RiddlParserInput("")
+      val testParser = TestParser(riddlParserInput)
+      testParser
+    }
+
+  }
+
   "Parser" should {
     "report bad syntax" in {
       val input = "Flerkins are evil but cute"
@@ -108,7 +117,7 @@ class ParserTest extends ParsingTest {
         case Right(content) => content mustBe Context(
             1 -> 1,
             Identifier(1 -> 9, "bar"),
-          Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 35), GatewayOption(1 -> 44))
+            Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 35), GatewayOption(1 -> 44))
           )
       }
     }
@@ -154,19 +163,18 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow entity definitions in contexts" in {
-      val input: String =
-        """entity Hamburger is {
-          |  options ( persistent, aggregate )
-          |  state foo is { x: String }
-          |  handler foo is {}
-          |  feature AnAspect is {
-          |    EXAMPLE foo {
-          |      GIVEN "everybody hates me"
-          |      AND "I'm depressed"
-          |      WHEN "I go fishing"
-          |      THEN "I'll just eat worms"
-          |      ELSE "I'm happy"
-          |    }
+      val input: String = """entity Hamburger is {
+                            |  options ( persistent, aggregate )
+                            |  state foo is { x: String }
+                            |  handler foo is {}
+                            |  feature AnAspect is {
+                            |    EXAMPLE foo {
+                            |      GIVEN "everybody hates me"
+                            |      AND "I'm depressed"
+                            |      WHEN "I go fishing"
+                            |      THEN "I'll just eat worms"
+                            |      ELSE "I'm happy"
+                            |    }
                             |  }
                             |}
                             |""".stripMargin
@@ -175,20 +183,20 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-          ConceptEntityKind(1 -> 1),
-          1 -> 1,
-          Identifier(1 -> 8, "Hamburger"),
-          Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 23)),
-          Seq(State(
-            3 -> 3,
-            Identifier(3 -> 9, "foo"),
-            Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
-            None
-          )),
-          handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
-          features = Seq(Feature(
-            5 -> 3,
-            Identifier(5 -> 11, "AnAspect"),
+            ConceptEntityKind(1 -> 1),
+            1 -> 1,
+            Identifier(1 -> 8, "Hamburger"),
+            Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 23)),
+            Seq(State(
+              3 -> 3,
+              Identifier(3 -> 9, "foo"),
+              Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
+              None
+            )),
+            handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
+            features = Seq(Feature(
+              5 -> 3,
+              Identifier(5 -> 11, "AnAspect"),
               Seq(Example(
                 6 -> 5,
                 Identifier(6 -> 13, "foo"),
@@ -234,19 +242,19 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Interaction(
-          1 -> 1,
-          Identifier(1 -> 13, "dosomething"),
-          Seq.empty[InteractionOption],
-          Seq(
-            MessageAction(
-              2 -> 3,
-              Identifier(2 -> 11, "perform a command"),
-              Seq(AsynchOption(2 -> 41)),
-              EntityRef(3 -> 10, PathIdentifier(3 -> 17, Seq("Unicorn"))),
-              EntityRef(4 -> 8, PathIdentifier(4 -> 15, Seq("myLittlePony"))),
-              CommandRef(4 -> 31, PathIdentifier(4 -> 39, Seq("DoAThing"))),
-              Seq.empty[Reaction]
-            ),
+            1 -> 1,
+            Identifier(1 -> 13, "dosomething"),
+            Seq.empty[InteractionOption],
+            Seq(
+              MessageAction(
+                2 -> 3,
+                Identifier(2 -> 11, "perform a command"),
+                Seq(AsynchOption(2 -> 41)),
+                EntityRef(3 -> 10, PathIdentifier(3 -> 17, Seq("Unicorn"))),
+                EntityRef(4 -> 8, PathIdentifier(4 -> 15, Seq("myLittlePony"))),
+                CommandRef(4 -> 31, PathIdentifier(4 -> 39, Seq("DoAThing"))),
+                Seq.empty[Reaction]
+              ),
               MessageAction(
                 6 -> 3,
                 Identifier(6 -> 11, "handle a thing"),

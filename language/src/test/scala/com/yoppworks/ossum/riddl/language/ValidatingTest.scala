@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind,
-  ValidationMessages, ValidationOptions}
+import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind, ValidationMessages, ValidationOptions}
 import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import org.scalatest.Assertion
 
@@ -12,10 +11,9 @@ import scala.reflect.*
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidateInContext[D <: ContextDefinition : ClassTag](
+  def parseAndValidateInContext[D <: ContextDefinition: ClassTag](
     input: String
-  )(
-    validator: (D, ValidationMessages) => Assertion
+  )(validator: (D, ValidationMessages) => Assertion
   ): Seq[Assertion] = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     parseDefinition[Domain](RiddlParserInput(parseString)) match {
@@ -32,16 +30,15 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def parseAndValidate[D <: Container[Definition] : ClassTag](
+  def parseAndValidate[D <: Container[Definition]: ClassTag](
     input: String
-  )(
-    validator: (D, ValidationMessages) => Assertion
+  )(validator: (D, ValidationMessages) => Assertion
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: D@unchecked) =>
+      case Right(model: D @unchecked) =>
         val msgs = Validation.validate(model)
         validator(model, msgs)
     }

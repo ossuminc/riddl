@@ -52,5 +52,5 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
     "language/src/test/input/rbbq.riddl" -> false
   )
 
-  "FormatTranslator" should {checkItems(items)}
+  "FormatTranslator" should { checkItems(items) }
 }

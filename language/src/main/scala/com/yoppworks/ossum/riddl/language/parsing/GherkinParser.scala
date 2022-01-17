@@ -47,7 +47,7 @@ trait GherkinParser extends CommonParser {
           .map(tpl => (GherkinClause.apply _).tupled(tpl)).rep(0)
     ).?.map {
       case Some((initial, remainder)) => initial +: remainder
-      case None => Seq.empty[GherkinClause]
+      case None                       => Seq.empty[GherkinClause]
     }
   }
 

@@ -1,9 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.SourceParserInput
-import org.scalatest.wordspec.AnyWordSpec
+import com.yoppworks.ossum.riddl.language.AST.Location
+import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, SourceParserInput}
 import org.scalatest.matchers.must
+import org.scalatest.wordspec.AnyWordSpec
 
 import scala.io.Source
 
@@ -15,6 +15,8 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
       val source: Source = Source.fromString(string)
       val riddlParserInput = RiddlParserInput(source)
       riddlParserInput.data mustBe string
+      riddlParserInput.innerLength mustBe 8
+      riddlParserInput.length mustBe 8
     }
 
     "length" should {
@@ -28,12 +30,26 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
             |""".stripMargin
         )
 
-        for (input <- inputs) { RiddlParserInput(input).length mustBe input.length }
-
+        for (input <- inputs) {
+          RiddlParserInput(input).length mustBe input.length
+          RiddlParserInput(input).innerLength mustBe input.length
+        }
       }
     }
 
     "rangeOf" should {
+      "convert a Location to a pair " in {
+        val input = RiddlParserInput("""12345
+                                       |6789
+                                       |0
+                                       |1234
+                                       |56
+                                       |""".stripMargin)
+        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach { case (loc, offset) =>
+          input.rangeOf(Location(loc)) mustBe offset
+        }
+
+      }
       "return the line and column of a char index" in {
         val input = RiddlParserInput("""12345
                                        |6789

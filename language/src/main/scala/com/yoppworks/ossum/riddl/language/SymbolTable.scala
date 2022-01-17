@@ -7,9 +7,9 @@ import scala.collection.mutable
 import scala.reflect.*
 
 /** Symbol Table for Validation This symbol table is built from the AST model after syntactic
- * parsing is complete. It will also work for any sub-tree of the model that is rooted by a
- * Container node.
- */
+  * parsing is complete. It will also work for any sub-tree of the model that is rooted by a
+  * Container node.
+  */
 case class SymbolTable(container: Container[Definition]) {
   type Parentage = Map[Definition, Container[Definition]]
 
@@ -31,18 +31,18 @@ case class SymbolTable(container: Container[Definition]) {
     child match {
       case e: Entity => e.states.foreach { s: State => addToSymTab(s.id.value, s -> e) }
       case t: Type => t.typ match {
-        case e: Enumeration => e.of.foreach { etor =>
-          addToSymTab(etor.id.value, etor -> parent)
-          // type reference and identifier relations must be handled by semantic validation
-        }
+          case e: Enumeration => e.of.foreach { etor =>
+              addToSymTab(etor.id.value, etor -> parent)
+            // type reference and identifier relations must be handled by semantic validation
+            }
           case mt: MessageType => mt.fields.foreach { fld =>
               addToSymTab(fld.id.value, fld -> parent)
-          }
-        case agg: Aggregation => agg.fields.foreach { fld =>
-          addToSymTab(fld.id.value, fld -> parent)
+            }
+          case agg: Aggregation => agg.fields.foreach { fld =>
+              addToSymTab(fld.id.value, fld -> parent)
+            }
+          case _ => addToSymTab(t.id.value, t -> parent) // types are definitions too
         }
-        case _ => addToSymTab(t.id.value, t -> parent) // types are definitions too
-      }
       case _ =>
     }
   }
@@ -58,7 +58,7 @@ case class SymbolTable(container: Container[Definition]) {
       examine: Definition
     ): List[Container[Definition]] = {
       parentage.get(examine) match {
-        case None => init
+        case None                                  => init
         case Some(parent) if init.contains(parent) => init
         case Some(parent) =>
           val newList = init :+ parent
@@ -79,7 +79,7 @@ case class SymbolTable(container: Container[Definition]) {
     symbols.update(name, included)
   }
 
-  def lookupSymbol[D <: Definition : ClassTag](
+  def lookupSymbol[D <: Definition: ClassTag](
     id: Seq[String]
   ): List[(Definition, Option[D])] = {
     val clazz = classTag[D].runtimeClass
@@ -87,14 +87,14 @@ case class SymbolTable(container: Container[Definition]) {
     val containerNames = id.tail
     symbols.get(leafName) match {
       case Some(set) => set.filter { case (_: Definition, container: Container[Definition]) =>
-        val parentNames = (container +: parentsOf(container)).map(_.id.value)
-        containerNames.zip(parentNames).forall { case (containerName, parentName) =>
-          containerName == parentName
-        }
-      }.map { case (d: Definition, _: Container[Definition]) =>
-        if (clazz.isInstance(d)) {(d, Some(d.asInstanceOf[D]))}
-        else {(d, None)}
-      }.toList
+          val parentNames = (container +: parentsOf(container)).map(_.id.value)
+          containerNames.zip(parentNames).forall { case (containerName, parentName) =>
+            containerName == parentName
+          }
+        }.map { case (d: Definition, _: Container[Definition]) =>
+          if (clazz.isInstance(d)) { (d, Some(d.asInstanceOf[D])) }
+          else { (d, None) }
+        }.toList
 
       case None => List.empty
     }
@@ -121,7 +121,7 @@ case class SymbolTable(container: Container[Definition]) {
             containerNames.zip(parentNames).forall { case (containerName, parentName) =>
               containerName == parentName
             }
-          } else {false}
+          } else { false }
         }.map(_._1.asInstanceOf[D])
         result.toList
       case None => List.empty[D]

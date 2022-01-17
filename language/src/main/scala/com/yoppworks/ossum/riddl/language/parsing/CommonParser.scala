@@ -99,7 +99,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
         .map(tpl => Seq(mapper.tupled(tpl)))
     ).?.map {
       case Some(seq) => seq
-      case None => Seq.empty[TY]
+      case None      => Seq.empty[TY]
     }
   }
 

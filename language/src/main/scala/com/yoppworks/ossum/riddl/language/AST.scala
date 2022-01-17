@@ -47,7 +47,7 @@ object AST {
 
     implicit def apply(
       pair: (Int, Int)
-    ): Location = {Location(pair._1, pair._2, defaultSourceName)}
+    ): Location = { Location(pair._1, pair._2, defaultSourceName) }
 
     implicit def apply(triple: (Int, Int, String)): Location = {
       Location(triple._1, triple._2, triple._3)
@@ -70,13 +70,13 @@ object AST {
   }
 
   case class PathIdentifier(loc: Location, value: Seq[String]) extends RiddlValue {
-    override def format: String = {if (value.isEmpty) "." else value.reverse.mkString(".")}
+    override def format: String = { if (value.isEmpty) "." else value.reverse.mkString(".") }
   }
 
   case class Description(
     loc: Location = 0 -> 0,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
-    extends RiddlValue
+      extends RiddlValue
 
   sealed trait Reference extends RiddlValue {
     def id: PathIdentifier
@@ -201,7 +201,7 @@ object AST {
     loc: Location,
     of: Seq[Enumerator],
     description: Option[Description] = None)
-    extends TypeExpression with ContainerValue[Enumerator] {
+      extends TypeExpression with ContainerValue[Enumerator] {
     lazy val contents: Seq[Enumerator] = of
   }
 
@@ -222,7 +222,7 @@ object AST {
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field],
     description: Option[Description] = None)
-    extends TypeExpression with ContainerValue[Field] {
+      extends TypeExpression with ContainerValue[Field] {
     lazy val contents: Seq[Field] = fields
   }
 
@@ -303,9 +303,9 @@ object AST {
     id: Identifier,
     typ: TypeExpression,
     description: Option[Description] = None)
-    extends Definition with ContextDefinition with EntityDefinition with DomainDefinition
+      extends Definition with ContextDefinition with EntityDefinition with DomainDefinition
 
-  //////////////////////////////////////////////////////////// EXPRESSIONS
+  // ////////////////////////////////////////////////////////// EXPRESSIONS
   sealed trait Expression extends RiddlValue
 
   case class UnknownExpression(loc: Location) extends Expression {
@@ -324,7 +324,7 @@ object AST {
     loc: Location,
     name: Identifier,
     arguments: ListMap[Identifier, Expression])
-    extends Expression {
+      extends Expression {
     override def format: String = s""
   }
 
@@ -332,7 +332,7 @@ object AST {
     loc: Location,
     operator: String,
     arguments: ListMap[Identifier, Expression])
-    extends Expression
+      extends Expression
 
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression {
     override def format: String = n.toString()
@@ -355,13 +355,13 @@ object AST {
   trait OptionsDef[T <: OptionValue] extends RiddlValue {
     def options: Seq[T]
 
-    def hasOption[OPT <: T : ClassTag]: Boolean = options
+    def hasOption[OPT <: T: ClassTag]: Boolean = options
       .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
 
     override def format: String = {
       options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
+        case 0               => ""
+        case 1               => s"option is ${options.head.format}"
         case x: Int if x > 1 => s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
       }
     }
@@ -386,7 +386,7 @@ object AST {
   sealed abstract class EntityKind(
     @unused
     name: String)
-    extends EntityValue
+      extends EntityValue
 
   case class ConceptEntityKind(loc: Location) extends EntityKind("concept")
 
@@ -412,7 +412,7 @@ object AST {
     thens: Seq[GherkinClause] = Seq.empty[GherkinClause],
     buts: Seq[GherkinClause] = Seq.empty[GherkinClause],
     description: Option[Description] = None)
-    extends Definition
+      extends Definition
 
   case class FeatureRef(loc: Location, id: PathIdentifier) extends DefRef[Feature] {
     override def format: String = s"feature ${id.format}"
@@ -423,7 +423,7 @@ object AST {
     id: Identifier,
     examples: Seq[Example] = Seq.empty[Example],
     description: Option[Description] = None)
-    extends Container[Example] with EntityDefinition with ContextDefinition {
+      extends Container[Example] with EntityDefinition with ContextDefinition {
     lazy val contents: Seq[Example] = examples
   }
 
@@ -438,14 +438,14 @@ object AST {
     output: Option[TypeExpression],
     examples: Seq[Example],
     description: Option[Description])
-    extends Container[Example] with EntityDefinition {
+      extends Container[Example] with EntityDefinition {
     override lazy val contents: Seq[Example] = examples
   }
 
   case class InvariantRef(
     loc: Location,
     id: PathIdentifier)
-    extends DefRef[Invariant] {
+      extends DefRef[Invariant] {
     override def format: String = s"invariant ${id.format}"
   }
 
@@ -465,8 +465,8 @@ object AST {
     target: PathIdentifier,
     value: Expression,
     description: Option[Description] = None)
-    extends OnClauseStatement {
-    override def format: String = {s"set ${target.format} to ${value.format}"}
+      extends OnClauseStatement {
+    override def format: String = { s"set ${target.format} to ${value.format}" }
   }
 
   case class AppendStatement(
@@ -474,18 +474,18 @@ object AST {
     value: PathIdentifier,
     target: Identifier,
     description: Option[Description] = None)
-    extends OnClauseStatement {
+      extends OnClauseStatement {
     override def format: String = s"append ${value.format} to ${target.format}"
   }
 
   case class MessageConstructor(
     msg: MessageRef,
     args: ListMap[Identifier, Expression])
-    extends RiddlNode {
+      extends RiddlNode {
     override def format: String = msg.format + {
       if (args.nonEmpty) {
         args.map { case (id, exp) => id.format + "=" + exp.format }.mkString("(", ", ", ")")
-      } else {""}
+      } else { "" }
     }
   }
 
@@ -494,7 +494,7 @@ object AST {
     msg: MessageConstructor,
     pipe: PipeRef,
     description: Option[Description] = None)
-    extends OnClauseStatement {
+      extends OnClauseStatement {
     override def format: String = s"publish ${msg.format} to ${pipe.format}"
   }
 
@@ -503,7 +503,7 @@ object AST {
     msg: MessageConstructor,
     entity: EntityRef,
     description: Option[Description] = None)
-    extends OnClauseStatement {
+      extends OnClauseStatement {
     override def format: String = s"send ${msg.format} to ${entity.format}"
   }
 
@@ -512,7 +512,7 @@ object AST {
     id: PathIdentifier,
     from: PathIdentifier,
     description: Option[Description] = None)
-    extends OnClauseStatement {
+      extends OnClauseStatement {
     override def format: String = s"remove ${id.format} from ${from.format}"
   }
 
@@ -578,7 +578,7 @@ object AST {
     condition: Condition,
     actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
     description: Option[Description] = None)
-    extends OnClauseStatement {
+      extends OnClauseStatement {
     override def format: String = {
       s"when ${condition.format} then ${actions.map(_.format).mkString("{", "\n", "}")}"
     }
@@ -603,11 +603,11 @@ object AST {
     id: Identifier,
     typeEx: Aggregation,
     description: Option[Description] = None)
-    extends EntityDefinition with Container[Field] {
+      extends EntityDefinition with Container[Field] {
 
     override def contents: Seq[Field] = typeEx match {
       case Aggregation(_, fs, _) => fs
-      case _ => Seq.empty[Field]
+      case _                     => Seq.empty[Field]
     }
   }
 
@@ -644,7 +644,7 @@ object AST {
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     description: Option[Description] = None)
-    extends Container[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption] {
+      extends Container[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption] {
 
     lazy val contents: Seq[EntityDefinition] =
       (states.iterator ++ types ++ handlers ++ features ++ functions ++ invariants).toList
@@ -658,7 +658,7 @@ object AST {
     command: CommandRef,
     examples: Seq[Example],
     description: Option[Description] = None)
-    extends AdaptorDefinition
+      extends AdaptorDefinition
 
   /** Definition of an Adapter Adapters are defined in Contexts to convert messaging from one
     * Context to another. Adapters translate incoming events from other Contexts into commands or
@@ -666,17 +666,17 @@ object AST {
     * Context
     *
     * @param loc
-   * Location in the parsing input
-   * @param id
-   * Name of the adaptor
-   */
+    *   Location in the parsing input
+    * @param id
+    *   Name of the adaptor
+    */
   case class Adaptor(
     loc: Location,
     id: Identifier,
     ref: ContextRef,
     adaptations: Seq[Adaptation],
     description: Option[Description] = None)
-    extends Container[Adaptation] with ContextDefinition {
+      extends Container[Adaptation] with ContextDefinition {
     lazy val contents: Seq[Adaptation] = adaptations
   }
 
@@ -709,7 +709,7 @@ object AST {
     features: Seq[Feature] = Seq.empty[Feature],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     description: Option[Description] = None)
-    extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
+      extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++ sagas ++
       features ++ interactions
   }
@@ -721,7 +721,7 @@ object AST {
     id: Identifier,
     transmitType: Option[TypeRef],
     description: Option[Description] = None)
-    extends PlantDefinition
+      extends PlantDefinition
 
   trait Streamlet extends Definition
 
@@ -746,7 +746,7 @@ object AST {
     outlets: Seq[Outlet],
     examples: Seq[Example],
     description: Option[Description] = None)
-    extends PlantDefinition with Container[Streamlet] {
+      extends PlantDefinition with Container[Streamlet] {
     override def contents: Seq[Streamlet] = inlets ++ outlets
   }
 
@@ -770,7 +770,7 @@ object AST {
     streamletRef: StreamletRef,
     pipe: PipeRef,
     description: Option[Description] = None)
-    extends PlantDefinition
+      extends PlantDefinition
 
   case class Plant(
     loc: Location,
@@ -779,7 +779,7 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     joints: Seq[Joint] = Seq.empty[Joint],
     description: Option[Description] = None)
-    extends Container[PlantDefinition] with DomainDefinition {
+      extends Container[PlantDefinition] with DomainDefinition {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ joints
   }
 
@@ -791,7 +791,7 @@ object AST {
     undoCommand: CommandRef,
     example: Seq[Example],
     description: Option[Description] = None)
-    extends Definition
+      extends Definition
 
   sealed trait SagaOption extends OptionValue
 
@@ -811,7 +811,7 @@ object AST {
     output: Option[TypeExpression],
     sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
     description: Option[Description] = None)
-    extends Container[SagaAction] with ContextDefinition with OptionsDef[SagaOption] {
+      extends Container[SagaAction] with ContextDefinition with OptionsDef[SagaOption] {
     lazy val contents: Seq[SagaAction] = sagaActions
   }
 
@@ -826,24 +826,24 @@ object AST {
   }
 
   /** Definition of an Interaction
-   *
-   * Interactions define an exemplary interaction between the system being designed and other
-   * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
-   *
-   * @param loc
-   * Where in the input the Scenario is defined
-   * @param id
-   * The name of the scenario
-   * @param actions
-   * The actions that constitute the interaction
-   */
+    *
+    * Interactions define an exemplary interaction between the system being designed and other
+    * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
+    *
+    * @param loc
+    *   Where in the input the Scenario is defined
+    * @param id
+    *   The name of the scenario
+    * @param actions
+    *   The actions that constitute the interaction
+    */
   case class Interaction(
     loc: Location,
     id: Identifier,
     options: Seq[InteractionOption],
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     description: Option[Description] = None)
-    extends Container[ActionDefinition]
+      extends Container[ActionDefinition]
       with DomainDefinition
       with ContextDefinition
       with OptionsDef[InteractionOption] {
@@ -857,7 +857,7 @@ object AST {
   case class DeviceOption(loc: Location) extends RoleOption
 
   /** Used to capture reactions to actions. Actions include reactions in their definition to model
-   * the precipitating reactions to the action.
+    * the precipitating reactions to the action.
     */
   case class Reaction(
     loc: Location,
@@ -866,7 +866,7 @@ object AST {
     function: FunctionRef,
     arguments: Seq[LiteralString],
     description: Option[Description] = None)
-    extends DescribedValue
+      extends DescribedValue
 
   type Actions = Seq[ActionDefinition]
 
@@ -885,15 +885,15 @@ object AST {
   }
 
   /** An Interaction based on entity messaging between two entities in the system.
-   *
-   * @param options
-   *    Options for the message
-   * @param loc
-   *    Where the message is located in the input
-   * @param id
-   *    The displayable text that describes the interaction
-   * @param sender
-   *    A reference to the entity sending the message
+    *
+    * @param options
+    *   Options for the message
+    * @param loc
+    *   Where the message is located in the input
+    * @param id
+    *   The displayable text that describes the interaction
+    * @param sender
+    *   A reference to the entity sending the message
     * @param receiver
     *   A reference to the entity receiving the message
     * @param message
@@ -908,7 +908,7 @@ object AST {
     message: MessageRef,
     reactions: Seq[Reaction],
     description: Option[Description] = None)
-    extends ActionDefinition with OptionsDef[MessageOption]
+      extends ActionDefinition with OptionsDef[MessageOption]
 
   case class DomainRef(loc: Location, id: PathIdentifier) extends DefRef[Domain] {
     override def format: String = s"domain ${id.format}"
@@ -923,7 +923,7 @@ object AST {
     plants: Seq[Plant] = Seq.empty[Plant],
     domains: Seq[Domain] = Seq.empty[Domain],
     description: Option[Description] = None)
-    extends Container[DomainDefinition] with DomainDefinition {
+      extends Container[DomainDefinition] with DomainDefinition {
 
     lazy val contents: Seq[DomainDefinition] =
       (domains ++ types.iterator ++ contexts ++ interactions ++ plants).toList

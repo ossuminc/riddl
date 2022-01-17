@@ -14,8 +14,7 @@ object Folding {
     parent: Container[Definition],
     container: Container[Definition],
     state: S
-  )(
-    f: SimpleDispatch[S]
+  )(f: SimpleDispatch[S]
   ): S = {
     var result = state
     container match {
@@ -107,18 +106,18 @@ object Folding {
     ): S = {
       container match {
         case root: RootContainer => root.contents.foldLeft(initState) { (s, content) =>
-          foldLeft(root, content, s)
-        }
+            foldLeft(root, content, s)
+          }
         case domain: Domain =>
           val domainContainer = parent.asInstanceOf[Container[Domain]]
           openDomain(initState, domainContainer, domain).step { state =>
             domain.contents.foldLeft(state) { case (next, dd) =>
               dd match {
-                case typ: Type => doType(next, domain, typ)
-                case context: Context => foldLeft(domain, context, next)
-                case plant: Plant => foldLeft(domain, plant, next)
+                case typ: Type                => doType(next, domain, typ)
+                case context: Context         => foldLeft(domain, context, next)
+                case plant: Plant             => foldLeft(domain, plant, next)
                 case interaction: Interaction => foldLeft(domain, interaction, next)
-                case subDomain: Domain => foldLeft(domain, subDomain, next)
+                case subDomain: Domain        => foldLeft(domain, subDomain, next)
               }
             }
           }.step { state => closeDomain(state, domainContainer, domain) }
@@ -127,11 +126,11 @@ object Folding {
           openContext(initState, parentDomain, context).step { state =>
             context.contents.foldLeft(state) { (next, cd) =>
               cd match {
-                case typ: Type => doType(next, context, typ)
-                case entity: Entity => foldLeft(context, entity, next)
-                case adaptor: Adaptor => foldLeft(context, adaptor, next)
-                case saga: Saga => foldLeft(context, saga, next)
-                case feature: Feature => foldLeft(context, feature, next)
+                case typ: Type                => doType(next, context, typ)
+                case entity: Entity           => foldLeft(context, entity, next)
+                case adaptor: Adaptor         => foldLeft(context, adaptor, next)
+                case saga: Saga               => foldLeft(context, saga, next)
+                case feature: Feature         => foldLeft(context, feature, next)
                 case interaction: Interaction => foldLeft(context, interaction, next)
               }
             }
@@ -141,12 +140,12 @@ object Folding {
           openEntity(initState, parentContext, entity).step { state =>
             entity.contents.foldLeft(state) { (st, entityDefinition) =>
               entityDefinition match {
-                case typ: Type => doType(st, entity, typ)
+                case typ: Type              => doType(st, entity, typ)
                 case entityState: AST.State => foldLeft(entity, entityState, st)
-                case handler: Handler => doHandler(st, entity, handler)
-                case function: Function => foldLeft(entity, function, st)
-                case feature: Feature => foldLeft(entity, feature, st)
-                case invariant: Invariant => doInvariant(st, entity, invariant)
+                case handler: Handler       => doHandler(st, entity, handler)
+                case function: Function     => foldLeft(entity, function, st)
+                case feature: Feature       => foldLeft(entity, feature, st)
+                case invariant: Invariant   => doInvariant(st, entity, invariant)
               }
             }
           }.step { state => closeEntity(state, parentContext, entity) }
@@ -155,9 +154,9 @@ object Folding {
           openPlant(initState, containingDomain, plant).step { state =>
             plant.contents.foldLeft(state) { (next, pd) =>
               pd match {
-                case pipe: Pipe => doPipe(next, plant, pipe)
+                case pipe: Pipe           => doPipe(next, plant, pipe)
                 case processor: Processor => foldLeft(plant, processor, next)
-                case joint: Joint => doJoint(next, plant, joint)
+                case joint: Joint         => doJoint(next, plant, joint)
               }
             }
           }.step { state => closePlant(state, containingDomain, plant) }
@@ -166,7 +165,7 @@ object Folding {
           openProcessor(initState, containingPlant, processor).step { state =>
             processor.contents.foldLeft(state) { (next, streamlet) =>
               streamlet match {
-                case inlet: Inlet => doInlet(next, processor, inlet)
+                case inlet: Inlet   => doInlet(next, processor, inlet)
                 case outlet: Outlet => doOutlet(next, processor, outlet)
               }
             }
@@ -180,28 +179,28 @@ object Folding {
           val interactionContainer = parent.asInstanceOf[Container[Interaction]]
           openInteraction(initState, interactionContainer, interaction).step { state =>
             interaction.contents.foldLeft(state) { (next, id) =>
-              id match {case action: MessageAction => doAction(next, interaction, action)}
+              id match { case action: MessageAction => doAction(next, interaction, action) }
             }
           }.step { state => closeInteraction(state, interactionContainer, interaction) }
         case feature: Feature =>
           val parentEntity = parent.asInstanceOf[Container[Feature]]
           openFeature(initState, parentEntity, feature).step { state =>
             feature.contents.foldLeft(state) { (next, fd) =>
-              fd match {case example: Example => doExample(next, feature, example)}
+              fd match { case example: Example => doExample(next, feature, example) }
             }
           }.step { state => closeFeature(state, parentEntity, feature) }
         case function: Function =>
           val parentEntity = parent.asInstanceOf[Entity]
           openFunction(initState, parentEntity, function).step { state =>
             function.contents.foldLeft(state) { (next, fd) =>
-              fd match {case example: Example => doExample(next, function, example)}
+              fd match { case example: Example => doExample(next, function, example) }
             }
           }.step { state => closeFunction(state, parentEntity, function) }
         case adaptor: Adaptor =>
           val parentContext = parent.asInstanceOf[Context]
           openAdaptor(initState, parentContext, adaptor).step { state =>
             adaptor.contents.foldLeft(state) { (s, ad) =>
-              ad match {case adaptation: Adaptation => doAdaptation(s, adaptor, adaptation)}
+              ad match { case adaptation: Adaptation => doAdaptation(s, adaptor, adaptation) }
             }
           }.step { state => closeAdaptor(state, parentContext, adaptor) }
         case state: AST.State =>

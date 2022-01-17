@@ -11,10 +11,10 @@ import java.nio.file.Path
 //noinspection ScalaStyle
 
 /** CheckMessage This test suite runs through the files in input/check directory and validates them
- * each as their own test case. Each .riddl file can have a .check file that lists the expected
- * messages. If there is no .check file the .riddl file is expected to validate completely with no
- * messages.
- */
+  * each as their own test case. Each .riddl file can have a .check file that lists the expected
+  * messages. If there is no .check file the .riddl file is expected to validate completely with no
+  * messages.
+  */
 class CheckMessagesTest extends ValidatingTest {
 
   val checkPathStr = "language/src/test/input/check"
@@ -25,8 +25,7 @@ class CheckMessagesTest extends ValidatingTest {
     label: String,
     fileName: String,
     options: ValidationOptions = ValidationOptions.Default
-  )(
-    validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val file = new File(fileName)
     TopLevelParser.parse(file) match {
@@ -46,7 +45,7 @@ class CheckMessagesTest extends ValidatingTest {
       s"check $relativeFileName" in {
         validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
           val msgSet = msgs.map(_.format).filter(_.nonEmpty).toSet
-          if (msgSet == expectedMessages) {succeed}
+          if (msgSet == expectedMessages) { succeed }
           else {
             val missingMessages = expectedMessages.diff(msgSet)
             val unexpectedMessages = msgSet.diff(expectedMessages)

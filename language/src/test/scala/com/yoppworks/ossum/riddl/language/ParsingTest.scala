@@ -40,8 +40,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Plant]       => plant(_)
       case x if x == classOf[AST.Processor]   => processor(_)
       case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
-      case x if x == classOf[AST.Joint] => joint(_)
-      case x if x == classOf[AST.Saga] => saga(_)
+      case x if x == classOf[AST.Joint]       => joint(_)
+      case x if x == classOf[AST.Saga]        => saga(_)
       case _ =>
         throw new RuntimeException(s"No parser defined for class ${classTag[T].runtimeClass}")
     }
@@ -163,9 +163,9 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDefinition[FROM]
   }
 
-  def parseDefinition[FROM <: Definition : ClassTag](
+  def parseDefinition[FROM <: Definition: ClassTag](
     input: String
-  ): Either[Seq[ParserError], FROM] = {parseDefinition(RiddlParserInput(input))}
+  ): Either[Seq[ParserError], FROM] = { parseDefinition(RiddlParserInput(input)) }
 
   def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
     input: String,

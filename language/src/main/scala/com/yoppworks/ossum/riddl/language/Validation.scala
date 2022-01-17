@@ -101,15 +101,11 @@ object Validation {
 
     def parentOf(
       definition: Definition
-    ): Container[Definition] = {symbolTable.parentOf(definition).getOrElse(RootContainer.empty)}
+    ): Container[Definition] = { symbolTable.parentOf(definition).getOrElse(RootContainer.empty) }
 
     def isReportMissingWarnings: Boolean = options.showMissingWarnings
 
     def isReportStyleWarnings: Boolean = options.showStyleWarnings
-
-    def lookup[T <: Definition: ClassTag](
-      id: PathIdentifier
-    ): List[T] = { symbolTable.lookup[T](id.value) }
 
     def lookup[T <: Definition: ClassTag](
       id: Seq[String]
@@ -510,21 +506,21 @@ object Validation {
         .checkSequence(entity.states) { (next, state) =>
           next.checkTypeExpression(state.typeEx, state)
         }.addIf(entity.handlers.isEmpty) {
-        ValidationMessage(entity.loc, s"Entity '${entity.id.format}' must define a handler")
-      }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
-        ValidationMessage(
-          entity.loc,
-          s"Entity '${entity.id.format}' has only empty handlers",
-          MissingWarning
-        )
-      }.addIf(entity.hasOption[EntityFiniteStateMachine] && entity.states.size < 2) {
-        ValidationMessage(
-          entity.loc,
-          s"Entity '${entity.id.format}' is declared as a finite-state-machine, but does not " +
-            s"have at least two states",
-          Error
-        )
-      }
+          ValidationMessage(entity.loc, s"Entity '${entity.id.format}' must define a handler")
+        }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
+          ValidationMessage(
+            entity.loc,
+            s"Entity '${entity.id.format}' has only empty handlers",
+            MissingWarning
+          )
+        }.addIf(entity.hasOption[EntityFiniteStateMachine] && entity.states.size < 2) {
+          ValidationMessage(
+            entity.loc,
+            s"Entity '${entity.id.format}' is declared as a finite-state-machine, but does not " +
+              s"have at least two states",
+            Error
+          )
+        }
     }
 
     override def doHandler(
@@ -672,8 +668,8 @@ object Validation {
     ): ValidationState = {
       adaptation match {
         case Adaptation(_, _, event, command, _, description) => state
-          .checkDefinition(container, adaptation).checkRef(event).checkRef(command)
-          .checkDescription(adaptation, description)
+            .checkDefinition(container, adaptation).checkRef(event).checkRef(command)
+            .checkDescription(adaptation, description)
         case _ =>
           require(requirement = false, "Unknown adaptation")
           state

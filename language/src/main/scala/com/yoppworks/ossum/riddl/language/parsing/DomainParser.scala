@@ -21,7 +21,7 @@ trait DomainParser
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
       typeDef.map(Seq(_)) | interaction.map(Seq(_)) | context.map(Seq(_)) | plant.map(Seq(_)) |
-        domain.map(Seq(_)) | domainInclude
+        domain.map(Seq(_)) | domainInclude | importDef.map(Seq(_))
     ).rep(0).map(_.flatten)
   }
 

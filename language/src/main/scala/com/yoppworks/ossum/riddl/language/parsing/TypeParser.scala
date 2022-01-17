@@ -64,7 +64,7 @@ trait TypeParser extends ReferenceParser {
   def uniqueIdType[u: P]: P[UniqueId] = {
     (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/ description).map {
       case (loc, Some(id), desc) => UniqueId(loc, id, desc)
-      case (loc, None, desc) => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), desc)
+      case (loc, None, desc)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), desc)
     }
   }
 

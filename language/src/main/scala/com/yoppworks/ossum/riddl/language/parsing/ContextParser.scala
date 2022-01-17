@@ -7,7 +7,7 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
 trait ContextParser
-  extends GherkinParser
+    extends GherkinParser
     with AdaptorParser
     with EntityParser
     with InteractionParser
@@ -16,10 +16,10 @@ trait ContextParser
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](StringIn(Options.wrapper, Options.function, Options.gateway).!) {
-      case (loc, Options.wrapper) => WrapperOption(loc)
+      case (loc, Options.wrapper)  => WrapperOption(loc)
       case (loc, Options.function) => FunctionOption(loc)
-      case (loc, Options.gateway) => GatewayOption(loc)
-      case (_, _) => throw new RuntimeException("Impossible case")
+      case (loc, Options.gateway)  => GatewayOption(loc)
+      case (_, _)                  => throw new RuntimeException("Impossible case")
     }
   }
 
