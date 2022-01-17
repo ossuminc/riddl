@@ -5,7 +5,7 @@ weight: 30
 ---
 
 ## Introduction
-Functions are pieces of processing that can be attached to `entity`, `consumer` 
+Functions are pieces of processing that can be attached to `entity`, `consumer`, 
 and `api` definitions.  A function has a set of inputs (its requirements) and a 
 set of output (what it yields). Functions need not be pure and often 
 have side effects through the state changes of an entity.   
@@ -28,7 +28,7 @@ Functions have applicability across several RIDDL definitions:
   in an entity 
   [handler](Encapsulate repeating logic from a 
   consumer's `on` 
-  clause
+  clause)
 * Allow internal entity processing to be specified as part of an interaction
 * etc.
 

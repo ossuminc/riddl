@@ -75,7 +75,7 @@ When you need a string to conform to a regular expression, you can use the
 Pattern type expression. The expression `Pattern(<regex>)` will define a 
 string that validates its content according to `<regex>` which must be a 
 quoted Scala regular expression.  If assignment to the string does not match 
-the`<regex` then an `InvalidateEstateException` will be generated. For example,
+the`<regex>` then an `InvalidateEstateException` will be generated. For example,
 here's a pattern for extracting the three components of a North American 
 telephone number: 
 ```riddl
@@ -116,7 +116,7 @@ An enumeration defines a type that may take the value of one identifier from a
 closed set of constant identifiers using the `any` keyword and the set of
 identifiers enclosed in square brackets, like this:
 ```
-type Color = any of  [Red, Orange, Yellow, Green, Blue, Indigo, Violet]
+type Color = any of [Red, Orange, Yellow, Green, Blue, Indigo, Violet]
 ```
 
 ### Alternation

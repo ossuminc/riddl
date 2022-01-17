@@ -4,7 +4,7 @@ type: page
 weight: 40
 ---
 A Feature is a requirement on an entity. Features are specified very similarly to the 
-[Gherkin language](https://cucumber.io/docs/gherkin/reference/). The same keywords are used by 
+[Gherkin language](https://cucumber.io/docs/gherkin/reference/). The same keywords are used and 
 the style is more like RIDDL syntax. If you're already familiar with Gherkin then an example 
 should suffice:
 ```riddl
