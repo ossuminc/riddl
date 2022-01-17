@@ -31,13 +31,13 @@ case class SymbolTable(container: Container[Definition]) {
     child match {
       case e: Entity => e.states.foreach { s: State => addToSymTab(s.id.value, s -> e) }
       case t: Type => t.typ match {
-          case e: Enumeration => e.of.foreach { etor =>
-              addToSymTab(etor.id.value, etor -> parent)
+          case e: Enumeration => e.enumerators.foreach { etor =>
+            addToSymTab(etor.id.value, etor -> parent)
             // type reference and identifier relations must be handled by semantic validation
-            }
+          }
           case mt: MessageType => mt.fields.foreach { fld =>
-              addToSymTab(fld.id.value, fld -> parent)
-            }
+            addToSymTab(fld.id.value, fld -> parent)
+          }
           case agg: Aggregation => agg.fields.foreach { fld =>
               addToSymTab(fld.id.value, fld -> parent)
             }

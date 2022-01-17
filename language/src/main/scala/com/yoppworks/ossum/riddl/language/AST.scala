@@ -199,10 +199,10 @@ object AST {
 
   case class Enumeration(
     loc: Location,
-    of: Seq[Enumerator],
+    enumerators: Seq[Enumerator],
     description: Option[Description] = None)
       extends TypeExpression with ContainerValue[Enumerator] {
-    lazy val contents: Seq[Enumerator] = of
+    lazy val contents: Seq[Enumerator] = enumerators
   }
 
   case class Alternation(

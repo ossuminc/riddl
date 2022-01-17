@@ -2,8 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.{ConfigReader, ConfigSource}
 import pureconfig.generic.auto.*
+import pureconfig.{ConfigReader, ConfigSource}
 
 import java.io.File
 import java.nio.file.Path
@@ -157,7 +157,7 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitEnumeration(enumeration: AST.Enumeration): FormatState = {
       val head = this.add(s"any of {\n").indent
-      val enumerators: String = enumeration.of.map { enumerator =>
+      val enumerators: String = enumeration.enumerators.map { enumerator =>
         enumerator.id.value + enumerator.enumVal.map("(" + _.format + ")").getOrElse("")
       }.mkString(s"$spc", s",\n$spc", s"\n")
       head.add(enumerators).outdent.addLine("}").emitDescription(enumeration.description)
