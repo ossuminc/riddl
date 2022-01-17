@@ -1,15 +1,16 @@
 context Menu is {
-  entity Menu is {
-    type Amount = range(0,1000)
-    type CorporateItemId = Pattern("")
-    type MenuItemRef is refer to entity MenuItem
-
     type MenuItem = {
       corporateId: CorporateItemId,
       name: String,
       description: String,
       price: Amount
     }
+
+  entity Menu is {
+    type Amount = range(0,1000)
+    type CorporateItemId = Pattern("")
+    type MenuItemRef is refer to entity MenuItem
+
 
     type AddItem = command { item: Item }
     type RemoveItem = command { corporateId: CorporateItemId }

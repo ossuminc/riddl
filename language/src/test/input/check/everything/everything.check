@@ -1,0 +1,53 @@
+Missing: everything.riddl(3:1): domain 'Everything' should have a description
+Missing: everything.riddl(50:5): type 'optional' should have a description
+Style: everything.riddl(27:5): type 'ident' should start with a capital letter
+Missing: everything.riddl(42:7): field 'key' should have a description
+Missing: everything.riddl(44:7): field 'time' should have a description
+Style: everything.riddl(29:5): type 'tim' should start with a capital letter
+Missing: everything.riddl(64:7): state 'someState' should have a description
+Missing: everything.riddl(6:3): type 'DoAThing' should have a description
+Missing: everything.riddl(30:5): type 'stamp' should have a description
+Missing: everything.riddl(20:3): context 'full' should have a description
+Missing: everything.riddl(59:5): entity 'Something' should have a description
+Missing: everything.riddl(43:7): field 'id' should have a description
+Style: everything.riddl(28:5): type 'dat' should start with a capital letter
+Style: everything.riddl(34:25): field identifier 'a' is too short. Identifiers should be at least 3 characters.
+Missing: everything.riddl(62:7): type 'somethingDate' should have a description
+Missing: everything.riddl(34:5): type 'PeachType' should have a description
+Style: everything.riddl(26:5): type 'boo' should start with a capital letter
+Style: everything.riddl(48:5): type 'oneOrMore' should start with a capital letter
+Missing: everything.riddl(24:5): type 'str' should have a description
+Style: everything.riddl(30:5): type 'stamp' should start with a capital letter
+Missing: everything.riddl(25:5): type 'num' should have a description
+Style: everything.riddl(38:5): type 'alt' should start with a capital letter
+Missing: everything.riddl(34:25): field 'a' should have a description
+Missing: everything.riddl(81:34): field 'field' should have a description
+Missing: everything.riddl(26:5): type 'boo' should have a description
+Missing: everything.riddl(31:5): type 'url' should have a description
+Missing: everything.riddl(80:5): entity 'SomeOtherThing' should have a description
+Missing: everything.riddl(38:5): type 'alt' should have a description
+Style: everything.riddl(24:5): type 'str' should start with a capital letter
+Missing: everything.riddl(66:7): function 'whenUnderTheInfluence' should have a description
+Style: everything.riddl(35:5): type 'enum' should start with a capital letter
+Style: everything.riddl(62:7): type 'somethingDate' should start with a capital letter
+Missing: everything.riddl(28:5): type 'dat' should have a description
+Style: everything.riddl(25:5): type 'num' should start with a capital letter
+Missing: everything.riddl(41:5): type 'agg' should have a description
+Style: everything.riddl(31:5): type 'url' should start with a capital letter
+Missing: everything.riddl(5:3): type 'SomeType' should have a description
+Missing: everything.riddl(64:28): field 'field' should have a description
+Missing: everything.riddl(48:5): type 'oneOrMore' should have a description
+Missing: everything.riddl(49:5): type 'zeroOrMore' should have a description
+Style: everything.riddl(50:5): type 'optional' should start with a capital letter
+Style: everything.riddl(41:5): type 'agg' should start with a capital letter
+Missing: everything.riddl(6:30): field 'thingField' should have a description
+Style: everything.riddl(43:7): field identifier 'id' is too short. Identifiers should be at least 3 characters.
+Missing: everything.riddl(35:5): type 'enum' should have a description
+Missing: everything.riddl(27:5): type 'ident' should have a description
+Missing: everything.riddl(29:5): type 'tim' should have a description
+Style: everything.riddl(49:5): type 'zeroOrMore' should start with a capital letter
+Missing: everything.riddl(82:7): state 'otherThingState' should have a description
+Missing: everything.riddl(82:34): field 'field' should have a description
+Missing: everything.riddl(81:7): type 'ItHappened' should have a description
+Error: everything.riddl(59:5): 'Something' was expected to be a command Type but is a entity Type instead
+Error: everything.riddl(84:35): 'SomeOtherThing.otherThingState.field' is not defined but should be a Field

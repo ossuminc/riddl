@@ -100,7 +100,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow options on context definitions" in {
-      val input = "context bar is { options (function wrapper gateway ) }"
+      val input = "context bar is { options (function, wrapper, gateway ) }"
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -108,7 +108,7 @@ class ParserTest extends ParsingTest {
         case Right(content) => content mustBe Context(
             1 -> 1,
             Identifier(1 -> 9, "bar"),
-            Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 36), GatewayOption(1 -> 44))
+          Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 35), GatewayOption(1 -> 44))
           )
       }
     }
@@ -154,21 +154,19 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow entity definitions in contexts" in {
-      val input: String = """entity Hamburger is {
-                            |  options ( persistent aggregate )
-                            |  state foo is { x: String }
-                            |  handler foo is {}
-                            |  feature AnAspect is {
-                            |    BACKGROUND {
-                            |      Given "Nobody loves me"
-                            |    }
-                            |    EXAMPLE foo {
-                            |      GIVEN "everybody hates me"
-                            |      AND "I'm depressed"
-                            |      WHEN "I go fishing"
-                            |      THEN "I'll just eat worms"
-                            |      ELSE "I'm happy"
-                            |    }
+      val input: String =
+        """entity Hamburger is {
+          |  options ( persistent, aggregate )
+          |  state foo is { x: String }
+          |  handler foo is {}
+          |  feature AnAspect is {
+          |    EXAMPLE foo {
+          |      GIVEN "everybody hates me"
+          |      AND "I'm depressed"
+          |      WHEN "I go fishing"
+          |      THEN "I'll just eat worms"
+          |      ELSE "I'm happy"
+          |    }
                             |  }
                             |}
                             |""".stripMargin
@@ -177,34 +175,30 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-            ConceptEntityKind(1 -> 1),
-            1 -> 1,
-            Identifier(1 -> 8, "Hamburger"),
-            Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 24)),
-            Seq(State(
-              3 -> 3,
-              Identifier(3 -> 9, "foo"),
-              Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
-              None
-            )),
-            handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
-            features = Seq(Feature(
-              5 -> 3,
-              Identifier(5 -> 11, "AnAspect"),
-              Some(Background(
-                6 -> 5,
-                Seq(Given(7 -> 7, Seq(LiteralString(7 -> 13, "Nobody loves me"))))
-              )),
+          ConceptEntityKind(1 -> 1),
+          1 -> 1,
+          Identifier(1 -> 8, "Hamburger"),
+          Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 23)),
+          Seq(State(
+            3 -> 3,
+            Identifier(3 -> 9, "foo"),
+            Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
+            None
+          )),
+          handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
+          features = Seq(Feature(
+            5 -> 3,
+            Identifier(5 -> 11, "AnAspect"),
               Seq(Example(
-                9 -> 5,
-                Identifier(9 -> 13, "foo"),
+                6 -> 5,
+                Identifier(6 -> 13, "foo"),
                 Seq(
-                  Given(10 -> 7, Seq(LiteralString(10 -> 13, "everybody hates me"))),
-                  Given(11 -> 7, Seq(LiteralString(11 -> 11, "I'm depressed")))
+                  GherkinClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
+                  GherkinClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
                 ),
-                Seq(When(12 -> 7, Seq(LiteralString(12 -> 12, "I go fishing")))),
-                Seq(Then(13 -> 7, Seq(LiteralString(13 -> 12, "I'll just eat worms")))),
-                Seq(But(14 -> 7, Seq(LiteralString(14 -> 12, "I'm happy"))))
+                Seq(GherkinClause(9 -> 7, Seq(LiteralString(9 -> 12, "I go fishing")))),
+                Seq(GherkinClause(10 -> 7, Seq(LiteralString(10 -> 12, "I'll just eat worms")))),
+                Seq(GherkinClause(11 -> 7, Seq(LiteralString(11 -> 12, "I'm happy"))))
               ))
             ))
           )
@@ -240,18 +234,19 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Interaction(
-            1 -> 1,
-            Identifier(1 -> 13, "dosomething"),
-            Seq(
-              MessageAction(
-                2 -> 3,
-                Identifier(2 -> 11, "perform a command"),
-                Seq(AsynchOption(2 -> 41)),
-                EntityRef(3 -> 10, PathIdentifier(3 -> 17, Seq("Unicorn"))),
-                EntityRef(4 -> 8, PathIdentifier(4 -> 15, Seq("myLittlePony"))),
-                CommandRef(4 -> 31, PathIdentifier(4 -> 39, Seq("DoAThing"))),
-                Seq.empty[Reaction]
-              ),
+          1 -> 1,
+          Identifier(1 -> 13, "dosomething"),
+          Seq.empty[InteractionOption],
+          Seq(
+            MessageAction(
+              2 -> 3,
+              Identifier(2 -> 11, "perform a command"),
+              Seq(AsynchOption(2 -> 41)),
+              EntityRef(3 -> 10, PathIdentifier(3 -> 17, Seq("Unicorn"))),
+              EntityRef(4 -> 8, PathIdentifier(4 -> 15, Seq("myLittlePony"))),
+              CommandRef(4 -> 31, PathIdentifier(4 -> 39, Seq("DoAThing"))),
+              Seq.empty[Reaction]
+            ),
               MessageAction(
                 6 -> 3,
                 Identifier(6 -> 11, "handle a thing"),

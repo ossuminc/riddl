@@ -19,7 +19,7 @@ context Payment is {
     }
 
     state PaymentState is {
-      orderId is Id(),
+      orderId is OrderId,
       orderAmount is Number,
       tipAmount is Number?,
       cardToken is String?,

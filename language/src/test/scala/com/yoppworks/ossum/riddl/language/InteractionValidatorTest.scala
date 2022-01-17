@@ -1,45 +1,49 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST._
+import com.yoppworks.ossum.riddl.language.AST.*
 
 class InteractionValidatorTest extends ValidatingTest {
 
   "Interaction" should {
     "give error for interactions without actions" in {
-      val input = """context foo is {
-                    |  interaction dosomething is {
-                    |   ???
-                    |  }
-                    |}
-                    |""".stripMargin
-      parseAndValidate[Context](input) { (content, msgs) =>
+      val input =
+        """domain dodo is { context foo is {
+          |  interaction dosomething is {
+          |   ???
+          |  }
+          |} }
+          |""".stripMargin
+      parseAndValidate[Domain](input) { (domain, msgs) =>
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "Actions in Interaction 'dosomething' should not be empty"
+          "Actions in interaction 'dosomething' should not be empty"
         )
+        val content = domain.contexts.head
         content.interactions.length mustBe 1
       }
     }
     "allow interaction definitions" in {
-      val input = """context foo is {
-                    |  entity myLittlePony is {
-                    |   ???
-                    |  }
-                    |  interaction dosomething is {
-                    |    message 'perform a command' option is async
-                    |      from entity Unicorn
-                    |      to entity myLittlePony as command DoAThing
-                    |
-                    |    message 'handle a thing' option is async
-                    |      from entity myLittlePony
-                    |      to entity Unicorn as command HandleAThing
-                    |  }
-                    |}
-                    |""".stripMargin
-      parseAndValidate[Context](input) { (content, msgs) =>
+      val input =
+        """domain bar is { context foo is {
+          |  entity myLittlePony is {
+          |   ???
+          |  }
+          |  interaction dosomething is {
+          |    message 'perform a command' option is async
+          |      from entity Unicorn
+          |      to entity myLittlePony as command DoAThing
+          |
+          |    message 'handle a thing' option is async
+          |      from entity myLittlePony
+          |      to entity Unicorn as command HandleAThing
+          |  }
+          |}}
+          |""".stripMargin
+      parseAndValidate[Domain](input) { (domain, msgs) =>
         msgs.filter(m => m.kind.isError && m.message.startsWith("Interaction 'dosomething'")) mustBe
           empty
+        val content = domain.contexts.head
         content.interactions.length mustBe 1
         val interaction = content.interactions.head
 

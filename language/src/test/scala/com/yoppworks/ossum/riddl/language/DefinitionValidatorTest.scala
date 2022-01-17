@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.Validation._
+import com.yoppworks.ossum.riddl.language.Validation.*
 
 class DefinitionValidatorTest extends ValidatingTest {
 
@@ -12,20 +12,20 @@ class DefinitionValidatorTest extends ValidatingTest {
                                  |}
                                  |""".stripMargin) {
         case (_: Domain, msgs: Seq[ValidationMessage]) =>
-          if (msgs.isEmpty)
+          if (msgs.isEmpty) {
             fail("Identifiers with less than 3 characters should generate a warning")
-          else {
+          } else {
             val styleWarnings = msgs.filter(_.kind == StyleWarning)
             styleWarnings.size mustEqual 2
             assertValidationMessage(
               styleWarnings,
               StyleWarning,
-              "Domain identifier 'po' is too short. Identifiers should be at least 3 characters."
+              "domain identifier 'po' is too short. Identifiers should be at least 3 characters."
             )
             assertValidationMessage(
               styleWarnings,
               StyleWarning,
-              "Type identifier 'Ba' is too short. Identifiers should be at least 3 characters."
+              "type identifier 'Ba' is too short. Identifiers should be at least 3 characters."
             )
           }
       }

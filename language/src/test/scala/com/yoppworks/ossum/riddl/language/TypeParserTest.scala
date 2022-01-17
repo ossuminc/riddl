@@ -138,9 +138,9 @@ class TypeParserTest extends ParsingTest {
       }
     }
     "allow mappings between two types" in {
-      val input = "type m1 = mapping { from String to Number }"
+      val input = "type m1 = mapping from String to Number"
       val expected =
-        Type(1 -> 1, Identifier(1 -> 6, "m1"), Mapping(1 -> 11, Strng(1 -> 26), Number(1 -> 36)))
+        Type(1 -> 1, Identifier(1 -> 6, "m1"), Mapping(1 -> 11, Strng(1 -> 24), Number(1 -> 34)))
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow range of values" in {

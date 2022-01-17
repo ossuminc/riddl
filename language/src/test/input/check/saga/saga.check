@@ -1,0 +1,7 @@
+Missing: saga.riddl(5:5): type 'AnotherThing' should have a description
+Missing: saga.riddl(6:5): type 'UndoAnotherThing' should have a description
+Error: saga.riddl(7:5): Entity 'blah' must define a handler
+Missing: saga.riddl(7:5): entity 'blah' should have a description
+Missing: saga.riddl(4:5): type 'UndoSomething' should have a description
+Missing: saga.riddl(3:5): type 'Something' should have a description
+Missing: saga.riddl(7:5): Containerentity 'blah' in context 'ignore' must have content.

@@ -17,7 +17,7 @@ domain ReactiveBBQ is {
   context Customer is {
     entity Customer is {
       state main is { }
-      handler input is {}
+      handler input is { ??? }
     }
   }
 
@@ -27,10 +27,10 @@ domain ReactiveBBQ is {
   context Kitchen is {
     type IP4Address is { a: Number, b: Number, c: Number, d: Number}
     type OrderViewType is {
-      address is IP4Address
+      address:  type IP4Address
     }
     device entity OrderViewer is {
-     state OrderState is { field: OrderViewType }
+     state OrderState is { field: type OrderViewType }
      handler input is {}
     } explained as {
       |# brief
@@ -108,7 +108,7 @@ domain ReactiveBBQ is {
     entity Payment is {
       option is aggregate
       state PaymentState is {
-        orderId is Id(),
+        orderId is OrderId,
         amount is Number,
         cardToken is String
       }
@@ -128,7 +128,7 @@ domain ReactiveBBQ is {
     type MenuItemRef is refer to entity MenuItem
     entity Menu is {
       option is aggregate
-      state items is many MenuItemRef
+      state typical is { items: many MenuItemRef }
       handler foo is {}
     }
   }
@@ -144,13 +144,13 @@ domain ReactiveBBQ is {
       date is Date
     }
     entity Location is {
-      state foo is String
+      state typical is { name: String }
       handler foo is {}
     } explained as "This is a retail store Location"
 
     entity Reservation is {
      options ( aggregate )
-     state reservation is ReservationValue
+     state reservation is { value: ReservationValue }
      handler ofInputs is {}
     }
   }

@@ -1,0 +1,3 @@
+Missing: main.riddl(1:1): Containerdomain 'foo' in rootcontainer 'root' must have content.
+Missing: main.riddl(1:19): For domain 'foo', description is declared but empty
+Missing: main.riddl(1:1): contents in domain 'foo' should not be empty

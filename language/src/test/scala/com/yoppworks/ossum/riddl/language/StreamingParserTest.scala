@@ -21,6 +21,7 @@ class StreamingParserTest extends ParsingTest {
           Identifier(3 -> 10, "Weather"),
           TypeRef(3 -> 21, PathIdentifier(3 -> 21, List("Forecast")))
         )),
+        List.empty[Example],
         Some(
           Description(4 -> 3, List(LiteralString(4 -> 16, "This is a source for Forecast data")))
         )
@@ -131,6 +132,7 @@ class StreamingParserTest extends ParsingTest {
               TypeRef(6 -> 23, PathIdentifier(6 -> 23, List("Forecast"))),
               None
             )),
+            List.empty[Example],
             Some(Description(
               7 -> 5,
               List(LiteralString(7 -> 18, "This is a source for Forecast data"))
@@ -151,6 +153,7 @@ class StreamingParserTest extends ParsingTest {
               TypeRef(11 -> 27, PathIdentifier(11 -> 27, List("Temperature"))),
               None
             )),
+            List.empty[Example],
             Some(Description(
               12 -> 5,
               List(LiteralString(
@@ -168,7 +171,8 @@ class StreamingParserTest extends ParsingTest {
               TypeRef(15 -> 26, PathIdentifier(15 -> 26, List("Temperature"))),
               None
             )),
-            List(),
+            List.empty[Outlet],
+            List.empty[Example],
             Some(Description(
               16 -> 5,
               List(LiteralString(

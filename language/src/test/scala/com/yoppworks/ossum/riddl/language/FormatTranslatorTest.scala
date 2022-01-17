@@ -21,7 +21,10 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
         parseTopLevelDomains(output) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
-            fail(s"In '${file.getPath}': on first generation:\n" + message)
+            fail(
+              s"In '${file.getPath}': on first generation:\n" + message + "\nIn Source:\n" +
+                output + "\n"
+            )
           case Right(roots2) =>
             val trans2 = new FormatTranslator
             val output2 = trans2.translateToString(roots2)
@@ -42,7 +45,11 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
     "language/src/test/input/domains" -> true,
     "language/src/test/input/enumerations" -> true,
     "language/src/test/input/mappings" -> true,
-    "language/src/test/input/ranges" -> true
+    "language/src/test/input/ranges" -> true,
+    "language/src/test/input/empty.riddl" -> false,
+    "language/src/test/input/everything.riddl" -> false,
+    "language/src/test/input/petstore.riddl" -> false,
+    "language/src/test/input/rbbq.riddl" -> false
   )
 
   "FormatTranslator" should {checkItems(items)}

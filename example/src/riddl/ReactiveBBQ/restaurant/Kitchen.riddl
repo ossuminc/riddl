@@ -1,7 +1,7 @@
 context Kitchen is {
   adaptor FromOrder for context Order is { ???  }
   type ReceiveOrder is {
-    items: Restaurant.Menu.Item+
+    items: Restaurant.Menu.MenuItem+
   }
 
   type OrderViewType is {

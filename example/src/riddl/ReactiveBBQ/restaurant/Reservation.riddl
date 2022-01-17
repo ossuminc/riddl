@@ -8,7 +8,7 @@ context Reservation is {
   }
   entity Reservation is {
    options ( aggregate )
-   state reservation is ReservationValue
+   state reservation is { value : ReservationValue }
    handler ofInputs is {}
   }
 }

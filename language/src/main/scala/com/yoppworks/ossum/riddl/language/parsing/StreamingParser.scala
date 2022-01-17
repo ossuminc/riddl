@@ -1,13 +1,12 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For StreamingParser */
-trait StreamingParser extends ReferenceParser with TypeParser {
+trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser {
 
   def pipeDefinition[u: P]: P[Pipe] = {
     location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
@@ -26,19 +25,25 @@ trait StreamingParser extends ReferenceParser with TypeParser {
     }
   }
 
-  def processorDefinitions[u: P]: P[(Seq[Inlet], Seq[Outlet])] = {
-    P(undefined((Seq.empty[Inlet], Seq.empty[Outlet])) | (inlet | outlet).rep(1).map {
-      seq: Seq[Streamlet] =>
-        val groups = seq.groupBy(_.getClass)
-        mapTo[Inlet](groups.get(classOf[Inlet])) -> mapTo[Outlet](groups.get(classOf[Outlet]))
-    })
+  def processorDefinitions[u: P]: P[(Seq[Inlet], Seq[Outlet], Seq[Example])] = {
+    P(
+      undefined((Seq.empty[Inlet], Seq.empty[Outlet], Seq.empty[Example])) |
+        ((inlet | outlet).rep(1) ~ examples).map { case (streams, exmpls) =>
+          val groups = streams.groupBy(_.getClass)
+          (
+            mapTo[Inlet](groups.get(classOf[Inlet])),
+            mapTo[Outlet](groups.get(classOf[Outlet])),
+            exmpls
+          )
+        }
+    )
   }
 
   def processor[u: P]: P[Processor] = P(
     location ~ Keywords.processor ~/ identifier ~ is ~ open ~ processorDefinitions ~ close ~
       description
-  ).map { case (loc, id, (inlets, outlets), description) =>
-    Processor(loc, id, inlets, outlets, description)
+  ).map { case (loc, id, (inlets, outlets, examples), description) =>
+    Processor(loc, id, inlets, outlets, examples, description)
   }
 
   def joint[u: P]: P[Joint] = {

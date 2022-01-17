@@ -2,9 +2,7 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -39,13 +37,13 @@ trait HandlerParser extends ReferenceParser with ConditionParser with Expression
 
   def publishStmt[u: P]: P[PublishStatement] = {
     P(
-      (Keywords.yields | Keywords.publish) ~/ location ~ messageConstructor ~
-        Terminals.Readability.to ~ pipeRef ~ description
+      Keywords.publish ~/ location ~ messageConstructor ~ Terminals.Readability.to ~ pipeRef ~
+        description
     ).map { t => (PublishStatement.apply _).tupled(t) }
   }
 
   def sendStmt[u: P]: P[SendStatement] = {
-    P(Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~ entityRef ~ description)
+    P(Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~/ entityRef ~ description)
       .map { t => (SendStatement.apply _).tupled(t) }
   }
 

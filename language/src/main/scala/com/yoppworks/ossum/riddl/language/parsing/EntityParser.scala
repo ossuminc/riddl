@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Options
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -57,7 +56,7 @@ trait EntityParser
   }
 
   def state[u: P]: P[State] = {
-    P(location ~ Keywords.state ~/ identifier ~ is ~ typeExpression ~ description)
+    P(location ~ Keywords.state ~/ identifier ~ is ~ aggregationWithoutDescription ~ description)
       .map(tpl => (State.apply _).tupled(tpl))
   }
 

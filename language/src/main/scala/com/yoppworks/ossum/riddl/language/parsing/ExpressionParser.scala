@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Operators
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.{Operators, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -55,8 +54,12 @@ trait ExpressionParser extends CommonParser {
     P(location ~ operator ~ argList).map(tpl => (MathExpression.apply _).tupled(tpl))
   }
 
+  def unknownExpression[u: P]: P[UnknownExpression] = {
+    P((location ~ Punctuation.undefined).map(loc => UnknownExpression(loc)))
+  }
+
   def expression[u: P]: P[Expression] = {
     mathExpression | functionCallExpression | groupExpression | literalInteger | literalDecimal |
-      fieldExpression | (location ~ Punctuation.undefined).map(loc => UnknownExpression(loc))
+      fieldExpression | unknownExpression
   }
 }

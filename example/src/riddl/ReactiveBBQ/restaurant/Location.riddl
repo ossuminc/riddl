@@ -1,6 +1,6 @@
 context Location is {
   entity Location is {
-    state foo is String
+    state foo is { name: String }
     handler foo is {}
   } explained as {
     "This is a retail store Location"

@@ -1,9 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Options
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -12,18 +10,25 @@ trait InteractionParser extends ReferenceParser {
 
   def roleOptions[u: P]: P[Seq[RoleOption]] = {
     options(StringIn("human", "device").!) {
-      case (loc, "human")  => HumanOption(loc)
+      case (loc, "human") => HumanOption(loc)
       case (loc, "device") => DeviceOption(loc)
-      case _               => throw new RuntimeException("Impossible case")
+      case _ => throw new RuntimeException("Impossible case")
+    }
+  }
+
+  def interactionOptions[u: P]: P[Seq[InteractionOption]] = {
+    options(StringIn("gateway").!) {
+      case (loc, "gateway") => GatewayInteraction(loc)
+      case _ => throw new RuntimeException("Impossible case")
     }
   }
 
   def messageOptions[u: P]: P[Seq[MessageOption]] = {
     options(StringIn(Options.sync, Options.async, Options.reply).!) {
-      case (loc, Options.sync)  => SynchOption(loc)
+      case (loc, Options.sync) => SynchOption(loc)
       case (loc, Options.async) => AsynchOption(loc)
       case (loc, Options.reply) => ReplyOption(loc)
-      case _                    => throw new RuntimeException("invalid message option")
+      case _ => throw new RuntimeException("invalid message option")
     }
   }
 
@@ -45,14 +50,17 @@ trait InteractionParser extends ReferenceParser {
     ).map { tpl => (MessageAction.apply _).tupled(tpl) }
   }
 
-  def interactions[u: P]: P[Actions] = { P(messageActionDef).rep(1) }
+  def interactionBody[u: P]: P[(Seq[InteractionOption], Actions)] = {
+    P(interactionOptions ~ messageActionDef.rep(1))
+  }
 
   def interaction[u: P]: P[Interaction] = {
     P(
       location ~ Keywords.interaction ~/ identifier ~ is ~ open ~
-        (undefined(Seq.empty[ActionDefinition]) | interactions) ~ close ~ description
-    ).map { case (loc, id, interactions, description) =>
-      Interaction(loc, id, interactions, description)
+        (undefined((Seq.empty[InteractionOption], Seq.empty[ActionDefinition])) | interactionBody) ~
+        close ~ description
+    ).map { case (loc, id, (options, interactions), description) =>
+      Interaction(loc, id, options, interactions, description)
     }
   }
 }

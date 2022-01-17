@@ -63,8 +63,8 @@ trait TypeParser extends ReferenceParser {
 
   def uniqueIdType[u: P]: P[UniqueId] = {
     (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/ description).map {
-      case (loc, Some(id), add) => UniqueId(loc, id, add)
-      case (loc, None, add)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), add)
+      case (loc, Some(id), desc) => UniqueId(loc, id, desc)
+      case (loc, None, desc) => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), desc)
     }
   }
 
@@ -73,8 +73,8 @@ trait TypeParser extends ReferenceParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(identifier ~ enumValue ~ isTypeRef.? ~ description).map { case (id, enumVal, typeRef, desc) =>
-      Enumerator(id.loc, id, enumVal, typeRef, desc)
+    P(identifier ~ enumValue ~ description).map { case (id, enumVal, desc) =>
+      Enumerator(id.loc, id, enumVal, desc)
     }
   }
 
@@ -141,8 +141,8 @@ trait TypeParser extends ReferenceParser {
     */
   def mapping[u: P]: P[Mapping] = {
     P(
-      location ~ "mapping" ~ open ~ "from" ~/ typeExpression ~ "to" ~ typeExpression ~ close ~
-        description
+      location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~ Readability.to ~
+        typeExpression ~ description
     ).map { tpl => (Mapping.apply _).tupled(tpl) }
   }
 

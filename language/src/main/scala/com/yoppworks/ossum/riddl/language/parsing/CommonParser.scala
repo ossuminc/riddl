@@ -1,10 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Operators
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Operators, Punctuation, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -93,12 +90,16 @@ trait CommonParser extends NoWhiteSpaceParsers {
   )(mapper: => (Location, String) => TY
   ): P[Seq[TY]] = {
     P(
-      (Keywords.options ~/ Punctuation.roundOpen ~ (location ~ validOptions).rep(1)
-        .map(_.map(mapper.tupled(_))) ~ Punctuation.roundClose) |
-        (Keywords.option ~ is ~/ (location ~ validOptions).map(tpl => Seq(mapper.tupled(tpl))))
+      (Keywords.options ~/ Punctuation.roundOpen ~ location ~ validOptions ~
+        (location ~ Punctuation.comma ~ validOptions).rep(0) ~ Punctuation.roundClose)
+        .map { case (headLoc, headOption, tail) =>
+          val end: Seq[TY] = tail.map(i => mapper(i._1, i._2))
+          mapper(headLoc, headOption) +: end
+        } | (Keywords.option ~/ Readability.is ~ location ~ validOptions)
+        .map(tpl => Seq(mapper.tupled(tpl)))
     ).?.map {
-      case Some(x) => x
-      case None    => Seq.empty[TY]
+      case Some(seq) => seq
+      case None => Seq.empty[TY]
     }
   }
 

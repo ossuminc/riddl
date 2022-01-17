@@ -4,13 +4,12 @@ import com.yoppworks.ossum.riddl.language.AST.*
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.reflect.ClassTag
-import scala.reflect.classTag
+import scala.reflect.{ClassTag, classTag}
 
 /** Validates an AST */
 object Validation {
 
-  def validate[C <: Container](
+  def validate[C <: Container[Definition]](
     root: C,
     options: ValidationOptions = ValidationOptions.Default
   ): ValidationMessages = {
@@ -102,7 +101,7 @@ object Validation {
 
     def parentOf(
       definition: Definition
-    ): Container = { symbolTable.parentOf(definition).getOrElse(RootContainer.empty) }
+    ): Container[Definition] = {symbolTable.parentOf(definition).getOrElse(RootContainer.empty)}
 
     def isReportMissingWarnings: Boolean = options.showMissingWarnings
 
@@ -174,43 +173,12 @@ object Validation {
     ): ValidationState = {
       enumerators.foldLeft(this) { case (state, enumerator) =>
         val id = enumerator.id
-        var s = state.checkIdentifierLength(enumerator).check(
+        val s = state.checkIdentifierLength(enumerator).check(
           id.value.head.isUpper,
           s"Enumerator '${id.value}' must start with upper case",
           StyleWarning,
           id.loc
         )
-        s = enumerator.typeRef match {
-          case Some(typeRef) => lookup[Type](typeRef.id) match {
-              case Nil => s.check(
-                  predicate = false,
-                  message = s"Enumeration references a non-existent type: ${typeRef.id.value}",
-                  Error,
-                  typeRef.id.loc
-                )
-              case singleRef +: Nil => s.check(
-                  singleRef.typ.isInstanceOf[Aggregation],
-                  s"Enumeration references a non-aggregation type: ${typeRef.id.value}",
-                  Error,
-                  typeRef.id.loc
-                )
-              case head +: tail => s.check(
-                  predicate = false,
-                  message = s"Enumeration references an ambiguous type: ${typeRef.id.value}.  " +
-                    s"Resolved references include: ${(head +: tail).map(_.id.value)}",
-                  Error,
-                  typeRef.id.loc
-                )
-              case List(_) => s.check(
-                  predicate = false,
-                  message = s"Enumeration references a non-existent type: ${typeRef.id.value}",
-                  Error,
-                  typeRef.id.loc
-                )
-              case _ => throw new IllegalStateException("Bad List[T] match")
-            }
-          case _ => s
-        }
         s.checkDescription(definition, desc)
       }
     }
@@ -426,7 +394,7 @@ object Validation {
     }
 
     def checkDefinition(
-      container: Container,
+      container: Container[Definition],
       definition: Definition
     ): ValidationState = {
       var result = this.check(
@@ -482,31 +450,43 @@ object Validation {
         )
       }
     }
+
+    def checkContainer(
+      parent: Container[Definition],
+      container: Container[Definition]
+    ): ValidationState = {
+      this.checkDefinition(parent, container).check(
+        container.contents.nonEmpty,
+        s"Container${container.identify} in ${parent.identify} must have content.",
+        MissingWarning,
+        container.loc
+      )
+    }
   }
 
   class ValidationFolding extends Folding.Folding[ValidationState] {
 
     override def openDomain(
       state: ValidationState,
-      container: Container,
+      container: Container[Domain],
       domain: Domain
     ): ValidationState = {
-      state.checkDefinition(container, domain)
+      state.checkContainer(container, domain)
         .checkNonEmpty(domain.contents, "contents", domain, MissingWarning)
     }
 
     override def closeDomain(
       state: ValidationState,
-      container: Container,
+      container: Container[Domain],
       domain: Domain
     ): ValidationState = { state.checkDescription(domain, domain.description) }
 
     override def openContext(
       state: Validation.ValidationState,
-      container: Container,
+      container: Domain,
       context: AST.Context
     ): ValidationState = {
-      val result = state.checkDefinition(container, context)
+      val result = state.checkContainer(container, context)
         .checkOptions[ContextOption](context.options, context.loc)
       if (context.entities.isEmpty) {
         result.add(
@@ -517,32 +497,30 @@ object Validation {
 
     override def closeContext(
       state: Validation.ValidationState,
-      container: Container,
+      container: Domain,
       context: AST.Context
     ): ValidationState = { state.checkDescription(context, context.description) }
 
     override def openEntity(
       state: Validation.ValidationState,
-      container: Container,
+      container: Context,
       entity: AST.Entity
     ): ValidationState = {
-      state.checkDefinition(container, entity).checkOptions[EntityOption](
-        entity.options,
-        entity.loc
-      ).checkSequence(entity.states) { (next, state) =>
-        next.checkTypeExpression(state.typeEx, state)
-      }.addIf(entity.handlers.isEmpty) {
-        ValidationMessage(entity.loc, s"Entity '${entity.id.value}' must define a handler")
+      state.checkContainer(container, entity).checkOptions[EntityOption](entity.options, entity.loc)
+        .checkSequence(entity.states) { (next, state) =>
+          next.checkTypeExpression(state.typeEx, state)
+        }.addIf(entity.handlers.isEmpty) {
+        ValidationMessage(entity.loc, s"Entity '${entity.id.format}' must define a handler")
       }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
         ValidationMessage(
           entity.loc,
-          s"Entity '${entity.id.value}' has only empty handlers",
+          s"Entity '${entity.id.format}' has only empty handlers",
           MissingWarning
         )
       }.addIf(entity.hasOption[EntityFiniteStateMachine] && entity.states.size < 2) {
         ValidationMessage(
           entity.loc,
-          s"Entity '${entity.id.value}' is declared as a finite-state-machine, but does not " +
+          s"Entity '${entity.id.format}' is declared as a finite-state-machine, but does not " +
             s"have at least two states",
           Error
         )
@@ -551,7 +529,7 @@ object Validation {
 
     override def doHandler(
       state: ValidationState,
-      container: Container,
+      container: Entity,
       handler: Handler
     ): ValidationState = {
       handler.clauses.foldLeft(state) { (state, onClause) => doOnClause(state, handler, onClause) }
@@ -595,13 +573,13 @@ object Validation {
 
     override def closeEntity(
       state: Validation.ValidationState,
-      container: Container,
+      container: Context,
       entity: AST.Entity
     ): ValidationState = { state.checkDescription(entity, entity.description) }
 
     override def openInteraction(
       state: ValidationState,
-      container: Container,
+      container: Container[Interaction],
       interaction: Interaction
     ): ValidationState = {
       state.checkDefinition(container, interaction)
@@ -610,42 +588,43 @@ object Validation {
 
     override def closeInteraction(
       state: ValidationState,
-      container: Container,
+      container: Container[Interaction],
       interaction: Interaction
     ): ValidationState = { state.checkDescription(interaction, interaction.description) }
 
     override def openFeature(
       state: ValidationState,
-      container: Container,
+      container: Container[Feature],
       feature: Feature
     ): ValidationState = {
       val state2 = state.checkDefinition(container, feature)
-      feature.background.foldLeft(state2) { case (s, bg) =>
-        s.checkNonEmpty(bg.givens, "Background", feature)
+      feature.contents.foldLeft(state2) { case (s, example) =>
+        s.checkNonEmpty(example.givens, "Given", feature)
+        s.checkNonEmpty(example.thens, "Then", feature)
       }
     }
 
     override def closeFeature(
       state: ValidationState,
-      container: Container,
+      container: Container[Feature],
       feature: Feature
     ): ValidationState = { state.checkDescription(feature, feature.description) }
 
     override def openAdaptor(
       state: ValidationState,
-      container: Container,
+      container: Context,
       adaptor: Adaptor
     ): ValidationState = { state.checkDefinition(container, adaptor) }
 
     override def closeAdaptor(
       state: ValidationState,
-      container: Container,
+      container: Context,
       adaptor: Adaptor
     ): ValidationState = { state.checkDescription(adaptor, adaptor.description) }
 
     override def doType(
       state: ValidationState,
-      container: Container,
+      container: Container[Definition],
       typeDef: Type
     ): ValidationState = {
       state.checkDefinition(container, typeDef).check(
@@ -656,15 +635,9 @@ object Validation {
       ).checkTypeExpression(typeDef.typ, container).checkDescription(typeDef, typeDef.description)
     }
 
-    override def doPredefinedType(
-      state: ValidationState,
-      container: Container,
-      predef: PredefinedType
-    ): ValidationState = { state }
-
     override def doAction(
       state: ValidationState,
-      container: Container,
+      container: Interaction,
       action: ActionDefinition
     ): ValidationState = {
       state.checkDefinition(container, action).checkDescription(action, action.description)
@@ -673,7 +646,7 @@ object Validation {
 
     override def doExample(
       state: ValidationState,
-      container: Container,
+      container: Container[Example],
       example: Example
     ): ValidationState = {
       state.checkDefinition(container, example).checkNonEmpty(example.givens, "Givens", example)
@@ -682,20 +655,9 @@ object Validation {
         .checkDescription(example, example.description)
     }
 
-    override def doFunction(
-      state: ValidationState,
-      container: Container,
-      function: Function
-    ): ValidationState = {
-      state.checkDefinition(container, function)
-        .checkTypeExpression(function.input.getOrElse(Nothing(function.loc)), function)
-        .checkTypeExpression(function.output.getOrElse(Nothing(function.loc)), function)
-        .checkDescription(function, function.description)
-    }
-
     override def doInvariant(
       state: ValidationState,
-      container: Container,
+      container: Entity,
       invariant: Invariant
     ): ValidationState = {
       state.checkDefinition(container, invariant)
@@ -705,13 +667,13 @@ object Validation {
 
     override def doAdaptation(
       state: ValidationState,
-      container: Container,
+      container: Adaptor,
       adaptation: Adaptation
     ): ValidationState = {
       adaptation match {
-        case EventAdaptation(_, _, event, command, _, description) => state
-            .checkDefinition(container, adaptation).checkRef(event).checkRef(command)
-            .checkDescription(adaptation, description)
+        case Adaptation(_, _, event, command, _, description) => state
+          .checkDefinition(container, adaptation).checkRef(event).checkRef(command)
+          .checkDescription(adaptation, description)
         case _ =>
           require(requirement = false, "Unknown adaptation")
           state
@@ -720,65 +682,99 @@ object Validation {
 
     override def openPlant(
       state: ValidationState,
-      container: Container,
+      container: Domain,
       plant: Plant
     ): ValidationState = state
 
-    override def closePlant(
+    def closePlant(
       state: ValidationState,
-      container: Container,
+      container: Domain,
       plant: Plant
     ): ValidationState = state
 
     override def openState(
       state: ValidationState,
-      container: Container,
+      container: Entity,
       s: State
     ): ValidationState = state
 
     override def closeState(
       state: ValidationState,
-      container: Container,
+      container: Entity,
       s: State
     ): ValidationState = state
 
     override def openSaga(
       state: ValidationState,
-      container: Container,
+      container: Container[Saga],
       saga: Saga
     ): ValidationState = state
 
     override def closeSaga(
       state: ValidationState,
-      container: Container,
+      container: Container[Saga],
       saga: Saga
     ): ValidationState = state
 
-    override def doField(
+    override def doStateField(
       state: ValidationState,
-      container: Container,
+      container: Container[Field],
       field: Field
     ): ValidationState = state
 
-    override def doPipe(state: ValidationState, container: Container, pipe: Pipe): ValidationState =
+    override def doPipe(state: ValidationState, container: Plant, pipe: Pipe): ValidationState =
       state
-
-    override def doProcessor(
-      state: ValidationState,
-      container: Container,
-      pipe: Processor
-    ): ValidationState = state
 
     override def doJoint(
       state: ValidationState,
-      container: Container,
+      container: Plant,
       joint: Joint
     ): ValidationState = state
 
     override def doSagaAction(
       state: ValidationState,
       saga: Saga,
-      definition: Definition
+      action: SagaAction
+    ): ValidationState = state
+
+    override def openProcessor(
+      state: ValidationState,
+      container: Plant,
+      processor: Processor
+    ): ValidationState = state
+
+    override def closeProcessor(
+      state: ValidationState,
+      container: Plant,
+      processor: Processor
+    ): ValidationState = state
+
+    override def openFunction(
+      state: ValidationState,
+      container: Entity,
+      function: Function
+    ): ValidationState = {
+      state.checkDefinition(container, function)
+        .checkTypeExpression(function.input.getOrElse(Nothing(function.loc)), function)
+        .checkTypeExpression(function.output.getOrElse(Nothing(function.loc)), function)
+    }
+
+    override def closeFunction(
+      state: ValidationState,
+      container: Entity,
+      function: Function
+    ): ValidationState = state.checkDescription(function, function.description)
+
+    override def doInlet(
+      state: ValidationState,
+      container: Processor,
+      inlet: Inlet
+    ): ValidationState = state
+
+    override def doOutlet(
+      state: ValidationState,
+      container: Processor,
+      outlet: Outlet
     ): ValidationState = state
   }
 }

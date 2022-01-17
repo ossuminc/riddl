@@ -1,15 +1,12 @@
 package com.yoppworks.ossum.riddl.language
-import java.io.File
-import AST.Definition
-import AST.RiddlNode
-import AST.*
-import com.yoppworks.ossum.riddl.language.parsing.ParserError
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
-import fastparse.*
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.*
 
+import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.parsing.{ParserError, RiddlParserInput, TopLevelParser}
+import fastparse.*
+import org.scalatest.matchers.*
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
@@ -43,7 +40,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Plant]       => plant(_)
       case x if x == classOf[AST.Processor]   => processor(_)
       case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
-      case x if x == classOf[AST.Joint]       => joint(_)
+      case x if x == classOf[AST.Joint] => joint(_)
+      case x if x == classOf[AST.Saga] => saga(_)
       case _ =>
         throw new RuntimeException(s"No parser defined for class ${classTag[T].runtimeClass}")
     }
@@ -165,12 +163,9 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDefinition[FROM]
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag](
+  def parseDefinition[FROM <: Definition : ClassTag](
     input: String
-  ): Either[Seq[ParserError], FROM] = {
-    val tp = TestParser(RiddlParserInput(input))
-    tp.parseDefinition[FROM]
-  }
+  ): Either[Seq[ParserError], FROM] = {parseDefinition(RiddlParserInput(input))}
 
   def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
     input: String,

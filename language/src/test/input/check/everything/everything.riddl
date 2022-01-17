@@ -32,7 +32,7 @@ domain Everything is {
 
     // Enumerations have a value chosen from a list of identifiers
     type PeachType is { a: Integer }
-    type enum is any of { Apple Pear Peach is type PeachType Persimmon }
+    type enum is any of { Apple Pear Peach(21) Persimmon(42) }
 
     // Alternations select one type from a list of types
     type alt is one of { enum or stamp or url }
@@ -57,7 +57,7 @@ domain Everything is {
     // Entities are the main objects that contexts define. They can be
     // persistent (long lived) or aggregate (they consume commands and queries)
     entity Something is {
-      options (aggregate persistent)
+      options (aggregate, persistent)
 
       type somethingDate is Date
 

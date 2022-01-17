@@ -24,12 +24,12 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityCommand' is not defined but should be a Command Type"
+          "'EntityCommand' is not defined but should be a command Type"
         )
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityEvent' is not defined but should be a Event Type"
+          "'EntityEvent' is not defined but should be a event Type"
         )
       }
     }
@@ -51,7 +51,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' is not defined but should be a Event Type"
+          "'Incoming' is not defined but should be a event Type"
         )
       }
     }
@@ -73,7 +73,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' should reference a Event Type but is a String instead"
+          "'Incoming' should reference a event Type but is a String instead"
         )
       }
     }

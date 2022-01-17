@@ -1,8 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.Entity
-import com.yoppworks.ossum.riddl.language.AST.Feature
+import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, Feature}
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
@@ -10,13 +8,16 @@ class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
     "handle entity with multiple states" in {
-      val input = """entity MultiState is {
-                    |  options(fsm)
-                    |  state foo is { field: String }
-                    |  state bar is { field2: Number }
-                    |}""".stripMargin
-      parseAndValidate[Entity](input) { case (entity: Entity, _: ValidationMessages) =>
-        assert(entity.states.size == 2)
+      val input =
+        """entity MultiState is {
+          |  options(fsm)
+          |  state foo is { field: String }
+          |  state bar is { field2: Number }
+          |  handler fum is { ??? }
+          |}""".stripMargin
+      parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
+        msgs.filter(_.kind.isError) mustBe (empty)
+        entity.states.size mustBe 2
       }
     }
     "error for finite-state-machine entities without at least two states" in {
@@ -24,8 +25,7 @@ class EntityValidatorTest extends ValidatingTest {
                     |  options(fsm)
                     |  state foo is { field: String }
                     |}""".stripMargin
-      parseAndValidate[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
-        msgs.size mustEqual 5
+      parseAndValidateInContext[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,
@@ -36,8 +36,7 @@ class EntityValidatorTest extends ValidatingTest {
     }
     "catch missing things" in {
       val input = "entity Hamburger is { state foo is {field:  SomeType } }"
-      parseAndValidate[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
-        msgs.size mustEqual 5
+      parseAndValidateInContext[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,
@@ -47,23 +46,24 @@ class EntityValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.MissingWarning,
-          "Entity 'Hamburger' should have a description"
+          "entity 'Hamburger' should have a description"
         )
       }
     }
 
     "produce an error for persistent entity with no event producer" in {
-      val input = """
-                    |domain foo is {
-                    |context bar is {
-                    |  entity Hamburger  is {
-                    |    options (aggregate persistent)
-                    |    state field is  SomeType
-                    |    handler foo is {}
-                    |  }
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain foo is {
+          |context bar is {
+          |  entity Hamburger  is {
+          |    options (aggregate, persistent)
+          |    state field is { field: SomeType }
+          |    handler foo is {}
+          |  }
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
@@ -73,27 +73,24 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
     "validate examples" in {
-      parseAndValidate[Feature]("""
-                                  |  feature AnAspect is {
-                                  |    BACKGROUND {
-                                  |      Given "Nobody loves me"
-                                  |    }
-                                  |    EXAMPLE foo {
-                                  |      GIVEN "everybody hates me"
-                                  |      AND "I'm depressed"
-                                  |      WHEN "I go fishing"
-                                  |      THEN "I'll just eat worms"
-                                  |      ELSE "I'm happy"
-                                  |    } described as {
-                                  |     "brief description"
-                                  |     "detailed description"
-                                  |    }
-                                  |  }
-                                  |""".stripMargin) { case (a, b) =>
-        a.id.value mustBe "AnAspect"
-        assert(a.background.get.givens.nonEmpty)
-        assert(a.examples.nonEmpty)
-        assert(b.isEmpty)
+      parseAndValidateInContext[Feature](
+        """
+          |  feature AnAspect is {
+          |    EXAMPLE foo {
+          |      GIVEN "everybody hates me"
+          |      AND "I'm depressed"
+          |      WHEN "I go fishing"
+          |      THEN "I'll just eat worms"
+          |      ELSE "I'm happy"
+          |    } described as {
+          |     "brief description"
+          |     "detailed description"
+          |    }
+          |  } described as "foo"
+          |""".stripMargin) { case (feature, msgs) =>
+        feature.id.value mustBe "AnAspect"
+        assert(feature.examples.nonEmpty)
+        assert(msgs.isEmpty)
       }
     }
   }
