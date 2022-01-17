@@ -2,8 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.generic.auto.*
 import pureconfig.{ConfigReader, ConfigSource}
+import pureconfig.generic.auto.*
 
 import java.io.File
 import java.nio.file.Path

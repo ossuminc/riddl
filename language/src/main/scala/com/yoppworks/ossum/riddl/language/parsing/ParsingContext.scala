@@ -13,7 +13,7 @@ case class ParserError(
   loc: Location,
   msg: String,
   context: String = "")
-  extends Throwable {
+    extends Throwable {
 
   def format: String = {
     val errorLine = input.annotateErrorLine(loc)
