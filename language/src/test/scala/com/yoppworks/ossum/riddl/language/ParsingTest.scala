@@ -1,7 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.parsing.{ParserError, RiddlParserInput, TopLevelParser}
+import com.yoppworks.ossum.riddl.language.parsing.ParserError
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import fastparse.*
 import org.scalatest.matchers.*
 import org.scalatest.wordspec.AnyWordSpec

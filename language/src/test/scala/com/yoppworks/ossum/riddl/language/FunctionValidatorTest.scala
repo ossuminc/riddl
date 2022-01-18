@@ -1,6 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Entity, Identifier}
+import com.yoppworks.ossum.riddl.language.AST.Entity
+import com.yoppworks.ossum.riddl.language.AST.Identifier
 
 class FunctionValidatorTest extends ValidatingTest {
 

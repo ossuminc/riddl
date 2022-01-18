@@ -21,8 +21,8 @@ object LukeAstWalker {
   ): HugoRoot = HugoRoot { ns =>
     root.contents.collect { case dom: AST.Domain =>
       walkDomain(ns, dom)
-      // case (ctx: AST.Context) => walkContext(ns, ctx)
-      // case (ent: AST.Entity)  => walkEntity(ns, ent)
+    // case (ctx: AST.Context) => walkContext(ns, ctx)
+    // case (ent: AST.Entity)  => walkEntity(ns, ent)
     }
   }
 
@@ -135,7 +135,7 @@ object LukeAstWalker {
     case AST.Enumeration(_, of, _) =>
       val opts: Seq[RiddlType.Enumeration.EnumOption] = of.map {
         case AST.Enumerator(_, id, Some(value), _) => RiddlType.Enumeration
-          .EnumOptionValue(id.value, value.n.toInt)
+            .EnumOptionValue(id.value, value.n.toInt)
         case AST.Enumerator(_, id, _, _) => RiddlType.Enumeration.EnumOptionNamed(id.value)
       }
       RiddlType.Enumeration(opts)

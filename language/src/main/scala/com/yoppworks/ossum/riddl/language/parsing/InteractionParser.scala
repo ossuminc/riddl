@@ -1,7 +1,9 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options, Punctuation}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Options
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 

@@ -34,10 +34,10 @@ case class SymbolTable(container: Container[Definition]) {
           case e: Enumeration => e.enumerators.foreach { etor =>
               addToSymTab(etor.id.value, etor -> parent)
             // type reference and identifier relations must be handled by semantic validation
-          }
+            }
           case mt: MessageType => mt.fields.foreach { fld =>
-            addToSymTab(fld.id.value, fld -> parent)
-          }
+              addToSymTab(fld.id.value, fld -> parent)
+            }
           case agg: Aggregation => agg.fields.foreach { fld =>
               addToSymTab(fld.id.value, fld -> parent)
             }

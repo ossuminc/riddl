@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Operators, Punctuation}
+import com.yoppworks.ossum.riddl.language.Terminals.Operators
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 

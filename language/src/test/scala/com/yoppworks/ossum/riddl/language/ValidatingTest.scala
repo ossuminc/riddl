@@ -1,8 +1,12 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind, ValidationMessages, ValidationOptions}
-import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
+import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 
 import java.io.File

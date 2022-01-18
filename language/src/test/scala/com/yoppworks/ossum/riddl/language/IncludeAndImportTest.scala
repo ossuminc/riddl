@@ -1,6 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Identifier, Strng, Type}
+import com.yoppworks.ossum.riddl.language.AST.Identifier
+import com.yoppworks.ossum.riddl.language.AST.Strng
+import com.yoppworks.ossum.riddl.language.AST.Type
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
 /** Unit Tests For Includes */

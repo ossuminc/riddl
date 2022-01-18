@@ -2,7 +2,8 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import fastparse.*
-import fastparse.Parsed.{Failure, Success}
+import fastparse.Parsed.Failure
+import fastparse.Parsed.Success
 
 import java.io.File
 import scala.annotation.unused
@@ -61,7 +62,7 @@ trait ParsingContext {
     } else {
       stack.push(file)
       val result = this.expect[T](rule) match {
-        case Left(_) => empty
+        case Left(_)       => empty
         case Right(result) => result
       }
       stack.pop
@@ -89,8 +90,8 @@ trait ParsingContext {
   def expect[T](parser: P[?] => P[T]): Either[Seq[ParserError], T] = {
     fastparse.parse(current, parser(_)) match {
       case Success(content, _) =>
-        if (errors.nonEmpty) {Left(errors.toSeq)}
-        else {Right(content)}
+        if (errors.nonEmpty) { Left(errors.toSeq) }
+        else { Right(content) }
       case failure: Failure =>
         makeParseFailureError(failure)
         Left(errors.toSeq)

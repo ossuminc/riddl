@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Location
-import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, SourceParserInput}
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.SourceParserInput
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 
