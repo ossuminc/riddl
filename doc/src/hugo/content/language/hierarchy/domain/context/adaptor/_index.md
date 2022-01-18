@@ -15,13 +15,13 @@ For example, consider the word "order" in various contexts:
 * _mathematics_ - A sequence or arrangement of successive things.
 * _sociology_ - A group of people united in a formal way
 * _architecture_ -  A type of column and entablature forming the unit of a style
-and there are several more. To disambiguate these definitions we use bounded contexts in DDD, 
-and RIDDL, that p
-* recisely define the meaning of a term in that context. But, what happens when 
+
+And there are several more. To disambiguate these definitions we use bounded contexts in DDD, 
+and RIDDL, that precisely define the meaning of a term in that context. But, what happens when 
 two bounded contexts use the same term for different purposes? That's where Adaptors come in. 
 
 ## Use Cases
-There are several use cases in which the need for an Adaptor occur as in the following subsections
+There are several use cases in which the need for an Adaptor occurs as in the following subsections
 
 ### Non-DDD External Systems
 An adaptor can adapt a non-DDD external system to a DDD system. The DDD system can then interact

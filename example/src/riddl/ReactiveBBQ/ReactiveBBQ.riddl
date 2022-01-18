@@ -10,9 +10,10 @@ include "corporate/domain"
 |* Restaurant -- handles each of the restaurant locations
 |* Back Office -- handles all the back office supplies and menus
 |* Corporate -- handles the corporate web site, marketing, accounting and HR
-|This domain definition is designed to be instructive in teh RIDDL language.
+|This domain definition is designed to be instructive in the RIDDL language.
 |It uses the case study from the Lightbend Reactive Architecture course as
 |the basis for defining the domain. The course uses a set of interviews with
-|Reactive BBQ employees to define the requirements. This domain specification
-|is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+|Reactive BBQ employees and customersto define the requirements. This domain
+|specification is a possible result of analyzing that domain: the Reactive BBQ
+|restaurant.
 }

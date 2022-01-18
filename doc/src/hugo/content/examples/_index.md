@@ -22,18 +22,18 @@ apply in this domain but we have chosen to fully specify it in RIDDL.
 As you might guess from the name, Reactive BBQ is a restaurant chain that 
 serves spicy (reactive!) BBQ dishes.  It doesn't exist of course, even if 
 Yoppworks employees may or may not have mistaken 
-[R&R's BBQ in Salt Lake City](https://randrbbq.com/) for the _Reactive_ 
+[R&R BBQ in Salt Lake City](https://randrbbq.com/) for the _Reactive_ 
 version in 2018.
 
-The LRA-P course had a case study that included interviews with several 
+The Reactive BBQ case study in the LRA-P course included interviews with several 
 fictitious employees. [Those interviews and the case study material have been 
-replicated here](scenario) with thanks too Lightbend; and we recommend that 
+replicated here](scenario) with thanks to Lightbend; and we recommend that 
 you read that scenario first.
 
 The RIDDL files for Reactive BBQ are arranged into a directory structure, 
 each with an explanation page as follows:
 
-- [ReactiveBBQ Domain](ReactiveBBQ)
+- [Reactive BBQ Domain](reactivebbq)
     - [Restaurant](restaurant)
     - [BackOffice](backoffice)
     - [Corporate](corporate)

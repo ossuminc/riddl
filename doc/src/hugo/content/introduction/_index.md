@@ -10,16 +10,16 @@ creatoremail: "reid.spencer@yoppworks.com"
 ---
 
 RIDDL is a specification language for large systems using concepts from domain 
-driven design and system architecture. It aims to capture  business level 
+driven design and reactive system architecture. It aims to capture  business level 
 concepts in a way that can be directly translated into software that 
 implements the scaffolding for those business concepts; leaving programmers 
-to augment that scaffolding with the buisiness logic.
+to augment that scaffolding with the business logic.
 
 ### Based On DDD 
 RIDDL is based on the concepts from 
 [Domain Driven Design (DDD)](https://en.wikipedia.org/wiki/Domain-driven_design). This allows 
 domain experts and software developers to work at a higher level of abstraction using a 
-ubiquitous language to develop a system specification that is familiar comprehensible by 
+ubiquitous language to develop a system specification that is familiar and comprehensible by 
 business and technology leaders alike.    
 
 For best comprehension of the language, it is best to be familiar with the
@@ -30,7 +30,7 @@ understanding, we recommend reading Vaughn Vernon's more concise book
 or Eric Evans' original tome
 **[Domain Driven Design](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software-ebook/dp/B00794TAUG/ref=pd_sim_351_2/139-5372630-4190805)**.
 
-RIDDL relieves developers of the need to write redundant, boilerplate code for micro-services 
+RIDDL relieves developers of the need to write redundant, boilerplate code for micro-service 
 implementations due to its code generation features. The DDD-inspired specification language 
 allows domain experts and developers to work at higher levels of abstraction and specification 
 than they would if they were coding directly in a programming language. RIDDL aims to relieve developers
@@ -46,7 +46,7 @@ into many kinds of output:
 * `docs` - generates a Hugo based website for sharing the model with coworkers in their browser
 * `diagrams` - data flow, sequence, entity, context maps, and other diagrams all automatically 
   deduced from the code
-* `api` - OpenAPI (nee Swagger) specifications for APIs implied in the model
+* `api` - OpenAPI (formerly called Swagger) specifications for APIs implied in the model
 * `code` - generates Scala/Akka code for the framework of the system with clean separation for
   the parts that a programmer must implement.
 * `others` - plugins can be written to convert the AST into any other kind of data

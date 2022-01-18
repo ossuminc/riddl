@@ -6,13 +6,13 @@ weight: 10
 
 The goal of the Akka translator is to generate all the infrastructure code 
 needed to support the domain(s) defined in the RIDDL input. While this does 
-produce a working system, it does relieve developers of much of the 
+produce a working system, it also relieves developers of much of the 
 repetitive, detail oriented infrastructure that is relatively boring 
 compared to the business logic of the system. 
 
-This translator recognizes that its output will be comingled with the 
+This translator recognizes that its output will be co-mingled with the 
 business logic output that developers are writing and keeps them separate. 
-When an expected developer file dooes not exist, it will create it, but 
+When an expected developer file does not exist, it will create it, but 
 otherwise uses Scala inheritance, or other mechanisms, to indicate the 
 portions that ought to be written. 
 

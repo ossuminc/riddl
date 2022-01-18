@@ -44,9 +44,12 @@ Contrary to Value Objects,
 Entities consume commands and queries and produce events and results,
 correspondingly. They also hold state, whether persistent or not. Entities use
 event sourcing to keep track of the entire history of changes to the entity's
-state.   For example, If two instances of the same object have different attribute values, but same identity value,
-Thus, entities are the single source of truth for a particular id.
-they are the same entity.
+state. This is important because two instances of the same Entity may have different 
+attribute values, but because both instances have the same identity value, they represent 
+the same Entity. Which, then, is correct? The answer is neither. Both would need to 
+reference the Event Log for the Entity to get the most current and correct state of
+this Entity. Thus, entities are the single source of truth for a particular id.
+They are the same entity.
 ![Entities](../../../../../../static/images/entities.png "Entities")
 
 

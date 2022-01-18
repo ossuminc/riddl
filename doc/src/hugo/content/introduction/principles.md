@@ -8,9 +8,9 @@ some principles of such languages. This page provides those principles.
 ## 1: Declarative
 RIDDL is not an implementation language and does not pretend to be
 computationally complete. RIDDL adopts this _what not how_ principle. 
-Details are for softwae developers. The analyst or architect that writes
+Details are for software developers. The analyst or architect that writes
 RIDDL documents wants to only specify what the system is while abstracting 
-away the process oof constructing it. It is like city planning, not the 
+away the process of constructing it. It is like city planning, not the 
 processes of laying pipes, providing power and paving roads. The end user 
 ought to be as comfortable reading it as the developer. 
 
@@ -40,7 +40,7 @@ The specification must provide the implementors all the information they need
 to complete the implementation of the system, _and no more_. 
 
 ## 4: Sufficiently Formal 
-A RIDDL specification should be sufficiently formal that it can conceivably be
+A RIDDL specification should be sufficiently formal so that it can conceivably be
 tested for consistency, correctness, completeness, and other desirable 
 properties. The`riddlc` compiler for RIDDL input aims to achieve exactly 
 this, automatically. 

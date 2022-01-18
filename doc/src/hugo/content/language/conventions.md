@@ -30,8 +30,8 @@ abstractions should be built. RIDDL is not a programming language, but its compi
 can generate structurally sound code that can be implemented by a software engineer.
 
 ### Every Definition Can Be Documented
-Every thing you can define can have a `described by` or `explained by` suffix which 
-lets you document the definition using markdown. Ther
+Every thing you can define can has a `described by` or `explained by` suffix which 
+lets you document the definition using markdown. 
 
 ### Hierarchy Of Definitions
 Definitions are specified in a [strict containment hierarchy](./hierarchy). Definitions that can 
@@ -126,7 +126,7 @@ For example:
 ```riddl
 #define x = expialidocious
 ```
-defines a symbol x that has the value 2. Wherever `$x` is seen in the input it will be replaced
+defines a symbol x that has the value `expialidocious` . Wherever `$x` is seen in the input it will be replaced
 with `expialidocious` before being lexically interpreted by the compiler.
 
 #### File Inclusion
@@ -134,8 +134,9 @@ RIDDL allows source input to be included, inline, from other files. That is, the
 will substitute the text of an included file, replacing the `include` directive. This is much 
 like the C preprocessor `#include` directive. RIDDL always parses the entire specification but 
 the `include` directive allows you to organize that specification into many (even nested) files. 
-Note that include directives are not permitted only within container definitions so as not to 
-allow fragments of definitions to be separated into individual files.
+Note that include directives only permitted within container definitions. Doing so prevents 
+fragments of definitions from being separated into individual files.
+
 For example, this is allowed:
 ```riddl
 domain ThingAmaJig {
