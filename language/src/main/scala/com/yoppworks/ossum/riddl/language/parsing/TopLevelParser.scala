@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
-import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
+import com.yoppworks.ossum.riddl.language.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -42,7 +42,7 @@ object TopLevelParser {
 
   def parse(
     input: String,
-    origin: String = AST.defaultSourceName
+    origin: String = Location.defaultSourceName
   ): Either[Seq[ParserError], RootContainer] = {
     val sp = StringParserInput(input, origin)
     val tlp = new TopLevelParser(sp)

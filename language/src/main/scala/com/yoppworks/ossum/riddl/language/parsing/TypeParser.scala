@@ -1,9 +1,9 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
-import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals.*
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation.*
+import com.yoppworks.ossum.riddl.language.{AST, Location}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -11,9 +11,7 @@ import fastparse.ScalaWhitespace.*
 trait TypeParser extends ReferenceParser {
 
   def referToType[u: P]: P[ReferenceType] = {
-    P(location ~ "refer" ~ "to" ~/ entityRef ~ description).map { tpl =>
-      (ReferenceType.apply _).tupled(tpl)
-    }
+    P(location ~ "refer" ~ "to" ~/ entityRef).map { tpl => (ReferenceType.apply _).tupled(tpl) }
   }
 
   def stringType[u: P]: P[Strng] = {
@@ -56,15 +54,14 @@ trait TypeParser extends ReferenceParser {
   def patternType[u: P]: P[Pattern] = {
     P(
       location ~ Predefined.Pattern ~/ roundOpen ~/
-        (literalStrings | Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
-        roundClose ~/ description
+        (literalStrings | Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~ roundClose./
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
 
   def uniqueIdType[u: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose ~/ description).map {
-      case (loc, Some(id), desc) => UniqueId(loc, id, desc)
-      case (loc, None, desc)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]), desc)
+    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose./).map {
+      case (loc, Some(id)) => UniqueId(loc, id)
+      case (loc, None) => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
     }
   }
 
@@ -86,7 +83,7 @@ trait TypeParser extends ReferenceParser {
     P(
       location ~ Keywords.any ~ Readability.of.? ~ open ~/
         (enumerator.rep(1, sep = comma.?) |
-          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close ~ description
+          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
@@ -94,7 +91,7 @@ trait TypeParser extends ReferenceParser {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (typeExpression.rep(2, P("or" | "|" | ",")) |
-          Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close ~ description
+          Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
@@ -107,30 +104,24 @@ trait TypeParser extends ReferenceParser {
     P(field.rep(min = 0, comma) | Punctuation.undefined.!.map(_ => Seq.empty[Field]))
   }
 
-  def aggregationWithoutDescription[u: P]: P[Aggregation] = {
-    P(location ~ open ~ fields ~ close).map { case (loc, fields) => Aggregation(loc, fields, None) }
-  }
-
   def aggregation[u: P]: P[Aggregation] = {
-    P(aggregationWithoutDescription ~ description).map { case (agg, desc) =>
-      agg.copy(description = desc)
-    }
+    P(location ~ open ~ fields ~ close).map { case (loc, fields) => Aggregation(loc, fields) }
   }
 
   def messageKind[u: P]: P[MessageKind] = {
     P(Keywords.command | Keywords.event | Keywords.query | Keywords.result).!.map { mk =>
       mk.toLowerCase() match {
         case mk if mk == Keywords.command => CommandKind
-        case mk if mk == Keywords.event   => EventKind
-        case mk if mk == Keywords.query   => QueryKind
-        case mk if mk == Keywords.result  => ResultKind
+        case mk if mk == Keywords.event => EventKind
+        case mk if mk == Keywords.query => QueryKind
+        case mk if mk == Keywords.result => ResultKind
       }
     }
   }
 
   def messageType[u: P]: P[MessageType] = {
     P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
-      MessageType(loc, mk, agg.fields, agg.description)
+      MessageType(loc, mk, agg.fields)
     }
   }
 
@@ -142,7 +133,7 @@ trait TypeParser extends ReferenceParser {
   def mapping[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~ Readability.to ~
-        typeExpression ~ description
+        typeExpression
     ).map { tpl => (Mapping.apply _).tupled(tpl) }
   }
 
@@ -156,7 +147,7 @@ trait TypeParser extends ReferenceParser {
       location ~ Keywords.range ~ roundOpen ~/
         literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, 0))) ~ comma ~
         literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, Int.MaxValue))) ~
-        roundClose ~ description
+        roundClose./
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 

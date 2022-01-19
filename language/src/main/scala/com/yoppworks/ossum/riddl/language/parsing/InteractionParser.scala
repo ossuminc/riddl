@@ -1,9 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Options
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options, Punctuation, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -50,8 +48,8 @@ trait InteractionParser extends ReferenceParser {
 
   def messageActionDef[u: P]: P[MessageAction] = {
     P(
-      location ~ "message" ~/ identifier ~ messageOptions ~ "from" ~/ entityRef ~ "to" ~/
-        entityRef ~ "as" ~ messageRef ~ causing ~ description
+      location ~ Keywords.message ~/ identifier ~ messageOptions ~ Readability.from ~/ entityRef ~
+        Readability.to ~/ entityRef ~ Readability.as ~ messageRef ~ causing ~ description
     ).map { tpl => (MessageAction.apply _).tupled(tpl) }
   }
 

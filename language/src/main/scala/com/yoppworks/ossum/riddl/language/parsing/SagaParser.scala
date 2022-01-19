@@ -1,9 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Options
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -27,12 +25,7 @@ trait SagaParser extends ReferenceParser with FunctionParser {
     }
   }
 
-  def sagaInput[u: P]: P[Aggregation] = {
-    P(location ~ Keywords.input ~ aggregationWithoutDescription.?).map {
-      case (_, Some(a)) => a
-      case (loc, None)  => Aggregation(loc)
-    }
-  }
+  def sagaInput[u: P]: P[Aggregation] = {P(Keywords.input ~ aggregation)}
 
   def saga[u: P]: P[Saga] = {
     P(

@@ -16,7 +16,7 @@ class InvariantValidator extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "Expression in invariant 'small' should not be empty"
+          "Expression in Invariant 'small' should not be empty"
         )
       }
     }
@@ -24,11 +24,12 @@ class InvariantValidator extends ValidatingTest {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
-          | invariant large is { "x must be greater or equal to 10" } described as "self
-          | explanatory!"
+          | invariant large is { "x must be greater or equal to 10" }
           |}
           |""".stripMargin
-      ) { (_, msgs) => assertValidationMessage(msgs, MissingWarning, "should have a description") }
+      ) { (_, msgs) =>
+        assertValidationMessage(msgs, MissingWarning, "Invariant 'large' should have a description")
+      }
     }
   }
 

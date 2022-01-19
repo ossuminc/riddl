@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Entity
-import com.yoppworks.ossum.riddl.language.AST.Identifier
+import com.yoppworks.ossum.riddl.language.AST.{Entity, Identifier}
 
 class FunctionValidatorTest extends ValidatingTest {
 
@@ -27,7 +26,7 @@ class FunctionValidatorTest extends ValidatingTest {
                 )
               ) =>
         }
-        assert(msgs.exists(_.message == "function 'foo' should have a description"))
+        assert(msgs.exists(_.message == "Function 'foo' should have a description"))
       }
     }
   }

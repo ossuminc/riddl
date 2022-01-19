@@ -27,7 +27,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "ident"),
-        UniqueId(1 -> 14, entityPath = PathIdentifier(1 -> 14, Seq.empty[String]), None)
+        UniqueId(1 -> 14, entityPath = PathIdentifier(1 -> 14, Seq.empty[String]))
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
@@ -95,7 +95,7 @@ class TypeParserTest extends ParsingTest {
             Field(
               3 -> 3,
               Identifier(3 -> 3, "id"),
-              UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]), None)
+              UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]))
             ),
             Field(4 -> 3, Identifier(4 -> 3, "time"), TimeStamp(4 -> 9))
           )
@@ -128,7 +128,7 @@ class TypeParserTest extends ParsingTest {
               Field(
                 3 -> 3,
                 Identifier(3 -> 3, "id"),
-                UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]), None)
+                UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]))
               ),
               Field(4 -> 3, Identifier(4 -> 3, "time"), TimeStamp(4 -> 9))
             )

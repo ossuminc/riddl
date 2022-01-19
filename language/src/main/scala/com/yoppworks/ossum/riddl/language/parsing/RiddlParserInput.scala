@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
-import com.yoppworks.ossum.riddl.language.AST
-import com.yoppworks.ossum.riddl.language.AST.Location
+import com.yoppworks.ossum.riddl.language.Location
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -69,7 +68,7 @@ abstract class RiddlParserInput extends ParserInput {
 
 case class StringParserInput(
   data: String,
-  origin: String = AST.defaultSourceName)
+  origin: String = Location.defaultSourceName)
     extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
 }

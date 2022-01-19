@@ -167,7 +167,7 @@ class ParserTest extends ParsingTest {
                             |  options ( persistent, aggregate )
                             |  state foo is { x: String }
                             |  handler foo is {}
-                            |  feature AnAspect is {
+                            |  function AnAspect is {
                             |    EXAMPLE foo {
                             |      GIVEN "everybody hates me"
                             |      AND "I'm depressed"
@@ -183,33 +183,33 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-            ConceptEntityKind(1 -> 1),
-            1 -> 1,
-            Identifier(1 -> 8, "Hamburger"),
-            Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 23)),
-            Seq(State(
-              3 -> 3,
-              Identifier(3 -> 9, "foo"),
-              Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
-              None
-            )),
-            handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
-            features = Seq(Feature(
-              5 -> 3,
-              Identifier(5 -> 11, "AnAspect"),
-              Seq(Example(
-                6 -> 5,
-                Identifier(6 -> 13, "foo"),
-                Seq(
-                  GherkinClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
-                  GherkinClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
-                ),
-                Seq(GherkinClause(9 -> 7, Seq(LiteralString(9 -> 12, "I go fishing")))),
-                Seq(GherkinClause(10 -> 7, Seq(LiteralString(10 -> 12, "I'll just eat worms")))),
-                Seq(GherkinClause(11 -> 7, Seq(LiteralString(11 -> 12, "I'm happy"))))
-              ))
+          ConceptEntityKind(1 -> 1),
+          1 -> 1,
+          Identifier(1 -> 8, "Hamburger"),
+          Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 23)),
+          Seq(State(
+            3 -> 3,
+            Identifier(3 -> 9, "foo"),
+            Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
+            None
+          )),
+          handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
+          functions = Seq(Function(
+            5 -> 3,
+            Identifier(5 -> 12, "AnAspect"),
+            examples = Seq(Example(
+              6 -> 5,
+              Identifier(6 -> 13, "foo"),
+              Seq(
+                GherkinClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
+                GherkinClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
+              ),
+              Seq(GherkinClause(9 -> 7, Seq(LiteralString(9 -> 12, "I go fishing")))),
+              Seq(GherkinClause(10 -> 7, Seq(LiteralString(10 -> 12, "I'll just eat worms")))),
+              Seq(GherkinClause(11 -> 7, Seq(LiteralString(11 -> 12, "I'm happy"))))
             ))
-          )
+          ))
+        )
       }
     }
     "allow adaptor definitions" in {

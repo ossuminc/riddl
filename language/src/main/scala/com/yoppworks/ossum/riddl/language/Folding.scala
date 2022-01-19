@@ -59,9 +59,6 @@ object Folding {
         result = entity.states.foldLeft(result) { (next, state) => f(entity, state, next) }
         result = entity.invariants.foldLeft(result) { (next, inv) => f(entity, inv, next) }
         result = entity.handlers.foldLeft(result) { (next, handler) => f(entity, handler, next) }
-        result = entity.features.foldLeft(result) { (next, feature) =>
-          foldEachDefinition[S](entity, feature, next)(f)
-        }
         entity.functions.foldLeft(result) { (next, feature) =>
           foldEachDefinition[S](entity, feature, next)(f)
         }
@@ -77,7 +74,12 @@ object Folding {
         processor.contents.foldLeft(result) { (next, proc) => f(processor, proc, next) }
       case saga: Saga =>
         result = f(parent, saga, result)
-        saga.contents.foldLeft(result) { (next, sagaAction) => f(saga, sagaAction, next) }
+        saga.contents.foldLeft(result) { (next, sagaAction) =>
+          foldEachDefinition(saga, sagaAction, next)(f)
+        }
+      case sagaAction: SagaAction =>
+        result = f(parent, sagaAction, result)
+        sagaAction.contents.foldLeft(result) { (next, example) => f(sagaAction, example, next) }
       case interaction: Interaction =>
         result = f(parent, interaction, result)
         interaction.contents.foldLeft(result) { (next, action) => f(interaction, action, next) }
@@ -96,8 +98,20 @@ object Folding {
 
   trait Folding[S <: State[S]] {
 
+    def doDomainContent(domain: Domain, state: S): S = {
+      domain.contents.foldLeft(state) { case (next, dd) =>
+        dd match {
+          case typ: Type => doType(next, domain, typ)
+          case context: Context => foldLeft(domain, context, next)
+          case plant: Plant => foldLeft(domain, plant, next)
+          case interaction: Interaction => foldLeft(domain, interaction, next)
+          case subDomain: Domain => foldLeft(domain, subDomain, next)
+        }
+      }
+    }
+
     /** Container Traversal This foldLeft allows the hierarchy of containers to be navigated
-      */
+     */
     // noinspection ScalaStyle
     final def foldLeft(
       parent: Container[?],
@@ -105,21 +119,15 @@ object Folding {
       initState: S
     ): S = {
       container match {
-        case root: RootContainer => root.contents.foldLeft(initState) { (s, content) =>
-            foldLeft(root, content, s)
-          }
+        case root: RootContainer => root.contents.foldLeft(initState) { (s, domain) =>
+          val s1 = openRootDomain(s, root, domain)
+          val s2 = doDomainContent(domain, s1)
+          closeRootDomain(s2, root, domain)
+        }
         case domain: Domain =>
-          val domainContainer = parent.asInstanceOf[Container[Domain]]
+          val domainContainer = parent.asInstanceOf[Domain]
           openDomain(initState, domainContainer, domain).step { state =>
-            domain.contents.foldLeft(state) { case (next, dd) =>
-              dd match {
-                case typ: Type                => doType(next, domain, typ)
-                case context: Context         => foldLeft(domain, context, next)
-                case plant: Plant             => foldLeft(domain, plant, next)
-                case interaction: Interaction => foldLeft(domain, interaction, next)
-                case subDomain: Domain        => foldLeft(domain, subDomain, next)
-              }
-            }
+            doDomainContent(domain, state)
           }.step { state => closeDomain(state, domainContainer, domain) }
         case context: Context =>
           val parentDomain = parent.asInstanceOf[Domain]
@@ -165,35 +173,39 @@ object Folding {
           openProcessor(initState, containingPlant, processor).step { state =>
             processor.contents.foldLeft(state) { (next, streamlet) =>
               streamlet match {
-                case inlet: Inlet   => doInlet(next, processor, inlet)
+                case inlet: Inlet => doInlet(next, processor, inlet)
                 case outlet: Outlet => doOutlet(next, processor, outlet)
+                case example: Example => doProcessorExample(next, processor, example)
               }
             }
           }.step { state => closeProcessor(state, containingPlant, processor) }
         case saga: Saga =>
-          val parentDomain = parent.asInstanceOf[Container[Saga]]
+          val parentDomain = parent.asInstanceOf[Context]
           openSaga(initState, parentDomain, saga).step { state =>
             saga.contents.foldLeft(state) { (next, action) => doSagaAction(next, saga, action) }
           }.step { state => closeSaga(state, parentDomain, saga) }
+        case _: SagaAction =>
+          // Handled by Saga
+          initState
         case interaction: Interaction =>
           val interactionContainer = parent.asInstanceOf[Container[Interaction]]
           openInteraction(initState, interactionContainer, interaction).step { state =>
             interaction.contents.foldLeft(state) { (next, id) =>
-              id match { case action: MessageAction => doAction(next, interaction, action) }
+              id match {case action: MessageAction => doAction(next, interaction, action)}
             }
           }.step { state => closeInteraction(state, interactionContainer, interaction) }
         case feature: Feature =>
-          val parentEntity = parent.asInstanceOf[Container[Feature]]
+          val parentEntity = parent.asInstanceOf[Context]
           openFeature(initState, parentEntity, feature).step { state =>
             feature.contents.foldLeft(state) { (next, fd) =>
-              fd match { case example: Example => doExample(next, feature, example) }
+              fd match {case example: Example => doFeatureExample(next, feature, example)}
             }
           }.step { state => closeFeature(state, parentEntity, feature) }
         case function: Function =>
           val parentEntity = parent.asInstanceOf[Entity]
           openFunction(initState, parentEntity, function).step { state =>
             function.contents.foldLeft(state) { (next, fd) =>
-              fd match { case example: Example => doExample(next, function, example) }
+              fd match {case example: Example => doFunctionExample(next, function, example)}
             }
           }.step { state => closeFunction(state, parentEntity, function) }
         case adaptor: Adaptor =>
@@ -213,17 +225,13 @@ object Folding {
       }
     }
 
-    def openDomain(
-      state: S,
-      container: Container[Domain],
-      domain: Domain
-    ): S
+    def openRootDomain(s: S, container: AST.RootContainer, domain: AST.Domain): S
 
-    def closeDomain(
-      state: S,
-      container: Container[Domain],
-      domain: Domain
-    ): S
+    def closeRootDomain(s: S, container: AST.RootContainer, domain: AST.Domain): S
+
+    def openDomain(state: S, container: Domain, domain: Domain): S
+
+    def closeDomain(state: S, container: Domain, domain: Domain): S
 
     def openContext(
       state: S,
@@ -287,13 +295,13 @@ object Folding {
 
     def openSaga(
       state: S,
-      container: Container[Saga],
+      container: Context,
       saga: Saga
     ): S
 
     def closeSaga(
       state: S,
-      container: Container[Saga],
+      container: Context,
       saga: Saga
     ): S
 
@@ -323,13 +331,13 @@ object Folding {
 
     def openFeature(
       state: S,
-      container: Container[Feature],
+      container: Context,
       feature: Feature
     ): S
 
     def closeFeature(
       state: S,
-      container: Container[Feature],
+      container: Context,
       feature: Feature
     ): S
 
@@ -353,7 +361,7 @@ object Folding {
 
     def doStateField(
       state: S,
-      container: Container[Field],
+      container: AST.State,
       field: Field
     ): S
 
@@ -369,9 +377,21 @@ object Folding {
       action: ActionDefinition
     ): S
 
-    def doExample(
+    def doFunctionExample(
       state: S,
-      container: Container[Example],
+      container: Function,
+      example: Example
+    ): S
+
+    def doFeatureExample(
+      state: S,
+      container: Feature,
+      example: Example
+    ): S
+
+    def doProcessorExample(
+      state: S,
+      container: Processor,
       example: Example
     ): S
 

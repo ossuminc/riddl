@@ -1,10 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.SevereError
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
-import com.yoppworks.ossum.riddl.language.Validation.ValidationState
-import com.yoppworks.ossum.riddl.language.Validation.Warning
+import com.yoppworks.ossum.riddl.language.Validation.{SevereError, ValidationMessage,
+  ValidationState, Warning}
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -40,7 +38,7 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(Nil, "foo", RootContainer.empty).msgs mustBe List(ValidationMessage(
           Location(),
-          "foo in rootcontainer 'root' should not be empty",
+          "foo in  '<file root>' should not be empty",
           Validation.Error
         ))
         ValidationState(SymbolTable(RootContainer.empty))

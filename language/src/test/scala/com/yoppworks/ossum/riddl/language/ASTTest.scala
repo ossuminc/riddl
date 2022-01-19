@@ -38,7 +38,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
 
   "PathIdentifier" should {
     "format" in {
-      PathIdentifier(Location(), Nil).format mustBe "."
+      PathIdentifier(Location(), Nil).format mustBe ""
       PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe "baz.bar.foo"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
     }
@@ -84,20 +84,6 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           )
         ))
         val handlers = Seq(Handler(Location(), Identifier(Location(), "con")))
-        val features = Seq(
-          Feature(
-            Location(),
-            id = Identifier(Location(), "the_feature1"),
-            examples = Nil,
-            description = None
-          ),
-          Feature(
-            Location(),
-            id = Identifier(Location(), "the_feature2"),
-            examples = Nil,
-            description = None
-          )
-        )
 
         val functions = Seq(Function(
           Location(),
@@ -121,14 +107,13 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           states = states,
           types = types,
           handlers = handlers,
-          features = features,
           functions = functions,
           invariants = invariants,
           description = None
         )
 
         entity.contents.toSet mustBe
-          (states.iterator ++ handlers ++ features ++ functions ++ invariants ++ types).toSet
+          (states.iterator ++ handlers ++ functions ++ invariants ++ types).toSet
       }
     }
   }

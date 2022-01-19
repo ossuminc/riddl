@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.generation.hugo
 
-import com.yoppworks.ossum.riddl.language.AST
-import com.yoppworks.ossum.riddl.language.AST.Location
+import com.yoppworks.ossum.riddl.language.{AST, Location}
 
 sealed trait WalkNodeF[In, Out <: HugoNode] {
   def apply(ns: HugoNode, inputNode: In): Out
@@ -10,7 +9,7 @@ sealed trait WalkNodeF[In, Out <: HugoNode] {
 private object WalkNodeF {
   final def apply[In, Out <: HugoNode](f: (HugoNode, In) => Out): WalkNodeF[In, Out] =
     new WalkNodeF[In, Out] {
-      final def apply(ns: HugoNode, inputNode: In) = f(ns, inputNode)
+      final def apply(ns: HugoNode, inputNode: In): Out = f(ns, inputNode)
     }
 }
 
@@ -89,7 +88,7 @@ object LukeAstWalker {
 
     val functions = node.functions.map { astFunction =>
       val funcName = resolveName(astFunction.id.value)
-      val inputs = astFunction.input.collect { case AST.Aggregation(_, fields, _) =>
+      val inputs = astFunction.input.collect { case AST.Aggregation(_, fields) =>
         fields.map { field => HugoField(field.id.value, handleTypeExpr(entityName, field.typeEx)) }
           .distinct.toSet
       }.fold(Set.empty[HugoField])(identity)
@@ -132,19 +131,19 @@ object LukeAstWalker {
     case AST.OneOrMore(_, texp) => RiddlType
         .Collection(handleTypeExpr(ns, texp), canBeEmpty = false)
 
-    case AST.Enumeration(_, of, _) =>
+    case AST.Enumeration(_, of) =>
       val opts: Seq[RiddlType.Enumeration.EnumOption] = of.map {
         case AST.Enumerator(_, id, Some(value), _) => RiddlType.Enumeration
-            .EnumOptionValue(id.value, value.n.toInt)
+          .EnumOptionValue(id.value, value.n.toInt)
         case AST.Enumerator(_, id, _, _) => RiddlType.Enumeration.EnumOptionNamed(id.value)
       }
       RiddlType.Enumeration(opts)
 
-    case AST.Alternation(_, of, _) =>
+    case AST.Alternation(_, of) =>
       val variants = of.map(handleTypeExpr(ns, _))
       RiddlType.Variant(variants)
 
-    case AST.Aggregation(_, fields, _) =>
+    case AST.Aggregation(_, fields) =>
       val recFields = fields.map(fld =>
         HugoField(
           fld.id.value,
@@ -154,19 +153,19 @@ object LukeAstWalker {
       )
       RiddlType.Record(recFields.distinct.toSet)
 
-    case AST.Mapping(_, from, to, _) =>
+    case AST.Mapping(_, from, to) =>
       val fromType = handleTypeExpr(ns, from)
       val toType = handleTypeExpr(ns, to)
       RiddlType.Mapping(fromType, toType)
 
-    case AST.RangeType(_, min, max, _) => RiddlType.Range(min.n.toInt, max.n.toInt)
+    case AST.RangeType(_, min, max) => RiddlType.Range(min.n.toInt, max.n.toInt)
 
-    case AST.Pattern(_, pattern, _) => RiddlType.RegexPattern(pattern.map(_.s))
+    case AST.Pattern(_, pattern) => RiddlType.RegexPattern(pattern.map(_.s))
 
     /* A `UniqueId` with no link is just a UUID! */
-    case AST.UniqueId(_, e, _) if e.value.isEmpty => RiddlType.PredefinedType.UUID
+    case AST.UniqueId(_, e) if e.value.isEmpty => RiddlType.PredefinedType.UUID
 
-    case AST.UniqueId(_, entityPath, _) => RiddlType.EntityReference(ns, entityPath.value)
+    case AST.UniqueId(_, entityPath) => RiddlType.EntityReference(ns, entityPath.value)
 
     case AST.TypeRef(_, id) => RiddlType.TypeReference(ns, id.value)
 

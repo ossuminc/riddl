@@ -2,9 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
 import pureconfig.generic.auto.*
+import pureconfig.{ConfigReader, ConfigSource}
 
 import java.io.File
 import java.nio.file.Path
@@ -118,7 +117,7 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def openDef(definition: Definition, withBrace: Boolean = true): FormatState = {
-      lines.append(s"$spc${definition.kind} ${definition.id.format} is ")
+      lines.append(s"$spc${AST.keyword(definition)} ${definition.id.format} is ")
       if (withBrace) lines.append("{\n")
       indent
     }
@@ -150,28 +149,39 @@ class FormatTranslator extends Translator[FormatConfig] {
     def emitString(s: Strng): FormatState = {
       (s.min, s.max) match {
         case (Some(n), Some(x)) => this.add(s"String($n,$x")
-        case (None, Some(x))    => this.add(s"String(,$x")
-        case (Some(n), None)    => this.add(s"String($n)")
-        case (None, None)       => this.add(s"String")
+        case (None, Some(x)) => this.add(s"String(,$x")
+        case (Some(n), None) => this.add(s"String($n)")
+        case (None, None) => this.add(s"String")
+      }
+    }
+
+    def mkEnumeratorDescription(description: Option[Description]): String = {
+      description match {
+        case Some(desc) => " described as { " + {
+          desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
+        }
+        case None => ""
       }
     }
 
     def emitEnumeration(enumeration: AST.Enumeration): FormatState = {
       val head = this.add(s"any of {\n").indent
       val enumerators: String = enumeration.enumerators.map { enumerator =>
-        enumerator.id.value + enumerator.enumVal.map("(" + _.format + ")").getOrElse("")
+        enumerator.id.value + enumerator.enumVal.map("(" + _.format + ")").getOrElse("") +
+          mkEnumeratorDescription(enumerator.description)
       }.mkString(s"$spc", s",\n$spc", s"\n")
-      head.add(enumerators).outdent.addLine("}").emitDescription(enumeration.description)
+      head.add(enumerators).outdent.addLine("}")
     }
 
     def emitAlternation(alternation: AST.Alternation): FormatState = {
       val s = this.add(s"one of {\n").indent.addIndent().emitTypeExpression(alternation.of.head)
       alternation.of.tail.foldLeft(s) { (s, te) => s.add(" or ").emitTypeExpression(te) }.add("\n")
-        .outdent.addLine("} ").emitDescription(alternation.description)
+        .outdent.addLine("} ")
     }
 
     def emitField(field: Field): FormatState = {
       this.add(s"${field.id.value}: ").emitTypeExpression(field.typeEx)
+        .emitDescription(field.description)
     }
 
     def emitFields(of: Seq[Field]): FormatState = {
@@ -190,12 +200,12 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitAggregation(aggregation: AST.Aggregation): FormatState = {
-      emitFields(aggregation.fields).emitDescription(aggregation.description).add("\n")
+      emitFields(aggregation.fields).add("\n")
     }
 
     def emitMapping(mapping: AST.Mapping): FormatState = {
       this.add(s"mapping from ").emitTypeExpression(mapping.from).add(" to ")
-        .emitTypeExpression(mapping.to).emitDescription(mapping.description)
+        .emitTypeExpression(mapping.to)
     }
 
     def emitPattern(pattern: AST.Pattern): FormatState = {
@@ -205,11 +215,11 @@ class FormatTranslator extends Translator[FormatConfig] {
           s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
           s"\n) "
         }
-      this.add(line).emitDescription(pattern.description)
+      this.add(line)
     }
 
     def emitMessageType(mt: AST.MessageType): FormatState = {
-      this.add(mt.messageKind.kind).add(" ").emitFields(mt.fields).emitDescription(mt.description)
+      this.add(mt.messageKind.kind.toLowerCase).add(" ").emitFields(mt.fields)
     }
 
     def emitMessageRef(mr: AST.MessageRef): FormatState = {
@@ -218,33 +228,31 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitTypeExpression(typEx: AST.TypeExpression): FormatState = {
       typEx match {
-        case string: Strng  => emitString(string)
-        case Bool(_)        => this.add("Boolean")
-        case Number(_)      => this.add("Number")
-        case Integer(_)     => this.add("Integer")
-        case Decimal(_)     => this.add("Decimal")
-        case Date(_)        => this.add("Date")
-        case Time(_)        => this.add("Time")
-        case DateTime(_)    => this.add("DateTime")
-        case TimeStamp(_)   => this.add("TimeStamp")
-        case LatLong(_)     => this.add("LatLong")
-        case Nothing(_)     => this.add("Nothing")
+        case string: Strng => emitString(string)
+        case b: Bool => this.add(b.kind)
+        case n: Number => this.add(n.kind)
+        case i: Integer => this.add(i.kind)
+        case d: Decimal => this.add(d.kind)
+        case d: Date => this.add(d.kind)
+        case t: Time => this.add(t.kind)
+        case dt: DateTime => this.add(dt.kind)
+        case ts: TimeStamp => this.add(ts.kind)
+        case ll: LatLong => this.add(ll.kind)
+        case n: Nothing => this.add(n.kind)
         case TypeRef(_, id) => this.add(id.format)
         case URL(_, scheme) => this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
-        case mapping: Mapping         => emitMapping(mapping)
-        case RangeType(_, min, max, desc) => this.add(s"range(${min.n},${max.n}) ")
-            .emitDescription(desc)
-        case ReferenceType(_, entityRef, desc) => this.add(s"refer to ${entityRef.format}")
-            .emitDescription(desc)
-        case pattern: Pattern      => emitPattern(pattern)
-        case mt: MessageType       => emitMessageType(mt)
-        case UniqueId(_, id, desc) => this.add(s"Id(${id.format}) ").emitDescription(desc)
-        case Optional(_, typex)    => this.emitTypeExpression(typex).add("?")
-        case ZeroOrMore(_, typex)  => this.emitTypeExpression(typex).add("*")
-        case OneOrMore(_, typex)   => this.emitTypeExpression(typex).add("+")
+        case mapping: Mapping => emitMapping(mapping)
+        case RangeType(_, min, max) => this.add(s"range(${min.n},${max.n}) ")
+        case ReferenceType(_, er) => this.add(s"refer to ${er.format}")
+        case pattern: Pattern => emitPattern(pattern)
+        case mt: MessageType => emitMessageType(mt)
+        case UniqueId(_, id) => this.add(s"Id(${id.format}) ")
+        case Optional(_, typex) => this.emitTypeExpression(typex).add("?")
+        case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
+        case OneOrMore(_, typex) => this.emitTypeExpression(typex).add("+")
         case x: TypeExpression =>
           require(requirement = false, s"Unknown type $x")
           this
@@ -300,15 +308,27 @@ class FormatTranslator extends Translator[FormatConfig] {
 
   class FormatFolding extends Folding[FormatState] {
 
+    override def openRootDomain(
+      state: FormatState,
+      container: RootContainer,
+      domain: Domain
+    ): FormatState = {state.openDef(domain)}
+
+    override def closeRootDomain(
+      state: FormatState,
+      container: RootContainer,
+      domain: Domain
+    ): FormatState = {state.closeDef(domain)}
+
     override def openDomain(
       state: FormatState,
-      container: Container[Domain],
+      container: Domain,
       domain: Domain
-    ): FormatState = { state.openDef(domain) }
+    ): FormatState = {state.openDef(domain)}
 
     override def closeDomain(
       state: FormatState,
-      container: Container[Domain],
+      container: Domain,
       domain: Domain
     ): FormatState = { state.closeDef(domain) }
 
@@ -338,13 +358,13 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def openFeature(
       state: FormatState,
-      container: Container[Feature],
+      container: Context,
       feature: Feature
     ): FormatState = { state.openDef(feature) }
 
     override def closeFeature(
       state: FormatState,
-      container: Container[Feature],
+      container: Context,
       feature: Feature
     ): FormatState = { state.closeDef(feature) }
 
@@ -353,7 +373,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Context,
       adaptor: Adaptor
     ): FormatState = {
-      val s = state.addIndent(adaptor.kind).add(" ").add(adaptor.id.format).add(" for ")
+      val s = state.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format).add(" for ")
         .add(adaptor.ref.format).add(" is {\n").indent
       if (adaptor.adaptations.isEmpty) { s.add(s.spc).emitUndefined() }
       else { s }
@@ -407,17 +427,29 @@ class FormatTranslator extends Translator[FormatConfig] {
       }
     }
 
-    override def doExample(
+    override def doFeatureExample(
       state: FormatState,
-      container: Container[Example],
+      feature: Feature,
       example: Example
-    ): FormatState = { state.emitExample(example) }
+    ): FormatState = {state.emitExample(example)}
+
+    override def doFunctionExample(
+      state: FormatState,
+      function: Function,
+      example: Example
+    ): FormatState = {state.emitExample(example)}
+
+    override def doProcessorExample(
+      state: FormatState,
+      processor: Processor,
+      example: Example
+    ): FormatState = {state.emitExample(example)}
 
     override def doInvariant(
       state: FormatState,
       container: Entity,
       invariant: Invariant
-    ): FormatState = state
+    ): FormatState = {state}
 
     override def openState(state: FormatState, container: Entity, s: State): FormatState = {
       state.openDef(s, withBrace = false).emitFields(s.typeEx.fields)
@@ -425,9 +457,9 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def doStateField(
       state: FormatState,
-      container: Container[Field],
+      container: State,
       field: Field
-    ): FormatState = { state }
+    ): FormatState = {state}
 
     override def closeState(state: FormatState, container: Entity, s: State): FormatState = {
       state.closeDef(s, withBrace = false)
@@ -435,7 +467,7 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def openSaga(
       state: FormatState,
-      container: Container[Saga],
+      container: Context,
       saga: Saga
     ): FormatState = { state.openDef(saga) }
 
@@ -447,7 +479,7 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def closeSaga(
       state: FormatState,
-      container: Container[Saga],
+      container: Context,
       saga: Saga
     ): FormatState = { state.closeDef(saga) }
 
@@ -478,7 +510,7 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     override def doJoint(state: FormatState, container: Plant, joint: Joint): FormatState = {
-      val s = state.addIndent(s"${joint.kind} ${joint.id.format} is ")
+      val s = state.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
       joint.streamletRef match {
         case InletRef(_, id) => s.addIndent(s"inlet ${id.format} from")
             .add(s" pipe ${joint.pipe.id.format}\n")

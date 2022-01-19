@@ -5,12 +5,13 @@ import com.yoppworks.ossum.riddl.language.Validation.*
 
 class DefinitionValidatorTest extends ValidatingTest {
 
-  "Definition validation" should {
+  "Definition Validation" should {
     "warn when an identifier is less than 3 characters" in {
-      parseAndValidate[Domain]("""domain po is {
-                                 |type Ba is String
-                                 |}
-                                 |""".stripMargin) {
+      parseAndValidate[Domain](
+        """domain po is {
+          |type Ba is String
+          |}
+          |""".stripMargin) {
         case (_: Domain, msgs: Seq[ValidationMessage]) =>
           if (msgs.isEmpty) {
             fail("Identifiers with less than 3 characters should generate a warning")
@@ -20,12 +21,12 @@ class DefinitionValidatorTest extends ValidatingTest {
             assertValidationMessage(
               styleWarnings,
               StyleWarning,
-              "domain identifier 'po' is too short. Identifiers should be at least 3 characters."
+              "Domain identifier 'po' is too short. The minimum length is 3"
             )
             assertValidationMessage(
               styleWarnings,
               StyleWarning,
-              "type identifier 'Ba' is too short. Identifiers should be at least 3 characters."
+              "Type identifier 'Ba' is too short. The minimum length is 3"
             )
           }
       }

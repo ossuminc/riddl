@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Options
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Options}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -57,7 +56,7 @@ trait EntityParser
   }
 
   def state[u: P]: P[State] = {
-    P(location ~ Keywords.state ~/ identifier ~ is ~ aggregationWithoutDescription ~ description)
+    P(location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ description)
       .map(tpl => (State.apply _).tupled(tpl))
   }
 
@@ -82,7 +81,6 @@ trait EntityParser
       val types = mapTo[Type](groups.get(classOf[Type]))
       val states = mapTo[State](groups.get(classOf[State]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val features = mapTo[Feature](groups.get(classOf[Feature]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       Entity(
@@ -93,7 +91,6 @@ trait EntityParser
         states,
         types,
         handlers,
-        features,
         functions,
         invariants,
         addendum

@@ -16,7 +16,7 @@ class InteractionValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "Actions in interaction 'dosomething' should not be empty"
+          "Actions in Interaction 'dosomething' should not be empty"
         )
         val content = domain.contexts.head
         content.interactions.length mustBe 1
