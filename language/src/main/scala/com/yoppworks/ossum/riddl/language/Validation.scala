@@ -512,6 +512,10 @@ object Validation {
       }
       this
     }
+
+    def checkExamples(examples: Seq[Example]): ValidationState = {
+      examples.foldLeft(this) { (next, example) => next.checkExample(example) }
+    }
   }
 
   class ValidationFolding extends Folding.Folding[ValidationState] {
@@ -731,8 +735,10 @@ object Validation {
       adaptation: Adaptation
     ): ValidationState = {
       adaptation match {
-        case Adaptation(_, _, event, command, _, _) => state.checkDefinition(container, adaptation)
-          .checkRef[Type](event).checkRef[Type](command).checkDescription(adaptation)
+        case Adaptation(_, _, event, command, examples, _) =>
+          state.checkDefinition(container, adaptation)
+            .checkRef[Type](event).checkRef[Type](command).checkExamples(examples)
+            .checkDescription(adaptation)
         case _ =>
           require(requirement = false, "Unknown adaptation")
           state
