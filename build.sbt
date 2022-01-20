@@ -51,8 +51,6 @@ lazy val scala2_13_Options = Seq(
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
-lazy val compileCheck = taskKey[Unit]("compile and then scalastyle")
-
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
   .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, doc)
 
@@ -105,9 +103,6 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
   scalacOptions := scala2_13_Options,
   libraryDependencies ++= Dep.parsing ++ Dep.testing,
-  Compile / compileCheck := {
-    Def.sequential(Compile / compile, (Compile / scalastyle).toTask("")).value
-  }
 )
 
 lazy val `hugo-generator` = (project in file("hugo-generator")).enablePlugins(BuildInfoPlugin)

@@ -160,7 +160,7 @@ object Validation {
           else {this}
         case MissingWarning =>
           if (isReportMissingWarnings) {this.copy(msgs = msgs :+ msg)}
-          else { this }
+          else {this}
 
         case _ => this.copy(msgs = msgs :+ msg)
       }
