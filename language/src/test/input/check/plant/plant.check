@@ -1,8 +1,8 @@
-Missing: plant.riddl(14:5): Inlet 'CurrentTemp' should have a description
-Missing: plant.riddl(9:5): Inlet 'Weather' should have a description
 Missing: plant.riddl(25:3): Joint 'forecast' should have a description
 Missing: plant.riddl(26:3): Joint 'temp_in' should have a description
 Missing: plant.riddl(27:3): Joint 'temp_out' should have a description
 Missing: plant.riddl(28:3): Joint 'temp_changes' should have a description
-Missing: plant.riddl(5:5): Outlet 'Weather' should have a description
-Missing: plant.riddl(10:5): Outlet 'CurrentTemp' should have a description
+Missing: plant.riddl(9:5): Inlet 'WeatherSource' should have a description
+Missing: plant.riddl(10:5): Outlet 'OutTemp' should have a description
+Missing: plant.riddl(14:5): Inlet 'InTemp' should have a description
+Missing: plant.riddl(5:5): Outlet 'WeatherSink' should have a description

@@ -16,14 +16,37 @@ object Validation {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, options)
     val folding = new ValidationFolding
-    folding.foldLeft(root, root, state).msgs.sortBy(_.loc)
+    val s1 = folding.foldLeft(root, root, state)
+    val result = checkOverloads(symTab, s1)
+    result.msgs.sortBy(_.loc)
+  }
+
+  def checkOverloads(symbolTable: SymbolTable, state: ValidationState): ValidationState = {
+    symbolTable.foreachOverloadedSymbol { defs: Seq[Seq[Definition]] =>
+      defs.foldLeft(state) { (s, defs) =>
+        if (defs.size == 2) {
+          val first = defs.head
+          val last = defs.last
+          state
+            .addStyle(last.loc, s"${last.identify} overloads ${first.identify} at ${first.id.loc}")
+        } else {
+          val first = defs.head
+          val tail = defs.tail.map(d => d.identify + " at " + d.loc).mkString(s",\n    ")
+          s.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
+        }
+      }
+    }
   }
 
   sealed trait ValidationMessageKind {
     def isSevereError: Boolean = true
+
     def isError: Boolean = false
+
     def isWarning: Boolean = false
+
     def isMissing: Boolean = false
+
     def isStyle: Boolean = false
   }
 
@@ -107,13 +130,25 @@ object Validation {
 
     def isReportStyleWarnings: Boolean = options.showStyleWarnings
 
-    def lookup[T <: Definition: ClassTag](
+    def lookup[T <: Definition : ClassTag](
       id: Seq[String]
-    ): List[T] = { symbolTable.lookup[T](id) }
+    ): List[T] = {symbolTable.lookup[T](id)}
 
     def addIf(predicate: Boolean)(msg: ValidationMessage): ValidationState = {
-      if (predicate) { add(msg) }
-      else { this }
+      if (predicate) {add(msg)}
+      else {this}
+    }
+
+    def addStyle(loc: Location, msg: String): ValidationState = {
+      add(ValidationMessage(loc, msg, StyleWarning))
+    }
+
+    def addWarning(loc: Location, msg: String): ValidationState = {
+      add(ValidationMessage(loc, msg, Warning))
+    }
+
+    def addError(loc: Location, msg: String): ValidationState = {
+      add(ValidationMessage(loc, msg, Error))
     }
 
     def add(
@@ -121,10 +156,10 @@ object Validation {
     ): ValidationState = {
       msg.kind match {
         case StyleWarning =>
-          if (isReportStyleWarnings) { this.copy(msgs = msgs :+ msg) }
-          else { this }
+          if (isReportStyleWarnings) {this.copy(msgs = msgs :+ msg)}
+          else {this}
         case MissingWarning =>
-          if (isReportMissingWarnings) { this.copy(msgs = msgs :+ msg) }
+          if (isReportMissingWarnings) {this.copy(msgs = msgs :+ msg)}
           else { this }
 
         case _ => this.copy(msgs = msgs :+ msg)
@@ -283,8 +318,7 @@ object Validation {
               )
               case te: TypeExpression => add(ValidationMessage(
                 ref.id.loc,
-                s"'${ref.id.format}' should reference a ${kind.kind} type but is a ${
-                  AST.kind(te)
+                s"'${ref.id.format}' should reference a ${kind.kind} type but is a ${AST.kind(te)
                 } type instead",
                 Error
               ))

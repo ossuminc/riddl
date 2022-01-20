@@ -1,5 +1,5 @@
-domain ignore is {
-  context ignore is {
+domain ignore1 is {
+  context ignore2 is {
     type Something = command {}
     type UndoSomething = command {}
     type AnotherThing = command {}

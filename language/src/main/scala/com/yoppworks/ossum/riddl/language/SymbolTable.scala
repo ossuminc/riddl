@@ -121,11 +121,17 @@ case class SymbolTable(container: Container[Definition]) {
             containerNames.zip(parentNames).forall { case (containerName, parentName) =>
               containerName == parentName
             }
-          } else { false }
+          } else {false}
         }.map(_._1.asInstanceOf[D])
         result.toList
       case None => List.empty[D]
     }
+  }
+
+  def foreachOverloadedSymbol[T](entries: Seq[Seq[Definition]] => T): T = {
+    val overloads = symbols.filter(_._2.size > 1)
+    val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
+    entries(defs)
   }
 
   /*

@@ -73,7 +73,7 @@ class EntityValidatorTest extends ValidatingTest {
     "validate examples" in {
       parseAndValidateInContext[Feature]("""
                                            |  feature AnAspect is {
-                                           |    EXAMPLE foo {
+                                           |    EXAMPLE foobar {
                                            |      GIVEN "everybody hates me"
                                            |      AND "I'm depressed"
                                            |      WHEN "I go fishing"
