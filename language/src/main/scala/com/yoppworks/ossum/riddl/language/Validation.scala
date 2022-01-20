@@ -135,8 +135,7 @@ object Validation {
     ): List[T] = {symbolTable.lookup[T](id)}
 
     def addIf(predicate: Boolean)(msg: ValidationMessage): ValidationState = {
-      if (predicate) {add(msg)}
-      else {this}
+      if (predicate) add(msg) else this
     }
 
     def addStyle(loc: Location, msg: String): ValidationState = {
@@ -156,12 +155,18 @@ object Validation {
     ): ValidationState = {
       msg.kind match {
         case StyleWarning =>
-          if (isReportStyleWarnings) {this.copy(msgs = msgs :+ msg)}
-          else {this}
+          if (isReportStyleWarnings) {
+            this.copy(msgs = msgs :+ msg)
+          } else {
+            this
+          }
         case MissingWarning =>
-          if (isReportMissingWarnings) {this.copy(msgs = msgs :+ msg)}
-          else {this}
-
+          if (isReportMissingWarnings) {
+            this.copy(msgs = msgs :+ msg)
+          }
+          else {
+            this
+          }
         case _ => this.copy(msgs = msgs :+ msg)
       }
     }
@@ -727,7 +732,7 @@ object Validation {
     ): ValidationState = {
       adaptation match {
         case Adaptation(_, _, event, command, _, _) => state.checkDefinition(container, adaptation)
-          .checkRef(event).checkRef(command).checkDescription(adaptation)
+          .checkRef[Type](event).checkRef[Type](command).checkDescription(adaptation)
         case _ =>
           require(requirement = false, "Unknown adaptation")
           state

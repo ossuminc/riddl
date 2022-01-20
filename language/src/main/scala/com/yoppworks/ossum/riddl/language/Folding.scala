@@ -89,7 +89,9 @@ object Folding {
       case function: Function =>
         result = f(parent, function, result)
         function.contents.foldLeft(result) { (next, example) => f(function, example, next) }
-      case adaptor: Adaptor => f(parent, adaptor, result)
+      case adaptor: Adaptor =>
+        result = f(parent, adaptor, result)
+        adaptor.contents.foldLeft(result) { (next, adaptation) => f(adaptor, adaptation, next) }
       case st: AST.State =>
         result = f(parent, st, result)
         st.typeEx.fields.foldLeft(result) { (next, field) => f(st, field, next) }

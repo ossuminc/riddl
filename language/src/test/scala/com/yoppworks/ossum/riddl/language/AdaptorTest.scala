@@ -23,8 +23,8 @@ class AdaptorTest extends ValidatingTest {
     "allow message actions" in {
       val input =
         """domain ignore is { context Foo is {
-          |type ItHappened = event { abc: String }
-          |type LetsDoIt = command { bcd: String }
+          |type ItHappened = event { abc: String described as "abc" } described as "?"
+          |type LetsDoIt = command { bcd: String described as "abc" } described as "?"
           |adaptor PaymentAdapter for context Foo is {
           |  adapt sendAMessage is {
           |    from event ItHappened to command LetsDoIt as {
@@ -36,7 +36,7 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidate[Domain](input) { (_, messages) =>
-        messages.size must be(7)
+        messages mustBe empty
       }
     }
   }
