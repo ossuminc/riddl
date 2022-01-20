@@ -1,10 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
-import com.yoppworks.ossum.riddl.language.AST.Adaptation
-import com.yoppworks.ossum.riddl.language.AST.Adaptor
-import com.yoppworks.ossum.riddl.language.AST.Example
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.AST.{Adaptation, Adaptor, Example}
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -15,10 +12,8 @@ trait AdaptorParser extends ReferenceParser with GherkinParser {
     P(
       location ~ Keywords.adapt ~/ identifier ~ is ~ open ~ Readability.from ~ eventRef ~
         Readability.to ~ commandRef ~ Readability.as ~/ open ~
-        (undefined(Seq.empty[Example]) | examples) ~ close
-    ).map { case (location, identifier, event, command, example) =>
-      Adaptation(location, identifier, event, command, example)
-    }
+        (undefined(Seq.empty[Example]) | examples) ~ close ~ description
+    ).map { tpl => (Adaptation.apply _).tupled(tpl) }
   }
 
   def adaptations[u: P]: P[Seq[Adaptation]] = {
