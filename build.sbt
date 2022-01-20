@@ -9,7 +9,6 @@ ThisBuild / dynverVTagPrefix := false
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator := "-"
-ThisBuild / scalafmtOnCompile := true
 ThisBuild / organization := "com.yoppworks"
 ThisBuild / scalaVersion := "2.13.7"
 buildInfoOptions := Seq(ToMap, BuildTime)
