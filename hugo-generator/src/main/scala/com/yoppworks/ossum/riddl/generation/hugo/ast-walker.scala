@@ -46,13 +46,15 @@ object LukeAstWalker {
     val options: HugoEntity.Options = node.options
       .foldLeft(HugoEntity.EntityOption.none) { case (opts, entityOpt) =>
         entityOpt match {
-          case AST.EntityEventSourced(_)       => opts + HugoEntity.EntityOption.EventSourced
-          case AST.EntityValueOption(_)        => opts + HugoEntity.EntityOption.ValueType
-          case AST.EntityAggregate(_)          => opts + HugoEntity.EntityOption.Aggregate
-          case AST.EntityPersistent(_)         => opts + HugoEntity.EntityOption.Persistent
-          case AST.EntityConsistent(_)         => opts + HugoEntity.EntityOption.Consistent
-          case AST.EntityAvailable(_)          => opts + HugoEntity.EntityOption.Available
+          case AST.EntityEventSourced(_) => opts + HugoEntity.EntityOption.EventSourced
+          case AST.EntityValueOption(_) => opts + HugoEntity.EntityOption.ValueType
+          case AST.EntityAggregate(_) => opts + HugoEntity.EntityOption.Aggregate
+          case AST.EntityPersistent(_) => opts + HugoEntity.EntityOption.Persistent
+          case AST.EntityConsistent(_) => opts + HugoEntity.EntityOption.Consistent
+          case AST.EntityAvailable(_) => opts + HugoEntity.EntityOption.Available
           case AST.EntityFiniteStateMachine(_) => opts + HugoEntity.EntityOption.FiniteStateMachine
+          case AST.EntityKind(_, _) => opts + HugoEntity.EntityOption.Kind
+          // FIXME: EntityKind.args unused
         }
       }
 

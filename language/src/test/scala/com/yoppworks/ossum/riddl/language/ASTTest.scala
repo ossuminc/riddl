@@ -74,7 +74,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "Entity" should {
     "contents" should {
       "contain all contents" in {
-        val options = Seq(EntityAggregate(Location()), EntityPersistent(Location()))
+        val options = Seq(EntityAggregate(Location()), EntityPersistent(Location()), EntityKind
+        (Location(), Seq(LiteralString(Location(), "concept"))))
         val states = Seq(State(
           Location(),
           Identifier(Location(), "bar"),
@@ -100,7 +101,6 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))
         )
         val entity = AST.Entity(
-          entityKind = ConceptEntityKind(Location()),
           loc = Location(),
           id = Identifier(Location(), "foo"),
           options = options,

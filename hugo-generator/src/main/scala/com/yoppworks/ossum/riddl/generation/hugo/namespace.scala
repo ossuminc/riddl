@@ -185,8 +185,8 @@ object HugoEntity {
   type Options = EntityOption.ValueSet
   object EntityOption extends Enumeration {
     val none: Options = ValueSet.empty
-    val EventSourced, ValueType, Aggregate, Persistent, Consistent, Available, FiniteStateMachine =
-      Value
+    val EventSourced, ValueType, Aggregate, Persistent, Consistent, Available,
+    FiniteStateMachine, Kind = Value
   }
 
   case class State(fullName: String, fields: Set[HugoField]) extends NameableFromFullName

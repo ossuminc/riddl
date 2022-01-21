@@ -29,7 +29,8 @@ domain ReactiveBBQ is {
     type OrderViewType is {
       address:  type IP4Address
     }
-    device entity OrderViewer is {
+    entity OrderViewer is {
+    option is kind("device")
      state OrderState is { field: type OrderViewType }
      handler input is {}
     } explained as {

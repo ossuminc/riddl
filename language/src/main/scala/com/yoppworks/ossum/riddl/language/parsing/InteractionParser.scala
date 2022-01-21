@@ -8,30 +8,19 @@ import fastparse.ScalaWhitespace.*
 /** Parsing rules for context interactions */
 trait InteractionParser extends ReferenceParser {
 
-  /* unused function commented out for code coverage reasons
-
-  def roleOptions[u: P]: P[Seq[RoleOption]] = {
-    options(StringIn("human", "device").!) {
-      case (loc, "human")  => HumanOption(loc)
-      case (loc, "device") => DeviceOption(loc)
-      case _               => throw new RuntimeException("Impossible case")
-    }
-  }
-   */
-
   def interactionOptions[u: P]: P[Seq[InteractionOption]] = {
     options(StringIn("gateway").!) {
-      case (loc, "gateway") => GatewayInteraction(loc)
-      case _                => throw new RuntimeException("Impossible case")
+      case (loc, "gateway", _) => GatewayInteraction(loc)
+      case _ => throw new RuntimeException("Impossible case")
     }
   }
 
   def messageOptions[u: P]: P[Seq[MessageOption]] = {
     options(StringIn(Options.sync, Options.async, Options.reply).!) {
-      case (loc, Options.sync)  => SynchOption(loc)
-      case (loc, Options.async) => AsynchOption(loc)
-      case (loc, Options.reply) => ReplyOption(loc)
-      case _                    => throw new RuntimeException("invalid message option")
+      case (loc, Options.sync, _) => SynchOption(loc)
+      case (loc, Options.async, _) => AsynchOption(loc)
+      case (loc, Options.reply, _) => ReplyOption(loc)
+      case _ => throw new RuntimeException("invalid message option")
     }
   }
 

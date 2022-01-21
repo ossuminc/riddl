@@ -82,22 +82,32 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
   }
 
-  def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
+  def open[u: P]: P[Unit] = {P(Punctuation.curlyOpen)}
 
-  def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
+  def close[u: P]: P[Unit] = {P(Punctuation.curlyClose)}
+
+  def maybeOptionWithArgs[u: P](
+    validOptions: => P[String]
+  ): P[(Location, String, Seq[LiteralString])] = {
+    P(location ~ validOptions ~ (Punctuation.roundOpen ~
+      literalString.rep(0, P(Punctuation.comma)) ~ Punctuation.roundClose).?).map {
+      case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
+      case (loc, opt, None) => (loc, opt, Seq.empty[LiteralString])
+    }
+  }
 
   def options[u: P, TY <: RiddlValue](
     validOptions: => P[String]
-  )(mapper: => (Location, String) => TY
+  )(
+    mapper: => (Location, String, Seq[LiteralString]) => TY
   ): P[Seq[TY]] = {
     P(
-      (Keywords.options ~/ Punctuation.roundOpen ~ location ~ validOptions ~
-        (location ~ Punctuation.comma ~ validOptions).rep(0) ~ Punctuation.roundClose)
-        .map { case (headLoc, headOption, tail) =>
-          val end: Seq[TY] = tail.map(i => mapper(i._1, i._2))
-          mapper(headLoc, headOption) +: end
-        } | (Keywords.option ~/ Readability.is ~ location ~ validOptions)
-        .map(tpl => Seq(mapper.tupled(tpl)))
+      (Keywords.options ~ Punctuation.roundOpen ~/
+        maybeOptionWithArgs(validOptions).rep(1, P(Punctuation.comma)) ~
+        Punctuation.roundClose
+        ).map(_.map { case (loc, opt, arg) => mapper(loc, opt, arg) }) |
+        (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))
+          .map(tpl => Seq(mapper.tupled(tpl)))
     ).?.map {
       case Some(seq) => seq
       case None      => Seq.empty[TY]

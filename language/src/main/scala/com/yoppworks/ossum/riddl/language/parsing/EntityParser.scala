@@ -18,27 +18,19 @@ trait EntityParser
         Options.persistent,
         Options.consistent,
         Options.available,
-        Options.stateMachine
+        Options.stateMachine,
+        Options.kind
       ).!
     ) {
-      case (loc, Options.eventSourced) => EntityEventSourced(loc)
-      case (loc, Options.value)        => EntityValueOption(loc)
-      case (loc, Options.aggregate)    => EntityAggregate(loc)
-      case (loc, Options.persistent)   => EntityPersistent(loc)
-      case (loc, Options.consistent)   => EntityConsistent(loc)
-      case (loc, Options.available)    => EntityAvailable(loc)
-      case (loc, Options.stateMachine) => EntityFiniteStateMachine(loc)
-      case _                           => throw new RuntimeException("Impossible case")
-    }
-  }
-
-  def entityKind[X: P]: P[EntityKind] = {
-    P(location ~ (Options.device | Options.concept | Options.actor).!.?).map {
-      case (loc, Some(Options.device))  => DeviceEntityKind(loc)
-      case (loc, Some(Options.actor))   => ActorEntityKind(loc)
-      case (loc, Some(Options.concept)) => ConceptEntityKind(loc)
-      case (loc, None)                  => ConceptEntityKind(loc)
-      case _                            => throw new RuntimeException("Impossible case")
+      case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
+      case (loc, Options.value, _) => EntityValueOption(loc)
+      case (loc, Options.aggregate, _) => EntityAggregate(loc)
+      case (loc, Options.persistent, _) => EntityPersistent(loc)
+      case (loc, Options.consistent, _) => EntityConsistent(loc)
+      case (loc, Options.available, _) => EntityAvailable(loc)
+      case (loc, Options.stateMachine, _) => EntityFiniteStateMachine(loc)
+      case (loc, Options.kind, args) => EntityKind(loc, args)
+      case _ => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -74,9 +66,9 @@ trait EntityParser
 
   def entity[u: P]: P[Entity] = {
     P(
-      entityKind ~ location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
         (noEntityBody | entityBody) ~ close ~ description
-    ).map { case (kind, loc, id, (options, entityDefs), addendum) =>
+    ).map { case (loc, id, (options, entityDefs), addendum) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val states = mapTo[State](groups.get(classOf[State]))
@@ -84,7 +76,6 @@ trait EntityParser
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       Entity(
-        kind,
         loc,
         id,
         options.fold(Seq.empty[EntityOption])(identity),

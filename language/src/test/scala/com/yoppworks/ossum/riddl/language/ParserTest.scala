@@ -117,7 +117,7 @@ class ParserTest extends ParsingTest {
         case Right(content) => content mustBe Context(
             1 -> 1,
             Identifier(1 -> 9, "bar"),
-            Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 35), GatewayOption(1 -> 44))
+            Seq(FunctionOption(1 -> 27), WrapperOption(1 -> 37), GatewayOption(1 -> 46))
           )
       }
     }
@@ -183,10 +183,9 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-          ConceptEntityKind(1 -> 1),
           1 -> 1,
           Identifier(1 -> 8, "Hamburger"),
-          Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 23)),
+          Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 25)),
           Seq(State(
             3 -> 3,
             Identifier(3 -> 9, "foo"),

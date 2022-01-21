@@ -52,6 +52,7 @@ object Terminals {
     final val eventSourced = "event sourced"
     final val function = "function"
     final val gateway = "gateway"
+    final val kind = "kind"
     final val parallel = "parallel"
     final val persistent = "persistent"
     final val reply = "reply"

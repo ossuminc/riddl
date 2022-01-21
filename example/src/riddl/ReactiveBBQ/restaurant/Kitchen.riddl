@@ -7,7 +7,8 @@ context Kitchen is {
   type OrderViewType is {
     address is IP4Address
   }
-  device entity OrderViewer is {
+  entity OrderViewer is {
+   option is kind("device")
    state OrderState is { field: OrderViewType }
    handler input is {}
   } explained as {

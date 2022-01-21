@@ -2,7 +2,6 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 
-import scala.annotation.unused
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
 
@@ -444,8 +443,9 @@ object AST {
 
   trait OptionValue extends RiddlValue {
     def name: String
+    def args: Seq[LiteralString] = Seq.empty[LiteralString]
 
-    override def format: String = name
+    override def format: String = name + args.map(_.format).mkString("(", ", ", ")")
   }
 
   trait OptionsDef[T <: OptionValue] extends RiddlValue {
@@ -481,18 +481,8 @@ object AST {
 
   case class EntityFiniteStateMachine(loc: Location) extends EntityOption("finite state machine")
 
-  sealed abstract class EntityKind(
-    @unused
-    name: String)
-      extends EntityValue
-
-  case class ConceptEntityKind(loc: Location) extends EntityKind("concept")
-
-  case class DeviceEntityKind(loc: Location) extends EntityKind("device")
-
-  case class ActorEntityKind(loc: Location) extends EntityKind("actor")
-
-  case class UserEntityKind(loc: Location) extends EntityKind("role")
+  case class EntityKind(loc: Location, override val args: Seq[LiteralString]) extends
+    EntityOption("kind")
 
   case class EntityRef(loc: Location, id: PathIdentifier) extends DefRef[Entity] {
     override def format: String = s"entity ${id.format}"
@@ -735,7 +725,6 @@ object AST {
     *   Invariant properties of the entity
     */
   case class Entity(
-    entityKind: EntityKind,
     loc: Location,
     id: Identifier,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
@@ -789,6 +778,7 @@ object AST {
 
   case class WrapperOption(loc: Location) extends ContextOption {
     def name: String = "wrapper"
+
   }
 
   case class FunctionOption(loc: Location) extends ContextOption {

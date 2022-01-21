@@ -57,8 +57,8 @@ They are the same entity.
 
 For example:
 ```riddl
-device entity Printer is {
-  options(value, available)
+entity Printer is {
+  options(value, available, kind("device"))
   // ...
 }
 ```
@@ -66,9 +66,9 @@ device entity Printer is {
 ### Aspects
 Entities also have several contained definitions which specify various aspects of the entity. 
 These aspects are detailed on the following pages: 
-* [_Options_](options) - Various
-* [_States_](state) - The information retained by the entity through its 
-  lifecycle
+
+* [_Options_](options) - Various options that provide high level optional aspects of the entity.
+* [_States_](state) - The information retained by the entity through its lifecycle
 * [_Handlers_](handler) - A specification of how the entity processes 
   commands, events, queries, and reactions to events from other entities in the same bounded 
   context.
