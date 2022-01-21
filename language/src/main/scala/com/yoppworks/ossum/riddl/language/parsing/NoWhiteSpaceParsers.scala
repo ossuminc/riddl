@@ -15,9 +15,18 @@ trait NoWhiteSpaceParsers extends ParsingContext {
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
 
+  def hexDigit[u: P]: P[Unit] = P(CharIn("0-9a-fA-F").!)
+
+  def unicodeEscape[u: P]: P[Unit] = P("u" ~ hexDigit ~ hexDigit ~ hexDigit ~ hexDigit).!
+
+  def escape[u: P]: P[Unit] = P("\\" ~ (CharIn("\"/\\\\bfnrt") | unicodeEscape))
+
+  def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
+
+  def strChars[u: P]: P[Unit] = P(CharsWhile(stringChars))
+
   def literalString[u: P]: P[LiteralString] = {
-    P(location ~ Punctuation.quote ~~ CharsWhile(_ != '"', 0).! ~~ Punctuation.quote).map { tpl =>
-      (LiteralString.apply _).tupled(tpl)
-    }
-  }
+    P(location ~ Punctuation.quote ~/ (strChars | escape).rep.! ~ Punctuation.quote)
+  }.map { tpl => (LiteralString.apply _).tupled(tpl) }
+
 }
