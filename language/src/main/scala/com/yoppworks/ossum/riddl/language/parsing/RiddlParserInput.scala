@@ -6,6 +6,7 @@ import fastparse.internal.Util
 
 import java.io.File
 import java.nio.file.Path
+import scala.collection.Searching
 import scala.io.Source
 import scala.language.implicitConversions
 
@@ -26,10 +27,24 @@ abstract class RiddlParserInput extends ParserInput {
 
   private[this] lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
+  /* Uses Linear Search but linNumbersLookup.search (see below) is faster?
   private def lineOf(index: Int): Int = {
     lineNumberLookup.indexWhere(_ > index) match {
       case -1 => 0
       case n  => math.max(0, n - 1)
+    }
+  }
+  */
+
+  private def lineOf(index: Int): Int = {
+    val result = lineNumberLookup.search(index)
+    result match {
+      case Searching.Found(foundIndex) =>
+        foundIndex
+      case Searching.InsertionPoint(insertionPoint) =>
+        if (insertionPoint > 0) insertionPoint - 1 else insertionPoint
+      case _ =>
+        0
     }
   }
 

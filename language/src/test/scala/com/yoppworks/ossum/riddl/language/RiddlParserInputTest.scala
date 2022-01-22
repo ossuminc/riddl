@@ -72,7 +72,10 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
           11 -> (11, 13),
           12 -> (11, 13),
           15 -> (13, 18)
-        ).foreach { case (in, out) => input.rangeOf(in) mustBe out }
+        ).foreach { case (in, out) =>
+          val result = input.rangeOf(in)
+          result mustBe out
+        }
       }
     }
   }
