@@ -1,34 +1,38 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
+import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Operators
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.{Operators, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For ConditionParser */
 trait ConditionParser extends ExpressionParser {
 
-  def referenceCondition[u: P]: P[ReferenceCondition] = {
-    P(location ~ pathIdentifier).map { case (loc, pid) => ReferenceCondition(loc, pid) }
+  def trueCondition[u: P]: P[True] = {
+    P(location ~ IgnoreCase("true")).map(True)./
   }
 
-  def trueCondition[u: P]: P[True] = { P(location ~ IgnoreCase("true")).map(True)./ }
+  def falseCondition[u: P]: P[False] = {
+    P(location ~ IgnoreCase("false")).map(False)./
+  }
 
-  def falseCondition[u: P]: P[False] = { P(location ~ IgnoreCase("false")).map(False)./ }
-
-  def comparator[u: P]: P[String] = { ("<=" | "!=" | "==" | ">=" | "<" | ">").!./ }
+  def comparator[u: P]: P[Comparator] = {
+    P("<=" | "!=" | "==" | ">=" | "<" | ">" | "le" | "ne" | "eq" | "ge" | "lt" | "gt").!./.map {
+      case "==" | "eq" => AST.eq
+      case "!=" | "ne" => AST.ge
+      case "<" | "lt" => AST.lt
+      case "<=" | "le" => AST.le
+      case ">" | "gt" => AST.gt
+      case ">=" | "ge" => AST.ge
+    }
+  }
 
   def comparisonCondition[u: P]: P[Comparison] = {
     P(
-      location ~ comparator ~ Punctuation.roundOpen ~/ expression ~ Punctuation.comma ~ expression ~
+      location ~ comparator ~ Punctuation.roundOpen ~/ condition ~ Punctuation.comma ~ condition ~
         Punctuation.roundClose./
     ).map { x => (Comparison.apply _).tupled(x) }
-  }
-
-  def expressionCondition[u: P]: P[ExpressionCondition] = {
-    P(location ~ identifier ~ argList ~ description)
-      .map(tpl => (ExpressionCondition.apply _).tupled(tpl))
   }
 
   def notCondition[u: P]: P[NotCondition] = {
@@ -50,17 +54,32 @@ trait ConditionParser extends ExpressionParser {
     ).map(t => (AndCondition.apply _).tupled(t))
   }
 
-  def grouping[u: P]: P[Condition] = {
+  def stringCondition[u: P]: P[StringCondition] = {
+    P(literalString).map(ls => StringCondition(ls))
+  }
+
+
+  def groupedCondition[u: P]: P[Condition] = {
     P(Punctuation.roundOpen ~/ condition ~ Punctuation.roundClose./)
   }
 
-  def logicalExpressions[u: P]: P[Condition] = {
-    P(orCondition | andCondition | notCondition | comparisonCondition | expressionCondition)
+  def callCondition[u: P]: P[FunctionCallCondition] = {
+    P(location ~ pathIdentifier ~ argList).map(tpl => (FunctionCallCondition.apply _).tupled(tpl))
   }
 
-  def terminalExpressions[u: P]: P[Condition] = { P(trueCondition | falseCondition) }
+  def terminalExpressions[u: P]: P[Condition] = {
+    P(trueCondition | falseCondition | stringCondition)
+  }
+
+  def logicalExpressions[u: P]: P[Condition] = {
+    P(orCondition | andCondition | notCondition | comparisonCondition | callCondition)
+  }
+
+  def referenceCondition[u: P]: P[ReferenceCondition] = {
+    P(location ~ pathIdentifier).map { case (loc, pid) => ReferenceCondition(loc, pid) }
+  }
 
   def condition[u: P]: P[Condition] = {
-    P(terminalExpressions | grouping | logicalExpressions | referenceCondition)
+    P(terminalExpressions | groupedCondition | logicalExpressions | referenceCondition)
   }
 }

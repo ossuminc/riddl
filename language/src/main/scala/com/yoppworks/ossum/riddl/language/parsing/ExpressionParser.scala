@@ -1,36 +1,32 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Operators
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.{Operators, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 import scala.collection.immutable.ListMap
-import scala.language.postfixOps
 
 /** Parser rules for value expressions */
-trait ExpressionParser extends CommonParser {
+trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def arguments[u: P]: P[ListMap[Identifier, Expression]] = {
-    P((identifier ~ Punctuation.equals).? ~ expression).rep(0, ",").map {
-      s: Seq[(Option[Identifier], Expression)] =>
+    P(identifier ~ Punctuation.equals ~ expression).rep(0, ",").map {
+      s: Seq[(Identifier, Expression)] =>
         s.foldLeft(ListMap.empty[Identifier, Expression]) { case (b, (id, exp)) =>
-          val newId = id match {
-            case Some(value) => value
-            case None        => Identifier(exp.loc, "<unnamed>")
-          }
-          b + (newId -> exp)
+          b + (id -> exp)
         }
     }
   }
 
-  def argList[u: P]: P[ListMap[Identifier, Expression]] = {
-    P(Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose /)
+  def argList[u: P]: P[ArgList] = {
+    P(
+      Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose./
+    ).map { lm => ArgList(lm) }
   }
 
   def functionCallExpression[u: P]: P[FunctionCallExpression] = {
-    P(location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose).map {
+    P(location ~ pathIdentifier ~ argList).map {
       tpl => (FunctionCallExpression.apply _).tupled(tpl)
     }
   }

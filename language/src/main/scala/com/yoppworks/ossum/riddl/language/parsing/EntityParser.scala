@@ -7,7 +7,7 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
 trait EntityParser
-    extends CommonParser with TypeParser with GherkinParser with FunctionParser with HandlerParser {
+    extends HandlerParser with TypeParser with GherkinParser with FunctionParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
