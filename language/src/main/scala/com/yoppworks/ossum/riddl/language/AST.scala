@@ -38,7 +38,7 @@ object AST {
 
   case class RiddlOption(loc: Location, name: String) extends RiddlValue
 
-  case class LiteralString(loc: Location, s: String) extends RiddlValue {
+  case class LiteralString(loc: Location, s: String) extends Expression {
     override def format = s"\"$s\""
 
     override def isEmpty: Boolean = s.isEmpty
@@ -394,14 +394,41 @@ object AST {
   }
 
   case class Type(
-    loc: Location,
-    id: Identifier,
-    typ: TypeExpression,
-    description: Option[Description] = None)
+                   loc: Location,
+                   id: Identifier,
+                   typ: TypeExpression,
+                   description: Option[Description] = None)
     extends Definition with ContextDefinition with EntityDefinition with DomainDefinition {}
 
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
   sealed trait Expression extends RiddlValue
+
+  sealed trait ArithmeticOperator extends Expression
+
+  case class Plus(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
+    override def format: String = "+(" + op1.format + ", " + op2.format + ")"
+  }
+
+  case class Minus(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
+    override def format: String = "-(" + op1.format + ", " + op2.format + ")"
+  }
+
+  case class Multiply(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
+    override def format: String = "*(" + op1.format + ", " + op2.format + ")"
+  }
+
+  case class Divide(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
+    override def format: String = "/(" + op1.format + ", " + op2.format + ")"
+  }
+
+  case class Modulus(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
+    override def format: String = "%(" + op1.format + ", " + op2.format + ")"
+  }
+
+  case class AbstractBinary(loc: Location, operator: String, op1: Expression, op2: Expression)
+    extends ArithmeticOperator {
+    override def format: String = operator + "(" + op1.format + ", " + op2.format + ")"
+  }
 
   case class UnknownExpression(loc: Location) extends Expression {
     override def format: String = "???"
@@ -423,19 +450,12 @@ object AST {
     }.mkString("(", ", ", ")")
   }
 
-  case class FunctionCallExpression(
-                                     loc: Location,
-                                     name: PathIdentifier,
-                                     arguments: ArgList)
+  case class FunctionCallExpression(loc: Location, name: PathIdentifier, arguments: ArgList)
     extends Expression {
     override def format: String = name.format + arguments.format
   }
 
-  case class MathExpression(
-                             loc: Location,
-                             operator: String,
-                             arguments: ArgList
-                           ) extends Expression {
+  case class ArbitraryExpression(loc: Location, operator: String, arguments: ArgList) extends Expression {
     override def format: String = operator + arguments.format
   }
 

@@ -54,9 +54,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
   def literalDecimal[u: P]: P[LiteralDecimal] = {
     P(
       location ~ (Operators.plus | Operators.minus).?.! ~ CharIn("0-9").rep(1).! ~
-        (Punctuation.dot ~ CharIn("0-9").rep(0)).?.! ~
+        Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
-    ).map { case (loc, a, b, c, d) => LiteralDecimal(loc, BigDecimal(a + b + c + d)) }
+    ).map { case (loc, a, b, c, d, e) => LiteralDecimal(loc, BigDecimal(a + b + c + d + e)) }
   }
 
   def simpleIdentifier[u: P]: P[String] = {

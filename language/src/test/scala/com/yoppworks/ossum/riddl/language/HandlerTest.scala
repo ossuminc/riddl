@@ -74,10 +74,10 @@ class HandlerTest extends ParsingTest {
                     |      execute Unnest
                     |    }
                     |    on command MachineMissort {
-                    |      set journey to ??? // TODO: how do we respond to this?
+                    |      set journey to unknown() // TODO: how do we respond to this?
                     |    }
                     |    on command HumanMissort {
-                    |      set journey to ??? // TODO: how do we respond to this?
+                    |      set journey to unknown() // TODO: how do we respond to this?
                     |    }
                     |    on command CustomerAddressingError {
                     |      set journey to OnHold // TODO: how do we respond to this?
