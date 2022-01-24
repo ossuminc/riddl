@@ -33,7 +33,7 @@ class HandlerTest extends ParsingTest {
                     |      send event ItemInducted() to entity DistributionItem
                     |    }
                     |    on command SortItem {
-                    |      when empty(timeOfFirstScan) then { set
+                    |      when empty(what=timeOfFirstScan) then { set
                     |      timeOfFirstScan to
                     |      SortItem.originTimeStamp }
                     |      set journey to Sorted
@@ -45,20 +45,20 @@ class HandlerTest extends ParsingTest {
                     |      set parentContainer to empty
                     |    }
                     |    on command NestItem {
-                    |      when empty(timeOfFirstScan) then {
+                    |      when empty(what=timeOfFirstScan) then {
                     |        set timeOfFirstScan to NestItem.originTimeStamp
                     |      }
                     |      set parentContainer to NestItem.container
                     |      send command AddItemToContainer() to entity DistributionItem
                     |    }
                     |    on command TransportItem {
-                    |      when empty(timeOfFirstScan) { set timeOfFirstScan to
+                    |      when empty(what=timeOfFirstScan) { set timeOfFirstScan to
                     |      TransportItem.originTimeStamp }
                     |      set journey to InTransit(trip = TransportItem.tripId)
                     |      set lastKnownWorkCenter to TransportItem.workCenter
                     |    }
                     |    on command ReceiveItem {
-                    |      when empty(timeOfFirstScan)  { set timeOfFirstScan to
+                    |      when empty(what=timeOfFirstScan)  { set timeOfFirstScan to
                     |      ReceiveItem.originTimeStamp }
                     |      set journey to AtWorkCenter(
                     |        workCenter = ReceiveItem.workCenter
@@ -74,10 +74,10 @@ class HandlerTest extends ParsingTest {
                     |      execute Unnest
                     |    }
                     |    on command MachineMissort {
-                    |      set journey to ??? // TODO: how do we respond to this?
+                    |      set journey to unknown() // TODO: how do we respond to this?
                     |    }
                     |    on command HumanMissort {
-                    |      set journey to ??? // TODO: how do we respond to this?
+                    |      set journey to unknown() // TODO: how do we respond to this?
                     |    }
                     |    on command CustomerAddressingError {
                     |      set journey to OnHold // TODO: how do we respond to this?

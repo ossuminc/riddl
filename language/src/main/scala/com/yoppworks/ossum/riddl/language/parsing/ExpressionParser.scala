@@ -1,36 +1,32 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Operators
-import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.{Operators, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 import scala.collection.immutable.ListMap
-import scala.language.postfixOps
 
 /** Parser rules for value expressions */
-trait ExpressionParser extends CommonParser {
+trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def arguments[u: P]: P[ListMap[Identifier, Expression]] = {
-    P((identifier ~ Punctuation.equals).? ~ expression).rep(0, ",").map {
-      s: Seq[(Option[Identifier], Expression)] =>
+    P(identifier ~ Punctuation.equals ~ expression).rep(0, ",").map {
+      s: Seq[(Identifier, Expression)] =>
         s.foldLeft(ListMap.empty[Identifier, Expression]) { case (b, (id, exp)) =>
-          val newId = id match {
-            case Some(value) => value
-            case None        => Identifier(exp.loc, "<unnamed>")
-          }
-          b + (newId -> exp)
+          b + (id -> exp)
         }
     }
   }
 
-  def argList[u: P]: P[ListMap[Identifier, Expression]] = {
-    P(Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose /)
+  def argList[u: P]: P[ArgList] = {
+    P(
+      Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose./
+    ).map { lm => ArgList(lm) }
   }
 
   def functionCallExpression[u: P]: P[FunctionCallExpression] = {
-    P(location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose).map {
+    P(location ~ pathIdentifier ~ argList).map {
       tpl => (FunctionCallExpression.apply _).tupled(tpl)
     }
   }
@@ -44,23 +40,32 @@ trait ExpressionParser extends CommonParser {
       .map(tpl => (GroupExpression.apply _).tupled(tpl))
   }
 
-  def operator[u: P]: P[String] = {
+  def operatorName[u: P]: P[String] = {
+    CharPred(x => x >= 'a' && x <= 'z').! ~~
+      CharsWhile(x => (x >= 'a' && x < 'z') || (x >= 'A' && x <= 'Z') || (x >= '0' && x <= '9')).!
+  }.map { case (x, y) => x + y }
+
+  def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
-      Operators.plus.! | Operators.minus.! | Operators.times.! | Operators.div.! | Operators.mod.! |
-        CharsWhile(x => x >= 'a' && x < 'z').!
-    )
+      location ~ (Operators.plus.! | Operators.minus.! | Operators.times.! |
+        Operators.div.! | Operators.mod.! | operatorName) ~
+        Punctuation.roundOpen ~ expression ~ Punctuation.comma ~ expression ~ Punctuation.roundClose
+    ).map {
+      case (loc, s, op1, op2) if s == Operators.plus => Plus(loc, op1, op2)
+      case (loc, s, op1, op2) if s == Operators.minus => Minus(loc, op1, op2)
+      case (loc, s, op1, op2) if s == Operators.times => Multiply(loc, op1, op2)
+      case (loc, s, op1, op2) if s == Operators.div => Divide(loc, op1, op2)
+      case (loc, s, op1, op2) if s == Operators.mod => Modulus(loc, op1, op2)
+      case (loc, s, op1, op2) => AbstractBinary(loc, s, op1, op2)
+    }
   }
 
-  def mathExpression[u: P]: P[MathExpression] = {
-    P(location ~ operator ~ argList).map(tpl => (MathExpression.apply _).tupled(tpl))
-  }
-
-  def unknownExpression[u: P]: P[UnknownExpression] = {
-    P((location ~ Punctuation.undefined).map(loc => UnknownExpression(loc)))
+  def arbitraryExpression[u: P]: P[ArbitraryExpression] = {
+    P(location ~ operatorName ~ argList).map(tpl => (ArbitraryExpression.apply _).tupled(tpl))
   }
 
   def expression[u: P]: P[Expression] = {
-    mathExpression | functionCallExpression | groupExpression | literalInteger | literalDecimal |
-      fieldExpression | unknownExpression
+    arithmeticOperator | arbitraryExpression | functionCallExpression | fieldExpression
+      | groupExpression | literalDecimal | literalInteger
   }
 }

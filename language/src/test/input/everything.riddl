@@ -70,8 +70,8 @@ domain Everything is {
 
       handler foo is {
         on command Something {
-          when misc() explained as { "inebriated" } then {
-            send event Inebriated to entity Everything.full.SomeOtherThing
+          when misc() then {
+            send event Inebriated() to entity Everything.full.SomeOtherThing
           }
         }
       }
