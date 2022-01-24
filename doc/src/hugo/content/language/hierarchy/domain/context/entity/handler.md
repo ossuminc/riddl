@@ -4,10 +4,11 @@ type: page
 weight: 50
 ---
 
-A _handler_ in an `entity` specifies how an entity handles its input.  
-Handlers are specified with the `on` keyword. There are four kinds of handlers 
-distinguished by the kind of message they handle (_command_, _event_, _query_,
-and _reaction_) as detailed in the following sections 
+A _handler_ in an `entity` specifies how an entity handles its input messages.  
+Handlers are specified with the `handler` keyword and enclose a set of `on` clauses that specify
+what to do with a given event when that handler is active. There are four kinds of `on` clauses
+distinguished by the kind of message they handle (_command_, _event_, _query_, and _reaction_) as
+detailed in the following sections
 
 ## Command Handler
 A command handler specifies which persistent event is generated for a given 
@@ -57,14 +58,24 @@ domain Foo {
 }    
 ```
 Notes:
-* `Path.To.Context.ThingThatHappend` is known as a 
+* `Path.To.Context.ThingThatHappend` is known as a
   [path identifier](../../../../hierarchy#Path_Identifiers).
 
 ## Query Handler
-A query handler associates a query message to the result message that the query returns along 
-with the SQL statement that yields the result set. 
+
+A query handler associates a query message to the result message that the query returns along with
+the SQL statement that yields the result set.
+
 ```riddl
 type JustGetIt = query { id: Id(AnEntity) }
 type JustGotIt = response { id: Id(AnEntity), count: Integer }
 on query JustGetIt return JustGotIt from "SELECT id, count FROM AnEntity WHERE id = %id"
 ```
+
+## Defining Multiple Handlers
+
+An entity can make use of multiple handlers so that the behavior of and entity can be changed. There
+can be only one handler active at any moment, but an entity can change which handler is active in
+response to any message. This ability permits a set of handlers to model a finite state machine
+where each handler is a state and each on clause is a transition. When a handler is active, any
+messages received that are not explicitly defined by the handler will simply be ignored. 
