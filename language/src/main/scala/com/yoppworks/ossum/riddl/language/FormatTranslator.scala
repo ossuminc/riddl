@@ -2,11 +2,12 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.{ConfigReader, ConfigSource}
 import pureconfig.generic.auto.*
+import pureconfig.{ConfigReader, ConfigSource}
 
 import java.io.File
 import java.nio.file.Path
+import scala.annotation.unused
 import scala.collection.mutable
 
 case class FormatConfig(
@@ -264,6 +265,16 @@ class FormatTranslator extends Translator[FormatConfig] {
         .emitDescription(t.description).add("\n")
     }
 
+    def emitCondition(@unused condition: Condition): FormatState = {
+      // TODO: write this
+      this
+    }
+
+    def emitAction(@unused action: Action): FormatState = {
+      // TODO: write this
+      this
+    }
+
     def emitGherkinStrings(strings: Seq[LiteralString]): FormatState = {
       strings.size match {
         case 0 => add("\"\"")
@@ -275,23 +286,37 @@ class FormatTranslator extends Translator[FormatConfig] {
       }
     }
 
-    def emitGherkinClause(kind: String, clauses: Seq[GherkinClause]): FormatState = {
+    def emitAGherkinClause(ghc: GherkinClause): FormatState = {
+      ghc match {
+        case GivenClause(_, strings) =>
+          emitGherkinStrings(strings)
+        case WhenClause(_, condition) =>
+          emitCondition(condition)
+        case ThenClause(_, action) =>
+          emitAction(action)
+        case ButClause(_, action) =>
+          emitAction(action)
+      }
+    }
+
+    def emitGherkinClauses(kind: String, clauses: Seq[GherkinClause]): FormatState = {
       clauses.size match {
-        case 0 =>
-        case 1 => addIndent(kind).add(" ").emitGherkinStrings(clauses.head.fact)
+        case 0 => this
+        case 1 =>
+          addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
         case _ =>
-          addIndent(kind).add(" ").emitGherkinStrings(clauses.head.fact)
+          addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
           clauses.tail.foldLeft(this) { (next, clause) =>
-            next.addNL.addIndent("and ").emitGherkinStrings(clause.fact)
+            next.addNL.addIndent("and ").emitAGherkinClause(clause)
           }
       }
-      this
     }
 
     def emitExample(example: Example): FormatState = {
-      openDef(example).emitGherkinClause("given ", example.givens)
-        .emitGherkinClause("when", example.whens).emitGherkinClause("then", example.thens)
-        .emitGherkinClause("but", example.buts).closeDef(example)
+      openDef(example).emitGherkinClauses("given ", example.givens)
+        .emitGherkinClauses("when", example.whens)
+        .emitGherkinClauses("then", example.thens)
+        .emitGherkinClauses("but", example.buts).closeDef(example)
     }
 
     def emitExamples(examples: Seq[Example]): FormatState = {

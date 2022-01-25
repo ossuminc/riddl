@@ -24,13 +24,13 @@ class HandlerTest extends ParsingTest {
                     |      set trackingId to CreateItem.trackingId
                     |      set manifestId to CreateItem.manifestId
                     |      set destination to CreatItem.postalCode
-                    |      send event ItemPreInducted() to entity DistributionItem
+                    |      tell entity DistributionItem event ItemPreInducted()
                     |    }
                     |    on command InductItem {
                     |      set timeOfFirstScan to InductItem.originTimeStamp
                     |      set journey to Inducted
                     |      set lastKnownWorkCenterId to InductItem.workCenter
-                    |      send event ItemInducted() to entity DistributionItem
+                    |      tell entity DistributionItem to event ItemInducted()
                     |    }
                     |    on command SortItem {
                     |      when empty(what=timeOfFirstScan) then { set
@@ -38,7 +38,7 @@ class HandlerTest extends ParsingTest {
                     |      SortItem.originTimeStamp }
                     |      set journey to Sorted
                     |      set lastKnownWorkCenter to SortItem.workCenter
-                    |      execute Unnest
+                    |      "execute Unnest"
                     |    }
                     |    on command RemoveItemFromContainer { // received from Container
                     |      set journey to AtWorkCenter // ??? what's the correct journey?
@@ -49,7 +49,7 @@ class HandlerTest extends ParsingTest {
                     |        set timeOfFirstScan to NestItem.originTimeStamp
                     |      }
                     |      set parentContainer to NestItem.container
-                    |      send command AddItemToContainer() to entity DistributionItem
+                    |      tell entity DistributionItem command AddItemToContainer()
                     |    }
                     |    on command TransportItem {
                     |      when empty(what=timeOfFirstScan) { set timeOfFirstScan to
@@ -63,7 +63,7 @@ class HandlerTest extends ParsingTest {
                     |      set journey to AtWorkCenter(
                     |        workCenter = ReceiveItem.workCenter
                     |      )
-                    |      execute Unnest
+                    |      "execute Unnest"
                     |    }
                     |    // TODO: what commands bring item out of a hold?
                     |    on command MarkItemOutForDelivery {
@@ -71,7 +71,7 @@ class HandlerTest extends ParsingTest {
                     |    }
                     |    on command DeliverItem {
                     |      set journey to Delivered
-                    |      execute Unnest
+                    |      "execute Unnest"
                     |    }
                     |    on command MachineMissort {
                     |      set journey to unknown() // TODO: how do we respond to this?

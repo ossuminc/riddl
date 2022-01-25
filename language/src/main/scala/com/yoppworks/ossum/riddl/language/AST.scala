@@ -108,7 +108,7 @@ object AST {
     }
   }
 
-  def kind(definition: Definition): String = {
+  def kind(definition: DescribedValue): String = {
     definition match {
       case _: Adaptation => "Adaptation"
       case _: Adaptor => "Adaptor"
@@ -135,6 +135,14 @@ object AST {
       case _: SagaAction => "SagaAction"
       case _: State => "State"
       case _: Type => "Type"
+      case _: AskAction => "Ask Action"
+      case _: BecomeAction => "Become Action"
+      case _: MorphAction => "Morph Action"
+      case _: SetAction => "Set Action"
+      case _: PublishAction => "Publish Action"
+      case _: TellAction => "Tell Action"
+      case _: WhenAction => "When Action"
+      case _: OnClause => "On Clause"
       case _ => "Definition"
     }
   }
@@ -204,13 +212,13 @@ object AST {
     lazy val kind: String = this.getClass.getSimpleName.dropRight("Kind".length + 1).toLowerCase
   }
 
-  case object CommandKind extends MessageKind
+  final case object CommandKind extends MessageKind
 
-  case object EventKind extends MessageKind
+  final case object EventKind extends MessageKind
 
-  case object QueryKind extends MessageKind
+  final case object QueryKind extends MessageKind
 
-  case object ResultKind extends MessageKind
+  final case object ResultKind extends MessageKind
 
   sealed trait MessageRef extends DefRef[Type] {
     def messageKind: MessageKind
@@ -326,7 +334,7 @@ object AST {
   }
 
   object PredefinedType {
-    final def unapply(preType: PredefinedType): Option[String] = Some(preType.kind)
+    final def unapply(preType: PredefinedType): Option[String] = Option(preType.kind)
   }
 
   case class Strng(
@@ -381,7 +389,7 @@ object AST {
     def kind: String = "UUID"
   }
 
-  case class URL(loc: Location, Numbereme: Option[LiteralString] = None) extends PredefinedType {
+  case class URL(loc: Location, scheme: Option[LiteralString] = None) extends PredefinedType {
     def kind: String = "URL"
   }
 
@@ -430,10 +438,6 @@ object AST {
     override def format: String = operator + "(" + op1.format + ", " + op2.format + ")"
   }
 
-  case class UnknownExpression(loc: Location) extends Expression {
-    override def format: String = "???"
-  }
-
   case class FieldExpression(loc: Location, path: PathIdentifier) extends Expression {
     override def format: String = path.format
   }
@@ -442,9 +446,8 @@ object AST {
     override def format: String = s"(${expression.format})"
   }
 
-  case class ArgList(
-                      args: ListMap[Identifier, Expression] = ListMap.empty[Identifier, Expression]
-                    ) extends RiddlNode {
+  case class ArgList(args: ListMap[Identifier, Expression] = ListMap.empty[Identifier, Expression])
+    extends RiddlNode {
     override def format: String = args.map { case (id, exp) =>
       id.format + "=" + exp.format
     }.mkString("(", ", ", ")")
@@ -475,7 +478,7 @@ object AST {
 
   case class False(loc: Location) extends Condition
 
-  case class StringCondition(cond: LiteralString) extends Condition {
+  case class ArbitraryCondition(cond: LiteralString) extends Condition {
     override def loc: Location = cond.loc
   }
 
@@ -487,17 +490,17 @@ object AST {
 
   sealed trait Comparator extends RiddlNode
 
-  case object lt extends Comparator
+  final case object lt extends Comparator
 
-  case object gt extends Comparator
+  final case object gt extends Comparator
 
-  case object le extends Comparator
+  final case object le extends Comparator
 
-  case object ge extends Comparator
+  final case object ge extends Comparator
 
-  case object eq extends Comparator
+  final case object eq extends Comparator
 
-  case object ne extends Comparator
+  final case object ne extends Comparator
 
   case class Comparison(
                          loc: Location,
@@ -524,6 +527,156 @@ object AST {
 
   case class OrCondition(loc: Location, cond1: Condition, cond2: Condition) extends BinaryCondition
 
+  ///////////////////////////////////////////////////////////// Actions
+
+  sealed trait Action extends DescribedValue
+
+  /** An action whose behavior is specified as a text string allowing extension to arbitrary
+   * actions not otherwise handled by RIDDL
+   *
+   * @param loc         The location where the action occurs in the source
+   * @param what        The action to take (emitted as pseudo-code)
+   * @param description An optional description of the action
+   */
+  case class ArbitraryAction(loc: Location, what: LiteralString,
+                             description: Option[Description]) extends Action
+
+  /** An action whose behavior is to set the value of a state field to some expression
+   *
+   * @param loc         The location where the action occurs int he source
+   * @param target      The path identifier of the entity's state field that is to be set
+   * @param value       An expression for the value to set the field to
+   * @param description An optional description of the action
+   */
+  case class SetAction(loc: Location,
+                       target: PathIdentifier,
+                       value: Expression,
+                       description: Option[Description] = None)
+    extends Action {
+    override def format: String = {
+      s"set ${target.format} to ${value.format}"
+    }
+  }
+
+  /** A helper class for publishing messages that represents the construction of the message to
+   * be sent.
+   *
+   * @param msg  A message reference that specifies the specific type of message to construct
+   * @param args An argument list that should correspond to teh fields of the message
+   */
+  case class MessageConstructor(msg: MessageRef, args: ArgList = ArgList())
+    extends RiddlNode {
+    override def format: String = msg.format + {
+      if (args.nonEmpty) {
+        args.format
+      } else {
+        ""
+      }
+    }
+  }
+
+  /** An action that publishes a message to a pipe
+   *
+   * @param loc         The location in the source of the publish action
+   * @param msg         The constructed message to be published
+   * @param pipe        The pipe onto which the message is published
+   * @param description An optional description of the action
+   */
+  case class PublishAction(
+                            loc: Location,
+                            msg: MessageConstructor,
+                            pipe: PipeRef,
+                            description: Option[Description] = None)
+    extends Action {
+    override def format: String = s"publish ${msg.format} to ${pipe.format}"
+  }
+
+  /** An action that morphs the state of an entity to a new structure
+   *
+   * @param loc         The location of the morph action in the source
+   * @param entity      The entity to be affected
+   * @param state       The reference to the new state structure
+   * @param description An optional description of this action
+   */
+  case class MorphAction(loc: Location,
+                         entity: EntityRef,
+                         state: StateRef,
+                         description: Option[Description] = None) extends Action {
+    override def format: String = s"morph ${}"
+  }
+
+  /** An action that changes the behavior of an entity by making it use a new
+   * handler for its messages; named for the "become" operation in Akka that
+   * does the same for an actor.
+   *
+   * @param loc         The location in the source of the become action
+   * @param entity      The entity whose behavior is to change
+   * @param handler     The reference to the new handler for the entity
+   * @param description An optional description of this action
+   */
+  case class BecomeAction(loc: Location,
+                          entity: EntityRef,
+                          handler: HandlerRef,
+                          description: Option[Description] = None
+                         ) extends Action {
+    override def format: String = s"become ${}"
+  }
+
+  case class TellAction(
+                         loc: Location,
+                         entity: EntityRef,
+                         msg: MessageConstructor,
+                         description: Option[Description] = None)
+    extends Action {
+    override def format: String = s"tell ${entity.format} to ${msg.format}"
+  }
+
+  case class AskAction(
+                        loc: Location,
+                        entity: EntityRef,
+                        msg: MessageConstructor,
+                        description: Option[Description] = None) extends Action {
+    override def format: String = s"ask ${entity.format} to ${msg.format}"
+  }
+
+
+  case class WhenAction(
+                         loc: Location,
+                         condition: Condition,
+                         `then`: Seq[Action] = Seq.empty[Action],
+                         `else`: Seq[Action] = Seq.empty[Action],
+                         description: Option[Description] = None)
+    extends Action {
+    override def format: String = {
+      s"when ${condition.format} then ${`then`.map(_.format).mkString("{", "\n", "}")}"
+    }
+  }
+
+  // ////////////////////////////////////////////////////////// Gherkin
+
+  sealed trait GherkinValue extends RiddlValue
+
+  sealed trait GherkinClause extends GherkinValue
+
+  case class GivenClause(loc: Location, scenario: Seq[LiteralString]) extends GherkinClause
+
+  case class WhenClause(loc: Location, condition: Condition) extends GherkinClause
+
+  case class ThenClause(loc: Location, action: Action) extends GherkinClause
+
+  case class ButClause(loc: Location, action: Action) extends GherkinClause
+
+  case class Example(
+                      loc: Location,
+                      id: Identifier,
+                      givens: Seq[GivenClause] = Seq.empty[GivenClause],
+                      whens: Seq[WhenClause] = Seq.empty[WhenClause],
+                      thens: Seq[ThenClause] = Seq.empty[ThenClause],
+                      buts: Seq[ButClause] = Seq.empty[ButClause],
+                      description: Option[Description] = None)
+    extends ProcessorDefinition {
+    override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty && thens.isEmpty && buts.isEmpty
+  }
 
   // ////////////////////////////////////////////////////////// Entities
 
@@ -574,27 +727,12 @@ object AST {
     EntityOption("kind")
 
   case class EntityRef(loc: Location, id: PathIdentifier) extends DefRef[Entity] {
-    override def format: String = s"entity ${id.format}"
+    override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
-  sealed trait ExampleValue extends RiddlValue
-
-  case class GherkinClause(loc: Location, fact: Seq[LiteralString]) extends ExampleValue
-
-  case class Example(
-    loc: Location,
-    id: Identifier,
-    givens: Seq[GherkinClause] = Seq.empty[GherkinClause],
-    whens: Seq[GherkinClause] = Seq.empty[GherkinClause],
-    thens: Seq[GherkinClause] = Seq.empty[GherkinClause],
-    buts: Seq[GherkinClause] = Seq.empty[GherkinClause],
-    description: Option[Description] = None)
-    extends ProcessorDefinition {
-    override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty && thens.isEmpty && buts.isEmpty
-  }
 
   case class FeatureRef(loc: Location, id: PathIdentifier) extends DefRef[Feature] {
-    override def format: String = s"feature ${id.format}"
+    override def format: String = s"${Keywords.feature} ${id.format}"
   }
 
   case class Feature(
@@ -607,7 +745,7 @@ object AST {
   }
 
   case class FunctionRef(loc: Location, id: PathIdentifier) extends DefRef[Function] {
-    override def format: String = s"function ${id.format}"
+    override def format: String = s"${Keywords.function} ${id.format}"
   }
 
   case class Function(
@@ -627,7 +765,7 @@ object AST {
     loc: Location,
     id: PathIdentifier)
       extends DefRef[Invariant] {
-    override def format: String = s"invariant ${id.format}"
+    override def format: String = s"${Keywords.invariant} ${id.format}"
   }
 
   case class Invariant(
@@ -639,120 +777,48 @@ object AST {
     override def isEmpty: Boolean = expression.isEmpty
   }
 
-  sealed trait OnClauseStatement extends RiddlValue {
-    def description: Option[Description]
-  }
-
-  case class SetStatement(
-    loc: Location,
-    target: PathIdentifier,
-    value: Expression,
-    description: Option[Description] = None)
-      extends OnClauseStatement {
-    override def format: String = { s"set ${target.format} to ${value.format}" }
-  }
-
-  case class AppendStatement(
-    loc: Location,
-    value: PathIdentifier,
-    target: Identifier,
-    description: Option[Description] = None)
-      extends OnClauseStatement {
-    override def format: String = s"append ${value.format} to ${target.format}"
-  }
-
-  case class MessageConstructor(
-                                 msg: MessageRef,
-                                 args: ArgList = ArgList())
-      extends RiddlNode {
-    override def format: String = msg.format + {
-      if (args.nonEmpty) {
-        args.format
-      } else {
-        ""
-      }
-    }
-  }
-
-  case class PublishStatement(
-    loc: Location,
-    msg: MessageConstructor,
-    pipe: PipeRef,
-    description: Option[Description] = None)
-      extends OnClauseStatement {
-    override def format: String = s"publish ${msg.format} to ${pipe.format}"
-  }
-
-  case class SendStatement(
-    loc: Location,
-    msg: MessageConstructor,
-    entity: EntityRef,
-    description: Option[Description] = None)
-      extends OnClauseStatement {
-    override def format: String = s"send ${msg.format} to ${entity.format}"
-  }
-
-  case class RemoveStatement(
-    loc: Location,
-    id: PathIdentifier,
-    from: PathIdentifier,
-    description: Option[Description] = None)
-      extends OnClauseStatement {
-    override def format: String = s"remove ${id.format} from ${from.format}"
-  }
-
-  case class ExecuteStatement(
-    loc: Location,
-    id: Identifier,
-    description: Option[Description] = None)
-      extends OnClauseStatement
-
-  case class WhenStatement(
-    loc: Location,
-    condition: Condition,
-    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
-    description: Option[Description] = None)
-      extends OnClauseStatement {
-    override def format: String = {
-      s"when ${condition.format} then ${actions.map(_.format).mkString("{", "\n", "}")}"
-    }
-  }
-
   case class OnClause(
-    loc: Location,
-    msg: MessageRef,
-    actions: Seq[OnClauseStatement] = Seq.empty[OnClauseStatement],
-    description: Option[Description] = None)
-      extends EntityValue with DescribedValue
+                       loc: Location,
+                       msg: MessageRef,
+                       actions: Seq[Action] = Seq.empty[Action],
+                       description: Option[Description] = None)
+    extends EntityValue with DescribedValue
 
   case class Handler(
-    loc: Location,
-    id: Identifier,
-    clauses: Seq[OnClause] = Seq.empty[OnClause],
-    description: Option[Description] = None)
+                      loc: Location,
+                      id: Identifier,
+                      clauses: Seq[OnClause] = Seq.empty[OnClause],
+                      description: Option[Description] = None)
     extends EntityDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
   }
 
+  case class HandlerRef(loc: Location, id: PathIdentifier) extends DefRef[Handler] {
+    override def format: String = s"${Keywords.handler} ${id.format}"
+  }
+
   case class State(
-    loc: Location,
-    id: Identifier,
-    typeEx: Aggregation,
-    description: Option[Description] = None)
-      extends EntityDefinition with Container[Field] {
+                    loc: Location,
+                    id: Identifier,
+                    typeEx: Aggregation,
+                    description: Option[Description] = None)
+    extends EntityDefinition with Container[Field] {
 
     override def contents: Seq[Field] = typeEx.fields
+  }
 
+  case class StateRef(loc: Location, id: PathIdentifier) extends DefRef[State] {
+    override def format: String = s"${Keywords.state} ${id.format}"
   }
 
   /** Definition of an Entity
-    *
-    * @param options
-    *   The options for the entity
-    * @param loc
-    *   The location in the input
-    * @param id
-    *   The name of the entity
+   *
+   * @param options
+   *    The options for the entity
+   * @param loc
+   *    The location in the input
+   * @param id
+   *    The name of the entity
     * @param states
     *   The state values of the entity
     * @param types

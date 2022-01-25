@@ -54,10 +54,9 @@ trait ConditionParser extends ExpressionParser {
     ).map(t => (AndCondition.apply _).tupled(t))
   }
 
-  def stringCondition[u: P]: P[StringCondition] = {
-    P(literalString).map(ls => StringCondition(ls))
+  def arbitraryCondition[u: P]: P[ArbitraryCondition] = {
+    P(literalString).map(ls => ArbitraryCondition(ls))
   }
-
 
   def groupedCondition[u: P]: P[Condition] = {
     P(Punctuation.roundOpen ~/ condition ~ Punctuation.roundClose./)
@@ -68,7 +67,7 @@ trait ConditionParser extends ExpressionParser {
   }
 
   def terminalExpressions[u: P]: P[Condition] = {
-    P(trueCondition | falseCondition | stringCondition)
+    P(trueCondition | falseCondition | arbitraryCondition)
   }
 
   def logicalExpressions[u: P]: P[Condition] = {

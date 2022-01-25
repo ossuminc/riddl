@@ -25,11 +25,21 @@ trait ReferenceParser extends CommonParser {
     P(location ~ Keywords.result ~ pathIdentifier).map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
-  def messageRef[u: P]: P[MessageRef] = { P(commandRef | eventRef | queryRef | resultRef) }
+  def messageRef[u: P]: P[MessageRef] = {
+    P(commandRef | eventRef | queryRef | resultRef)
+  }
 
   def entityRef[u: P]: P[EntityRef] = {
     P(location ~ maybe(Keywords.entity) ~ pathIdentifier)
       .map(tpl => (EntityRef.apply _).tupled(tpl))
+  }
+
+  def handlerRef[u: P]: P[HandlerRef] = {
+    P(location ~ Keywords.handler ~ pathIdentifier).map(tpl => (HandlerRef.apply _).tupled(tpl))
+  }
+
+  def stateRef[u: P]: P[StateRef] = {
+    P(location ~ Keywords.state ~ pathIdentifier).map(tpl => (StateRef.apply _).tupled(tpl))
   }
 
   def typeRef[u: P]: P[TypeRef] = {

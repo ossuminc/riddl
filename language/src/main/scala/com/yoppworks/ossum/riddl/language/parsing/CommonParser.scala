@@ -41,8 +41,8 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def description[u: P]: P[Option[Description]] = {
     P(location ~ (Keywords.described | Keywords.explained) ~ as ~ docBlock).?.map {
-      case Some((loc, lines)) => Some(Description(loc, lines))
-      case None               => None
+      case Some((loc, lines)) => Option(Description(loc, lines))
+      case None => None
     }
   }
 
@@ -115,7 +115,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def mapTo[T <: Definition](seq: Option[Seq[Definition]]): Seq[T] = {
-    seq.map(_.map(_.asInstanceOf[T])).getOrElse(Seq.empty[T])
+    seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 
 }

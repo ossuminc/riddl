@@ -49,7 +49,6 @@ Style: everything.riddl(49:5): Type 'zeroOrMore' should start with a capital let
 Missing: everything.riddl(82:7): State 'otherThingState' should have a description
 Missing: everything.riddl(82:34): Field 'field' should have a description
 Missing: everything.riddl(81:7): Type 'ItHappened' should have a description
-Error: everything.riddl(84:35): 'SomeOtherThing.otherThingState.field' is not defined but should be a Field
 Missing: everything.riddl(35:48): Enumerator 'Persimmon' should have a description
 Missing: everything.riddl(35:33): Enumerator 'Pear' should have a description
 Missing: everything.riddl(12:27): Outlet 'Commands' should have a description
@@ -60,3 +59,7 @@ Missing: everything.riddl(35:38): Enumerator 'Peach' should have a description
 Missing: everything.riddl(13:25): Inlet 'Commands' should have a description
 Error: everything.riddl(72:20): 'Something' was expected to be a command type but is a Entity  instead
 Style: everything.riddl(13:25): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:34)
+Missing: everything.riddl(73:11): When Action should have a description
+Missing: everything.riddl(74:18): Tell Action should have a description
+Missing: everything.riddl(85:15): Set Action should have a description
+Error: everything.riddl(74:62): 'Inebriated' is not defined but should be a message type

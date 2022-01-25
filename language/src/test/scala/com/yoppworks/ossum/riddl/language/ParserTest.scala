@@ -200,12 +200,14 @@ class ParserTest extends ParsingTest {
               6 -> 5,
               Identifier(6 -> 13, "foo"),
               Seq(
-                GherkinClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
-                GherkinClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
+                GivenClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
+                GivenClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
               ),
-              Seq(GherkinClause(9 -> 7, Seq(LiteralString(9 -> 12, "I go fishing")))),
-              Seq(GherkinClause(10 -> 7, Seq(LiteralString(10 -> 12, "I'll just eat worms")))),
-              Seq(GherkinClause(11 -> 7, Seq(LiteralString(11 -> 12, "I'm happy"))))
+              Seq(WhenClause(9 -> 7, ArbitraryCondition(LiteralString(9 -> 12, "I go fishing")))),
+              Seq(ThenClause(10 -> 7,
+                ArbitraryAction(10 -> 12, LiteralString(10 -> 12, "I'll just eat worms"), None))),
+              Seq(ButClause(11 -> 7,
+                ArbitraryAction(11 -> 12, LiteralString(11 -> 12, "I'm happy"), None)))
             ))
           ))
         )
