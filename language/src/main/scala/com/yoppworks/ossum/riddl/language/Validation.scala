@@ -423,7 +423,7 @@ object Validation {
       } else { this }
     }
 
-    def checkRef[T <: Definition: ClassTag](reference: Reference): ValidationState = {
+    def checkRef[T <: Definition : ClassTag](reference: Reference[T]): ValidationState = {
       checkPathRef[T](reference.id)()
     }
 
@@ -534,7 +534,7 @@ object Validation {
     def checkContainer[P <: Container[Definition], T <: Container[Definition]](
                                                                                 parent: P,
                                                                                 container: T
-    ): ValidationState = {
+                                                                              ): ValidationState = {
       this.checkDefinition(parent, container).check(
         container.nonEmpty,
         s"${container.identify} in ${parent.identify} must have content.",
@@ -543,11 +543,67 @@ object Validation {
       )
     }
 
+    def checkAction(action: Action): ValidationState = {
+      val newState = action match {
+        case SetAction(_, path, value, _) =>
+          this
+            .checkPathRef[Field](path)()
+            .checkExpression(value)
+        case PublishAction(_, msg, pipeRef, _) =>
+          this
+            .checkMessageConstructor(msg)
+            .checkRef[Pipe](pipeRef)
+        case BecomeAction(_, entity, handler, _) =>
+          this
+            .checkRef[Entity](entity)
+            .checkRef[Handler](handler)
+        case MorphAction(_, entity, entityState, _) =>
+          this
+            .checkRef[Entity](entity)
+            .checkRef[State](entityState)
+        case TellAction(_, entity, msg, _) =>
+          this
+            .checkRef[Entity](entity)
+            .checkMessageConstructor(msg)
+        case AskAction(_, entity, msg, _) =>
+          this
+            .checkRef[Entity](entity)
+            .checkMessageConstructor(msg)
+        case ArbitraryAction(loc, what, _) =>
+          this.check(what.nonEmpty,
+            "arbitrary action is empty so specifies nothing", MissingWarning, loc)
+      }
+      newState.checkDescription[Action](AST.kind(action), action)
+    }
+
     def checkExample(example: Example): ValidationState = {
+      // TODO: Validate examples actions too
       if (example.nonEmpty) {
-        this.checkNonEmpty(example.givens, "Givens", example)
-          .checkNonEmpty(example.whens, "Whens", example)
-          .checkNonEmpty(example.thens, "Thens", example, required = true).checkDescription(example)
+        this.checkNonEmpty(example.givens, "Givens", example).step { state: ValidationState =>
+          example.givens.foldLeft(state) { (state, givenClause) =>
+            val s = state.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
+            givenClause.scenario.foldLeft(s) { (state, ls) =>
+              state.checkNonEmptyValue(ls, "Given String", example, MissingWarning)
+            }
+          }
+        }
+          .checkNonEmpty(example.whens, "Whens", example).step { state: ValidationState =>
+          example.whens.foldLeft(state) { (state, whenClause) =>
+            state.checkExpression(whenClause.condition)
+          }
+        }
+          .checkNonEmpty(example.thens, "Thens", example, required = true)
+          .step { state: ValidationState =>
+            example.thens.foldLeft(state) { (state, thenClause) =>
+              state.checkAction(thenClause.action)
+            }
+          }
+          .checkNonEmpty(example.buts, "Buts", example).step { state: ValidationState =>
+          example.buts.foldLeft(state) { (state, butClause) =>
+            state.checkAction(butClause.action)
+          }
+        }
+          .checkDescription(example)
       }
       this
     }
@@ -746,52 +802,9 @@ object Validation {
       onClause: OnClause
     ): ValidationState = {
       val result = state.checkMessageRef(onClause.msg, onClause.msg.messageKind)
-      onClause.actions.foldLeft(result) { (state, action) =>
-        checkOnClauseAction(state, onClause, action)
+      onClause.examples.foldLeft(result) { (state, example) =>
+        state.checkExample(example)
       }
-    }
-
-    def checkOnClauseAction(
-                             state: ValidationState,
-                             @unused parent: OnClause,
-                             action: Action
-                           ): ValidationState = {
-      val newState = action match {
-        case SetAction(_, path, value, _) =>
-          state
-            .checkPathRef[Field](path)()
-            .checkExpression(value)
-        case PublishAction(_, msg, pipeRef, _) =>
-          state
-            .checkMessageConstructor(msg)
-            .checkRef[Pipe](pipeRef)
-        case BecomeAction(_, entity, handler, _) =>
-          state
-            .checkRef[Entity](entity)
-            .checkRef[Handler](handler)
-        case MorphAction(_, entity, entityState, _) =>
-          state
-            .checkRef[Entity](entity)
-            .checkRef[State](entityState)
-        case TellAction(_, entity, msg, _) =>
-          state
-            .checkRef[Entity](entity)
-            .checkMessageConstructor(msg)
-        case AskAction(_, entity, msg, _) =>
-          state
-            .checkRef[Entity](entity)
-            .checkMessageConstructor(msg)
-        case ArbitraryAction(loc, what, _) =>
-          state.check(what.nonEmpty,
-            "arbitrary action is empty so specifies nothing", MissingWarning, loc)
-        case WhenAction(_, condition, th, el, _) =>
-          el.foldLeft(th.foldLeft(state.checkExpression(condition)) { (s, action) =>
-            checkOnClauseAction(s, parent, action)
-          }) { (s, action) =>
-            checkOnClauseAction(s, parent, action)
-          }
-      }
-      newState.checkDescription[Action](AST.kind(action), action)
     }
 
     override def closeEntity(
@@ -868,10 +881,12 @@ object Validation {
     }
 
     override def doFeatureExample(
-      state: ValidationState,
-      feature: Feature,
-      example: Example
-    ): ValidationState = {state.checkDefinition(feature, example).checkExample(example)}
+                                   state: ValidationState,
+                                   feature: Feature,
+                                   example: Example
+                                 ): ValidationState = {
+      state.checkDefinition(feature, example).checkExample(example)
+    }
 
     override def doFunctionExample(
       state: ValidationState,

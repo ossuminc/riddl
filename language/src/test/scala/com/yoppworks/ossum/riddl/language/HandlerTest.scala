@@ -9,10 +9,11 @@ class HandlerTest extends ParsingTest {
       val input = """entity DistributionItem is {
                     |  state DistributionState is {}
                     | handler FromContainer  is {
-                    |    on event ContainerNestedInContainer {
+                    |    on event ContainerNestedInContainer { example only {
                     |      when ==(ContainerNestedInContainer.id,parentContainer)
                     |      then {
                     |        set lastKnownWorkCenter to ContainerNestedInContainer.workCenter
+                    |      }
                     |      }
                     |      // anything else needing to be updated?
                     |    } explained as { "Helps update this item's location" }

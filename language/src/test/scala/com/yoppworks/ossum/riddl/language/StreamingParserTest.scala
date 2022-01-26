@@ -22,9 +22,7 @@ class StreamingParserTest extends ParsingTest {
           TypeRef(3 -> 21, PathIdentifier(3 -> 21, List("Forecast")))
         )),
         List.empty[Example],
-        Some(
-          Description(4 -> 3, List(LiteralString(4 -> 16, "This is a source for Forecast data")))
-        )
+        Option(Description(4 -> 3, List(LiteralString(4 -> 16, "This is a source for Forecast data"))))
       )
       checkDefinition[Processor, Processor](input, expected, identity)
     }
@@ -35,7 +33,7 @@ class StreamingParserTest extends ParsingTest {
       val expected = Pipe(
         1 -> 1,
         Identifier(2 -> 6, "TemperatureChanges"),
-        Some(TypeRef(2 -> 39, PathIdentifier(2 -> 39, List("temperature"))))
+        Option(TypeRef(2 -> 39, PathIdentifier(2 -> 39, List("temperature"))))
       )
       checkDefinition[Pipe, Pipe](input, expected, identity)
     }
@@ -43,23 +41,23 @@ class StreamingParserTest extends ParsingTest {
     "recognize an InJoint" in {
       val input =
         """joint temp_in is inlet GetCurrentTemperature.weather from pipe WeatherForecast"""
-      val expected = Joint(
+      val expected = InletJoint(
         1 -> 1,
         Identifier(1 -> 7, "temp_in"),
         InletRef(1 -> 18, PathIdentifier(1 -> 24, Seq("weather", "GetCurrentTemperature"))),
         PipeRef(1 -> 59, PathIdentifier(1 -> 64, Seq("WeatherForecast")))
       )
-      checkDefinition[Joint, Joint](input, expected, identity)
+      checkDefinition[InletJoint, InletJoint](input, expected, identity)
     }
     "recognize an OutJoint" in {
       val input = """joint forecast is outlet GetWeatherForecast.Weather to pipe WeatherForecast"""
-      val expected = Joint(
+      val expected = OutletJoint(
         1 -> 1,
         Identifier(1 -> 7, "forecast"),
         OutletRef(1 -> 19, PathIdentifier(1 -> 26, Seq("Weather", "GetWeatherForecast"))),
         PipeRef(1 -> 56, PathIdentifier(1 -> 61, Seq("WeatherForecast")))
       )
-      checkDefinition[Joint, Joint](input, expected, identity)
+      checkDefinition[OutletJoint, OutletJoint](input, expected, identity)
     }
     "recognize a Plant" in {
       val input =
@@ -105,8 +103,8 @@ class StreamingParserTest extends ParsingTest {
           Pipe(
             18 -> 3,
             Identifier(18 -> 8, "WeatherForecast"),
-            Some(TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))),
-            Some(Description(
+            Option(TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))),
+            Option(Description(
               20 -> 5,
               List(LiteralString(20 -> 18, "Carries changes in the current weather forecast"))
             ))
@@ -114,8 +112,8 @@ class StreamingParserTest extends ParsingTest {
           Pipe(
             22 -> 3,
             Identifier(22 -> 8, "TemperatureChanges"),
-            Some(TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))),
-            Some(Description(
+            Option(TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))),
+            Option(Description(
               24 -> 5,
               List(LiteralString(24 -> 18, "Carries changes in the current temperature"))
             ))
@@ -133,7 +131,7 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
-            Some(Description(
+            Option(Description(
               7 -> 5,
               List(LiteralString(7 -> 18, "This is a source for Forecast data"))
             ))
@@ -154,7 +152,7 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
-            Some(Description(
+            Option(Description(
               12 -> 5,
               List(LiteralString(
                 12 -> 18,
@@ -173,7 +171,7 @@ class StreamingParserTest extends ParsingTest {
             )),
             List.empty[Outlet],
             List.empty[Example],
-            Some(Description(
+            Option(Description(
               16 -> 5,
               List(LiteralString(
                 16 -> 18,
@@ -183,21 +181,30 @@ class StreamingParserTest extends ParsingTest {
           )
         ),
         List(
-          Joint(
-            26 -> 3,
-            Identifier(26 -> 9, "forecast"),
-            OutletRef(26 -> 21, PathIdentifier(26 -> 28, List("Weather", "GetWeatherForecast"))),
-            PipeRef(26 -> 58, PathIdentifier(26 -> 63, List("WeatherForecast"))),
-            None
-          ),
-          Joint(
+          InletJoint(
             27 -> 3,
             Identifier(27 -> 9, "temp_in"),
             InletRef(27 -> 20, PathIdentifier(27 -> 26, List("weather", "GetCurrentTemperature"))),
             PipeRef(27 -> 61, PathIdentifier(27 -> 66, List("WeatherForecast"))),
             None
           ),
-          Joint(
+          InletJoint(
+            29 -> 3,
+            Identifier(29 -> 9, "temp_changes"),
+            InletRef(29 -> 25, PathIdentifier(29 -> 31, List("CurrentTemp", "AttenuateSensor"))),
+            PipeRef(29 -> 64, PathIdentifier(29 -> 69, List("TemperatureChanges"))),
+            None
+          )
+        ),
+        List(
+          OutletJoint(
+            26 -> 3,
+            Identifier(26 -> 9, "forecast"),
+            OutletRef(26 -> 21, PathIdentifier(26 -> 28, List("Weather", "GetWeatherForecast"))),
+            PipeRef(26 -> 58, PathIdentifier(26 -> 63, List("WeatherForecast"))),
+            None
+          ),
+          OutletJoint(
             28 -> 3,
             Identifier(28 -> 9, "temp_out"),
             OutletRef(
@@ -207,15 +214,8 @@ class StreamingParserTest extends ParsingTest {
             PipeRef(28 -> 65, PathIdentifier(28 -> 70, List("TemperatureChanges"))),
             None
           ),
-          Joint(
-            29 -> 3,
-            Identifier(29 -> 9, "temp_changes"),
-            InletRef(29 -> 25, PathIdentifier(29 -> 31, List("CurrentTemp", "AttenuateSensor"))),
-            PipeRef(29 -> 64, PathIdentifier(29 -> 69, List("TemperatureChanges"))),
-            None
-          )
         ),
-        Some(Description(
+        Option(Description(
           31 -> 3,
           List(LiteralString(
             32 -> 1,

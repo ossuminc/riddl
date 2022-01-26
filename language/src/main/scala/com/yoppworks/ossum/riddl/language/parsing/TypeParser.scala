@@ -1,9 +1,9 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.{AST, Location}
 import com.yoppworks.ossum.riddl.language.Terminals.*
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation.*
+import com.yoppworks.ossum.riddl.language.{AST, Location}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -111,10 +111,10 @@ trait TypeParser extends ReferenceParser {
   def messageKind[u: P]: P[MessageKind] = {
     P(Keywords.command | Keywords.event | Keywords.query | Keywords.result).!.map { mk =>
       mk.toLowerCase() match {
-        case mk if mk == Keywords.command => CommandKind
-        case mk if mk == Keywords.event => EventKind
-        case mk if mk == Keywords.query => QueryKind
-        case mk if mk == Keywords.result => ResultKind
+        case kind if kind == Keywords.command => CommandKind
+        case kind if kind == Keywords.event => EventKind
+        case kind if kind == Keywords.query => QueryKind
+        case kind if kind == Keywords.result => ResultKind
       }
     }
   }
@@ -126,10 +126,10 @@ trait TypeParser extends ReferenceParser {
   }
 
   /** Parses mappings, i.e.
-    * ```
-    * mapping { from Integer to String }
-    * ```
-    */
+   * {{{
+   * mapping { from Integer to String }
+   * }}}
+   */
   def mapping[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~ Readability.to ~
@@ -138,10 +138,10 @@ trait TypeParser extends ReferenceParser {
   }
 
   /** Parses ranges, i.e.
-    * ```
-    *   range { from 1 to 2 }
-    * ```
-    */
+   * {{{
+   *   range { from 1 to 2 }
+   * }}}
+   */
   def range[u: P]: P[RangeType] = {
     P(
       location ~ Keywords.range ~ roundOpen ~/

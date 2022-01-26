@@ -1,9 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.parsing.ParserError
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
+import com.yoppworks.ossum.riddl.language.parsing.{ParserError, RiddlParserInput, TopLevelParser}
 import fastparse.*
 import org.scalatest.matchers.*
 import org.scalatest.wordspec.AnyWordSpec
@@ -32,18 +30,19 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
       case x if x == classOf[AST.Type]        => typeDef(_)
       case x if x == classOf[AST.Domain]      => domain(_)
-      case x if x == classOf[AST.Context]     => context(_)
+      case x if x == classOf[AST.Context] => context(_)
       case x if x == classOf[AST.Interaction] => interaction(_)
-      case x if x == classOf[AST.Feature]     => feature(_)
-      case x if x == classOf[AST.Entity]      => entity(_)
-      case x if x == classOf[AST.Adaptor]     => adaptor(_)
-      case x if x == classOf[AST.Invariant]   => invariant(_)
-      case x if x == classOf[AST.Function]    => function(_)
-      case x if x == classOf[AST.Plant]       => plant(_)
-      case x if x == classOf[AST.Processor]   => processor(_)
-      case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
-      case x if x == classOf[AST.Joint]       => joint(_)
-      case x if x == classOf[AST.Saga]        => saga(_)
+      case x if x == classOf[AST.Feature] => feature(_)
+      case x if x == classOf[AST.Entity] => entity(_)
+      case x if x == classOf[AST.Adaptor] => adaptor(_)
+      case x if x == classOf[AST.Invariant] => invariant(_)
+      case x if x == classOf[AST.Function] => function(_)
+      case x if x == classOf[AST.Plant] => plant(_)
+      case x if x == classOf[AST.Processor] => processor(_)
+      case x if x == classOf[AST.Pipe] => pipeDefinition(_)
+      case x if x == classOf[AST.InletJoint] => joint(_)
+      case x if x == classOf[AST.OutletJoint] => joint(_)
+      case x if x == classOf[AST.Saga] => saga(_)
       case _ =>
         throw new RuntimeException(s"No parser defined for class ${classTag[T].runtimeClass}")
     }

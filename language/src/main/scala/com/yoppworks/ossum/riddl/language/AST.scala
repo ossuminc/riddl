@@ -15,7 +15,7 @@ import scala.reflect.ClassTag
  */
 object AST {
 
-  /** The root trait of all things RIDDL AST */
+  /** The root trait of all things RIDDL AST. Every node in the tree is a RiddlNode. */
   sealed trait RiddlNode {
     def format: String = ""
 
@@ -25,58 +25,101 @@ object AST {
     def nonEmpty: Boolean = !isEmpty
   }
 
-  /** */
+  /** The root trait of all parsable values. If a parser returns something, its a RiddlValue */
   sealed trait RiddlValue extends RiddlNode {
     def loc: Location
   }
 
+  /**
+   * A RiddlValue that is a parsed identifier, typically the name of a definition.
+   *
+   * @param loc   The location in the input where the identifier starts
+   * @param value The parsed value of the identifer
+   */
   case class Identifier(loc: Location, value: String) extends RiddlValue {
     override def format: String = value
 
     override def isEmpty: Boolean = value.isEmpty
   }
 
-  case class RiddlOption(loc: Location, name: String) extends RiddlValue
-
+  /**
+   * Represents a literal string parsed between quote characters in the input
+   *
+   * @param loc The location in the input of the opening quote character
+   * @param s   The parsed value of the string content
+   */
   case class LiteralString(loc: Location, s: String) extends Condition {
     override def format = s"\"$s\""
 
     override def isEmpty: Boolean = s.isEmpty
   }
 
+  /**
+   * Represents a segmented identifier to a definition in the model. Path Identifiers are parsed
+   * from a dot-separated list of identifiers in the input. Path identifiers are used to
+   * reference other definitions in the model.
+   *
+   * @param loc   Location in the input of the first letter of the path identifier
+   * @param value The list of strings that make up the path identifer
+   */
   case class PathIdentifier(loc: Location, value: Seq[String]) extends RiddlValue {
-    override def format: String = {value.reverse.mkString(".")}
+    override def format: String = {
+      value.reverse.mkString(".")
+    }
 
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
   }
 
+  /**
+   * The description of a definition. All definitions have a name and an optional description.
+   * This class provides the description part.
+   *
+   * @param loc   The location in the input of the description
+   * @param lines The lines of markdown that provide the description
+   */
   case class Description(
-    loc: Location = 0 -> 0,
-    lines: Seq[LiteralString] = Seq.empty[LiteralString])
+                          loc: Location = 0 -> 0,
+                          lines: Seq[LiteralString] = Seq.empty[LiteralString])
     extends RiddlValue {
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.s.isEmpty)
   }
 
-  sealed trait Reference extends RiddlValue {
+  /**
+   * A reference to a definition of a specific type.
+   *
+   * @tparam T The type of definition to which the references refers.
+   */
+  sealed abstract class Reference[+T <: Definition] extends RiddlValue {
     def id: PathIdentifier
 
     override def isEmpty: Boolean = id.isEmpty
   }
 
-  trait DefRef[+T <: Definition] extends Reference
-
-  sealed trait DescribedValue extends DefinitionValue {
+  /**
+   * Base trait of all values that have an optional Description
+   */
+  sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
   }
 
-  sealed trait DefinitionValue extends RiddlValue
-
-  sealed trait ContainerValue[+CT <: Definition] extends DefinitionValue {
+  /**
+   * Base trait of all values that contain definitions
+   *
+   * @tparam CT The contained type of definition
+   */
+  sealed trait ContainerValue[+CT <: Definition] extends RiddlValue {
     def contents: Seq[CT]
 
     override def isEmpty: Boolean = contents.isEmpty
   }
 
+  /**
+   * A function to translate between a definition and the keyword that introduces them.
+   *
+   * @param definition The definition to look up
+   * @return A string providing the definition keyword, if any. Enumerators and fields don't have
+   *         their own keywords
+   */
   def keyword(definition: Definition): String = {
     definition match {
       case _: Adaptation => Keywords.adapt
@@ -108,6 +151,12 @@ object AST {
     }
   }
 
+  /**
+   * A function to provide the kind of thing that a DescribedValue is
+   *
+   * @param definition The DescribedValue for which the kind is returned
+   * @return A string for the kind of DescribedValue
+   */
   def kind(definition: DescribedValue): String = {
     definition match {
       case _: Adaptation => "Adaptation"
@@ -141,16 +190,19 @@ object AST {
       case _: SetAction => "Set Action"
       case _: PublishAction => "Publish Action"
       case _: TellAction => "Tell Action"
-      case _: WhenAction => "When Action"
       case _: OnClause => "On Clause"
       case _ => "Definition"
     }
   }
 
+  /**
+   * Base trait for all definitions requiring an identifier for the definition and providing the
+   * identify method to yield a string that provides the kind and name
+   */
   sealed trait Definition extends DescribedValue {
     def id: Identifier
 
-    def identify: String = s"${AST.kind(this)} '${id.value}'"
+    def identify: String = s"${AST.kind(this)} '${id.format}'"
   }
 
   sealed trait AdaptorDefinition extends Definition
@@ -180,7 +232,7 @@ object AST {
 
   // ////////////////////////////////////////////////////////// TYPES
 
-  sealed trait TypeExpression extends DefinitionValue
+  sealed trait TypeExpression extends RiddlValue
 
   def kind(te: TypeExpression): String = {
     te match {
@@ -204,7 +256,7 @@ object AST {
 
   sealed trait TypeContainer extends TypeExpression with ContainerValue[Type]
 
-  case class TypeRef(loc: Location, id: PathIdentifier) extends DefRef[Type] with TypeExpression {
+  case class TypeRef(loc: Location, id: PathIdentifier) extends Reference[Type] with TypeExpression {
     override def format: String = s"type ${id.format}"
   }
 
@@ -220,7 +272,7 @@ object AST {
 
   final case object ResultKind extends MessageKind
 
-  sealed trait MessageRef extends DefRef[Type] {
+  sealed trait MessageRef extends Reference[Type] {
     def messageKind: MessageKind
   }
 
@@ -644,19 +696,6 @@ object AST {
     override def format: String = s"ask ${entity.format} to ${msg.format}"
   }
 
-
-  case class WhenAction(
-                         loc: Location,
-                         condition: Condition,
-                         `then`: Seq[Action] = Seq.empty[Action],
-                         `else`: Seq[Action] = Seq.empty[Action],
-                         description: Option[Description] = None)
-    extends Action {
-    override def format: String = {
-      s"when ${condition.format} then ${`then`.map(_.format).mkString("{", "\n", "}")}"
-    }
-  }
-
   // ////////////////////////////////////////////////////////// Gherkin
 
   sealed trait GherkinValue extends RiddlValue
@@ -731,12 +770,12 @@ object AST {
   case class EntityKind(loc: Location, override val args: Seq[LiteralString]) extends
     EntityOption("kind")
 
-  case class EntityRef(loc: Location, id: PathIdentifier) extends DefRef[Entity] {
+  case class EntityRef(loc: Location, id: PathIdentifier) extends Reference[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
 
-  case class FeatureRef(loc: Location, id: PathIdentifier) extends DefRef[Feature] {
+  case class FeatureRef(loc: Location, id: PathIdentifier) extends Reference[Feature] {
     override def format: String = s"${Keywords.feature} ${id.format}"
   }
 
@@ -749,7 +788,7 @@ object AST {
     lazy val contents: Seq[Example] = examples
   }
 
-  case class FunctionRef(loc: Location, id: PathIdentifier) extends DefRef[Function] {
+  case class FunctionRef(loc: Location, id: PathIdentifier) extends Reference[Function] {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
 
@@ -769,7 +808,7 @@ object AST {
   case class InvariantRef(
     loc: Location,
     id: PathIdentifier)
-      extends DefRef[Invariant] {
+    extends Reference[Invariant] {
     override def format: String = s"${Keywords.invariant} ${id.format}"
   }
 
@@ -785,9 +824,11 @@ object AST {
   case class OnClause(
                        loc: Location,
                        msg: MessageRef,
-                       actions: Seq[Action] = Seq.empty[Action],
-                       description: Option[Description] = None)
-    extends EntityValue with DescribedValue
+                       examples: Seq[Example] = Seq.empty[Example],
+                       description: Option[Description] = None
+                     ) extends EntityValue with DescribedValue {
+    override def isEmpty: Boolean = examples.isEmpty
+  }
 
   case class Handler(
                       loc: Location,
@@ -798,7 +839,7 @@ object AST {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
   }
 
-  case class HandlerRef(loc: Location, id: PathIdentifier) extends DefRef[Handler] {
+  case class HandlerRef(loc: Location, id: PathIdentifier) extends Reference[Handler] {
     override def format: String = s"${Keywords.handler} ${id.format}"
   }
 
@@ -812,7 +853,7 @@ object AST {
     override def contents: Seq[Field] = typeEx.fields
   }
 
-  case class StateRef(loc: Location, id: PathIdentifier) extends DefRef[State] {
+  case class StateRef(loc: Location, id: PathIdentifier) extends Reference[State] {
     override def format: String = s"${Keywords.state} ${id.format}"
   }
 
@@ -900,7 +941,7 @@ object AST {
     def name: String = "gateway"
   }
 
-  case class ContextRef(loc: Location, id: PathIdentifier) extends DefRef[Context] {
+  case class ContextRef(loc: Location, id: PathIdentifier) extends Reference[Context] {
     override def format: String = s"context ${id.format}"
   }
 
@@ -960,37 +1001,48 @@ object AST {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++ examples
   }
 
-  case class PipeRef(loc: Location, id: PathIdentifier) extends DefRef[Pipe] {
+  case class PipeRef(loc: Location, id: PathIdentifier) extends Reference[Pipe] {
     override def format: String = s"pipe ${id.format}"
   }
 
-  sealed trait StreamletRef extends Reference
+  sealed trait StreamletRef[+T <: Definition] extends Reference[T]
 
-  case class InletRef(loc: Location, id: PathIdentifier) extends StreamletRef with DefRef[Inlet] {
+  case class InletRef(loc: Location, id: PathIdentifier) extends StreamletRef[Inlet] {
     override def format: String = s"inlet ${id.format}"
   }
 
-  case class OutletRef(loc: Location, id: PathIdentifier) extends StreamletRef with DefRef[Outlet] {
+  case class OutletRef(loc: Location, id: PathIdentifier) extends StreamletRef[Outlet] {
     override def format: String = s"outlet ${id.format}"
   }
 
-  case class Joint(
-    loc: Location,
-    id: Identifier,
-    streamletRef: StreamletRef,
-    pipe: PipeRef,
-    description: Option[Description] = None)
-      extends PlantDefinition
+  sealed trait Joint extends PlantDefinition
+
+  case class InletJoint(
+                         loc: Location,
+                         id: Identifier,
+                         streamletRef: InletRef,
+                         pipe: PipeRef,
+                         description: Option[Description] = None)
+    extends Joint
+
+  case class OutletJoint(
+                          loc: Location,
+                          id: Identifier,
+                          streamletRef: OutletRef,
+                          pipe: PipeRef,
+                          description: Option[Description] = None)
+    extends Joint
 
   case class Plant(
-    loc: Location,
-    id: Identifier,
-    pipes: Seq[Pipe] = Seq.empty[Pipe],
-    processors: Seq[Processor] = Seq.empty[Processor],
-    joints: Seq[Joint] = Seq.empty[Joint],
-    description: Option[Description] = None)
-      extends Container[PlantDefinition] with DomainDefinition {
-    lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ joints
+                    loc: Location,
+                    id: Identifier,
+                    pipes: Seq[Pipe] = Seq.empty[Pipe],
+                    processors: Seq[Processor] = Seq.empty[Processor],
+                    inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
+                    outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
+                    description: Option[Description] = None)
+    extends Container[PlantDefinition] with DomainDefinition {
+    lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++ outJoints
   }
 
   case class SagaAction(
@@ -1129,7 +1181,7 @@ object AST {
     description: Option[Description] = None)
       extends ActionDefinition with OptionsDef[MessageOption]
 
-  case class DomainRef(loc: Location, id: PathIdentifier) extends DefRef[Domain] {
+  case class DomainRef(loc: Location, id: PathIdentifier) extends Reference[Domain] {
     override def format: String = s"domain ${id.format}"
   }
 

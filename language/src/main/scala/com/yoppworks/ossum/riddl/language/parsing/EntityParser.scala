@@ -6,8 +6,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
-trait EntityParser
-    extends HandlerParser with TypeParser with GherkinParser with FunctionParser {
+trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -49,6 +48,19 @@ trait EntityParser
   def state[u: P]: P[State] = {
     P(location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ description)
       .map(tpl => (State.apply _).tupled(tpl))
+  }
+
+  def onClause[u: P]: P[OnClause] = {
+    Keywords.on ~/ location ~ messageRef ~ open ~
+      (examples | undefined(Seq.empty[Example])) ~ close ~ description
+  }.map(t => (OnClause.apply _).tupled(t))
+
+  def handler[u: P]: P[Handler] = {
+    P(
+      Keywords.handler ~/ location ~ identifier ~ is ~
+        ((open ~ undefined(Seq.empty[OnClause]) ~ close) | optionalNestedContent(onClause)) ~
+        description
+    ).map(t => (Handler.apply _).tupled(t))
   }
 
   def entityDefinition[u: P]: P[EntityDefinition] = {

@@ -57,7 +57,6 @@ Missing: everything.riddl(35:38): Enumerator 'Peach' should have a description
 Missing: everything.riddl(13:25): Inlet 'Commands' should have a description
 Error: everything.riddl(72:20): 'Something' was expected to be a command type but is a Entity  instead
 Style: everything.riddl(13:25): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:34)
-Missing: everything.riddl(73:11): When Action should have a description
 Missing: everything.riddl(74:18): Tell Action should have a description
 Missing: everything.riddl(85:15): Set Action should have a description
 Error: everything.riddl(74:62): 'Inebriated' is not defined but should be a message type

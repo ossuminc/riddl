@@ -64,7 +64,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def quotedIdentifier[u: P]: P[String] = {
-    P("'" ~/ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
+    P("'" ~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
   }
 
   def anyIdentifier[u: P]: P[String] = { P(simpleIdentifier | quotedIdentifier) }

@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -41,7 +40,7 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   }
 
   def processor[u: P]: P[Processor] = P(
-    location ~ Keywords.processor ~/ identifier ~ is ~ open ~ processorDefinitions ~ close ~
+    location ~ Keywords.processor ~ identifier ~ is ~ open ~ processorDefinitions ~ close ~
       description
   ).map { case (loc, id, (inlets, outlets, examples), description) =>
     Processor(loc, id, inlets, outlets, examples, description)
@@ -52,17 +51,21 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
       location ~ Keywords.joint ~/ identifier ~ is ~
         ((inletRef ~ Readability.from) | (outletRef ~ Readability.to)) ~/ pipeRef ~ description
     ).map { case (loc, id, streamletRef, pipeRef, desc) =>
-      Joint(loc, id, streamletRef, pipeRef, desc)
+      streamletRef match {
+        case ir: InletRef => InletJoint(loc, id, ir, pipeRef, desc)
+        case or: OutletRef => OutletJoint(loc, id, or, pipeRef, desc)
+      }
     }
   }
 
-  def plantDefinitions[u: P]: P[(Seq[Pipe], Seq[Processor], Seq[Joint])] = {
+  def plantDefinitions[u: P]: P[(Seq[Pipe], Seq[Processor], Seq[InletJoint], Seq[OutletJoint])] = {
     P(pipeDefinition | processor | joint).rep(0).map { seq =>
       val groups = seq.groupBy(_.getClass)
       (
         mapTo[Pipe](groups.get(classOf[Pipe])),
         mapTo[Processor](groups.get(classOf[Processor])),
-        mapTo[Joint](groups.get(classOf[Joint]))
+        mapTo[InletJoint](groups.get(classOf[InletJoint])),
+        mapTo[OutletJoint](groups.get(classOf[OutletJoint])),
       )
     }
   }
@@ -70,11 +73,11 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        (undefined(Seq.empty[Pipe], Seq.empty[Processor], Seq.empty[Joint]) | plantDefinitions) ~
+        (undefined((Seq.empty[Pipe], Seq.empty[Processor],
+          Seq.empty[InletJoint], Seq.empty[OutletJoint])) | plantDefinitions) ~
         close ~ description
-    ).map { case (loc, id, (pipes, processors, joints), addendum) =>
-      Plant(loc, id, pipes, processors, joints, addendum)
+    ).map { case (loc, id, (pipes, processors, inletJoints, outletJoints), addendum) =>
+      Plant(loc, id, pipes, processors, inletJoints, outletJoints, addendum)
     }
   }
-
 }

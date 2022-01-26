@@ -27,6 +27,15 @@ class ParserTest extends ParsingTest {
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
+    "handle missing }" in {
+      val input = "domain foo is {"
+      parseTopLevelDomain(input, _.contents.head) match {
+        case Left(errors) =>
+          errors must not be empty
+          errors.head.msg.contains("Expected one of (") must be(true)
+        case Right(_) => fail("Missing closing brace should make an error")
+      }
+    }
     "allow an empty funky-name domain" in {
       val input = "domain 'foo-fah|roo' is { }"
       parseTopLevelDomain(input, _.contents.head) match {

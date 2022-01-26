@@ -13,8 +13,8 @@ class HandlerValidatorTest extends ValidatingTest {
                     |entity Hamburger is {
                     |  state HamburgerState = { field1: Number, field2: String }
                     |  handler foo is {
-                    |    on command EntityCommand { set field1 to 445 }
-                    |    on event EntityEvent { set field1 to 678 }
+                    |    on command EntityCommand { example only { then set field1 to 445 } }
+                    |    on event EntityEvent { example only { then set field1 to 678 } }
                     |  }
                     |}
                     |}
@@ -35,18 +35,19 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause references a message of the wrong type" in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on event Incoming { set field1 to 678 }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  state HamburgerState = { field1: Number }
+          |  handler foo is {
+          |    on event Incoming { example only { then set field1 to 678 } }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
@@ -57,18 +58,19 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause doesn't reference a message type" in {
-      val input = """domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  type Incoming is String
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on event Incoming { set field1 to 678 }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type Incoming is String
+          |  state HamburgerState = { field1: Number }
+          |  handler foo is {
+          |    on event Incoming { example only { then set field1 to 678 } }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
@@ -79,18 +81,21 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause references a state field that does not exist" in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on command EntityCommand { set nonExistingField to 123 }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  state HamburgerState = { field1: Number }
+          |  handler foo is {
+          |    on command EntityCommand { example only {
+          |      then set nonExistingField to 123
+          |    } }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,

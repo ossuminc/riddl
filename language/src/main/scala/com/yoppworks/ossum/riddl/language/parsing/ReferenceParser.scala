@@ -66,11 +66,11 @@ trait ReferenceParser extends CommonParser {
   }
 
   def outletRef[u: P]: P[OutletRef] = {
-    P(location ~ maybe(Keywords.outlet) ~ pathIdentifier)
+    P(location ~ Keywords.outlet ~ pathIdentifier)
       .map(tpl => (OutletRef.apply _).tupled(tpl))
   }
 
   def inletRef[u: P]: P[InletRef] = {
-    P(location ~ maybe(Keywords.inlet) ~ pathIdentifier).map(tpl => (InletRef.apply _).tupled(tpl))
+    P(location ~ Keywords.inlet ~ pathIdentifier).map(tpl => (InletRef.apply _).tupled(tpl))
   }
 }

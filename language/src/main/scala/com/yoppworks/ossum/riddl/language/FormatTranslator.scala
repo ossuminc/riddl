@@ -521,9 +521,8 @@ class FormatTranslator extends Translator[FormatConfig] {
     ): FormatState = {
       val s = state.openDef(handler)
       handler.clauses.foldLeft(s) { (s, clause) =>
-        val s2 = s.addIndent("on ").emitMessageRef(clause.msg).add(" {\n").indent
-        clause.actions.foldLeft(s2) { (s, action) => s.addLine(action.format) }.outdent
-          .addIndent("}\n")
+        s.addIndent("on ").emitMessageRef(clause.msg).add(" {\n").indent
+          .emitExamples(clause.examples).outdent.addIndent("}\n")
       }.closeDef(handler)
     }
 
@@ -542,11 +541,13 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def doJoint(state: FormatState, container: Plant, joint: Joint): FormatState = {
       val s = state.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
-      joint.streamletRef match {
-        case InletRef(_, id) => s.addIndent(s"inlet ${id.format} from")
-            .add(s" pipe ${joint.pipe.id.format}\n")
-        case OutletRef(_, id) => s.addIndent(s"outlet ${id.format} to")
-            .add(s" pipe ${joint.pipe.id.format}\n")
+      joint match {
+        case InletJoint(_, _, inletRef, pipeRef, _) =>
+          s.addIndent(s"inlet ${inletRef.id.format} from")
+            .add(s" pipe ${pipeRef.id.format}\n")
+        case OutletJoint(_, _, outletRef, pipeRef, _) =>
+          s.addIndent(s"outlet ${outletRef.id.format} to")
+            .add(s" pipe ${pipeRef.id.format}\n")
       }
     }
 

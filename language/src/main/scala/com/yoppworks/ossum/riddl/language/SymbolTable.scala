@@ -110,7 +110,7 @@ case class SymbolTable(container: Container[Definition]) {
   }
 
   def lookup[D <: Definition: ClassTag](
-    ref: Reference
+                                         ref: Reference[D]
   ): List[D] = { lookup[D](ref.id.value) }
 
   def lookup[D <: Definition: ClassTag](

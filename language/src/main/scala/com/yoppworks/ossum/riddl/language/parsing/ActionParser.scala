@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation, Readability}
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -58,21 +58,10 @@ trait ActionParser extends ReferenceParser with ConditionParser with ExpressionP
       .map { tpl => (AskAction.apply _).tupled(tpl) }
   }
 
-  def whenAction[u: P]: P[WhenAction] = {
-    P(
-      location ~ Keywords.when ~/ condition ~ Keywords.then_.? ~ Punctuation.curlyOpen ~/
-        anyAction.rep ~ Punctuation.curlyClose ~
-        (Keywords.else_ ~ Punctuation.curlyOpen ~ anyAction.rep ~ Punctuation.curlyClose).?.map {
-          case Some(actions) => actions;
-          case None => Seq.empty[Action]
-        } ~ description
-    ).map(t => (WhenAction.apply _).tupled(t))
-  }
-
   def anyAction[u: P]: P[Action] = {
     P(
       arbitraryAction | setAction | morphAction | becomeAction | publishAction |
-        tellAction | askAction | whenAction
+        tellAction | askAction
     )
   }
 }

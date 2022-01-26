@@ -68,7 +68,8 @@ object Folding {
         result = plant.processors.foldLeft(result) { (next, proc) =>
           foldEachDefinition(plant, proc, next)(f)
         }
-        plant.joints.foldLeft(result) { (next, joint) => f(plant, joint, next) }
+        plant.inJoints.foldLeft(result) { (next, joint) => f(plant, joint, next) }
+        plant.outJoints.foldLeft(result) { (next, joint) => f(plant, joint, next) }
       case processor: Processor =>
         result = f(parent, processor, result)
         processor.contents.foldLeft(result) { (next, proc) => f(processor, proc, next) }

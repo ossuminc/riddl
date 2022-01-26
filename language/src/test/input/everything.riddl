@@ -70,8 +70,10 @@ domain Everything is {
 
       handler foo is {
         on command Something {
-          when misc() then {
-            tell entity Everything.full.SomeOtherThing  to event Inebriated()
+          example only {
+            given "Something arrives "
+            when misc()
+            then tell entity Everything.full.SomeOtherThing  to event Inebriated()
           }
         }
       }
@@ -81,7 +83,11 @@ domain Everything is {
       type ItHappened is event { field: String }
       state otherThingState is { field: String }
       handler fee is {
-        on event ItHappened { set SomeOtherThing.otherThingState.field to ItHappened.field }
+        on event ItHappened {
+          example only {
+            then set SomeOtherThing.otherThingState.field to ItHappened.field
+          }
+        }
       }
     }
   }
