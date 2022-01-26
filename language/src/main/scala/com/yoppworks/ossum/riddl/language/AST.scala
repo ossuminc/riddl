@@ -38,7 +38,7 @@ object AST {
 
   case class RiddlOption(loc: Location, name: String) extends RiddlValue
 
-  case class LiteralString(loc: Location, s: String) extends Expression {
+  case class LiteralString(loc: Location, s: String) extends Condition {
     override def format = s"\"$s\""
 
     override def isEmpty: Boolean = s.isEmpty
@@ -411,34 +411,16 @@ object AST {
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
   sealed trait Expression extends RiddlValue
 
-  sealed trait ArithmeticOperator extends Expression
-
-  case class Plus(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
-    override def format: String = "+(" + op1.format + ", " + op2.format + ")"
+  case class ArbitraryExpression(loc: Location, what: LiteralString) extends Expression {
+    override def format: String = what.format
   }
 
-  case class Minus(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
-    override def format: String = "-(" + op1.format + ", " + op2.format + ")"
+  case class ArithmeticOperator(
+                                 loc: Location, operator: String, operands: Seq[Expression]) extends Expression {
+    override def format: String = operator + operands.mkString("(", ",", ")")
   }
 
-  case class Multiply(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
-    override def format: String = "*(" + op1.format + ", " + op2.format + ")"
-  }
-
-  case class Divide(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
-    override def format: String = "/(" + op1.format + ", " + op2.format + ")"
-  }
-
-  case class Modulus(loc: Location, op1: Expression, op2: Expression) extends ArithmeticOperator {
-    override def format: String = "%(" + op1.format + ", " + op2.format + ")"
-  }
-
-  case class AbstractBinary(loc: Location, operator: String, op1: Expression, op2: Expression)
-    extends ArithmeticOperator {
-    override def format: String = operator + "(" + op1.format + ", " + op2.format + ")"
-  }
-
-  case class FieldExpression(loc: Location, path: PathIdentifier) extends Expression {
+  case class ValueExpression(loc: Location, path: PathIdentifier) extends Condition {
     override def format: String = path.format
   }
 
@@ -454,12 +436,8 @@ object AST {
   }
 
   case class FunctionCallExpression(loc: Location, name: PathIdentifier, arguments: ArgList)
-    extends Expression {
+    extends Expression with Condition {
     override def format: String = name.format + arguments.format
-  }
-
-  case class ArbitraryExpression(loc: Location, operator: String, arguments: ArgList) extends Expression {
-    override def format: String = operator + arguments.format
   }
 
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression {
@@ -472,7 +450,7 @@ object AST {
 
   ///////////////////////////////////////////////////////////// Conditional Expressions
 
-  sealed trait Condition extends RiddlValue
+  sealed trait Condition extends Expression
 
   case class True(loc: Location) extends Condition {
     override def format: String = "true"
@@ -484,16 +462,7 @@ object AST {
 
   case class ArbitraryCondition(cond: LiteralString) extends Condition {
     override def loc: Location = cond.loc
-
     override def format: String = cond.format
-  }
-
-  case class FunctionCallCondition(
-    loc: Location,
-    id: PathIdentifier,
-    args: ArgList
-  ) extends Condition {
-    override def format: String = id.format + args.format
   }
 
   sealed trait Comparator extends RiddlNode
@@ -523,23 +492,15 @@ object AST {
   }
 
   case class Comparison(
-    loc: Location,
-    op: Comparator,
-    cond1: Condition,
-    cond2: Condition) extends BinaryCondition {
+                         loc: Location,
+                         op: Comparator,
+                         expr1: Expression,
+                         expr2: Expression) extends Condition {
     override def format: String =
-      op.format + super.format
+      op.format + Seq(expr1.format, expr2.format).mkString("(", ",", ")")
   }
 
-  case class ReferenceCondition(loc: Location, ref: PathIdentifier) extends Condition {
-    override def format: String = ref.format
-  }
-
-  abstract class UnaryCondition extends Condition {
-    def cond1: Condition
-  }
-
-  case class NotCondition(loc: Location, cond1: Condition) extends UnaryCondition {
+  case class NotCondition(loc: Location, cond1: Condition) extends Condition {
     override def format: String = "!(" + cond1 + ")"
   }
 
@@ -550,7 +511,6 @@ object AST {
 
     override def format: String =
       Seq(cond1.format, cond2.format).mkString("(", ",", ")")
-
   }
 
   case class AndCondition(loc: Location, cond1: Condition, cond2: Condition) extends

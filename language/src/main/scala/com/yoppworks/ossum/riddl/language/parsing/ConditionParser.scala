@@ -30,7 +30,7 @@ trait ConditionParser extends ExpressionParser {
 
   def comparisonCondition[u: P]: P[Comparison] = {
     P(
-      location ~ comparator ~ Punctuation.roundOpen ~/ condition ~ Punctuation.comma ~ condition ~
+      location ~ comparator ~ Punctuation.roundOpen ~/ expression ~ Punctuation.comma ~ expression ~
         Punctuation.roundClose./
     ).map { x => (Comparison.apply _).tupled(x) }
   }
@@ -62,20 +62,12 @@ trait ConditionParser extends ExpressionParser {
     P(Punctuation.roundOpen ~/ condition ~ Punctuation.roundClose./)
   }
 
-  def callCondition[u: P]: P[FunctionCallCondition] = {
-    P(location ~ pathIdentifier ~ argList).map(tpl => (FunctionCallCondition.apply _).tupled(tpl))
-  }
-
   def terminalExpressions[u: P]: P[Condition] = {
     P(trueCondition | falseCondition | arbitraryCondition)
   }
 
   def logicalExpressions[u: P]: P[Condition] = {
-    P(orCondition | andCondition | notCondition | comparisonCondition | callCondition)
-  }
-
-  def referenceCondition[u: P]: P[ReferenceCondition] = {
-    P(location ~ pathIdentifier).map { case (loc, pid) => ReferenceCondition(loc, pid) }
+    P(orCondition | andCondition | notCondition | comparisonCondition | functionCallExpression)
   }
 
   def undefinedCondition[u: P]: P[UndefinedCondition] = {
@@ -83,7 +75,7 @@ trait ConditionParser extends ExpressionParser {
   }
 
   def condition[u: P]: P[Condition] = {
-    P(terminalExpressions | groupedCondition | logicalExpressions | referenceCondition |
+    P(terminalExpressions | groupedCondition | logicalExpressions | valueExpression |
       undefinedCondition)
   }
 }

@@ -11,7 +11,7 @@ import scala.collection.immutable.ListMap
 trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def arguments[u: P]: P[ListMap[Identifier, Expression]] = {
-    P(identifier ~ Punctuation.equals ~ expression).rep(0, ",").map {
+    P(identifier ~ Punctuation.equals ~ expression).rep(min = 0, Punctuation.comma).map {
       s: Seq[(Identifier, Expression)] =>
         s.foldLeft(ListMap.empty[Identifier, Expression]) { case (b, (id, exp)) =>
           b + (id -> exp)
@@ -31,8 +31,8 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     }
   }
 
-  def fieldExpression[u: P]: P[FieldExpression] = {
-    P(location ~ pathIdentifier).map(tpl => (FieldExpression.apply _).tupled(tpl))
+  def valueExpression[u: P]: P[ValueExpression] = {
+    P(location ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
   }
 
   def groupExpression[u: P]: P[GroupExpression] = {
@@ -49,23 +49,17 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     P(
       location ~ (Operators.plus.! | Operators.minus.! | Operators.times.! |
         Operators.div.! | Operators.mod.! | operatorName) ~
-        Punctuation.roundOpen ~ expression ~ Punctuation.comma ~ expression ~ Punctuation.roundClose
-    ).map {
-      case (loc, s, op1, op2) if s == Operators.plus => Plus(loc, op1, op2)
-      case (loc, s, op1, op2) if s == Operators.minus => Minus(loc, op1, op2)
-      case (loc, s, op1, op2) if s == Operators.times => Multiply(loc, op1, op2)
-      case (loc, s, op1, op2) if s == Operators.div => Divide(loc, op1, op2)
-      case (loc, s, op1, op2) if s == Operators.mod => Modulus(loc, op1, op2)
-      case (loc, s, op1, op2) => AbstractBinary(loc, s, op1, op2)
-    }
+        Punctuation.roundOpen ~ expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
+    ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
   def arbitraryExpression[u: P]: P[ArbitraryExpression] = {
-    P(location ~ operatorName ~ argList).map(tpl => (ArbitraryExpression.apply _).tupled(tpl))
+    P(location ~ literalString).map(tpl => (ArbitraryExpression.apply _).tupled(tpl))
   }
 
+
   def expression[u: P]: P[Expression] = {
-    arithmeticOperator | arbitraryExpression | functionCallExpression | fieldExpression
+    arithmeticOperator | functionCallExpression | valueExpression | arbitraryExpression
       | groupExpression | literalDecimal | literalInteger
   }
 }

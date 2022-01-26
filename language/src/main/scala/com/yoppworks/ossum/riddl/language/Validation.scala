@@ -581,40 +581,21 @@ object Validation {
       }
     }
 
-    def checkCondition(@unused condition: Condition): ValidationState = {
-      condition match {
-        case FunctionCallCondition(loc, pathId, args) =>
-          checkFunctionCall(loc, pathId, args)
-        case ReferenceCondition(_, ref) =>
-          checkPathRef[Field](ref)()
-        case _ =>
-          this
-      }
-    }
-
-    def checkExpression(@unused expression: Expression): ValidationState = {
+    def checkExpression(expression: Expression): ValidationState = {
       expression match {
-        case FieldExpression(_, path) =>
+        case ValueExpression(_, path) =>
           checkPathRef[Field](path)()
         case GroupExpression(_, expr) =>
           checkExpression(expr)
         case FunctionCallExpression(loc, pathId, arguments) =>
           checkFunctionCall(loc, pathId, arguments)
-        case Plus(_, op1, op2) =>
-          checkExpression(op1).checkExpression(op2)
-        case Minus(_, op1, op2) =>
-          checkExpression(op1).checkExpression(op2)
-        case Multiply(_, op1, op2) =>
-          checkExpression(op1).checkExpression(op2)
-        case Divide(_, op1, op2) =>
-          checkExpression(op1).checkExpression(op2)
-        case Modulus(_, op1, op2) =>
-          checkExpression(op1).checkExpression(op2)
-        case AbstractBinary(loc, op, op1, op2) =>
-          check(op.nonEmpty, "Operator is empty in abstract binary operator", Error, loc)
-            .checkExpression(op1).checkExpression(op2)
-        case _ =>
-          this
+        case ArithmeticOperator(loc, op, operands) =>
+          val s1 = check(op.nonEmpty, "Operator is empty in abstract binary operator", Error, loc)
+          operands.foldLeft(s1) { (st, operand) => st.checkExpression(operand) }
+        case Comparison(_, _, arg1, arg2) =>
+          checkExpression(arg1).checkExpression(arg2)
+        case _: Expression =>
+          this // everything else doesn't need validation
       }
     }
 
@@ -804,7 +785,7 @@ object Validation {
           state.check(what.nonEmpty,
             "arbitrary action is empty so specifies nothing", MissingWarning, loc)
         case WhenAction(_, condition, th, el, _) =>
-          el.foldLeft(th.foldLeft(state.checkCondition(condition)) { (s, action) =>
+          el.foldLeft(th.foldLeft(state.checkExpression(condition)) { (s, action) =>
             checkOnClauseAction(s, parent, action)
           }) { (s, action) =>
             checkOnClauseAction(s, parent, action)
@@ -911,7 +892,7 @@ object Validation {
     ): ValidationState = {
       state.checkDefinition(container, invariant)
         .checkNonEmptyValue(invariant.expression, "Condition", invariant, MissingWarning)
-        .checkCondition(invariant.expression)
+        .checkExpression(invariant.expression)
         .checkDescription(invariant)
     }
 
