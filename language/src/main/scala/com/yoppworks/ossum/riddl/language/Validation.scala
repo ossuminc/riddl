@@ -551,8 +551,36 @@ object Validation {
       this
     }
 
-    def checkAssignment(loc: Location, to: TypeExpression, from: TypeExpression): ValidationState
+    def getFieldType(path: PathIdentifier): Option[TypeExpression] = {
+      val results = symbolTable.lookup[Definition](path.value)
+      if (results.size == 1) {
+        results.head match {
+          case f: Field =>
+            Some(f.typeEx)
+          case t: Type =>
+            Some(t.typ)
+          case _ =>
+            None
+        }
+      } else {
+        None
+      }
+    }
+
+
+    def getExpressionType(expr: Expression): Option[TypeExpression] =
+      expr match {
+        case x: LiteralInteger => Number
+      }
+
+    def checkAssignment(loc: Location, to: PathIdentifier, from: Expression): ValidationState
     = {
+      getFieldType(to) match {
+        case Some(typeExpression) =>
+          typeExpression match {
+
+          }
+      }
       check(to.getClass == from.getClass,
         s"incompatible assignment of ${AST.kind(from)} to ${AST.kind(to)}", Error, loc)
     }
@@ -704,6 +732,7 @@ object Validation {
           state
             .checkPathRef[Field](path)()
             .checkExpression(value)
+            .checkAssignment(state.getFieldType(path), value)
         case PublishAction(_, msg, pipeRef, _) =>
           state
             .checkMessageConstructor(msg)

@@ -266,13 +266,11 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitCondition(@unused condition: Condition): FormatState = {
-      // TODO: write this
-      this
+      this.add(condition.format)
     }
 
     def emitAction(@unused action: Action): FormatState = {
-      // TODO: write this
-      this
+      this.add(action.format)
     }
 
     def emitGherkinStrings(strings: Seq[LiteralString]): FormatState = {

@@ -474,58 +474,94 @@ object AST {
 
   sealed trait Condition extends RiddlValue
 
-  case class True(loc: Location) extends Condition
+  case class True(loc: Location) extends Condition {
+    override def format: String = "true"
+  }
 
-  case class False(loc: Location) extends Condition
+  case class False(loc: Location) extends Condition {
+    override def format: String = "false"
+  }
 
   case class ArbitraryCondition(cond: LiteralString) extends Condition {
     override def loc: Location = cond.loc
+
+    override def format: String = cond.format
   }
 
   case class FunctionCallCondition(
-                                    loc: Location,
-                                    id: PathIdentifier,
-                                    args: ArgList
-                                  ) extends Condition
+    loc: Location,
+    id: PathIdentifier,
+    args: ArgList
+  ) extends Condition {
+    override def format: String = id.format + args.format
+  }
 
   sealed trait Comparator extends RiddlNode
 
-  final case object lt extends Comparator
+  final case object lt extends Comparator {
+    override def format: String = "<"
+  }
 
-  final case object gt extends Comparator
+  final case object gt extends Comparator {
+    override def format: String = ">"
+  }
 
-  final case object le extends Comparator
+  final case object le extends Comparator {
+    override def format: String = "<="
+  }
 
-  final case object ge extends Comparator
+  final case object ge extends Comparator {
+    override def format: String = ">="
+  }
 
-  final case object eq extends Comparator
+  final case object eq extends Comparator {
+    override def format: String = "=="
+  }
 
-  final case object ne extends Comparator
+  final case object ne extends Comparator {
+    override def format: String = "!="
+  }
 
   case class Comparison(
-                         loc: Location,
-                         op: Comparator,
-                         left: Condition,
-                         right: Condition)
-    extends Condition
+    loc: Location,
+    op: Comparator,
+    cond1: Condition,
+    cond2: Condition) extends BinaryCondition {
+    override def format: String =
+      op.format + super.format
+  }
 
-  case class ReferenceCondition(loc: Location, ref: PathIdentifier) extends Condition
+  case class ReferenceCondition(loc: Location, ref: PathIdentifier) extends Condition {
+    override def format: String = ref.format
+  }
 
   abstract class UnaryCondition extends Condition {
     def cond1: Condition
   }
 
-  case class NotCondition(loc: Location, cond1: Condition) extends UnaryCondition
+  case class NotCondition(loc: Location, cond1: Condition) extends UnaryCondition {
+    override def format: String = "!(" + cond1 + ")"
+  }
 
   abstract class BinaryCondition extends Condition {
     def cond1: Condition
 
     def cond2: Condition
+
+    override def format: String =
+      Seq(cond1.format, cond2.format).mkString("(", ",", ")")
+
   }
 
-  case class AndCondition(loc: Location, cond1: Condition, cond2: Condition) extends BinaryCondition
+  case class AndCondition(loc: Location, cond1: Condition, cond2: Condition) extends
+    BinaryCondition {
+    override def format: String = "and" + super.format
+  }
 
-  case class OrCondition(loc: Location, cond1: Condition, cond2: Condition) extends BinaryCondition
+  case class OrCondition(loc: Location, cond1: Condition, cond2: Condition) extends
+    BinaryCondition {
+    override def format: String = "or" + super.format
+  }
 
   ///////////////////////////////////////////////////////////// Actions
 
@@ -538,8 +574,11 @@ object AST {
    * @param what        The action to take (emitted as pseudo-code)
    * @param description An optional description of the action
    */
-  case class ArbitraryAction(loc: Location, what: LiteralString,
-                             description: Option[Description]) extends Action
+  case class ArbitraryAction(
+    loc: Location, what: LiteralString,
+    description: Option[Description]) extends Action {
+    override def format: String = what.format
+  }
 
   /** An action whose behavior is to set the value of a state field to some expression
    *
@@ -570,7 +609,7 @@ object AST {
       if (args.nonEmpty) {
         args.format
       } else {
-        ""
+        "()"
       }
     }
   }
