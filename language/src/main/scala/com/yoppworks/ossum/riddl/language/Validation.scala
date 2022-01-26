@@ -315,7 +315,7 @@ object Validation {
 
     def checkSymbolLookup[DT <: Definition : ClassTag](symbol: Seq[String])
                                                       (checkEmpty: () => ValidationState)
-                                                      (checkSingle: (DT) => ValidationState)
+                                                      (checkSingle: DT => ValidationState)
                                                       (checkMulti: (DT, SymbolTable#LookupResult[DT]) => ValidationState
                                                       ): ValidationState = {
       symbolTable.lookupSymbol[DT](symbol) match {
@@ -432,17 +432,32 @@ object Validation {
     }
 
     def checkSequence[A](
-      elements: Seq[A]
-    )(fold: (ValidationState, A) => ValidationState
-    ): ValidationState = elements.foldLeft(this) { case (next, element) => fold(next, element) }
+                          elements: Seq[A]
+                        )(fold: (ValidationState, A) => ValidationState
+                        ): ValidationState = elements.foldLeft(this) { case (next, element) => fold(next, element) }
+
+    def checkNonEmptyValue(
+                            value: RiddlValue,
+                            name: String,
+                            thing: Definition,
+                            kind: ValidationMessageKind = Error,
+                            required: Boolean = false
+                          ): ValidationState = {
+      check(
+        value.nonEmpty,
+        message = s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
+        kind,
+        thing.loc
+      )
+    }
 
     def checkNonEmpty(
-      list: Seq[?],
-      name: String,
-      thing: Definition,
-      kind: ValidationMessageKind = Error,
-      required: Boolean = false
-    ): ValidationState = {
+                       list: Seq[?],
+                       name: String,
+                       thing: Definition,
+                       kind: ValidationMessageKind = Error,
+                       required: Boolean = false
+                     ): ValidationState = {
       check(
         list.nonEmpty,
         message = s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
@@ -541,14 +556,66 @@ object Validation {
       examples.foldLeft(this) { (next, example) => next.checkExample(example) }
     }
 
+    def checkFunctionCall(loc: Location, pathId: PathIdentifier, args: ArgList): ValidationState = {
+      checkPathRef[Function](pathId) { (state, foundClass, id, defClass, defn, optN) => {
+        val s = defaultSingleMatchValidationFunction(state, foundClass, id, defClass, defn, optN)
+        defn match {
+          case Function(_, fid, Some(Aggregation(_, fields)), _, _, _) =>
+            val paramNames = fields.map(_.id.value)
+            val argNames = args.args.keys.map(_.value).toSeq
+            val s1 = s.check(argNames.size == paramNames.size,
+              s"Wrong number of arguments for ${
+                fid.format
+              }. Expected ${paramNames.size}, got ${argNames.size}", Error, loc)
+            val missing = paramNames.filterNot(argNames.contains(_))
+            val unexpected = argNames.filterNot(paramNames.contains(_))
+            val s2 = s1.check(missing.isEmpty,
+              s"Missing arguments: ${missing.mkString(", ")}", Error, loc)
+            s2.check(unexpected.isEmpty,
+              s"Arguments do not correspond to parameters; ${unexpected.mkString(",")}",
+              Error, loc)
+          case _ =>
+            s
+        }
+      }
+      }
+    }
+
     def checkCondition(@unused condition: Condition): ValidationState = {
-      // TODO: check conditions
-      this
+      condition match {
+        case FunctionCallCondition(loc, pathId, args) =>
+          checkFunctionCall(loc, pathId, args)
+        case ReferenceCondition(_, ref) =>
+          checkPathRef[Field](ref)()
+        case _ =>
+          this
+      }
     }
 
     def checkExpression(@unused expression: Expression): ValidationState = {
-      // TODO: check expressions
-      this
+      expression match {
+        case FieldExpression(_, path) =>
+          checkPathRef[Field](path)()
+        case GroupExpression(_, expr) =>
+          checkExpression(expr)
+        case FunctionCallExpression(loc, pathId, arguments) =>
+          checkFunctionCall(loc, pathId, arguments)
+        case Plus(_, op1, op2) =>
+          checkExpression(op1).checkExpression(op2)
+        case Minus(_, op1, op2) =>
+          checkExpression(op1).checkExpression(op2)
+        case Multiply(_, op1, op2) =>
+          checkExpression(op1).checkExpression(op2)
+        case Divide(_, op1, op2) =>
+          checkExpression(op1).checkExpression(op2)
+        case Modulus(_, op1, op2) =>
+          checkExpression(op1).checkExpression(op2)
+        case AbstractBinary(loc, op, op1, op2) =>
+          check(op.nonEmpty, "Operator is empty in abstract binary operator", Error, loc)
+            .checkExpression(op1).checkExpression(op2)
+        case _ =>
+          this
+      }
     }
 
     def getFieldType(path: PathIdentifier): Option[TypeExpression] = {
@@ -556,9 +623,9 @@ object Validation {
       if (results.size == 1) {
         results.head match {
           case f: Field =>
-            Some(f.typeEx)
+            Option(f.typeEx)
           case t: Type =>
-            Some(t.typ)
+            Option(t.typ)
           case _ =>
             None
         }
@@ -567,26 +634,7 @@ object Validation {
       }
     }
 
-
-    def getExpressionType(expr: Expression): Option[TypeExpression] =
-      expr match {
-        case x: LiteralInteger => Number
-      }
-
-    def checkAssignment(loc: Location, to: PathIdentifier, from: Expression): ValidationState
-    = {
-      getFieldType(to) match {
-        case Some(typeExpression) =>
-          typeExpression match {
-
-          }
-      }
-      check(to.getClass == from.getClass,
-        s"incompatible assignment of ${AST.kind(from)} to ${AST.kind(to)}", Error, loc)
-    }
-
     def checkMessageConstructor(messageConstructor: MessageConstructor): ValidationState = {
-      // TODO: check message construction
       val id = messageConstructor.msg.id
       checkSymbolLookup(id.value) { () =>
         add(ValidationMessage(
@@ -732,7 +780,6 @@ object Validation {
           state
             .checkPathRef[Field](path)()
             .checkExpression(value)
-            .checkAssignment(state.getFieldType(path), value)
         case PublishAction(_, msg, pipeRef, _) =>
           state
             .checkMessageConstructor(msg)
@@ -863,7 +910,9 @@ object Validation {
       invariant: Invariant
     ): ValidationState = {
       state.checkDefinition(container, invariant)
-        .checkNonEmpty(invariant.expression, "Expression", invariant).checkDescription(invariant)
+        .checkNonEmptyValue(invariant.expression, "Condition", invariant, MissingWarning)
+        .checkCondition(invariant.expression)
+        .checkDescription(invariant)
     }
 
     override def doAdaptation(

@@ -563,6 +563,12 @@ object AST {
     override def format: String = "or" + super.format
   }
 
+  case class UndefinedCondition(loc: Location) extends Condition {
+    override def format: String = Terminals.Punctuation.undefined
+
+    override def isEmpty: Boolean = true
+  }
+
   ///////////////////////////////////////////////////////////// Actions
 
   sealed trait Action extends DescribedValue
@@ -808,10 +814,10 @@ object AST {
   }
 
   case class Invariant(
-    loc: Location,
-    id: Identifier,
-    expression: Seq[LiteralString] = Seq.empty[LiteralString],
-    description: Option[Description] = None)
+                        loc: Location,
+                        id: Identifier,
+                        expression: Condition,
+                        description: Option[Description] = None)
     extends EntityDefinition {
     override def isEmpty: Boolean = expression.isEmpty
   }

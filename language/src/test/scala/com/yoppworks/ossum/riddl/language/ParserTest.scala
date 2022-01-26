@@ -6,7 +6,7 @@ import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput.*
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 
-  import AST.*
+  import com.yoppworks.ossum.riddl.language.AST.*
 
   "ParserContext" should {
     "throw on underflow" in {
@@ -23,7 +23,7 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.msg mustBe ("Expected one of (\"domain\" | end-of-input)")
+          errors.head.msg mustBe "Expected one of (\"domain\" | end-of-input)"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
@@ -155,11 +155,11 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Invariant(
-            1 -> 11,
-            Identifier(1 -> 11, "large"),
-            Seq(LiteralString(1 -> 22, "x is greater or equal to 10")),
-            None
-          )
+          1 -> 11,
+          Identifier(1 -> 11, "large"),
+          ArbitraryCondition(LiteralString(1 -> 22, "x is greater or equal to 10")),
+          None
+        )
       }
     }
     "allow entity definitions in contexts" in {

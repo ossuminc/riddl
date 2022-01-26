@@ -86,10 +86,12 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def add(strings: Seq[LiteralString]): FormatState = {
-      if (strings.length > 1) {
+      if (strings.sizeIs > 1) {
         lines.append("\n")
         strings.foreach(s => lines.append(s"""$spc"${s.s}"$nl"""))
-      } else { strings.foreach(s => lines.append(s""" "${s.s}" """)) }
+      } else {
+        strings.foreach(s => lines.append(s""" "${s.s}" """))
+      }
       this
     }
 
@@ -168,7 +170,7 @@ class FormatTranslator extends Translator[FormatConfig] {
     def emitEnumeration(enumeration: AST.Enumeration): FormatState = {
       val head = this.add(s"any of {\n").indent
       val enumerators: String = enumeration.enumerators.map { enumerator =>
-        enumerator.id.value + enumerator.enumVal.map("(" + _.format + ")").getOrElse("") +
+        enumerator.id.value + enumerator.enumVal.fold("")("(" + _.format + ")") +
           mkEnumeratorDescription(enumerator.description)
       }.mkString(s"$spc", s",\n$spc", s"\n")
       head.add(enumerators).outdent.addLine("}")
@@ -186,8 +188,10 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitFields(of: Seq[Field]): FormatState = {
-      if (of.isEmpty) { this.add("{}") }
-      else if (of.size == 1) {
+      if (of.isEmpty) {
+        this.add("{}")
+      }
+      else if (of.sizeIs == 1) {
         val f: Field = of.head
         add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
       } else {
@@ -211,7 +215,9 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitPattern(pattern: AST.Pattern): FormatState = {
       val line =
-        if (pattern.pattern.size == 1) { "Pattern(\"" + pattern.pattern.head.s + "\"" + s") " }
+        if (pattern.pattern.sizeIs == 1) {
+          "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
+        }
         else {
           s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
           s"\n) "
@@ -241,7 +247,7 @@ class FormatTranslator extends Translator[FormatConfig] {
         case ll: LatLong => this.add(ll.kind)
         case n: Nothing => this.add(n.kind)
         case TypeRef(_, id) => this.add(id.format)
-        case URL(_, scheme) => this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
+        case URL(_, scheme) => this.add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
@@ -469,10 +475,12 @@ class FormatTranslator extends Translator[FormatConfig] {
     ): FormatState = {state.emitExample(example)}
 
     override def doInvariant(
-      state: FormatState,
-      container: Entity,
-      invariant: Invariant
-    ): FormatState = {state}
+                              state: FormatState,
+                              container: Entity,
+                              invariant: Invariant
+                            ): FormatState = {
+      state.openDef(invariant).closeDef(invariant, withBrace = false)
+    }
 
     override def openState(state: FormatState, container: Entity, s: State): FormatState = {
       state.openDef(s, withBrace = false).emitFields(s.typeEx.fields)

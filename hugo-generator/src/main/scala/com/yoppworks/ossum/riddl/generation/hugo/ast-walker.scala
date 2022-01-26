@@ -100,7 +100,7 @@ object LukeAstWalker {
 
     val invariants = node.invariants.map { astInvariant =>
       HugoEntity
-        .Invariant(resolveName(astInvariant.id.value), astInvariant.expression.map(_.s).toList)
+        .Invariant(resolveName(astInvariant.id.value), List(astInvariant.expression.format))
     }
 
     HugoEntity(

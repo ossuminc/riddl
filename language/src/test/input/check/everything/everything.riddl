@@ -78,11 +78,11 @@ domain Everything is {
     }
 
     entity SomeOtherThing is {
-      type ItHappened is event { field: String }
-      state otherThingState is { field: String }
+      type ItHappened is event { what: String }
+      state otherThingState is { field: String described as "arbitrary field"}
       handler fee is {
         on event ItHappened {
-          set Everything.full.SomeOtherThing.otherThingState.field to ItHappened.field
+          set Everything.full.SomeOtherThing.otherThingState.field to ItHappened.what
         }
       }
     }

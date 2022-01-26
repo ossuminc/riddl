@@ -78,7 +78,12 @@ trait ConditionParser extends ExpressionParser {
     P(location ~ pathIdentifier).map { case (loc, pid) => ReferenceCondition(loc, pid) }
   }
 
+  def undefinedCondition[u: P]: P[UndefinedCondition] = {
+    P(location ~ Punctuation.undefined).map(UndefinedCondition)
+  }
+
   def condition[u: P]: P[Condition] = {
-    P(terminalExpressions | groupedCondition | logicalExpressions | referenceCondition)
+    P(terminalExpressions | groupedCondition | logicalExpressions | referenceCondition |
+      undefinedCondition)
   }
 }

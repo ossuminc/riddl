@@ -42,8 +42,7 @@ trait EntityParser
     */
   def invariant[u: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
-        (undefined(Seq.empty[LiteralString]) | docBlock) ~ close ~ description
+      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~ condition ~ close ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
