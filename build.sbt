@@ -84,14 +84,15 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(H
 
 lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
   .enablePlugins(JavaAppPackaging).settings(
-    name := "riddlc",
-    mainClass := Some("com.yoppworks.ossum.riddl.RIDDLC"),
-    scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.cats_core, Dep.scopt, Dep.config),
-    buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.yoppworks.ossum.riddl",
-    buildInfoUsePackageAsPath := true
-  ).dependsOn(language, `hugo-generator`)
+  name := "riddlc",
+  mainClass := Some("com.yoppworks.ossum.riddl.RIDDLC"),
+  scalacOptions := scala2_13_Options,
+  libraryDependencies ++= Seq(Dep.cats_core, Dep.scopt, Dep.config),
+  maintainer := "reid.spencer@yoppworks.com",
+  buildInfoObject := "BuildInfo",
+  buildInfoPackage := "com.yoppworks.ossum.riddl",
+  buildInfoUsePackageAsPath := true
+).dependsOn(language, `hugo-generator`)
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   .configure(C.withCoverage).settings(
