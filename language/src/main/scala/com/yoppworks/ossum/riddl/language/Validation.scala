@@ -4,6 +4,7 @@ import com.yoppworks.ossum.riddl.language.AST.*
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
+import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 
 /** Validates an AST */
@@ -18,7 +19,7 @@ object Validation {
     val folding = new ValidationFolding
     val s1 = folding.foldLeft(root, root, state)
     val result = checkOverloads(symTab, s1)
-    result.msgs.sortBy(_.loc)
+    result.messages.sortBy(_.loc).toSeq
   }
 
   def checkOverloads(symbolTable: SymbolTable, state: ValidationState): ValidationState = {
@@ -125,14 +126,18 @@ object Validation {
 
   case class ValidationState(
     symbolTable: SymbolTable,
-    options: ValidationOptions = ValidationOptions.Default,
-    msgs: ValidationMessages = NoValidationMessages)
+    options: ValidationOptions = ValidationOptions.Default)
       extends Folding.State[ValidationState] {
+
+    private val msgs: ListBuffer[ValidationMessage] = ListBuffer.empty[ValidationMessage]
+
+    def messages: ValidationMessages = msgs.toList
+
     def step(f: ValidationState => ValidationState): ValidationState = f(this)
 
     def parentOf(
       definition: Definition
-    ): Container[Definition] = { symbolTable.parentOf(definition).getOrElse(RootContainer.empty) }
+    ): Container[Definition] = {symbolTable.parentOf(definition).getOrElse(RootContainer.empty)}
 
     def isReportMissingWarnings: Boolean = options.showMissingWarnings
 
@@ -164,18 +169,22 @@ object Validation {
       msg.kind match {
         case StyleWarning =>
           if (isReportStyleWarnings) {
-            this.copy(msgs = msgs :+ msg)
+            msgs += msg
+            this
           } else {
             this
           }
         case MissingWarning =>
           if (isReportMissingWarnings) {
-            this.copy(msgs = msgs :+ msg)
+            msgs += msg
+            this
           }
           else {
             this
           }
-        case _ => this.copy(msgs = msgs :+ msg)
+        case _ =>
+          msgs += msg
+          this
       }
     }
 
@@ -577,7 +586,6 @@ object Validation {
     }
 
     def checkExample(example: Example): ValidationState = {
-      // TODO: Validate examples actions too
       if (example.nonEmpty) {
         this.checkNonEmpty(example.givens, "Givens", example).step { state: ValidationState =>
           example.givens.foldLeft(state) { (state, givenClause) =>
@@ -613,7 +621,7 @@ object Validation {
     }
 
     def checkFunctionCall(loc: Location, pathId: PathIdentifier, args: ArgList): ValidationState = {
-      checkPathRef[Function](pathId) { (state, foundClass, id, defClass, defn, optN) => {
+      checkPathRef[Function](pathId) { (state, foundClass, id, defClass, defn, optN) =>
         val s = defaultSingleMatchValidationFunction(state, foundClass, id, defClass, defn, optN)
         defn match {
           case Function(_, fid, Some(Aggregation(_, fields)), _, _, _) =>
@@ -633,7 +641,6 @@ object Validation {
           case _ =>
             s
         }
-      }
       }
     }
 

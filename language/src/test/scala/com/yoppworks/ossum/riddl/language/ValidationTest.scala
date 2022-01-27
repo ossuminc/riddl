@@ -36,13 +36,13 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       }
       "checkNonEmpty" in {
         ValidationState(SymbolTable(RootContainer.empty))
-          .checkNonEmpty(Nil, "foo", RootContainer.empty).msgs mustBe List(ValidationMessage(
+          .checkNonEmpty(Nil, "foo", RootContainer.empty).messages mustBe List(ValidationMessage(
           Location(),
           "foo in  '<file root>' should not be empty",
           Validation.Error
         ))
         ValidationState(SymbolTable(RootContainer.empty))
-          .checkNonEmpty(List(1, 2, 3), "foo", RootContainer.empty).msgs mustBe Nil
+          .checkNonEmpty(List(1, 2, 3), "foo", RootContainer.empty).messages mustBe Nil
       }
       "checkOptions" in {
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
@@ -52,10 +52,10 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
             EntityAggregate(Location())
           ),
           Location()
-        ).msgs mustBe
+        ).messages mustBe
           List(ValidationMessage(Location(), "Options should not be repeated", Validation.Error))
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(List(1, 2, 3), Location())
-          .msgs mustBe Nil
+          .messages mustBe Nil
       }
     }
   }

@@ -17,7 +17,8 @@ case class SymbolTable(container: Container[Definition]) {
 
   val parentage: Parentage = {
     Folding.foldEachDefinition[Parentage](container, container, emptyParentage) {
-      (parent, child, next) => next + (child -> parent)
+      (parent, child, next) =>
+        next + (child -> parent)
     }
   }
 
@@ -29,10 +30,6 @@ case class SymbolTable(container: Container[Definition]) {
   Folding.foldEachDefinition[Unit](container, container, ()) { (parent, child, _) =>
     addToSymTab(child.id.value, child -> parent)
     child match {
-      case e: Entity => e.states.foreach { s: State =>
-        addToSymTab(s.id.value, s -> e)
-        s.typeEx.fields.foreach { f: Field => addToSymTab(f.id.value, f -> s) }
-      }
       case t: Type => t.typ match {
         case e: Enumeration => e.enumerators.foreach { etor =>
           addToSymTab(etor.id.value, etor -> parent)
@@ -43,9 +40,9 @@ case class SymbolTable(container: Container[Definition]) {
         }
         case agg: Aggregation => agg.fields.foreach { fld =>
           addToSymTab(fld.id.value, fld -> parent)
-            }
-          case _ => addToSymTab(t.id.value, t -> parent) // types are definitions too
         }
+        case _ => addToSymTab(t.id.value, t -> parent) // types are definitions too
+      }
       case _ =>
     }
   }

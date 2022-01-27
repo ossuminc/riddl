@@ -56,7 +56,10 @@ object Folding {
       case entity: Entity =>
         result = f(parent, entity, result)
         result = entity.types.foldLeft(result) { (next, typ) => f(entity, typ, next) }
-        result = entity.states.foldLeft(result) { (next, state) => f(entity, state, next) }
+        result = entity.states.foldLeft(result) { (next, state) =>
+          val s = f(entity, state, next)
+          state.typeEx.fields.foldLeft(s) { (next, field: Field) => f(state, field, next) }
+        }
         result = entity.invariants.foldLeft(result) { (next, inv) => f(entity, inv, next) }
         result = entity.handlers.foldLeft(result) { (next, handler) => f(entity, handler, next) }
         entity.functions.foldLeft(result) { (next, feature) =>
@@ -68,7 +71,7 @@ object Folding {
         result = plant.processors.foldLeft(result) { (next, proc) =>
           foldEachDefinition(plant, proc, next)(f)
         }
-        plant.inJoints.foldLeft(result) { (next, joint) => f(plant, joint, next) }
+        result = plant.inJoints.foldLeft(result) { (next, joint) => f(plant, joint, next) }
         plant.outJoints.foldLeft(result) { (next, joint) => f(plant, joint, next) }
       case processor: Processor =>
         result = f(parent, processor, result)

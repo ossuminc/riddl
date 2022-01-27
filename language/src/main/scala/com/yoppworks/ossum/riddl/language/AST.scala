@@ -190,6 +190,7 @@ object AST {
       case _: SetAction => "Set Action"
       case _: PublishAction => "Publish Action"
       case _: TellAction => "Tell Action"
+      case _: ArbitraryAction => "Arbitrary Action"
       case _: OnClause => "On Clause"
       case _ => "Definition"
     }
