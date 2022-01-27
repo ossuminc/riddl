@@ -206,16 +206,37 @@ object AST {
     def identify: String = s"${AST.kind(this)} '${id.format}'"
   }
 
+  /**
+   * Base trait of any definition that is in the content of an adaptor
+   */
   sealed trait AdaptorDefinition extends Definition
 
+  /**
+   * Base trait of any definition that is in the content of a context
+   */
   sealed trait ContextDefinition extends Definition
 
+  /**
+   * Base trait of any definition that is in the content of a domain
+   */
   sealed trait DomainDefinition extends Definition
 
+  /**
+   * Base trait of any definition that is in the content of an entity.
+   */
   sealed trait EntityDefinition extends Definition
 
+  /** Base trait of any definition that is also a ContainerValue
+   *
+   * @tparam CV The kind of definition that is contained by the container
+   */
   sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV]
 
+  /**
+   * The root of the containment hierarchy, corresponding roughly to a level about a file.
+   *
+   * @param domains The sequence of domains contained by the root
+   */
   case class RootContainer(domains: Seq[Domain]) extends Container[Domain] {
 
     def id: Identifier = Identifier((0, 0), "<file root>")
@@ -233,8 +254,17 @@ object AST {
 
   // ////////////////////////////////////////////////////////// TYPES
 
+  /**
+   * Base trait of an expression that defines a type
+   */
   sealed trait TypeExpression extends RiddlValue
 
+  /**
+   * A utility function for getting the kind of a type expression.
+   *
+   * @param te The type expression to examine
+   * @return A string indicating the kind corresponding to te
+   */
   def kind(te: TypeExpression): String = {
     te match {
       case TypeRef(_, id) => s"Reference To ${id.format}"
@@ -255,85 +285,173 @@ object AST {
     }
   }
 
+  /**
+   * Base trait for a type expression that is also a container value
+   */
   sealed trait TypeContainer extends TypeExpression with ContainerValue[Type]
 
+  /**
+   * A reference to a type definition
+   *
+   * @param loc The location in the source where the reference to the type is made
+   * @param id  The path identifier of the reference type
+   */
   case class TypeRef(loc: Location, id: PathIdentifier) extends Reference[Type] with
     TypeExpression {
     override def format: String = s"type ${id.format}"
   }
 
+  /** Base of an enumeration for the four kinds of message types */
   sealed trait MessageKind {
-    lazy val kind: String = this.getClass.getSimpleName.dropRight("Kind".length + 1).toLowerCase
+    def kind: String
   }
 
-  final case object CommandKind extends MessageKind
+  /** An enumerator value for command types */
+  final case object CommandKind extends MessageKind {
+    def kind: String = "command"
+  }
 
-  final case object EventKind extends MessageKind
+  /** An enumerator value for event types */
+  final case object EventKind extends MessageKind {
+    def kind: String = "event"
+  }
 
-  final case object QueryKind extends MessageKind
+  /** An enumerator value for query types */
+  final case object QueryKind extends MessageKind {
+    def kind: String = "query"
+  }
 
-  final case object ResultKind extends MessageKind
+  /** An enumerator value for result types */
+  final case object ResultKind extends MessageKind {
+    def kind: String = "result"
+  }
 
+  /** Base trait for the four kinds of message references */
   sealed trait MessageRef extends Reference[Type] {
     def messageKind: MessageKind
+
+    override def format: String = s"${messageKind.kind} ${id.format}"
   }
 
+  /** A Reference to a command type
+   *
+   * @param loc The location of the reference
+   * @param id  The path identifier to the event type
+   */
   case class CommandRef(loc: Location, id: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = CommandKind
-
-    override def format: String = s"command ${id.format}"
   }
+
+  /** A Reference to an event type
+   *
+   * @param loc The location of the reference
+   * @param id  The path identifier to the event type
+   */
   case class EventRef(loc: Location, id: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = EventKind
-
-    override def format: String = s"event ${id.format}"
   }
+
+  /** A reference to a query type
+   *
+   * @param loc The location of the reference
+   * @param id  The path identifier to the query type
+   */
   case class QueryRef(loc: Location, id: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = QueryKind
-
-    override def format: String = s"query ${id.format}"
   }
+
+  /** A reference to a result type
+   *
+   * @param loc The location of the reference
+   * @param id  The path identifier to the result type
+   */
   case class ResultRef(loc: Location, id: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = ResultKind
-
-    override def format: String = s"result ${id.format}"
   }
 
-  case class Optional(loc: Location, typeExp: TypeExpression) extends TypeExpression
+  /** Base trait of the cardinality type expressions */
+  sealed trait Cardinality extends TypeExpression
 
-  case class ZeroOrMore(loc: Location, typeExp: TypeExpression) extends TypeExpression
+  /**
+   * A cardinality type expression that indicates another type expression as being optional; that
+   * is with a cardinality of 0 or 1.
+   *
+   * @param loc     The location of the optional cardinality
+   * @param typeExp The type expression that is indicated as optional
+   */
+  case class Optional(loc: Location, typeExp: TypeExpression) extends Cardinality
 
-  case class OneOrMore(loc: Location, typeExp: TypeExpression) extends TypeExpression
+  /**
+   * A cardinality type expression that indicates another type expression as having zero or more
+   * instances.
+   *
+   * @param loc     The location of the zero-or-more cardinality
+   * @param typeExp The type expression that is indicated with a cardinality of zero or more.
+   */
+  case class ZeroOrMore(loc: Location, typeExp: TypeExpression) extends Cardinality
+
+  /**
+   * A cardinality type expression that indicates another type expression as having one or more
+   * instances.
+   *
+   * @param loc     The location of the one-or-more cardinality
+   * @param typeExp The type expression that is indicated with a cardinality of one or more.
+   */
+  case class OneOrMore(loc: Location, typeExp: TypeExpression) extends Cardinality
 
   /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
-    *
-    * @param id
-    *   the identifier (name) of the Enumerator
-    * @param enumVal
-    *   the optional int value
-    * @param description
-    *   the description of the enumerator. Each Enumerator in an enumeration may define independent
-    *   descriptions
-    */
+   *
+   * @param id
+   * the identifier (name) of the Enumerator
+   * @param enumVal
+   * the optional int value
+   * @param description
+   * the description of the enumerator. Each Enumerator in an enumeration may define independent
+   * descriptions
+   */
   case class Enumerator(
     loc: Location,
     id: Identifier,
     enumVal: Option[LiteralInteger] = None,
     description: Option[Description] = None)
-      extends Definition
+    extends Definition
 
+  /**
+   * A type expression that defines its range of possible values as being one value from a set of
+   * enumerated values.
+   *
+   * @param loc         The location of the enumeration type expression
+   * @param enumerators The set of enumerators from which the value of this enumeration may be
+   *                    chosen.
+   */
   case class Enumeration(
     loc: Location,
     enumerators: Seq[Enumerator])
-      extends TypeExpression with ContainerValue[Enumerator] {
+    extends TypeExpression with ContainerValue[Enumerator] {
     lazy val contents: Seq[Enumerator] = enumerators
   }
 
+  /**
+   * A type expression that that defines its range of possible values as being any one of the
+   * possible values from a set of other type expressions.
+   *
+   * @param loc The location of the alternation type expression
+   * @param of  The set of type expressions from which the value for this alternation may be chosen
+   */
   case class Alternation(
     loc: Location,
     of: Seq[TypeExpression])
-      extends TypeExpression
+    extends TypeExpression
 
+  /**
+   * A definition that is a field of an aggregation type expressions. Fields associate an
+   * identifier with a type expression.
+   *
+   * @param loc         The location of the field definition
+   * @param id          The name of the field
+   * @param typeEx      The type of the field
+   * @param description An optional description of the field.
+   */
   case class Field(
     loc: Location,
     id: Identifier,
@@ -341,46 +459,98 @@ object AST {
     description: Option[Description] = None)
     extends Definition {}
 
+  /**
+   * A type expression that takes a set of named fields as its value.
+   *
+   * @param loc    The location of the aggregation definition
+   * @param fields The fields of the aggregation
+   */
   case class Aggregation(
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field])
-      extends TypeExpression with ContainerValue[Field] {
+    extends TypeExpression with ContainerValue[Field] {
     lazy val contents: Seq[Field] = fields
   }
 
+  /**
+   * A type expressions that defines a mapping from a key to a value. The value of a mapping is
+   * the set of mapped key -> value pairs, based on which keys have been provided values.
+   *
+   * @param loc  The location of the mapping type expression
+   * @param from The type expression for the keys of the mapping
+   * @param to   The type expression for the values of the mapping
+   */
   case class Mapping(
     loc: Location,
     from: TypeExpression,
     to: TypeExpression)
-      extends TypeExpression
+    extends TypeExpression
 
+  /**
+   * A type expression that defines a set of integer values from a minimum value
+   * to a maximum value, inclusively.
+   *
+   * @param loc The location of the range type expression
+   * @param min The minimum value of the range
+   * @param max The maximum value of the range
+   */
   case class RangeType(
     loc: Location,
     min: LiteralInteger,
     max: LiteralInteger)
-      extends TypeExpression
+    extends TypeExpression
 
+  /**
+   * A type expression whose value is a reference to an entity.
+   *
+   * @param loc    The location of the reference type expression
+   * @param entity The entity referenced by this type expression.
+   */
   case class ReferenceType(
     loc: Location,
     entity: EntityRef)
-      extends TypeExpression
+    extends TypeExpression
 
+  /**
+   * A type expression that defines a string value constrained by a Java Regular Expression
+   *
+   * @param loc     The location of the pattern type expression
+   * @param pattern The Java Regular Expression to which values of this type expression must obey.
+   * @see https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
+   */
   case class Pattern(
     loc: Location,
     pattern: Seq[LiteralString])
-      extends TypeExpression
+    extends TypeExpression
 
+  /**
+   * A type expression for values that ensure a unique identifier for a specific entity.
+   *
+   * @param loc        The location of the unique identifier type expression
+   * @param entityPath The path identifier of the entity type
+   */
   case class UniqueId(
     loc: Location,
     entityPath: PathIdentifier)
-      extends TypeExpression
+    extends TypeExpression
 
+  /**
+   * A type expression for an aggregation type expression that is marked as being one of the four
+   * message kinds.
+   *
+   * @param loc         The location of the message type expression
+   * @param messageKind The kind of message defined
+   * @param fields      The fields of the message's aggregation
+   */
   case class MessageType(
     loc: Location,
     messageKind: MessageKind,
     fields: Seq[Field] = Seq.empty[Field])
-      extends TypeExpression with EntityValue
+    extends TypeExpression with EntityValue
 
+  /**
+   * Base class of all pre-defined type expressions
+   */
   abstract class PredefinedType extends TypeExpression {
     def loc: Location
 
@@ -391,6 +561,13 @@ object AST {
     final def unapply(preType: PredefinedType): Option[String] = Option(preType.kind)
   }
 
+  /**
+   * A type expression for values of arbitrary string type, possibly bounded by length.
+   *
+   * @param loc The location of the Strng type expression
+   * @param min The minimum length of the string (default: 0)
+   * @param max The maximum length of the string (default: MaxInt)
+   */
   case class Strng(
     loc: Location,
     min: Option[LiteralInteger] = None,
@@ -399,62 +576,145 @@ object AST {
     override lazy val kind: String = "String"
   }
 
+  /**
+   * A predefined type expression for boolean values (true / false)
+   *
+   * @param loc The locatin of the Bool type expression
+   */
   case class Bool(loc: Location) extends PredefinedType {
     override lazy val kind: String = "Boolean"
   }
 
+  /**
+   * A predefined type expression for an arbitrary number value
+   *
+   * @param loc The location of the number type expression
+   */
   case class Number(loc: Location) extends PredefinedType {
     def kind: String = "Number"
   }
 
+  /**
+   * A predefined type expression for an integer value
+   *
+   * @param loc The locaiton of the integer type expression
+   */
   case class Integer(loc: Location) extends PredefinedType {
     def kind: String = "Integer"
   }
 
+  /**
+   * A predefined type expression for a decimal value including IEEE
+   * floating point syntax.
+   *
+   * @param loc The location of the decimal integer type expression
+   */
   case class Decimal(loc: Location) extends PredefinedType {
     def kind: String = "Decimal"
   }
 
+  /**
+   * A predefined type expression for a real number value.
+   *
+   * @param loc The locaiton of the real number type expression
+   */
   case class Real(loc: Location) extends PredefinedType {
     def kind: String = "Real"
   }
 
+  /**
+   * A predefined type expression for a calendar date.
+   *
+   * @param loc The location of the date type expression.
+   */
   case class Date(loc: Location) extends PredefinedType {
     def kind: String = "Date"
   }
 
+  /**
+   * A predefined type expression for a clock time with hours, minutes, seconds.
+   *
+   * @param loc The location of the time type expression.
+   */
   case class Time(loc: Location) extends PredefinedType {
     def kind: String = "Time"
   }
 
+  /**
+   * A predefined type expression for a calendar date and clock time combination.
+   *
+   * @param loc The location of the datetime type expression.
+   */
   case class DateTime(loc: Location) extends PredefinedType {
     def kind: String = "DateTime"
   }
 
+  /**
+   * A predefined type expression for a timestamp that records the number of
+   * milliseconds from the epoch.
+   *
+   * @param loc The location of the timestamp
+   */
   case class TimeStamp(loc: Location) extends PredefinedType {
     def kind: String = "TimeStamp"
   }
 
+  /**
+   * A predefined type expression for a time duration that records the number of
+   * milliseconds between two fixed points in time
+   *
+   * @param loc The location of the duration type expression
+   */
   case class Duration(loc: Location) extends PredefinedType {
     def kind: String = "Duration"
   }
 
+  /**
+   * A predefined type expression for a universally unique identifier as defined
+   * by the Java Virtual Machine.
+   *
+   * @param loc The location of the UUID type expression
+   */
   case class UUID(loc: Location) extends PredefinedType {
     def kind: String = "UUID"
   }
 
+  /**
+   * A predefined type expression for a Uniform Resource Locator of a specific schema.
+   *
+   * @param loc    The location of the URL type expression
+   * @param scheme The scheme to which the URL is constrained.
+   */
   case class URL(loc: Location, scheme: Option[LiteralString] = None) extends PredefinedType {
     def kind: String = "URL"
   }
 
+  /**
+   * A predefined type expression for a location on earth given in latitude and longitude.
+   *
+   * @param loc The location of the LatLong type expression.
+   */
   case class LatLong(loc: Location) extends PredefinedType {
     def kind: String = "LatLong"
   }
 
+  /**
+   * A predefined type expression for a type that can have no values
+   *
+   * @param loc The location of the nothing type expression.
+   */
   case class Nothing(loc: Location) extends PredefinedType {
     def kind: String = "Nothing"
   }
 
+  /**
+   * A type definition which associates an identifier with a type expression.
+   *
+   * @param loc         The location of the type definition
+   * @param id          The name of the type being defined
+   * @param typ         The type expression of the type being defined
+   * @param description An optional description of the type.
+   */
   case class Type(
     loc: Location,
     id: Identifier,
