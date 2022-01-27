@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation, Readability}
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -12,58 +12,56 @@ import fastparse.ScalaWhitespace.*
  */
 trait ActionParser extends ReferenceParser with ConditionParser with ExpressionParser {
 
-  def assignStmt[u: P]: P[SetStatement] = {
+  def arbitraryAction[u: P]: P[ArbitraryAction] = {
     P(
-      Keywords.set ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~ expression ~
-        description
-    ).map { t => (SetStatement.apply _).tupled(t) }
+      location ~ literalString ~ description
+    ).map { tpl => (ArbitraryAction.apply _).tupled(tpl) }
   }
 
-  def appendStmt[u: P]: P[AppendStatement] = {
+  def setAction[u: P]: P[SetAction] = {
     P(
-      Keywords.append ~/ location ~ pathIdentifier ~ Terminals.Readability.to ~ identifier ~
+      Keywords.set ~/ location ~ pathIdentifier ~ Readability.to ~ expression ~
         description
-    ).map { t => (AppendStatement.apply _).tupled(t) }
+    ).map { t => (SetAction.apply _).tupled(t) }
+  }
+
+  def morphAction[u: P]: P[MorphAction] = {
+    P(
+      Keywords.morph ~/ location ~ entityRef ~ Readability.to.? ~ stateRef ~ description
+    ).map { tpl => (MorphAction.apply _).tupled(tpl) }
+  }
+
+  def becomeAction[u: P]: P[BecomeAction] = {
+    P(
+      Keywords.become ~/ location ~ entityRef ~ Readability.to ~ handlerRef ~ description
+    ).map { tpl => (BecomeAction.apply _).tupled(tpl) }
   }
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
     P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
   }
 
-  def publishStmt[u: P]: P[PublishStatement] = {
+  def publishAction[u: P]: P[PublishAction] = {
     P(
       Keywords.publish ~/ location ~ messageConstructor ~ Terminals.Readability.to ~ pipeRef ~
         description
-    ).map { t => (PublishStatement.apply _).tupled(t) }
+    ).map { t => (PublishAction.apply _).tupled(t) }
   }
 
-  def sendStmt[u: P]: P[SendStatement] = {
-    P(Keywords.send ~/ location ~ messageConstructor ~ Readability.to ~/ entityRef ~ description)
-      .map { t => (SendStatement.apply _).tupled(t) }
+  def tellAction[u: P]: P[TellAction] = {
+    P(Keywords.tell ~/ location ~ entityRef ~ Readability.to.? ~/ messageConstructor ~ description)
+      .map { t => (TellAction.apply _).tupled(t) }
   }
 
-  def removalStmt[u: P]: P[RemoveStatement] = {
+  def askAction[u: P]: P[AskAction] = {
+    P(Keywords.ask ~/ location ~ entityRef ~ Readability.to.? ~/ messageConstructor ~ description)
+      .map { tpl => (AskAction.apply _).tupled(tpl) }
+  }
+
+  def anyAction[u: P]: P[Action] = {
     P(
-      Keywords.remove ~/ location ~ pathIdentifier ~ Readability.from ~ pathIdentifier ~ description
-    ).map { t => (RemoveStatement.apply _).tupled(t) }
+      arbitraryAction | setAction | morphAction | becomeAction | publishAction |
+        tellAction | askAction
+    )
   }
-
-  def executeStmt[u: P]: P[ExecuteStatement] = {
-    P(location ~ Keywords.execute ~/ identifier ~ description).map { t =>
-      (ExecuteStatement.apply _).tupled(t)
-    }
-  }
-
-  def whenStmt[u: P]: P[WhenStatement] = {
-    P(
-      location ~ Keywords.when ~/ condition ~ Keywords.then_.? ~ Punctuation.curlyOpen ~/
-        anyAction.rep ~ Punctuation.curlyClose ~ description
-    ).map(t => (WhenStatement.apply _).tupled(t))
-  }
-
-  def anyAction[u: P]: P[OnClauseStatement] = {
-    P(assignStmt | appendStmt | removalStmt | sendStmt | publishStmt | whenStmt | executeStmt)
-  }
-
-
 }

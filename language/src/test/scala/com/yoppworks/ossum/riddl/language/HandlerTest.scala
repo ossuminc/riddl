@@ -9,79 +9,74 @@ class HandlerTest extends ParsingTest {
       val input = """entity DistributionItem is {
                     |  state DistributionState is {}
                     | handler FromContainer  is {
-                    |    on event ContainerNestedInContainer {
+                    |    on event ContainerNestedInContainer { example only {
                     |      when ==(ContainerNestedInContainer.id,parentContainer)
-                    |      then {
-                    |        set lastKnownWorkCenter to ContainerNestedInContainer.workCenter
+                    |      then set lastKnownWorkCenter to ContainerNestedInContainer.workCenter
                     |      }
                     |      // anything else needing to be updated?
                     |    } explained as { "Helps update this item's location" }
                     |  }
                     |  handler FromDistributionItem  is {
-                    |    on command CreateItem {
+                    |    on command CreateItem { example only {
                     |      // intent: DistributionItem is created
-                    |      set journey to PreInducted
-                    |      set trackingId to CreateItem.trackingId
-                    |      set manifestId to CreateItem.manifestId
-                    |      set destination to CreatItem.postalCode
-                    |      send event ItemPreInducted() to entity DistributionItem
-                    |    }
-                    |    on command InductItem {
-                    |      set timeOfFirstScan to InductItem.originTimeStamp
-                    |      set journey to Inducted
-                    |      set lastKnownWorkCenterId to InductItem.workCenter
-                    |      send event ItemInducted() to entity DistributionItem
-                    |    }
-                    |    on command SortItem {
-                    |      when empty(what=timeOfFirstScan) then { set
-                    |      timeOfFirstScan to
-                    |      SortItem.originTimeStamp }
-                    |      set journey to Sorted
-                    |      set lastKnownWorkCenter to SortItem.workCenter
-                    |      execute Unnest
-                    |    }
-                    |    on command RemoveItemFromContainer { // received from Container
-                    |      set journey to AtWorkCenter // ??? what's the correct journey?
-                    |      set parentContainer to empty
-                    |    }
-                    |    on command NestItem {
-                    |      when empty(what=timeOfFirstScan) then {
-                    |        set timeOfFirstScan to NestItem.originTimeStamp
-                    |      }
-                    |      set parentContainer to NestItem.container
-                    |      send command AddItemToContainer() to entity DistributionItem
-                    |    }
-                    |    on command TransportItem {
-                    |      when empty(what=timeOfFirstScan) { set timeOfFirstScan to
-                    |      TransportItem.originTimeStamp }
-                    |      set journey to InTransit(trip = TransportItem.tripId)
-                    |      set lastKnownWorkCenter to TransportItem.workCenter
-                    |    }
-                    |    on command ReceiveItem {
-                    |      when empty(what=timeOfFirstScan)  { set timeOfFirstScan to
-                    |      ReceiveItem.originTimeStamp }
-                    |      set journey to AtWorkCenter(
-                    |        workCenter = ReceiveItem.workCenter
-                    |      )
-                    |      execute Unnest
-                    |    }
+                    |      then set journey to PreInducted
+                    |      and set trackingId to CreateItem.trackingId
+                    |      and set manifestId to CreateItem.manifestId
+                    |      and set destination to CreatItem.postalCode
+                    |      and tell entity DistributionItem event ItemPreInducted()
+                    |    } }
+                    |    on command InductItem { example only {
+                    |      then set timeOfFirstScan to InductItem.originTimeStamp
+                    |      and set journey to Inducted
+                    |      and set lastKnownWorkCenterId to InductItem.workCenter
+                    |      and tell entity DistributionItem to event ItemInducted()
+                    |    } }
+                    |    on command SortItem { example only {
+                    |      when empty(what=timeOfFirstScan)
+                    |      then set timeOfFirstScan to SortItem.originTimeStamp
+                    |      and set journey to Sorted
+                    |      and set lastKnownWorkCenter to SortItem.workCenter
+                    |      and "execute Unnest"
+                    |    }}
+                    |    on command RemoveItemFromContainer { example only {
+                    |      then set journey to AtWorkCenter // ??? what's the correct journey?
+                    |      and set parentContainer to empty
+                    |    }}
+                    |    on command NestItem { example only {
+                    |      when empty(what=timeOfFirstScan)
+                    |      then set timeOfFirstScan to NestItem.originTimeStamp
+                    |      and set parentContainer to NestItem.container
+                    |      and tell entity DistributionItem command AddItemToContainer()
+                    |    }}
+                    |    on command TransportItem { example only {
+                    |      when empty(what=timeOfFirstScan)
+                    |      then set timeOfFirstScan to TransportItem.originTimeStamp
+                    |      and set journey to InTransit(trip = TransportItem.tripId)
+                    |      and set lastKnownWorkCenter to TransportItem.workCenter
+                    |    }}
+                    |    on command ReceiveItem { example only {
+                    |      when empty(what=timeOfFirstScan)
+                    |      then set timeOfFirstScan to ReceiveItem.originTimeStamp
+                    |      and set journey to AtWorkCenter(workCenter=ReceiveItem.workCenter)
+                    |      and "execute Unnest"
+                    |    } }
                     |    // TODO: what commands bring item out of a hold?
-                    |    on command MarkItemOutForDelivery {
-                    |      set journey to OutForDelivery
-                    |    }
-                    |    on command DeliverItem {
-                    |      set journey to Delivered
-                    |      execute Unnest
-                    |    }
-                    |    on command MachineMissort {
-                    |      set journey to unknown() // TODO: how do we respond to this?
-                    |    }
-                    |    on command HumanMissort {
-                    |      set journey to unknown() // TODO: how do we respond to this?
-                    |    }
-                    |    on command CustomerAddressingError {
-                    |      set journey to OnHold // TODO: how do we respond to this?
-                    |    }
+                    |    on command MarkItemOutForDelivery { example only {
+                    |      then set journey to OutForDelivery
+                    |    }}
+                    |    on command DeliverItem { example only {
+                    |      then set journey to Delivered
+                    |      and "execute Unnest"
+                    |    }}
+                    |    on command MachineMissort { example only {
+                    |      then set journey to unknown() // TODO: how do we respond to this?
+                    |    }}
+                    |    on command HumanMissort { example only {
+                    |      then set journey to unknown() // TODO: how do we respond to this?
+                    |    }}
+                    |    on command CustomerAddressingError { example only {
+                    |      then set journey to OnHold // TODO: how do we respond to this?
+                    |    }}
                     |  }
                     |}
                     |""".stripMargin

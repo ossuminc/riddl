@@ -6,7 +6,7 @@ import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput.*
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 
-  import AST.*
+  import com.yoppworks.ossum.riddl.language.AST.*
 
   "ParserContext" should {
     "throw on underflow" in {
@@ -23,8 +23,17 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.msg mustBe ("Expected one of (\"domain\" | end-of-input)")
+          errors.head.msg mustBe "Expected one of (\"domain\" | end-of-input)"
         case Right(_) => fail("Invalid syntax should make an error")
+      }
+    }
+    "handle missing }" in {
+      val input = "domain foo is {"
+      parseTopLevelDomain(input, _.contents.head) match {
+        case Left(errors) =>
+          errors must not be empty
+          errors.head.msg.contains("Expected one of (") must be(true)
+        case Right(_) => fail("Missing closing brace should make an error")
       }
     }
     "allow an empty funky-name domain" in {
@@ -155,11 +164,11 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Invariant(
-            1 -> 11,
-            Identifier(1 -> 11, "large"),
-            Seq(LiteralString(1 -> 22, "x is greater or equal to 10")),
-            None
-          )
+          1 -> 11,
+          Identifier(1 -> 11, "large"),
+          ArbitraryCondition(LiteralString(1 -> 22, "x is greater or equal to 10")),
+          None
+        )
       }
     }
     "allow entity definitions in contexts" in {
@@ -200,12 +209,14 @@ class ParserTest extends ParsingTest {
               6 -> 5,
               Identifier(6 -> 13, "foo"),
               Seq(
-                GherkinClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
-                GherkinClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
+                GivenClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
+                GivenClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
               ),
-              Seq(GherkinClause(9 -> 7, Seq(LiteralString(9 -> 12, "I go fishing")))),
-              Seq(GherkinClause(10 -> 7, Seq(LiteralString(10 -> 12, "I'll just eat worms")))),
-              Seq(GherkinClause(11 -> 7, Seq(LiteralString(11 -> 12, "I'm happy"))))
+              Seq(WhenClause(9 -> 7, ArbitraryCondition(LiteralString(9 -> 12, "I go fishing")))),
+              Seq(ThenClause(10 -> 7,
+                ArbitraryAction(10 -> 12, LiteralString(10 -> 12, "I'll just eat worms"), None))),
+              Seq(ButClause(11 -> 7,
+                ArbitraryAction(11 -> 12, LiteralString(11 -> 12, "I'm happy"), None)))
             ))
           ))
         )

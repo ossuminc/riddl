@@ -1,68 +1,65 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for feature definitions This is based on Cucumber's Gherkin language.
-  *
-  * @see
-  *   https://cucumber.io/docs/gherkin/reference/
-  */
-trait GherkinParser extends CommonParser {
+ *
+ * @see
+ * https://cucumber.io/docs/gherkin/reference/
+ */
+trait GherkinParser extends ConditionParser with ActionParser {
 
-  def givens[u: P]: P[Seq[GherkinClause]] = {
+  def givens[u: P]: P[Seq[GivenClause]] = {
     P(
       (location ~ IgnoreCase(Keywords.given_) ~/ docBlock)
-        .map(tpl => (GherkinClause.apply _).tupled(tpl)) ~
+        .map(tpl => (GivenClause.apply _).tupled(tpl)) ~
         (location ~ IgnoreCase(Readability.and) ~/ docBlock)
-          .map(tpl => (GherkinClause.apply _).tupled(tpl)).rep(0)
+          .map(tpl => (GivenClause.apply _).tupled(tpl)).rep(0)
     ).map { case (initial, remainder) => initial +: remainder }
   }
 
-  def whens[u: P]: P[Seq[GherkinClause]] = {
+  def whens[u: P]: P[Seq[WhenClause]] = {
     P(
-      (location ~ IgnoreCase(Keywords.when) ~/ docBlock)
-        .map(tpl => (GherkinClause.apply _).tupled(tpl)) ~
-        (location ~ IgnoreCase(Readability.and) ~/ docBlock)
-          .map(tpl => (GherkinClause.apply _).tupled(tpl)).rep(0)
+      (location ~ IgnoreCase(Keywords.when) ~/ condition)
+        .map(tpl => (WhenClause.apply _).tupled(tpl)) ~
+        (location ~ IgnoreCase(Readability.and) ~/ condition)
+          .map(tpl => (WhenClause.apply _).tupled(tpl)).rep(0)
     ).map { case (initial, remainder) => initial +: remainder }
   }
 
-  def thens[u: P]: P[Seq[GherkinClause]] = {
+  def thens[u: P]: P[Seq[ThenClause]] = {
     P(
-      (location ~ IgnoreCase(Keywords.then_) ~/ docBlock)
-        .map(tpl => (GherkinClause.apply _).tupled(tpl)) ~
-        (location ~ IgnoreCase(Readability.and) ~/ docBlock)
-          .map(tpl => (GherkinClause.apply _).tupled(tpl)).rep(0)
+      (location ~ IgnoreCase(Keywords.then_) ~/ anyAction)
+        .map(tpl => (ThenClause.apply _).tupled(tpl)) ~
+        (location ~ IgnoreCase(Readability.and) ~/ anyAction)
+          .map(tpl => (ThenClause.apply _).tupled(tpl)).rep(0)
     ).map { case (initial, remainder) => initial +: remainder }
   }
 
-  def buts[u: P]: P[Seq[GherkinClause]] = {
+  def buts[u: P]: P[Seq[ButClause]] = {
     P(
-      (location ~ (IgnoreCase(Keywords.else_) | IgnoreCase(Keywords.but)) ~/ docBlock)
-        .map(tpl => (GherkinClause.apply _).tupled(tpl)) ~
-        (location ~ IgnoreCase(Readability.and) ~/ docBlock)
-          .map(tpl => (GherkinClause.apply _).tupled(tpl)).rep(0)
+      (location ~ (IgnoreCase(Keywords.else_) | IgnoreCase(Keywords.but)) ~/ anyAction)
+        .map(tpl => (ButClause.apply _).tupled(tpl)) ~
+        (location ~ IgnoreCase(Readability.and) ~/ anyAction)
+          .map(tpl => (ButClause.apply _).tupled(tpl)).rep(0)
     ).?.map {
       case Some((initial, remainder)) => initial +: remainder
-      case None                       => Seq.empty[GherkinClause]
+      case None => Seq.empty[ButClause]
     }
   }
 
-  def exampleBody[
-    u: P
-  ]: P[(Seq[GherkinClause], Seq[GherkinClause], Seq[GherkinClause], Seq[GherkinClause])] = {
+  def exampleBody[u: P]: P[(Seq[GivenClause], Seq[WhenClause], Seq[ThenClause], Seq[ButClause])] = {
     P(
-      (givens.?.map(_.getOrElse(Seq.empty[GherkinClause])) ~
-        whens.?.map(_.getOrElse(Seq.empty[GherkinClause])) ~ thens ~
-        buts.?.map(_.getOrElse(Seq.empty[GherkinClause]))) | undefined((
-        Seq.empty[GherkinClause],
-        Seq.empty[GherkinClause],
-        Seq.empty[GherkinClause],
-        Seq.empty[GherkinClause]
+      (givens.?.map(_.getOrElse(Seq.empty[GivenClause])) ~
+        whens.?.map(_.getOrElse(Seq.empty[WhenClause])) ~ thens ~
+        buts.?.map(_.getOrElse(Seq.empty[ButClause]))) | undefined((
+        Seq.empty[GivenClause],
+        Seq.empty[WhenClause],
+        Seq.empty[ThenClause],
+        Seq.empty[ButClause]
       ))
     )
   }

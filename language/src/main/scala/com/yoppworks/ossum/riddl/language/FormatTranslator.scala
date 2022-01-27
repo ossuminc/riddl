@@ -2,11 +2,12 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
-import pureconfig.{ConfigReader, ConfigSource}
 import pureconfig.generic.auto.*
+import pureconfig.{ConfigReader, ConfigSource}
 
 import java.io.File
 import java.nio.file.Path
+import scala.annotation.unused
 import scala.collection.mutable
 
 case class FormatConfig(
@@ -85,10 +86,12 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def add(strings: Seq[LiteralString]): FormatState = {
-      if (strings.length > 1) {
+      if (strings.sizeIs > 1) {
         lines.append("\n")
         strings.foreach(s => lines.append(s"""$spc"${s.s}"$nl"""))
-      } else { strings.foreach(s => lines.append(s""" "${s.s}" """)) }
+      } else {
+        strings.foreach(s => lines.append(s""" "${s.s}" """))
+      }
       this
     }
 
@@ -167,7 +170,7 @@ class FormatTranslator extends Translator[FormatConfig] {
     def emitEnumeration(enumeration: AST.Enumeration): FormatState = {
       val head = this.add(s"any of {\n").indent
       val enumerators: String = enumeration.enumerators.map { enumerator =>
-        enumerator.id.value + enumerator.enumVal.map("(" + _.format + ")").getOrElse("") +
+        enumerator.id.value + enumerator.enumVal.fold("")("(" + _.format + ")") +
           mkEnumeratorDescription(enumerator.description)
       }.mkString(s"$spc", s",\n$spc", s"\n")
       head.add(enumerators).outdent.addLine("}")
@@ -185,8 +188,10 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitFields(of: Seq[Field]): FormatState = {
-      if (of.isEmpty) { this.add("{}") }
-      else if (of.size == 1) {
+      if (of.isEmpty) {
+        this.add("{}")
+      }
+      else if (of.sizeIs == 1) {
         val f: Field = of.head
         add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
       } else {
@@ -210,7 +215,9 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitPattern(pattern: AST.Pattern): FormatState = {
       val line =
-        if (pattern.pattern.size == 1) { "Pattern(\"" + pattern.pattern.head.s + "\"" + s") " }
+        if (pattern.pattern.sizeIs == 1) {
+          "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
+        }
         else {
           s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
           s"\n) "
@@ -240,7 +247,7 @@ class FormatTranslator extends Translator[FormatConfig] {
         case ll: LatLong => this.add(ll.kind)
         case n: Nothing => this.add(n.kind)
         case TypeRef(_, id) => this.add(id.format)
-        case URL(_, scheme) => this.add(s"URL${scheme.map(s => "\"" + s.s + "\"").getOrElse("")}")
+        case URL(_, scheme) => this.add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
@@ -264,6 +271,14 @@ class FormatTranslator extends Translator[FormatConfig] {
         .emitDescription(t.description).add("\n")
     }
 
+    def emitCondition(@unused condition: Condition): FormatState = {
+      this.add(condition.format)
+    }
+
+    def emitAction(@unused action: Action): FormatState = {
+      this.add(action.format)
+    }
+
     def emitGherkinStrings(strings: Seq[LiteralString]): FormatState = {
       strings.size match {
         case 0 => add("\"\"")
@@ -275,23 +290,37 @@ class FormatTranslator extends Translator[FormatConfig] {
       }
     }
 
-    def emitGherkinClause(kind: String, clauses: Seq[GherkinClause]): FormatState = {
+    def emitAGherkinClause(ghc: GherkinClause): FormatState = {
+      ghc match {
+        case GivenClause(_, strings) =>
+          emitGherkinStrings(strings)
+        case WhenClause(_, condition) =>
+          emitCondition(condition)
+        case ThenClause(_, action) =>
+          emitAction(action)
+        case ButClause(_, action) =>
+          emitAction(action)
+      }
+    }
+
+    def emitGherkinClauses(kind: String, clauses: Seq[GherkinClause]): FormatState = {
       clauses.size match {
-        case 0 =>
-        case 1 => addIndent(kind).add(" ").emitGherkinStrings(clauses.head.fact)
+        case 0 => this
+        case 1 =>
+          addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
         case _ =>
-          addIndent(kind).add(" ").emitGherkinStrings(clauses.head.fact)
+          addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
           clauses.tail.foldLeft(this) { (next, clause) =>
-            next.addNL.addIndent("and ").emitGherkinStrings(clause.fact)
+            next.addNL.addIndent("and ").emitAGherkinClause(clause)
           }
       }
-      this
     }
 
     def emitExample(example: Example): FormatState = {
-      openDef(example).emitGherkinClause("given ", example.givens)
-        .emitGherkinClause("when", example.whens).emitGherkinClause("then", example.thens)
-        .emitGherkinClause("but", example.buts).closeDef(example)
+      openDef(example).emitGherkinClauses("given ", example.givens)
+        .emitGherkinClauses("when", example.whens)
+        .emitGherkinClauses("then", example.thens)
+        .emitGherkinClauses("but", example.buts).closeDef(example)
     }
 
     def emitExamples(examples: Seq[Example]): FormatState = {
@@ -449,7 +478,9 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Entity,
       invariant: Invariant
-    ): FormatState = {state}
+    ): FormatState = {
+      state.openDef(invariant).closeDef(invariant, withBrace = false)
+    }
 
     override def openState(state: FormatState, container: Entity, s: State): FormatState = {
       state.openDef(s, withBrace = false).emitFields(s.typeEx.fields)
@@ -490,9 +521,8 @@ class FormatTranslator extends Translator[FormatConfig] {
     ): FormatState = {
       val s = state.openDef(handler)
       handler.clauses.foldLeft(s) { (s, clause) =>
-        val s2 = s.addIndent("on ").emitMessageRef(clause.msg).add(" {\n").indent
-        clause.actions.foldLeft(s2) { (s, action) => s.addLine(action.format) }.outdent
-          .addIndent("}\n")
+        s.addIndent("on ").emitMessageRef(clause.msg).add(" {\n").indent
+          .emitExamples(clause.examples).outdent.addIndent("}\n")
       }.closeDef(handler)
     }
 
@@ -511,11 +541,13 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     override def doJoint(state: FormatState, container: Plant, joint: Joint): FormatState = {
       val s = state.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
-      joint.streamletRef match {
-        case InletRef(_, id) => s.addIndent(s"inlet ${id.format} from")
-            .add(s" pipe ${joint.pipe.id.format}\n")
-        case OutletRef(_, id) => s.addIndent(s"outlet ${id.format} to")
-            .add(s" pipe ${joint.pipe.id.format}\n")
+      joint match {
+        case InletJoint(_, _, inletRef, pipeRef, _) =>
+          s.addIndent(s"inlet ${inletRef.id.format} from")
+            .add(s" pipe ${pipeRef.id.format}\n")
+        case OutletJoint(_, _, outletRef, pipeRef, _) =>
+          s.addIndent(s"outlet ${outletRef.id.format} to")
+            .add(s" pipe ${pipeRef.id.format}\n")
       }
     }
 

@@ -90,12 +90,13 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           Location(),
           Identifier(Location(), "my_func"),
           None,
-          Some(Bool(Location())),
+          Option(Bool(Location())),
           Seq.empty[Example],
           None
         ))
 
-        val invariants = Seq(Invariant(Location(), Identifier(Location(), "my_id"), Nil, None))
+        val invariants = Seq(Invariant(Location(), Identifier(Location(), "my_id"),
+          True(Location()), None))
         val types = Seq(
           Type(Location(), Identifier(Location(), "mytype"), Bool(Location())),
           Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))

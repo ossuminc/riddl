@@ -5,7 +5,7 @@ import com.yoppworks.ossum.riddl.language.Validation.MissingWarning
 class InvariantValidator extends ValidatingTest {
 
   "InvariantValidator" should {
-    "validate expressions in invariants in" in {
+    "allow undefined expressions in invariants" in {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
@@ -13,14 +13,16 @@ class InvariantValidator extends ValidatingTest {
           |}
           |""".stripMargin
       ) { (_, msgs) =>
-        assertValidationMessage(
-          msgs,
-          Validation.Error,
-          "Expression in Invariant 'small' should not be empty"
+        assertValidationMessage(msgs, Validation.MissingWarning,
+          "Condition in Invariant 'small' should not be empty"
         )
+        assertValidationMessage(msgs, Validation.Error,
+          "Entity 'user' must define a handler")
+        assertValidationMessage(msgs, Validation.MissingWarning,
+          "Entity 'user' should have a description")
       }
     }
-    "validate invariants have descriptions in" in {
+    "warn about missing descriptions " in {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
@@ -30,6 +32,18 @@ class InvariantValidator extends ValidatingTest {
       ) { (_, msgs) =>
         assertValidationMessage(msgs, MissingWarning, "Invariant 'large' should have a description")
       }
+    }
+    "allow conditional expressions" in {
+      parseAndValidateInContext[AST.Entity](
+        """
+          |entity user is {
+          | invariant large is { and(Field.name1,Field.name2) }
+          |}
+          |""".stripMargin
+      ) { (_, msgs) =>
+        assertValidationMessage(msgs, MissingWarning, "Invariant 'large' should have a description")
+      }
+
     }
   }
 

@@ -61,7 +61,7 @@ domain Everything is {
 
       type somethingDate is Date
 
-      state someState is { field:  SomeType }
+      state someState is { someField:  SomeType }
 
       function whenUnderTheInfluence is {
         requires Nothing
@@ -70,18 +70,24 @@ domain Everything is {
 
       handler foo is {
         on command Something {
-          when misc() then {
-            send event Inebriated() to entity Everything.full.SomeOtherThing
+          example only {
+            given "Something arrives"
+            when misc()
+            then tell entity Everything.full.SomeOtherThing  to event Inebriated()
           }
         }
       }
     }
 
     entity SomeOtherThing is {
-      type ItHappened is event { field: String }
-      state otherThingState is { field: String }
+      type ItHappened is event { when: String }
+      state otherThingState is { then: String }
       handler fee is {
-        on event ItHappened { set SomeOtherThing.otherThingState.field to ItHappened.field }
+        on event ItHappened {
+          example only {
+            then set SomeOtherThing.otherThingState.then to ItHappened.when
+          }
+        }
       }
     }
   }

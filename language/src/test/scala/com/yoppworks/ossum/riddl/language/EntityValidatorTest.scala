@@ -87,7 +87,8 @@ class EntityValidatorTest extends ValidatingTest {
                                            |""".stripMargin) { case (feature, msgs) =>
         feature.id.value mustBe "AnAspect"
         assert(feature.examples.nonEmpty)
-        assert(msgs.isEmpty)
+        assert(msgs.nonEmpty)
+        assert(msgs.forall(_.message.contains("should have a description")))
       }
     }
   }

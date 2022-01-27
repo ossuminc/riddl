@@ -62,8 +62,8 @@ trait ParsingContext {
     } else {
       stack.push(file)
       val result = this.expect[T](rule) match {
-        case Left(_)       => empty
-        case Right(result) => result
+        case Left(_) => empty
+        case Right(res) => res
       }
       stack.pop
       result

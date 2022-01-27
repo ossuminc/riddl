@@ -21,10 +21,9 @@ Style: everything.riddl(30:5): Type 'stamp' should start with a capital letter
 Missing: everything.riddl(25:5): Type 'num' should have a description
 Style: everything.riddl(38:5): Type 'alt' should start with a capital letter
 Missing: everything.riddl(34:25): Field 'a' should have a description
-Missing: everything.riddl(81:34): Field 'field' should have a description
 Missing: everything.riddl(26:5): Type 'boo' should have a description
 Missing: everything.riddl(31:5): Type 'url' should have a description
-Missing: everything.riddl(80:5): Entity 'SomeOtherThing' should have a description
+Missing: everything.riddl(82:5): Entity 'SomeOtherThing' should have a description
 Missing: everything.riddl(38:5): Type 'alt' should have a description
 Style: everything.riddl(24:5): Type 'str' should start with a capital letter
 Missing: everything.riddl(66:7): Function 'whenUnderTheInfluence' should have a description
@@ -35,7 +34,7 @@ Style: everything.riddl(25:5): Type 'num' should start with a capital letter
 Missing: everything.riddl(41:5): Type 'agg' should have a description
 Style: everything.riddl(31:5): Type 'url' should start with a capital letter
 Missing: everything.riddl(5:3): Type 'SomeType' should have a description
-Missing: everything.riddl(64:28): Field 'field' should have a description
+Missing: everything.riddl(64:28): Field 'someField' should have a description
 Missing: everything.riddl(48:5): Type 'oneOrMore' should have a description
 Missing: everything.riddl(49:5): Type 'zeroOrMore' should have a description
 Style: everything.riddl(50:5): Type 'optional' should start with a capital letter
@@ -46,10 +45,8 @@ Missing: everything.riddl(35:5): Type 'enum' should have a description
 Missing: everything.riddl(27:5): Type 'ident' should have a description
 Missing: everything.riddl(29:5): Type 'tim' should have a description
 Style: everything.riddl(49:5): Type 'zeroOrMore' should start with a capital letter
-Missing: everything.riddl(82:7): State 'otherThingState' should have a description
-Missing: everything.riddl(82:34): Field 'field' should have a description
-Missing: everything.riddl(81:7): Type 'ItHappened' should have a description
-Error: everything.riddl(84:35): 'SomeOtherThing.otherThingState.field' is not defined but should be a Field
+Missing: everything.riddl(84:7): State 'otherThingState' should have a description
+Missing: everything.riddl(83:7): Type 'ItHappened' should have a description
 Missing: everything.riddl(35:48): Enumerator 'Persimmon' should have a description
 Missing: everything.riddl(35:33): Enumerator 'Pear' should have a description
 Missing: everything.riddl(12:27): Outlet 'Commands' should have a description
@@ -60,3 +57,16 @@ Missing: everything.riddl(35:38): Enumerator 'Peach' should have a description
 Missing: everything.riddl(13:25): Inlet 'Commands' should have a description
 Error: everything.riddl(72:20): 'Something' was expected to be a command type but is a Entity  instead
 Style: everything.riddl(13:25): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:34)
+Missing: everything.riddl(76:23): Tell Action should have a description
+Missing: everything.riddl(88:22): Set Action should have a description
+Error: everything.riddl(76:71): 'Inebriated' is not defined but should be a message type
+Error: everything.riddl(75:18): 'misc' is not defined but should be a Function
+Error: everything.riddl(88:61): 'ItHappened.when' is not defined but should be a Field
+Missing: everything.riddl(83:34): Field 'when' should have a description
+Missing: everything.riddl(84:34): Field 'then' should have a description
+Missing: everything.riddl(73:11): Example 'only' should have a description
+Error: everything.riddl(87:11): Givens in Example 'only' should not be empty
+Error: everything.riddl(87:11): Whens in Example 'only' should not be empty
+Error: everything.riddl(87:11): Buts in Example 'only' should not be empty
+Error: everything.riddl(73:11): Buts in Example 'only' should not be empty
+Missing: everything.riddl(87:11): Example 'only' should have a description
