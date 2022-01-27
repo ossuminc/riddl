@@ -75,17 +75,6 @@ class ConditionParserTest extends ParsingTest {
         )
       }
     }
-    "accept comparison expressions" in {
-      parseCondition("or(lt(a,42),lt(b,SomeFunc()))") { cond: Condition =>
-        cond mustBe OrCondition(1 -> 1,
-          Comparison(1 -> 4, lt,
-            ValueExpression(1 -> 7, PathIdentifier(1 -> 7, Seq("a"))), LiteralInteger(1 -> 9, BigInt(42))),
-          Comparison(1 -> 13, lt, ValueExpression(1 -> 16, PathIdentifier(1 -> 16, Seq("b"))),
-            FunctionCallExpression(1 -> 18, PathIdentifier(1 -> 18, Seq("SomeFunc")), ArgList()))
-
-        )
-      }
-    }
     "accept complicated conditional expression" in {
       val input = """or(and(not(==("sooth", false)),(SomeFunc(x=42))),true)""".stripMargin
       parseCondition(input) { cond: Condition =>
