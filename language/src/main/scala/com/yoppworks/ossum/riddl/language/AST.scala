@@ -723,25 +723,69 @@ object AST {
     extends Definition with ContextDefinition with EntityDefinition with DomainDefinition {}
 
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
+
+  /**
+   * Base trait of all expressions
+   */
   sealed trait Expression extends RiddlValue
 
+  /**
+   * Represents an arbitrary expression that is specified merely with a literal string. This
+   * can't be easily processed downstream but provides the author with the ability to include
+   * arbitrary ideas/concepts into an expression.
+   * For example:
+   * {{{
+   *   +(42,"number of widgets in a wack-a-mole")
+   * }}}
+   * shows the use of an arbitrary expressions as the conditional to the "when" keyword
+   * @param loc
+   * @param what
+   */
   case class ArbitraryExpression(loc: Location, what: LiteralString) extends Expression {
     override def format: String = what.format
   }
+
+  /**
+   * Represents the use of an arithmetic operator or well-known function call. The operator can
+   * be simple like addition or subtraction or complicated like pow, sqrt, etc. There is no limit
+   * on the number of operands but defining them shouldn't be necessary as they are
+   * pre-determined by use of the name of the operator (e.g. pow takes two floating point
+   * numbers, sqrt takes one.
+   * @param loc The location of the operator
+   * @param operator The name of the operator (+, -, sqrt, ...)
+   * @param operands A list of expressions that correspond to the required operands for the operator
+   */
 
   case class ArithmeticOperator(
     loc: Location, operator: String, operands: Seq[Expression]) extends Expression {
     override def format: String = operator + operands.mkString("(", ",", ")")
   }
 
+  /**
+   * Represents an expression that is merely a reference to some value, presumably an entity
+   * state value.
+   * @param loc The location of this expression
+   * @param path The path to the value for this expression
+   */
   case class ValueExpression(loc: Location, path: PathIdentifier) extends Condition {
     override def format: String = path.format
   }
 
+  /**
+   * A syntactic convenience for grouping another expression.
+   * @param loc The location of the expression group
+   * @param expression The expression that is grouped
+   */
   case class GroupExpression(loc: Location, expression: Expression) extends Expression {
     override def format: String = s"(${expression.format})"
   }
 
+  /**
+   * The arguments of a [[FunctionCallExpression]] which is a mapping between an argument name and
+   * the expression that provides the value for that argument.
+   * @param args A mapping of Identifier to Expression to provide the arguments for the function
+   *             call.
+   */
   case class ArgList(args: ListMap[Identifier, Expression] = ListMap.empty[Identifier, Expression])
     extends RiddlNode {
     override def format: String = args.map { case (id, exp) =>
@@ -749,31 +793,70 @@ object AST {
     }.mkString("(", ", ", ")")
   }
 
+  /**
+   * A RIDDL Function call. The only callable thing here is a function identified by its path
+   * identifier with a matching set of arguments
+   * @param loc The location of the function call expression
+   * @param name The path identifier of the RIDDL Function being called
+   * @param arguments An [[Arglist]] to pass to the function.
+   */
   case class FunctionCallExpression(loc: Location, name: PathIdentifier, arguments: ArgList)
     extends Expression with Condition {
     override def format: String = name.format + arguments.format
   }
 
+  /**
+   * An expression that is a literal constant integer value
+   * @param loc The location of the integer value
+   * @param n The number to use as the value of the expression
+   */
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression {
     override def format: String = n.toString()
   }
 
+  /**
+   * An expression that is a liberal constant decimal value
+   * @param loc The loation of the decimal value
+   * @param d The decimal number to use as the value of the expression
+   */
   case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression {
     override def format: String = d.toString
   }
 
   ///////////////////////////////////////////////////////////// Conditional Expressions
 
+  /**
+   * Base trait for expressions that yield a boolean value (a condition)
+   */
   sealed trait Condition extends Expression
 
+  /**
+   * A condition value for "true"
+   * @param loc The location of this expression value
+   */
   case class True(loc: Location) extends Condition {
     override def format: String = "true"
   }
 
+  /**
+   * A condition value for "false"
+   * @param loc The location of this expression value
+   */
   case class False(loc: Location) extends Condition {
     override def format: String = "false"
   }
 
+  /**
+   * Represents an arbitrary condition that is specified merely with a literal string. This
+   * can't be easily processed downstream but provides the author with the ability to include
+   * arbitrary ideas/concepts into a condition
+   * For example:
+   * {{{
+   *   example foo { when "the timer has expired" }
+   * }}}
+   * shows the use of an arbitrary condition for the "when" part of a Gherkin example
+   * @param cond
+   */
   case class ArbitraryCondition(cond: LiteralString) extends Condition {
     override def loc: Location = cond.loc
 
