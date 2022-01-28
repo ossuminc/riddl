@@ -50,18 +50,19 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
 
-    "produce an error for persistent entity with no event producer" in {
-      val input = """
-                    |domain foo is {
-                    |context bar is {
-                    |  entity Hamburger  is {
-                    |    options (aggregate, persistent)
-                    |    state field is { field: SomeType }
-                    |    handler foo is {}
-                    |  }
-                    |}
-                    |}
-                    |""".stripMargin
+    "produce an error for transient entity with empty event handler" in {
+      val input =
+        """
+          |domain foo is {
+          |context bar is {
+          |  entity Hamburger  is {
+          |    options (aggregate, transient)
+          |    state field is { field: SomeType }
+          |    handler foo is {}
+          |  }
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,

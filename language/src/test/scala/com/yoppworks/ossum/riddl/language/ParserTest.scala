@@ -173,7 +173,7 @@ class ParserTest extends ParsingTest {
     }
     "allow entity definitions in contexts" in {
       val input: String = """entity Hamburger is {
-                            |  options ( persistent, aggregate )
+                            |  options ( transient, aggregate )
                             |  state foo is { x: String }
                             |  handler foo is {}
                             |  function AnAspect is {
@@ -194,7 +194,7 @@ class ParserTest extends ParsingTest {
         case Right(content) => content mustBe Entity(
           1 -> 1,
           Identifier(1 -> 8, "Hamburger"),
-          Seq(EntityPersistent(2 -> 13), EntityAggregate(2 -> 25)),
+          Seq(EntityTransient(2 -> 13), EntityAggregate(2 -> 24)),
           Seq(State(
             3 -> 3,
             Identifier(3 -> 9, "foo"),
@@ -280,20 +280,23 @@ class ParserTest extends ParsingTest {
     }
 
     "allow functions" in {
-      val input = """
-                    |function foo is {
-                    |  requires Boolean
-                    |  yields Integer
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |function foo is {
+          |  requires {b:Boolean}
+          |  yields {i:Integer}
+          |}
+          |""".stripMargin
 
       parseDefinition[Function](RiddlParserInput(input)) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content must matchPattern {
-            case Function(_, Identifier(_, "foo"), Some(Bool(_)), Some(Integer(_)), _, None) =>
-          }
+          case Function(_, Identifier(_, "foo"),
+          Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _)))),
+          Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _)))), _, None) =>
+        }
       }
     }
   }

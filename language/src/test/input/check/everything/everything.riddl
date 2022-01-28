@@ -57,15 +57,15 @@ domain Everything is {
     // Entities are the main objects that contexts define. They can be
     // persistent (long lived) or aggregate (they consume commands and queries)
     entity Something is {
-      options (aggregate, persistent)
+      options (aggregate, transient)
 
       type somethingDate is Date
 
       state someState is { someField:  SomeType }
 
       function whenUnderTheInfluence is {
-        requires Nothing
-        yields Boolean
+        requires { n: Nothing }
+        yields { b: Boolean }
       }
 
       handler foo is {

@@ -252,6 +252,40 @@ object AST {
     val empty: RootContainer = RootContainer(Seq.empty[Domain])
   }
 
+  /**
+   * Base trait for option values for any option of a definition.
+   */
+  trait OptionValue extends RiddlValue {
+    def name: String
+
+    def args: Seq[LiteralString] = Seq.empty[LiteralString]
+
+    override def format: String = name + args.map(_.format).mkString("(", ", ", ")")
+  }
+
+  /**
+   * Base trait that can be used in any definition that takes options and ensures
+   * the options are defined, can be queried, and formatted.
+   *
+   * @tparam T The sealed base trait of the permitted options for this definition
+   */
+  trait OptionsDef[T <: OptionValue] extends RiddlValue {
+    def options: Seq[T]
+
+    def hasOption[OPT <: T : ClassTag]: Boolean = options
+      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+
+    override def format: String = {
+      options.size match {
+        case 0 => ""
+        case 1 => s"option is ${options.head.format}"
+        case x: Int if x > 1 => s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
+      }
+    }
+
+    override def isEmpty: Boolean = options.isEmpty
+  }
+
   // ////////////////////////////////////////////////////////// TYPES
 
   /**
@@ -738,8 +772,9 @@ object AST {
    *   +(42,"number of widgets in a wack-a-mole")
    * }}}
    * shows the use of an arbitrary expressions as the conditional to the "when" keyword
-   * @param loc
-   * @param what
+   *
+   * @param loc  The location of the expression
+   * @param what The arbitrary specification of the expression's calculation
    */
   case class ArbitraryExpression(loc: Location, what: LiteralString) extends Expression {
     override def format: String = what.format
@@ -796,9 +831,10 @@ object AST {
   /**
    * A RIDDL Function call. The only callable thing here is a function identified by its path
    * identifier with a matching set of arguments
-   * @param loc The location of the function call expression
-   * @param name The path identifier of the RIDDL Function being called
-   * @param arguments An [[Arglist]] to pass to the function.
+   *
+   * @param loc       The location of the function call expression
+   * @param name      The path identifier of the RIDDL Function being called
+   * @param arguments An [[ArgList]] to pass to the function.
    */
   case class FunctionCallExpression(loc: Location, name: PathIdentifier, arguments: ArgList)
     extends Expression with Condition {
@@ -855,7 +891,8 @@ object AST {
    *   example foo { when "the timer has expired" }
    * }}}
    * shows the use of an arbitrary condition for the "when" part of a Gherkin example
-   * @param cond
+   *
+   * @param cond The arbitrary condition provided as a quoted string
    */
   case class ArbitraryCondition(cond: LiteralString) extends Condition {
     override def loc: Location = cond.loc
@@ -889,6 +926,14 @@ object AST {
     override def format: String = "!="
   }
 
+  /**
+   * Represents one of the six comparison operators
+   *
+   * @param loc   Location of the comparison
+   * @param op    The comparison operator
+   * @param expr1 The first operand in the comparison
+   * @param expr2 The second operand in the comparison
+   */
   case class Comparison(
     loc: Location,
     op: Comparator,
@@ -898,10 +943,19 @@ object AST {
       op.format + Seq(expr1.format, expr2.format).mkString("(", ",", ")")
   }
 
+  /**
+   * Not condition
+   *
+   * @param loc   Location of the not condition
+   * @param cond1 The condition being negated
+   */
   case class NotCondition(loc: Location, cond1: Condition) extends Condition {
     override def format: String = "!(" + cond1 + ")"
   }
 
+  /**
+   * Base class for conditions with two operands
+   */
   abstract class BinaryCondition extends Condition {
     def cond1: Condition
 
@@ -911,16 +965,36 @@ object AST {
       Seq(cond1.format, cond2.format).mkString("(", ",", ")")
   }
 
+  /**
+   * And condition
+   *
+   * @param loc   Location of the and condition
+   * @param cond1 First operand for the and condition
+   * @param cond2 Second operand for the nad condition
+   */
   case class AndCondition(loc: Location, cond1: Condition, cond2: Condition) extends
     BinaryCondition {
     override def format: String = "and" + super.format
   }
 
+  /**
+   * Or condition
+   *
+   * @param loc   Location of the or condition
+   * @param cond1 First operand for the or condition
+   * @param cond2 Second operand for the or condition
+   */
   case class OrCondition(loc: Location, cond1: Condition, cond2: Condition) extends
     BinaryCondition {
     override def format: String = "or" + super.format
   }
 
+  /**
+   * Represents a condition expression that will be specified later and uses the ??? syntax to
+   * represent that condition.
+   *
+   * @param loc The location of the undefined condition
+   */
   case class UndefinedCondition(loc: Location) extends Condition {
     override def format: String = Terminals.Punctuation.undefined
 
@@ -929,10 +1003,16 @@ object AST {
 
   ///////////////////////////////////////////////////////////// Actions
 
+  /**
+   * Base class for all actions. Actions are used in the "then" and "but" clauses of a Gherkin
+   * example such as in the body of a [[Handler]]'s [[OnClause]] or in the definition of a
+   * [[Function]]. The subclasses define different kinds of actions that can be used.
+   */
   sealed trait Action extends DescribedValue
 
-  /** An action whose behavior is specified as a text string allowing extension to arbitrary
-   * actions not otherwise handled by RIDDL
+  /**
+   * An action whose behavior is specified as a text string allowing extension to arbitrary
+   * actions not otherwise handled by RIDDL's syntax.
    *
    * @param loc         The location where the action occurs in the source
    * @param what        The action to take (emitted as pseudo-code)
@@ -1028,6 +1108,15 @@ object AST {
     override def format: String = s"become ${}"
   }
 
+  /**
+   * An action that tells a message to an entity. This is very analagous to the tell operator in
+   * Akka.
+   *
+   * @param loc         The location of the tell action
+   * @param entity      The entity to which the message is directed
+   * @param msg         A constructed message value to send to the entity, probably a command
+   * @param description An optional description for this action
+   */
   case class TellAction(
     loc: Location,
     entity: EntityRef,
@@ -1037,6 +1126,14 @@ object AST {
     override def format: String = s"tell ${entity.format} to ${msg.format}"
   }
 
+  /**
+   * An action that asks a query to an entity. This is very analogous to the ask operator in Akka.
+   *
+   * @param loc         The location of the ask action
+   * @param entity      The entity to which the message is directed
+   * @param msg         A constructed message value to send to the entity, probably a query
+   * @param description An optional description of the action.
+   */
   case class AskAction(
     loc: Location,
     entity: EntityRef,
@@ -1045,20 +1142,79 @@ object AST {
     override def format: String = s"ask ${entity.format} to ${msg.format}"
   }
 
+  /**
+   * An action that is a set of other actions.
+   *
+   * @param loc         The location of the compound action
+   * @param actions     The actions in the compound group of actions
+   * @param description An optional description for the action
+   */
+  case class CompoundAction(
+    loc: Location,
+    actions: Seq[Action],
+    description: Option[Description] = None) extends Action {
+    override def format: String = actions.mkString("{", ",", "}")
+  }
+
   // ////////////////////////////////////////////////////////// Gherkin
 
+  /**
+   * Base class of any Gherkin value
+   */
   sealed trait GherkinValue extends RiddlValue
 
+  /**
+   * Base class of one of the four Gherkin clauses (Given, When, Then, But)
+   */
   sealed trait GherkinClause extends GherkinValue
 
+  /**
+   * A GherkinClause for the Given part of a Gherkin [[Example]]
+   *
+   * @param loc      The location of the Given clause
+   * @param scenario The strings that define the scenario
+   */
   case class GivenClause(loc: Location, scenario: Seq[LiteralString]) extends GherkinClause
 
+  /**
+   * A [[GherkinClause]] for the When part of a Gherkin [[Example]]
+   *
+   * @param loc       The location of the When clause
+   * @param condition The condition expression that defines the trigger for the [[Example]]
+   */
   case class WhenClause(loc: Location, condition: Condition) extends GherkinClause
 
+  /**
+   * A [[GherkinClause]] for the Then part of a Gherkin [[Example]]. This part specifies what
+   * should be done if the [[WhenClause]] evaluates to true.
+   *
+   * @param loc    The location of the Then clause
+   * @param action The action to be performed
+   */
   case class ThenClause(loc: Location, action: Action) extends GherkinClause
 
+  /**
+   * A [[GherkinClause]] for the But part of a Gherkin [[Example]]. This part specifies what
+   * should be done if the [[WhenClause]] evaluates to false.
+   *
+   * @param loc    The location of the But clause
+   * @param action The action to be performed
+   */
   case class ButClause(loc: Location, action: Action) extends GherkinClause
 
+  /**
+   * A Gherkin example. Examples have names, [[id]], and a sequence of each of the four kinds of
+   * Gherkin clauses: [[GivenClause]], [[WhenClause]], [[ThenClause]], [[ButClause]]
+   *
+   * @see [[https://cucumber.io/docs/gherkin/reference/ The Gherkin Reference]]
+   * @param loc         The location of the start of the example
+   * @param id          The name of the example
+   * @param givens      The list of Given/And statements
+   * @param whens       The list of When/And statements
+   * @param thens       The list of Then/And statements
+   * @param buts        The List of But/And statements
+   * @param description An optional description of the example
+   */
   case class Example(
     loc: Location,
     id: Identifier,
@@ -1073,61 +1229,114 @@ object AST {
 
   // ////////////////////////////////////////////////////////// Entities
 
+  /**
+   * Base trait of any value used in the definition of an entity
+   */
   sealed trait EntityValue extends RiddlValue
 
-  trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name + args.map(_.format).mkString("(", ", ", ")")
-  }
-
-  trait OptionsDef[T <: OptionValue] extends RiddlValue {
-    def options: Seq[T]
-
-    def hasOption[OPT <: T : ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 => s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
-
-    override def isEmpty: Boolean = options.isEmpty
-  }
-
+  /**
+   * Abstract base class of options for entities
+   *
+   * @param name the name of the option
+   */
   sealed abstract class EntityOption(val name: String) extends EntityValue with OptionValue
 
+  /**
+   * An [[EntityOption]] that indicates that this entity should store its state in an event
+   * sourced fashion.
+   *
+   * @param loc The location of the option.
+   */
   case class EntityEventSourced(loc: Location) extends EntityOption("event sourced")
 
+  /**
+   * An [[EntityOption]] that indicates that this entity should store only the latest value
+   * without using event sourcing. In other words, the history of changes is not stored.
+   *
+   * @param loc The location of the option
+   */
   case class EntityValueOption(loc: Location) extends EntityOption("value")
 
+  /**
+   * An [[EntityOption]] that indicates that this entity should not persist its state and is only
+   * available in transient memory. All entity values will be lost when the service is stopped.
+   *
+   * @param loc The location of the option.
+   */
+  case class EntityTransient(loc: Location) extends EntityOption("transient")
+
+  /**
+   * An [[EntityOption]] that indicates that this entity is an aggregate root entity through
+   * which all commands and queries are sent on behalf of the aggregated entities.
+   *
+   * @param loc The location of the option
+   */
   case class EntityAggregate(loc: Location) extends EntityOption("aggregate")
 
-  case class EntityPersistent(loc: Location) extends EntityOption("persistent")
-
+  /**
+   * An [[EntityOption]] that indicates that this entity favors consistency over availability in
+   * the CAP theorem.
+   *
+   * @param loc The location of the option.
+   */
   case class EntityConsistent(loc: Location) extends EntityOption("consistent")
 
+  /**
+   * A [[EntityOption]] that indicates that this entity favors availability over consistency in
+   * the CAP theorem.
+   *
+   * @param loc The location of the option.
+   */
   case class EntityAvailable(loc: Location) extends EntityOption("available")
 
+  /**
+   * An [[EntityOption]] that indicates that this entity is intended to implement a finite state
+   * machine.
+   *
+   * @param loc The location of the option.
+   */
   case class EntityFiniteStateMachine(loc: Location) extends EntityOption("finite state machine")
 
+  /**
+   * An [[EntityOption]] that indicates the general kind of entity being defined. This option takes
+   * a value which provides the kind.  Examples of useful kinds are "device", "actor", "concept",
+   * "machine", and similar kinds of entities. This entity option may be used by downstream AST
+   * processors, especially code generators.
+   *
+   * @param loc  The location of the entity kind option
+   * @param args The argument to the option
+   */
   case class EntityKind(loc: Location, override val args: Seq[LiteralString]) extends
     EntityOption("kind")
 
+  /**
+   * A reference to an entity
+   *
+   * @param loc The location of the entity reference
+   * @param id  The path identifier of the referenced entity.
+   */
   case class EntityRef(loc: Location, id: PathIdentifier) extends Reference[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
-
+  /**
+   * A reference to a feature
+   *
+   * @param loc The location of the feature reference
+   * @param id  The path identifier of the referenced feature
+   */
   case class FeatureRef(loc: Location, id: PathIdentifier) extends Reference[Feature] {
     override def format: String = s"${Keywords.feature} ${id.format}"
   }
 
+  /**
+   * A feature of a bounded context specified as a set of Gherkin [[Example]]s
+   *
+   * @param loc         The location of the feature definition
+   * @param id          The identifier that names the feature definition
+   * @param examples    A set of example definitions to define the feature
+   * @param description An optional description of the feature
+   */
   case class Feature(
     loc: Location,
     id: Identifier,
@@ -1137,15 +1346,35 @@ object AST {
     lazy val contents: Seq[Example] = examples
   }
 
+  /**
+   * A reference to a function.
+   *
+   * @param loc The location of the function reference.
+   * @param id  The path identifier of the referenced function.
+   */
   case class FunctionRef(loc: Location, id: PathIdentifier) extends Reference[Function] {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
 
+  /**
+   * A function definition which can be part of a bounded context or an entity.
+   *
+   * @param loc         The location of the function definition
+   * @param id          The identifier that names the function
+   * @param input       An optional type expression that names and types the fields of the input
+   *                    of the
+   *                    function
+   * @param output      An optional type expression that names and types the fields of the output
+   *                    of the
+   *                    function
+   * @param examples    The set of examples that define the behavior of the function.
+   * @param description An optional description of the function.
+   */
   case class Function(
     loc: Location,
     id: Identifier,
-    input: Option[TypeExpression] = None,
-    output: Option[TypeExpression] = None,
+    input: Option[Aggregation] = None,
+    output: Option[Aggregation] = None,
     examples: Seq[Example] = Seq.empty[Example],
     description: Option[Description] = None)
     extends Container[Example] with EntityDefinition {
@@ -1154,13 +1383,15 @@ object AST {
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty && output.isEmpty
   }
 
-  case class InvariantRef(
-    loc: Location,
-    id: PathIdentifier)
-    extends Reference[Invariant] {
-    override def format: String = s"${Keywords.invariant} ${id.format}"
-  }
-
+  /**
+   * An invariant expression that can be used in the definition of an entity. Invariants provide
+   * conditional expressions that must be true at all times in the lifecycle of an entity.
+   *
+   * @param loc         The location of the invariant definition
+   * @param id          The name of the invariant
+   * @param expression  The conditional expression that must always be true.
+   * @param description An optional description of the invariant.
+   */
   case class Invariant(
     loc: Location,
     id: Identifier,
@@ -1170,6 +1401,16 @@ object AST {
     override def isEmpty: Boolean = expression.isEmpty
   }
 
+  /**
+   * Defines the actions to be taken when a particular message is received by an entity.
+   * [[OnClause]]s are used in the definition of a [[Handler]] with one for each kind of message
+   * that handler deals with.
+   *
+   * @param loc         The location of the "on" clause
+   * @param msg         A reference to the message type that is handled
+   * @param examples    A set of examples that define the behavior when the [[msg]] is received.
+   * @param description An optional description of the on clause.
+   */
   case class OnClause(
     loc: Location,
     msg: MessageRef,
@@ -1179,6 +1420,18 @@ object AST {
     override def isEmpty: Boolean = examples.isEmpty
   }
 
+  /**
+   * A named handler of messages (commands, events, queries) that bundles together a set of
+   * [[OnClause]] definitions and by doing so defines the behavior of an entity. Note that
+   * entities may define multiple handlers and switch between them to change how it responds
+   * to messages over time or in response to changing conditions
+   *
+   * @param loc         The location of the handler definition
+   * @param id          The name of the handler.
+   * @param clauses     The set of [[OnClause]] definitions that define how the entity responds to
+   *                    received messages.
+   * @param description An optional description of the handler
+   */
   case class Handler(
     loc: Location,
     id: Identifier,
@@ -1188,10 +1441,26 @@ object AST {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
   }
 
+  /**
+   * A reference to a Handler
+   *
+   * @param loc The location of the handler reference
+   * @param id  The path identifier of the referenced handler
+   */
   case class HandlerRef(loc: Location, id: PathIdentifier) extends Reference[Handler] {
     override def format: String = s"${Keywords.handler} ${id.format}"
   }
 
+  /**
+   * Represents the state of an entity. The [[MorphAction]] can cause the state definition of an
+   * entity to change.
+   *
+   * @param loc         The location of the state definition
+   * @param id          The name of the state definition
+   * @param typeEx      The aggregation that provides the field name and type expression
+   *                    associations
+   * @param description An optional description of the state.
+   */
   case class State(
     loc: Location,
     id: Identifier,
@@ -1202,6 +1471,12 @@ object AST {
     override def contents: Seq[Field] = typeEx.fields
   }
 
+  /**
+   * A reference to an entity's state definition
+   *
+   * @param loc The location of the state reference
+   * @param id  The path identifier of the referenced state definition
+   */
   case class StateRef(loc: Location, id: PathIdentifier) extends Reference[State] {
     override def format: String = s"${Keywords.state} ${id.format}"
   }
@@ -1235,7 +1510,7 @@ object AST {
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     description: Option[Description] = None)
-      extends Container[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption] {
+    extends Container[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption] {
 
     lazy val contents: Seq[EntityDefinition] = {
       (states ++ types ++ handlers ++ functions ++ invariants).toList
@@ -1244,6 +1519,16 @@ object AST {
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
 
+  /**
+   * The specification of a single adaptation based on message
+   *
+   * @param loc         The location of the adaptation definition
+   * @param id          The name of the adaptation
+   * @param event       The event that triggers the adaptation
+   * @param command     The command that adapts the event to the bounded context
+   * @param examples    Optional set of Gherkin [[Example]]s to define the adaptation
+   * @param description Optional description of the adaptation.
+   */
   case class Adaptation(
     loc: Location,
     id: Identifier,
@@ -1255,45 +1540,100 @@ object AST {
     override def contents: Seq[Example] = examples
   }
 
-  /** Definition of an Adapter Adapters are defined in Contexts to convert messaging from one
-    * Context to another. Adapters translate incoming events from other Contexts into commands or
-    * events that its owning context can understand. There should be one Adapter for each external
-    * Context
-    *
-    * @param loc
-    *   Location in the parsing input
-    * @param id
-    *   Name of the adaptor
-    */
+  case class ActionAdaptation(
+    loc: Location,
+    id: Identifier,
+    event: EventRef,
+    action: Action
+  )
+
+  /**
+   * Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another
+   * bounded context. Adaptors translate incoming messages into corresponding messages using the
+   * ubiquitous language of the defining bounded context. There should be one Adapter for each
+   * external
+   * Context
+   *
+   * @param loc         Location in the parsing input
+   * @param id          Name of the adaptor
+   * @param ref         A reference to the bounded context from which messages are adapted
+   * @param adaptations A set of [[Adaptation]] definitions that indicate what to do when
+   *                    messages occur.
+   * @param description Optional description of the adaptor.
+   */
   case class Adaptor(
     loc: Location,
     id: Identifier,
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
     description: Option[Description] = None)
-      extends Container[Adaptation] with ContextDefinition {
+    extends Container[Adaptation] with ContextDefinition {
     lazy val contents: Seq[Adaptation] = adaptations
   }
 
+  /**
+   * Base trait for all options a Context can have.
+   */
   sealed trait ContextOption extends OptionValue
 
+  /**
+   * A context's "wrapper" option. This option suggests the bounded context is to be used as a
+   * wrapper around an external system and is therefore at the boundary of the context map
+   *
+   * @param loc The location of the wrapper option
+   */
   case class WrapperOption(loc: Location) extends ContextOption {
     def name: String = "wrapper"
 
   }
 
+  /**
+   * A context's "function" option that suggests
+   *
+   * @param loc
+   */
   case class FunctionOption(loc: Location) extends ContextOption {
     def name: String = "function"
   }
 
+  /**
+   * A context's "gateway" option that suggests the bounded context is intended to be an
+   * application gateway to the model. Gateway's provide authentication and authorization access
+   * to external systems, usually user applications.
+   *
+   * @param loc
+   */
   case class GatewayOption(loc: Location) extends ContextOption {
     def name: String = "gateway"
   }
 
+  /**
+   * A reference to a bounded context
+   *
+   * @param loc The location of the reference
+   * @param id  The path identifier for the referenced context
+   */
   case class ContextRef(loc: Location, id: PathIdentifier) extends Reference[Context] {
     override def format: String = s"context ${id.format}"
   }
 
+  /**
+   * A bounded context definition. Bounded contexts provide a definitional boundary on the
+   * language used to describe some aspect of a system. They imply a tightly integrated ecosystem
+   * of one or more microservices that share a common purpose. Context can be used to house
+   * entities, read side projections, sagas, adaptations to other contexts, apis, and etc.
+   *
+   * @param loc          The location of the bounded context definition
+   * @param id           The name of the context
+   * @param options      The options for the context
+   * @param types        Types defined for the scope of this context
+   * @param entities     Entities defined for the scope of this context
+   * @param adaptors     Adaptors to messages from other contexts
+   * @param sagas        Sagas with all-or-none semantics across various entities
+   * @param features     Features specified for the context
+   * @param interactions TBD
+   * @param description  An optional description of the context
+   */
   case class Context(
     loc: Location,
     id: Identifier,
@@ -1305,15 +1645,27 @@ object AST {
     features: Seq[Feature] = Seq.empty[Feature],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     description: Option[Description] = None)
-      extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
+    extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++ sagas ++
       features ++ interactions
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
 
+  /**
+   * Base trait of any definition that occurs in the body of a plant
+   */
   sealed trait PlantDefinition extends Definition
 
+  /**
+   * Definition of a pipe for data streaming purposes. Pipes are conduits through which data of a
+   * particular type flows.
+   *
+   * @param loc          The location of the pipe definition
+   * @param id           The name of the pipe
+   * @param transmitType The type of data transmitted.
+   * @param description  An optional description of the pipe.
+   */
   case class Pipe(
     loc: Location,
     id: Identifier,
@@ -1321,10 +1673,24 @@ object AST {
     description: Option[Description] = None)
     extends PlantDefinition
 
+  /**
+   * Base trait of definitions defined in a processor
+   */
   trait ProcessorDefinition extends Definition
 
+  /**
+   * Base trait of an Inlet or Outlet definition
+   */
   trait Streamlet extends ProcessorDefinition
 
+  /**
+   * A streamlet that supports input of data of a particlar type.
+   *
+   * @param loc         The location of the Inlet definition
+   * @param id          The name of the inlet
+   * @param type_       The type of the data that is received from the inlet
+   * @param description An optional description
+   */
   case class Inlet(
     loc: Location,
     id: Identifier,

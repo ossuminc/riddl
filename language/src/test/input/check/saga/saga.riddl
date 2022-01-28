@@ -8,7 +8,7 @@ domain ignore1 is {
     saga name is {
       options(parallel)
       requires: { p1: String, p2: String }
-      yields: String
+      yields: {s: String }
       action Step1 for entity blah is {
         command Something reverted by command undoSomething as {
           example A is {

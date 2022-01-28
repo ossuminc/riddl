@@ -55,7 +55,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "EntityAggregate" should {
     "have correct name" in {
       EntityAggregate(Location()).name mustBe "aggregate"
-      EntityPersistent(Location()).name mustBe "persistent"
+      EntityTransient(Location()).name mustBe "transient"
       EntityConsistent(Location()).name mustBe "consistent"
       EntityAvailable(Location()).name mustBe "available"
     }
@@ -74,7 +74,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "Entity" should {
     "contents" should {
       "contain all contents" in {
-        val options = Seq(EntityAggregate(Location()), EntityPersistent(Location()), EntityKind
+        val options = Seq(EntityAggregate(Location()), EntityTransient(Location()), EntityKind
         (Location(), Seq(LiteralString(Location(), "concept"))))
         val states = Seq(State(
           Location(),
@@ -90,7 +90,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           Location(),
           Identifier(Location(), "my_func"),
           None,
-          Option(Bool(Location())),
+          Option(Aggregation(Location(), Seq(Field(Location(), Identifier(Location(), "a"), Bool
+          (Location()))))),
           Seq.empty[Example],
           None
         ))

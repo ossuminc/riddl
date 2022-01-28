@@ -48,7 +48,7 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
           List(
             EntityAggregate(Location()),
-            EntityPersistent(Location()),
+            EntityTransient(Location()),
             EntityAggregate(Location())
           ),
           Location()

@@ -581,6 +581,11 @@ object Validation {
           this
             .checkRef[Entity](entity)
             .checkMessageConstructor(msg)
+        case CompoundAction(loc, actions, _) =>
+          val vs = this
+            .check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
+          actions.foldLeft(vs) { (s, action) => s.checkAction(action) }
+
         case ArbitraryAction(loc, what, _) =>
           this.check(what.nonEmpty,
             "arbitrary action is empty so specifies nothing", MissingWarning, loc)

@@ -1,28 +1,29 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Entity, Identifier}
+import com.yoppworks.ossum.riddl.language.AST.*
 
 class FunctionValidatorTest extends ValidatingTest {
 
   "FunctionValidator" should {
     "accept function but warn about descriptions" in {
-      parseAndValidateInContext[Entity]("""
-                                          |entity user is {
-                                          |  function foo is {
-                                          |    requires Boolean
-                                          |    yields Integer
-                                          |  }
-                                          |}
-                                          |""".stripMargin) { (e, msgs) =>
+      parseAndValidateInContext[Entity](
+        """
+          |entity user is {
+          |  function foo is {
+          |    requires {b: Boolean }
+          |    yields {r: Integer }
+          |  }
+          |}
+          |""".stripMargin) { (e, msgs) =>
         e.functions must matchPattern {
           case Seq(
                 AST.Function(
-                  _,
-                  Identifier(_, "foo"),
-                  Some(AST.Bool(_)),
-                  Some(AST.Integer(_)),
-                  _,
-                  None
+                _,
+                Identifier(_, "foo"),
+                Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _)))),
+                Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _)))),
+                _,
+                None
                 )
               ) =>
         }

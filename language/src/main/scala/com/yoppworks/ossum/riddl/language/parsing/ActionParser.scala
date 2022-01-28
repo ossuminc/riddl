@@ -58,10 +58,16 @@ trait ActionParser extends ReferenceParser with ConditionParser with ExpressionP
       .map { tpl => (AskAction.apply _).tupled(tpl) }
   }
 
+  def compoundAction[u: P]: P[CompoundAction] = {
+    P(
+      location ~ open ~ anyAction.rep(1, ",") ~ close ~ description
+    ).map(tpl => (CompoundAction.apply _).tupled(tpl))
+  }
+
   def anyAction[u: P]: P[Action] = {
     P(
       arbitraryAction | setAction | morphAction | becomeAction | publishAction |
-        tellAction | askAction
+        tellAction | askAction | compoundAction
     )
   }
 }

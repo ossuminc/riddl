@@ -48,8 +48,8 @@ object LukeAstWalker {
         entityOpt match {
           case AST.EntityEventSourced(_) => opts + HugoEntity.EntityOption.EventSourced
           case AST.EntityValueOption(_) => opts + HugoEntity.EntityOption.ValueType
+          case AST.EntityTransient(_) => opts + HugoEntity.EntityOption.Transient
           case AST.EntityAggregate(_) => opts + HugoEntity.EntityOption.Aggregate
-          case AST.EntityPersistent(_) => opts + HugoEntity.EntityOption.Persistent
           case AST.EntityConsistent(_) => opts + HugoEntity.EntityOption.Consistent
           case AST.EntityAvailable(_) => opts + HugoEntity.EntityOption.Available
           case AST.EntityFiniteStateMachine(_) => opts + HugoEntity.EntityOption.FiniteStateMachine

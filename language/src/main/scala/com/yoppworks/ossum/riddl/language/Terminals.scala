@@ -54,13 +54,13 @@ object Terminals {
     final val gateway = "gateway"
     final val kind = "kind"
     final val parallel = "parallel"
-    final val persistent = "persistent"
     final val reply = "reply"
     final val sequential = "sequential"
     final val sync = "sync"
     final val value = "value"
     final val wrapper = "wrapper"
     final val stateMachine = "fsm"
+    final val transient = "transient"
   }
 
   object Keywords {

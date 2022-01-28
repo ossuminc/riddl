@@ -14,7 +14,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
         Options.eventSourced,
         Options.value,
         Options.aggregate,
-        Options.persistent,
+        Options.transient,
         Options.consistent,
         Options.available,
         Options.stateMachine,
@@ -24,7 +24,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
       case (loc, Options.value, _) => EntityValueOption(loc)
       case (loc, Options.aggregate, _) => EntityAggregate(loc)
-      case (loc, Options.persistent, _) => EntityPersistent(loc)
+      case (loc, Options.transient, _) => EntityTransient(loc)
       case (loc, Options.consistent, _) => EntityConsistent(loc)
       case (loc, Options.available, _) => EntityAvailable(loc)
       case (loc, Options.stateMachine, _) => EntityFiniteStateMachine(loc)
