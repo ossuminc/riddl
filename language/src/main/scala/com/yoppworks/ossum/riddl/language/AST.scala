@@ -1555,7 +1555,17 @@ object AST {
    */
   case class WrapperOption(loc: Location) extends ContextOption {
     def name: String = "wrapper"
+  }
 
+  /**
+   * A context's "service" option. This option suggests the bounded context is intended to be a
+   * DDD service, similar to a wrapper but without any persistent state and more of a
+   * stateless service aspect to its nature
+   *
+   * @param loc The location at which the option occurs
+   */
+  case class ServiceOption(loc: Location) extends ContextOption {
+    def name: String = "service"
   }
 
   /**

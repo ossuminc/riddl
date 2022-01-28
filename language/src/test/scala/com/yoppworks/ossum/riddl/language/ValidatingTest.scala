@@ -1,12 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
+import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind,
+  ValidationMessages, ValidationOptions}
+import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -15,7 +12,7 @@ import scala.reflect.*
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidateInContext[D <: ContextDefinition: ClassTag](
+  def parseAndValidateInContext[D <: ContextDefinition : ClassTag](
     input: String
   )(validator: (D, ValidationMessages) => Assertion
   ): Seq[Assertion] = {
@@ -34,9 +31,30 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def parseAndValidate[D <: Container[Definition]: ClassTag](
+
+  def parseAndValidateContext(
+    input: String,
+    options: ValidationOptions = ValidationOptions.Default
+  )(
+    validator: (Context, ValidationMessages) => Assertion
+  ): Assertion = {
+    val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
+    parseDefinition[Domain](RiddlParserInput(parseString)) match {
+      case Left(errors) =>
+        val msg = errors.map(_.format).mkString("\n")
+        fail(msg)
+      case Right(model: Domain) =>
+        val msgs = Validation.validate(model, options)
+        val reducedMessages = msgs.filterNot(_.loc.line == 1)
+        validator(model.contexts.head, reducedMessages)
+    }
+  }
+
+
+  def parseAndValidate[D <: Container[Definition] : ClassTag](
     input: String
-  )(validator: (D, ValidationMessages) => Assertion
+  )(
+    validator: (D, ValidationMessages) => Assertion
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>

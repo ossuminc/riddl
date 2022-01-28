@@ -56,6 +56,7 @@ object Terminals {
     final val parallel = "parallel"
     final val reply = "reply"
     final val sequential = "sequential"
+    final val service = "service"
     final val sync = "sync"
     final val value = "value"
     final val wrapper = "wrapper"
