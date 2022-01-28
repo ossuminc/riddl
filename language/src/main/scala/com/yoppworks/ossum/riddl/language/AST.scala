@@ -1590,7 +1590,7 @@ object AST {
   /**
    * A context's "function" option that suggests
    *
-   * @param loc
+   * @param loc The location of the function option
    */
   case class FunctionOption(loc: Location) extends ContextOption {
     def name: String = "function"
@@ -1601,7 +1601,8 @@ object AST {
    * application gateway to the model. Gateway's provide authentication and authorization access
    * to external systems, usually user applications.
    *
-   * @param loc
+   * @param loc The location of the gateway option
+   *
    */
   case class GatewayOption(loc: Location) extends ContextOption {
     def name: String = "gateway"
@@ -1684,7 +1685,7 @@ object AST {
   trait Streamlet extends ProcessorDefinition
 
   /**
-   * A streamlet that supports input of data of a particlar type.
+   * A streamlet that supports input of data of a particular type.
    *
    * @param loc         The location of the Inlet definition
    * @param id          The name of the inlet
@@ -1698,13 +1699,32 @@ object AST {
     description: Option[Description] = None)
     extends Streamlet
 
+  /**
+   * A streamlet that supports output of data of a particular type.
+   *
+   * @param loc         The location of the outlet definition
+   * @param id          The name of the outlet
+   * @param type_       The type expression for the kind of data put out
+   * @param description An optional description of the outlet.
+   */
   case class Outlet(
     loc: Location,
     id: Identifier,
     type_ : TypeRef,
     description: Option[Description] = None)
-      extends Streamlet
+    extends Streamlet
 
+  /**
+   * A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A processor's
+   * processing is specified by Gherkin [[Example]]s
+   *
+   * @param loc         The location of the Processor definition
+   * @param id          The name of the processor
+   * @param inlets      The list of inlets that provide the data the processor needs
+   * @param outlets     The list of outlets that the processor produces
+   * @param examples    A set of examples that define the data processing
+   * @param description An optional description of the processor
+   */
   case class Processor(
     loc: Location,
     id: Identifier,
@@ -1716,38 +1736,94 @@ object AST {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++ examples
   }
 
+  /**
+   * A reference to a pipe
+   *
+   * @param loc The location of the pipe reference
+   * @param id  The path identifier for the referenced pipe.
+   */
   case class PipeRef(loc: Location, id: PathIdentifier) extends Reference[Pipe] {
     override def format: String = s"pipe ${id.format}"
   }
 
+  /**
+   * Sealed base trait of references to [[Inlet]]s or [[Outlet]]s
+   *
+   * @tparam T The type of definition to which the references refers.
+   */
   sealed trait StreamletRef[+T <: Definition] extends Reference[T]
 
+  /**
+   * A reference to an [[Inlet]]
+   *
+   * @param loc The location of the inlet reference
+   * @param id  The path identifier of the referenced [[Inlet]]
+   */
   case class InletRef(loc: Location, id: PathIdentifier) extends StreamletRef[Inlet] {
     override def format: String = s"inlet ${id.format}"
   }
 
+  /**
+   * A reference to an [[Outlet]]
+   *
+   * @param loc The location of the outlet reference
+   * @param id  The path identifier of the referenced [[Outlet]]
+   */
   case class OutletRef(loc: Location, id: PathIdentifier) extends StreamletRef[Outlet] {
     override def format: String = s"outlet ${id.format}"
   }
 
+  /**
+   * Sealed base trait for both kinds of Joint definitions
+   */
   sealed trait Joint extends PlantDefinition
 
+  /**
+   * A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
+   *
+   * @param loc         The location of the InletJoint
+   * @param id          The name of the inlet joint
+   * @param inletRef    A reference to the inlet being connected
+   * @param pipe        A reference to the pipe being connected
+   * @param description An optional description of the joint
+   */
   case class InletJoint(
     loc: Location,
     id: Identifier,
-    streamletRef: InletRef,
+    inletRef: InletRef,
     pipe: PipeRef,
     description: Option[Description] = None)
     extends Joint
 
+  /**
+   * A joint that connects a [[Processor]]'s [[Outlet]] to a [[Pipe]].
+   *
+   * @param loc         The location of the OutletJoint
+   * @param id          The name of the OutletJoint
+   * @param outletRef   A reference to the outlet being connected
+   * @param pipe        A reference to the pipe being connected
+   * @param description An optional description of the OutletJoint
+   */
   case class OutletJoint(
     loc: Location,
     id: Identifier,
-    streamletRef: OutletRef,
+    outletRef: OutletRef,
     pipe: PipeRef,
     description: Option[Description] = None)
     extends Joint
 
+  /**
+   * The definition of a plant which brings pipes, processors and joints together into a closed
+   * system of data processing.
+   *
+   * @param loc         The location of the plant definition
+   * @param id          The name of the plant
+   * @param pipes       The set of pipes involved in the plant
+   * @param processors  The set of processors involved in the plant.
+   * @param inJoints    The InletJoints connecting pipes and processors
+   * @param outJoints   The OutletJoints connecting pipes and processors
+   * @param description An optional description of the plant
+   */
   case class Plant(
     loc: Location,
     id: Identifier,
@@ -1760,6 +1836,17 @@ object AST {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++ outJoints
   }
 
+  /**
+   * The definition of one step in a saga with its undo step and example.
+   *
+   * @param loc         The location of the saga action definition
+   * @param id          The name of the SagaAction
+   * @param entity      A reference to the entity to which commands are directed
+   * @param doCommand   The command to be done.
+   * @param undoCommand The command that undoes [[doCommand]]
+   * @param example     An list of examples for the intended behavior
+   * @param description An optional description of the saga action
+   */
   case class SagaAction(
     loc: Location,
     id: Identifier,
@@ -1774,25 +1861,54 @@ object AST {
     override def contents: Seq[Example] = example
   }
 
+  /**
+   * Base trait for all options applicable to a saga.
+   */
   sealed trait SagaOption extends OptionValue
 
+  /**
+   * A [[SagaOption]] that indicates sequential (serial) execution of the saga actions.
+   *
+   * @param loc The location of the sequential option
+   */
   case class SequentialOption(loc: Location) extends SagaOption {
     def name: String = "sequential"
   }
 
+  /**
+   * A [[SagaOption]] that indicates parallel execution of the saga actions.
+   *
+   * @param loc The location of the parallel option
+   */
   case class ParallelOption(loc: Location) extends SagaOption {
-    def name: String = "sequential"
+    def name: String = "parallel"
   }
 
+  /**
+   * The definition of a Saga based on inputs, outputs, and the set of [[SagaAction]]s involved
+   * in the saga. Sagas define a computing action based on a variety of related commands that
+   * must all succeed atomically or have their effects undone.
+   *
+   * @param loc         The location of the Saga definition
+   * @param id          The name of the saga
+   * @param options     The options of the saga
+   * @param input       A definition of the aggregate input values needed to invoke the saga, if
+   *                    any.
+   * @param output      A definition of the aggregate output values resulting from invoking the
+   *                    saga,
+   *                    if any.
+   * @param sagaActions The set of [[SagaAction]]s that comprise the saga.
+   * @param description An optional description of the saga.
+   */
   case class Saga(
     loc: Location,
     id: Identifier,
     options: Seq[SagaOption] = Seq.empty[SagaOption],
-    input: Option[TypeExpression],
-    output: Option[TypeExpression],
+    input: Option[Aggregation],
+    output: Option[Aggregation],
     sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
     description: Option[Description] = None)
-      extends Container[SagaAction] with ContextDefinition with OptionsDef[SagaOption] {
+    extends Container[SagaAction] with ContextDefinition with OptionsDef[SagaOption] {
     lazy val contents: Seq[SagaAction] = sagaActions
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty && input.isEmpty &&
@@ -1884,7 +2000,7 @@ object AST {
     *   A reference to the entity receiving the message
     * @param message
     *   A reference to the kind of message sent & received
-    */
+   */
   case class MessageAction(
     loc: Location,
     id: Identifier,
@@ -1894,12 +2010,33 @@ object AST {
     message: MessageRef,
     reactions: Seq[Reaction],
     description: Option[Description] = None)
-      extends ActionDefinition with OptionsDef[MessageOption]
+    extends ActionDefinition with OptionsDef[MessageOption]
 
+  /**
+   * A reference to a domain definition
+   *
+   * @param loc The location at which the domain definition occurs
+   * @param id  The path identifier for the referenced domain.
+   */
   case class DomainRef(loc: Location, id: PathIdentifier) extends Reference[Domain] {
     override def format: String = s"domain ${id.format}"
   }
 
+  /**
+   * The definition of a domain. Domains are the highest building block in RIDDL and may be
+   * nested inside each other to form a hierarchy of domains. Generally, domains follow
+   * hierarchical organization structure but other taxonomies and ontologies may be modelled with
+   * domains too.
+   *
+   * @param loc          The location of the domain definition
+   * @param id           The name of the domain
+   * @param types        The types defined in the scope of the domain
+   * @param contexts     The contexts defined in the scope of the domain
+   * @param interactions TBD
+   * @param plants       The plants defined in the scope of the domain
+   * @param domains      Nested sub-domains within this domain
+   * @param description  An optional description of the domain.
+   */
   case class Domain(
     loc: Location,
     id: Identifier,
@@ -1909,7 +2046,7 @@ object AST {
     plants: Seq[Plant] = Seq.empty[Plant],
     domains: Seq[Domain] = Seq.empty[Domain],
     description: Option[Description] = None)
-      extends Container[DomainDefinition] with DomainDefinition {
+    extends Container[DomainDefinition] with DomainDefinition {
 
     lazy val contents: Seq[DomainDefinition] =
       (domains ++ types.iterator ++ contexts ++ interactions ++ plants).toList
