@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, Feature}
+import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, Function}
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
@@ -71,19 +71,20 @@ class EntityValidatorTest extends ValidatingTest {
         )
       }
     }
-    "validate examples" in {
-      parseAndValidateInContext[Feature]("""
-                                           |  feature AnAspect is {
-                                           |    EXAMPLE foobar {
-                                           |      GIVEN "everybody hates me"
-                                           |      AND "I'm depressed"
-                                           |      WHEN "I go fishing"
-                                           |      THEN "I'll just eat worms"
-                                           |      ELSE "I'm happy"
-                                           |    } described as {
-                                           |     "brief description"
-                                           |     "detailed description"
-                                           |    }
+    "validate function examples" in {
+      parseAndValidateInContext[Function](
+        """
+          |  function AnAspect is {
+          |    EXAMPLE foobar {
+          |      GIVEN "everybody hates me"
+          |      AND "I'm depressed"
+          |      WHEN "I go fishing"
+          |      THEN "I'll just eat worms"
+          |      ELSE "I'm happy"
+          |    } described as {
+          |     "brief description"
+          |     "detailed description"
+          |    }
                                            |  } described as "foo"
                                            |""".stripMargin) { case (feature, msgs) =>
         feature.id.value mustBe "AnAspect"

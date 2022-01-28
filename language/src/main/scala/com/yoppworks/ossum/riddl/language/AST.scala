@@ -129,7 +129,6 @@ object AST {
       case _: Entity => Keywords.entity
       case _: Enumerator => ""
       case _: Example => Keywords.example
-      case _: Feature => Keywords.feature
       case _: Field => ""
       case _: Function => Keywords.function
       case _: Handler => Keywords.handler
@@ -166,7 +165,6 @@ object AST {
       case _: Entity => "Entity"
       case _: Enumerator => "Enumerator"
       case _: Example => "Example"
-      case _: Feature => "Feature"
       case _: Field => "Field"
       case _: Function => "Function"
       case _: Handler => "Handler"
@@ -1320,33 +1318,6 @@ object AST {
   }
 
   /**
-   * A reference to a feature
-   *
-   * @param loc The location of the feature reference
-   * @param id  The path identifier of the referenced feature
-   */
-  case class FeatureRef(loc: Location, id: PathIdentifier) extends Reference[Feature] {
-    override def format: String = s"${Keywords.feature} ${id.format}"
-  }
-
-  /**
-   * A feature of a bounded context specified as a set of Gherkin [[Example]]s
-   *
-   * @param loc         The location of the feature definition
-   * @param id          The identifier that names the feature definition
-   * @param examples    A set of example definitions to define the feature
-   * @param description An optional description of the feature
-   */
-  case class Feature(
-    loc: Location,
-    id: Identifier,
-    examples: Seq[Example] = Seq.empty[Example],
-    description: Option[Description] = None)
-    extends Container[Example] with EntityDefinition with ContextDefinition {
-    lazy val contents: Seq[Example] = examples
-  }
-
-  /**
    * A reference to a function.
    *
    * @param loc The location of the function reference.
@@ -1377,7 +1348,7 @@ object AST {
     output: Option[Aggregation] = None,
     examples: Seq[Example] = Seq.empty[Example],
     description: Option[Description] = None)
-    extends Container[Example] with EntityDefinition {
+    extends Container[Example] with EntityDefinition with ContextDefinition {
     override lazy val contents: Seq[Example] = examples
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty && output.isEmpty
@@ -1631,7 +1602,7 @@ object AST {
    * @param entities     Entities defined for the scope of this context
    * @param adaptors     Adaptors to messages from other contexts
    * @param sagas        Sagas with all-or-none semantics across various entities
-   * @param features     Features specified for the context
+   * @param functions    Features specified for the context
    * @param interactions TBD
    * @param description  An optional description of the context
    */
@@ -1643,12 +1614,12 @@ object AST {
     entities: Seq[Entity] = Seq.empty[Entity],
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
     sagas: Seq[Saga] = Seq.empty[Saga],
-    features: Seq[Feature] = Seq.empty[Feature],
+    functions: Seq[Function] = Seq.empty[Function],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     description: Option[Description] = None)
     extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++ sagas ++
-      features ++ interactions
+      functions ++ interactions
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }

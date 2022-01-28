@@ -73,10 +73,4 @@ trait GherkinParser extends ConditionParser with ActionParser {
 
   def examples[u: P]: P[Seq[Example]] = { P(example.rep(0)) }
 
-  def feature[u: P]: P[Feature] = {
-    P(
-      location ~ IgnoreCase(Keywords.feature) ~/ identifier ~ is ~ open ~
-        (undefined(Seq.empty[Example]) | examples) ~ close ~ description
-    ).map { case (loc, id, examples, desc) => Feature(loc, id, examples, desc) }
-  }
 }

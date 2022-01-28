@@ -337,113 +337,101 @@ class FormatTranslator extends Translator[FormatConfig] {
 
   class FormatFolding extends Folding[FormatState] {
 
-    override def openRootDomain(
+    def openRootDomain(
       state: FormatState,
       container: RootContainer,
       domain: Domain
     ): FormatState = {state.openDef(domain)}
 
-    override def closeRootDomain(
+    def closeRootDomain(
       state: FormatState,
       container: RootContainer,
       domain: Domain
     ): FormatState = {state.closeDef(domain)}
 
-    override def openDomain(
+    def openDomain(
       state: FormatState,
       container: Domain,
       domain: Domain
     ): FormatState = {state.openDef(domain)}
 
-    override def closeDomain(
+    def closeDomain(
       state: FormatState,
       container: Domain,
       domain: Domain
-    ): FormatState = { state.closeDef(domain) }
+    ): FormatState = {state.closeDef(domain)}
 
-    override def openContext(
+    def openContext(
       state: FormatState,
       container: Domain,
       context: Context
-    ): FormatState = { state.openDef(context).emitOptions(context) }
+    ): FormatState = {state.openDef(context).emitOptions(context)}
 
-    override def closeContext(
+    def closeContext(
       state: FormatState,
       container: Domain,
       context: Context
-    ): FormatState = { state.closeDef(context) }
+    ): FormatState = {state.closeDef(context)}
 
-    override def openEntity(
+    def openEntity(
       state: FormatState,
       container: Context,
       entity: Entity
-    ): FormatState = { state.openDef(entity).emitOptions(entity) }
+    ): FormatState = {state.openDef(entity).emitOptions(entity)}
 
-    override def closeEntity(
+    def closeEntity(
       state: FormatState,
       container: Context,
       entity: Entity
-    ): FormatState = { state.closeDef(entity) }
+    ): FormatState = {state.closeDef(entity)}
 
-    override def openFeature(
-      state: FormatState,
-      container: Context,
-      feature: Feature
-    ): FormatState = { state.openDef(feature) }
-
-    override def closeFeature(
-      state: FormatState,
-      container: Context,
-      feature: Feature
-    ): FormatState = { state.closeDef(feature) }
-
-    override def openAdaptor(
+    def openAdaptor(
       state: FormatState,
       container: Context,
       adaptor: Adaptor
     ): FormatState = {
       val s = state.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format).add(" for ")
         .add(adaptor.ref.format).add(" is {\n").indent
-      if (adaptor.adaptations.isEmpty) { s.add(s.spc).emitUndefined() }
-      else { s }
+      if (adaptor.adaptations.isEmpty) {s.add(s.spc).emitUndefined()}
+      else {s}
     }
 
-    override def doAdaptation(
+    def doAdaptation(
       state: FormatState,
       container: Adaptor,
       adaptation: Adaptation
     ): FormatState = adaptation match {
       case Adaptation(_, _, event, command, examples, description) => state
-          .addIndent(s"adapt ${adaptation.id.format} is {\n").indent.addIndent("from ")
-          .emitMessageRef(event).add(" to ").emitMessageRef(command).add(" as {\n").indent
-          .emitExamples(examples).outdent.add("\n").addIndent("} ").emitDescription(description)
+        .addIndent(s"adapt ${adaptation.id.format} is {\n").indent.addIndent("from ")
+        .emitMessageRef(event).add(" to ").emitMessageRef(command).add(" as {\n").indent
+        .emitExamples(examples).outdent.add("\n").addIndent("} ").emitDescription(description)
     }
 
-    override def closeAdaptor(
+    def closeAdaptor(
       state: FormatState,
       container: Context,
       adaptor: Adaptor
-    ): FormatState = { state.closeDef(adaptor) }
+    ): FormatState = {state.closeDef(adaptor)}
 
-    override def openInteraction(
+    def openInteraction(
       state: FormatState,
       container: Container[Interaction],
       interaction: Interaction
-    ): FormatState = { state.openDef(interaction).emitOptions(interaction) }
+    ): FormatState = {state.openDef(interaction).emitOptions(interaction)}
 
-    override def closeInteraction(
+    def closeInteraction(
       state: FormatState,
       container: Container[Interaction],
       interaction: Interaction
-    ): FormatState = { state.closeDef(interaction) }
+    ): FormatState = {state.closeDef(interaction)}
 
-    override def doType(
+    def doType(
       state: FormatState,
       container: Container[Definition],
       typeDef: Type
-    ): FormatState = { state.emitType(typeDef) }
+    ): FormatState = {state.emitType(typeDef)}
 
-    override def doAction(
+    def doAction(
       state: FormatState,
       container: Interaction,
       action: ActionDefinition
@@ -456,19 +444,13 @@ class FormatTranslator extends Translator[FormatConfig] {
       }
     }
 
-    override def doFeatureExample(
-      state: FormatState,
-      feature: Feature,
-      example: Example
-    ): FormatState = {state.emitExample(example)}
-
-    override def doFunctionExample(
+    def doFunctionExample(
       state: FormatState,
       function: Function,
       example: Example
     ): FormatState = {state.emitExample(example)}
 
-    override def doProcessorExample(
+    def doProcessorExample(
       state: FormatState,
       processor: Processor,
       example: Example
@@ -490,7 +472,9 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: State,
       field: Field
-    ): FormatState = {state}
+    ): FormatState = {
+      state // Functionality handled in OpenState
+    }
 
     override def closeState(state: FormatState, container: Entity, s: State): FormatState = {
       state.closeDef(s, withBrace = false)
@@ -577,9 +561,9 @@ class FormatTranslator extends Translator[FormatConfig] {
       plant: Plant
     ): FormatState = { state.closeDef(plant) }
 
-    override def openFunction(
+    def openFunction[TCD <: Container[Definition]](
       state: FormatState,
-      container: Entity,
+      container: TCD,
       function: Function
     ): FormatState = {
       state.openDef(function).step { s =>
@@ -589,11 +573,11 @@ class FormatTranslator extends Translator[FormatConfig] {
       }
     }
 
-    override def closeFunction(
+    def closeFunction[TCD <: Container[Definition]](
       state: FormatState,
-      container: Entity,
+      container: TCD,
       function: Function
-    ): FormatState = { state.closeDef(function) }
+    ): FormatState = {state.closeDef(function)}
   }
 
 }

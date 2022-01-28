@@ -32,7 +32,7 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       typeDef.map(Seq(_)) | entity.map(Seq(_)) | adaptor.map(Seq(_)) | interaction.map(Seq(_)) |
-        feature.map(Seq(_)) | saga.map(Seq(_)) | contextInclude
+        function.map(Seq(_)) | saga.map(Seq(_)) | contextInclude
     ).rep(0).map { seq => seq.flatten }
   }
 
@@ -44,12 +44,12 @@ trait ContextParser
     ).map { case (loc, id, (options, definitions), addendum) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
-      val features = mapTo[Feature](groups.get(classOf[Feature]))
+      val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
-      Context(loc, id, options, types, entities, adaptors, sagas, features, interactions, addendum)
+      Context(loc, id, options, types, entities, adaptors, sagas, functions, interactions, addendum)
     }
   }
 }

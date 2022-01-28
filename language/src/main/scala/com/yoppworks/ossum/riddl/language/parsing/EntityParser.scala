@@ -64,7 +64,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
   }
 
   def entityDefinition[u: P]: P[EntityDefinition] = {
-    P(handler | feature | function | invariant | typeDef | state)
+    P(handler | function | invariant | typeDef | state)
   }
 
   type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])

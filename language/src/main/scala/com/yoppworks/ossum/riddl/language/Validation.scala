@@ -844,24 +844,6 @@ object Validation {
       interaction: Interaction
     ): ValidationState = {state.checkDescription(interaction)}
 
-    override def openFeature(
-      state: ValidationState,
-      container: Context,
-      feature: Feature
-    ): ValidationState = {
-      val state2 = state.checkDefinition(container, feature)
-      feature.contents.foldLeft(state2) { case (s, example) =>
-        s.checkNonEmpty(example.givens, "Given", feature)
-        s.checkNonEmpty(example.thens, "Then", feature)
-      }
-    }
-
-    override def closeFeature(
-      state: ValidationState,
-      container: Context,
-      feature: Feature
-    ): ValidationState = {state.checkDescription(feature)}
-
     override def openAdaptor(
       state: ValidationState,
       container: Context,
@@ -894,14 +876,6 @@ object Validation {
     ): ValidationState = {
       state.checkDefinition(container, action).checkDescription(action)
       // FIXME: do some validation of action
-    }
-
-    override def doFeatureExample(
-      state: ValidationState,
-      feature: Feature,
-      example: Example
-    ): ValidationState = {
-      state.checkDefinition(feature, example).checkExample(example)
     }
 
     override def doFunctionExample(
@@ -1015,21 +989,24 @@ object Validation {
       processor: Processor
     ): ValidationState = state.checkDescription(processor)
 
-    override def openFunction(
+    def openFunction[TCD <: Container[Definition]](
       state: ValidationState,
-      container: Entity,
+      container: TCD,
       function: Function
     ): ValidationState = {
       state.checkDefinition(container, function)
         .checkTypeExpression(function.input.getOrElse(Nothing(function.loc)), function)
         .checkTypeExpression(function.output.getOrElse(Nothing(function.loc)), function)
+        .checkExamples(function.examples)
     }
 
-    override def closeFunction(
+    def closeFunction[TCD <: Container[Definition]](
       state: ValidationState,
-      container: Entity,
+      container: TCD,
       function: Function
-    ): ValidationState = state.checkDescription(function)
+    ): ValidationState = {
+      state.checkDescription(function)
+    }
 
     override def doInlet(
       state: ValidationState,

@@ -3,7 +3,7 @@ package com.yoppworks.ossum.riddl.language.parsing
 import java.io.File
 import scala.collection.mutable
 
-/** Unit Tests For InputStack */
+/** The stack of input sources while parsing */
 case class InputStack(
 ) {
 

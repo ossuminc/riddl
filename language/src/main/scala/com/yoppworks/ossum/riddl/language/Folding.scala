@@ -47,7 +47,7 @@ object Folding {
         result = context.sagas.foldLeft(result) { (next, saga) =>
           foldEachDefinition(context, saga, next)(f)
         }
-        result = context.features.foldLeft(result) { (next, feature) =>
+        result = context.functions.foldLeft(result) { (next, feature) =>
           foldEachDefinition[S](context, feature, next)(f)
         }
         context.interactions.foldLeft(result) { (next, interaction) =>
@@ -87,9 +87,6 @@ object Folding {
       case interaction: Interaction =>
         result = f(parent, interaction, result)
         interaction.contents.foldLeft(result) { (next, action) => f(interaction, action, next) }
-      case feature: Feature =>
-        result = f(parent, feature, result)
-        feature.contents.foldLeft(result) { (next, example) => f(feature, example, next) }
       case function: Function =>
         result = f(parent, function, result)
         function.contents.foldLeft(result) { (next, example) => f(function, example, next) }
@@ -119,9 +116,9 @@ object Folding {
     /** Container Traversal This foldLeft allows the hierarchy of containers to be navigated
      */
     // noinspection ScalaStyle
-    final def foldLeft(
-      parent: Container[?],
-      container: Container[?],
+    final def foldLeft[CT <: Container[Definition]](
+      parent: CT,
+      container: CT,
       initState: S
     ): S = {
       container match {
@@ -143,8 +140,8 @@ object Folding {
                 case typ: Type                => doType(next, context, typ)
                 case entity: Entity           => foldLeft(context, entity, next)
                 case adaptor: Adaptor         => foldLeft(context, adaptor, next)
-                case saga: Saga               => foldLeft(context, saga, next)
-                case feature: Feature         => foldLeft(context, feature, next)
+                case saga: Saga => foldLeft(context, saga, next)
+                case function: Function => foldLeft(context, function, next)
                 case interaction: Interaction => foldLeft(context, interaction, next)
               }
             }
@@ -158,7 +155,6 @@ object Folding {
                 case entityState: AST.State => foldLeft(entity, entityState, st)
                 case handler: Handler       => doHandler(st, entity, handler)
                 case function: Function     => foldLeft(entity, function, st)
-                case feature: Feature       => foldLeft(entity, feature, st)
                 case invariant: Invariant   => doInvariant(st, entity, invariant)
               }
             }
@@ -200,20 +196,12 @@ object Folding {
               id match {case action: MessageAction => doAction(next, interaction, action)}
             }
           }.step { state => closeInteraction(state, interactionContainer, interaction) }
-        case feature: Feature =>
-          val parentEntity = parent.asInstanceOf[Context]
-          openFeature(initState, parentEntity, feature).step { state =>
-            feature.contents.foldLeft(state) { (next, fd) =>
-              fd match {case example: Example => doFeatureExample(next, feature, example)}
-            }
-          }.step { state => closeFeature(state, parentEntity, feature) }
         case function: Function =>
-          val parentEntity = parent.asInstanceOf[Entity]
-          openFunction(initState, parentEntity, function).step { state =>
+          openFunction(initState, parent, function).step { state =>
             function.contents.foldLeft(state) { (next, fd) =>
               fd match {case example: Example => doFunctionExample(next, function, example)}
             }
-          }.step { state => closeFunction(state, parentEntity, function) }
+          }.step { state => closeFunction(state, parent, function) }
         case adaptor: Adaptor =>
           val parentContext = parent.asInstanceOf[Context]
           openAdaptor(initState, parentContext, adaptor).step { state =>
@@ -323,28 +311,16 @@ object Folding {
       interaction: Interaction
     ): S
 
-    def openFunction(
+    def openFunction[TCD <: Container[Definition]](
       state: S,
-      container: Entity,
+      container: TCD,
       feature: Function
     ): S
 
-    def closeFunction(
+    def closeFunction[TCD <: Container[Definition]](
       state: S,
-      container: Entity,
+      container: TCD,
       feature: Function
-    ): S
-
-    def openFeature(
-      state: S,
-      container: Context,
-      feature: Feature
-    ): S
-
-    def closeFeature(
-      state: S,
-      container: Context,
-      feature: Feature
     ): S
 
     def openAdaptor(
@@ -386,12 +362,6 @@ object Folding {
     def doFunctionExample(
       state: S,
       container: Function,
-      example: Example
-    ): S
-
-    def doFeatureExample(
-      state: S,
-      container: Feature,
       example: Example
     ): S
 
