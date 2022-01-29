@@ -2,6 +2,8 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 
+import scala.collection.mutable
+
 object Folding {
 
   trait State[S <: State[?]] {
@@ -107,8 +109,29 @@ object Folding {
     }
   }
 
+  final def foldLeft[S](
+    value: S, parents: mutable.Stack[Container[Definition]] =
+  mutable.Stack.empty[Container[Definition]]
+  )(top: Container[Definition])(
+    f: (S, Definition, mutable.Stack[Container[Definition]]) => S
+  ): S = {
+    val initial = f(value, top, parents)
+    parents.push(top)
+    val result = top.contents.foldLeft(initial) { (next, defn) =>
+      defn match {
+        case cont: Container[Definition] =>
+          foldLeft(next, parents)(cont)(f)
+        case _: Definition =>
+          f(next, defn, parents)
+      }
+    }
+    parents.pop()
+    result
+  }
+
   trait Folding[S <: State[S]] {
 
+    // noinspection ScalaStyle
     def doDomainContent(domain: Domain, state: S): S = {
       domain.contents.foldLeft(state) { case (next, dd) =>
         dd match {
