@@ -1,12 +1,14 @@
 ---
 title: "Streaming"
+type: page weight: 40
+
 ---
 
-RIDDL supports the definition of complex data streaming models. 
-There are two basic definitions involved in setting up a pipeline: 
-a `pipe`, and a a `processor`. There are several kinds of pipes and 
-processors, and they can be combined to form entire systems of data 
-processing known as a `plant`. These metaphors come from chemical processing  
+RIDDL supports the definition of complex data streaming models. There are two basic definitions
+involved in setting up a pipeline:
+a `pipe`, and a a `processor`. There are several kinds of pipes and processors, and they can be
+combined to form entire systems of data processing known as a `plant`. These metaphors come from
+chemical processing  
 concepts which you can visualize as something like this:
 
 ![Visualization Of Pipeline](chemical-plant.jpg)
