@@ -12,7 +12,6 @@ class FoldingTest extends ParsingTest {
           |      inlet b_in is String
           |      outlet b_out is Number
           |    }
-          |    joint foo
           |  }
           |  interaction one is { ??? }
           |  context one is { ??? }
@@ -39,7 +38,7 @@ class FoldingTest extends ParsingTest {
             case (value, _, _) =>
               value + 1
           }
-          val expected = 17
+          val expected = 19
           count must be(expected)
       }
     }
