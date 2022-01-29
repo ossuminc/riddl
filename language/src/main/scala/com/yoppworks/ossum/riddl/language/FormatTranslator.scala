@@ -2,6 +2,7 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import pureconfig.generic.auto.*
 import pureconfig.{ConfigReader, ConfigSource}
 
@@ -309,7 +310,7 @@ class FormatTranslator extends Translator[FormatConfig] {
         case 1 =>
           addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
         case _ =>
-          addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
+          add("\n").addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
           clauses.tail.foldLeft(this) { (next, clause) =>
             next.addNL.addIndent("and ").emitAGherkinClause(clause)
           }
@@ -372,6 +373,28 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Domain,
       context: Context
     ): FormatState = {state.closeDef(context)}
+
+    def openStory(state: FormatState, container: Domain, story: Story): FormatState = {
+      state.openDef(story)
+        .addIndent(Keywords.role).add(" is ").add(story.role.format).addNL
+        .addIndent(Keywords.capability).add(" is ").add(story.capability.format).addNL
+        .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format).addNL
+        .step { state =>
+          if (story.examples.nonEmpty) {
+            state.addIndent(Keywords.accepted).add(" by {").addNL.indent
+          } else {
+            state
+          }
+        }
+    }
+
+    def closeStory(state: FormatState, container: Domain, story: Story): FormatState = {
+      (if (story.examples.nonEmpty) {
+        state.outdent.addNL.addLine("}")
+      } else {
+        state
+      }).closeDef(story)
+    }
 
     def openEntity(
       state: FormatState,
@@ -442,6 +465,11 @@ class FormatTranslator extends Translator[FormatConfig] {
           state.openDef(m)
           state.closeDef(m)
       }
+    }
+
+    override def doStoryExample(state: FormatState, container: Story, example: Example)
+    : FormatState = {
+      state.emitExample(example)
     }
 
     def doFunctionExample(

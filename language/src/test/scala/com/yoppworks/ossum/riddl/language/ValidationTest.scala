@@ -62,7 +62,6 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
 
   "ValidationMessageKind" should {
     "have correct field values" in {
-      // TODO: probably most things should not be severe errors
       Validation.MissingWarning.isWarning mustBe true
       Validation.MissingWarning.isError mustBe false
       Validation.MissingWarning.isSevereError mustBe true

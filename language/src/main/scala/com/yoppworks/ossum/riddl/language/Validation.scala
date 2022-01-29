@@ -19,7 +19,7 @@ object Validation {
     val folding = new ValidationFolding
     val s1 = folding.foldLeft(root, root, state)
     val result = checkOverloads(symTab, s1)
-    result.messages.sortBy(_.loc).toSeq
+    result.messages.sortBy(_.loc)
   }
 
   def checkOverloads(symbolTable: SymbolTable, state: ValidationState): ValidationState = {
@@ -556,7 +556,7 @@ object Validation {
     }
 
     def checkAction(action: Action): ValidationState = {
-      val newState = action match {
+      action match {
         case SetAction(_, path, value, _) =>
           this
             .checkPathRef[Field](path)()
@@ -590,20 +590,16 @@ object Validation {
           this.check(what.nonEmpty,
             "arbitrary action is empty so specifies nothing", MissingWarning, loc)
       }
-      newState.checkDescription[Action](AST.kind(action), action)
     }
 
     def checkExample(example: Example): ValidationState = {
       if (example.nonEmpty) {
-        this.checkNonEmpty(example.givens, "Givens", example).step { state: ValidationState =>
-          example.givens.foldLeft(state) { (state, givenClause) =>
-            val s = state.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
-            givenClause.scenario.foldLeft(s) { (state, ls) =>
-              state.checkNonEmptyValue(ls, "Given String", example, MissingWarning)
-            }
+        example.givens.foldLeft(this) { (state, givenClause) =>
+          val s = state.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
+          givenClause.scenario.foldLeft(s) { (state, ls) =>
+            state.checkNonEmptyValue(ls, "Given String", example, MissingWarning)
           }
-        }
-          .checkNonEmpty(example.whens, "Whens", example).step { state: ValidationState =>
+        }.step { state: ValidationState =>
           example.whens.foldLeft(state) { (state, whenClause) =>
             state.checkExpression(whenClause.condition)
           }
@@ -613,15 +609,13 @@ object Validation {
             example.thens.foldLeft(state) { (state, thenClause) =>
               state.checkAction(thenClause.action)
             }
-          }
-          .checkNonEmpty(example.buts, "Buts", example).step { state: ValidationState =>
+          }.step { state: ValidationState =>
           example.buts.foldLeft(state) { (state, butClause) =>
             state.checkAction(butClause.action)
           }
         }
           .checkDescription(example)
-      }
-      this
+      } else {this}
     }
 
     def checkExamples(examples: Seq[Example]): ValidationState = {
@@ -771,13 +765,27 @@ object Validation {
         .checkOptions[ContextOption](context.options, context.loc)
     }
 
-    override def closeContext(
+    def closeContext(
       state: Validation.ValidationState,
       container: Domain,
       context: AST.Context
     ): ValidationState = {state.checkDescription(context)}
 
-    override def openEntity(
+    def openStory(state: ValidationState, container: Domain, story: Story):
+    ValidationState = {
+      state.checkContainer(container, story)
+        .checkNonEmptyValue(story.role, "role", story, MissingWarning)
+        .checkNonEmptyValue(story.capability, "capability", story, MissingWarning)
+        .checkNonEmptyValue(story.benefit, "benefit", story, MissingWarning)
+        .checkExamples(story.examples)
+    }
+
+    override def closeStory(state: ValidationState, container: Domain, story: Story)
+    : ValidationState = {
+      state.checkDescription(story)
+    }
+
+    def openEntity(
       state: Validation.ValidationState,
       container: Context,
       entity: AST.Entity
@@ -876,6 +884,12 @@ object Validation {
     ): ValidationState = {
       state.checkDefinition(container, action).checkDescription(action)
       // FIXME: do some validation of action
+      // FIXME: do some validation of action
+    }
+
+    override def doStoryExample(state: ValidationState, container: Story, example: Example)
+    : ValidationState = {
+      state.checkDefinition(container, example).checkExample(example)
     }
 
     override def doFunctionExample(
@@ -1019,5 +1033,6 @@ object Validation {
       container: Processor,
       outlet: Outlet
     ): ValidationState = state.checkDefinition(container, outlet).checkDescription(outlet)
+
   }
 }

@@ -145,8 +145,9 @@ object AST {
       case _: Saga => Keywords.saga
       case _: SagaAction => Keywords.action
       case _: State => Keywords.state
+      case _: Story => Keywords.story
       case _: Type => Keywords.`type`
-      case _ => ""
+      case _ => "unknown"
     }
   }
 
@@ -1994,6 +1995,32 @@ object AST {
     extends ActionDefinition with OptionsDef[MessageOption]
 
   /**
+   * The definition of an agile user story. Stories define functionality from the perspective of
+   * a certain kind of user (man or machine), interacting with the system via some role. RIDDL
+   * extends the notion of an agile user story by allowing a linkage between the story and the
+   * RIDDL features that implement it.
+   *
+   * @param loc         The location of the story definition
+   * @param id          The name of the story
+   * @param role        The role of the actor involved in the story
+   * @param capability  The capability utilized by the actor in the story
+   * @param benefit     The benefit, to the user, of using the capability.
+   * @param examples    Gherkin examples to specify "done" for the implementation of the user story
+   * @param description An optional description of the
+   */
+  case class Story(
+    loc: Location,
+    id: Identifier,
+    role: LiteralString,
+    capability: LiteralString,
+    benefit: LiteralString,
+    examples: Seq[Example] = Seq.empty[Example],
+    description: Option[Description] = None
+  ) extends Container[Example] with DomainDefinition {
+    override def contents: Seq[Example] = examples
+  }
+
+  /**
    * A reference to a domain definition
    *
    * @param loc The location at which the domain definition occurs
@@ -2025,11 +2052,12 @@ object AST {
     contexts: Seq[Context] = Seq.empty[Context],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
     plants: Seq[Plant] = Seq.empty[Plant],
+    stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
     description: Option[Description] = None)
     extends Container[DomainDefinition] with DomainDefinition {
 
     lazy val contents: Seq[DomainDefinition] =
-      (domains ++ types.iterator ++ contexts ++ interactions ++ plants).toList
+      (domains ++ types.iterator ++ contexts ++ interactions ++ plants ++ stories).toList
   }
 }

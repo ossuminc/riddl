@@ -27,6 +27,9 @@ object Folding {
         result = domain.plants.foldLeft(result) { (next, pl) =>
           foldEachDefinition(domain, pl, next)(f)
         }
+        result = domain.stories.foldLeft(result) { (next, st) =>
+          foldEachDefinition(domain, st, next)(f)
+        }
         result = domain.contexts.foldLeft(result) { (next, context) =>
           foldEachDefinition[S](domain, context, next)(f)
         }
@@ -52,6 +55,11 @@ object Folding {
         }
         context.interactions.foldLeft(result) { (next, interaction) =>
           foldEachDefinition[S](context, interaction, next)(f)
+        }
+      case story: Story =>
+        result = f(parent, story, result)
+        story.contents.foldLeft(result) { (next, example) =>
+          f(story, example, next)
         }
       case entity: Entity =>
         result = f(parent, entity, result)
@@ -107,6 +115,7 @@ object Folding {
           case typ: Type => doType(next, domain, typ)
           case context: Context => foldLeft(domain, context, next)
           case plant: Plant => foldLeft(domain, plant, next)
+          case story: Story => foldLeft(domain, story, next)
           case interaction: Interaction => foldLeft(domain, interaction, next)
           case subDomain: Domain => foldLeft(domain, subDomain, next)
         }
@@ -137,25 +146,32 @@ object Folding {
           openContext(initState, parentDomain, context).step { state =>
             context.contents.foldLeft(state) { (next, cd) =>
               cd match {
-                case typ: Type                => doType(next, context, typ)
-                case entity: Entity           => foldLeft(context, entity, next)
-                case adaptor: Adaptor         => foldLeft(context, adaptor, next)
+                case typ: Type => doType(next, context, typ)
+                case entity: Entity => foldLeft(context, entity, next)
+                case adaptor: Adaptor => foldLeft(context, adaptor, next)
                 case saga: Saga => foldLeft(context, saga, next)
                 case function: Function => foldLeft(context, function, next)
                 case interaction: Interaction => foldLeft(context, interaction, next)
               }
             }
           }.step { state => closeContext(state, parentDomain, context) }
+        case story: Story =>
+          val parentDomain = parent.asInstanceOf[Domain]
+          openStory(initState, parentDomain, story).step { state =>
+            story.contents.foldLeft(state) { (next, example) =>
+              doStoryExample(next, story, example)
+            }
+          }.step { state => closeStory(state, parentDomain, story) }
         case entity: Entity =>
           val parentContext = parent.asInstanceOf[Context]
           openEntity(initState, parentContext, entity).step { state =>
             entity.contents.foldLeft(state) { (st, entityDefinition) =>
               entityDefinition match {
-                case typ: Type              => doType(st, entity, typ)
+                case typ: Type => doType(st, entity, typ)
                 case entityState: AST.State => foldLeft(entity, entityState, st)
-                case handler: Handler       => doHandler(st, entity, handler)
-                case function: Function     => foldLeft(entity, function, st)
-                case invariant: Invariant   => doInvariant(st, entity, invariant)
+                case handler: Handler => doHandler(st, entity, handler)
+                case function: Function => foldLeft(entity, function, st)
+                case invariant: Invariant => doInvariant(st, entity, invariant)
               }
             }
           }.step { state => closeEntity(state, parentContext, entity) }
@@ -237,6 +253,18 @@ object Folding {
       state: S,
       container: Domain,
       context: Context
+    ): S
+
+    def openStory(
+      state: S,
+      container: Domain,
+      story: Story
+    ): S
+
+    def closeStory(
+      state: S,
+      container: Domain,
+      story: Story
     ): S
 
     def openEntity(
@@ -362,6 +390,12 @@ object Folding {
     def doFunctionExample(
       state: S,
       container: Function,
+      example: Example
+    ): S
+
+    def doStoryExample(
+      state: S,
+      container: Story,
       example: Example
     ): S
 

@@ -85,11 +85,11 @@ class EntityValidatorTest extends ValidatingTest {
           |     "brief description"
           |     "detailed description"
           |    }
-                                           |  } described as "foo"
-                                           |""".stripMargin) { case (feature, msgs) =>
+          |  } described as "foo"
+          |""".stripMargin) { case (feature, msgs) =>
         feature.id.value mustBe "AnAspect"
         assert(feature.examples.nonEmpty)
-        assert(msgs.nonEmpty)
+        assert(msgs.isEmpty)
         assert(msgs.forall(_.message.contains("should have a description")))
       }
     }

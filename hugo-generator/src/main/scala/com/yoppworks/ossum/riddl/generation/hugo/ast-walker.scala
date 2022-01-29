@@ -54,7 +54,7 @@ object LukeAstWalker {
           case AST.EntityAvailable(_) => opts + HugoEntity.EntityOption.Available
           case AST.EntityFiniteStateMachine(_) => opts + HugoEntity.EntityOption.FiniteStateMachine
           case AST.EntityKind(_, _) => opts + HugoEntity.EntityOption.Kind
-          // FIXME: EntityKind.args unused
+           // FIXME: EntityKind.args unused
         }
       }
 

@@ -65,6 +65,7 @@ object Terminals {
   }
 
   object Keywords {
+    final val accepted = "accepted"
     final val action = "action"
     final val adapt = "adapt"
     final val adaptor = "adaptor"
@@ -74,9 +75,11 @@ object Terminals {
     final val ask = "ask"
     final val background = "background"
     final val become = "become"
+    final val benefit = "benefit"
     final val brief = "brief"
     final val but = "but"
     final val call = "call"
+    final val capability = "capability"
     final val causing = "causing"
     final val command = "command"
     final val commands = "commands"
@@ -137,6 +140,7 @@ object Terminals {
     final val see = "see"
     final val set = "set"
     final val state = "state"
+    final val story = "story"
     final val tell = "tell"
     final val then_ = "then"
     final val topic = "topic"

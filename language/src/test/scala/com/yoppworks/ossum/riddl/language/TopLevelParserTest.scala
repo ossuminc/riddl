@@ -1,12 +1,9 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.io.File
-import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.Identifier
-import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
+import com.yoppworks.ossum.riddl.language.AST.{Domain, Identifier, RootContainer}
+import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 
+import java.io.File
 import scala.io.Source
 
 class TopLevelParserTest extends ParsingTestBase {
@@ -18,6 +15,7 @@ class TopLevelParserTest extends ParsingTestBase {
   val simpleDomain = RootContainer(List(Domain(
     (1, 1, origin),
     Identifier((1, 8, origin), "foo"),
+    List(),
     List(),
     List(),
     List(),
