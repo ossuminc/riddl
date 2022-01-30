@@ -159,11 +159,16 @@ lazy val `example` = project.in(file("example")).settings(
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
   .enablePlugins(BuildInfoPlugin).settings(
-    name := "sbt-riddl",
-    sbtPlugin := true,
-    scalaVersion := "2.12.15",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin"
-  )
+  name := "sbt-riddl",
+  sbtPlugin := true,
+  scalaVersion := "2.12.15",
+  buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin",
+  scriptedLaunchOpts := {
+    scriptedLaunchOpts.value ++
+      Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
+  },
+  scriptedBufferLog := false
+)
 
 (Global / excludeLintKeys) ++=
   Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
