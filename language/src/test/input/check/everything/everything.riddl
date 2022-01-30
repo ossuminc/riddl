@@ -85,7 +85,7 @@ domain Everything is {
       handler fee is {
         on event ItHappened {
           example only {
-            then set SomeOtherThing.otherThingState.then to ItHappened.when
+            then set SomeOtherThing.otherThingState.then to @ItHappened.when
           }
         }
       }

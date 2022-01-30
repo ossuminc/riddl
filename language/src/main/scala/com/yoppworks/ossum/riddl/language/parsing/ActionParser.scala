@@ -10,7 +10,7 @@ import fastparse.ScalaWhitespace.*
  * Define actions that various constructs can take for modelling behavior
  * in a message-passing system
  */
-trait ActionParser extends ReferenceParser with ConditionParser with ExpressionParser {
+trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def arbitraryAction[u: P]: P[ArbitraryAction] = {
     P(

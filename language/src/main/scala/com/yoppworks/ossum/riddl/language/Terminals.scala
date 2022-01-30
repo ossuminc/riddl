@@ -5,6 +5,7 @@ object Terminals {
 
   object Punctuation {
     val asterisk = "*"
+    val at = "@"
     val comma = ","
     val colon = ":"
     val curlyOpen = "{"
@@ -187,10 +188,11 @@ object Terminals {
   }
 
   object Operators {
-    final val call = "call"
     final val and = "and"
-    final val or = "or"
+    final val call = "call"
+    final val if_ = "if"
     final val not = "not"
+    final val or = "or"
     final val plus = "+"
     final val minus = "-"
     final val times = "*"

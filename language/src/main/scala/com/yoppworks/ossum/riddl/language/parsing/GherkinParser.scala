@@ -10,7 +10,7 @@ import fastparse.ScalaWhitespace.*
  * @see
  * https://cucumber.io/docs/gherkin/reference/
  */
-trait GherkinParser extends ConditionParser with ActionParser {
+trait GherkinParser extends ActionParser {
 
   def givens[u: P]: P[Seq[GivenClause]] = {
     P(

@@ -23,7 +23,7 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.msg mustBe "Expected one of (\"domain\" | end-of-input)"
+          errors.head.msg mustBe "Expected one of (end-of-input | \"domain\")"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }

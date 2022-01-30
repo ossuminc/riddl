@@ -59,7 +59,7 @@ Error: everything.riddl(72:20): 'Something' was expected to be a command type bu
 Style: everything.riddl(13:25): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:34)
 Error: everything.riddl(76:71): 'Inebriated' is not defined but should be a message type
 Error: everything.riddl(75:18): 'misc' is not defined but should be a Function
-Error: everything.riddl(88:61): 'ItHappened.when' is not defined but should be a Field
+Error: everything.riddl(88:62): 'ItHappened.when' is not defined but should be a Field
 Missing: everything.riddl(83:34): Field 'when' should have a description
 Missing: everything.riddl(84:34): Field 'then' should have a description
 Missing: everything.riddl(73:11): Example 'only' should have a description

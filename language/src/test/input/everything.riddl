@@ -103,7 +103,7 @@ domain Everything is {
       handler fee is {
         on event ItHappened {
           example only {
-            then set SomeOtherThing.otherThingState.field to ItHappened.field
+            then set SomeOtherThing.otherThingState.field to @ItHappened.field
           }
         }
       }

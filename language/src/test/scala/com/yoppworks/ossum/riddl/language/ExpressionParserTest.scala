@@ -83,7 +83,7 @@ class ExpressionParserTest extends ParsingTest {
           )))
       }
     }
-    "accept arbitrary expression with 0 number of args" in {
+    "accept arithmetic expression with 0 number of args" in {
       parseExpression("now()") { expr: Expression =>
         expr mustBe ArithmeticOperator(Location(1 -> 1), "now", Seq.empty[Expression])
       }
@@ -101,5 +101,14 @@ class ExpressionParserTest extends ParsingTest {
           ))
       }
     }
+    "accept a ternary operator" in {
+      parseExpression("if(<(@a,@b),42,21)") { cond: Expression =>
+        cond mustBe Ternary(1 -> 1, Comparison(1 -> 4, lt,
+          ValueCondition(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
+          ValueCondition(1 -> 9, PathIdentifier(1 -> 10, Seq("b"))),
+        ), LiteralInteger(1 -> 13, BigInt(42)), LiteralInteger(1 -> 16, BigInt(21)))
+      }
+    }
+
   }
 }

@@ -648,7 +648,7 @@ object Validation {
 
     def checkExpression(expression: Expression): ValidationState = {
       expression match {
-        case ValueExpression(_, path) =>
+        case ValueCondition(_, path) =>
           checkPathRef[Field](path)()
         case GroupExpression(_, expr) =>
           checkExpression(expr)

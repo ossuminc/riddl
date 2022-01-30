@@ -763,23 +763,6 @@ object AST {
   sealed trait Expression extends RiddlValue
 
   /**
-   * Represents an arbitrary expression that is specified merely with a literal string. This
-   * can't be easily processed downstream but provides the author with the ability to include
-   * arbitrary ideas/concepts into an expression.
-   * For example:
-   * {{{
-   *   +(42,"number of widgets in a wack-a-mole")
-   * }}}
-   * shows the use of an arbitrary expressions as the conditional to the "when" keyword
-   *
-   * @param loc  The location of the expression
-   * @param what The arbitrary specification of the expression's calculation
-   */
-  case class ArbitraryExpression(loc: Location, what: LiteralString) extends Expression {
-    override def format: String = what.format
-  }
-
-  /**
    * Represents the use of an arithmetic operator or well-known function call. The operator can
    * be simple like addition or subtraction or complicated like pow, sqrt, etc. There is no limit
    * on the number of operands but defining them shouldn't be necessary as they are
@@ -797,12 +780,13 @@ object AST {
 
   /**
    * Represents an expression that is merely a reference to some value, presumably an entity
-   * state value.
-   * @param loc The location of this expression
+   * state value. Since it can be a boolean value, it is also a condition
+   *
+   * @param loc  The location of this expression
    * @param path The path to the value for this expression
    */
-  case class ValueExpression(loc: Location, path: PathIdentifier) extends Condition {
-    override def format: String = path.format
+  case class ValueCondition(loc: Location, path: PathIdentifier) extends Condition {
+    override def format: String = "@" + path.format
   }
 
   /**
@@ -841,9 +825,24 @@ object AST {
   }
 
   /**
+   * Ternary operator to accept a conditional and two expressions and choose one of the
+   * expressions as the resulting value based on the conditional.
+   *
+   * @param loc       The location of the ternary operator
+   * @param condition The conditional expression that determines the result
+   * @param expr1     An expression for the result if the condition is true
+   * @param expr2     An expression for the result if the condition is false
+   */
+  case class Ternary(loc: Location, condition: Condition, expr1: Expression, expr2: Expression)
+    extends Condition {
+    override def format: String = s"if(${condition.format},${expr1.format},${expr2.format})"
+  }
+
+  /**
    * An expression that is a literal constant integer value
+   *
    * @param loc The location of the integer value
-   * @param n The number to use as the value of the expression
+   * @param n   The number to use as the value of the expression
    */
   case class LiteralInteger(loc: Location, n: BigInt) extends Expression {
     override def format: String = n.toString()
@@ -882,14 +881,21 @@ object AST {
   }
 
   /**
-   * Represents an arbitrary condition that is specified merely with a literal string. This
+   * Represents an arbitrary expression that is specified merely with a literal string. This
    * can't be easily processed downstream but provides the author with the ability to include
-   * arbitrary ideas/concepts into a condition
+   * arbitrary ideas/concepts into an expression or condition
    * For example:
    * {{{
    *   example foo { when "the timer has expired" }
    * }}}
-   * shows the use of an arbitrary condition for the "when" part of a Gherkin example
+   * shows the use of an arbitrary condition for the "when" part of a Gherkin example. Or
+   * {{{
+   *   +(42,"number of widgets in a wack-a-mole")
+   * }}}
+   * shows the use of an arbitrary expression as the operand to an addition.
+   *
+   * Note that since the expression is arbitrary, it could be a boolean value and is thus
+   * considered to be a conditioanl expression too, hence the name.
    *
    * @param cond The arbitrary condition provided as a quoted string
    */
@@ -949,7 +955,7 @@ object AST {
    * @param cond1 The condition being negated
    */
   case class NotCondition(loc: Location, cond1: Condition) extends Condition {
-    override def format: String = "!(" + cond1 + ")"
+    override def format: String = "not(" + cond1 + ")"
   }
 
   /**

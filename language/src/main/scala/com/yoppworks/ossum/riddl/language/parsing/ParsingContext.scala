@@ -4,6 +4,7 @@ import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Location
 import fastparse.*
 import fastparse.Parsed.{Failure, Success}
+import fastparse.internal.Lazy
 
 import java.io.File
 import scala.annotation.unused
@@ -75,13 +76,21 @@ trait ParsingContext {
     errors.append(error)
   }
 
+  private def mkTerminals(list: List[Lazy[String]]): String = {
+    list.map(_.force).map {
+      case s: String if s.startsWith("char-pred") => "pattern"
+      case s: String if s.startsWith("chars-with") => "pattern"
+      case s: String => s
+    }.distinct.mkString("(", " | ", ")")
+  }
+
   def makeParseFailureError(failure: Failure): Unit = {
     val location = current.location(failure.index)
     val trace = failure.trace()
     val msg = trace.terminals.value.size match {
       case 0 => "Unexpected content"
-      case 1 => s"Expected ${trace.terminals.render}"
-      case _ => s"Expected one of ${trace.terminals.render}"
+      case 1 => s"Expected " + mkTerminals(trace.terminals.value)
+      case _ => s"Expected one of " + mkTerminals(trace.terminals.value)
     }
     val context = trace.groups.render
     error(location, msg, context)

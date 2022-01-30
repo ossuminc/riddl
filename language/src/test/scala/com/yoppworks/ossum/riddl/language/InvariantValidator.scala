@@ -37,7 +37,7 @@ class InvariantValidator extends ValidatingTest {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
-          | invariant large is { and(Field.name1,Field.name2) }
+          | invariant large is { and(@Field.name1,@Field.name2) }
           |}
           |""".stripMargin
       ) { (_, msgs) =>
