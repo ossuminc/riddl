@@ -32,7 +32,7 @@ domain dokn is {
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
             type CompanyAdded is event {}
-            type CompanyEvent is one of { event CompanyAdded }
+            type CompanyEvent is one of { type CompanyAdded }
 
             state CompanyBase is {
                 companyId: CompanyId,
@@ -42,18 +42,18 @@ domain dokn is {
                 primaryContactEmail: EmailAddress
             }
             handler CompanyBase is {
-                on command AddCompany { 
-                    then publish CompanyAdded to dokn.Company.events 
+                on command AddCompany {
+                    then publish event CompanyAdded() to dokn.Company.events
                 }
             }
         }
     }
 
-    context Driver is { 
+    context Driver is {
         entity Driver is {
             options(event sourced, available)
 
-            type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId } 
+            type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
             type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
 
             type RemoveDriverFromCompany is command { mobile: MobileNumber, companyId: CompanyId }
@@ -68,13 +68,17 @@ domain dokn is {
                 companyId: CompanyId
             }
             handler Base is {
-                on command AddDriverToCompany { send event DriverAddedToCompany() to sender }
-                on command RemoveDriverFromCompany { send event DriverRemovedFromCompany() to sender}
+                on command AddDriverToCompany {
+                  then tell event DriverAddedToCompany() to sender
+                }
+                on command RemoveDriverFromCompany {
+                  then tell event DriverRemovedFromCompany() to sender
+                }
             }
         }
     }
 
-    context Note is { 
+    context Note is {
         entity Note is {
             options(event sourced, available)
             state NoteBase is {
@@ -102,7 +106,7 @@ domain dokn is {
         }
     }
 
-    context Location is { 
+    context Location is {
         entity Location is {
             options(event sourced, available)
 
@@ -136,24 +140,24 @@ domain dokn is {
                 loadingMethod: LoadingMethod
             }
             handler Base is {
-                on command AddDeliveryLocation { send event DeliveryLocaitonAdded() to sender }
-                on command ChangeLocationName { send event LocationNameChanged() to sender }
-                on command ReportTicketReceived { send event TicketReportedAtLocation() to sender }
-                on command ModifyNotesAtLocation { send event NotesForLocationModified() to sender }
-                on event LocationAddressReceived { set address to LocationAddressReceived.address }
-                on query getLocationDetails { send result LocationDetails() to Driver }
-                on query getLocationNotes { send result LocationNotes() to Driver }
+                on command AddDeliveryLocation { then tell event DeliveryLocaitonAdded() to sender }
+                on command ChangeLocationName { then tell event LocationNameChanged() to sender }
+                on command ReportTicketReceived { then tell event TicketReportedAtLocation() to sender }
+                on command ModifyNotesAtLocation { then tell event NotesForLocationModified() to sender }
+                on event LocationAddressReceived { then set address to @LocationAddressReceived.address }
+                on query getLocationDetails { then tell result LocationDetails() to Driver }
+                on query getLocationNotes { then tell result LocationNotes() to Driver }
             }
         }
     }
 
 } explained as {
     |The dokn domain is the starting point for a simple application which allows
-    |delivery drivers to capture notes about delivery locations to create 
+    |delivery drivers to capture notes about delivery locations to create
     |efficiency for future deliveries. The main Entities within this domain are:
-    |*Driver - a person who delivers parcels and freight deliveries to a 
+    |*Driver - a person who delivers parcels and freight deliveries to a
     |specific location.
     |*Location - A specific geographic location to which a driver delivers to.
-    |*Note - Drivers capture notes about delivering to a specific location. 
+    |*Note - Drivers capture notes about delivering to a specific location.
     |i.e. Accepts deliveries at loading dock C. Ask for Mike (555-123-4567)
 }

@@ -5,6 +5,25 @@ import com.yoppworks.ossum.riddl.language.AST.Entity
 /** Unit Tests For HandlerTest */
 class HandlerTest extends ParsingTest {
   "Handlers" should {
+    "accept shortcut syntax for single example on clauses " in {
+      val input =
+        """entity DistributionItem is {
+          |  state DistributionState is {}
+          |  handler FromContainer  is {
+          |    on event ContainerNestedInContainer {
+          |      when ==(@ContainerNestedInContainer.id,@parentContainer)
+          |      then set lastKnownWorkCenter to @ContainerNestedInContainer.workCenter
+          |    } explained as { "Helps update this item's location" }
+          |  }
+          |}
+          |""".stripMargin
+      parseDefinition[Entity](input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString("\n")
+          fail(msg)
+        case Right(_) => succeed
+      }
+    }
     "handle actions" in {
       val input = """entity DistributionItem is {
                     |  state DistributionState is {}
@@ -23,13 +42,13 @@ class HandlerTest extends ParsingTest {
                     |      and set trackingId to @CreateItem.trackingId
                     |      and set manifestId to @CreateItem.manifestId
                     |      and set destination to @CreatItem.postalCode
-                    |      and tell entity DistributionItem event ItemPreInducted()
+                    |      and tell event ItemPreInducted() to entity DistributionItem
                     |    } }
                     |    on command InductItem { example only {
                     |      then set timeOfFirstScan to @InductItem.originTimeStamp
                     |      and set journey to @Inducted
                     |      and set lastKnownWorkCenterId to @InductItem.workCenter
-                    |      and tell entity DistributionItem to event ItemInducted()
+                    |      and tell event ItemInducted() to entity DistributionItem
                     |    } }
                     |    on command SortItem { example only {
                     |      when empty(what=@timeOfFirstScan)
@@ -46,7 +65,7 @@ class HandlerTest extends ParsingTest {
                     |      when empty(what=@timeOfFirstScan)
                     |      then set timeOfFirstScan to @NestItem.originTimeStamp
                     |      and set parentContainer to @NestItem.container
-                    |      and tell entity DistributionItem command AddItemToContainer()
+                    |      and tell command AddItemToContainer() to entity DistributionItem
                     |    }}
                     |    on command TransportItem { example only {
                     |      when empty(what=timeOfFirstScan())
@@ -82,7 +101,7 @@ class HandlerTest extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Entity](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
+          val msg = errors.map(_.format).mkString("\n")
           fail(msg)
         case Right(_) => succeed
       }

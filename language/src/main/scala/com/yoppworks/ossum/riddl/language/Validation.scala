@@ -573,7 +573,7 @@ object Validation {
           this
             .checkRef[Entity](entity)
             .checkRef[State](entityState)
-        case TellAction(_, entity, msg, _) =>
+        case TellAction(_, msg, entity, _) =>
           this
             .checkRef[Entity](entity)
             .checkMessageConstructor(msg)

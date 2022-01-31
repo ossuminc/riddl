@@ -49,7 +49,7 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def tellAction[u: P]: P[TellAction] = {
-    P(Keywords.tell ~/ location ~ entityRef ~ Readability.to.? ~/ messageConstructor ~ description)
+    P(Keywords.tell ~/ location ~ messageConstructor ~ Readability.to.? ~/ entityRef ~ description)
       .map { t => (TellAction.apply _).tupled(t) }
   }
 

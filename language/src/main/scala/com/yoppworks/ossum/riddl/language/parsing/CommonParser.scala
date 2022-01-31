@@ -79,7 +79,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[u: P]: P[Unit] = {
-    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals)./
+    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals).?./
   }
 
   def open[u: P]: P[Unit] = {P(Punctuation.curlyOpen)}

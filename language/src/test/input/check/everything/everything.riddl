@@ -73,7 +73,7 @@ domain Everything is {
           example only {
             given "Something arrives"
             when misc()
-            then tell entity Everything.full.SomeOtherThing  to event Inebriated()
+            then tell event Inebriated() to entity Everything.full.SomeOtherThing
           }
         }
       }

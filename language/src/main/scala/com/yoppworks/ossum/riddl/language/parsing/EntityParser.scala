@@ -54,7 +54,9 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
 
   def onClause[u: P]: P[OnClause] = {
     Keywords.on ~/ location ~ messageRef ~ open ~
-      (examples | undefined(Seq.empty[Example])) ~ close ~ description
+      ((location ~ exampleBody).map { case (l,(g,w,t,b)) =>
+        Seq(Example(l,Identifier(l,"implicit"),g, w,t,b))
+      } | examples | undefined(Seq.empty[Example])) ~ close ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def handler[u: P]: P[Handler] = {

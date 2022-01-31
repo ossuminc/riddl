@@ -1124,11 +1124,11 @@ object AST {
    */
   case class TellAction(
     loc: Location,
-    entity: EntityRef,
     msg: MessageConstructor,
+    entity: EntityRef,
     description: Option[Description] = None)
     extends Action {
-    override def format: String = s"tell ${entity.format} to ${msg.format}"
+    override def format: String = s"tell ${msg.format} to ${entity.format}"
   }
 
   /**
