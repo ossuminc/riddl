@@ -90,7 +90,7 @@ trait TypeParser extends ReferenceParser {
   def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (typeExpression.rep(2, P("or" | "|" | ",")) |
+        (typeExpression.rep(1, P("or" | "|" | ",")) |
           Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }

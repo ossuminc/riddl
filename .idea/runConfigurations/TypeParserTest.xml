@@ -1,19 +1,14 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="TypeParserTest" type="ScalaTestRunConfiguration" factoryName="ScalaTest" show_console_on_std_err="false" show_console_on_std_out="false">
-    <module name="riddl-languge" />
-    <option name="allowRunningInParallel" value="false" />
-    <option name="testKind" value="Class" />
-    <option name="envs">
-      <map />
+  <configuration default="false" name="TypeParserTest" type="ScalaTestRunConfiguration" factoryName="ScalaTest" singleton="false" show_console_on_std_err="false" show_console_on_std_out="false">
+    <module name="riddl-language" />
+    <option name="allowRunningInParallel" value="true" />
+    <option name="projectPathOnTarget" />
+    <option name="selectedOptions">
+      <list />
     </option>
-    <option name="javaOptions" value="" />
-    <option name="jrePath" />
-    <option name="searchTest" value="Across module dependencies" />
-    <option name="showProgressMessages" value="true" />
-    <option name="testArgs" value="" />
+    <option name="testKind" value="Class" />
+    <option name="shortenClasspath" value="NONE" />
     <option name="testClassPath" value="com.yoppworks.ossum.riddl.language.TypeParserTest" />
-    <option name="useSbt" value="false" />
-    <option name="useUiWithSbt" value="false" />
     <option name="workingDirectory" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
