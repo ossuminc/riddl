@@ -1,8 +1,12 @@
+import org.jetbrains.sbtidea.Keys.IntelliJPlatform
 import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 maintainer := "reid@reactific.com"
 Global / onChangedBuildSource := ReloadOnSourceChanges
+(Global / excludeLintKeys) ++=
+  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
+
 ThisBuild / versionScheme := Some("semver-spec")
 ThisBuild / dynverVTagPrefix := false
 
@@ -170,5 +174,18 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
   scriptedBufferLog := false
 )
 
-(Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
+lazy val `riddl-idea-plugin` = project.in(file("riddl-idea-plugin"))
+  .enablePlugins(SbtIdeaPlugin)
+  .settings(
+    ThisBuild / intellijPluginName := "riddl-idea-plugin",
+    ThisBuild / intellijBuild      := "213.6461.79",
+    ThisBuild / intellijPlatform   := IntelliJPlatform.IdeaCommunity,
+    intellijPlugins       += "com.intellij.properties".toPlugin,
+    ThisBuild / intellijAttachSources := true,
+    Compile / javacOptions ++= "--release" :: "17" :: Nil,
+    libraryDependencies ++= Seq(
+      "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5" withSources()
+    ),
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
+    Test / unmanagedResourceDirectories    += baseDirectory.value / "testResources"
+  ).dependsOn(language)

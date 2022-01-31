@@ -17,3 +17,5 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.2")
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.9.2")
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.7")
+
+addSbtPlugin("org.jetbrains" % "sbt-idea-plugin" % "3.13.5")
