@@ -53,6 +53,7 @@ object LukeAstWalker {
           case AST.EntityConsistent(_) => opts + HugoEntity.EntityOption.Consistent
           case AST.EntityAvailable(_) => opts + HugoEntity.EntityOption.Available
           case AST.EntityFiniteStateMachine(_) => opts + HugoEntity.EntityOption.FiniteStateMachine
+          case AST.EntityMessageQueue(_) => opts + HugoEntity.EntityOption.MessageQueue
           case AST.EntityKind(_, _) => opts + HugoEntity.EntityOption.Kind
            // FIXME: EntityKind.args unused
         }

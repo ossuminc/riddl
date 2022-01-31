@@ -18,7 +18,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
         Options.consistent,
         Options.available,
         Options.stateMachine,
-        Options.kind
+        Options.kind,
+        Options.messageQueue
       ).!
     ) {
       case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
@@ -29,6 +30,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       case (loc, Options.available, _) => EntityAvailable(loc)
       case (loc, Options.stateMachine, _) => EntityFiniteStateMachine(loc)
       case (loc, Options.kind, args) => EntityKind(loc, args)
+      case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
       case _ => throw new RuntimeException("Impossible case")
     }
   }

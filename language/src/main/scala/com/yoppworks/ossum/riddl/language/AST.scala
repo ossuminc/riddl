@@ -1303,6 +1303,14 @@ object AST {
   case class EntityFiniteStateMachine(loc: Location) extends EntityOption("finite state machine")
 
   /**
+   * An [[EntityOption]] that indicates that this entity should allow receipt of commands and
+   * queries via a message queue.
+   *
+   * @param loc The location at which this option occurs.
+   */
+  case class EntityMessageQueue(loc: Location) extends EntityOption("message queue")
+
+  /**
    * An [[EntityOption]] that indicates the general kind of entity being defined. This option takes
    * a value which provides the kind.  Examples of useful kinds are "device", "actor", "concept",
    * "machine", and similar kinds of entities. This entity option may be used by downstream AST

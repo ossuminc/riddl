@@ -1,19 +1,37 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, Function}
+import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, EntityAggregate, EntityAvailable,
+  EntityFiniteStateMachine, EntityMessageQueue, EntityTransient, Function}
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
 class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
+    "handle a variety of options" in {
+      val input =
+        """entity WithOptions is {
+          | options(fsm, mq, aggregate, transient, available)
+          | }
+          |""".stripMargin
+      parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
+        msgs.count(_.kind.isError) mustBe 2
+        entity.options must contain(EntityFiniteStateMachine(3 -> 10))
+        entity.options must contain(EntityMessageQueue(3 -> 15))
+        entity.options must contain(EntityAggregate(3 -> 19))
+        entity.options must contain(EntityTransient(3 -> 30))
+        entity.options must contain(EntityAvailable(3 -> 41))
+      }
+    }
+
     "handle entity with multiple states" in {
-      val input = """entity MultiState is {
-                    |  options(fsm)
-                    |  state foo is { field: String }
-                    |  state bar is { field2: Number }
-                    |  handler fum is { ??? }
-                    |}""".stripMargin
+      val input =
+        """entity MultiState is {
+          |  options(fsm)
+          |  state foo is { field: String }
+          |  state bar is { field2: Number }
+          |  handler fum is { ??? }
+          |}""".stripMargin
       parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
         msgs.filter(_.kind.isError) mustBe (empty)
         entity.states.size mustBe 2

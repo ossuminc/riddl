@@ -54,6 +54,7 @@ object Terminals {
     final val function = "function"
     final val gateway = "gateway"
     final val kind = "kind"
+    final val messageQueue = "mq"
     final val parallel = "parallel"
     final val reply = "reply"
     final val sequential = "sequential"
