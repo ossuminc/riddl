@@ -1,0 +1,159 @@
+domain dokn is {
+    type Address = {
+        line1: String,
+        line2: String,
+        line3: String,
+        line4: String,
+        city: String,
+        province: String,
+        country: String,
+        postalCode: String
+    }
+    type MobileNumber = Pattern("\(([0-9]{3})\)([0-9]{3})-([0-9]{4})")
+    //https:emailregex.com RFC 5322 Official Standard
+    type EmailAddress = Pattern("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-](?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-])|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])\")@(?:(?:[a-z0-9](?:[a-z0-9-][a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-][a-z0-9])?|[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])")
+    type LoadingMethod = any of { dock, tailgate, forklift, none }
+    type CompanyId = Id(Company.Company)
+    type DriverId = MobileNumber
+    type NoteId = Id(Note.Note)
+    type MediaId is Id(Media.Media)
+    type LocationId is Id(Location.Location)
+    type NoteList is Note.Note*
+
+    plant Company is {
+        pipe events is {
+            transmit dokn.Company.Company.CompanyEvent
+        }
+    }
+
+    context Company is {
+        entity Company is {
+            options(event sourced, available)
+
+            type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
+            type CompanyAdded is event {}
+            type CompanyEvent is one of { event CompanyAdded }
+
+            state CompanyBase is {
+                companyId: CompanyId,
+                mailingAddress: Address,
+                primaryContactName: String,
+                primaryContactPhone: MobileNumber,
+                primaryContactEmail: EmailAddress
+            }
+            handler CompanyBase is {
+                on command AddCompany { 
+                    then publish CompanyAdded to dokn.Company.events 
+                }
+            }
+        }
+    }
+
+    context Driver is { 
+        entity Driver is {
+            options(event sourced, available)
+
+            type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId } 
+            type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
+
+            type RemoveDriverFromCompany is command { mobile: MobileNumber, companyId: CompanyId }
+            type DriverRemovedFromCompany is event { mobile: MobileNumber, companyId: CompanyId }
+
+            type PlaceDriverOnDuty is command { mobile: MobileNumber }
+
+            state DriverBase is {
+                driverId: DriverId,
+                name: String,
+                onDutyTime: TimeStamp,
+                companyId: CompanyId
+            }
+            handler Base is {
+                on command AddDriverToCompany { send event DriverAddedToCompany() to sender }
+                on command RemoveDriverFromCompany { send event DriverRemovedFromCompany() to sender}
+            }
+        }
+    }
+
+    context Note is { 
+        entity Note is {
+            options(event sourced, available)
+            state NoteBase is {
+                noteId: NoteId,
+                locationId: LocationId,
+                companyId: CompanyId,
+                text: String,
+                upvoteCount: Integer,
+                downvoteCount: Integer,
+                approved: Boolean
+            }
+            handler Base is { ??? }
+        }
+    }
+
+    context Media is {
+        entity Media is {
+            options(consistent)
+            state MediaBase is {
+                mediaId: MediaId,
+                path: String,
+                companyId: CompanyId
+            }
+            handler Base is { ??? }
+        }
+    }
+
+    context Location is { 
+        entity Location is {
+            options(event sourced, available)
+
+            type AddDeliveryLocation is command  { geohash: LatLong, label: String }
+            type DeliveryLocationAdded is event  {}
+
+            type ChangeLocationName is command { newName: String }
+            type LocationNameChanged is event { newName: String }
+
+            type ReportTicketReceived is command {}
+            type TicketReportedAtLocation is event {}
+
+            type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
+            type NotesForLocationModified is event { note: String }
+
+            type LocationAddressReceived is event { address: Address }
+
+            type getLocationDetails is query  {}
+            //type LocationDetails is response  { ??? }
+
+            type getLocationNotes is query { cid: CompanyId }
+            //type LocationNotes is response type NoteList
+
+            state LocationBase is {
+                locationId: LocationId,
+                geohash: LatLong,
+                label: String ,
+                address: Address,
+                notes: NoteList,
+                ticketCount: Integer,
+                loadingMethod: LoadingMethod
+            }
+            handler Base is {
+                on command AddDeliveryLocation { send event DeliveryLocaitonAdded() to sender }
+                on command ChangeLocationName { send event LocationNameChanged() to sender }
+                on command ReportTicketReceived { send event TicketReportedAtLocation() to sender }
+                on command ModifyNotesAtLocation { send event NotesForLocationModified() to sender }
+                on event LocationAddressReceived { set address to LocationAddressReceived.address }
+                on query getLocationDetails { send result LocationDetails() to Driver }
+                on query getLocationNotes { send result LocationNotes() to Driver }
+            }
+        }
+    }
+
+} explained as {
+    |The dokn domain is the starting point for a simple application which allows
+    |delivery drivers to capture notes about delivery locations to create 
+    |efficiency for future deliveries. The main Entities within this domain are:
+    |*Driver - a person who delivers parcels and freight deliveries to a 
+    |specific location.
+    |*Location - A specific geographic location to which a driver delivers to.
+    |*Note - Drivers capture notes about delivering to a specific location. 
+    |i.e. Accepts deliveries at loading dock C. Ask for Mike (555-123-4567)
+}
