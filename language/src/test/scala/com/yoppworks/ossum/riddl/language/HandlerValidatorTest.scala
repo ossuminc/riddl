@@ -29,7 +29,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityEvent' is not defined but should be a event type"
+          "'EntityEvent' is not defined but should be an event type"
         )
       }
     }
@@ -52,7 +52,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' is not defined but should be a event type"
+          "'Incoming' is not defined but should be an event type"
         )
       }
     }
@@ -75,7 +75,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' should reference a event type but is a String type instead"
+          "'Incoming' should reference an event type but is a String type instead"
         )
       }
     }

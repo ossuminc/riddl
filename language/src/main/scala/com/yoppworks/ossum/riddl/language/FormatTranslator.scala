@@ -256,7 +256,7 @@ class FormatTranslator extends Translator[FormatConfig] {
         case aggregation: Aggregation => emitAggregation(aggregation)
         case mapping: Mapping => emitMapping(mapping)
         case RangeType(_, min, max) => this.add(s"range(${min.n},${max.n}) ")
-        case ReferenceType(_, er) => this.add(s"refer to ${er.format}")
+        case ReferenceType(_, er) => this.add(s"${Keywords.reference} to ${er.format}")
         case pattern: Pattern => emitPattern(pattern)
         case mt: MessageType => emitMessageType(mt)
         case UniqueId(_, id) => this.add(s"Id(${id.format}) ")

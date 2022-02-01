@@ -126,7 +126,7 @@ domain ReactiveBBQ is {
       }
       handler foo is {}
     }
-    type MenuItemRef is refer to entity MenuItem
+    type MenuItemRef is reference to entity MenuItem
     entity Menu is {
       option is aggregate
       state typical is { items: many MenuItemRef }

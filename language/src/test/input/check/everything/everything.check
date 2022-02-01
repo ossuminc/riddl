@@ -55,7 +55,7 @@ Missing: everything.riddl(16:5): Joint 'output' should have a description
 Missing: everything.riddl(35:27): Enumerator 'Apple' should have a description
 Missing: everything.riddl(35:38): Enumerator 'Peach' should have a description
 Missing: everything.riddl(13:25): Inlet 'Commands' should have a description
-Error: everything.riddl(72:20): 'Something' was expected to be a command type but is a Entity  instead
+Error: everything.riddl(72:20): 'Something' was expected to be a command type but is an Entity instead
 Style: everything.riddl(13:25): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:34)
 Error: everything.riddl(76:29): 'Inebriated' is not defined but should be a message type
 Error: everything.riddl(75:18): 'misc' is not defined but should be a Function
