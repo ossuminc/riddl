@@ -1,0 +1,6 @@
+context Table {
+  entity Table {
+    state TableState is { ??? }
+    handler TableHandler is { ??? }
+  }
+}

@@ -203,6 +203,7 @@ object AST {
     def id: Identifier
 
     def identify: String = s"${AST.kind(this)} '${id.format}'"
+    def isImplicit: Boolean = false
   }
 
   /**
@@ -490,7 +491,14 @@ object AST {
     id: Identifier,
     typeEx: TypeExpression,
     description: Option[Description] = None)
-    extends Definition {}
+    extends Definition {
+    override def isImplicit: Boolean = {
+      id.value == "sender" && (typeEx match {
+        case ReferenceType(_,EntityRef(_,PathIdentifier(_,seq))) => seq.isEmpty
+        case _ => false
+      })
+    }
+  }
 
   /**
    * A type expression that takes a set of named fields as its value.

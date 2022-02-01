@@ -422,7 +422,7 @@ object Validation {
       val exactlyOneMatch = types.count(_.getClass == tc) == 1
       val allDifferent = definitions.map(AST.kind).distinct.sizeIs == definitions.size
       if (exactlyOneMatch && allDifferent) { this }
-      else {
+      else if (!d.isImplicit) {
         add(ValidationMessage(
           id.loc,
           s"""'${id.value}' is not uniquely defined.
@@ -430,6 +430,8 @@ object Validation {
              |${formatDefinitions(definitions)}""".stripMargin,
           Error
         ))
+      } else {
+        this
       }
     }
 
@@ -714,7 +716,7 @@ object Validation {
               val names = messageConstructor.args.args.keys.map(_.value).toSeq
               val unset = mt.fields.filterNot { fName => names.contains(fName.id.value) }
               if (unset.nonEmpty) {
-                unset.foldLeft(this) { (next, field) =>
+                unset.filterNot(_.isImplicit).foldLeft(this) { (next, field) =>
                   next.add(ValidationMessage(messageConstructor.msg.loc,
                     s"Field '${field.id.format}' was not set in message constructor"))
                 }

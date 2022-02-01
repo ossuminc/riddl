@@ -18,7 +18,7 @@ domain dokn is {
     type NoteId = Id(Note.Note)
     type MediaId is Id(Media.Media)
     type LocationId is Id(Location.Location)
-    type NoteList is Note.Note*
+    type NoteList is reference to Note.Note*
 
     plant CompanyPlant is {
         pipe CompanyEvents is {
@@ -31,7 +31,7 @@ domain dokn is {
             options(event sourced, available)
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
-            type CompanyAdded is event {}
+            type CompanyAdded is event { ??? }
             type CompanyEvent is one of { type CompanyAdded }
 
             state CompanyBase is {
@@ -118,7 +118,7 @@ domain dokn is {
             options(event sourced, available)
 
             type AddDeliveryLocation is command  { geohash: LatLong, label: String }
-            type DeliveryLocationAdded is event  {}
+            type DeliveryLocationAdded is event  { }
 
             type ChangeLocationName is command { newName: String }
             type LocationNameChanged is event { newName: String }
@@ -132,10 +132,10 @@ domain dokn is {
             type LocationAddressReceived is event { newAddress: Address }
 
             type getLocationDetails is query  {}
-            //type LocationDetails is response  { ??? }
+            type LocationDetails is result  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }
-            type LocationNotes is response { notes: NoteList }
+            type LocationNotes is result { notes: NoteList }
 
             state LocationBase is {
                 locationId: LocationId,
@@ -161,7 +161,7 @@ domain dokn is {
                 }
                 on event LocationAddressReceived { then set LocationBase.address to @newAddress }
                 on query getLocationDetails { then tell result LocationDetails() to Driver }
-                on query getLocationNotes { then tell result LocationNotes() to Driver }
+                on query getLocationNotes { then tell result LocationNotes(notes=empty()) to Driver }
             }
         }
     }

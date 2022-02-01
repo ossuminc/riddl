@@ -11,7 +11,8 @@ import fastparse.ScalaWhitespace.*
 trait TypeParser extends ReferenceParser {
 
   def referToType[u: P]: P[ReferenceType] = {
-    P(location ~ "refer" ~ "to" ~/ entityRef).map { tpl => (ReferenceType.apply _).tupled(tpl) }
+    P(location ~ Keywords.reference ~ Readability.to ~/ entityRef)
+      .map { tpl => (ReferenceType.apply _).tupled(tpl) }
   }
 
   def stringType[u: P]: P[Strng] = {
@@ -90,8 +91,9 @@ trait TypeParser extends ReferenceParser {
   def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (typeExpression.rep(1, P("or" | "|" | ",")) |
-          Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression])) ~ close
+        ( Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression]) |
+          typeExpression.rep(0, P("or" | "|" | ","))
+        ) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
@@ -101,7 +103,7 @@ trait TypeParser extends ReferenceParser {
   }
 
   def fields[u: P]: P[Seq[Field]] = {
-    P(field.rep(min = 1, comma) | Punctuation.undefined.!.map(_ => Seq.empty[Field]))
+    P(Punctuation.undefined.!.map(_ => Seq.empty[Field]) | field.rep(min = 0, comma) )
   }
 
   def aggregation[u: P]: P[Aggregation] = {

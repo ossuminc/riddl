@@ -131,6 +131,7 @@ object Terminals {
     final val query = "query"
     final val queries = "queries"
     final val range = "range"
+    final val reference = "reference"
     final val remove = "remove"
     final val requires = "requires"
     final val result = "result"

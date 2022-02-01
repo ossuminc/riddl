@@ -7,7 +7,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
   Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
 
-ThisBuild / versionScheme := Some("semver-spec")
+ThisBuild / versionScheme := Option("semver-spec")
 ThisBuild / dynverVTagPrefix := false
 
 // NEVER  SET  THIS: version := "0.1"
@@ -80,7 +80,7 @@ lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme")).settings(
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(
     name := "riddl-doc",
-    publishTo := Some(Resolver.defaultLocal),
+    publishTo := Option(Resolver.defaultLocal),
     Hugo / sourceDirectory := sourceDirectory.value / "hugo",
     // minimumHugoVersion := "0.89.4",
     publishSite
@@ -89,7 +89,7 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(H
 lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
   .enablePlugins(JavaAppPackaging).settings(
   name := "riddlc",
-  mainClass := Some("com.yoppworks.ossum.riddl.RIDDLC"),
+  mainClass := Option("com.yoppworks.ossum.riddl.RIDDLC"),
   scalacOptions := scala2_13_Options,
   libraryDependencies ++= Seq(Dep.cats_core, Dep.scopt, Dep.config),
   maintainer := "reid.spencer@yoppworks.com",
@@ -126,7 +126,7 @@ lazy val examples = project.in(file("examples")).settings(
   Compile / packageBin / publishArtifact := false,
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
-  publishTo := Some(Resolver.defaultLocal),
+  publishTo := Option(Resolver.defaultLocal),
   libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
   /*
     runRiddlc := {

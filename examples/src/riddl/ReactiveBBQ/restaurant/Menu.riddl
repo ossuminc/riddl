@@ -1,15 +1,18 @@
 context Menu is {
-    type MenuItem = {
+  entity MenuItem {
+    state MenuItemState = {
       corporateId: CorporateItemId,
       name: String,
       description: String,
       price: Amount
     }
+    handler MenuItemHandler is { ??? }
+  }
 
   entity Menu is {
     type Amount = range(0,1000)
     type CorporateItemId = Pattern("")
-    type MenuItemRef is refer to entity MenuItem
+    type MenuItemRef is reference to MenuItem
 
 
     type AddItem = command { item: Item }

@@ -8,7 +8,7 @@ import org.scalatest.Assertion
 import java.io.File
 
 /** Unit Tests To Check Documentation Examples */
-class CheckExampleSpec extends ValidatingTest {
+class CheckExamplesSpec extends ValidatingTest {
 
   val directory = "examples/src/riddl/"
   val roots = Map(
@@ -16,19 +16,20 @@ class CheckExampleSpec extends ValidatingTest {
     "DokN" -> "dokn/dokn.riddl"
   )
 
+  val errorsOnly = ValidationOptions(
+    showTimes = true,
+    showMissingWarnings = false,
+    showStyleWarnings = false
+  )
+
   def checkOne(name: String, path: String): Assertion = {
     val file = new File(directory + path)
-    val options = ValidationOptions(
-      showTimes = true,
-      showMissingWarnings = false,
-      showStyleWarnings = false
-    )
     TopLevelParser.parse(file) match {
       case Left(errors) =>
         val msgs = errors.iterator.map(_.format).mkString("\n")
         fail(s"In $name:$path:\n$msgs")
       case Right(ast) =>
-        val messages = Validation.validate(ast, options)
+        val messages = Validation.validate(ast, errorsOnly)
         val errors = messages.filter(_.kind.isError)
         val warnings: ValidationMessages = messages.filter(_.kind.isWarning)
         if (warnings.nonEmpty) {
