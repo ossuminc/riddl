@@ -55,7 +55,7 @@ lazy val scala2_13_Options = Seq(
 )
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, doc)
+  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, /*examples,*/ doc)
 
 val themeTask = taskKey[File]("Task to generate theme artifact")
 lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme")).settings(
@@ -121,8 +121,8 @@ lazy val `hugo-generator` = (project in file("hugo-generator")).enablePlugins(Bu
 // lazy val exampleTask = taskKey[File]("Task to generate example hugo docs")
 // lazy val runRiddlc = taskKey[Unit]("Run the riddlc compiler")
 
-lazy val `example` = project.in(file("example")).settings(
-  name := "riddl-example",
+lazy val examples = project.in(file("examples")).settings(
+  name := "riddl-examples",
   Compile / packageBin / publishArtifact := false,
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
