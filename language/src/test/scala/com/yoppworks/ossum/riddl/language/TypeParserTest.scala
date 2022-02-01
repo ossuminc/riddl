@@ -146,6 +146,9 @@ class TypeParserTest extends ParsingTest {
               case "result"  => ResultKind
             },
             Seq(
+              Field(1 -> 12, Identifier(1 -> 12, "sender"),
+                ReferenceType(1 -> 12, EntityRef(1 -> 12, PathIdentifier(1 -> 12, Seq
+                  .empty[String])))),
               Field(2 -> 3, Identifier(2 -> 3, "key"), Number(2 -> 8)),
               Field(
                 3 -> 3,

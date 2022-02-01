@@ -1,9 +1,9 @@
 domain ignore1 is {
   context ignore2 is {
-    type Something = command {}
-    type UndoSomething = command {}
-    type AnotherThing = command {}
-    type UndoAnotherThing = command {}
+    type Something = command { ??? }
+    type UndoSomething = command { ??? }
+    type AnotherThing = command { ??? }
+    type UndoAnotherThing = command { ??? }
     entity blah is { ??? }
     saga name is {
       options(parallel)

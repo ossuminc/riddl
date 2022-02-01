@@ -121,7 +121,9 @@ trait TypeParser extends ReferenceParser {
 
   def messageType[u: P]: P[MessageType] = {
     P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
-      MessageType(loc, mk, agg.fields)
+      MessageType(loc, mk, Field(loc, Identifier(loc, "sender"),
+        ReferenceType(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String]))))
+        +: agg.fields)
     }
   }
 

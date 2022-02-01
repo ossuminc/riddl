@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Validation.*
 
 /** Unit Tests For TypeValidationTest */
@@ -43,6 +43,35 @@ class TypeValidatorTest extends ValidatingTest {
           |} explained as "nothing"
           |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
         msgs mustBe empty
+      }
+    }
+    "generate 'sender' field in messages" in {
+      val cases = Seq("command", "event", "query", "result")
+      for {messageKind <- cases} {
+        val input =
+          s"""domain foo is {
+             |type Message is $messageKind {
+             |  two: String explained as "a field"
+             |} explained as "subject"
+             |} explained as "nothing"
+             |""".stripMargin
+        parseAndValidate[Domain](input) { case (d: Domain, msgs: ValidationMessages) =>
+          msgs mustBe empty
+          val typ = d.types.head
+          typ.typ match {
+            case MessageType(_, kind, fields) =>
+              kind.kind mustBe messageKind
+              fields.head.id.value mustBe "sender"
+              fields.head.typeEx match {
+                case ReferenceType(_, EntityRef(_, id)) =>
+                  id mustBe empty
+                case x: TypeExpression =>
+                  fail(s"Expected a ReferenceType but got: $x")
+              }
+            case x: TypeExpression =>
+              fail(s"Expected an MessageType but got: $x")
+          }
+        }
       }
     }
 

@@ -28,6 +28,7 @@ object Validation {
         if (defs.sizeIs == 2) {
           val first = defs.head
           val last = defs.last
+
           state
             .addStyle(last.loc, s"${last.identify} overloads ${first.identify} at ${first.id.loc}")
         } else {
@@ -283,7 +284,25 @@ object Validation {
       mt: MessageType
     ): ValidationState = {
       val kind = mt.messageKind.kind
-      mt.fields.foldLeft(this) { case (state, field) =>
+      val s1: ValidationState = mt.fields.headOption match {
+        case Some(sender) =>
+          this.check(sender.id.value == "sender",
+            "The first field of a message type must be the implicit 'sender'",
+            SevereError, mt.loc)
+            .step { state =>
+              sender.typeEx match {
+                case ReferenceType(loc, entityRef) =>
+                  state.check(entityRef.id.isEmpty,
+                    "The implicit 'sender' must not have a path in its entity reference",
+                    SevereError, loc)
+                case other: TypeExpression =>
+                  state.addError(mt.loc, s"The implicit 'sender must be Reference type, not $other")
+              }
+            }
+        case None =>
+          this
+      }
+      mt.fields.tail.foldLeft(s1) { case (state, field) =>
         state.checkIdentifierLength(field).check(
           field.id.value.head.isLower,
           s"Field names in $kind messages should start with a lower case letter",
@@ -615,7 +634,7 @@ object Validation {
           }
         }
           .checkDescription(example)
-      } else {this}
+      } else this
     }
 
     def checkExamples(examples: Seq[Example]): ValidationState = {

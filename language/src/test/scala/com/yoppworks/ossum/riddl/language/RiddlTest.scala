@@ -1,14 +1,13 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.time.Instant
-import java.io.File
-import java.util.UUID
-import com.yoppworks.ossum.riddl.language.AST.Domain
-import com.yoppworks.ossum.riddl.language.AST.RootContainer
+import com.yoppworks.ossum.riddl.language.AST.{Domain, RootContainer}
 import com.yoppworks.ossum.riddl.language.Logging.Lvl
 import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
+import java.io.File
+import java.time.Instant
+import java.util.UUID
 import scala.io.Source
 
 class RiddlTest extends ParsingTestBase {
@@ -55,7 +54,7 @@ class RiddlTest extends ParsingTestBase {
         options = RiddlTest.DefaultOptions
       )
 
-      result must matchPattern { case Some(_) => }
+      result mustNot be(empty)
     }
     "return none when file does not exist" in {
       val logger = new InMemoryLogger

@@ -16,7 +16,7 @@ domain ReactiveBBQ is {
   }
   context Customer is {
     entity Customer is {
-      state main is { }
+      state main is { ??? }
       handler input is { ??? }
     }
   }

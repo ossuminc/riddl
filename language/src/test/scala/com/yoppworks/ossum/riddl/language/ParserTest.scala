@@ -90,7 +90,7 @@ class ParserTest extends ParsingTest {
                     |    function foo is { ??? }
                     |    entity one is { ??? }
                     |    entity two is {
-                    |      state entityState is {}
+                    |      state entityState is { ??? }
                     |      handler one  is { ??? }
                     |      function one is { ??? }
                     |      invariant one is { ??? }

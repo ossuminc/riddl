@@ -135,7 +135,7 @@ case class SymbolTable(container: Container[Definition]) {
   }
 
   def foreachOverloadedSymbol[T](entries: Seq[Seq[Definition]] => T): T = {
-    val overloads = symbols.filter(_._2.size > 1)
+    val overloads = symbols.filter(_._2.size > 1).filter(_._1 != "sender")
     val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
     entries(defs)
   }

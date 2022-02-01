@@ -190,7 +190,7 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def emitFields(of: Seq[Field]): FormatState = {
       if (of.isEmpty) {
-        this.add("{}")
+        this.add("{ ??? }")
       }
       else if (of.sizeIs == 1) {
         val f: Field = of.head
@@ -227,7 +227,9 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitMessageType(mt: AST.MessageType): FormatState = {
-      this.add(mt.messageKind.kind.toLowerCase).add(" ").emitFields(mt.fields)
+      this.add(mt.messageKind.kind.toLowerCase)
+        .add(" ")
+        .emitFields(mt.fields.tail)
     }
 
     def emitMessageRef(mr: AST.MessageRef): FormatState = {

@@ -8,7 +8,7 @@ class HandlerTest extends ParsingTest {
     "accept shortcut syntax for single example on clauses " in {
       val input =
         """entity DistributionItem is {
-          |  state DistributionState is {}
+          |  state DistributionState is { ??? }
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      when ==(@ContainerNestedInContainer.id,@parentContainer)
@@ -25,18 +25,19 @@ class HandlerTest extends ParsingTest {
       }
     }
     "handle actions" in {
-      val input = """entity DistributionItem is {
-                    |  state DistributionState is {}
-                    | handler FromContainer  is {
-                    |    on event ContainerNestedInContainer { example only {
-                    |      when ==(@ContainerNestedInContainer.id,@parentContainer)
-                    |      then set lastKnownWorkCenter to @ContainerNestedInContainer.workCenter
-                    |      }
-                    |      // anything else needing to be updated?
-                    |    } explained as { "Helps update this item's location" }
-                    |  }
-                    |  handler FromDistributionItem  is {
-                    |    on command CreateItem { example only {
+      val input =
+        """entity DistributionItem is {
+          |  state DistributionState is { ??? }
+          | handler FromContainer  is {
+          |    on event ContainerNestedInContainer { example only {
+          |      when ==(@ContainerNestedInContainer.id,@parentContainer)
+          |      then set lastKnownWorkCenter to @ContainerNestedInContainer.workCenter
+          |      }
+          |      // anything else needing to be updated?
+          |    } explained as { "Helps update this item's location" }
+          |  }
+          |  handler FromDistributionItem  is {
+          |    on command CreateItem { example only {
                     |      // intent: DistributionItem is created
                     |      then set journey to @PreInducted
                     |      and set trackingId to @CreateItem.trackingId

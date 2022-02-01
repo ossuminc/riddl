@@ -40,7 +40,7 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
   }
 
   val items = Seq(
-    "example/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl" -> false,
+    "examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl" -> false,
     "doc/src/hugo/content/language/hierarchy/domain/streaming/riddl/plant.riddl" -> false,
     "language/src/test/input/domains" -> true,
     "language/src/test/input/enumerations" -> true,
