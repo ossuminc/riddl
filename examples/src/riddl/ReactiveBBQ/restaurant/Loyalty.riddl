@@ -14,7 +14,7 @@ context Loyalty is {
   }
   type AccruePoints is command {
     when is TimeStamp,
-    loyaltyAccount is LoyaltyId,
+    loyaltyAccountId is LoyaltyId,
     pointsAccrued is Number,
     fromOrder is OrderId?
   } explained as {
@@ -32,10 +32,11 @@ context Loyalty is {
     |The event indicates `when` the accrual occurred, the loyalty account it
     |accrued to, and the number of `pointsAccrued`.
   }
+
   type RedeemPoints is command {
     ???
-  } explained as {
-  }
+  } explained as "This needs some work"
+
   type PointsRedeemed is event {
     when is TimeStamp,
     who is CustomerId,
@@ -66,7 +67,7 @@ context Loyalty is {
     |This state type used when a loyalty account is active
     }
     handler Inputs is {
-      on AccrualEvent
+      ???
     }
   }
 } explained as {

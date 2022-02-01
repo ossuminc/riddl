@@ -1,4 +1,5 @@
 context Menu is {
+  type MenuItemRef = reference to MenuItem
   entity MenuItem {
     state MenuItemState = {
       corporateId: CorporateItemId,
@@ -9,15 +10,13 @@ context Menu is {
     handler MenuItemHandler is { ??? }
   }
 
+  type AddItem = command { item: MenuItemRef }
+  type RemoveItem = command { corporateId: CorporateItemId }
+  type MakeItemOutOfStock = command { corporateId: CorporateItemId }
+
   entity Menu is {
     type Amount = range(0,1000)
     type CorporateItemId = Pattern("")
-    type MenuItemRef is reference to MenuItem
-
-
-    type AddItem = command { item: Item }
-    type RemoveItem = command { corporateId: CorporateItemId }
-    type MakeItemOutOfStock = command { corporateId: CorporateItemId }
 
     state MenuState is {
       items: many MenuItemRef

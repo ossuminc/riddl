@@ -6,6 +6,7 @@ import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
 import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
+import scala.util.matching.Regex
 
 /** Validates an AST */
 object Validation {
@@ -189,6 +190,12 @@ object Validation {
       }
     }
 
+    private val vowels: Regex = "[aAeEiIoOuU]".r
+    def article(thing: String): String = {
+      val article = if (vowels.matches(thing.substring(0,1))) "an" else "a"
+      s"$article $thing"
+    }
+
     def check(
       predicate: Boolean = true,
       message: => String,
@@ -229,7 +236,7 @@ object Validation {
         val id = enumerator.id
         state.checkIdentifierLength(enumerator).check(
           id.value.head.isUpper,
-          s"Enumerator '${id.value}' must start with upper case",
+          s"Enumerator '${id.format}' must start with upper case",
           StyleWarning,
           id.loc
         ).checkDescription(enumerator)
@@ -356,23 +363,24 @@ object Validation {
 
     def checkMessageRef(ref: MessageRef, kind: MessageKind): ValidationState = {
       symbolTable.lookupSymbol[Type](ref.id.value) match {
-        case Nil => add(ValidationMessage(
-          ref.id.loc,
-          s"'${ref.id.format}' is not defined but should be a ${kind.kind} type",
-          Error
-        ))
+        case Nil =>
+          add(ValidationMessage(
+            ref.id.loc,
+            s"'${ref.id.format}' is not defined but should be ${article(kind.kind)} type",
+            Error
+          ))
         case (d, _) :: Nil => d match {
           case Type(_, _, typ, _) => typ match {
             case MessageType(_, mk, _) => check(
               mk == kind,
-              s"'${ref.id.format}' was expected to be a ${kind.kind} type" +
-                s" but is a ${mk.kind} type instead",
+              s"'${ref.id.format}' should be ${article(kind.kind)} type" +
+                s" but is ${article(mk.kind)} type instead",
               Error,
               ref.id.loc
             )
             case te: TypeExpression => add(ValidationMessage(
               ref.id.loc,
-              s"'${ref.id.format}' should reference a ${kind.kind} type but is a ${
+              s"'${ref.id.format}' should reference ${article(kind.kind)} type but is a ${
                 AST.kind(te)
                 } type instead",
                 Error
@@ -380,8 +388,8 @@ object Validation {
             }
             case _ => add(ValidationMessage(
               ref.id.loc,
-              s"'${ref.id.format}' was expected to be a ${kind.kind} type but is a ${AST.kind(d)}" +
-                s"  instead",
+              s"'${ref.id.format}' was expected to be ${article(kind.kind)} type but is ${
+                article(AST.kind(d))} instead",
               Error
             ))
           }
@@ -403,7 +411,8 @@ object Validation {
       (state, foundClass, id, defClass, _, _) => {
         state.check(
           foundClass.isAssignableFrom(defClass),
-          s"'${id.format}' was expected to be a ${foundClass.getSimpleName} but is a ${defClass.getSimpleName} instead",
+          s"'${id.format}' was expected to be ${article(foundClass.getSimpleName)} but is " +
+            s"${article(defClass.getSimpleName)} instead",
           Error,
           id.loc
         )
@@ -425,7 +434,7 @@ object Validation {
       else if (!d.isImplicit) {
         add(ValidationMessage(
           id.loc,
-          s"""'${id.value}' is not uniquely defined.
+          s"""'${id.format}' is not uniquely defined.
              |Definitions are:
              |${formatDefinitions(definitions)}""".stripMargin,
           Error
@@ -442,9 +451,10 @@ object Validation {
       if (id.value.nonEmpty) {
         val tc = classTag[T].runtimeClass
         symbolTable.lookupSymbol[T](id.value) match {
-          case Nil => add(ValidationMessage(
+          case Nil =>
+            add(ValidationMessage(
               id.loc,
-              s"'${id.format}' is not defined but should be a ${tc.getSimpleName}",
+              s"'${id.format}' is not defined but should be ${article(tc.getSimpleName)}",
               Error
             ))
           // Single match, defer to validation function
@@ -738,7 +748,8 @@ object Validation {
           case _ =>
             add(ValidationMessage(
               id.loc,
-              s"'${id.format}' was expected to be a message type but is a ${AST.kind(d)} instead",
+              s"'${id.format}' was expected to be a message type but is ${
+                article(AST.kind(d))} instead",
               Error
             ))
         }

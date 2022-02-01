@@ -1,0 +1,6 @@
+context Server {
+  entity Server {
+    state ServerState is { ??? }
+    handler ServerHandler is { ??? }
+  }
+}

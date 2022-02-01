@@ -3,13 +3,10 @@ context Kitchen is {
   type ReceiveOrder is {
     items: MenuItemRef+
   }
-
-  type OrderViewType is {
-    address is IP4Address
-  }
+  type OrderViewType is any of { List, Simple, Detailed }
   entity OrderViewer is {
    option is kind("device")
-   state OrderState is { field: OrderViewType }
+   state OrderViewerState is { viewType: OrderViewType }
    handler input is {}
   } explained as {
     |## Brief

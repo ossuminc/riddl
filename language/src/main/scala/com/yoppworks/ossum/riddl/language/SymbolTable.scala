@@ -41,7 +41,7 @@ case class SymbolTable(container: Container[Definition]) {
         case agg: Aggregation => agg.fields.foreach { fld =>
           addToSymTab(fld.id.value, fld -> parent)
         }
-        case _ => addToSymTab(t.id.value, t -> parent) // types are definitions too
+        case _ => // addToSymTab(t.id.value, t -> parent) // types are definitions too
       }
       case _ =>
     }
