@@ -101,7 +101,7 @@ trait TypeParser extends ReferenceParser {
   }
 
   def fields[u: P]: P[Seq[Field]] = {
-    P(field.rep(min = 0, comma) | Punctuation.undefined.!.map(_ => Seq.empty[Field]))
+    P(field.rep(min = 1, comma) | Punctuation.undefined.!.map(_ => Seq.empty[Field]))
   }
 
   def aggregation[u: P]: P[Aggregation] = {

@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.Validation.*
 import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.Validation.*
 
 /** Unit Tests For TypeValidationTest */
 class TypeValidatorTest extends ValidatingTest {
@@ -36,13 +36,23 @@ class TypeValidatorTest extends ValidatingTest {
           assert(errors.forall(_.message.contains("not defined")), "Wrong message")
       }
     }
+    "allow ??? in aggregate bodies without warning" in {
+      parseAndValidate[Domain](
+        """domain foo {
+          |type Empty is { ??? } explained as "empty"
+          |} explained as "nothing"
+          |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
+        msgs mustBe empty
+      }
+    }
 
     "identify when pattern type does not refer to a valid pattern" in {
-      parseAndValidate[Domain]("""
-                                 |domain foo is {
-                                 |type pat is Pattern("[")
-                                 |}
-                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](
+        """
+          |domain foo is {
+          |type pat is Pattern("[")
+          |}
+          |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
         assertValidationMessage(msgs, Validation.Error, "Unclosed character class")
       }
     }
