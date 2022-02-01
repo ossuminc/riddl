@@ -111,5 +111,30 @@ class EntityValidatorTest extends ValidatingTest {
         assert(msgs.forall(_.message.contains("should have a description")))
       }
     }
+    "produce correct field references" in {
+      val input =
+        """domain foo is {
+          |context bar is {
+          |  type DoIt = command { ??? }
+          |  type Message = event { a: Integer }
+          |  entity Hamburger  is {
+          |    options (aggregate, transient)
+          |    state field is { field: SomeType }
+          |    handler baz is {
+          |      on command DoIt {
+          |        then tell event Message() to entity Hamburger
+          |      }
+          |    }
+          |  }
+          |}
+          |}
+          |""".stripMargin
+      parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
+        msgs.map(_.format) must contain(
+          "Error: default(10:19): Field 'a' was not set in message constructor"
+        )
+      }
+
+    }
   }
 }

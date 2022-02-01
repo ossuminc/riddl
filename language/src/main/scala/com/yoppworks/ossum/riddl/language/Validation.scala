@@ -715,8 +715,8 @@ object Validation {
               val unset = mt.fields.filterNot { fName => names.contains(fName.id.value) }
               if (unset.nonEmpty) {
                 unset.foldLeft(this) { (next, field) =>
-                  next.add(ValidationMessage(field.loc,
-                    s"Field '${field.id.format}' was not set in message constructor'"))
+                  next.add(ValidationMessage(messageConstructor.msg.loc,
+                    s"Field '${field.id.format}' was not set in message constructor"))
                 }
               } else {
                 mt.fields.foldLeft(this) { (next, _: Field) =>
