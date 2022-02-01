@@ -135,7 +135,7 @@ domain dokn is {
             //type LocationDetails is response  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }
-            //type LocationNotes is response { notes: NoteList }
+            type LocationNotes is response { notes: NoteList }
 
             state LocationBase is {
                 locationId: LocationId,
