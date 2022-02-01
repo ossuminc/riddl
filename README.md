@@ -98,66 +98,30 @@ source the next time they are requested. To view the site in your browser:
 open http://localhost:1313/
 ```
 
-## Testing
+## Ways To Test RIDDL
+### ScalaTest
+There are many test points already defined in language/src/tests/scala using
+ScalaTest. In general, any change in language should be done in TDD style with
+tests cases written before code to make that test case pass.  This is how the
+parser and validator were created. That tradition needs to continue. 
 
-In addition to regular ScalaTest unit tests, we also have one special test, PosNeg, which allows you to compile some Riddl code, and compare the output of the compiler against some expected output.
+### "Check" Tests
+In `language/src/test/input` there are a variety of tests with `.check` files
+that have the same basename as the `.riddl` file. The `.check` files have 
+the error output that is expected from validating the correctly parsing `.
+riddl` file. This way we can identify changes in error and messages. These 
+tests are performed by the `CheckMessagesTest.scala` test suite which will
+read all the riddl files in test/input/check and check them for validity and
+compare the output messages to what's in the `.check` file. If there is no
+corresponding `.check` file then the `.riddl` file is expected to validate 
+cleanly with no errors and no warnings.
 
-Within source tree of the `language` project, PosNeg tests are located at `src/test/input/posneg/`. The categories of tests are:
+This is where most regression tests should be added. The input should be 
+whittled down to the smallest set of definitions that cause a problem to 
+occur, and then it should succeed after the regression is fixed.  
 
-* `pos`: 
-    * These files must compile successfully, and emit no messages at level ERROR or higher.
-    * Tests can come in two forms:
-        * `.riddl` file within the `pos` directory. These files will be run, and will error if they emit any ERROR or higher messages, but other messages will be ignored.
-        * directory within `pos` that contains one `.riddl` file and optionally a `.check` file. In addition to checking that the file compiles without ERROR, all warnings emitted by the compiler will be compared against the content of the `.check` file, failing if there are missing or extra warnings.
-* `neg`: These files must NOT compile successfully, they must 
-    * Tests can agaqin come in two forms, but work slightly different to `pos` tests:
-        * `.riddl` file within the `neg` directory. These files will be run, and will error if they DO NOT emit any ERROR or higher messages.
-        * directory within `neg` that contains one `.riddl` file and optionally a `.check` file. In addition to checking that the file compiles with errors, all ERRORS (not warnings) emitted by the compiler will be compared against the content of the `.check` file, failing if there are missing or extra errors.
-
-
-Example tests:
-
-```
-
-posneg/
-    pos/
-        filetest.riddl
-            """
-            domain foo is {
-            
-            } described as {
-                brief "this is the description"
-                details "this is the description"
-            }
-            """
-        directorytest/
-            main.riddl
-                """
-                domain foo is {
-                
-                } described as {
-                    brief "this is the description"
-                }
-                """
-            main.check
-                """
-                Missing: main.riddl(3:3): For Domain 'foo', detailed description should not be empty
-                """
-    neg/
-        filetest.riddl
-            """
-            domain foo is {
-            }
-            """
-        directorytest/
-            main.riddl
-                """
-                domain foo is {
-                }
-                """
-            main.check
-                """
-                Missing: main.riddl(3:3): For Domain 'foo', detailed description should not be empty
-                """
-```
-
+### "Examples" Tests
+In `examples/src/test/scala` there is a `CheckExamplesSpec.scala` which runs 
+the parser and validator on the examples in `examples/src/riddl`. Each 
+sub-directory there is a separate example. They are expected to parse and 
+validate cleanly without issue 
