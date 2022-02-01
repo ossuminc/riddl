@@ -243,6 +243,7 @@ class FormatTranslator extends Translator[FormatConfig] {
         case n: Number => this.add(n.kind)
         case i: Integer => this.add(i.kind)
         case d: Decimal => this.add(d.kind)
+        case r: Real => this.add(r.kind)
         case d: Date => this.add(d.kind)
         case t: Time => this.add(t.kind)
         case dt: DateTime => this.add(dt.kind)
@@ -323,7 +324,8 @@ class FormatTranslator extends Translator[FormatConfig] {
       openDef(example).emitGherkinClauses("given ", example.givens)
         .emitGherkinClauses("when", example.whens)
         .emitGherkinClauses("then", example.thens)
-        .emitGherkinClauses("but", example.buts).closeDef(example)
+        .emitGherkinClauses("but", example.buts)
+        .closeDef(example)
     }
 
     def emitExamples(examples: Seq[Example]): FormatState = {
@@ -426,10 +428,12 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Adaptor,
       adaptation: Adaptation
     ): FormatState = adaptation match {
-      case Adaptation(_, _, event, command, examples, description) => state
-        .addIndent(s"adapt ${adaptation.id.format} is {\n").indent.addIndent("from ")
-        .emitMessageRef(event).add(" to ").emitMessageRef(command).add(" as {\n").indent
-        .emitExamples(examples).outdent.add("\n").addIndent("} ").emitDescription(description)
+      case Adaptation(_, _, event, command, examples, _) => state
+        .addIndent(s"adapt ${adaptation.id.format} is {\n")
+        .indent.addIndent("from ").emitMessageRef(event).add(" to ").emitMessageRef(command)
+        .add(" as {\n").indent
+        .emitExamples(examples).outdent.addIndent("}\n")
+        .outdent.addIndent("} ")
     }
 
     def closeAdaptor(

@@ -32,9 +32,8 @@ trait ContextParser
 
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
-      typeDef.map(Seq(_)) | entity.map(Seq(_)) | adaptor.map(Seq(_)) | interaction.map(Seq(_)) |
-        function.map(Seq(_)) | saga.map(Seq(_)) | contextInclude
-    ).rep(0).map { seq => seq.flatten }
+      (typeDef | entity | adaptor | interaction | function | saga).map(Seq(_)) | contextInclude
+    ).rep(0).map(_.flatten)
   }
 
   def context[u: P]: P[Context] = {

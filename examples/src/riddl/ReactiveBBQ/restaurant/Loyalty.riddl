@@ -11,7 +11,7 @@ context Loyalty is {
         }
       }
     }
-  }
+  } described as "Adapts loyalty rewards from payments"
   type AccruePoints is command {
     when is TimeStamp,
     loyaltyAccountId is LoyaltyId,
@@ -59,10 +59,10 @@ context Loyalty is {
     }
     state ActiveState is {
       id is LoyaltyId,
-      customer Is CustomerId,
+      customer is CustomerId,
       points is Number,
       accrualRate is Real,
-      redemptionRate is Real,
+      redemptionRate is Real
     } explained as {
     |This state type used when a loyalty account is active
     }

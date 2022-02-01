@@ -4,6 +4,7 @@ type CustomerId is Id(Customer.Customer) explained as "Unique identifier for a c
 type OrderId is Id(Order.Order) described as "Unique identifier for a customer's order"
 type LocationId is Id(Location.Location)
 type LoyaltyId is Id(Loyalty.LoyaltyAccount)
+type OrderViewerId is Id(Kitchen.OrderViewer)
 type ReservationId is Id(Reservation.Reservation)
 type PaymentId is Id(Payment.Payment)
 type ServerId is Id(Server.Server)

@@ -29,7 +29,7 @@ class AdaptorTest extends ValidatingTest {
           |  adapt sendAMessage is {
           |    from event ItHappened to command LetsDoIt as {
           |      ???
-          |    } explained as "simple event conversion"
+          |    }
           |  } explained as "?"
           |} explained as "?"
           |} explained as "?"

@@ -5,9 +5,8 @@ context Order is {
       orderId is OrderId,
       customerId is CustomerId
     }
-    handler foo  is {}
+    handler foo  is { ??? }
   }
-
 } explained as {
 | This bounded context defines the handling of restaurant orders.
 }
