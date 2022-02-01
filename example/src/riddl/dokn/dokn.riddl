@@ -20,8 +20,8 @@ domain dokn is {
     type LocationId is Id(Location.Location)
     type NoteList is Note.Note*
 
-    plant Company is {
-        pipe events is {
+    plant CompanyPlant is {
+        pipe CompanyEvents is {
             transmit dokn.Company.Company.CompanyEvent
         }
     }
@@ -41,9 +41,9 @@ domain dokn is {
                 primaryContactPhone: MobileNumber,
                 primaryContactEmail: EmailAddress
             }
-            handler CompanyBase is {
+            handler CompanyBaseHandler is {
                 on command AddCompany {
-                    then publish event CompanyAdded() to dokn.Company.events
+                    then publish event CompanyAdded() to dokn.CompanyPlant.CompanyEvents
                 }
             }
         }
@@ -67,12 +67,19 @@ domain dokn is {
                 onDutyTime: TimeStamp,
                 companyId: CompanyId
             }
-            handler Base is {
+            handler DriverBaseHandler is {
                 on command AddDriverToCompany {
-                  then tell event DriverAddedToCompany() to sender
+                  then tell event DriverAddedToCompany (
+                    name = @AddDriverToCompany.name,
+                    mobile = @AddDriverToCompany.mobile,
+                    companyId = @AddDriverToCompany.companyId
+                  ) to sender
                 }
                 on command RemoveDriverFromCompany {
-                  then tell event DriverRemovedFromCompany() to sender
+                  then tell event DriverRemovedFromCompany(
+                    mobile = @RemoveDriverFromCompany.mobile,
+                    companyId = @RemoveDriverFromCompany.companyId
+                  ) to sender
                 }
             }
         }
@@ -90,7 +97,7 @@ domain dokn is {
                 downvoteCount: Integer,
                 approved: Boolean
             }
-            handler Base is { ??? }
+            handler NoteBaseHandler is { ??? }
         }
     }
 
@@ -102,7 +109,7 @@ domain dokn is {
                 path: String,
                 companyId: CompanyId
             }
-            handler Base is { ??? }
+            handler MediaBaseHandler is { ??? }
         }
     }
 
@@ -122,13 +129,13 @@ domain dokn is {
             type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
-            type LocationAddressReceived is event { address: Address }
+            type LocationAddressReceived is event { newAddress: Address }
 
             type getLocationDetails is query  {}
             //type LocationDetails is response  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }
-            //type LocationNotes is response type NoteList
+            //type LocationNotes is response { NoteList }
 
             state LocationBase is {
                 locationId: LocationId,
@@ -140,11 +147,19 @@ domain dokn is {
                 loadingMethod: LoadingMethod
             }
             handler Base is {
-                on command AddDeliveryLocation { then tell event DeliveryLocaitonAdded() to sender }
-                on command ChangeLocationName { then tell event LocationNameChanged() to sender }
+                on command AddDeliveryLocation { then tell event DeliveryLocationAdded() to sender }
+                on command ChangeLocationName {
+                    then tell event LocationNameChanged(
+                        newName = @ChangeLocationName.newName
+                    ) to sender
+                }
                 on command ReportTicketReceived { then tell event TicketReportedAtLocation() to sender }
-                on command ModifyNotesAtLocation { then tell event NotesForLocationModified() to sender }
-                on event LocationAddressReceived { then set address to @LocationAddressReceived.address }
+                on command ModifyNotesAtLocation {
+                    then tell event NotesForLocationModified(
+                        note = @ModifyNotesAtLocation.newNote
+                    ) to sender
+                }
+                on event LocationAddressReceived { then set LocationBase.address to @newAddress }
                 on query getLocationDetails { then tell result LocationDetails() to Driver }
                 on query getLocationNotes { then tell result LocationNotes() to Driver }
             }
