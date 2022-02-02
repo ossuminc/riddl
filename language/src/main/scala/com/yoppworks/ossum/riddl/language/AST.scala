@@ -2057,6 +2057,28 @@ object AST {
   }
 
   /**
+   * A [[RiddlValue]] that holds the author's information
+   *
+   * @param loc          The location of the author information
+   * @param name         The full name of the author
+   * @param email        The author's email address
+   * @param organization The name of the organization the author is associated with
+   * @param title        The author's title within the organization
+   */
+  case class AuthorInfo(
+    loc: Location,
+    name: LiteralString,
+    email: LiteralString,
+    organization: Option[LiteralString] = None,
+    title: Option[LiteralString] = None,
+    description: Option[Description] = None
+  ) extends DescribedValue {
+    override def isEmpty: Boolean = {
+      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
+    }
+  }
+
+  /**
    * The definition of a domain. Domains are the highest building block in RIDDL and may be
    * nested inside each other to form a hierarchy of domains. Generally, domains follow
    * hierarchical organization structure but other taxonomies and ontologies may be modelled with
@@ -2074,6 +2096,7 @@ object AST {
   case class Domain(
     loc: Location,
     id: Identifier,
+    author: Option[AuthorInfo] = Option.empty[AuthorInfo],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
@@ -2082,7 +2105,7 @@ object AST {
     domains: Seq[Domain] = Seq.empty[Domain],
     description: Option[Description] = None)
     extends Container[DomainDefinition] with DomainDefinition {
-
+    override def isEmpty: Boolean = super.isEmpty && author.isEmpty
     lazy val contents: Seq[DomainDefinition] =
       (domains ++ types.iterator ++ contexts ++ interactions ++ plants ++ stories).toList
   }

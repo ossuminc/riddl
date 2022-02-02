@@ -10,7 +10,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "Types" should {
     "support domain definitions" in {
       Domain((0, 0), Identifier((1, 1), "foo")) must be
-      Domain((0, 0), Identifier((1, 1), "foo"), Seq.empty[Type])
+      Domain((0, 0), Identifier((1, 1), "foo"))
     }
     "support all type constructs" in {
       TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe

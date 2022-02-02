@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
-import com.yoppworks.ossum.riddl.language.AST
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
+import com.yoppworks.ossum.riddl.language.{AST, Location}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -33,9 +33,31 @@ trait DomainParser
         Story(loc, id, role, capa, bene, Seq.empty[Example], description)
     }
 
+  def author[u: P]: P[Option[AuthorInfo]] = {
+    P(
+      location ~ Keywords.author ~/ is ~ open ~
+        (undefined((LiteralString(Location(), ""), LiteralString(Location(), ""),
+          Option.empty[LiteralString], Option.empty[LiteralString])) |
+          (
+            Keywords.name ~ is ~ literalString ~
+              Keywords.email ~ is ~ literalString ~
+              (Keywords.organization ~ is ~ literalString).? ~
+              (Keywords.title ~ is ~ literalString).?
+            )) ~ close ~ description
+    ).?.map {
+      case Some((loc, (name, email, org, title), description)) =>
+        if (name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty) {
+          Option.empty[AuthorInfo]
+        } else {
+          Some(AuthorInfo(loc, name, email, org, title, description))
+        }
+      case None => None
+    }
+  }
+
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (typeDef | interaction | context | plant | story | domain |  importDef).map(Seq(_)) |
+      (typeDef | interaction | context | plant | story | domain | importDef).map(Seq(_)) |
         domainInclude
     ).rep(0).map(_.flatten)
   }
@@ -43,8 +65,10 @@ trait DomainParser
   def domain[u: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
-        (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/ description
-    ).map { case (loc, id, defs, description) =>
+        (undefined((Option.empty[AuthorInfo], Seq.empty[DomainDefinition])) |
+          author ~ domainContent) ~
+        close ~/ description
+    ).map { case (loc, id, (author, defs), description) =>
       val groups = defs.groupBy(_.getClass)
       val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
@@ -52,7 +76,7 @@ trait DomainParser
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
-      Domain(loc, id, types, contexts, interactions, plants, stories, domains, description)
+      Domain(loc, id, author, types, contexts, interactions, plants, stories, domains, description)
     }
   }
 }

@@ -55,7 +55,7 @@ lazy val scala2_13_Options = Seq(
 )
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, /*examples,*/ doc)
+  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, examples, doc)
 
 val themeTask = taskKey[File]("Task to generate theme artifact")
 lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme")).settings(
