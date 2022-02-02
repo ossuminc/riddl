@@ -12,6 +12,8 @@ class StoryTest extends ValidatingTest {
           |  role is "Author"
           |  capability is "edit on the screen"
           |  benefit is "revise content more easily"
+          |  shown by { http://example.com:80/path/to/WritingABook }
+          |  implemented by { Path.To.Context }
           |  accepted by {
           |    example one {
           |      given "I need to write a book"
@@ -35,8 +37,11 @@ class StoryTest extends ValidatingTest {
         story.role.s mustBe "Author"
         story.capability mustBe LiteralString(4 -> 17, "edit on the screen")
         story.benefit mustBe LiteralString(5 -> 14, "revise content more easily")
+        story.shownBy mustNot be(empty)
+        story.shownBy.head.toString mustBe "http://example.com:80/path/to/WritingABook"
+        story.implementedBy mustNot be(empty)
+        story.implementedBy.head.format mustBe "Path.To.Context"
       }
     }
   }
-
 }

@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
+import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation, Readability}
 import com.yoppworks.ossum.riddl.language.{AST, Location}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
@@ -24,13 +24,17 @@ trait DomainParser
       Keywords.role ~ is ~ literalString ~
       Keywords.capability ~ is ~ literalString ~
       Keywords.benefit ~ is ~ literalString ~
+      (Keywords.shown ~ Readability.by ~ open ~ httpUrl.rep(1,Punctuation.comma) ~ close).?
+        .map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get } ~
+      (Keywords.implemented ~ Readability.by ~ open ~ pathIdentifier.rep(1,Punctuation.comma) ~
+        close).?.map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
       (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~
       close ~ description
     ).map {
-      case (loc, id, role, capa, bene, Some(examples), description) =>
-        Story(loc, id, role, capa, bene, examples, description)
-      case (loc, id, role, capa, bene, None, description) =>
-        Story(loc, id, role, capa, bene, Seq.empty[Example], description)
+      case (loc, id, role, capa, bene, shown, implemented, Some(examples), description) =>
+        Story(loc, id, role, capa, bene, shown, implemented, examples, description)
+      case (loc, id, role, capa, bene, shown, implemented, None, description) =>
+        Story(loc, id, role, capa, bene, shown, implemented, Seq.empty[Example], description)
     }
 
   def author[u: P]: P[Option[AuthorInfo]] = {
@@ -49,7 +53,7 @@ trait DomainParser
         if (name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty) {
           Option.empty[AuthorInfo]
         } else {
-          Some(AuthorInfo(loc, name, email, org, title, description))
+          Option(AuthorInfo(loc, name, email, org, title, description))
         }
       case None => None
     }

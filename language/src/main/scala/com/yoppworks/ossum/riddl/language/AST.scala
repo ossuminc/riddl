@@ -2031,6 +2031,8 @@ object AST {
    * @param role        The role of the actor involved in the story
    * @param capability  The capability utilized by the actor in the story
    * @param benefit     The benefit, to the user, of using the capability.
+   * @param shownBy     A list of URLs to visualizations or other materials related to the story
+   * @param implementedBy A list of PathIdentifiers, presumably contexts, that implement the story
    * @param examples    Gherkin examples to specify "done" for the implementation of the user story
    * @param description An optional description of the
    */
@@ -2040,6 +2042,8 @@ object AST {
     role: LiteralString,
     capability: LiteralString,
     benefit: LiteralString,
+    shownBy: Seq[java.net.URL],
+    implementedBy: Seq[PathIdentifier],
     examples: Seq[Example] = Seq.empty[Example],
     description: Option[Description] = None
   ) extends Container[Example] with DomainDefinition {

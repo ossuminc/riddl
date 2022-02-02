@@ -6,6 +6,7 @@ import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Operators, Punctu
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
+import java.net.URL
 import scala.language.postfixOps
 
 /** Common Parsing Rules */
@@ -116,6 +117,33 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def mapTo[T <: Definition](seq: Option[Seq[Definition]]): Seq[T] = {
     seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
+  }
+
+  def hostString[u:P]: P[String] = {
+    P(
+      CharsWhile{ch => ch.isLetterOrDigit || ch == '-'}
+        .rep(1,".", 32)
+    ).!
+  }
+
+  def portNum[u:P]: P[String] = {
+    P(
+      CharsWhileIn("0-9")
+        .rep(min=1,max=5)
+    ).!
+  }
+
+  def urlPath[u:P]: P[String] = {
+    P(
+      CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch) )
+        .rep(min=0,max=240)
+    ).!
+  }
+
+  def httpUrl[u:P]: P[URL] = {
+    P(
+      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
+    ).!.map(new URL(_))
   }
 
 }
