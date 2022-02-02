@@ -28,7 +28,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "handle missing }" in {
-      val input = "domain foo is {"
+      val input = "domain foo is { author is { ??? }\n"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty

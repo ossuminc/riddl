@@ -15,6 +15,7 @@ class TopLevelParserTest extends ParsingTestBase {
   val simpleDomain = RootContainer(List(Domain(
     (1, 1, origin),
     Identifier((1, 8, origin), "foo"),
+    None,
     List(),
     List(),
     List(),

@@ -358,7 +358,29 @@ class FormatTranslator extends Translator[FormatConfig] {
       state: FormatState,
       container: Domain,
       domain: Domain
-    ): FormatState = {state.openDef(domain)}
+    ): FormatState = {
+      state
+        .openDef(domain)
+        .addIndent(s"author is {\n").indent
+        .step { s =>
+          if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
+            val author = domain.author.get
+            s.addIndent(s"name = ${author.name.format}\n")
+              .addIndent(s"email = ${author.email.format}\n")
+              .step { s =>
+                author.organization.map(org =>
+                  s.addIndent(s"organization =${org.format}\n")).orElse(Some(s)).get
+              }
+              .step { s =>
+                author.title.map(title =>
+                  s.addIndent(s"title = ${title.format}\n")).orElse(Some(s)).get
+              }
+              .outdent.addIndent("}\n")
+          } else {
+            s.add(" ??? }\n")
+          }
+        }
+    }
 
     def closeDomain(
       state: FormatState,
@@ -420,7 +442,7 @@ class FormatTranslator extends Translator[FormatConfig] {
       val s = state.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format).add(" for ")
         .add(adaptor.ref.format).add(" is {\n").indent
       if (adaptor.adaptations.isEmpty) {s.add(s.spc).emitUndefined()}
-      else {s}
+      else s
     }
 
     def doAdaptation(
