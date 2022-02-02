@@ -55,7 +55,7 @@ lazy val scala2_13_Options = Seq(
 )
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, examples, doc)
+  .aggregate(language, `hugo-generator`, examples, doc, riddlc, `sbt-riddl`)
 
 val themeTask = taskKey[File]("Task to generate theme artifact")
 lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme")).settings(
@@ -91,7 +91,7 @@ lazy val riddlc = project.in(file("riddlc")).enablePlugins(BuildInfoPlugin)
   name := "riddlc",
   mainClass := Option("com.yoppworks.ossum.riddl.RIDDLC"),
   scalacOptions := scala2_13_Options,
-  libraryDependencies ++= Seq(Dep.cats_core, Dep.scopt, Dep.config),
+  libraryDependencies ++= Seq(Dep.cats_core, Dep.scopt, Dep.config) ++ Dep.testing,
   maintainer := "reid.spencer@yoppworks.com",
   buildInfoObject := "BuildInfo",
   buildInfoPackage := "com.yoppworks.ossum.riddl",
