@@ -2,7 +2,7 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.{Domain, RootContainer}
 import com.yoppworks.ossum.riddl.language.Logging.Lvl
-import com.yoppworks.ossum.riddl.language.Riddl.SysLogger
+import com.yoppworks.ossum.riddl.language.Riddl.{StringLogger, SysLogger}
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
 import java.io.File
@@ -17,8 +17,8 @@ class RiddlTest extends ParsingTestBase {
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 
-      val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl.timer(clock, printStream, "MyStage", show = true) {
+      val logger = StringLogger()
+      val result = RiddlImpl.timer(clock, logger, "MyStage", show = true) {
         clock.updateInstant(_.plusSeconds(2))
         123
       }
@@ -26,14 +26,14 @@ class RiddlTest extends ParsingTestBase {
       result mustBe 123
 
       clock.instant() mustBe start.plusSeconds(2)
-      printStream.mkString() mustBe "Stage 'MyStage': 2.000 seconds\n"
+      logger.toString mustBe "[info] Stage 'MyStage': 2.000 seconds\n"
     }
     "not print anything" in {
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl.timer(clock, printStream, "MyStage", show = false) {
+      val result = RiddlImpl.timer(clock, SysLogger, "MyStage", show = false) {
         clock.updateInstant(_.plusSeconds(2))
         123
       }

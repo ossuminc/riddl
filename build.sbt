@@ -5,7 +5,8 @@ import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 maintainer := "reid@reactific.com"
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
+  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer,
+    intellijAttachSources)
 
 ThisBuild / versionScheme := Option("semver-spec")
 ThisBuild / dynverVTagPrefix := false
@@ -55,7 +56,7 @@ lazy val scala2_13_Options = Seq(
 )
 
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(language, `hugo-generator`, examples, doc, riddlc, `sbt-riddl`)
+  .aggregate(language, `hugo-generator`, riddlc, `sbt-riddl`, doc /*, examples */)
 
 val themeTask = taskKey[File]("Task to generate theme artifact")
 lazy val `riddl-hugo-theme` = project.in(file("riddl-hugo-theme")).settings(
@@ -128,38 +129,39 @@ lazy val examples = project.in(file("examples")).settings(
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
   libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
-  /*
-    runRiddlc := {
-      val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
-      val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
-      riddlc/Compile/run.inputTaskValue.fullInput(
-        s"translate hugo -i ${inputDir}/rbbq.riddl -c rbbq.conf -o $outDir"
-      ).parsed
-    },
-    exampleTask := {
-      import scala.sys.process._
-      val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
-      // val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
-      // val riddlcPath: File = target.value.getParentFile.getParentFile.getAbsoluteFile / "riddlc" /
-        "target" / "universal" / "scripts" / "bin" / "riddlc"
-      // val cp: Seq[File] = (Runtime/fullClasspath).value.files
-      // val foo = riddlc/Compile/run.value.fullInput("translate hugo -i rbbq.riddl -c rbbq.conf -o $outDir")
-      runRiddlc.value
-      // val pb = Process(command, inputDir)
-      // println(command)
-      // val stdout = pb.!!
-      // println(stdout)
-      val artifact = Artifact("riddl-example", "zip", "zip")
-      val output: File = target.value / (artifact.name + "." + artifact.extension)
-      val zipCommand = s"zip -rv9o ${output.toString} ReactiveBBQ"
-      val zpb = Process(zipCommand, outDir.getParentFile)
-      println(zipCommand)
-      zpb.run
-      output
-    },
-    addArtifact(Artifact("riddl-example", "zip", "zip"), exampleTask)
-   */
 ).dependsOn(language % "test->compile;test->test", riddlc)
+
+/*
+  runRiddlc := {
+    val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
+    val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
+    riddlc/Compile/run.inputTaskValue.fullInput(
+      s"translate hugo -i ${inputDir}/rbbq.riddl -c rbbq.conf -o $outDir"
+    ).parsed
+  },
+  exampleTask := {
+    import scala.sys.process._
+    val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
+    // val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
+    // val riddlcPath: File = target.value.getParentFile.getParentFile.getAbsoluteFile / "riddlc" /
+      "target" / "universal" / "scripts" / "bin" / "riddlc"
+    // val cp: Seq[File] = (Runtime/fullClasspath).value.files
+    // val foo = riddlc/Compile/run.value.fullInput("translate hugo -i rbbq.riddl -c rbbq.conf -o $outDir")
+    runRiddlc.value
+    // val pb = Process(command, inputDir)
+    // println(command)
+    // val stdout = pb.!!
+    // println(stdout)
+    val artifact = Artifact("riddl-example", "zip", "zip")
+    val output: File = target.value / (artifact.name + "." + artifact.extension)
+    val zipCommand = s"zip -rv9o ${output.toString} ReactiveBBQ"
+    val zpb = Process(zipCommand, outDir.getParentFile)
+    println(zipCommand)
+    zpb.run
+    output
+  },
+  addArtifact(Artifact("riddl-example", "zip", "zip"), exampleTask)
+ */
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
   .enablePlugins(BuildInfoPlugin).settings(

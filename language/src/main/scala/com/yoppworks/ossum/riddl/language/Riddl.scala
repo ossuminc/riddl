@@ -1,6 +1,5 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
@@ -20,7 +19,7 @@ object Riddl {
     def info(s: => String): Unit
   }
 
-  case object SysLogger extends Logger {
+  final case object SysLogger extends Logger {
 
     override def severe(s: => String): Unit = { System.err.println("[severe] " + s) }
 
@@ -29,6 +28,15 @@ object Riddl {
     override def warn(s: => String): Unit = { System.err.println("[warning] " + s) }
 
     override def info(s: => String): Unit = { System.err.println("[info] " + s) }
+  }
+
+  case class StringLogger(capacity: Int = 512*2) extends Logger {
+    private  val stringBuilder = new StringBuilder(capacity)
+    override def severe(s: => String): Unit = { stringBuilder.append("[severe] " + s + "\n") }
+    override def error(s: => String): Unit = { stringBuilder.append("[error] " + s + "\n") }
+    override def warn(s: => String): Unit = { stringBuilder.append("[warning] " + s + "\n") }
+    override def info(s: => String): Unit = { stringBuilder.append("[info] " + s + "\n") }
+    override def toString: String = stringBuilder.toString()
   }
 
   trait Options {
@@ -51,14 +59,17 @@ object Riddl {
     *   The name of the stage, is included in output message
     * @param show
     *   if `true`, then message is printed, otherwise not
+    * @param logger
+   *   The logger to which timing messages should be put out.
     * @param f
     *   the code block to execute
     *
     * @return
     *   The result of running `f`
     */
-  def timer[T](stage: String, show: Boolean = true)(f: => T): T = RiddlImpl
-    .timer(Clock.systemUTC(), System.out, stage, show)(f)
+  def timer[T](stage: String, show: Boolean = true, logger: Logger = SysLogger)(f: => T): T = {
+    RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f)
+  }
 
   def parse(
     path: Path,
@@ -85,7 +96,7 @@ object Riddl {
           errors.map(_.format).foreach(logger.error(_))
           logger.info(s"Syntax Errors: ${errors.length}")
           None
-        case Right(root) => Some(root)
+        case Right(root) => Option(root)
       }
     }
   }
@@ -111,8 +122,8 @@ object Riddl {
       severe.map(_.format).foreach(log.severe(_))
       log.info(s"""Severe Errors: ${errors.length} errors""")
       if (errs.nonEmpty) { None }
-      else { Some(root) }
-    } else { Some(root) }
+      else { Option(root) }
+    } else { Option(root) }
   }
 
   def parseAndValidate(
@@ -166,7 +177,7 @@ private[language] object RiddlImpl {
     */
   def timer[T](
     clock: Clock,
-    out: PrintStream,
+    out: Riddl.Logger,
     stage: String,
     show: Boolean
   )(f: => T
@@ -178,7 +189,7 @@ private[language] object RiddlImpl {
       val delta = stop - start
       val seconds = delta / 1000
       val milliseconds = delta % 1000
-      out.println(f"Stage '$stage': $seconds.$milliseconds%03d seconds")
+      out.info(f"Stage '$stage': $seconds.$milliseconds%03d seconds")
       result
     } else { f }
   }
