@@ -191,10 +191,10 @@ object Terminals {
 
   object Operators {
     final val and = "and"
-    final val call = "call"
     final val if_ = "if"
     final val not = "not"
     final val or = "or"
+    final val xor = "xor"
     final val plus = "+"
     final val minus = "-"
     final val times = "*"

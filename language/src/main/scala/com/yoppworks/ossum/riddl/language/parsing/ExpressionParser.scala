@@ -114,20 +114,28 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def orCondition[u: P]: P[OrCondition] = {
     P(
-      location ~ Operators.or ~ Punctuation.roundOpen ~/ condition ~ Punctuation.comma ~ condition ~
+      location ~ Operators.or ~ Punctuation.roundOpen ~/ condition.rep(2, Punctuation.comma) ~
         Punctuation.roundClose./
     ).map(t => (OrCondition.apply _).tupled(t))
   }
 
+  def xorCondition[u: P]: P[XorCondition] = {
+    P(
+      location ~ Operators.xor ~ Punctuation.roundOpen ~/ condition.rep(2, Punctuation.comma) ~
+        Punctuation.roundClose./
+    ).map(tpl => (XorCondition.apply _).tupled(tpl))
+  }
+
   def andCondition[u: P]: P[AndCondition] = {
     P(
-      location ~ Operators.and ~ Punctuation.roundOpen ~/ condition ~ Punctuation.comma ~
-        condition ~ Punctuation.roundClose./
+      location ~ Operators.and ~ Punctuation.roundOpen ~/ condition.rep(2,  Punctuation.comma) ~
+        Punctuation.roundClose./
     ).map(t => (AndCondition.apply _).tupled(t))
   }
 
   def logicalExpressions[u: P]: P[Condition] = {
-    P(orCondition | andCondition | notCondition | comparisonCondition | functionCallExpression)
+    P(orCondition | xorCondition | andCondition | notCondition | comparisonCondition |
+      functionCallExpression)
   }
 
   def condition[u: P]: P[Condition] = {

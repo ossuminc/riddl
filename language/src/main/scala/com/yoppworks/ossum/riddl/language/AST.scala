@@ -969,37 +969,41 @@ object AST {
   /**
    * Base class for conditions with two operands
    */
-  abstract class BinaryCondition extends Condition {
-    def cond1: Condition
+  abstract class MultiCondition extends Condition {
+    def conditions: Seq[Condition]
 
-    def cond2: Condition
-
-    override def format: String =
-      Seq(cond1.format, cond2.format).mkString("(", ",", ")")
+    override def format: String = conditions.mkString("(", ",", ")")
   }
 
   /**
    * And condition
    *
    * @param loc   Location of the and condition
-   * @param cond1 First operand for the and condition
-   * @param cond2 Second operand for the nad condition
+   * @param conditions The conditions (minimum 2) that must all be true for "and" to be true
    */
-  case class AndCondition(loc: Location, cond1: Condition, cond2: Condition) extends
-    BinaryCondition {
+  case class AndCondition(loc: Location, conditions: Seq[Condition]) extends MultiCondition {
     override def format: String = "and" + super.format
   }
 
   /**
    * Or condition
    *
-   * @param loc   Location of the or condition
-   * @param cond1 First operand for the or condition
-   * @param cond2 Second operand for the or condition
+   * @param loc   Location of the `or` condition
+   * @param conditions The conditions (minimum 2), any one of which must be true for  "Or" to be
+   *                   true
    */
-  case class OrCondition(loc: Location, cond1: Condition, cond2: Condition) extends
-    BinaryCondition {
+  case class OrCondition(loc: Location, conditions: Seq[Condition]) extends MultiCondition {
     override def format: String = "or" + super.format
+  }
+
+  /**
+   * Xor condition
+   * @param loc Location of the `xor` condition
+   * @param conditions The conditions (minimum 2), only one of which may be true for "xor" to be
+   *                   true.
+   */
+  case class XorCondition(loc: Location, conditions: Seq[Condition]) extends MultiCondition {
+    override def format: String = "xor" + super.format
   }
 
   /**

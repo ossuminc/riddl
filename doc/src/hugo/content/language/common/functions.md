@@ -1,7 +1,7 @@
 ---
 title: Functions
 type: page
-weight: 30
+weight: 50
 ---
 
 ## Introduction
