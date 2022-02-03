@@ -24,17 +24,18 @@ trait DomainParser
       Keywords.role ~ is ~ literalString ~
       Keywords.capability ~ is ~ literalString ~
       Keywords.benefit ~ is ~ literalString ~
-      (Keywords.shown ~ Readability.by ~ open ~ httpUrl.rep(1,Punctuation.comma) ~ close).?
+      (Keywords.shown ~ Readability.by ~ open ~ httpUrl.rep(1, Punctuation.comma) ~ close).?
         .map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get } ~
-      (Keywords.implemented ~ Readability.by ~ open ~ pathIdentifier.rep(1,Punctuation.comma) ~
+      (Keywords.implemented ~ Readability.by ~ open ~ pathIdentifier.rep(1, Punctuation.comma) ~
         close).?.map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
       (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~
-      close ~ description
+      close ~ briefly ~ description
     ).map {
-      case (loc, id, role, capa, bene, shown, implemented, Some(examples), description) =>
-        Story(loc, id, role, capa, bene, shown, implemented, examples, description)
-      case (loc, id, role, capa, bene, shown, implemented, None, description) =>
-        Story(loc, id, role, capa, bene, shown, implemented, Seq.empty[Example], description)
+      case (loc, id, role, capa, bene, shown, implemented, Some(examples), briefly, description) =>
+        Story(loc, id, role, capa, bene, shown, implemented, examples, briefly, description)
+      case (loc, id, role, capa, bene, shown, implemented, None, briefly, description) =>
+        Story(loc, id, role, capa, bene, shown, implemented, Seq.empty[Example], briefly,
+          description)
     }
 
   def author[u: P]: P[Option[AuthorInfo]] = {
@@ -71,8 +72,8 @@ trait DomainParser
       location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
         (undefined((Option.empty[AuthorInfo], Seq.empty[DomainDefinition])) |
           author ~ domainContent) ~
-        close ~/ description
-    ).map { case (loc, id, (author, defs), description) =>
+        close ~/ briefly ~ description
+    ).map { case (loc, id, (author, defs), briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
@@ -80,7 +81,8 @@ trait DomainParser
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
-      Domain(loc, id, author, types, contexts, interactions, plants, stories, domains, description)
+      Domain(loc, id, author, types, contexts, interactions, plants, stories, domains,
+        briefly, description)
     }
   }
 }

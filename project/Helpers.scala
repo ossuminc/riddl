@@ -1,9 +1,6 @@
 import sbt._
-
-import scoverage.ScoverageKeys.coverageEnabled
-import scoverage.ScoverageKeys.coverageFailOnMinimum
-import scoverage.ScoverageKeys.coverageMinimumBranchTotal
-import scoverage.ScoverageKeys.coverageMinimumStmtTotal
+import scoverage.ScoverageKeys.{coverageEnabled, coverageFailOnMinimum,
+  coverageMinimumBranchTotal, coverageMinimumStmtTotal}
 
 /** V - Dependency Versions object */
 object V {
@@ -14,6 +11,7 @@ object V {
   val scalacheck = "1.15.4"
   val scalatest = "3.2.9"
   val scopt = "4.0.1"
+  val ujson = "1.5.0"
 }
 
 object Dep {
@@ -25,6 +23,7 @@ object Dep {
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest % "test"
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck % "test"
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
+  val ujson = "com.lihaoyi" %% "ujson" % V.ujson
 
   val parsing = Seq(fastparse, pureconfig)
   val testing = Seq(scalactic, scalatest, scalacheck)

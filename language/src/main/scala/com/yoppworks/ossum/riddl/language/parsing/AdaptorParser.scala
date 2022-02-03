@@ -23,7 +23,7 @@ trait AdaptorParser extends ReferenceParser with GherkinParser {
   def adaptor[u: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~ contextRef ~ is ~ open ~
-        adaptations ~ close ~ description
+        adaptations ~ close ~ briefly ~ description
     ).map { tpl => (Adaptor.apply _).tupled(tpl) }
   }
 

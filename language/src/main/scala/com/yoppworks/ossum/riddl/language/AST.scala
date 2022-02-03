@@ -95,6 +95,10 @@ object AST {
     override def isEmpty: Boolean = id.isEmpty
   }
 
+  sealed trait BrieflyDescribedValue extends RiddlValue {
+    def brief: Option[LiteralString]
+  }
+
   /**
    * Base trait of all values that have an optional Description
    */
@@ -230,7 +234,8 @@ object AST {
    *
    * @tparam CV The kind of definition that is contained by the container
    */
-  sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV]
+  sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV] with
+    BrieflyDescribedValue
 
   /**
    * The root of the containment hierarchy, corresponding roughly to a level about a file.
@@ -240,6 +245,8 @@ object AST {
   case class RootContainer(domains: Seq[Domain]) extends Container[Domain] {
 
     def id: Identifier = Identifier((0, 0), "<file root>")
+
+    def brief: Option[LiteralString] = Option.empty[LiteralString]
 
     def description: Option[Description] = None
 
@@ -1374,6 +1381,7 @@ object AST {
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[Example] with EntityDefinition with ContextDefinition {
     override lazy val contents: Seq[Example] = examples
@@ -1413,8 +1421,9 @@ object AST {
     loc: Location,
     msg: MessageRef,
     examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends EntityValue with DescribedValue {
+  ) extends EntityValue with DescribedValue with BrieflyDescribedValue {
     override def isEmpty: Boolean = examples.isEmpty
   }
 
@@ -1463,6 +1472,7 @@ object AST {
     loc: Location,
     id: Identifier,
     typeEx: Aggregation,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends EntityDefinition with Container[Field] {
 
@@ -1507,6 +1517,7 @@ object AST {
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption] {
 
@@ -1564,6 +1575,7 @@ object AST {
     id: Identifier,
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[Adaptation] with ContextDefinition {
     lazy val contents: Seq[Adaptation] = adaptations
@@ -1653,6 +1665,7 @@ object AST {
     sagas: Seq[Saga] = Seq.empty[Saga],
     functions: Seq[Function] = Seq.empty[Function],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++ sagas ++
@@ -1739,6 +1752,7 @@ object AST {
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends PlantDefinition with Container[ProcessorDefinition] {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++ examples
@@ -1839,6 +1853,7 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
     outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[PlantDefinition] with DomainDefinition {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++ outJoints
@@ -1862,6 +1877,7 @@ object AST {
     doCommand: CommandRef,
     undoCommand: CommandRef,
     example: Seq[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[Example] {
     override def isEmpty: Boolean = example.isEmpty
@@ -1915,6 +1931,7 @@ object AST {
     input: Option[Aggregation],
     output: Option[Aggregation],
     sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[SagaAction] with ContextDefinition with OptionsDef[SagaOption] {
     lazy val contents: Seq[SagaAction] = sagaActions
@@ -1950,6 +1967,7 @@ object AST {
     id: Identifier,
     options: Seq[InteractionOption] = Seq.empty[InteractionOption],
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Container[ActionDefinition]
       with DomainDefinition
@@ -2045,6 +2063,7 @@ object AST {
     shownBy: Seq[java.net.URL],
     implementedBy: Seq[PathIdentifier],
     examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Container[Example] with DomainDefinition {
     override def contents: Seq[Example] = examples
@@ -2107,6 +2126,7 @@ object AST {
     plants: Seq[Plant] = Seq.empty[Plant],
     stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Container[DomainDefinition] with DomainDefinition {
     override def isEmpty: Boolean = super.isEmpty && author.isEmpty

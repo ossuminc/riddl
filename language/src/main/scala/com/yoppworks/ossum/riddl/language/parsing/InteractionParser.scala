@@ -50,9 +50,9 @@ trait InteractionParser extends ReferenceParser {
     P(
       location ~ Keywords.interaction ~/ identifier ~ is ~ open ~
         (undefined((Seq.empty[InteractionOption], Seq.empty[ActionDefinition])) | interactionBody) ~
-        close ~ description
-    ).map { case (loc, id, (options, interactions), description) =>
-      Interaction(loc, id, options, interactions, description)
+        close ~ briefly ~ description
+    ).map { case (loc, id, (options, interactions), briefly, description) =>
+      Interaction(loc, id, options, interactions, briefly, description)
     }
   }
 }

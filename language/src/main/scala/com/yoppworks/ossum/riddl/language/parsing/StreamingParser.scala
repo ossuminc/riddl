@@ -40,10 +40,10 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   }
 
   def processor[u: P]: P[Processor] = P(
-    location ~ Keywords.processor ~ identifier ~ is ~ open ~ processorDefinitions ~ close ~
-      description
-  ).map { case (loc, id, (inlets, outlets, examples), description) =>
-    Processor(loc, id, inlets, outlets, examples, description)
+    location ~ Keywords.processor ~ identifier ~ is ~ open ~
+      processorDefinitions ~ close ~ briefly ~ description
+  ).map { case (loc, id, (inlets, outlets, examples), briefly, description) =>
+    Processor(loc, id, inlets, outlets, examples, briefly, description)
   }
 
   def joint[u: P]: P[Joint] = {
@@ -75,9 +75,9 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
         (undefined((Seq.empty[Pipe], Seq.empty[Processor],
           Seq.empty[InletJoint], Seq.empty[OutletJoint])) | plantDefinitions) ~
-        close ~ description
-    ).map { case (loc, id, (pipes, processors, inletJoints, outletJoints), addendum) =>
-      Plant(loc, id, pipes, processors, inletJoints, outletJoints, addendum)
+        close ~ briefly ~ description
+    ).map { case (loc, id, (pipes, processors, inletJoints, outletJoints), briefly, description) =>
+      Plant(loc, id, pipes, processors, inletJoints, outletJoints, briefly, description)
     }
   }
 }

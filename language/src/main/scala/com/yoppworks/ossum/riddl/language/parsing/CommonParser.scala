@@ -29,15 +29,19 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  def markdownLines[u: P]: P[Seq[LiteralString]] = { P(markdownLine.rep(1)) }
+  def markdownLines[u: P]: P[Seq[LiteralString]] = {P(markdownLine.rep(1))}
 
-  def as[u: P]: P[Unit] = { P(Readability.as | Readability.by).? }
+  def as[u: P]: P[Unit] = {P(Readability.as | Readability.by).?}
 
   def docBlock[u: P]: P[Seq[LiteralString]] = {
     P(
       (open ~ (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~ close) |
         literalString.map(Seq(_))
     )
+  }
+
+  def briefly[u: P]: P[Option[LiteralString]] = {
+    P(Keywords.brief ~ literalString).?
   }
 
   def description[u: P]: P[Option[Description]] = {

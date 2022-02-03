@@ -48,15 +48,15 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
   }
 
   def state[u: P]: P[State] = {
-    P(location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ description)
+    P(location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ briefly ~ description)
       .map(tpl => (State.apply _).tupled(tpl))
   }
 
   def onClause[u: P]: P[OnClause] = {
     Keywords.on ~/ location ~ messageRef ~ open ~
-      ((location ~ exampleBody).map { case (l,(g,w,t,b)) =>
-        Seq(Example(l,Identifier(l,"implicit"),g, w,t,b))
-      } | examples | undefined(Seq.empty[Example])) ~ close ~ description
+      ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
+        Seq(Example(l, Identifier(l, "implicit"), g, w, t, b))
+      } | examples | undefined(Seq.empty[Example])) ~ close ~ briefly ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def handler[u: P]: P[Handler] = {
@@ -82,8 +82,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
   def entity[u: P]: P[Entity] = {
     P(
       location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
-        (noEntityBody | entityBody) ~ close ~ description
-    ).map { case (loc, id, (options, entityDefs), addendum) =>
+        (noEntityBody | entityBody) ~ close ~ briefly ~ description
+    ).map { case (loc, id, (options, entityDefs), briefly, description) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val states = mapTo[State](groups.get(classOf[State]))
@@ -91,15 +91,9 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       Entity(
-        loc,
-        id,
+        loc, id,
         options.fold(Seq.empty[EntityOption])(identity),
-        states,
-        types,
-        handlers,
-        functions,
-        invariants,
-        addendum
+        states, types, handlers, functions, invariants, briefly, description
       )
     }
   }

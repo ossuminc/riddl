@@ -657,7 +657,7 @@ object Validation {
       checkPathRef[Function](pathId) { (state, foundClass, id, defClass, defn, optN) =>
         val s = defaultSingleMatchValidationFunction(state, foundClass, id, defClass, defn, optN)
         defn match {
-          case Function(_, fid, Some(Aggregation(_, fields)), _, _, _) =>
+          case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _) =>
             val paramNames = fields.map(_.id.value)
             val argNames = args.args.keys.map(_.value).toSeq
             val s1 = s.check(argNames.size == paramNames.size,
@@ -822,10 +822,11 @@ object Validation {
       container: Context,
       entity: AST.Entity
     ): ValidationState = {
-      state.checkContainer(container, entity).checkOptions[EntityOption](entity.options, entity.loc)
+      state.checkContainer(container, entity)
+        .checkOptions[EntityOption](entity.options, entity.loc)
         .checkSequence(entity.states) { (next, state) =>
           next.checkTypeExpression(state.typeEx, state)
-        }.addIf(entity.handlers.isEmpty) {
+        }.addIf(entity.handlers.isEmpty && !entity.isEmpty) {
         ValidationMessage(entity.loc, s"Entity '${entity.id.format}' must define a handler")
       }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
         ValidationMessage(
@@ -915,7 +916,6 @@ object Validation {
       action: ActionDefinition
     ): ValidationState = {
       state.checkDefinition(container, action).checkDescription(action)
-      // FIXME: do some validation of action
       // FIXME: do some validation of action
     }
 

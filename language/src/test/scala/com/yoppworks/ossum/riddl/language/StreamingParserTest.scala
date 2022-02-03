@@ -10,7 +10,7 @@ class StreamingParserTest extends ParsingTest {
       val input = """
                     |processor GetWeatherForecast is {
                     |  outlet Weather is Forecast
-                    |} described by "This is a source for Forecast data"
+                    |} brief "foo" described by "This is a source for Forecast data"
                     |""".stripMargin
       val expected = Processor(
         1 -> 1,
@@ -22,7 +22,8 @@ class StreamingParserTest extends ParsingTest {
           TypeRef(3 -> 21, PathIdentifier(3 -> 21, List("Forecast")))
         )),
         List.empty[Example],
-        Option(Description(4 -> 3, List(LiteralString(4 -> 16, "This is a source for Forecast " +
+        Some(LiteralString(4 -> 9, "foo")),
+        Option(Description(4 -> 15, List(LiteralString(4 -> 28, "This is a source for Forecast " +
           "data"))))
       )
       checkDefinition[Processor, Processor](input, expected, identity)
@@ -132,6 +133,7 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
+            None,
             Option(Description(
               7 -> 5,
               List(LiteralString(7 -> 18, "This is a source for Forecast data"))
@@ -153,6 +155,7 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
+            None,
             Option(Description(
               12 -> 5,
               List(LiteralString(
@@ -172,6 +175,7 @@ class StreamingParserTest extends ParsingTest {
             )),
             List.empty[Outlet],
             List.empty[Example],
+            None,
             Option(Description(
               16 -> 5,
               List(LiteralString(
@@ -216,6 +220,7 @@ class StreamingParserTest extends ParsingTest {
             None
           ),
         ),
+        None,
         Option(Description(
           31 -> 3,
           List(LiteralString(

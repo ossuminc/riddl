@@ -32,10 +32,10 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
   def function[u: P]: P[Function] = {
     P(
       location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~
-        (undefined(None).map { n => (n, None) } | optionalInputOrOutput) ~ examples ~ close ~
-        description
-    ).map { case (loc, id, (inp, outp), examples, descr) =>
-      Function(loc, id, inp, outp, examples, descr)
+        (undefined(None).map { n => (n, None) } | optionalInputOrOutput) ~
+        examples ~ close ~ briefly ~ description
+    ).map { case (loc, id, (inp, outp), examples, briefly, description) =>
+      Function(loc, id, inp, outp, examples, briefly, description)
     }
   }
 }

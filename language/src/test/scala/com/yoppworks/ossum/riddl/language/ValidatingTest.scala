@@ -60,17 +60,36 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: D @unchecked) =>
+      case Right(model: D@unchecked) =>
         val msgs = Validation.validate(model)
         validator(model, msgs)
     }
   }
 
+  def parseAndValidate(
+    input: String,
+    testCaseName: String,
+    options: ValidationOptions = ValidationOptions.Default
+  )(
+    validation: (RootContainer, ValidationMessages) => Assertion
+  ): Assertion = {
+    TopLevelParser.parse(input, testCaseName) match {
+      case Left(errors) =>
+        val msgs = errors.iterator.map(_.format).mkString("\n")
+        fail(s"In $testCaseName:\n$msgs")
+      case Right(root) =>
+        val messages = Validation.validate(root, options)
+        validation(root, messages)
+    }
+  }
+
+
   def validateFile(
     label: String,
     fileName: String,
     options: ValidationOptions = ValidationOptions.Default
-  )(validation: (RootContainer, ValidationMessages) => Assertion
+  )(
+    validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val directory = "language/src/test/input/"
     val file = new File(directory + fileName)

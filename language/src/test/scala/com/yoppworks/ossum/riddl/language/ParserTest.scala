@@ -295,7 +295,7 @@ class ParserTest extends ParsingTest {
         case Right(content) => content must matchPattern {
           case Function(_, Identifier(_, "foo"),
           Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _)))),
-          Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _)))), _, None) =>
+          Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _)))), _, None, None) =>
         }
       }
     }

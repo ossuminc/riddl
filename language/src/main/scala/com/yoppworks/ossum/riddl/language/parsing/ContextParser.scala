@@ -40,8 +40,9 @@ trait ContextParser
     P(
       location ~ Keywords.context ~/ identifier ~ is ~ open ~
         (undefined(Seq.empty[ContextOption] -> Seq.empty[ContextDefinition]) |
-          (contextOptions ~ contextDefinitions)) ~ close ~ description
-    ).map { case (loc, id, (options, definitions), addendum) =>
+          (contextOptions ~ contextDefinitions)) ~
+        close ~ briefly ~ description
+    ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
@@ -49,7 +50,8 @@ trait ContextParser
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
-      Context(loc, id, options, types, entities, adaptors, sagas, functions, interactions, addendum)
+      Context(loc, id, options, types, entities, adaptors, sagas, functions, interactions,
+        briefly, description)
     }
   }
 }
