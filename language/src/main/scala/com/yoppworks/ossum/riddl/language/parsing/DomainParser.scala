@@ -71,8 +71,7 @@ trait DomainParser
     P(
       location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
         (undefined((Option.empty[AuthorInfo], Seq.empty[DomainDefinition])) |
-          author ~ domainContent) ~
-        close ~/ briefly ~ description
+          author ~ domainContent) ~ close ~/ briefly ~ description
     ).map { case (loc, id, (author, defs), briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))

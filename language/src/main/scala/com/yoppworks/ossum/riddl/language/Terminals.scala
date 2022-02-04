@@ -80,6 +80,7 @@ object Terminals {
     final val become = "become"
     final val benefit = "benefit"
     final val brief = "brief"
+    final val briefly = "briefly"
     final val but = "but"
     final val call = "call"
     final val capability = "capability"

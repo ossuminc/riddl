@@ -126,7 +126,7 @@ lazy val `hugo-translator` = project.in(file("hugo-translator")).enablePlugins(B
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  ).dependsOn(language, `riddl-hugo-theme`)
+  ).dependsOn(language % "compile->compile;test->test", `riddl-hugo-theme`)
 
 lazy val `hugo-generator` = project.in(file("hugo-generator")).enablePlugins(BuildInfoPlugin)
   .settings(

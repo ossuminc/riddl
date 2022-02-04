@@ -41,11 +41,11 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
-    P(Keywords.brief ~ literalString).?
+    P((Keywords.brief | Keywords.briefly) ~/ literalString).?
   }
 
   def description[u: P]: P[Option[Description]] = {
-    P(location ~ (Keywords.described | Keywords.explained) ~ as ~ docBlock).?.map {
+    P(location ~ (Keywords.described | Keywords.explained) ~/ as ~ docBlock).?.map {
       case Some((loc, lines)) => Option(Description(loc, lines))
       case None => None
     }

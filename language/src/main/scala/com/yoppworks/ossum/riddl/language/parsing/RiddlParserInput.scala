@@ -59,8 +59,13 @@ abstract class RiddlParserInput extends ParserInput {
     require(loc.line > 0)
     val start = lineNumberLookup(loc.line - 1)
     val end =
-      if (lineNumberLookup.length == 1) { data.length }
-      else { lineNumberLookup(loc.line) }
+      if (lineNumberLookup.length == 1) {data.length}
+      else if (loc.line >= lineNumberLookup.length) {
+        // actually out of bounds but go to last line
+        lineNumberLookup(lineNumberLookup.length - 1)
+      } else {
+        lineNumberLookup(loc.line)
+      }
     start -> end
   }
 
