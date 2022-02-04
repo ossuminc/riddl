@@ -1,11 +1,12 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.AST.{Container, Definition, Domain}
+import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.AST.{Container,Definition}
 import com.yoppworks.ossum.riddl.language._
 import pureconfig.generic.auto._
 import pureconfig.{ConfigReader, ConfigSource}
 
-import java.io.File
+import java.io.{File, IOException}
 import java.net.URL
 import java.nio.file.Path
 import scala.collection.mutable
@@ -29,12 +30,15 @@ case class HugoTranslatorState(config: HugoTranslatorConfig) {
   val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
   dirs.push(config.contentRoot)
 
+  def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) => path.resolve(nm) }
+
   def addDir(name: String): Path = {
     dirs.push(Path.of(name))
-    dirs.foldRight(Path.of("")) { case (name, path) => path.resolve(name) }
+    parentDirs
   }
 
-  def addFile(path: Path): MarkdownWriter = {
+  def addFile(fileName: String): MarkdownWriter = {
+    val path = parentDirs.resolve(fileName)
     val mdw = MarkdownWriter(path)
     files.append(mdw)
     mdw
@@ -50,20 +54,49 @@ class HugoTranslator extends Translator[HugoTranslatorConfig] {
     ConfigSource.file(path).load[HugoTranslatorConfig]
   }
 
-  val geekdoc_version = "v0.25.1"
-  val geekdoc_url = new URL(
-    s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/${
-      geekdoc_version
-    }/hugo-geekdoc.tar.gz")
+  val geekDoc_version = "v0.25.1"
+  val geekDoc_file = "hugo-geekdoc.tar.gz"
+  val geekDoc_url = new URL(
+    s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file")
 
-  val sitmap_xsd = "https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
+  val sitemap_xsd = "https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
 
-  def loadTemplate(rootDir: Path): Unit = {
-
+  def loadGeekDoc(outDir: Path): Unit = {
+    import java.io.InputStream
+    import java.nio.file.Files
+    import java.nio.file.StandardCopyOption
+    import scala.sys.process.Process
+    val in: InputStream = geekDoc_url.openStream
+    val tar_gz_File = outDir.resolve("themes").resolve(geekDoc_file)
+    Files.copy(in, tar_gz_File, StandardCopyOption.REPLACE_EXISTING)
+    Process(s"tar zxf $tar_gz_File").! match {
+      case rc: Int if rc != 0 =>
+        throw new IOException(s"Failed to unzip $tar_gz_File")
+    }
   }
 
-  def loadGeekDoc(rootDir: Path): Unit = {
-    val dest = rootDir.resolve("")
+  def parents(stack: mutable.Stack[Container[Definition]]): Seq[String] = {
+    stack.map(_.id.format).toSeq.reverse
+  }
+
+  def setUpContainer(
+    c: Container[Definition],
+    state: HugoTranslatorState,
+    stack: mutable.Stack[Container[Definition]]
+  ): (MarkdownWriter, Seq[String]) = {
+    state.addDir(c.id.format)
+    val pars = parents(stack)
+    stack.push(c)
+    state.addFile("_index.md") -> pars
+  }
+
+  def setUpDefinition(
+    d: Definition,
+    state: HugoTranslatorState,
+    stack: mutable.Stack[Container[Definition]]
+  ): (MarkdownWriter, Seq[String]) = {
+    val dirPath = state.addFile(d.id.format + ".md")
+    dirPath -> parents(stack)
   }
 
   override def translate(
@@ -75,19 +108,32 @@ class HugoTranslator extends Translator[HugoTranslatorConfig] {
     val state = HugoTranslatorState(config)
     val parents = mutable.Stack[Container[Definition]]()
     Folding.foldLeft(state, parents)(root) {
-      case (state, definition: Definition, stack) =>
-        definition match {
-          case d: Domain =>
-            val dirPath = state.addDir(d.id.format)
-            val filePath = dirPath.resolve("_index.md")
-            val mkd = state.addFile(filePath)
-            mkd.emitDomain(d, stack.map(_.id.format).toSeq.reverse)
-            state
-          case _ =>
-            state
+      case (st, definition: Definition, stack) =>
+        if (definition.isContainer) {
+          val (mkd, parents) =
+            setUpContainer(definition.asInstanceOf[Container[Definition]], st, stack)
+          definition match {
+            case e: AST.Entity => mkd.emitEntity(e, parents)
+            case f: AST.Function => mkd.emitFunction(f, parents)
+            case c: AST.Context => mkd.emitContext(c, parents)
+            case a: AST.Adaptor => mkd.emitAdaptor(a, parents)
+            case s: AST.Saga => mkd.emitSaga(s, parents)
+            case s: AST.Story => mkd.emitStory(s, parents)
+            case p: AST.Plant => mkd.emitPlant(p, parents)
+            case p: AST.Processor => mkd.emitProcessor(p, parents)
+            case d: AST.Domain => mkd.emitDomain(d, parents)
+            case _ => // skip, handled by the MarkdownWriter
+          }
+          stack.pop()
+        } else {
+          val (mkd, parents) = setUpDefinition(definition, st, stack)
+          definition match {
+            case a: AST.Adaptation => mkd.emitAdaptation(a, parents)
+            case p: AST.Pipe => mkd.emitPipe(p, parents)
+            case _: Definition => // handled by MarkdownWriter or above
+          }
         }
-    }
-    Seq.empty[File]
+        st
+    }.files.map(_.filePath.toFile).toSeq
   }
-
 }

@@ -30,7 +30,7 @@ trait Translator[CONF <: TranslatorConfiguration] {
     path: Option[Path]
   ): Option[CONF] = {
     path match {
-      case None => Some(defaultConfig)
+      case None => Option(defaultConfig)
       case Some(p) => loadConfig(p) match {
           case Left(failures: ConfigReaderFailures) =>
             failures.toList.foreach { crf: ConfigReaderFailure =>
@@ -42,7 +42,7 @@ trait Translator[CONF <: TranslatorConfiguration] {
               logger.error(crf.description)
             }
             None
-          case Right(configuration) => Some(configuration)
+          case Right(configuration) => Option(configuration)
         }
     }
   }
@@ -61,7 +61,7 @@ trait Translator[CONF <: TranslatorConfiguration] {
     config: Option[Path]
   ): Seq[File] = {
     val cfg = getConfig(logger, config)
-    cfg.map(translate(root, outputRoot, logger, _)).getOrElse(Seq.empty[File])
+    cfg.fold(Seq.empty[File])(translate(root, outputRoot, logger, _))
   }
 
   final def parseValidateTranslateFile(

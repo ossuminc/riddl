@@ -71,9 +71,8 @@ trait TypeParser extends ReferenceParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(identifier ~ enumValue ~ description).map { case (id, enumVal, desc) =>
-      Enumerator(id.loc, id, enumVal, desc)
-    }
+    P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
+      (Enumerator.apply _).tupled(tpl) }
   }
 
   /** Type reference parser that requires the 'type' keyword qualifier
@@ -98,7 +97,7 @@ trait TypeParser extends ReferenceParser {
   }
 
   def field[u: P]: P[Field] = {
-    P(location ~ identifier ~ is ~ typeExpression ~ description)
+    P(location ~ identifier ~ is ~ typeExpression ~ briefly ~ description)
       .map(tpl => (Field.apply _).tupled(tpl))
   }
 
@@ -184,8 +183,8 @@ trait TypeParser extends ReferenceParser {
   }
 
   def typeDef[u: P]: P[Type] = {
-    P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ description).map { tpl =>
-      (Type.apply _).tupled(tpl)
+    P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~ description).map {
+      tpl => (Type.apply _).tupled(tpl)
     }
   }
 }

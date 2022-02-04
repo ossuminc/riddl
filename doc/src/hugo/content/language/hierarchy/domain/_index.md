@@ -13,7 +13,7 @@ concepts. Within domains  you find `types`, `contexts`, `topics`, and
 Domains can declare themselves as the subdomain of another domain. For
 example, a Car is a subdomain of the more general Automotive
 domain. In RIDDL you would write it like so:
-```text
+```riddl
 domain Automotive {
   domain Cars { ??? }
   domain Trucks { ??? }

@@ -96,7 +96,7 @@ class TypeParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(Type(_,_,typeExp,_)) =>
+        case Right(Type(_,_,typeExp, _, _)) =>
           typeExp mustBe expected
       }
     }

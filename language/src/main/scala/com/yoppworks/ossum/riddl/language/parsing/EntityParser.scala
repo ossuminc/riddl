@@ -43,7 +43,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
     */
   def invariant[u: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~ condition ~ close ~ description
+      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~ condition ~ close ~
+        briefly ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
@@ -63,7 +64,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
     P(
       Keywords.handler ~/ location ~ identifier ~ is ~
         ((open ~ undefined(Seq.empty[OnClause]) ~ close) | optionalNestedContent(onClause)) ~
-        description
+        briefly ~ description
     ).map(t => (Handler.apply _).tupled(t))
   }
 

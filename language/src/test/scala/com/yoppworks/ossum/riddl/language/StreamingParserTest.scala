@@ -106,6 +106,7 @@ class StreamingParserTest extends ParsingTest {
             18 -> 3,
             Identifier(18 -> 8, "WeatherForecast"),
             Option(TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))),
+            None,
             Option(Description(
               20 -> 5,
               List(LiteralString(20 -> 18, "Carries changes in the current weather forecast"))
@@ -115,6 +116,7 @@ class StreamingParserTest extends ParsingTest {
             22 -> 3,
             Identifier(22 -> 8, "TemperatureChanges"),
             Option(TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))),
+            None,
             Option(Description(
               24 -> 5,
               List(LiteralString(24 -> 18, "Carries changes in the current temperature"))

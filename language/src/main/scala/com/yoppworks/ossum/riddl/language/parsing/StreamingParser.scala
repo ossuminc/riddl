@@ -10,19 +10,19 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
 
   def pipeDefinition[u: P]: P[Pipe] = {
     location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
-      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~ close ~ description
-  }.map { case (loc, id, typeRef, desc) => Pipe(loc, id, typeRef, desc) }
+      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~
+      close ~ briefly ~ description
+  }.map { tpl => (Pipe.apply _).tupled(tpl) }
 
   def inlet[u: P]: P[Inlet] = {
-    P(location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ description).map {
-      case (loc, id, typeRef, desc) => Inlet(loc, id, typeRef, desc)
+    P(location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ briefly ~ description).map {
+      tpl => (Inlet.apply _).tupled(tpl)
     }
   }
 
   def outlet[u: P]: P[Outlet] = {
-    P(location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ description).map {
-      case (loc, id, typeRef, desc) => Outlet(loc, id, typeRef, desc)
-    }
+    P(location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ briefly ~ description)
+      .map {tpl => (Outlet.apply _).tupled(tpl) }
   }
 
   def processorDefinitions[u: P]: P[(Seq[Inlet], Seq[Outlet], Seq[Example])] = {
@@ -49,11 +49,12 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   def joint[u: P]: P[Joint] = {
     P(
       location ~ Keywords.joint ~/ identifier ~ is ~
-        ((inletRef ~ Readability.from) | (outletRef ~ Readability.to)) ~/ pipeRef ~ description
-    ).map { case (loc, id, streamletRef, pipeRef, desc) =>
+        ((inletRef ~ Readability.from) | (outletRef ~ Readability.to)) ~/ pipeRef ~
+        briefly ~ description
+    ).map { case (loc, id, streamletRef, pipeRef, briefly, desc) =>
       streamletRef match {
-        case ir: InletRef => InletJoint(loc, id, ir, pipeRef, desc)
-        case or: OutletRef => OutletJoint(loc, id, or, pipeRef, desc)
+        case ir: InletRef => InletJoint(loc, id, ir, pipeRef, briefly, desc)
+        case or: OutletRef => OutletJoint(loc, id, or, pipeRef, briefly, desc)
       }
     }
   }

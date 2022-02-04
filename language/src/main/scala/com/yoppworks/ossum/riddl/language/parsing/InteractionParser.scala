@@ -38,7 +38,7 @@ trait InteractionParser extends ReferenceParser {
   def messageActionDef[u: P]: P[MessageAction] = {
     P(
       location ~ Keywords.message ~/ identifier ~ messageOptions ~ Readability.from ~/ entityRef ~
-        Readability.to ~/ entityRef ~ Readability.as ~ messageRef ~ causing ~ description
+        Readability.to ~/ entityRef ~ Readability.as ~ messageRef ~ causing ~ briefly ~ description
     ).map { tpl => (MessageAction.apply _).tupled(tpl) }
   }
 

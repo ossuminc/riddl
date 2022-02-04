@@ -203,11 +203,12 @@ object AST {
    * Base trait for all definitions requiring an identifier for the definition and providing the
    * identify method to yield a string that provides the kind and name
    */
-  sealed trait Definition extends DescribedValue {
+  sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
     def id: Identifier
 
     def identify: String = s"${AST.kind(this)} '${id.format}'"
     def isImplicit: Boolean = false
+    def isContainer: Boolean = false
   }
 
   /**
@@ -234,8 +235,9 @@ object AST {
    *
    * @tparam CV The kind of definition that is contained by the container
    */
-  sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV] with
-    BrieflyDescribedValue
+  sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV] {
+    override def isContainer: Boolean = true
+  }
 
   /**
    * The root of the containment hierarchy, corresponding roughly to a level about a file.
@@ -446,6 +448,7 @@ object AST {
    * the identifier (name) of the Enumerator
    * @param enumVal
    * the optional int value
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description
    * the description of the enumerator. Each Enumerator in an enumeration may define independent
    * descriptions
@@ -454,6 +457,7 @@ object AST {
     loc: Location,
     id: Identifier,
     enumVal: Option[LiteralInteger] = None,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Definition
 
@@ -491,12 +495,14 @@ object AST {
    * @param loc         The location of the field definition
    * @param id          The name of the field
    * @param typeEx      The type of the field
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the field.
    */
   case class Field(
     loc: Location,
     id: Identifier,
     typeEx: TypeExpression,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Definition {
     override def isImplicit: Boolean = {
@@ -761,12 +767,14 @@ object AST {
    * @param loc         The location of the type definition
    * @param id          The name of the type being defined
    * @param typ         The type expression of the type being defined
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the type.
    */
   case class Type(
     loc: Location,
     id: Identifier,
     typ: TypeExpression,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Definition with ContextDefinition with EntityDefinition with DomainDefinition {}
 
@@ -1237,6 +1245,7 @@ object AST {
    * @param whens       The list of When/And statements
    * @param thens       The list of Then/And statements
    * @param buts        The List of But/And statements
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the example
    */
   case class Example(
@@ -1246,7 +1255,8 @@ object AST {
     whens: Seq[WhenClause] = Seq.empty[WhenClause],
     thens: Seq[ThenClause] = Seq.empty[ThenClause],
     buts: Seq[ButClause] = Seq.empty[ButClause],
-    description: Option[Description] = None)
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = Option.empty[Description])
     extends ProcessorDefinition {
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty && thens.isEmpty && buts.isEmpty
   }
@@ -1373,6 +1383,7 @@ object AST {
    *                    of the
    *                    function
    * @param examples    The set of examples that define the behavior of the function.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the function.
    */
   case class Function(
@@ -1396,17 +1407,20 @@ object AST {
    * @param loc         The location of the invariant definition
    * @param id          The name of the invariant
    * @param expression  The conditional expression that must always be true.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the invariant.
    */
   case class Invariant(
     loc: Location,
     id: Identifier,
     expression: Condition,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends EntityDefinition {
     override def isEmpty: Boolean = expression.isEmpty
   }
 
+  sealed trait HandlerDefinition extends Definition
   /**
    * Defines the actions to be taken when a particular message is received by an entity.
    * [[OnClause]]s are used in the definition of a [[Handler]] with one for each kind of message
@@ -1415,6 +1429,7 @@ object AST {
    * @param loc         The location of the "on" clause
    * @param msg         A reference to the message type that is handled
    * @param examples    A set of examples that define the behavior when the [[msg]] is received.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the on clause.
    */
   case class OnClause(
@@ -1423,7 +1438,8 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends EntityValue with DescribedValue with BrieflyDescribedValue {
+  ) extends HandlerDefinition {
+    def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
     override def isEmpty: Boolean = examples.isEmpty
   }
 
@@ -1437,12 +1453,14 @@ object AST {
    * @param id          The name of the handler.
    * @param clauses     The set of [[OnClause]] definitions that define how the entity responds to
    *                    received messages.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the handler
    */
   case class Handler(
     loc: Location,
     id: Identifier,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends EntityDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
@@ -1466,6 +1484,7 @@ object AST {
    * @param id          The name of the state definition
    * @param typeEx      The aggregation that provides the field name and type expression
    *                    associations
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the state.
    */
   case class State(
@@ -1491,23 +1510,17 @@ object AST {
 
   /** Definition of an Entity
    *
-   * @param options
-   * The options for the entity
-   * @param loc
-   * The location in the input
-   * @param id
-   * The name of the entity
-   * @param states
-   * The state values of the entity
-   * @param types
-   * Type definitions useful internally to the entity definition
-   * @param handlers
-   * A set of event handlers
-   * @param functions
-   * Utility functions defined for the entity
-   * @param invariants
-   * Invariant properties of the entity
-    */
+   * @param options     The options for the entity
+   * @param loc         The location in the input
+   * @param id          The name of the entity
+   * @param states      The state values of the entity
+   * @param types       Type definitions useful internally to the entity definition
+   * @param handlers    A set of event handlers
+   * @param functions   Utility functions defined for the entity
+   * @param invariants  Invariant properties of the entity
+   * @param brief       A brief description (one sentence) for use in documentation
+   * @param description Optional description of the entity
+   */
   case class Entity(
     loc: Location,
     id: Identifier,
@@ -1536,6 +1549,7 @@ object AST {
    * @param event       The event that triggers the adaptation
    * @param command     The command that adapts the event to the bounded context
    * @param examples    Optional set of Gherkin [[Example]]s to define the adaptation
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description Optional description of the adaptation.
    */
   case class Adaptation(
@@ -1544,6 +1558,7 @@ object AST {
     event: EventRef,
     command: CommandRef,
     examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends AdaptorDefinition with ContainerValue[Example] {
     override def contents: Seq[Example] = examples
@@ -1568,6 +1583,7 @@ object AST {
    * @param ref         A reference to the bounded context from which messages are adapted
    * @param adaptations A set of [[Adaptation]] definitions that indicate what to do when
    *                    messages occur.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description Optional description of the adaptor.
    */
   case class Adaptor(
@@ -1653,6 +1669,7 @@ object AST {
    * @param sagas        Sagas with all-or-none semantics across various entities
    * @param functions    Features specified for the context
    * @param interactions TBD
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description  An optional description of the context
    */
   case class Context(
@@ -1686,12 +1703,14 @@ object AST {
    * @param loc          The location of the pipe definition
    * @param id           The name of the pipe
    * @param transmitType The type of data transmitted.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description  An optional description of the pipe.
    */
   case class Pipe(
     loc: Location,
     id: Identifier,
     transmitType: Option[TypeRef],
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None)
     extends PlantDefinition
 
@@ -1711,12 +1730,14 @@ object AST {
    * @param loc         The location of the Inlet definition
    * @param id          The name of the inlet
    * @param type_       The type of the data that is received from the inlet
-   * @param description An optional description
+   * @param brief       A brief description (one sentence) for use in documentation
+   * @param description An optional description of the Inlet
    */
   case class Inlet(
     loc: Location,
     id: Identifier,
     type_ : TypeRef,
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None)
     extends Streamlet
 
@@ -1726,12 +1747,14 @@ object AST {
    * @param loc         The location of the outlet definition
    * @param id          The name of the outlet
    * @param type_       The type expression for the kind of data put out
-   * @param description An optional description of the outlet.
+   * @param brief       A brief description (one sentence) for use in documentation
+   * @param description An optional description of the Outlet.
    */
   case class Outlet(
     loc: Location,
     id: Identifier,
     type_ : TypeRef,
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None)
     extends Streamlet
 
@@ -1744,6 +1767,7 @@ object AST {
    * @param inlets      The list of inlets that provide the data the processor needs
    * @param outlets     The list of outlets that the processor produces
    * @param examples    A set of examples that define the data processing
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the processor
    */
   case class Processor(
@@ -1807,6 +1831,7 @@ object AST {
    * @param id          The name of the inlet joint
    * @param inletRef    A reference to the inlet being connected
    * @param pipe        A reference to the pipe being connected
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the joint
    */
   case class InletJoint(
@@ -1814,6 +1839,7 @@ object AST {
     id: Identifier,
     inletRef: InletRef,
     pipe: PipeRef,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Joint
 
@@ -1824,6 +1850,7 @@ object AST {
    * @param id          The name of the OutletJoint
    * @param outletRef   A reference to the outlet being connected
    * @param pipe        A reference to the pipe being connected
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the OutletJoint
    */
   case class OutletJoint(
@@ -1831,6 +1858,7 @@ object AST {
     id: Identifier,
     outletRef: OutletRef,
     pipe: PipeRef,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends Joint
 
@@ -1844,6 +1872,7 @@ object AST {
    * @param processors  The set of processors involved in the plant.
    * @param inJoints    The InletJoints connecting pipes and processors
    * @param outJoints   The OutletJoints connecting pipes and processors
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the plant
    */
   case class Plant(
@@ -1868,6 +1897,7 @@ object AST {
    * @param doCommand   The command to be done.
    * @param undoCommand The command that undoes [[doCommand]]
    * @param example     An list of examples for the intended behavior
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the saga action
    */
   case class SagaAction(
@@ -1922,6 +1952,7 @@ object AST {
    *                    saga,
    *                    if any.
    * @param sagaActions The set of [[SagaAction]]s that comprise the saga.
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the saga.
    */
   case class Saga(
@@ -2024,6 +2055,7 @@ object AST {
     *   A reference to the entity sending the message
     * @param receiver
     *   A reference to the entity receiving the message
+   * @param brief       A brief description (one sentence) for use in documentation
     * @param message
     *   A reference to the kind of message sent & received
    */
@@ -2035,6 +2067,7 @@ object AST {
     receiver: EntityRef,
     message: MessageRef,
     reactions: Seq[Reaction],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
     extends ActionDefinition with OptionsDef[MessageOption]
 
@@ -2052,6 +2085,7 @@ object AST {
    * @param shownBy     A list of URLs to visualizations or other materials related to the story
    * @param implementedBy A list of PathIdentifiers, presumably contexts, that implement the story
    * @param examples    Gherkin examples to specify "done" for the implementation of the user story
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description An optional description of the
    */
   case class Story(
@@ -2114,6 +2148,7 @@ object AST {
    * @param interactions TBD
    * @param plants       The plants defined in the scope of the domain
    * @param domains      Nested sub-domains within this domain
+   * @param brief       A brief description (one sentence) for use in documentation
    * @param description  An optional description of the domain.
    */
   case class Domain(

@@ -62,7 +62,7 @@ object LukeAstWalker {
     val states = node.states.map { astState =>
       HugoEntity.State(
         resolveName(astState.id.value),
-        astState.contents.collect { case AST.Field(_, id, typeEx, description) =>
+        astState.contents.collect { case AST.Field(_, id, typeEx, _, description) =>
           HugoField(
             id.value,
             handleTypeExpr(entityName, typeEx),
@@ -136,9 +136,9 @@ object LukeAstWalker {
 
     case AST.Enumeration(_, of) =>
       val opts: Seq[RiddlType.Enumeration.EnumOption] = of.map {
-        case AST.Enumerator(_, id, Some(value), _) => RiddlType.Enumeration
+        case AST.Enumerator(_, id, Some(value), _, _) => RiddlType.Enumeration
           .EnumOptionValue(id.value, value.n.toInt)
-        case AST.Enumerator(_, id, _, _) => RiddlType.Enumeration.EnumOptionNamed(id.value)
+        case AST.Enumerator(_, id, _, _, _) => RiddlType.Enumeration.EnumOptionNamed(id.value)
       }
       RiddlType.Enumeration(opts)
 

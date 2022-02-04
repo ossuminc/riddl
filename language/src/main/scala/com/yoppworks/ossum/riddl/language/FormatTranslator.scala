@@ -122,13 +122,23 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def openDef(definition: Definition, withBrace: Boolean = true): FormatState = {
       lines.append(s"$spc${AST.keyword(definition)} ${definition.id.format} is ")
-      if (withBrace) lines.append("{\n")
-      indent
+      if (withBrace) {
+        if (definition.isEmpty) {
+          lines.append("{ ??? }")
+        } else {
+          lines.append("{\n")
+          indent
+        }
+      }
+      this
     }
 
     def closeDef(definition: Definition, withBrace: Boolean = true): FormatState = {
-      outdent
-      if (withBrace) { addIndent("} ") }
+      if (withBrace && !definition.isEmpty) {
+        outdent
+        addIndent("}")
+      }
+      emitBrief(definition.brief)
       emitDescription(definition.description).add("\n")
     }
 
@@ -142,10 +152,16 @@ class FormatTranslator extends Translator[FormatConfig] {
 
     def spc: String = { " ".repeat(indentLevel) }
 
+    def emitBrief(brief: Option[LiteralString]): FormatState = {
+      brief.foldLeft(this) { (s, ls: LiteralString) =>
+        s.add(s" briefly ${ls.format}")
+      }
+    }
+
     def emitDescription(description: Option[Description]): FormatState = {
       description.foldLeft(this) { (s, desc: Description) =>
         val s2 = s.add(" described as {\n").indent
-        desc.lines.foldLeft(s2) { case (s, line) => s.add(s.spc + "|" + line.s + "\n") }.outdent
+        desc.lines.foldLeft(s2) { case (s3, line) => s3.add(s3.spc + "|" + line.s + "\n") }.outdent
           .addLine("}")
       }
     }
@@ -178,9 +194,14 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitAlternation(alternation: AST.Alternation): FormatState = {
-      val s = this.add(s"one of {\n").indent.addIndent().emitTypeExpression(alternation.of.head)
-      alternation.of.tail.foldLeft(s) { (s, te) => s.add(" or ").emitTypeExpression(te) }.add("\n")
-        .outdent.addLine("} ")
+      this.add(s"one of {\n").indent.step { s2 =>
+        s2.addIndent("").emitTypeExpression(alternation.of.head).step { s3 =>
+          alternation.of.tail.foldLeft(s3) { (s4, te) => s4.add(" or ").emitTypeExpression(te) }
+            .step { s5 =>
+              s5.add("\n").outdent.addIndent("}")
+            }
+        }
+      }
     }
 
     def emitField(field: Field): FormatState = {
@@ -206,7 +227,7 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitAggregation(aggregation: AST.Aggregation): FormatState = {
-      emitFields(aggregation.fields).add("\n")
+      emitFields(aggregation.fields)
     }
 
     def emitMapping(mapping: AST.Mapping): FormatState = {
@@ -361,19 +382,20 @@ class FormatTranslator extends Translator[FormatConfig] {
     ): FormatState = {
       state
         .openDef(domain)
-        .addIndent(s"author is {\n").indent
+        .addIndent(s"author is {")
         .step { s =>
           if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
             val author = domain.author.get
+            s.add("\n").indent
             s.addIndent(s"name = ${author.name.format}\n")
               .addIndent(s"email = ${author.email.format}\n")
               .step { s =>
                 author.organization.map(org =>
-                  s.addIndent(s"organization =${org.format}\n")).orElse(Some(s)).get
+                  s.addIndent(s"organization =${org.format}\n")).orElse(Option(s)).get
               }
               .step { s =>
                 author.title.map(title =>
-                  s.addIndent(s"title = ${title.format}\n")).orElse(Some(s)).get
+                  s.addIndent(s"title = ${title.format}\n")).orElse(Option(s)).get
               }
               .outdent.addIndent("}\n")
           } else {
@@ -439,10 +461,14 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Context,
       adaptor: Adaptor
     ): FormatState = {
-      val s = state.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format).add(" for ")
-        .add(adaptor.ref.format).add(" is {\n").indent
-      if (adaptor.adaptations.isEmpty) {s.add(s.spc).emitUndefined()}
-      else s
+      state.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format).add(" for ")
+        .add(adaptor.ref.format).add(" is {").step { s2 =>
+        if (adaptor.isEmpty) {
+          s2.emitUndefined().add(" }\n")
+        } else {
+          s2.add("\n").indent
+        }
+      }
     }
 
     def doAdaptation(
@@ -450,12 +476,14 @@ class FormatTranslator extends Translator[FormatConfig] {
       container: Adaptor,
       adaptation: Adaptation
     ): FormatState = adaptation match {
-      case Adaptation(_, _, event, command, examples, _) => state
+      case Adaptation(_, _, event, command, examples, brief, description) => state
         .addIndent(s"adapt ${adaptation.id.format} is {\n")
         .indent.addIndent("from ").emitMessageRef(event).add(" to ").emitMessageRef(command)
         .add(" as {\n").indent
         .emitExamples(examples).outdent.addIndent("}\n")
-        .outdent.addIndent("} ")
+        .outdent.addIndent("}\n")
+        .emitBrief(brief)
+        .emitDescription(description)
     }
 
     def closeAdaptor(
@@ -582,10 +610,10 @@ class FormatTranslator extends Translator[FormatConfig] {
     override def doJoint(state: FormatState, container: Plant, joint: Joint): FormatState = {
       val s = state.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
       joint match {
-        case InletJoint(_, _, inletRef, pipeRef, _) =>
+        case InletJoint(_, _, inletRef, pipeRef, _, _) =>
           s.addIndent(s"inlet ${inletRef.id.format} from")
             .add(s" pipe ${pipeRef.id.format}\n")
-        case OutletJoint(_, _, outletRef, pipeRef, _) =>
+        case OutletJoint(_, _, outletRef, pipeRef, _, _) =>
           s.addIndent(s"outlet ${outletRef.id.format} to")
             .add(s" pipe ${pipeRef.id.format}\n")
       }
@@ -623,9 +651,9 @@ class FormatTranslator extends Translator[FormatConfig] {
       function: Function
     ): FormatState = {
       state.openDef(function).step { s =>
-        function.input.map(te => s.addIndent("requires ").emitTypeExpression(te).addNL).getOrElse(s)
+        function.input.fold(s)(te => s.addIndent("requires ").emitTypeExpression(te).addNL)
       }.step { s =>
-        function.output.map(te => s.addIndent("yields ").emitTypeExpression(te).addNL).getOrElse(s)
+        function.output.fold(s)(te => s.addIndent("yields ").emitTypeExpression(te).addNL)
       }
     }
 

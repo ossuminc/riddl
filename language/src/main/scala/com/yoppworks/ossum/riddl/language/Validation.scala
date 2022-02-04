@@ -370,7 +370,7 @@ object Validation {
             Error
           ))
         case (d, _) :: Nil => d match {
-          case Type(_, _, typ, _) => typ match {
+          case Type(_, _, typ, _, _) => typ match {
             case MessageType(_, mk, _) => check(
               mk == kind,
               s"'${ref.id.format}' should be ${article(kind.kind)} type" +
@@ -721,7 +721,7 @@ object Validation {
         ))
       } { d: Definition =>
         d match {
-          case Type(_, _, typ, _) => typ match {
+          case Type(_, _, typ, _, _) => typ match {
             case mt: MessageType =>
               val names = messageConstructor.args.args.keys.map(_.value).toSeq
               val unset = mt.fields.filterNot { fName => names.contains(fName.id.value) }
@@ -953,7 +953,7 @@ object Validation {
       adaptation: Adaptation
     ): ValidationState = {
       adaptation match {
-        case Adaptation(_, _, event, command, examples, _) =>
+        case Adaptation(_, _, event, command, examples, _, _) =>
           state.checkDefinition(container, adaptation)
             .checkRef[Type](event).checkRef[Type](command).checkExamples(examples)
             .checkDescription(adaptation)

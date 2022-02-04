@@ -67,8 +67,8 @@ trait GherkinParser extends ActionParser {
   def example[u: P]: P[Example] = {
     P(
       location ~ (IgnoreCase(Keywords.example) | IgnoreCase(Keywords.scenario)) ~/ identifier ~
-        is.? ~ open ~/ exampleBody ~ close ~ description
-    ).map { case (loc, id, (g, w, t, e), desc) => Example(loc, id, g, w, t, e, desc) }
+        is.? ~ open ~/ exampleBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (g, w, t, e), brief, desc) => Example(loc, id, g, w, t, e, brief, desc) }
   }
 
   def examples[u: P]: P[Seq[Example]] = { P(example.rep(0)) }
