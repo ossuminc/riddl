@@ -7,14 +7,14 @@ import java.nio.file.Path
 class MarkdownWriterTest extends ParsingTest {
 
   "MarkdownWriterTest" must {
-    "emit a container" in {
+    "emit a domain" in {
       val paths = Seq[String]("hugo-translator", "target", "test-output", "container.md")
       val output = Path.of(paths.head, paths.tail: _*)
       val mkd = MarkdownWriter(output)
       val input =
         """domain TestDomain {
           |  author is { name="Reid Spencer" email="reid.spencer@yoppworks.com" }
-          |  type MyString is String
+          |  type MyString is String described as "Just a renamed string"
           |} brief "Just For Testing" described as {
           ||A test domain for ensuring that documentation for domains is
           ||generated sufficiently.
@@ -26,22 +26,44 @@ class MarkdownWriterTest extends ParsingTest {
         case Right(root) =>
           root.domains mustNot be(empty)
           val domain = root.domains.head
-          mkd.emitContainer(domain, paths.dropRight(1))
+          mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
           val expected =
             """---
               |title: "TestDomain"
-              |weight: 0
+              |weight: 10
               |description: "Just For Testing"
               |---
+              |
               |<p style="text-align: center;">
               |# TestDomain
               |</p>
+              |
               |## Briefly
               |Just For Testing
-              |## Contents
-              |* [Type 'MyString'](hugo-translator/target/test-output/MyString)
-              |## Description
+              |_Location_: hugo-translator.target.test-output.TestDomain at default(1:1)
+              |
+              |## Author
+              |* _Name_: Reid Spencer
+              |* _Email_: reid.spencer@yoppworks.com
+              |
+              |## Types
+              |* _MyString_: String
+              |  Just a renamed string
+              |
+              |## Contexts
+              |No Contexts
+              |
+              |## Stories
+              |No Stories
+              |
+              |## Plants
+              |No Plants
+              |
+              |## Subdomains
+              |No Subdomains
+              |
+              |## Details
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
               |""".stripMargin

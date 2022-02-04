@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.AST.{Container, Definition}
+import com.yoppworks.ossum.riddl.language.AST.{Container, Definition, Domain}
 import com.yoppworks.ossum.riddl.language._
 import pureconfig.generic.auto._
 import pureconfig.{ConfigReader, ConfigSource}
@@ -77,11 +77,13 @@ class HugoTranslator extends Translator[HugoTranslatorConfig] {
     Folding.foldLeft(state, parents)(root) {
       case (state, definition: Definition, stack) =>
         definition match {
-          case d: Container[Definition] =>
+          case d: Domain =>
             val dirPath = state.addDir(d.id.format)
             val filePath = dirPath.resolve("_index.md")
             val mkd = state.addFile(filePath)
-            mkd.emitContainer(d, stack.map(_.id.format).toSeq.reverse)
+            mkd.emitDomain(d, stack.map(_.id.format).toSeq.reverse)
+            state
+          case _ =>
             state
         }
     }
