@@ -111,7 +111,7 @@ trait TypeParser extends ReferenceParser {
   }
 
   def messageKind[u: P]: P[MessageKind] = {
-    P(Keywords.command | Keywords.event | Keywords.query | Keywords.result).!.map { mk =>
+    P(StringIn(Keywords.command, Keywords.event, Keywords.query, Keywords.result).!).map { mk =>
       mk.toLowerCase() match {
         case kind if kind == Keywords.command => CommandKind
         case kind if kind == Keywords.event => EventKind
@@ -158,7 +158,7 @@ trait TypeParser extends ReferenceParser {
   def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
     P(
       Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~
-        (question.! | asterisk.! | plus.! | ellipsisQuestion.! | ellipsis.!).?
+        StringIn(question, asterisk, plus, ellipsisQuestion, ellipsis).!.?
     ).map {
       case (None, None, loc, typ, Some("?"))       => Optional(loc, typ)
       case (None, None, loc, typ, Some("+"))       => OneOrMore(loc, typ)

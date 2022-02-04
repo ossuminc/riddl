@@ -31,7 +31,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def markdownLines[u: P]: P[Seq[LiteralString]] = {P(markdownLine.rep(1))}
 
-  def as[u: P]: P[Unit] = {P(Readability.as | Readability.by).?}
+  def as[u: P]: P[Unit] = {P(StringIn(Readability.as, Readability.by).?)}
 
   def docBlock[u: P]: P[Seq[LiteralString]] = {
     P(
@@ -41,24 +41,24 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
-    P((Keywords.brief | Keywords.briefly) ~/ literalString).?
+    P(StringIn(Keywords.brief, Keywords.briefly) ~/ literalString).?
   }
 
   def description[u: P]: P[Option[Description]] = {
-    P(location ~ (Keywords.described | Keywords.explained) ~/ as ~ docBlock).?.map {
+    P(location ~ StringIn(Keywords.described, Keywords.explained) ~/ as ~ docBlock).?.map {
       case Some((loc, lines)) => Option(Description(loc, lines))
       case None => None
     }
   }
 
   def literalInteger[u: P]: P[LiteralInteger] = {
-    P(location ~ (Operators.plus | Operators.minus).? ~ CharIn("0-9").rep(1).!.map(_.toInt))
+    P(location ~ StringIn(Operators.plus, Operators.minus).? ~ CharIn("0-9").rep(1).!.map(_.toInt))
       .map(s => LiteralInteger(s._1, BigInt(s._2)))
   }
 
   def literalDecimal[u: P]: P[LiteralDecimal] = {
     P(
-      location ~ (Operators.plus | Operators.minus).?.! ~ CharIn("0-9").rep(1).! ~
+      location ~ StringIn(Operators.plus, Operators.minus).?.! ~ CharIn("0-9").rep(1).! ~
         Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
     ).map { case (loc, a, b, c, d, e) => LiteralDecimal(loc, BigDecimal(a + b + c + d + e)) }
@@ -84,7 +84,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[u: P]: P[Unit] = {
-    P(Readability.is | Readability.are | Punctuation.colon | Punctuation.equals).?./
+    P(StringIn(Readability.is, Readability.are, Punctuation.colon, Punctuation.equals)).?./
   }
 
   def open[u: P]: P[Unit] = {P(Punctuation.curlyOpen)}
