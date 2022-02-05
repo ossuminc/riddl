@@ -1,41 +1,48 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.Clock
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
-import com.yoppworks.ossum.riddl.language.parsing.FileParserInput
-import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
+import com.yoppworks.ossum.riddl.language.parsing.{FileParserInput, RiddlParserInput,
+  TopLevelParser}
+
+import java.nio.file.{Files, Path}
+import java.time.Clock
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
   trait Logger {
     def severe(s: => String): Unit
+
     def error(s: => String): Unit
+
     def warn(s: => String): Unit
+
     def info(s: => String): Unit
   }
 
-  final case object SysLogger extends Logger {
+  final case object SysLogger extends Riddl.Logger {
 
-    override def severe(s: => String): Unit = { System.err.println("[severe] " + s) }
+    override def severe(s: => String): Unit = {System.err.println("[severe] " + s)}
 
-    override def error(s: => String): Unit = { System.err.println("[error] " + s) }
+    override def error(s: => String): Unit = {System.err.println("[error] " + s)}
 
-    override def warn(s: => String): Unit = { System.err.println("[warning] " + s) }
+    override def warn(s: => String): Unit = {System.err.println("[warning] " + s)}
 
-    override def info(s: => String): Unit = { System.err.println("[info] " + s) }
+    override def info(s: => String): Unit = {System.err.println("[info] " + s)}
   }
 
-  case class StringLogger(capacity: Int = 512*2) extends Logger {
-    private  val stringBuilder = new StringBuilder(capacity)
-    override def severe(s: => String): Unit = { stringBuilder.append("[severe] " + s + "\n") }
-    override def error(s: => String): Unit = { stringBuilder.append("[error] " + s + "\n") }
-    override def warn(s: => String): Unit = { stringBuilder.append("[warning] " + s + "\n") }
-    override def info(s: => String): Unit = { stringBuilder.append("[info] " + s + "\n") }
+  case class StringLogger(capacity: Int = 512 * 2) extends Riddl.Logger {
+    private val stringBuilder = new StringBuilder(capacity)
+
+    override def severe(s: => String): Unit = {stringBuilder.append("[severe] " + s + "\n")}
+
+    override def error(s: => String): Unit = {stringBuilder.append("[error] " + s + "\n")}
+
+    override def warn(s: => String): Unit = {stringBuilder.append("[warning] " + s + "\n")}
+
+    override def info(s: => String): Unit = {stringBuilder.append("[info] " + s + "\n")}
+
     override def toString: String = stringBuilder.toString()
   }
 
