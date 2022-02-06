@@ -60,7 +60,7 @@ lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := 
     language,
     /*`d3-generator`,*/
     /* `hugo-theme`*/
-    /* `hugo-translator`, */
+    `hugo-translator`,
     `hugo-generator`, riddlc, `sbt-riddl`, doc /*, examples*/)
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
@@ -136,7 +136,7 @@ lazy val examples = project.in(file("examples")).settings(
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
   libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
-).dependsOn(language % "test->compile;test->test", riddlc)
+).dependsOn(`hugo-translator` % "test->compile;test->test", riddlc)
 
 /*
   runRiddlc := {
