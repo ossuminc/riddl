@@ -11,7 +11,7 @@ class HugoTranslatorTest extends HugoTranslateExamplesBase {
   "HugoTranslator" should {
     for {(name, fileName) <- roots} {
       s"parse, validate, and translate $name" in {
-        runTest(name, fileName)
+        checkExamples(name, fileName)
       }
     }
   }

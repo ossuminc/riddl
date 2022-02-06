@@ -142,34 +142,51 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
       case (st, _: RootContainer, _) =>
         // skip, not needed
         st
-      case (st, definition: Definition, stack) =>
-        if (definition.isContainer) {
-          val (mkd, parents) =
-            setUpContainer(definition.asInstanceOf[Container[Definition]], st, stack)
-          definition match {
-            case e: AST.Entity => mkd.emitEntity(e, parents)
-            case f: AST.Function => mkd.emitFunction(f, parents)
-            case c: AST.Context => mkd.emitContext(c, parents)
-            case a: AST.Adaptor => mkd.emitAdaptor(a, parents)
-            case s: AST.Saga => mkd.emitSaga(s, parents)
-            case s: AST.Story => mkd.emitStory(s, parents)
-            case p: AST.Plant => mkd.emitPlant(p, parents)
-            case p: AST.Processor => mkd.emitProcessor(p, parents)
-            case d: AST.Domain => mkd.emitDomain(d, parents)
-            case _ => // skip, handled by the MarkdownWriter
-          }
-          stack.pop()
-        } else {
-          definition match {
-            case a: AST.Adaptation =>
-              val (mkd, parents) = setUpDefinition(definition, st, stack)
-              mkd.emitAdaptation(a, parents)
-            case p: AST.Pipe =>
-              val (mkd, parents) = setUpDefinition(definition, st, stack)
-              mkd.emitPipe(p, parents)
-            case _: Definition => // handled by MarkdownWriter or above
-          }
-        }
+      case (st, e: AST.Entity, stack) =>
+        val (mkd, parents) = setUpContainer(e, st, stack)
+        mkd.emitEntity(e, parents)
+        st
+      case (st, f: AST.Function, stack) =>
+        val (mkd, parents) = setUpContainer(f, st, stack)
+        mkd.emitFunction(f, parents)
+        st
+      case (st, c: AST.Context, stack) =>
+        val (mkd, parents) = setUpContainer(c, st, stack)
+        mkd.emitContext(c, parents)
+        st
+      case (st, a: AST.Adaptor, stack) =>
+        val (mkd, parents) = setUpContainer(a, st, stack)
+        mkd.emitAdaptor(a, parents)
+        st
+      case (st, s: AST.Saga, stack) =>
+        val (mkd, parents) = setUpContainer(s, st, stack)
+        mkd.emitSaga(s, parents)
+        st
+      case (st, s: AST.Story, stack) =>
+        val (mkd, parents) = setUpContainer(s, st, stack)
+        mkd.emitStory(s, parents)
+        st
+      case (st, p: AST.Plant, stack) =>
+        val (mkd, parents) = setUpContainer(p, st, stack)
+        mkd.emitPlant(p, parents)
+        st
+      case (st, p: AST.Processor, stack) =>
+        val (mkd, parents) = setUpContainer(p, st, stack)
+        mkd.emitProcessor(p, parents)
+        st
+      case (st, d: AST.Domain, stack) =>
+        val (mkd, parents) = setUpContainer(d, st, stack)
+        mkd.emitDomain(d, parents)
+        st
+      case (st, a: AST.Adaptation, stack) =>
+        val (mkd, parents) = setUpDefinition(a, st, stack)
+        mkd.emitAdaptation(a, parents)
+        st
+      case (st, p: AST.Pipe, stack) =>
+        val (mkd, parents) = setUpDefinition(p, st, stack)
+        mkd.emitPipe(p, parents)
+        st
+      case (st, _, _) => // skip, handled by the MarkdownWriter
         st
     }
     newState.files.foreach(_.write())

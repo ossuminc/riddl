@@ -57,17 +57,33 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     val srcDir = source.toFile
     srcDir.isDirectory mustBe true
     val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
-    val logger = ProcessLogger { line => lineBuffer.append(line) }
+    var hadErrorOutput: Boolean = false
+    var hadWarningOutput: Boolean = false
+
+    def fout(line: String): Unit = {
+      lineBuffer.append(line);
+      if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
+    }
+
+    def ferr(line: String): Unit = {lineBuffer.append(line); hadErrorOutput = true}
+
+    val logger = ProcessLogger(fout, ferr)
     val proc = Process("hugo", cwd = Option(srcDir))
     proc.!(logger) match {
       case 0 =>
-        succeed
+        if (hadErrorOutput) {
+          fail("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  "))
+        } else if (hadWarningOutput) {
+          fail("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
+        } else {
+          succeed
+        }
       case _ =>
         fail("hugo run failed with:\n  " + lineBuffer.mkString("\n  "))
     }
   }
 
-  def runTest(name: String, path: String): Assertion = {
+  def checkExamples(name: String, path: String): Assertion = {
     checkOne(name, path)
     genHugo(name, path)
     runHugo(outPath(path))
