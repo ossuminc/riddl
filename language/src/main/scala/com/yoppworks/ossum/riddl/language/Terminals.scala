@@ -158,6 +158,7 @@ object Terminals {
     final val transform = "transform"
     final val transmit = "transmit"
     final val `type` = "type"
+    final val url = "url"
     final val value = "value"
     final val when = "when"
     final val yields = "yields"

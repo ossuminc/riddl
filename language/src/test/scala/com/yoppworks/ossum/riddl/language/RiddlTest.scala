@@ -123,19 +123,19 @@ class RiddlTest extends ParsingTestBase {
   "SysLogger" should {
     val sl = SysLogger()
     "print error message" in {
-      capturingStdErr(() => sl.error("asdf"))._2 mustBe "[error] asdf\n"
+      capturingStdOut(() => sl.error("asdf"))._2 mustBe "[error] asdf\n"
     }
     "print severe message" in {
-      capturingStdErr(() => sl.severe("asdf"))._2 mustBe "[severe] asdf\n"
+      capturingStdOut(() => sl.severe("asdf"))._2 mustBe "[severe] asdf\n"
     }
     "print warn message" in {
-      capturingStdErr(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n"
+      capturingStdOut(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n"
     }
     "print info message" in {
-      capturingStdErr(() => sl.info("asdf"))._2 mustBe "[info] asdf\n"
+      capturingStdOut(() => sl.info("asdf"))._2 mustBe "[info] asdf\n"
     }
     "print many message" in {
-      capturingStdErr { () =>
+      capturingStdOut { () =>
         sl.error("a")
         sl.info("b")
         sl.info("c")

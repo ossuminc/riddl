@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.AST.{Container, Definition, RootContainer}
+import com.yoppworks.ossum.riddl.language.AST.{AuthorInfo, Container, Definition, RootContainer}
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language._
 import pureconfig.generic.auto._
@@ -10,6 +10,7 @@ import java.io.{File, IOException}
 import java.net.URL
 import java.nio.file.Path
 import scala.collection.mutable
+import scala.sys.process.Process
 
 case class HugoTranslatingOptions(
   validatingOptions: ValidatingOptions = ValidatingOptions(),
@@ -21,9 +22,9 @@ case class HugoTranslatingOptions(
   baseUrl: Option[URL] = Some(new URL("http://example.com/")),
   themeUrl: Option[URL] = Some(HugoTranslator.geekDoc_url)
 ) extends TranslatingOptions {
-  def contentRoot: Path = {
-    outputPath.getOrElse(Path.of(".")).resolve("content")
-  }
+  lazy val outputRoot: Path = outputPath.getOrElse(Path.of("."))
+  lazy val contentRoot: Path = outputRoot.resolve("content")
+  lazy val themesRoot: Path = outputRoot.resolve("themes")
 }
 
 case class HugoTranslatorConfig() extends TranslatorConfiguration
@@ -57,6 +58,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     ConfigSource.file(path).load[HugoTranslatorConfig]
   }
 
+  val geekdoc_dest_dir = "hugo-geekdoc"
   val geekDoc_version = "v0.25.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
@@ -64,16 +66,42 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
 
   val sitemap_xsd = "https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
 
-  def loadGeekDoc(outDir: Path): Unit = {
+  def loadGeekDoc(options: HugoTranslatingOptions): Unit = {
     import java.io.InputStream
     import java.nio.file.{Files, StandardCopyOption}
-    import scala.sys.process.Process
     val in: InputStream = geekDoc_url.openStream
-    val tar_gz_File = outDir.resolve("themes").resolve(geekDoc_file)
-    Files.copy(in, tar_gz_File, StandardCopyOption.REPLACE_EXISTING)
-    Process(s"tar zxf $tar_gz_File").! match {
-      case rc: Int if rc != 0 =>
-        throw new IOException(s"Failed to unzip $tar_gz_File")
+    val destDir = options.themesRoot.resolve(geekdoc_dest_dir)
+    destDir.toFile.mkdirs()
+    val tar_gz_Path = destDir.resolve(geekDoc_file)
+    Files.copy(in, tar_gz_Path, StandardCopyOption.REPLACE_EXISTING)
+    val rc = Process(s"tar zxf $geekDoc_file", cwd = destDir.toFile).!
+    if (rc != 0) {
+      throw new IOException(s"Failed to unzip $tar_gz_Path")
+    }
+    tar_gz_Path.toFile.delete()
+  }
+
+  def deleteAll(directory: File): Boolean = {
+    val maybeFiles = Option(directory.listFiles)
+    if (maybeFiles.nonEmpty) {
+      for (file <- maybeFiles.get) {
+        deleteAll(file)
+      }
+    }
+    directory.delete
+  }
+
+  def makeDirectoryStructure(options: HugoTranslatingOptions): Unit = {
+    val outDir = options.outputRoot.toFile
+    if (outDir.exists()) {
+      deleteAll(outDir)
+    }
+    val parent = outDir.getParentFile
+    require(parent.isDirectory, "Parent of output directory is not a directory!")
+    if (0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!) {
+      options.log.error(s"Hugo could not create a site here: $outDir")
+    } else {
+      loadGeekDoc(options)
     }
   }
 
@@ -106,8 +134,10 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     options: HugoTranslatingOptions,
     config: HugoTranslatorConfig
   ): Seq[File] = {
+    makeDirectoryStructure(options)
     val state = HugoTranslatorState(options, config)
     val parents = mutable.Stack[Container[Definition]]()
+
     val newState = Folding.foldLeft(state, parents)(root) {
       case (st, _: RootContainer, _) =>
         // skip, not needed
@@ -144,5 +174,28 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     }
     newState.files.foreach(_.write())
     newState.files.map(_.filePath.toFile).toSeq
+  }
+
+  // scalastyle:off method.length
+  def configTemplate(options: HugoTranslatingOptions, author: AuthorInfo): String = {
+    s"""######################## Hugo Configuration ####################
+       |
+       |# Configure GeekDocs
+       |languageCode = 'en-us'
+       |title = '${options.projectName.get}'
+       |name = "${options.projectName.get}"
+       |description = "${options.projectName.get}"
+       |homepage = "http://example.org/"
+       |demosite = "http://example.org/"
+       |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
+       |min_version = "0.83.0"
+       |theme = ["hugo-geekdoc"]
+       |pygmentsCodeFences=  true
+       |pygmentsStyle=  "monokailight"
+       |
+       |[author]
+       |    name = "${author.name.s}"
+       |    homepage = "${author.url.getOrElse(new URL("http://example.org/"))}"
+       |""".stripMargin
   }
 }

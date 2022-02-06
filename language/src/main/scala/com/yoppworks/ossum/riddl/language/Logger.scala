@@ -18,13 +18,13 @@ object Logger {
 
 case class SysLogger() extends Logger {
 
-  override def severe(s: => String): Unit = {System.err.println("[severe] " + s)}
+  override def severe(s: => String): Unit = {System.out.println("[severe] " + s)}
 
-  override def error(s: => String): Unit = {System.err.println("[error] " + s)}
+  override def error(s: => String): Unit = {System.out.println("[error] " + s)}
 
-  override def warn(s: => String): Unit = {System.err.println("[warning] " + s)}
+  override def warn(s: => String): Unit = {System.out.println("[warning] " + s)}
 
-  override def info(s: => String): Unit = {System.err.println("[info] " + s)}
+  override def info(s: => String): Unit = {System.out.println("[info] " + s)}
 }
 
 case class StringLogger(capacity: Int = 512 * 2) extends Logger {

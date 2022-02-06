@@ -41,20 +41,27 @@ trait DomainParser
   def author[u: P]: P[Option[AuthorInfo]] = {
     P(
       location ~ Keywords.author ~/ is ~ open ~
-        (undefined((LiteralString(Location(), ""), LiteralString(Location(), ""),
-          Option.empty[LiteralString], Option.empty[LiteralString])) |
-          (
-            Keywords.name ~ is ~ literalString ~
-              Keywords.email ~ is ~ literalString ~
-              (Keywords.organization ~ is ~ literalString).? ~
-              (Keywords.title ~ is ~ literalString).?
-            )) ~ close ~ description
+        (
+          undefined(
+            (LiteralString(Location(), ""), LiteralString(Location(), ""),
+              Option.empty[LiteralString], Option.empty[LiteralString],
+              Option.empty[java.net.URL]
+            )
+          ) |
+            (
+              Keywords.name ~ is ~ literalString ~
+                Keywords.email ~ is ~ literalString ~
+                (Keywords.organization ~ is ~ literalString).? ~
+                (Keywords.title ~ is ~ literalString).? ~
+                (Keywords.url ~ is ~ httpUrl).?
+              )
+          ) ~ close ~ description
     ).?.map {
-      case Some((loc, (name, email, org, title), description)) =>
-        if (name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty) {
+      case Some((loc, (name, email, org, title, url), description)) =>
+        if (name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty && url.isEmpty) {
           Option.empty[AuthorInfo]
         } else {
-          Option(AuthorInfo(loc, name, email, org, title, description))
+          Option(AuthorInfo(loc, name, email, org, title, url, description))
         }
       case None => None
     }

@@ -2123,6 +2123,7 @@ object AST {
    * @param email        The author's email address
    * @param organization The name of the organization the author is associated with
    * @param title        The author's title within the organization
+   * @param url          A URL associated with the author
    */
   case class AuthorInfo(
     loc: Location,
@@ -2130,6 +2131,7 @@ object AST {
     email: LiteralString,
     organization: Option[LiteralString] = None,
     title: Option[LiteralString] = None,
+    url: Option[java.net.URL] = None,
     description: Option[Description] = None
   ) extends DescribedValue {
     override def isEmpty: Boolean = {

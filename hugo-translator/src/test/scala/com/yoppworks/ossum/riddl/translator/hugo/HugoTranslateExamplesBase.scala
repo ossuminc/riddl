@@ -42,9 +42,8 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     if (!outFile.isDirectory) outFile.mkdirs()
     val outDir = Some(outFile.toPath)
     val sourcePath = Path.of(directory).resolve(source)
-    val vOpts = ValidatingOptions(ParsingOptions(showTimes = true))
     val htc = HugoTranslatingOptions(
-      validatingOptions = vOpts,
+      validatingOptions = errorsOnly,
       inputPath = Some(sourcePath),
       outputPath = outDir,
       projectName = Some(projectName)
