@@ -17,8 +17,15 @@ class FoldingTest extends ParsingTest {
           |  context one is { ??? }
           |  context two is {
           |    interaction two is { ??? }
-          |    function foo is { ??? }
-          |    entity one is { ??? }
+          |    function foo is {
+          |       requires { a: Integer, b: String }
+          |     }
+          |    entity one is {
+          |      state entityState is { ??? }
+          |      handler one  is { ??? }
+          |      function one is { ??? }
+          |      invariant one is { ??? }
+          |    }
           |    entity two is {
           |      state entityState is { ??? }
           |      handler one  is { ??? }
@@ -34,12 +41,46 @@ class FoldingTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
-          val count = Folding.foldLeft[Int](0)(content) {
-            case (value, _, _) =>
-              value + 1
+          val empty = Seq.empty[Seq[String]]
+          val result = Folding.foldLeft(empty)(content) {
+            case (track, definition, stack) =>
+              val path = stack.toSeq.map(_.identify).reverse :+ definition.identify
+              track :+ path
           }
-          val expected = 19
-          count must be(expected)
+          val expectedCount = 23
+          result.length must be(expectedCount)
+          val expectedResult = List(
+            List("Root '<path>'"),
+            List("Root '<path>'", "Domain 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'", "State " +
+              "'entityState'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'", "Handler 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'", "Function " +
+              "'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'", "Invariant " +
+              "'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'", "State " +
+              "'entityState'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'", "Handler 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'", "Function " +
+              "'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'", "Invariant " +
+              "'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Adaptor 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Function 'foo'"),
+            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Interaction 'two'"),
+            List("Root '<path>'", "Domain 'one'", "Interaction 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Pipe 'a'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Processor 'b'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Processor 'b'", "Inlet 'b_in'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Processor 'b'", "Outlet 'b_out'")
+          )
+          result mustBe expectedResult
       }
     }
   }

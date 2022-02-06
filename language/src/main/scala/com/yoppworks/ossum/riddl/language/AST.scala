@@ -182,7 +182,7 @@ object AST {
       case _: Pipe => "Pipe"
       case _: Plant => "Plant"
       case _: Processor => "Processor"
-      case _: RootContainer => ""
+      case _: RootContainer => "Root"
       case _: Saga => "Saga"
       case _: SagaAction => "SagaAction"
       case _: State => "State"
@@ -244,9 +244,12 @@ object AST {
    *
    * @param domains The sequence of domains contained by the root
    */
-  case class RootContainer(domains: Seq[Domain]) extends Container[Domain] {
+  case class RootContainer(
+    domains: Seq[Domain],
+    path: Option[String] = None
+  ) extends Container[Domain] {
 
-    def id: Identifier = Identifier((0, 0), "<file root>")
+    def id: Identifier = Identifier((0, 0), path.getOrElse("<path>"))
 
     def brief: Option[LiteralString] = Option.empty[LiteralString]
 

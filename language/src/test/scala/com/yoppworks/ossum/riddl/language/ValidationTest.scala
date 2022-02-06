@@ -38,7 +38,7 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(Nil, "foo", RootContainer.empty).messages mustBe List(ValidationMessage(
           Location(),
-          "foo in  '<file root>' should not be empty",
+          "foo in Root '<path>' should not be empty",
           Validation.Error
         ))
         ValidationState(SymbolTable(RootContainer.empty))
