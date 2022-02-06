@@ -1,12 +1,12 @@
 <span class="no-wrap">
   <svg class="icon gdoc_date"><use xlink:href="#gdoc_date"></use></svg>
   <span class="gdoc-post__tag">
-    <time datetime="{{ .Lastmod.Format " 2006-01-02T15:04:05Z07:00" | safeHTML }}">
+    <time datetime="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" | safeHTML }}">
       {{ if .Lastmod.After (.Date.AddDate 0 0 1) }}
         {{ i18n "posts_update_prefix" }}
       {{ end }}
       {{ .Lastmod.Format "Jan 2, 2006" }}
-      </time>
+    </time>
   </span>
 </span>
 
@@ -17,28 +17,28 @@
 
 {{ $tc := 0 }}
 {{ with .Params.tags }}
-{{ range sort . }}
-{{ $name := . }}
-{{ with $.Site.GetPage (printf "/tags/%s" $name | urlize) }}
-{{ if eq $tc 0 }}
-<span class="no-wrap">
+  {{ range sort . }}
+    {{ $name := . }}
+    {{ with $.Site.GetPage (printf "/tags/%s" $name | urlize) }}
+      {{ if eq $tc 0 }}
+        <span class="no-wrap">
           <svg class="icon gdoc_bookmark"><use xlink:href="#gdoc_bookmark"></use></svg>
           {{ template "post-tag" dict "name" $name "page" . }}
         </span>
-{{ else }}
-{{ template "post-tag" dict "name" $name "page" . }}
-{{ end }}
-{{ end }}
-{{ $tc = (add $tc 1) }}
-{{ end }}
+      {{ else }}
+        {{ template "post-tag" dict "name" $name "page" . }}
+      {{ end }}
+    {{ end }}
+    {{ $tc = (add $tc 1) }}
+  {{ end }}
 {{ end }}
 
 {{ define "post-tag" }}
-<span class="gdoc-post__tag gdoc-button">
+  <span class="gdoc-post__tag gdoc-button">
     <a
-            class="gdoc-button__link"
-            href="{{ .page.RelPermalink }}"
-            title="All posts tagged with '{{ .name }}'"
+      class="gdoc-button__link"
+      href="{{ .page.RelPermalink }}"
+      title="All posts tagged with '{{ .name }}'"
     >
       {{ .name }}
     </a>
@@ -46,7 +46,7 @@
 {{ end }}
 
 {{ define "post-author" }}
-<span class="gdoc-post__tag gdoc-button">
+  <span class="gdoc-post__tag gdoc-button">
     <a class="gdoc-button__link" href="{{ .page.RelPermalink }}" title="All posts of this author">
       {{ .name }}
     </a>

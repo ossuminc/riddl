@@ -1,5 +1,5 @@
 {{ if .Site.IsMultiLingual }}
-<span class="gdoc-language">
+  <span class="gdoc-language">
     <ul class="gdoc-language__selector" role="button" aria-pressed="false" tabindex="0">
       <li>
         {{ range .Site.Languages }}
@@ -17,11 +17,11 @@
             {{ range $.Translations }}
               <li>
                 <a
-                        class="flex gdoc-language__entry"
-                        title="{{ .Language.LanguageName }}"
-                        href="{{ .RelPermalink }}"
-                        hreflang="{{ .Lang }}"
-                        lang="{{ .Lang }}"
+                  class="flex gdoc-language__entry"
+                  title="{{ .Language.LanguageName }}"
+                  href="{{ .RelPermalink }}"
+                  hreflang="{{ .Lang }}"
+                  lang="{{ .Lang }}"
                 >
                   {{ .Language.LanguageName }}
                 </a>
@@ -32,14 +32,14 @@
               {{ if ne $.Site.Language.Lang .Lang }}
                 <li>
                   <a
-                          class="flex gdoc-language__entry"
-                          title="{{ i18n " language_switch_no_tranlation_prefix" }} {{ .LanguageName }}"
+                    class="flex gdoc-language__entry"
+                    title="{{ i18n "language_switch_no_tranlation_prefix" }} {{ .LanguageName }}"
                     href="{{ .Lang | relLangURL }}"
                     hreflang="{{ .Lang }}"
                     lang="{{ .Lang }}"
                   >
                     {{ .LanguageName }}*
-                    </a>
+                  </a>
                 </li>
               {{ end -}}
             {{ end -}}

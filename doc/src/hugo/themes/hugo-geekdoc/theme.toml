@@ -8,5 +8,5 @@ tags = ["docs", "documentation", "responsive", "simple"]
 min_version = "0.83.0"
 
 [author]
-name = "Robert Kaussow"
-homepage = "https://thegeeklab.de/"
+    name = "Robert Kaussow"
+    homepage = "https://thegeeklab.de/"
