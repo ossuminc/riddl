@@ -1,5 +1,6 @@
 import org.jetbrains.sbtidea.Keys.IntelliJPlatform
 import sbt.Keys.scalaVersion
+import sbt.io.Path.allSubpaths
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 maintainer := "reid@reactific.com"
@@ -75,26 +76,31 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
     libraryDependencies ++= Seq(Dep.scopt) ++ Dep.parsing ++ Dep.testing,
   )
 
-val themeTask = taskKey[File]("Task to generate theme artifact")
+def makeThemeResource(name: String, from: File, targetDir: File): Seq[File] = {
+  val zip = name + ".zip"
+  val distTarget = targetDir / zip
+  IO.copyDirectory(from, targetDir)
+  val dirToZip = targetDir / name
+  IO.zip(allSubpaths(dirToZip), distTarget, None)
+  Seq(distTarget)
+}
+
 lazy val `hugo-theme` = project.in(file("hugo-theme"))
   .settings(
     name := "riddl-hugo-theme",
-    Compile / packageBin / publishArtifact := false,
+    Compile / resourceGenerators += Def.task {
+      val projectName = name.value
+      val from = sourceDirectory.value / "main"
+      val targetDir = target.value / "dist"
+      makeThemeResource(projectName, from, targetDir)
+    }.taskValue,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,
-    themeTask := {
-      import scala.sys.process._
-      val artifact = Artifact(name.value, "zip", "zip")
-      val output: File = target.value.toPath.toAbsolutePath.toFile /
-        (artifact.name + "." + artifact.extension)
-      val inputDir: File = sourceDirectory.value / "main"
-      val command = s"zip -rv9o ${output.toString} ${name.value}"
-      val pb = Process(command, inputDir)
-      println(command)
-      pb.run
-      output
-    },
-    addArtifact(Artifact("riddl-hugo-theme", "zip", "zip"), themeTask)
+    /* Compile / packageBin / mappings += {
+      val zip = name.value + ".zip"
+      (target.value / "dist" / zip) -> zip
+    }*/
+    // addArtifact(Artifact("riddl-hugo-theme", "zip", "zip"), themeTask)
   )
 
 lazy val `d3-generator` = project.in(file("d3-generator")).enablePlugins(BuildInfoPlugin)

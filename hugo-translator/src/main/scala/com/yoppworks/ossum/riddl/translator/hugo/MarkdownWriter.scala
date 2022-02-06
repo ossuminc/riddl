@@ -285,11 +285,12 @@ case class MarkdownWriter(filePath: Path) {
     fileHead(function)
     h2(function.id.format)
     emitBriefly(function, parents)
+    emitDetails(function.description)
     emitInputOutput(function.input, function.output)
     h2("Examples")
     val functionExampleLevel = 3
     function.examples.foreach(emitExample(_, parents, functionExampleLevel))
-    emitDetails(function.description)
+    this
   }
 
   def emitContext(cont: Context, parents: Seq[String]): this.type = {
@@ -354,13 +355,13 @@ case class MarkdownWriter(filePath: Path) {
     fileHead(entity)
     title(entity)
     emitBriefly(entity, parents)
+    emitDetails(entity.description)
     emitOptions(entity.options)
     emitTypes(entity.types)
     emitStates(entity.states,parents)
     emitInvariants(entity.invariants)
     toc("Functions", mkTocSeq(entity.functions))
     emitHandlers(entity.handlers, parents)
-    emitDetails(entity.description)
   }
 
   def emitSagaActions(actions: Seq[SagaAction], parents: Seq[String]): this.type = {
@@ -387,49 +388,51 @@ case class MarkdownWriter(filePath: Path) {
     fileHead(saga)
     title(saga)
     emitBriefly(saga, parents)
+    emitDetails(saga.description)
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)
     emitSagaActions(saga.sagaActions, parents)
-    emitDetails(saga.description)
   }
 
   def emitStory(story: Story, prefix: Seq[String]): this.type = {
     fileHead(story)
     title(story)
     emitBriefly(story, prefix)
+    emitDetails(story.description)
     h2("Story")
     p(s"I, as a ${story.role.s}, want ${story.capability.s}, so that ${story.benefit.s}.")
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
     list("Implemented By", story.implementedBy.map(_.format))
-    emitDetails(story.description)
   }
 
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
     fileHead(plant)
     title(plant)
     emitBriefly(plant, parents)
+    emitDetails(plant.description)
     // TODO: generate a diagram for the plant
     toc("Processors", mkTocSeq(plant.processors))
     list("Pipes", mkTocSeq(plant.pipes))
     list("Input Joints", mkTocSeq(plant.inJoints))
     list("Output Joints", mkTocSeq(plant.outJoints))
-    emitDetails(plant.description)
   }
 
   def emitPipe(pipe: Pipe, parents: Seq[String]): this.type = {
     fileHead(pipe, weight = 20)
     title(pipe)
     emitBriefly(pipe, parents)
+    emitDetails(pipe.description)
     if (pipe.transmitType.nonEmpty) {
       p(s"Transmission Type: ${pipe.transmitType.get.format} ")
     }
-    emitDetails(pipe.description)
+    this
   }
 
   def emitProcessor(proc: Processor, parents: Seq[String]): this.type = {
     fileHead(proc, weight = 30)
     title(proc)
     emitBriefly(proc, parents)
+    emitDetails(proc.description)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
       h3(inlet.id.format + s": ${inlet.type_.format}")
@@ -441,16 +444,16 @@ case class MarkdownWriter(filePath: Path) {
       emitBriefly(outlet, parents, 4)
       emitDetails(outlet.description,4)
     }
-    emitDetails(proc.description)
+    this
   }
 
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
     fileHead(adaptor)
     title(adaptor)
     emitBriefly(adaptor, parents)
+    emitDetails(adaptor.description)
     p(s"Applicable To: ${adaptor.ref.format}")
     toc("Adaptations", mkTocSeq(adaptor.adaptations))
-    emitDetails(adaptor.description)
   }
 
   def emitAdaptation(adaptation: Adaptation, parents: Seq[String]): this.type = {

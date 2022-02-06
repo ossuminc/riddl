@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
-import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
-import com.yoppworks.ossum.riddl.language.{ParsingOptions, Riddl, ValidatingTest}
+import com.yoppworks.ossum.riddl.language.{ParsingOptions, ValidatingTest}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -25,17 +24,6 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     showMissingWarnings = false,
     showStyleWarnings = false
   )
-
-  def checkOne(name: String, path: String): Assertion = {
-    val file = new File(directory + path)
-    TopLevelParser.parse(file) match {
-      case Left(errors) =>
-        val msgs = errors.iterator.map(_.format).mkString("\n")
-        fail(s"In $name:$path:\n$msgs")
-      case Right(ast) =>
-        Riddl.validate(ast, errorsOnly) mustNot be(empty)
-    }
-  }
 
   def genHugo(projectName: String, source: String): Seq[File] = {
     val outFile = outPath(source).toFile
@@ -78,13 +66,12 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
         } else {
           succeed
         }
-      case _ =>
-        fail("hugo run failed with:\n  " + lineBuffer.mkString("\n  "))
+      case rc: Int =>
+        fail(s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  "))
     }
   }
 
   def checkExamples(name: String, path: String): Assertion = {
-    checkOne(name, path)
     genHugo(name, path)
     runHugo(outPath(path))
   }

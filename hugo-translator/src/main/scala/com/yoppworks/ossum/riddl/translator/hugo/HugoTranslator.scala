@@ -21,10 +21,8 @@ case class HugoTranslatingOptions(
   logger: Option[Logger] = None,
   baseUrl: Option[URL] = Some(new URL("https://example.com/")),
   themes: Seq[(String, URL)] = Seq(
-    "hugo-geekdoc" -> HugoTranslator.geekDoc_url,
-    "riddl-hugo-theme" -> HugoTranslator.riddl_hugo_theme_url
+    "hugo-geekdoc" -> HugoTranslator.geekDoc_url
   )
-
 ) extends TranslatingOptions {
   lazy val outputRoot: Path = outputPath.getOrElse(Path.of("."))
   lazy val contentRoot: Path = outputRoot.resolve("content")
@@ -64,11 +62,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     ConfigSource.file(path).load[HugoTranslatorConfig]
   }
 
-  val riddl_hugo_theme_url: URL =
-    Path.of(System.getProperty("user.dir"))
-      .resolve("hugo-theme/target/riddl-hugo-theme.zip")
-      .toUri.toURL
-
+  val riddl_hugo_theme = "riddl-hugo-theme" -> "riddl-hugo-theme.zip"
   val geekdoc_dest_dir = "hugo-geekdoc"
   val geekDoc_version = "v0.25.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
@@ -97,7 +91,10 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url, destDir)
     }
+    val url = this.getClass.getClassLoader.getResource(riddl_hugo_theme._2)
+    loadATheme(url, options.themesRoot.resolve(riddl_hugo_theme._1))
   }
+
 
   def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
@@ -234,6 +231,11 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
       AuthorInfo(1 -> 1, name = LiteralString(1 -> 1, "Not Provided"),
         email = LiteralString(1 -> 1, "somebody@somewere.tld")
       ))
+    val themes: String = {
+      val names: Seq[String] = options.themes.map(_._1)
+      (names :+ this.riddl_hugo_theme._1).mkString("[ \"", "\", \"", "\" ]")
+    }
+
     s"""######################## Hugo Configuration ####################
        |
        |# Configure GeekDocs
@@ -245,7 +247,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
        |demosite = "https://example.org/"
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
-       |theme = ["hugo-geekdoc"]
+       |theme = $themes
        |pygmentsCodeFences=  true
        |pygmentsStyle=  "monokailight"
        |
