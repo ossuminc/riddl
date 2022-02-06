@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.AST
-import com.yoppworks.ossum.riddl.language.AST.{Container,Definition}
+import com.yoppworks.ossum.riddl.language.AST.{Container, Definition, RootContainer}
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language._
 import pureconfig.generic.auto._
 import pureconfig.{ConfigReader, ConfigSource}
@@ -11,24 +11,27 @@ import java.net.URL
 import java.nio.file.Path
 import scala.collection.mutable
 
-case class HugoTranslatorConfig(
-  showTimes: Boolean = false,
-  showWarnings: Boolean = false,
-  showMissingWarnings: Boolean = false,
-  showStyleWarnings: Boolean = false,
-  baseURL: URL = new URL("https://example.io/"),
+case class HugoTranslatingOptions(
+  validatingOptions: ValidatingOptions = ValidatingOptions(),
+  projectName: Option[String] = None,
   inputPath: Option[Path] = None,
-  outputPath: Option[Path] = None
-) extends TranslatorConfiguration {
+  outputPath: Option[Path] = None,
+  configPath: Option[Path] = None,
+  logger: Option[Logger] = None,
+  baseUrl: Option[URL] = Some(new URL("http://example.com/")),
+  themeUrl: Option[URL] = Some(HugoTranslator.geekDoc_url)
+) extends TranslatingOptions {
   def contentRoot: Path = {
     outputPath.getOrElse(Path.of(".")).resolve("content")
   }
 }
 
-case class HugoTranslatorState(config: HugoTranslatorConfig) {
+case class HugoTranslatorConfig() extends TranslatorConfiguration
+
+case class HugoTranslatorState(options: HugoTranslatingOptions, config: HugoTranslatorConfig) {
   val files: mutable.ListBuffer[MarkdownWriter] = mutable.ListBuffer.empty[MarkdownWriter]
   val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
-  dirs.push(config.contentRoot)
+  dirs.push(options.contentRoot)
 
   def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) => path.resolve(nm) }
 
@@ -46,9 +49,9 @@ case class HugoTranslatorState(config: HugoTranslatorConfig) {
 }
 
 
-class HugoTranslator extends Translator[HugoTranslatorConfig] {
-  type CONF = HugoTranslatorConfig
+object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorConfig] {
   val defaultConfig: HugoTranslatorConfig = HugoTranslatorConfig()
+  val defaultOptions: HugoTranslatingOptions = HugoTranslatingOptions()
 
   def loadConfig(path: Path): ConfigReader.Result[HugoTranslatorConfig] = {
     ConfigSource.file(path).load[HugoTranslatorConfig]
@@ -63,8 +66,7 @@ class HugoTranslator extends Translator[HugoTranslatorConfig] {
 
   def loadGeekDoc(outDir: Path): Unit = {
     import java.io.InputStream
-    import java.nio.file.Files
-    import java.nio.file.StandardCopyOption
+    import java.nio.file.{Files, StandardCopyOption}
     import scala.sys.process.Process
     val in: InputStream = geekDoc_url.openStream
     val tar_gz_File = outDir.resolve("themes").resolve(geekDoc_file)
@@ -101,13 +103,15 @@ class HugoTranslator extends Translator[HugoTranslatorConfig] {
 
   override def translate(
     root: AST.RootContainer,
-    outputRoot: Option[Path],
-    logger: Riddl.Logger,
+    options: HugoTranslatingOptions,
     config: HugoTranslatorConfig
   ): Seq[File] = {
-    val state = HugoTranslatorState(config)
+    val state = HugoTranslatorState(options, config)
     val parents = mutable.Stack[Container[Definition]]()
-    Folding.foldLeft(state, parents)(root) {
+    val newState = Folding.foldLeft(state, parents)(root) {
+      case (st, _: RootContainer, _) =>
+        // skip, not needed
+        st
       case (st, definition: Definition, stack) =>
         if (definition.isContainer) {
           val (mkd, parents) =
@@ -126,14 +130,19 @@ class HugoTranslator extends Translator[HugoTranslatorConfig] {
           }
           stack.pop()
         } else {
-          val (mkd, parents) = setUpDefinition(definition, st, stack)
           definition match {
-            case a: AST.Adaptation => mkd.emitAdaptation(a, parents)
-            case p: AST.Pipe => mkd.emitPipe(p, parents)
+            case a: AST.Adaptation =>
+              val (mkd, parents) = setUpDefinition(definition, st, stack)
+              mkd.emitAdaptation(a, parents)
+            case p: AST.Pipe =>
+              val (mkd, parents) = setUpDefinition(definition, st, stack)
+              mkd.emitPipe(p, parents)
             case _: Definition => // handled by MarkdownWriter or above
           }
         }
         st
-    }.files.map(_.filePath.toFile).toSeq
+    }
+    newState.files.foreach(_.write())
+    newState.files.map(_.filePath.toFile).toSeq
   }
 }

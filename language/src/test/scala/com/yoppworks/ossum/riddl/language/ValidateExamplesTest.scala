@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.Validation.MissingWarning
-import com.yoppworks.ossum.riddl.language.Validation.StyleWarning
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.Validation.{MissingWarning, StyleWarning,
+  ValidatingOptions}
 
 /** Validate files */
 class ValidateExamplesTest extends ValidatingTest {
@@ -58,7 +57,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidationOptions(showStyleWarnings = false)
+        options = ValidatingOptions(showStyleWarnings = false)
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isStyle))
@@ -67,7 +66,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidationOptions()
+        options = ValidatingOptions()
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isStyle))
@@ -80,7 +79,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidationOptions(showMissingWarnings = false)
+        options = ValidatingOptions(showMissingWarnings = false)
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isMissing))
@@ -88,7 +87,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidationOptions()
+        options = ValidatingOptions()
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isMissing))

@@ -1,9 +1,9 @@
 package com.yoppworks.ossum.riddl.examples
 
 import com.yoppworks.ossum.riddl.RIDDLC
-import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessages, ValidationOptions}
+import com.yoppworks.ossum.riddl.language.Validation.{ValidatingOptions, ValidationMessages}
 import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
-import com.yoppworks.ossum.riddl.language.{ValidatingTest, Validation}
+import com.yoppworks.ossum.riddl.language.{ParsingOptions, ValidatingTest, Validation}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -19,8 +19,8 @@ class CheckExamplesSpec extends ValidatingTest {
     "DokN" -> "dokn/dokn.riddl"
   )
 
-  val errorsOnly: ValidationOptions = ValidationOptions(
-    showTimes = true,
+  val errorsOnly: ValidatingOptions = ValidatingOptions(
+    parsingOptions = ParsingOptions(showTimes = true),
     showMissingWarnings = false,
     showStyleWarnings = false
   )
@@ -49,12 +49,11 @@ class CheckExamplesSpec extends ValidatingTest {
   def genHugo(projectName: String, source: String): Assertion = {
     val outDir = output + new File(source).getName
     val args: Array[String] = Array(
-      "translate",
+      "hugo",
       "--suppress-warnings",
       "-i", source,
       "-o", outDir,
       "-p", projectName,
-      "Hugo"
     )
     RIDDLC.runMain(args) mustBe true
   }

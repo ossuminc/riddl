@@ -1,8 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.{ValidationMessage, ValidationMessageKind,
-  ValidationMessages, ValidationOptions}
+import com.yoppworks.ossum.riddl.language.Validation.{ValidatingOptions, ValidationMessage,
+  ValidationMessageKind, ValidationMessages}
 import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import org.scalatest.Assertion
 
@@ -34,7 +34,7 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidateContext(
     input: String,
-    options: ValidationOptions = ValidationOptions.Default
+    options: ValidatingOptions = ValidatingOptions.default
   )(
     validator: (Context, ValidationMessages) => Assertion
   ): Assertion = {
@@ -69,7 +69,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidate(
     input: String,
     testCaseName: String,
-    options: ValidationOptions = ValidationOptions.Default
+    options: ValidatingOptions = ValidatingOptions.default
   )(
     validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
@@ -87,7 +87,7 @@ abstract class ValidatingTest extends ParsingTest {
   def validateFile(
     label: String,
     fileName: String,
-    options: ValidationOptions = ValidationOptions.Default
+    options: ValidatingOptions = ValidatingOptions.default
   )(
     validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
@@ -106,7 +106,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidateFile(
     label: String,
     file: File,
-    options: ValidationOptions = ValidationOptions.Default
+    options: ValidatingOptions = ValidatingOptions.default
   ): Assertion = {
     TopLevelParser.parse(file) match {
       case Left(errors) =>

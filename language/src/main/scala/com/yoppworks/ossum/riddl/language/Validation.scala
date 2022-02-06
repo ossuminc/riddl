@@ -13,7 +13,7 @@ object Validation {
 
   def validate[C <: Container[Definition]](
     root: C,
-    options: ValidationOptions = ValidationOptions.Default
+    options: ValidatingOptions = ValidatingOptions.default
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, options)
@@ -95,7 +95,7 @@ object Validation {
     kind: ValidationMessageKind = Error)
       extends Ordered[ValidationMessage] {
 
-    def format: String = { s"$kind: $loc: $message" }
+    def format: String = {s"$kind: $loc: $message"}
 
     override def compare(that: ValidationMessage): Int = this.loc.compare(that.loc)
   }
@@ -104,32 +104,23 @@ object Validation {
 
   val NoValidationMessages: List[ValidationMessage] = List.empty[ValidationMessage]
 
-  trait ValidationOptions extends Riddl.Options
+  case class ValidatingOptions(
+    parsingOptions: ParsingOptions = ParsingOptions(),
+    showWarnings: Boolean = true,
+    showMissingWarnings: Boolean = true,
+    showStyleWarnings: Boolean = true
+  ) {
+    def log: Logger = parsingOptions.log
+  }
 
-  object ValidationOptions {
-
-    private final case class ValidationOptionsImpl(
-      showTimes: Boolean,
-      showWarnings: Boolean,
-      showMissingWarnings: Boolean,
-      showStyleWarnings: Boolean)
-        extends ValidationOptions
-
-    def apply(
-      showTimes: Boolean = false,
-      showWarnings: Boolean = true,
-      showMissingWarnings: Boolean = true,
-      showStyleWarnings: Boolean = true
-    ): ValidationOptions =
-      ValidationOptionsImpl(showTimes, showWarnings, showMissingWarnings, showStyleWarnings)
-
-    val Default: ValidationOptions = apply()
+  object ValidatingOptions {
+    val default: ValidatingOptions = ValidatingOptions()
   }
 
   case class ValidationState(
     symbolTable: SymbolTable,
-    options: ValidationOptions = ValidationOptions.Default)
-      extends Folding.State[ValidationState] {
+    options: ValidatingOptions = ValidatingOptions.default)
+    extends Folding.State[ValidationState] {
 
     private val msgs: ListBuffer[ValidationMessage] = ListBuffer.empty[ValidationMessage]
 
@@ -858,10 +849,9 @@ object Validation {
       parent: Handler,
       onClause: OnClause
     ): ValidationState = {
-      val result = state.checkMessageRef(onClause.msg, onClause.msg.messageKind)
-      onClause.examples.foldLeft(result) { (state, example) =>
-        state.checkExample(example)
-      }
+      state
+        .checkMessageRef(onClause.msg, onClause.msg.messageKind)
+        .checkExamples(onClause.examples)
     }
 
     override def closeEntity(

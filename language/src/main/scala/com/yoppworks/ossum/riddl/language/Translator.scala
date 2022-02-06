@@ -1,103 +1,118 @@
 package com.yoppworks.ossum.riddl.language
 
-import java.io.File
-import java.nio.file.Path
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Riddl.Options
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 import pureconfig.*
 import pureconfig.error.*
 
-trait TranslatorConfiguration extends Options {
+import java.io.File
+import java.nio.file.Path
+
+trait TranslatingOptions {
+  def validatingOptions: ValidatingOptions
+
+  def projectName: Option[String]
+
   def inputPath: Option[Path]
+
+  def outputPath: Option[Path]
+
+  def configPath: Option[Path]
+
+  def logger: Option[Logger]
+
+  final def log: Logger = logger.getOrElse(SysLogger())
 }
+
+trait TranslatorConfiguration
 
 trait TranslatorState {
   def config: TranslatorConfiguration
+
   def generatedFiles: Seq[File]
+
   def addFile(file: File): TranslatorState
 }
 
 /** Unit Tests For Translator */
-trait Translator[CONF <: TranslatorConfiguration] {
+trait Translator[OPT <: TranslatingOptions, CONF <: TranslatorConfiguration] {
 
   def loadConfig(path: Path): ConfigReader.Result[CONF]
+
+  def defaultOptions: OPT
 
   def defaultConfig: CONF
 
   protected final def getConfig(
-    logger: Riddl.Logger,
+    logger: Logger,
     path: Option[Path]
   ): Option[CONF] = {
     path match {
       case None => Option(defaultConfig)
-      case Some(p) => loadConfig(p) match {
-          case Left(failures: ConfigReaderFailures) =>
-            failures.toList.foreach { crf: ConfigReaderFailure =>
-              val location = crf.origin match {
-                case Some(origin) => origin.description
-                case None         => "unknown location"
+      case Some(p) =>
+        if (p.toFile.exists()) {
+          loadConfig(p) match {
+            case Left(failures: ConfigReaderFailures) =>
+              failures.toList.foreach { crf: ConfigReaderFailure =>
+                val location = crf.origin match {
+                  case Some(origin) => origin.description
+                  case None => "unknown location"
+                }
+                logger.error(s"In $location:\n${crf.description}")
               }
-              logger.error(s"In $location:")
-              logger.error(crf.description)
-            }
-            None
-          case Right(configuration) => Option(configuration)
+              None
+            case Right(configuration) => Option(configuration)
+          }
+        } else {
+          logger.error(s"File $p does not exist")
+          None
         }
     }
   }
 
-  def translate(
+  protected def translate(
     root: RootContainer,
-    outputRoot: Option[Path],
-    logger: Riddl.Logger,
+    options: OPT,
     config: CONF
   ): Seq[File]
 
   final def translate(
     root: RootContainer,
-    outputRoot: Option[Path],
-    logger: Riddl.Logger,
-    config: Option[Path]
+    options: OPT,
   ): Seq[File] = {
-    val cfg = getConfig(logger, config)
-    cfg.fold(Seq.empty[File])(translate(root, outputRoot, logger, _))
+    val showTimes = options.validatingOptions.parsingOptions.showTimes
+    val cfg = Riddl.timer(stage = "load configuration", showTimes) {
+      getConfig(options.log, options.configPath)
+    }
+    Riddl.timer(stage = "translate", showTimes) {
+      cfg.fold(Seq.empty[File])(translate(root, options, _))
+    }
   }
 
-  final def parseValidateTranslateFile(
-    path: Path,
-    outputRoot: Option[Path],
-    logger: Riddl.Logger,
-    config: CONF
+  final def parseValidateTranslate(
+    options: OPT,
   ): Seq[File] = {
-    Riddl.parseAndValidate(path, logger, config) match {
-      case Some(root) => translate(root, outputRoot, logger, config)
-      case None       => Seq.empty[File]
+    Riddl.parseAndValidate(options.inputPath.get.toFile, options.validatingOptions) match {
+      case Some(root) => translate(root, options)
+      case None => Seq.empty[File]
     }
   }
 
   final def parseValidateTranslate(
     input: RiddlParserInput,
-    outputRoot: Option[Path],
-    logger: Riddl.Logger,
-    config: CONF
+    options: OPT,
   ): Seq[File] = {
-
-    Riddl.parseAndValidate(input, logger, config) match {
-      case Some(root) => translate(root, outputRoot, logger, config)
-      case None       => Seq.empty[File]
+    Riddl.parseAndValidate(input, options.validatingOptions) match {
+      case Some(root) => translate(root, options)
+      case None => Seq.empty[File]
     }
   }
 
-  final def run(
-    inputFile: Path,
-    outputRoot: Option[Path],
-    logger: Riddl.Logger,
-    configFile: Option[Path]
+  final def parseValidateTranslateFile(
+    path: Path,
+    options: OPT
   ): Seq[File] = {
-    getConfig(logger, configFile) match {
-      case Some(config) => parseValidateTranslateFile(inputFile, outputRoot, logger, config)
-      case None         => Seq.empty[File]
-    }
+    parseValidateTranslate(RiddlParserInput(path), options)
   }
 }

@@ -52,16 +52,16 @@ class MarkdownWriterTest extends ParsingTest {
               |  Just a renamed string
               |
               |## Contexts
-              |No Contexts
+              |No Contexts defined.
               |
               |## Stories
-              |No Stories
+              |No Stories defined.
               |
               |## Plants
-              |No Plants
+              |No Plants defined.
               |
               |## Subdomains
-              |No Subdomains
+              |No Subdomains defined.
               |
               |## Details
               |A test domain for ensuring that documentation for domains is

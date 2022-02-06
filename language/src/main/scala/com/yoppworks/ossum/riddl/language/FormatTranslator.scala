@@ -3,6 +3,7 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import pureconfig.generic.auto.*
 import pureconfig.{ConfigReader, ConfigSource}
 
@@ -11,17 +12,25 @@ import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.mutable
 
-case class FormatConfig(
-  showTimes: Boolean = false,
-  showWarnings: Boolean = false,
-  showMissingWarnings: Boolean = false,
-  showStyleWarnings: Boolean = false,
+case class FormatConfig() extends TranslatorConfiguration
+
+case class FormattingOptions(
+  validatingOptions: ValidatingOptions = ValidatingOptions(),
+  configPath: Option[Path] = None,
   inputPath: Option[Path] = None,
-  outputPath: Option[Path] = None)
-    extends TranslatorConfiguration
+  outputPath: Option[Path] = None,
+  configFile: Option[File] = None,
+  projectName: Option[String] = None,
+  logger: Option[Logger] = None,
+  singleFile: Boolean = true
+) extends TranslatingOptions {
+  def withLogger(logger: Logger): FormattingOptions = {
+    this.copy(logger = Some(logger))
+  }
+}
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
-class FormatTranslator extends Translator[FormatConfig] {
+object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
 
   private type Lines = mutable.StringBuilder
 
@@ -34,9 +43,8 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
   }
 
+  val defaultOptions: FormattingOptions = FormattingOptions()
   val defaultConfig: FormatConfig = FormatConfig()
-
-  type CONF = FormatConfig
 
   def loadConfig(path: Path): ConfigReader.Result[FormatConfig] = {
     ConfigSource.file(path).load[FormatConfig]
@@ -44,25 +52,28 @@ class FormatTranslator extends Translator[FormatConfig] {
 
   def translate(
     root: RootContainer,
-    outputRoot: Option[Path],
-    log: Riddl.Logger,
+    options: FormattingOptions,
     configuration: FormatConfig
   ): Seq[File] = {
-    val state = FormatState(configuration)
+    val state = FormatState(options, configuration)
     val folding = new FormatFolding()
     folding.foldLeft(root, root, state).files
   }
 
   def translateToString(
-    root: RootContainer
+    root: RootContainer,
+    options: FormattingOptions
   ): String = {
-    val state = FormatState(FormatConfig())
-    val folding = new FormatFolding()
-    val newState = folding.foldLeft(root, root, state)
-    newState.toString()
+    val logger = StringLogger()
+    val opts = options.withLogger(logger)
+    translate(root, opts)
+    logger.toString()
   }
 
-  case class FormatState(config: FormatConfig) extends Folding.State[FormatState] {
+  case class FormatState(
+    options: FormattingOptions,
+    config: FormatConfig
+  ) extends Folding.State[FormatState] {
     def step(f: FormatState => FormatState): FormatState = f(this)
 
     private final val nl = "\n"
@@ -342,11 +353,13 @@ class FormatTranslator extends Translator[FormatConfig] {
     }
 
     def emitExample(example: Example): FormatState = {
-      openDef(example).emitGherkinClauses("given ", example.givens)
+      if (!example.isImplicit) {openDef(example)}
+      emitGherkinClauses("given ", example.givens)
         .emitGherkinClauses("when", example.whens)
         .emitGherkinClauses("then", example.thens)
         .emitGherkinClauses("but", example.buts)
-        .closeDef(example)
+      if (!example.isImplicit) {closeDef(example)}
+      this
     }
 
     def emitExamples(examples: Seq[Example]): FormatState = {

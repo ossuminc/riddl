@@ -43,7 +43,7 @@ case class MarkdownWriter(filePath: Path) {
     this
   }
 
-  def containerWeight = 10
+  def containerWeight: Int = 2 * 5
 
   def fileHead(cont: Container[Definition]): this.type = {
     fileHead(cont.id.format, containerWeight,
@@ -57,9 +57,12 @@ case class MarkdownWriter(filePath: Path) {
 
   def heading(heading: String, level: Int = 2): this.type = {
     level match {
+      case 1 => h1(heading)
+      case 2 => h2(heading)
       case 3 => h3(heading)
       case 4 => h4(heading)
       case 5 => h5(heading)
+      case 6 => h6(heading)
       case _ => h2(heading)
     }
   }
@@ -86,6 +89,11 @@ case class MarkdownWriter(filePath: Path) {
 
   def h5(heading: String): this.type = {
     sb.append(s"\n##### $heading\n")
+    this
+  }
+
+  def h6(heading: String): this.type = {
+    sb.append(s"\n###### $heading\n")
     this
   }
 
@@ -124,16 +132,16 @@ case class MarkdownWriter(filePath: Path) {
 
     for {item <- items} {
       item match {
-        case (prefix: String, definition: String, description: Option[Description] @unchecked) =>
+        case (prefix: String, definition: String, description: Option[Description]@unchecked) =>
           emitPair(prefix, definition)
           if (description.nonEmpty) {
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
-        case (prefix: String, docBlock: Seq[LiteralString] @unchecked) =>
-          sb.append(s"* $prefix\n")
-          docBlock.foreach(ls => sb.append(s"> ${ls.s}\n"))
         case (prefix: String, body: String) =>
           emitPair(prefix, body)
+        case (prefix: String, docBlock: Seq[String]@unchecked) =>
+          sb.append(s"* $prefix\n")
+          docBlock.foreach(s => sb.append(s"    * $s\n"))
         case body: String =>
           sb.append(s"* $body\n")
         case x: Any =>
@@ -157,7 +165,7 @@ case class MarkdownWriter(filePath: Path) {
     val items = contents.map { case (label, partial) =>
       s"[$label]" -> partial.mkString("(", "/", ")")
     }.toSeq
-    list[(String, String)](kindOfThing, items, s"No $kindOfThing")
+    list[(String, String)](kindOfThing, items, s"No $kindOfThing defined.")
   }
 
   private def mkTocSeq(
@@ -197,9 +205,8 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitOptions[OT <: OptionValue](options: Seq[OT]): this.type = {
-    h2("Options")
     list("Options",
-      options.map(_.format), "No Options"
+      options.map(_.format), "No options were defined."
     )
     this
   }
@@ -209,7 +216,7 @@ case class MarkdownWriter(filePath: Path) {
       types.map { t =>
         (t.id.format, AST.kind(t.typ) + t.description.fold(Seq.empty[String])(_.lines.map(_.s))
           .mkString("\n  ", "\n  ", ""))
-      }, emptyMessage = "No Types"
+      }, emptyMessage = "No types were defined."
     )
   }
 
@@ -239,26 +246,37 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitExample(example: Example, parents: Seq[String], level: Int = 2): this.type = {
-    heading(example.id.format, level)
-    emitBriefly(example, parents, level + 1)
-    heading("Gherkin", level + 1)
-    sb.append(example.givens.map { given =>
-      given.scenario.map(_.s).mkString("    *","\n    *", "\n")
-    }.mkString("* GIVEN\n", "* AND\n", ""))
-    sb.append(example
-      .whens
-      .map { when => when.condition.format }
-      .mkString("* WHEN\n", "* AND\n", ""))
+    val hLevel = if (example.isImplicit) {
+      level
+    } else {
+      heading(example.id.format, level)
+      level + 1
+    }
+    emitBriefly(example, parents, hLevel)
+    heading("Gherkin", hLevel)
+    if (example.givens.nonEmpty) {
+      sb.append(example.givens.map { given =>
+        given.scenario.map(_.s).mkString("    *", "\n    *", "\n")
+      }.mkString("* GIVEN\n", "* AND\n", ""))
+    }
+    if (example.whens.nonEmpty) {
+      sb.append(example
+        .whens
+        .map { when => when.condition.format }
+        .mkString("* WHEN\n", "* AND\n", ""))
+    }
     sb.append(example
       .thens
       .map { then_ => then_.action.format }
-      .mkString("* THEN\n    *", "\n    *", "\n")
+      .mkString("* THEN\n    * ", "\n    * ", "\n")
     )
-    sb.append(example.buts
-      .map { but => but.action.format }
-      .mkString("* BUT\n    *", "\n    *", "\n")
-    )
-    emitDetails(example.description, level + 1)
+    if (example.buts.nonEmpty) {
+      sb.append(example.buts
+        .map { but => but.action.format }
+        .mkString("* BUT\n    * ", "\n    * ", "\n")
+      )
+    }
+    emitDetails(example.description, hLevel)
     this
   }
 
@@ -277,7 +295,7 @@ case class MarkdownWriter(filePath: Path) {
   def emitFunction(function: Function, parents: Seq[String]): this.type = {
     fileHead(function)
     h2(function.id.format)
-    emitBriefly(function, parents, 2)
+    emitBriefly(function, parents)
     emitInputOutput(function.input, function.output)
     h2("Examples")
     val functionExampleLevel = 3

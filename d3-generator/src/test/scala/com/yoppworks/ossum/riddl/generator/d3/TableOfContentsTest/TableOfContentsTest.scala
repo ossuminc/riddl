@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.generator.d3.TableOfContentsTest
 
 import com.yoppworks.ossum.riddl.language.ValidatingTest
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
 import com.yoppworks.ossume.riddl.generator.d3.TableOfContents
 import ujson.{Arr, Obj, validate}
 

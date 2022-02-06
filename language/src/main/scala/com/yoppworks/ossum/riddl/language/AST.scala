@@ -1259,6 +1259,8 @@ object AST {
     description: Option[Description] = Option.empty[Description])
     extends ProcessorDefinition {
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty && thens.isEmpty && buts.isEmpty
+
+    override def isImplicit: Boolean = id.value.isEmpty
   }
 
   // ////////////////////////////////////////////////////////// Entities

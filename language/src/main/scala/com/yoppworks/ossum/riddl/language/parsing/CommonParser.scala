@@ -22,7 +22,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def optionalNestedContent[u: P, T](parser: => P[T]): P[Seq[T]] = {
-    P(open ~ parser.rep.? ~ close).map(_.getOrElse(Seq.empty[T]))
+    P(open ~ parser.rep(0) ~ close)
   }
 
   def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined /).map(_ => ret) }

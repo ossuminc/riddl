@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.Validation.{ValidatingOptions, ValidationMessages}
 import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 
@@ -25,7 +24,7 @@ class CheckMessagesTest extends ValidatingTest {
   override def validateFile(
     label: String,
     fileName: String,
-    options: ValidationOptions = ValidationOptions.Default
+    options: ValidatingOptions = ValidatingOptions.default
   )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val file = new File(fileName)

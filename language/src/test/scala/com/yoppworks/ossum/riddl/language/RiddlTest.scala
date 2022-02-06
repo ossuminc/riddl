@@ -1,8 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.{Domain, RootContainer}
-import com.yoppworks.ossum.riddl.language.Logging.Lvl
-import com.yoppworks.ossum.riddl.language.Riddl.{StringLogger, SysLogger}
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
 import java.io.File
@@ -33,7 +32,7 @@ class RiddlTest extends ParsingTestBase {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl.timer(clock, SysLogger, "MyStage", show = false) {
+      val result = RiddlImpl.timer(clock, SysLogger(), "MyStage", show = false) {
         clock.updateInstant(_.plusSeconds(2))
         123
       }
@@ -47,32 +46,31 @@ class RiddlTest extends ParsingTestBase {
 
   "parse" should {
     "parse a file" in {
-      val logger = new InMemoryLogger
+      val logger = InMemoryLogger()
       val result = Riddl.parse(
         path = new File("language/src/test/input/rbbq.riddl").toPath,
-        logger = logger,
-        options = RiddlTest.DefaultOptions
+        options = ParsingOptions(showTimes = true, Some(logger))
       )
-
       result mustNot be(empty)
     }
+
     "return none when file does not exist" in {
-      val logger = new InMemoryLogger
+      val options = ParsingOptions(showTimes = true, Some(InMemoryLogger()))
       val result = Riddl.parse(
         path = new File(UUID.randomUUID().toString).toPath,
-        logger = logger,
-        options = RiddlTest.DefaultOptions
+        options
       )
       result mustBe None
     }
     "record errors" in {
-      val logger = new InMemoryLogger
       val riddlParserInput: RiddlParserInput = RiddlParserInput(UUID.randomUUID().toString)
+      val logger = InMemoryLogger()
+      val options = ParsingOptions(showTimes = true, Some(logger))
       val result = Riddl
-        .parse(input = riddlParserInput, logger = logger, options = RiddlTest.DefaultOptions)
+        .parse(input = riddlParserInput, options)
       result mustBe None
       assert(
-        logger.lines().exists(_.level == Lvl.Error),
+        logger.lines().exists(_.level == InMemoryLogger.Lvl.Error),
         "When failing to parse, an error should be logged."
       )
     }
@@ -123,26 +121,27 @@ class RiddlTest extends ParsingTestBase {
   }
 
   "SysLogger" should {
+    val sl = SysLogger()
     "print error message" in {
-      capturingStdErr(() => SysLogger.error("asdf"))._2 mustBe "[error] asdf\n"
+      capturingStdErr(() => sl.error("asdf"))._2 mustBe "[error] asdf\n"
     }
     "print severe message" in {
-      capturingStdErr(() => SysLogger.severe("asdf"))._2 mustBe "[severe] asdf\n"
+      capturingStdErr(() => sl.severe("asdf"))._2 mustBe "[severe] asdf\n"
     }
     "print warn message" in {
-      capturingStdErr(() => SysLogger.warn("asdf"))._2 mustBe "[warning] asdf\n"
+      capturingStdErr(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n"
     }
     "print info message" in {
-      capturingStdErr(() => SysLogger.info("asdf"))._2 mustBe "[info] asdf\n"
+      capturingStdErr(() => sl.info("asdf"))._2 mustBe "[info] asdf\n"
     }
     "print many message" in {
       capturingStdErr { () =>
-        SysLogger.error("a")
-        SysLogger.info("b")
-        SysLogger.info("c")
-        SysLogger.warn("d")
-        SysLogger.severe("e")
-        SysLogger.error("f")
+        sl.error("a")
+        sl.info("b")
+        sl.info("c")
+        sl.warn("d")
+        sl.severe("e")
+        sl.error("f")
       }._2 mustBe """[error] a
                     |[info] b
                     |[info] c
@@ -154,53 +153,44 @@ class RiddlTest extends ParsingTestBase {
   }
 
   "parseAndValidate" should {
+    def runOne(pathname: String): (Option[RootContainer], InMemoryLogger) = {
+      val logger = InMemoryLogger()
+      val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
+      Riddl.parseAndValidate(new File(pathname).toPath, options) -> logger
+    }
+
     "parse and validate a simple domain from path" in {
-      val result = Riddl.parseAndValidate(
-        new File("language/src/test/input/domains/simpleDomain.riddl").toPath,
-        new InMemoryLogger,
-        RiddlTest.DefaultOptions
-      )
+      val (result, _) = runOne("language/src/test/input/domains/simpleDomain.riddl")
       result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
+
     "parse and validate nonsense file as invalid" in {
-      val logger = new InMemoryLogger
-      val result = Riddl.parseAndValidate(
-        new File("language/src/test/input/invalid.riddl").toPath,
-        logger,
-        RiddlTest.DefaultOptions
-      )
+      val (result, logger) = runOne("language/src/test/input/invalid.riddl")
       result mustBe None
-      assert(logger.lines().exists(_.level == Lvl.Error))
+      assert(logger.lines().exists(_.level == InMemoryLogger.Lvl.Error))
     }
+
     "parse and validate a simple domain from input" in {
       val content: String = {
         val source = Source.fromFile(new File("language/src/test/input/domains/simpleDomain.riddl"))
         try source.mkString
         finally source.close()
       }
-      val result = Riddl
-        .parseAndValidate(RiddlParserInput(content), new InMemoryLogger, RiddlTest.DefaultOptions)
+      val logger = InMemoryLogger()
+      val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
+      val result = Riddl.parseAndValidate(RiddlParserInput(content), options)
       result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
+
     "parse and validate nonsense input as invalid" in {
-      val logger = new InMemoryLogger
+      val logger = InMemoryLogger()
+      val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
       val result = Riddl.parseAndValidate(
         RiddlParserInput("I am not valid riddl (hopefully)."),
-        logger,
-        RiddlTest.DefaultOptions
+        options
       )
       result mustBe None
-      assert(logger.lines().exists(_.level == Lvl.Error))
+      assert(logger.lines().exists(_.level == InMemoryLogger.Lvl.Error))
     }
-  }
-}
-
-object RiddlTest {
-
-  val DefaultOptions: Riddl.Options = new Riddl.Options {
-    override val showTimes: Boolean = true
-    override val showWarnings: Boolean = true
-    override val showMissingWarnings: Boolean = true
-    override val showStyleWarnings: Boolean = true
   }
 }

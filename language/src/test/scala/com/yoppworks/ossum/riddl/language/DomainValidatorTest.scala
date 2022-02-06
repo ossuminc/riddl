@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.ValidationOptions
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 
 /** Unit Tests For ValidatorTest */
 class DomainValidatorTest extends ValidatingTest {
@@ -13,7 +13,7 @@ class DomainValidatorTest extends ValidatingTest {
           Seq(Domain((0, 0), Identifier((0, 0), "foo")),
             Domain((1, 1), Identifier((1, 1), "foo")))
         ),
-        ValidationOptions.Default
+        ValidatingOptions.default
       )
       errors must not be empty
       errors.head.message must include("'foo' is defined multiple times")

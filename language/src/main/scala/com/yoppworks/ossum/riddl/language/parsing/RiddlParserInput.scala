@@ -120,5 +120,7 @@ object RiddlParserInput {
   ): RiddlParserInput = { StringParserInput(data) }
 
   implicit def apply(source: Source): RiddlParserInput = { SourceParserInput(source, source.descr) }
-  implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
+  implicit def apply(file: File): RiddlParserInput = {FileParserInput(file)}
+
+  implicit def apply(path: Path): RiddlParserInput = {FileParserInput(path.toFile)}
 }
