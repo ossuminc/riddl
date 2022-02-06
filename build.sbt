@@ -59,7 +59,7 @@ lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := 
   .aggregate(
     language,
     /*`d3-generator`,*/
-    /* `hugo-theme`*/
+    `hugo-theme`,
     `hugo-translator`,
     `hugo-generator`, riddlc, `sbt-riddl`, doc /*, examples*/)
 

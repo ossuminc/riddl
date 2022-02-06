@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.AST.{AuthorInfo, Container, Definition, RootContainer}
+import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language._
 import pureconfig.generic.auto._
@@ -19,12 +19,17 @@ case class HugoTranslatingOptions(
   outputPath: Option[Path] = None,
   configPath: Option[Path] = None,
   logger: Option[Logger] = None,
-  baseUrl: Option[URL] = Some(new URL("http://example.com/")),
-  themeUrl: Option[URL] = Some(HugoTranslator.geekDoc_url)
+  baseUrl: Option[URL] = Some(new URL("https://example.com/")),
+  themes: Seq[(String, URL)] = Seq(
+    "hugo-geekdoc" -> HugoTranslator.geekDoc_url,
+    "riddl-hugo-theme" -> HugoTranslator.riddl_hugo_theme_url
+  )
+
 ) extends TranslatingOptions {
   lazy val outputRoot: Path = outputPath.getOrElse(Path.of("."))
   lazy val contentRoot: Path = outputRoot.resolve("content")
   lazy val themesRoot: Path = outputRoot.resolve("themes")
+  lazy val configFile: Path = outputRoot.resolve("config.toml")
 }
 
 case class HugoTranslatorConfig() extends TranslatorConfiguration
@@ -41,8 +46,9 @@ case class HugoTranslatorState(options: HugoTranslatingOptions, config: HugoTran
     parentDirs
   }
 
-  def addFile(fileName: String): MarkdownWriter = {
-    val path = parentDirs.resolve(fileName)
+  def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
+    val parDir = parents.foldLeft(options.contentRoot) { (next, par) => next.resolve(par) }
+    val path = parDir.resolve(fileName)
     val mdw = MarkdownWriter(path)
     files.append(mdw)
     mdw
@@ -58,6 +64,11 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     ConfigSource.file(path).load[HugoTranslatorConfig]
   }
 
+  val riddl_hugo_theme_url: URL =
+    Path.of(System.getProperty("user.dir"))
+      .resolve("hugo-theme/target/riddl-hugo-theme.zip")
+      .toUri.toURL
+
   val geekdoc_dest_dir = "hugo-geekdoc"
   val geekDoc_version = "v0.25.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
@@ -66,19 +77,26 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
 
   val sitemap_xsd = "https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
 
-  def loadGeekDoc(options: HugoTranslatingOptions): Unit = {
+  def loadATheme(from: URL, destDir: Path): Unit = {
     import java.io.InputStream
     import java.nio.file.{Files, StandardCopyOption}
-    val in: InputStream = geekDoc_url.openStream
-    val destDir = options.themesRoot.resolve(geekdoc_dest_dir)
+    val fileName = from.getPath.split('/').last
+    val in: InputStream = from.openStream
     destDir.toFile.mkdirs()
-    val tar_gz_Path = destDir.resolve(geekDoc_file)
-    Files.copy(in, tar_gz_Path, StandardCopyOption.REPLACE_EXISTING)
-    val rc = Process(s"tar zxf $geekDoc_file", cwd = destDir.toFile).!
+    val dl_path = destDir.resolve(fileName)
+    Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
+    val rc = Process(s"tar zxf $fileName", cwd = destDir.toFile).!
     if (rc != 0) {
-      throw new IOException(s"Failed to unzip $tar_gz_Path")
+      throw new IOException(s"Failed to unzip $dl_path")
     }
-    tar_gz_Path.toFile.delete()
+    dl_path.toFile.delete()
+  }
+
+  def loadThemes(options: HugoTranslatingOptions): Unit = {
+    for ((name, url) <- options.themes) {
+      val destDir = options.themesRoot.resolve(name)
+      loadATheme(url, destDir)
+    }
   }
 
   def deleteAll(directory: File): Boolean = {
@@ -101,12 +119,25 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     if (0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!) {
       options.log.error(s"Hugo could not create a site here: $outDir")
     } else {
-      loadGeekDoc(options)
+      loadThemes(options)
     }
   }
 
+  def writeConfigToml(options: HugoTranslatingOptions, author: Option[AuthorInfo]): Unit = {
+    import java.nio.charset.StandardCharsets
+    import java.nio.file.Files
+    val content = configTemplate(options, author)
+    val outFile = options.configFile
+    Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
+  }
+
   def parents(stack: mutable.Stack[Container[Definition]]): Seq[String] = {
-    stack.map(_.id.format).toSeq.reverse
+    // The stack goes from most nested to highest. We don't want to change the
+    // stack (its mutable) so we copy it to a Seq first, then reverse it, then
+    // drop all the root containers (file includes) to finally end up at a domin
+    // and then map to just the name of that domain.
+    val result = stack.toSeq.reverse.dropWhile(_.isRootContainer).map(_.id.format)
+    result
   }
 
   def setUpContainer(
@@ -116,8 +147,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
   ): (MarkdownWriter, Seq[String]) = {
     state.addDir(c.id.format)
     val pars = parents(stack)
-    stack.push(c)
-    state.addFile("_index.md") -> pars
+    state.addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
   def setUpDefinition(
@@ -125,8 +155,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     state: HugoTranslatorState,
     stack: mutable.Stack[Container[Definition]]
   ): (MarkdownWriter, Seq[String]) = {
-    val dirPath = state.addFile(d.id.format + ".md")
-    dirPath -> parents(stack)
+    val pars = parents(stack)
+    state.addFile(pars, d.id.format + ".md") -> pars
   }
 
   override def translate(
@@ -135,13 +165,16 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     config: HugoTranslatorConfig
   ): Seq[File] = {
     makeDirectoryStructure(options)
+    val maybeAuthor = root.domains.headOption match {
+      case Some(domain) =>
+        domain.author
+      case None => Option.empty[AuthorInfo]
+    }
+    writeConfigToml(options, maybeAuthor)
     val state = HugoTranslatorState(options, config)
     val parents = mutable.Stack[Container[Definition]]()
 
     val newState = Folding.foldLeft(state, parents)(root) {
-      case (st, _: RootContainer, _) =>
-        // skip, not needed
-        st
       case (st, e: AST.Entity, stack) =>
         val (mkd, parents) = setUpContainer(e, st, stack)
         mkd.emitEntity(e, parents)
@@ -186,6 +219,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
         val (mkd, parents) = setUpDefinition(p, st, stack)
         mkd.emitPipe(p, parents)
         st
+      case (st, _: RootContainer, _) =>
+        // skip, not needed
+        st
       case (st, _, _) => // skip, handled by the MarkdownWriter
         st
     }
@@ -193,8 +229,11 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     newState.files.map(_.filePath.toFile).toSeq
   }
 
-  // scalastyle:off method.length
-  def configTemplate(options: HugoTranslatingOptions, author: AuthorInfo): String = {
+  def configTemplate(options: HugoTranslatingOptions, author: Option[AuthorInfo]): String = {
+    val auth: AuthorInfo = author.getOrElse(
+      AuthorInfo(1 -> 1, name = LiteralString(1 -> 1, "Not Provided"),
+        email = LiteralString(1 -> 1, "somebody@somewere.tld")
+      ))
     s"""######################## Hugo Configuration ####################
        |
        |# Configure GeekDocs
@@ -202,8 +241,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
        |title = '${options.projectName.get}'
        |name = "${options.projectName.get}"
        |description = "${options.projectName.get}"
-       |homepage = "http://example.org/"
-       |demosite = "http://example.org/"
+       |homepage = "https://example.org/"
+       |demosite = "https://example.org/"
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = ["hugo-geekdoc"]
@@ -211,8 +250,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
        |pygmentsStyle=  "monokailight"
        |
        |[author]
-       |    name = "${author.name.s}"
-       |    homepage = "${author.url.getOrElse(new URL("http://example.org/"))}"
+       |    name = "${auth.name.s}"
+       |    email = "${auth.email.s}"
+       |    homepage = "${auth.url.getOrElse(new URL("https://example.org/"))}"
        |""".stripMargin
   }
 }

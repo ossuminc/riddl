@@ -50,7 +50,7 @@ case class MarkdownWriter(filePath: Path) {
       Option(cont.brief.fold(cont.id.format + " has no brief description.")(_.s)))
   }
 
-  def fileHead(definition: Definition with BrieflyDescribedValue, weight: Int): this.type = {
+  def fileHead(definition: Definition, weight: Int): this.type = {
     fileHead(definition.id.format, weight,
       Option(definition.brief.fold(definition.id.format + " has no brief description.")(_.s)))
   }
@@ -104,10 +104,8 @@ case class MarkdownWriter(filePath: Path) {
     this
   }
 
-  def title(title: String): this.type = {
-    sb.append("\n<p style=\"text-align: center;\">\n")
-      .append(s"# $title\n")
-      .append("</p>\n")
+  def title(definition: Definition): this.type = {
+    sb.append(s"# ${definition.identify}\n")
     this
   }
 
@@ -151,32 +149,27 @@ case class MarkdownWriter(filePath: Path) {
     this
   }
 
-  def list[T](typeOfThing: String, items: Seq[T], emptyMessage: String, level: Int = 2): this.type = {
-    heading(typeOfThing, level)
-    if (items.isEmpty) {
-      p(emptyMessage)
-    } else {
+  def list[T](typeOfThing: String, items: Seq[T], level: Int = 2): this.type = {
+    if (items.nonEmpty) {
+      heading(typeOfThing, level)
       list(items)
     }
     this
   }
 
-  def toc(kindOfThing: String, contents: Map[String, Seq[String]]): this.type = {
-    val items = contents.map { case (label, partial) =>
-      s"[$label]" -> partial.mkString("(", "/", ")")
-    }.toSeq
-    list[(String, String)](kindOfThing, items, s"No $kindOfThing defined.")
+  def toc(kindOfThing: String, contents: Seq[String]): this.type = {
+    if (contents.nonEmpty) {
+      val items = contents.map { name => s"[$name]" -> s"(${name.toLowerCase})" }
+      list[(String, String)](kindOfThing, items)
+    }
+    this
   }
 
   private def mkTocSeq(
     list: Seq[Definition],
-    prefix: Seq[String]
- ): Seq[(String, Seq[String])] = {
-    list.map(c => (c.identify, prefix :+ c.id.format))
-  }
-
-  private def mkTocMap(list: Seq[Definition], prefix: Seq[String]): Map[String, Seq[String]] = {
-    mkTocSeq(list, prefix).toMap
+  ): Seq[String] = {
+    val result = list.map(c => c.id.value)
+    result
   }
 
   def emitFields(fields: Seq[Field]): this.type = {
@@ -184,7 +177,7 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitBriefly(
-    d: Definition with BrieflyDescribedValue,
+    d: Definition,
     parents: Seq[String],
     level: Int = 2
   ) : this.type = {
@@ -192,22 +185,23 @@ case class MarkdownWriter(filePath: Path) {
       heading("Briefly", level)
       p(d.brief.fold("Brief description missing.\n")(_.s))
       val path = (parents :+ d.id.format).mkString(".")
-      italic(s"Location").p(s": $path at ${d.loc}")
+      italic("Path").p(s": $path")
+      italic("Defined At").p(s": ${d.loc}")
     }
     this
   }
 
   def emitDetails(d: Option[Description], level: Int = 2): this.type = {
-    heading("Details", level)
-    val description = d.fold(Seq("No description"))(_.lines.map(_.s))
-    description.foreach(p)
+    if (d.nonEmpty) {
+      heading("Details", level)
+      val description = d.get.lines.map(_.s)
+      description.foreach(p)
+    }
     this
   }
 
   def emitOptions[OT <: OptionValue](options: Seq[OT]): this.type = {
-    list("Options",
-      options.map(_.format), "No options were defined."
-    )
+    list("Options", options.map(_.format))
     this
   }
 
@@ -216,32 +210,28 @@ case class MarkdownWriter(filePath: Path) {
       types.map { t =>
         (t.id.format, AST.kind(t.typ) + t.description.fold(Seq.empty[String])(_.lines.map(_.s))
           .mkString("\n  ", "\n  ", ""))
-      }, emptyMessage = "No types were defined."
-    )
+      })
   }
 
-  def emitDomain(cont: Domain, prefix: Seq[String]): this.type = {
-    fileHead(cont)
-    title(cont.id.format)
-    emitBriefly(cont, prefix)
-    if (cont.author.nonEmpty) {
-      val a = cont.author.get
+  def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
+    fileHead(domain)
+    title(domain)
+    if (domain.author.nonEmpty) {
+      val a = domain.author.get
       val items = Seq(
         "Name" -> a.name.s,
         "Email" -> a.email.s,
       ) ++ a.organization.fold(Seq.empty[(String, String)])(ls => Seq("Organization" -> ls.s)) ++
         a.title.fold(Seq.empty[(String, String)])(ls => Seq("Title" -> ls.s))
-      list("Author", items, "")
+      list("Author", items)
     }
-
-    emitTypes(cont.types)
-    toc("Contexts", mkTocMap(cont.contexts, prefix))
-    toc("Stories", mkTocMap(cont.stories, prefix))
-    toc("Plants", mkTocMap(cont.plants, prefix))
-    toc("Subdomains", mkTocMap(cont.domains, prefix))
-    h2("Details")
-    val description = cont.description.fold(Seq("No description"))(_.lines.map(_.s))
-    description.foreach(p)
+    emitBriefly(domain, parents)
+    emitDetails(domain.description)
+    emitTypes(domain.types)
+    toc("Contexts", mkTocSeq(domain.contexts))
+    toc("Stories", mkTocSeq(domain.stories))
+    toc("Plants", mkTocSeq(domain.plants))
+    toc("Subdomains", mkTocSeq(domain.domains))
     this
   }
 
@@ -253,17 +243,17 @@ case class MarkdownWriter(filePath: Path) {
       level + 1
     }
     emitBriefly(example, parents, hLevel)
-    heading("Gherkin", hLevel)
+    emitDetails(example.description, hLevel)
     if (example.givens.nonEmpty) {
       sb.append(example.givens.map { given =>
         given.scenario.map(_.s).mkString("    *", "\n    *", "\n")
-      }.mkString("* GIVEN\n", "* AND\n", ""))
+      }.mkString("* GIVEN\n", "* AND\n", "\n"))
     }
     if (example.whens.nonEmpty) {
       sb.append(example
         .whens
         .map { when => when.condition.format }
-        .mkString("* WHEN\n", "* AND\n", ""))
+        .mkString("* WHEN\n", "\n    * AND ", "\n"))
     }
     sb.append(example
       .thens
@@ -276,7 +266,6 @@ case class MarkdownWriter(filePath: Path) {
         .mkString("* BUT\n    * ", "\n    * ", "\n")
       )
     }
-    emitDetails(example.description, hLevel)
     this
   }
 
@@ -305,15 +294,15 @@ case class MarkdownWriter(filePath: Path) {
 
   def emitContext(cont: Context, parents: Seq[String]): this.type = {
     fileHead(cont)
-    title(cont.id.format)
+    title(cont)
     emitBriefly(cont, parents)
+    emitDetails(cont.description)
     emitOptions(cont.options)
     emitTypes(cont.types)
-    toc("Functions", mkTocMap(cont.functions, parents))
-    toc("Adaptors", mkTocMap(cont.adaptors, parents))
-    toc("Entities", mkTocMap(cont.entities, parents))
-    toc("Sagas", mkTocMap(cont.sagas, parents))
-    emitDetails(cont.description)
+    toc("Functions", mkTocSeq(cont.functions))
+    toc("Adaptors", mkTocSeq(cont.adaptors))
+    toc("Entities", mkTocSeq(cont.entities))
+    toc("Sagas", mkTocSeq(cont.sagas))
     this
   }
 
@@ -330,35 +319,32 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitInvariants(invariants: Seq[Invariant]): this.type = {
-    h2("Invariants")
-    if (invariants.isEmpty) {
-      sb.append("No invariants defined. \n")
-    } else {
+    if (invariants.nonEmpty) {
+      h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
         sb.append("* ").append(invariant.expression.format).append("\n")
-        emitDetails(invariant.description)
+        emitDetails(invariant.description, 4)
       }
     }
     this
   }
 
   def emitHandlers(handlers: Seq[Handler], parents: Seq[String]): this.type = {
-    h2("Handlers")
-    if (handlers.isEmpty) {
-      sb.append("No handlers defined.\n")
-    } else {
+    if (handlers.nonEmpty) {
+      h2("Handlers")
       handlers.foreach { handler =>
         h3(handler.id.format)
+        emitBriefly(handler, parents, 4)
+        emitDetails(handler.description, 4)
         handler.clauses.foreach { clause =>
           h4("On " + clause.msg.format)
+          emitDetails(clause.description, level = 5)
           val clauseParents = parents :+ handler.id.format
-          emitBriefly(clause, clauseParents )
-          h4("Examples")
-          clause.examples.foreach(emitExample(_, clauseParents, 5))
-          emitDetails(clause.description)
+          emitBriefly(clause, clauseParents)
+          h5("Examples")
+          clause.examples.foreach(emitExample(_, clauseParents, 6))
         }
-        emitDetails(handler.description)
       }
     }
     this
@@ -366,13 +352,13 @@ case class MarkdownWriter(filePath: Path) {
 
   def emitEntity(entity: Entity, parents: Seq[String]): this.type = {
     fileHead(entity)
-    title(entity.id.format)
+    title(entity)
     emitBriefly(entity, parents)
     emitOptions(entity.options)
     emitTypes(entity.types)
     emitStates(entity.states,parents)
     emitInvariants(entity.invariants)
-    toc("Functions", mkTocMap(entity.functions, parents))
+    toc("Functions", mkTocSeq(entity.functions))
     emitHandlers(entity.handlers, parents)
     emitDetails(entity.description)
   }
@@ -399,7 +385,7 @@ case class MarkdownWriter(filePath: Path) {
   }
   def emitSaga(saga: Saga, parents: Seq[String]): this.type = {
     fileHead(saga)
-    title(saga.id.format)
+    title(saga)
     emitBriefly(saga, parents)
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)
@@ -409,30 +395,30 @@ case class MarkdownWriter(filePath: Path) {
 
   def emitStory(story: Story, prefix: Seq[String]): this.type = {
     fileHead(story)
-    title(story.id.format)
+    title(story)
     emitBriefly(story, prefix)
     h2("Story")
     p(s"I, as a ${story.role.s}, want ${story.capability.s}, so that ${story.benefit.s}.")
-    list("Visualizations", story.shownBy.map(u => s"($u)[$u]"), "None")
-    list("Implemented By", story.implementedBy.map(_.format), "None")
+    list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
+    list("Implemented By", story.implementedBy.map(_.format))
     emitDetails(story.description)
   }
 
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
     fileHead(plant)
-    title(plant.id.format)
+    title(plant)
     emitBriefly(plant, parents)
     // TODO: generate a diagram for the plant
-    toc("Processors", mkTocMap(plant.processors, parents))
-    list("Pipes", mkTocSeq(plant.pipes, parents), "No pipes defined")
-    list("Input Joints", mkTocSeq(plant.inJoints, parents), "No input joints defined. ")
-    list("Output Joints", mkTocSeq(plant.outJoints, parents), "No output joints defined.")
+    toc("Processors", mkTocSeq(plant.processors))
+    list("Pipes", mkTocSeq(plant.pipes))
+    list("Input Joints", mkTocSeq(plant.inJoints))
+    list("Output Joints", mkTocSeq(plant.outJoints))
     emitDetails(plant.description)
   }
 
   def emitPipe(pipe: Pipe, parents: Seq[String]): this.type = {
     fileHead(pipe, weight = 20)
-    title(pipe.id.format)
+    title(pipe)
     emitBriefly(pipe, parents)
     if (pipe.transmitType.nonEmpty) {
       p(s"Transmission Type: ${pipe.transmitType.get.format} ")
@@ -441,8 +427,8 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitProcessor(proc: Processor, parents: Seq[String]): this.type = {
-    fileHead(proc, weight=30)
-    title(proc.id.format)
+    fileHead(proc, weight = 30)
+    title(proc)
     emitBriefly(proc, parents)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
@@ -460,27 +446,23 @@ case class MarkdownWriter(filePath: Path) {
 
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
     fileHead(adaptor)
-    title(adaptor.id.format)
+    title(adaptor)
     emitBriefly(adaptor, parents)
     p(s"Applicable To: ${adaptor.ref.format}")
-    if (adaptor.adaptations.nonEmpty) {
-      val adaptations = adaptor.adaptations.map { adaptation =>
-        adaptation.id.format -> parents.appended(adaptation.id.format)
-      }.toMap
-      toc("Adaptations", adaptations)
-    }
+    toc("Adaptations", mkTocSeq(adaptor.adaptations))
     emitDetails(adaptor.description)
   }
 
   def emitAdaptation(adaptation: Adaptation, parents: Seq[String]): this.type = {
     fileHead(adaptation, 20)
-    title(adaptation.id.format)
+    title(adaptation)
     emitBriefly(adaptation, parents)
-    p(s"From event: ${adaptation.event.format}")
-    p(s"To command: ${adaptation.command.format}")
-    h2("Examples")
-    adaptation.examples.foreach(emitExample(_,parents,3))
     emitDetails(adaptation.description)
+    italic(s"From event").p(s": ${adaptation.event.format}\n")
+    italic(s"To command").p(s": ${adaptation.command.format}\n")
+    h2("Examples")
+    adaptation.examples.foreach(emitExample(_, parents, 3))
+    this
   }
 }
 

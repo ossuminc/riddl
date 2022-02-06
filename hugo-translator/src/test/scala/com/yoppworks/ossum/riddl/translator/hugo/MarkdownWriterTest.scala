@@ -34,38 +34,24 @@ class MarkdownWriterTest extends ParsingTest {
               |weight: 10
               |description: "Just For Testing"
               |---
-              |
-              |<p style="text-align: center;">
-              |# TestDomain
-              |</p>
-              |
-              |## Briefly
-              |Just For Testing
-              |_Location_: hugo-translator.target.test-output.TestDomain at default(1:1)
+              |# Domain 'TestDomain'
               |
               |## Author
               |* _Name_: Reid Spencer
               |* _Email_: reid.spencer@yoppworks.com
               |
-              |## Types
-              |* _MyString_: String
-              |  Just a renamed string
-              |
-              |## Contexts
-              |No Contexts defined.
-              |
-              |## Stories
-              |No Stories defined.
-              |
-              |## Plants
-              |No Plants defined.
-              |
-              |## Subdomains
-              |No Subdomains defined.
+              |## Briefly
+              |Just For Testing
+              |_Path_: hugo-translator.target.test-output.TestDomain
+              |_Defined At_: default(1:1)
               |
               |## Details
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
+              |
+              |## Types
+              |* _MyString_: String
+              |  Just a renamed string
               |""".stripMargin
           emitted mustBe expected
       }

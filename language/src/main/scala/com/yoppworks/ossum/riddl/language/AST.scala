@@ -237,6 +237,8 @@ object AST {
    */
   sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV] {
     override def isContainer: Boolean = true
+
+    def isRootContainer: Boolean = false
   }
 
   /**
@@ -248,6 +250,8 @@ object AST {
     domains: Seq[Domain],
     path: Option[String] = None
   ) extends Container[Domain] {
+
+    override def isRootContainer: Boolean = true
 
     def id: Identifier = Identifier((0, 0), path.getOrElse("<path>"))
 
