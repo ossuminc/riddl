@@ -5,14 +5,15 @@ weight: 10
 ---
 
 An entity in RIDDL is the same as it is in DDD which defines it this way:
-{{% panel theme="success" header="Entity Definition" %}}
+{{% hint nada  %}}
+**Entity Definitions**
 > _An object primarily defined by its identity is called an Entity._ 
 
 and
 
 > _Many objects are not fundamentally defined by their attributes, but_ 
 > _rather by a thread of **continuity** and **identity**._
-{{% /panel %}}
+{{% /hint %}}
  
 There are three main aspects to this definition of entity:
 * Entities are objects (containing both state and function) which means they can
