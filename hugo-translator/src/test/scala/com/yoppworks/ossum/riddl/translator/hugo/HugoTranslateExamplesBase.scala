@@ -12,7 +12,6 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
 
   val directory: String = "examples/src/riddl/"
   val output: String
-  val roots: Map[String, String]
 
   def outPath(path: String): Path = {
     Path.of(output).resolve(new File(path).getName)

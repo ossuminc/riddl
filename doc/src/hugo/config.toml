@@ -1,42 +1,152 @@
-######################## basic configuration ####################
+# Configure GeekDocs
 baseURL = "https://riddl.yoppworks.com/"
+languageCode = 'en-us'
 title = "RIDDL Documentation"
 theme = ["hugo-geekdoc", "riddl-hugo-theme"]
-author = "Reid Spencer"
+name = "riddl"
+description = "Technical documentation for Reactive Interace to Domain Design Language"
+homepage = "https://riddl.yoppworks.com/"
+demosite = "https://riddl.yoppworks.com/"
+tags = ["docs", "documentation", "responsive", "simple", "riddl"]
+min_version = "0.83.0"
 # googleAnalytics = "" # example : UA-123-45
-disableLanguages = [] # desable language from here
-pygmentsCodeFences=  true
-pygmentsStyle=  "monokailight"
+disableLanguages = [] # disable language from here
+
+[author]
+  name = "Reid Spencer"
+  email = "reid.spencer@yoppworks.com"
+  homepage = "https://www.yoppworks.com/"
+
+
+# Required to get well formatted code blocks
+pygmentsUseClasses = true
+pygmentsCodeFences = true
+disablePathToLower = true
+enableGitInfo      = true
+pygmentsStyle      =  "monokailight"
 
 # hugo outputs
 [outputs]
 home = [ "HTML", "JSON", "RSS"]
 
-# render unsafe html
+# Required if you want to render robots.txt template
+enableRobotsTXT = true
+
+[markup.tableOfContents]
+  startLevel = 1
+  endLevel = 9
+
+## markup(down?) rendering configuration
 [markup.goldmark.renderer]
-unsafe = true
+  unsafe = true
 
 [markup.goldmark.extensions]
-definitionList = true
-footnote = true
-linkify = true
-strikethrough = true
-table = true
-taskList = true
-typographer = true
+  definitionList = true
+  footnote = true
+  linkify = true
+  strikethrough = true
+  table = true
+  taskList = true
+  typographer = true
 
 # Configure code highlighting
 [markup.highlight]
-anchorLineNos = false
-codeFences= true
-guessSyntax= false
-hl_Lines= ""
-lineAnchors= ""
-lineNoStart= 1
-lineNos= false
-lineNumbersInTable= true
-noClasses= true
-tabWidth= 2
+  anchorLineNos = false
+  codeFences= true
+  guessSyntax= false
+  hl_Lines= ""
+  lineAnchors= ""
+  lineNoStart= 1
+  lineNos= false
+  lineNumbersInTable= true
+  noClasses= true
+  tabWidth= 2
+
+[taxonomies]
+  tag = "tags"
+
+[params]
+# (Optional, default 6) Set how many table of contents levels to be showed on page.
+# Use false to hide ToC, note that 0 will default to 6 (https://gohugo.io/functions/default/)
+# You can also specify this parameter per page in front matter.
+  geekdocToC = 4
+
+# (Optional, default static/brand.svg) Set the path to a logo for the Geekdoc
+# relative to your 'static/' folder.
+  geekdocLogo = "images/YWLogo.png"
+
+# (Optional, default false) Render menu from data file in 'data/menu/main.yaml'.
+# See also https://geekdocs.de/usage/menus/#bundle-menu.
+  geekdocMenuBundle = false
+
+# (Optional, default false) Collapse all menu entries, can not be overwritten
+# per page if enabled. Can be enabled per page via `geekdocCollapseSection`.
+  geekdocCollapseAllSections = false
+
+# (Optional, default true) Show page navigation links at the bottom of each
+# docs page (bundle menu only).
+  geekdocNextPrev = true
+
+# (Optional, default true) Show a breadcrumb navigation bar at the top of each docs page.
+# You can also specify this parameter per page in front matter.
+  geekdocBreadcrumb = true
+
+# (Optional, default none) Set source repository location. Used for 'Edit page' links.
+# You can also specify this parameter per page in front matter.
+  geekdocRepo = "https://github.com/Yoppworks/riddl"
+
+# (Optional, default none) Enable 'Edit page' links. Requires 'GeekdocRepo' param
+# and path must point to 'content' directory of repo.
+# You can also specify this parameter per page in front matter.
+  geekdocEditPath = "blob/main/doc/src/hugo/content"
+
+# (Optional, default true) Enables search function with flexsearch.
+# Index is built on the fly and might slow down your website.
+  geekdocSearch = true
+
+# (Optional, default false) Display search results with the parent folder as prefix. This
+# option allows you to distinguish between files with the same name in different folders.
+# NOTE: This parameter only applies when 'geekdocSearch = true'.
+  geekdocSearchShowParent = true
+
+# (Optional, default none) Add a link to your Legal Notice page to the site footer.
+# It can be either a remote url or a local file path relative to your content directory.
+  geekdocLegalNotice = "https://www.yoppworks.com/legal"
+
+# (Optional, default none) Add a link to your Privacy Policy page to the site footer.
+# It can be either a remote url or a local file path relative to your content directory.
+  geekdocPrivacyPolicy = "https://www.yoppworks.com/privacy"
+
+# (Optional, default true) Add an anchor link to headlines.
+  geekdocAnchor = true
+
+# (Optional, default true) Copy anchor url to clipboard on click.
+  geekdocAnchorCopy = false
+
+# (Optional, default true) Enable or disable image lazy loading for images rendered
+# by the 'img' shortcode.
+  geekdocImageLazyLoading = true
+
+# (Optional, default false) Set HTMl <base> to .Site.BaseURL if enabled. It might be required
+# if a subdirectory is used within Hugos BaseURL.
+# See https://developer.mozilla.org/de/docs/Web/HTML/Element/base.
+  geekdocOverwriteHTMLBase = false
+
+# (Optional, default false) Auto-decrease brightness of images and add a slightly grayscale to avoid
+# bright spots while using the dark mode.
+  geekdocDarkModeDim = true
+
+# (Optional, default true) Display a "Back to top" link in the site footer.
+  geekdocBackToTop = true
+
+# (Optional, default false) Enable or disable adding tags for post pages automatically to the navigation sidebar.
+  geekdocTagsToMenu = true
+
+# (Optional, default 'title') Configure how to sort file-tree menu entries. Possible options are 'title', 'linktitle',
+# 'date', 'publishdate', 'expirydate' or 'lastmod'. Every option can be used with a reverse modifier as well
+# e.g. 'title_reverse'.
+  geekdocFileTreeSortBy = "title"
+
 
 ############################# Plugins ##############################
 
@@ -106,19 +216,6 @@ icon_font = "Font Awesome 5 Free"
 font_size = "14px" # default is 16px
 font_scale = "1.25" # default is "majorThird": 1.25
 
-#################### GoDocs parameters ################################
-[params]
-logo = "images/YWLogo-60px-high.png"
-favicon = "images/favicon.png"
-# Meta data
-description = "This is meta description"
-author = "Yoppworks Inc."
-# contact form action
-contact_form_action = "#" # contact form works with https://formspree.io
-navigation_button_solid= true
-mermaidInitialize = "{ \"theme\": \"dark\" }"
-editURL= "https=//gitlab.com/yoppworks/ossum/riddl/edit/master/doc/src/hugo"
-
 # Preloader
 [params.preloader]
 enable = false
@@ -133,7 +230,6 @@ link = "changelog"
 style = "solid" # available style: solid, outline
 label = "Contact"
 link = "contact"
-
 
 ############################# social site ########################
 
@@ -151,124 +247,3 @@ link = "https://github.com/yoppworks"
 title = "linkedin"
 icon = "fab fa-linkedin" # fontawesome icon : https://fontawesome.com/icons
 link = "https://linkedin.com/company/yoppworks"
-
-
-################################### English language #####################################
-[Languages.en]
-languageName = "En"
-languageCode = "en-us"
-weight = 1
-# copyright
-copyright = "(c) 2021 Yoppworks Inc. All Rights Reserved."
-
-# banner
-[Languages.en.banner]
-title = "Documentation For Yoppworks' RIDDL"
-subtitle = ""
-image = "images/banner.jpg"
-
-# call to action
-[Languages.en.call_to_action]
-enable = false
-title = "Didn't Find What You're Looking For?"
-image = "images/cta-illustration.jpg"
-content = "Just click the button and we will get back to you"
-
-  # call to action button
-  [Languages.en.call_to_action.button]
-  enable = "true"
-  label = "Contact Us"
-  link = "contact"
-
-
-############## English navigation ###############
-# main menu
-[[Languages.en.menu.main]]
-name = "Home"
-url = ""
-weight = 1
-
-[[Languages.en.menu.main]]
-name = "GitLab"
-url = "https://gitlab.com/yoppworks/ossum/riddl"
-weight = 2
-
-
-# footer menu
-[[Languages.en.menu.footer]]
-name = "Home"
-url = ""
-weight = 1
-
-[[Languages.en.menu.footer]]
-name = "Changelog"
-url = "changelog"
-weight = 2
-
-[[Languages.en.menu.footer]]
-name = "Contact"
-url = "contact"
-weight = 3
-
-[[Languages.en.menu.footer]]
-name = "GitLab"
-url = "https://gitlab.com/yoppworks/ossum/riddl"
-weight = 4
-
-
-################################### French language #####################################
-[Languages.fr]
-languageName = "Fr"
-languageCode = "fr-fr"
-weight = 2
-# copyright
-copyright = "(c) 2021 Yoppworks Inc. All Rights Reserved."
-
-# banner
-[Languages.fr.banner]
-title = "Documentation Theme By Themefisher Team"
-subtitle = "Lorem ipsum dolor amet, consetetur sadiffspscing elitr, diam nonumy invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua At."
-image = "images/banner.jpg"
-
-# call to action
-[Languages.fr.call_to_action]
-enable = true
-title = "Still Didn't Find Your Answer?"
-image = "images/cta-illustration.jpg"
-content = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam <br> nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam"
-
-  # call to action button
-  [Languages.fr.call_to_action.button]
-  enable = "true"
-  label = "Submit a ticket"
-  link = "contact"
-
-
-############## French navigation ###############
-# main menu
-[[Languages.fr.menu.main]]
-name = "Home"
-url = ""
-weight = 1
-
-[[Languages.fr.menu.main]]
-name = "Github"
-url = "https://github.com/themefisher/"
-weight = 2
-
-
-# footer menu
-[[Languages.fr.menu.footer]]
-name = "Changelog"
-url = "changelog"
-weight = 1
-
-[[Languages.fr.menu.footer]]
-name = "contact"
-url = "contact"
-weight = 2
-
-[[Languages.fr.menu.footer]]
-name = "Github"
-url = "https://github.com/themefisher/"
-weight = 3

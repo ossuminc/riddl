@@ -1,5 +1,13 @@
 domain ReactiveBBQ is {
 
+author is {
+  name: "Reid Spencer"
+  email: "reid.spencer@yoppworks.com"
+  organization: "Yoppworks Inc."
+  title: "VP Technologies"
+  url: http://www.yoppworks.com/
+}
+
 include "restaurant/domain"
 include "backoffice/domain"
 include "corporate/domain"
@@ -13,7 +21,7 @@ include "corporate/domain"
 |This domain definition is designed to be instructive in the RIDDL language.
 |It uses the case study from the Lightbend Reactive Architecture course as
 |the basis for defining the domain. The course uses a set of interviews with
-|Reactive BBQ employees and customersto define the requirements. This domain
+|Reactive BBQ employees and customers to define the requirements. This domain
 |specification is a possible result of analyzing that domain: the Reactive BBQ
 |restaurant.
 }

@@ -30,13 +30,20 @@ case class MarkdownWriter(filePath: Path) {
 
   def nl: this.type = {sb.append("\n"); this}
 
-  def fileHead(name: String, weight: Int, desc: Option[String]): this
-    .type = {
+  def fileHead(
+                name: String,
+                weight: Int,
+                desc: Option[String],
+                extras: Map[String,String] = Map.empty[String,String]
+              ): this.type = {
+    val adds: String = extras.map{ case (k: String, v: String) => s"$k: $v"}.mkString("\n")
     val headTemplate =
       s"""---
          |title: "$name"
          |weight: $weight
          |description: "${desc.getOrElse("")}"
+         |geekdocAnchor: true
+         |$adds
          |---
          |""".stripMargin
     sb.append(headTemplate)
@@ -47,7 +54,9 @@ case class MarkdownWriter(filePath: Path) {
 
   def fileHead(cont: Container[Definition]): this.type = {
     fileHead(cont.id.format, containerWeight,
-      Option(cont.brief.fold(cont.id.format + " has no brief description.")(_.s)))
+      Option(cont.brief.fold(cont.id.format + " has no brief description.")(_.s)),
+      Map("geekdocCollapseSection" -> "true")
+    )
   }
 
   def fileHead(definition: Definition, weight: Int): this.type = {

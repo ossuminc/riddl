@@ -33,6 +33,8 @@ class MarkdownWriterTest extends ParsingTest {
               |title: "TestDomain"
               |weight: 10
               |description: "Just For Testing"
+              |geekdocAnchor: true
+              |geekdocCollapseSection: true
               |---
               |# Domain 'TestDomain'
               |

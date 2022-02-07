@@ -183,7 +183,7 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(H
   Hugo / sourceDirectory := sourceDirectory.value / "hugo",
   // minimumHugoVersion := "0.89.4",
   publishSite
-).dependsOn(language % "test->compile;test->test", riddlc)
+).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(BuildInfoPlugin)
