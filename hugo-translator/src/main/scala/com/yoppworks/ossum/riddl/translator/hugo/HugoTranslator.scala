@@ -62,7 +62,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     ConfigSource.file(path).load[HugoTranslatorConfig]
   }
 
-  val riddl_hugo_theme = "riddl-hugo-theme" -> "riddl-hugo-theme.zip"
+  val riddl_hugo_theme: (String, String) = "riddl-hugo-theme" -> "riddl-hugo-theme.zip"
   val geekdoc_dest_dir = "hugo-geekdoc"
   val geekDoc_version = "v0.25.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
@@ -94,7 +94,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     val url = this.getClass.getClassLoader.getResource(riddl_hugo_theme._2)
     loadATheme(url, options.themesRoot.resolve(riddl_hugo_theme._1))
   }
-
 
   def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)

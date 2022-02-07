@@ -1,6 +1,6 @@
 package com.yoppworks.ossume.riddl.generator.d3
 
-import com.yoppworks.ossum.riddl.language.AST.{Container, Definition, RootContainer}
+import com.yoppworks.ossum.riddl.language.AST.{Container, Definition, LiteralString, RootContainer}
 import com.yoppworks.ossum.riddl.language.{AST, Folding}
 import ujson.*
 
@@ -30,18 +30,22 @@ case class TableOfContents(
     sb.append(definition.id.format).toString
   }
 
-  private def mkObject(d: Definition, name: String, stack: ParentStack): Obj = {
-    Obj("name" -> name, "link" -> mkPathId(d, stack), "children" -> Arr())
+  private def mkObject(d: Definition, stack: ParentStack): Obj = {
+    Obj("name" -> s"${AST.kind(d)}:${d.id.format}",
+      "link" -> mkPathId(d, stack),
+      "brief" -> d.brief.getOrElse(LiteralString(0 -> 0, "")).s,
+      "children" -> Arr()
+    )
   }
 
   private def addDef(entry: Obj, d: Definition, stack: ParentStack): Obj = {
-    val child = mkObject(d, s"${AST.kind(d)}:${d.id.format}", stack)
+    val child = mkObject(d, stack)
     entry.obj("children").arr.append(child)
     child
   }
 
   def makeData: Arr = {
-    val rootObj = mkObject(rootContainer, "root", empty)
+    val rootObj = mkObject(rootContainer, empty)
 
     Folding.foldLeft(rootObj, empty)(rootContainer) { (entry, definition, stack) =>
       definition match {
@@ -49,9 +53,6 @@ case class TableOfContents(
           entry
         case c: Container[?] =>
           addDef(entry, c, stack)
-        case d: Definition =>
-          addDef(entry, d, stack)
-          entry
         case _ =>
           entry
       }

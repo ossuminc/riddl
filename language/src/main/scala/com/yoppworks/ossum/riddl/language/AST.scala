@@ -181,7 +181,7 @@ object AST {
       case _: Outlet => "Outlet"
       case _: Pipe => "Pipe"
       case _: Plant => "Plant"
-      case _: Processor => "Processor"
+      case p: Processor => p.kind.getClass.getSimpleName
       case _: RootContainer => "Root"
       case _: Saga => "Saga"
       case _: SagaAction => "SagaAction"
@@ -1746,6 +1746,7 @@ object AST {
     loc: Location,
     id: Identifier,
     type_ : TypeRef,
+    entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
     extends Streamlet
@@ -1763,9 +1764,24 @@ object AST {
     loc: Location,
     id: Identifier,
     type_ : TypeRef,
+    entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
     extends Streamlet
+
+  sealed trait ProcessorKind extends RiddlValue
+
+  case class Source(loc: Location) extends ProcessorKind
+
+  case class Sink(loc: Location) extends ProcessorKind
+
+  case class Flow(loc: Location) extends ProcessorKind
+
+  case class Merge(loc: Location) extends ProcessorKind
+
+  case class Split(loc: Location) extends ProcessorKind
+
+  case class Multi(loc: Location) extends ProcessorKind
 
   /**
    * A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A processor's
@@ -1782,6 +1798,7 @@ object AST {
   case class Processor(
     loc: Location,
     id: Identifier,
+    kind: ProcessorKind,
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],

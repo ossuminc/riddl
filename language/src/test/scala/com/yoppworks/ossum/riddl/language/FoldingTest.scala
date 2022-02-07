@@ -8,7 +8,7 @@ class FoldingTest extends ParsingTest {
         """domain one is {
           |  plant one is {
           |    pipe a is { ??? }
-          |    processor b is {
+          |    flow b is {
           |      inlet b_in is String
           |      outlet b_out is Number
           |    }
@@ -76,9 +76,9 @@ class FoldingTest extends ParsingTest {
             List("Root '<path>'", "Domain 'one'", "Interaction 'one'"),
             List("Root '<path>'", "Domain 'one'", "Plant 'one'"),
             List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Pipe 'a'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Processor 'b'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Processor 'b'", "Inlet 'b_in'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Processor 'b'", "Outlet 'b_out'")
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Flow 'b'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Flow 'b'", "Inlet 'b_in'"),
+            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Flow 'b'", "Outlet 'b_out'")
           )
           result mustBe expectedResult
       }

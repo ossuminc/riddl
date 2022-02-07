@@ -49,14 +49,14 @@ Missing: everything.riddl(84:7): State 'otherThingState' should have a descripti
 Missing: everything.riddl(83:7): Type 'ItHappened' should have a description
 Missing: everything.riddl(35:48): Enumerator 'Persimmon' should have a description
 Missing: everything.riddl(35:33): Enumerator 'Pear' should have a description
-Missing: everything.riddl(12:27): Outlet 'Commands' should have a description
+Missing: everything.riddl(12:24): Outlet 'Commands' should have a description
 Missing: everything.riddl(15:5): Joint 'input' should have a description
 Missing: everything.riddl(16:5): Joint 'output' should have a description
 Missing: everything.riddl(35:27): Enumerator 'Apple' should have a description
 Missing: everything.riddl(35:38): Enumerator 'Peach' should have a description
-Missing: everything.riddl(13:25): Inlet 'Commands' should have a description
+Missing: everything.riddl(13:20): Inlet 'Commands' should have a description
 Error: everything.riddl(72:20): 'Something' was expected to be a command type but is an Entity instead
-Style: everything.riddl(13:25): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:34)
+Style: everything.riddl(13:20): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:31)
 Error: everything.riddl(76:29): 'Inebriated' is not defined but should be a message type
 Error: everything.riddl(75:18): 'misc' is not defined but should be a Function
 Error: everything.riddl(88:62): 'ItHappened.when' is not defined but should be a Field

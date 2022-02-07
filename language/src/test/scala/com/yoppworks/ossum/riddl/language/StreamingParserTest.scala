@@ -6,15 +6,17 @@ import com.yoppworks.ossum.riddl.language.AST.*
 class StreamingParserTest extends ParsingTest {
 
   "StreamingParser" should {
-    "recognize a Processor" in {
-      val input = """
-                    |processor GetWeatherForecast is {
-                    |  outlet Weather is Forecast
-                    |} brief "foo" described by "This is a source for Forecast data"
-                    |""".stripMargin
+    "recognize a source processor" in {
+      val input =
+        """
+          |source GetWeatherForecast is {
+          |  outlet Weather is Forecast
+          |} brief "foo" described by "This is a source for Forecast data"
+          |""".stripMargin
       val expected = Processor(
         1 -> 1,
-        Identifier(2 -> 11, "GetWeatherForecast"),
+        Identifier(2 -> 8, "GetWeatherForecast"),
+        Source(1 -> 1),
         List.empty[Inlet],
         List(Outlet(
           3 -> 3,
@@ -67,16 +69,16 @@ class StreamingParserTest extends ParsingTest {
           |domain AnyDomain is {
           |plant SensorMaintenance is {
           |
-          |  processor GetWeatherForecast is {
+          |  source GetWeatherForecast is {
           |    outlet Weather is Forecast
           |  } described by "This is a source for Forecast data"
           |
-          |  processor GetCurrentTemperature is {
+          |  flow GetCurrentTemperature is {
           |    inlet Weather is Forecast
           |    outlet CurrentTemp is Temperature
           |  } explained as "This is a Flow for the current temperature, when it changes"
           |
-          |  processor AttenuateSensor is {
+          |  sink AttenuateSensor is {
           |    inlet CurrentTemp is Temperature
           |  } explained as "This is a Sink for making sensor adjustments based on temperature"
           |
@@ -126,7 +128,8 @@ class StreamingParserTest extends ParsingTest {
         List(
           Processor(
             5 -> 3,
-            Identifier(5 -> 13, "GetWeatherForecast"),
+            Identifier(5 -> 10, "GetWeatherForecast"),
+            Source(5 -> 3),
             List(),
             List(Outlet(
               6 -> 5,
@@ -143,7 +146,8 @@ class StreamingParserTest extends ParsingTest {
           ),
           Processor(
             9 -> 3,
-            Identifier(9 -> 13, "GetCurrentTemperature"),
+            Identifier(9 -> 8, "GetCurrentTemperature"),
+            Flow(9 -> 3),
             List(Inlet(
               10 -> 5,
               Identifier(10 -> 11, "Weather"),
@@ -168,7 +172,8 @@ class StreamingParserTest extends ParsingTest {
           ),
           Processor(
             14 -> 3,
-            Identifier(14 -> 13, "AttenuateSensor"),
+            Identifier(14 -> 8, "AttenuateSensor"),
+            Sink(14 -> 3),
             List(Inlet(
               15 -> 5,
               Identifier(15 -> 11, "CurrentTemp"),

@@ -1,8 +1,9 @@
 package com.yoppworks.ossum.riddl.generator.d3.TableOfContentsTest
 
-import com.yoppworks.ossum.riddl.language.ValidatingTest
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
+import com.yoppworks.ossum.riddl.language.{ParsingOptions, ValidatingTest}
 import com.yoppworks.ossume.riddl.generator.d3.TableOfContents
-import ujson.{Arr, Obj, validate}
+// import ujson.{Arr, Obj}
 
 import java.net.URL
 
@@ -24,8 +25,8 @@ class TableOfContentsTest extends ValidatingTest {
       parseAndValidate(
         input,
         "TableOfContents.build-correct-data-hierarchy",
-        ValidationOptions(
-          showTimes = true,
+        ValidatingOptions(
+          parsingOptions = ParsingOptions(showTimes = true),
           showWarnings = false,
           showMissingWarnings = false,
           showStyleWarnings = false
@@ -37,32 +38,21 @@ class TableOfContentsTest extends ValidatingTest {
           val toc = TableOfContents(baseURL, root)
           val data = toc.makeData
           try {
-            validate(data)
+            ujson.validate(data)
           } catch {
             case x: Exception =>
               fail(x)
           }
-          data mustBe
-            Arr(
-              Obj("name" -> "Domain:a", "link" -> "https://example.com/a/",
-                "children" -> Arr(
-                  Obj("name" -> "Context:b", "link" -> "https://example.com/a/b/",
-                    "children" -> Arr(
-                      Obj("name" -> "Entity:c", "link" -> "https://example.com/a/b/c",
-                        "children" -> Arr()),
-                      Obj("name" -> "Entity:d", "link" -> "https://example.com/a/b/d",
-                        "children" -> Arr())
-                    )
-                  ),
-                  Obj("name" -> "Context:e", "link" -> "https://example.com/a/e/",
-                    "children" -> Arr(
-                      Obj("name" -> "Entity:f", "link" -> "https://example.com/a/e/f",
-                        "children" -> Arr()),
-                    )
-                  )
-                )
-              )
-            )
+
+          val expected =
+            """[{"name":"Domain:a","link":"https://example.com/a","brief":"",
+              |"children":[{"name":"Context:b","link":"https://example.com/a/b","brief":"",
+              |"children":[{"name":"Entity:c","link":"https://example.com/a/b/c","brief":"",
+              |"children":[{"name":"Entity:d","link":"https://example.com/a/b/d","brief":"",
+              |"children":[{"name":"Context:e","link":"https://example.com/a/e","brief":"",
+              |"children":[{"name":"Entity:f","link":"https://example.com/a/e/f","brief":"",
+              |"children":[]}]}]}]}]}]}]""".stripMargin
+          data.toString() mustBe expected
       }
     }
   }

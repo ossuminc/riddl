@@ -71,6 +71,13 @@ trait GherkinParser extends ActionParser {
     ).map { case (loc, id, (g, w, t, e), brief, desc) => Example(loc, id, g, w, t, e, brief, desc) }
   }
 
-  def examples[u: P]: P[Seq[Example]] = { P(example.rep(0)) }
+  def testedWithExamples[u: P]: P[Seq[Example]] = {
+    P(("tested" ~ ("with" | "by")).? ~ examples).?.map {
+      case Some(examples) => examples
+      case None => Seq.empty[Example]
+    }
+  }
+
+  def examples[u: P]: P[Seq[Example]] = {P(example.rep(0))}
 
 }

@@ -453,12 +453,19 @@ object Validation {
           // Too many matches / non-unique
           case (d, optT) :: tail => handleMultipleResultsCase[T](id, d, optT, tail)
         }
-      } else { this }
+      } else {this}
     }
 
     def checkRef[T <: Definition : ClassTag](reference: Reference[T]): ValidationState = {
       checkPathRef[T](reference.id)()
     }
+
+    def checkRef[T <: Definition : ClassTag](reference: Option[Reference[T]]): ValidationState = {
+      if (reference.nonEmpty) {
+        checkPathRef[T](reference.get.id)()
+      } else {this}
+    }
+
 
     private def formatDefinitions[T <: Definition](list: List[T]): String = {
       list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }.mkString("\n")
@@ -751,6 +758,44 @@ object Validation {
         } other definitions"))
       }
     }
+
+    def checkProcessorKind(proc: Processor): ValidationState = {
+      val ins = proc.inlets.size
+      val outs = proc.outlets.size
+      proc.kind match {
+        case AST.Source(loc) =>
+          if (ins != 0 || outs != 1) {
+            this.addError(loc,
+              s"${proc.identify} should have 1 Outlet and no Inlets but has $outs and $ins ")
+          } else {this}
+        case AST.Flow(loc) =>
+          if (ins != 1 || outs != 1) {
+            this.addError(loc,
+              s"${proc.identify} should have 1 Outlet and 1 Inlet but has $outs and $ins")
+          } else {this}
+        case AST.Sink(loc) =>
+          if (ins != 1 || outs != 0) {
+            this.addError(loc,
+              s"${proc.identify} should have no Outlets and 1 Inlet but has $outs and $ins")
+          } else {this}
+        case AST.Merge(loc) =>
+          if (ins < 2 || outs != 1) {
+            this.addError(loc,
+              s"${proc.identify} should have 1 Outlet and >1 Inlets but has $outs and $ins")
+          } else {this}
+        case AST.Split(loc) =>
+          if (ins != 1 || outs < 2) {
+            this.addError(loc,
+              s"${proc.identify} should have >1 Outlets and 1 Inlet but has $outs and $ins")
+          } else {this}
+        case AST.Multi(loc) =>
+          if (ins < 2 || outs < 2) {
+            this.addError(loc,
+              s"${proc.identify} should have >1 Outlets and >1 Inlets but has $outs and $ins")
+          } else {this}
+      }
+    }
+
   }
 
   class ValidationFolding extends Folding.Folding[ValidationState] {
@@ -1017,7 +1062,17 @@ object Validation {
       state: ValidationState,
       container: Plant,
       processor: Processor
-    ): ValidationState = state.checkDefinition(container, processor)
+    ): ValidationState = {
+      state
+        .checkDefinition(container, processor)
+        .checkProcessorKind(processor)
+        .step { s2 =>
+          val s3 = processor.inlets.foldLeft(s2) { (s, n) => s.checkRef[Entity](n.entity) }
+          processor.outlets.foldLeft(s3) { (s, n) => s.checkRef[Entity](n.entity) }
+        }.step { s5 =>
+        s5.checkExamples(processor.examples)
+      }
+    }
 
     override def closeProcessor(
       state: ValidationState,

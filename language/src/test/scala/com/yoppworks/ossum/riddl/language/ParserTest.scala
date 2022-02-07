@@ -81,7 +81,7 @@ class ParserTest extends ParsingTest {
                     |  plant one is { ??? }
                     |  plant two is {
                     |    pipe a is { ??? }
-                    |    processor b is { ??? }
+                    |    multi b is { ??? }
                     |  }
                     |  interaction one is { ??? }
                     |  context one is { ??? }

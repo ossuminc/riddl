@@ -9,8 +9,8 @@ domain Everything is {
   // in domain scope because they can cross contexts too.
 
   plant APlant is {
-    processor Source is { outlet Commands is DoAThing } described by "Data Source"
-    processor Sink is { inlet Commands is DoAThing } explained as "Data Sink"
+    source Source is { outlet Commands is DoAThing } described by "Data Source"
+    sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
     pipe AChannel is { transmit DoAThing } explained as "A Channel"
     joint input is outlet Source.Commands to pipe AChannel
     joint output is inlet Sink.Commands from pipe AChannel
