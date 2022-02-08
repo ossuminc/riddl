@@ -44,6 +44,7 @@ class TableOfContentsTest extends ValidatingTest {
               fail(x)
           }
 
+          // scalastyle:off
           val expected =
             """[{"name":"Domain:a","link":"https://example.com/a","brief":"",
               |"children":[{"name":"Context:b","link":"https://example.com/a/b","brief":"",

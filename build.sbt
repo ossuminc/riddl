@@ -59,10 +59,12 @@ lazy val scala2_13_Options = Seq(
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
   .aggregate(
     language,
-    /*`d3-generator`,*/
+    `d3-generator`,
     `hugo-theme`,
     `hugo-translator`,
-    `hugo-generator`, riddlc, `sbt-riddl`, doc /*, examples*/)
+    examples, doc,
+    riddlc, `sbt-riddl`
+  )
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
   .configure(C.withCoverage)
@@ -122,19 +124,6 @@ lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   ).dependsOn(language % "compile->compile;test->test", `hugo-theme`)
 
-lazy val `hugo-generator` = project.in(file("hugo-generator"))
-  .enablePlugins(BuildInfoPlugin)
-  .settings(
-    name := "riddl-hugo-generator",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.generation.hugo",
-    Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
-    Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig, Dep.cats_core) ++ Dep.testing
-  ).dependsOn(language, `hugo-theme`)
-
-// lazy val exampleTask = taskKey[File]("Task to generate example hugo docs")
-// lazy val runRiddlc = taskKey[Unit]("Run the riddlc compiler")
-
 lazy val examples = project.in(file("examples")).settings(
   name := "riddl-examples",
   Compile / packageBin / publishArtifact := false,
@@ -142,46 +131,13 @@ lazy val examples = project.in(file("examples")).settings(
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
   libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
-).dependsOn(`hugo-translator` % "test->compile;test->test", riddlc)
-
-/*
-  runRiddlc := {
-    val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
-    val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
-    riddlc/Compile/run.inputTaskValue.fullInput(
-      s"translate hugo -i ${inputDir}/rbbq.riddl -c rbbq.conf -o $outDir"
-    ).parsed
-  },
-  exampleTask := {
-    import scala.sys.process._
-    val outDir: File = target.value / "riddlc" / "ReactiveBBQ"
-    // val inputDir: File = sourceDirectory.value / "riddl" / "ReactiveBBQ"
-    // val riddlcPath: File = target.value.getParentFile.getParentFile.getAbsoluteFile / "riddlc" /
-      "target" / "universal" / "scripts" / "bin" / "riddlc"
-    // val cp: Seq[File] = (Runtime/fullClasspath).value.files
-    // val foo = riddlc/Compile/run.value.fullInput("translate hugo -i rbbq.riddl -c rbbq.conf -o $outDir")
-    runRiddlc.value
-    // val pb = Process(command, inputDir)
-    // println(command)
-    // val stdout = pb.!!
-    // println(stdout)
-    val artifact = Artifact("riddl-example", "zip", "zip")
-    val output: File = target.value / (artifact.name + "." + artifact.extension)
-    val zipCommand = s"zip -rv9o ${output.toString} ReactiveBBQ"
-    val zpb = Process(zipCommand, outDir.getParentFile)
-    println(zipCommand)
-    zpb.run
-    output
-  },
-  addArtifact(Artifact("riddl-example", "zip", "zip"), exampleTask)
- */
+).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
   .enablePlugins(SiteScaladocPlugin).settings(
   name := "riddl-doc",
   publishTo := Option(Resolver.defaultLocal),
   Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-  // minimumHugoVersion := "0.89.4",
   publishSite
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
@@ -197,7 +153,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoUsePackageAsPath := true
-  ).dependsOn(language, `hugo-generator`, `hugo-translator`)
+  ).dependsOn(language, `hugo-translator`)
 
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
