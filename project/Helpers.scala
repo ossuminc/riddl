@@ -25,7 +25,6 @@ object Dep {
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val ujson = "com.lihaoyi" %% "ujson" % V.ujson
 
-  val parsing = Seq(fastparse, pureconfig)
   val testing = Seq(scalactic, scalatest, scalacheck)
 
 }

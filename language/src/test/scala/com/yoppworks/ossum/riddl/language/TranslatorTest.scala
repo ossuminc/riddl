@@ -3,9 +3,6 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.AST.Container
 import com.yoppworks.ossum.riddl.language.AST.Definition
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
-import pureconfig.generic.auto.*
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
 
 import java.io.File
 import java.nio.file.Path
@@ -26,28 +23,20 @@ class TranslatorTest extends ValidatingTest {
     logger: Option[Logger] = None)
       extends TranslatingOptions
 
-  case class TestTranslatorConfig() extends TranslatorConfiguration
-
-  case class TestTranslatorState(config: TestTranslatorConfig) extends TranslatorState {
+  case class TestTranslatorState(options: TestTranslatingOptions) extends TranslatorState {
     override def generatedFiles: Seq[File] = Seq.empty[File]
 
     override def addFile(file: File): TranslatorState = this
   }
 
-  class TestTranslator extends Translator[TestTranslatingOptions, TestTranslatorConfig] {
-    val defaultConfig: TestTranslatorConfig = TestTranslatorConfig()
+  class TestTranslator extends Translator[TestTranslatingOptions] {
     val defaultOptions: TestTranslatingOptions = TestTranslatingOptions()
 
-    override def loadConfig(path: Path): ConfigReader.Result[TestTranslatorConfig] = {
-      ConfigSource.file(path).load[TestTranslatorConfig]
-    }
-
-    override def translate(
+    override def translateImpl(
       root: AST.RootContainer,
       options: TestTranslatingOptions,
-      config: TestTranslatorConfig
     ): Seq[File] = {
-      val state = TestTranslatorState(config)
+      val state = TestTranslatorState(options)
       val parents = scala.collection.mutable.Stack.empty[Container[Definition]]
       Folding.foldLeft(state, parents)(root) { case (state, definition, stack) =>
         options.log.info(stack.reverse.mkString(".") + "." + definition.id.format)

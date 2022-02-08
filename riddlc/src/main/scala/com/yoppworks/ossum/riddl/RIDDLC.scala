@@ -4,12 +4,11 @@ import com.yoppworks.ossum.riddl.RiddlOptions.*
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.FormatTranslator
-import com.yoppworks.ossum.riddl.language.Logger
 import com.yoppworks.ossum.riddl.language.Riddl
-import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslator
+import com.yoppworks.ossum.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
+import pureconfig.*
 
 import java.nio.file.Path
-import scala.annotation.unused
 
 /** RIDDL Main Program */
 object RIDDLC {
@@ -24,7 +23,6 @@ object RIDDLC {
             case Validate => validate(options)
             case Prettify => prettify(options)
             case Hugo     => translateHugo(options)
-            case OldHugo  => generateHugo(options)
             case D3       => generateD3(options)
             case _ =>
               options.log.error(s"A command must be specified as an option")
@@ -86,45 +84,23 @@ object RIDDLC {
   }
 
   def translateHugo(options: RiddlOptions): Boolean = {
-    parseAndValidate(options.hugoOptions.inputPath, options.hugoOptions.validatingOptions) match {
-      case None =>
-        options.log.error("Translation to Hugo was cancelled due to parse or validation errors")
-        false
-      case Some(root) => HugoTranslator.translate(root, options.hugoOptions).nonEmpty
-    }
-  }
+    implicitly[ConfigReader[HugoTranslatingOptions]]
 
-  def required[A](opt: Option[A])(log: Logger, errorMsg: String): Option[A] = opt match {
-    case ok @ Some(_) => ok
-    case None =>
-      log.error(errorMsg)
-      None
-  }
-
-  def printError(log: Logger, error: Throwable): Unit = {
-    log.error(error.toString)
-    log.error("Stack Trace:")
-    error.printStackTrace(System.err)
-  }
-
-  def generateHugo(
-    @unused
-    options: RiddlOptions
-  ): Boolean = {
-    false
-    /*
-    val tOpts = options.translationOptions
-    for {
-      astRoot <- Riddl.parse(tOpts.inputPath.get, options.log, options.validationOptions)
-      genOpts = GeneratorOptions(tOpts.outputPath.get.toFile.getAbsolutePath,
-        tOpts.projectName.get, options.verbose)
-      _ <- HugoGenerator.attempt(astRoot, genOpts).leftMap(printError(options.log,_)).toOption
-    } yield {
-      options.log.info("Hugo documentation generated!")
-    }
-    true
-
-     */
+    RiddlOptions.loadOptions[HugoTranslatingOptions](options.optionsPath, HugoTranslatingOptions()) match {
+        case Right(hugoOpts) =>
+          val newOpts = options.copy(hugoOptions = hugoOpts)
+          parseAndValidate(newOpts.hugoOptions.inputPath, newOpts.hugoOptions.validatingOptions) match {
+            case None =>
+              options.log.error("Translation to Hugo was cancelled due to parse or validation errors")
+              false
+            case Some(root) =>
+              HugoTranslator.translate(root, options.hugoOptions).nonEmpty
+          }
+        case Left(errors) =>
+          options.log.error(errors.head.toString)
+          errors.tail.foreach(err => options.log.error(err.toString))
+          false
+      }
   }
 
   def generateD3(options: RiddlOptions): Boolean = {

@@ -4,15 +4,11 @@ import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
-import pureconfig.{ConfigReader, ConfigSource}
-import pureconfig.generic.auto.*
 
 import java.io.File
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.mutable
-
-case class FormatConfig() extends TranslatorConfiguration
 
 case class FormattingOptions(
   validatingOptions: ValidatingOptions = ValidatingOptions(),
@@ -28,7 +24,7 @@ case class FormattingOptions(
 }
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
-object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
+object FormatTranslator extends Translator[FormattingOptions] {
 
   private type Lines = mutable.StringBuilder
 
@@ -42,18 +38,12 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
   }
 
   val defaultOptions: FormattingOptions = FormattingOptions()
-  val defaultConfig: FormatConfig = FormatConfig()
 
-  def loadConfig(path: Path): ConfigReader.Result[FormatConfig] = {
-    ConfigSource.file(path).load[FormatConfig]
-  }
-
-  def translate(
+  def translateImpl(
     root: RootContainer,
-    options: FormattingOptions,
-    configuration: FormatConfig
+    options: FormattingOptions
   ): Seq[File] = {
-    val state = FormatState(options, configuration)
+    val state = FormatState(options)
     val folding = new FormatFolding()
     folding.foldLeft(root, root, state).files
   }
@@ -68,10 +58,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     logger.toString()
   }
 
-  case class FormatState(
-    options: FormattingOptions,
-    config: FormatConfig)
-      extends Folding.State[FormatState] {
+  case class FormatState(options: FormattingOptions) extends Folding.State[FormatState] {
     def step(f: FormatState => FormatState): FormatState = f(this)
 
     private final val nl = "\n"

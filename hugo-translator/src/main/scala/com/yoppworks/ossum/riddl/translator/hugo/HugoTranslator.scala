@@ -3,8 +3,6 @@ package com.yoppworks.ossum.riddl.translator.hugo
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language._
-import pureconfig.generic.auto._
-import pureconfig.{ConfigReader, ConfigSource}
 
 import java.io.{File, IOException}
 import java.net.URL
@@ -34,9 +32,7 @@ case class HugoTranslatingOptions(
   lazy val configFile: Path = outputRoot.resolve("config.toml")
 }
 
-case class HugoTranslatorConfig() extends TranslatorConfiguration
-
-case class HugoTranslatorState(options: HugoTranslatingOptions, config: HugoTranslatorConfig) {
+case class HugoTranslatorState(options: HugoTranslatingOptions) {
   val files: mutable.ListBuffer[MarkdownWriter] = mutable.ListBuffer.empty[MarkdownWriter]
   val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
   dirs.push(options.contentRoot)
@@ -57,13 +53,8 @@ case class HugoTranslatorState(options: HugoTranslatingOptions, config: HugoTran
   }
 }
 
-object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorConfig] {
-  val defaultConfig: HugoTranslatorConfig = HugoTranslatorConfig()
+object HugoTranslator extends Translator[HugoTranslatingOptions] {
   val defaultOptions: HugoTranslatingOptions = HugoTranslatingOptions()
-
-  def loadConfig(path: Path): ConfigReader.Result[HugoTranslatorConfig] = {
-    ConfigSource.file(path).load[HugoTranslatorConfig]
-  }
 
   val riddl_hugo_theme: (String, String) = "riddl-hugo-theme" -> "riddl-hugo-theme.zip"
   val geekdoc_dest_dir = "hugo-geekdoc"
@@ -176,10 +167,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
     state.addFile(pars, d.id.format + ".md") -> pars
   }
 
-  override def translate(
+  override def translateImpl(
     root: AST.RootContainer,
-    options: HugoTranslatingOptions,
-    config: HugoTranslatorConfig
+    options: HugoTranslatingOptions
   ): Seq[File] = {
     val newOptions = makeDirectoryStructure(options)
     val maybeAuthor = root.domains.headOption match {
@@ -187,7 +177,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions, HugoTranslatorC
       case None         => Option.empty[AuthorInfo]
     }
     writeConfigToml(newOptions, maybeAuthor)
-    val state = HugoTranslatorState(options, config)
+    val state = HugoTranslatorState(options)
     val parents = mutable.Stack[Container[Definition]]()
 
     val newState = Folding.foldLeft(state, parents)(root) {

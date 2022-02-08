@@ -75,7 +75,7 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
     buildInfoUsePackageAsPath := true,
     coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.scopt) ++ Dep.parsing ++ Dep.testing,
+    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse)  ++ Dep.testing,
   )
 
 def makeThemeResource(name: String, from: File, targetDir: File): Seq[File] = {
@@ -148,7 +148,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     name := "riddlc",
     mainClass := Option("com.yoppworks.ossum.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.cats_core, Dep.config) ++ Dep.testing,
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
     maintainer := "reid.spencer@yoppworks.com",
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.yoppworks.ossum.riddl",
