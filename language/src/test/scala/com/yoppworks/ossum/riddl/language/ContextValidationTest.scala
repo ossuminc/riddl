@@ -7,8 +7,7 @@ class ContextValidationTest extends ValidatingTest {
 
   "Context" should {
     "allow options" in {
-      val input =
-        """options (wrapper, service, gateway, function)"""
+      val input = """options (wrapper, service, gateway, function)"""
       parseAndValidateContext(input) { case (context: Context, msgs: ValidationMessages) =>
         msgs.filter(_.kind.isError) mustBe (empty)
         context.options.size mustBe 4

@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, EntityAggregate, EntityAvailable,
-  EntityFiniteStateMachine, EntityMessageQueue, EntityTransient, Function}
+import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, EntityAggregate, EntityAvailable, EntityFiniteStateMachine, EntityMessageQueue, EntityTransient, Function}
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
@@ -9,11 +8,10 @@ class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
     "handle a variety of options" in {
-      val input =
-        """entity WithOptions is {
-          | options(fsm, mq, aggregate, transient, available)
-          | }
-          |""".stripMargin
+      val input = """entity WithOptions is {
+                    | options(fsm, mq, aggregate, transient, available)
+                    | }
+                    |""".stripMargin
       parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
         msgs.count(_.kind.isError) mustBe 2
         entity.options must contain(EntityFiniteStateMachine(3 -> 10))
@@ -25,13 +23,12 @@ class EntityValidatorTest extends ValidatingTest {
     }
 
     "handle entity with multiple states" in {
-      val input =
-        """entity MultiState is {
-          |  options(fsm)
-          |  state foo is { field: String }
-          |  state bar is { field2: Number }
-          |  handler fum is { ??? }
-          |}""".stripMargin
+      val input = """entity MultiState is {
+                    |  options(fsm)
+                    |  state foo is { field: String }
+                    |  state bar is { field2: Number }
+                    |  handler fum is { ??? }
+                    |}""".stripMargin
       parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
         msgs.filter(_.kind.isError) mustBe (empty)
         entity.states.size mustBe 2
@@ -69,18 +66,17 @@ class EntityValidatorTest extends ValidatingTest {
     }
 
     "produce an error for transient entity with empty event handler" in {
-      val input =
-        """
-          |domain foo is {
-          |context bar is {
-          |  entity Hamburger  is {
-          |    options (aggregate, transient)
-          |    state field is { field: SomeType }
-          |    handler foo is {}
-          |  }
-          |}
-          |}
-          |""".stripMargin
+      val input = """
+                    |domain foo is {
+                    |context bar is {
+                    |  entity Hamburger  is {
+                    |    options (aggregate, transient)
+                    |    state field is { field: SomeType }
+                    |    handler foo is {}
+                    |  }
+                    |}
+                    |}
+                    |""".stripMargin
       parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
@@ -90,21 +86,20 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
     "validate function examples" in {
-      parseAndValidateInContext[Function](
-        """
-          |  function AnAspect is {
-          |    EXAMPLE foobar {
-          |      GIVEN "everybody hates me"
-          |      AND "I'm depressed"
-          |      WHEN "I go fishing"
-          |      THEN "I'll just eat worms"
-          |      ELSE "I'm happy"
-          |    } described as {
-          |     "brief description"
-          |     "detailed description"
-          |    }
-          |  } described as "foo"
-          |""".stripMargin) { case (feature, msgs) =>
+      parseAndValidateInContext[Function]("""
+                                            |  function AnAspect is {
+                                            |    EXAMPLE foobar {
+                                            |      GIVEN "everybody hates me"
+                                            |      AND "I'm depressed"
+                                            |      WHEN "I go fishing"
+                                            |      THEN "I'll just eat worms"
+                                            |      ELSE "I'm happy"
+                                            |    } described as {
+                                            |     "brief description"
+                                            |     "detailed description"
+                                            |    }
+                                            |  } described as "foo"
+                                            |""".stripMargin) { case (feature, msgs) =>
         feature.id.value mustBe "AnAspect"
         assert(feature.examples.nonEmpty)
         assert(msgs.isEmpty)
@@ -112,27 +107,25 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
     "produce correct field references" in {
-      val input =
-        """domain foo is {
-          |context bar is {
-          |  type DoIt = command { ??? }
-          |  type Message = event { a: Integer }
-          |  entity Hamburger  is {
-          |    options (aggregate, transient)
-          |    state field is { field: SomeType }
-          |    handler baz is {
-          |      on command DoIt {
-          |        then tell event Message() to entity Hamburger
-          |      }
-          |    }
-          |  }
-          |}
-          |}
-          |""".stripMargin
+      val input = """domain foo is {
+                    |context bar is {
+                    |  type DoIt = command { ??? }
+                    |  type Message = event { a: Integer }
+                    |  entity Hamburger  is {
+                    |    options (aggregate, transient)
+                    |    state field is { field: SomeType }
+                    |    handler baz is {
+                    |      on command DoIt {
+                    |        then tell event Message() to entity Hamburger
+                    |      }
+                    |    }
+                    |  }
+                    |}
+                    |}
+                    |""".stripMargin
       parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
-        msgs.map(_.format) must contain(
-          "Error: default(10:19): Field 'a' was not set in message constructor"
-        )
+        msgs.map(_.format) must
+          contain("Error: default(10:19): Field 'a' was not set in message constructor")
       }
 
     }

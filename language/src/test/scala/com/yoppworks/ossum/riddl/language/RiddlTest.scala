@@ -1,6 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Domain, RootContainer}
+import com.yoppworks.ossum.riddl.language.AST.Domain
+import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
@@ -56,18 +57,14 @@ class RiddlTest extends ParsingTestBase {
 
     "return none when file does not exist" in {
       val options = ParsingOptions(showTimes = true, Some(InMemoryLogger()))
-      val result = Riddl.parse(
-        path = new File(UUID.randomUUID().toString).toPath,
-        options
-      )
+      val result = Riddl.parse(path = new File(UUID.randomUUID().toString).toPath, options)
       result mustBe None
     }
     "record errors" in {
       val riddlParserInput: RiddlParserInput = RiddlParserInput(UUID.randomUUID().toString)
       val logger = InMemoryLogger()
       val options = ParsingOptions(showTimes = true, Some(logger))
-      val result = Riddl
-        .parse(input = riddlParserInput, options)
+      val result = Riddl.parse(input = riddlParserInput, options)
       result mustBe None
       assert(
         logger.lines().exists(_.level == InMemoryLogger.Lvl.Error),
@@ -122,18 +119,12 @@ class RiddlTest extends ParsingTestBase {
 
   "SysLogger" should {
     val sl = SysLogger()
-    "print error message" in {
-      capturingStdOut(() => sl.error("asdf"))._2 mustBe "[error] asdf\n"
-    }
+    "print error message" in { capturingStdOut(() => sl.error("asdf"))._2 mustBe "[error] asdf\n" }
     "print severe message" in {
       capturingStdOut(() => sl.severe("asdf"))._2 mustBe "[severe] asdf\n"
     }
-    "print warn message" in {
-      capturingStdOut(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n"
-    }
-    "print info message" in {
-      capturingStdOut(() => sl.info("asdf"))._2 mustBe "[info] asdf\n"
-    }
+    "print warn message" in { capturingStdOut(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n" }
+    "print info message" in { capturingStdOut(() => sl.info("asdf"))._2 mustBe "[info] asdf\n" }
     "print many message" in {
       capturingStdOut { () =>
         sl.error("a")
@@ -185,10 +176,8 @@ class RiddlTest extends ParsingTestBase {
     "parse and validate nonsense input as invalid" in {
       val logger = InMemoryLogger()
       val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
-      val result = Riddl.parseAndValidate(
-        RiddlParserInput("I am not valid riddl (hopefully)."),
-        options
-      )
+      val result = Riddl
+        .parseAndValidate(RiddlParserInput("I am not valid riddl (hopefully)."), options)
       result mustBe None
       assert(logger.lines().exists(_.level == InMemoryLogger.Lvl.Error))
     }

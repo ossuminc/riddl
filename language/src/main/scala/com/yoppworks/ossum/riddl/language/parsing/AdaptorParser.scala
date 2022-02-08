@@ -16,8 +16,7 @@ trait AdaptorParser extends ReferenceParser with GherkinParser {
     P(
       location ~ Keywords.adapt ~/ identifier ~ is ~ open ~ Readability.from ~ eventRef ~
         Readability.to ~ commandRef ~ Readability.as ~/ open ~
-        (undefined(Seq.empty[Example]) | examples) ~
-        close ~ close ~ briefly ~ description
+        (undefined(Seq.empty[Example]) | examples) ~ close ~ close ~ briefly ~ description
     ).map { tpl => (Adaptation.apply _).tupled(tpl) }
   }
 

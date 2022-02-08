@@ -12,37 +12,35 @@ trait Logger {
   def info(s: => String): Unit
 }
 
-object Logger {
-}
-
+object Logger {}
 
 case class SysLogger() extends Logger {
 
-  override def severe(s: => String): Unit = {System.out.println("[severe] " + s)}
+  override def severe(s: => String): Unit = { System.out.println("[severe] " + s) }
 
-  override def error(s: => String): Unit = {System.out.println("[error] " + s)}
+  override def error(s: => String): Unit = { System.out.println("[error] " + s) }
 
-  override def warn(s: => String): Unit = {System.out.println("[warning] " + s)}
+  override def warn(s: => String): Unit = { System.out.println("[warning] " + s) }
 
-  override def info(s: => String): Unit = {System.out.println("[info] " + s)}
+  override def info(s: => String): Unit = { System.out.println("[info] " + s) }
 }
 
 case class StringLogger(capacity: Int = 512 * 2) extends Logger {
   private val stringBuilder = new StringBuilder(capacity)
 
-  override def severe(s: => String): Unit = {stringBuilder.append("[severe] " + s + "\n")}
+  override def severe(s: => String): Unit = { stringBuilder.append("[severe] " + s + "\n") }
 
-  override def error(s: => String): Unit = {stringBuilder.append("[error] " + s + "\n")}
+  override def error(s: => String): Unit = { stringBuilder.append("[error] " + s + "\n") }
 
-  override def warn(s: => String): Unit = {stringBuilder.append("[warning] " + s + "\n")}
+  override def warn(s: => String): Unit = { stringBuilder.append("[warning] " + s + "\n") }
 
-  override def info(s: => String): Unit = {stringBuilder.append("[info] " + s + "\n")}
+  override def info(s: => String): Unit = { stringBuilder.append("[info] " + s + "\n") }
 
   override def toString: String = stringBuilder.toString()
 }
 
 /** A Logger which captures logged lines into an in-memory buffer, useful for testing purposes.
- */
+  */
 object InMemoryLogger {
   sealed trait Lvl
 
@@ -65,7 +63,7 @@ case class InMemoryLogger() extends Logger {
 
   private[this] val buffer = ArrayBuffer[Line]()
 
-  private[this] def addMsg(level: Lvl, msg: String): Unit = {buffer += Line(level, msg)}
+  private[this] def addMsg(level: Lvl, msg: String): Unit = { buffer += Line(level, msg) }
 
   override def severe(s: => String): Unit = addMsg(Lvl.Severe, s)
 

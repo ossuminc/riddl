@@ -30,8 +30,10 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
             parseTopLevelDomains(output2) match {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")
-                fail(s"In '${file.getPath}': on second generation: " + message + "\nIn Source:\n" +
-                  output2 + "\n")
+                fail(
+                  s"In '${file.getPath}': on second generation: " + message + "\nIn Source:\n" +
+                    output2 + "\n"
+                )
               case Right(_) => output mustEqual output2
             }
         }

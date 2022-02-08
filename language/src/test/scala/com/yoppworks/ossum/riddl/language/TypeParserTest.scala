@@ -79,25 +79,18 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow alternation of a lone type reference" in {
-      val input = RiddlParserInput(
-        """domain Blah is {
-          |type Foo = String
-          |type alt = one of { type Foo }
-          |}
-          |""".stripMargin)
+      val input = RiddlParserInput("""domain Blah is {
+                                     |type Foo = String
+                                     |type alt = one of { type Foo }
+                                     |}
+                                     |""".stripMargin)
       val expected =
-        Alternation(
-          3 -> 12,
-          List(
-            TypeRef(3 -> 21, PathIdentifier(3 -> 26, Seq("Foo")))
-          )
-        )
+        Alternation(3 -> 12, List(TypeRef(3 -> 21, PathIdentifier(3 -> 26, Seq("Foo")))))
       parseDomainDefinition[Type](input, _.types.last) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(Type(_,_,typeExp, _, _)) =>
-          typeExp mustBe expected
+        case Right(Type(_, _, typeExp, _, _)) => typeExp mustBe expected
       }
     }
     "allow aggregation" in {
@@ -146,9 +139,14 @@ class TypeParserTest extends ParsingTest {
               case "result"  => ResultKind
             },
             Seq(
-              Field(1 -> 12, Identifier(1 -> 12, "sender"),
-                ReferenceType(1 -> 12, EntityRef(1 -> 12, PathIdentifier(1 -> 12, Seq
-                  .empty[String])))),
+              Field(
+                1 -> 12,
+                Identifier(1 -> 12, "sender"),
+                ReferenceType(
+                  1 -> 12,
+                  EntityRef(1 -> 12, PathIdentifier(1 -> 12, Seq.empty[String]))
+                )
+              ),
               Field(2 -> 3, Identifier(2 -> 3, "key"), Number(2 -> 8)),
               Field(
                 3 -> 3,

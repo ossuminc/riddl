@@ -6,10 +6,10 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for feature definitions This is based on Cucumber's Gherkin language.
- *
- * @see
- * https://cucumber.io/docs/gherkin/reference/
- */
+  *
+  * @see
+  *   https://cucumber.io/docs/gherkin/reference/
+  */
 trait GherkinParser extends ActionParser {
 
   def givens[u: P]: P[Seq[GivenClause]] = {
@@ -47,7 +47,7 @@ trait GherkinParser extends ActionParser {
           .map(tpl => (ButClause.apply _).tupled(tpl)).rep(0)
     ).?.map {
       case Some((initial, remainder)) => initial +: remainder
-      case None => Seq.empty[ButClause]
+      case None                       => Seq.empty[ButClause]
     }
   }
 
@@ -55,12 +55,9 @@ trait GherkinParser extends ActionParser {
     P(
       (givens.?.map(_.getOrElse(Seq.empty[GivenClause])) ~
         whens.?.map(_.getOrElse(Seq.empty[WhenClause])) ~ thens ~
-        buts.?.map(_.getOrElse(Seq.empty[ButClause]))) | undefined((
-        Seq.empty[GivenClause],
-        Seq.empty[WhenClause],
-        Seq.empty[ThenClause],
-        Seq.empty[ButClause]
-      ))
+        buts.?.map(_.getOrElse(Seq.empty[ButClause]))) | undefined(
+        (Seq.empty[GivenClause], Seq.empty[WhenClause], Seq.empty[ThenClause], Seq.empty[ButClause])
+      )
     )
   }
 
@@ -74,10 +71,10 @@ trait GherkinParser extends ActionParser {
   def testedWithExamples[u: P]: P[Seq[Example]] = {
     P(("tested" ~ ("with" | "by")).? ~ examples).?.map {
       case Some(examples) => examples
-      case None => Seq.empty[Example]
+      case None           => Seq.empty[Example]
     }
   }
 
-  def examples[u: P]: P[Seq[Example]] = {P(example.rep(0))}
+  def examples[u: P]: P[Seq[Example]] = { P(example.rep(0)) }
 
 }

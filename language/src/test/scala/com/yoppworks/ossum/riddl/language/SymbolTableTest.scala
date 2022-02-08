@@ -16,14 +16,13 @@ class SymbolTableTest extends ParsingTest {
 
     val st = captureEverythingSymbols
 
-    def assertRefWithParent[T <: Definition : ClassTag, P <: Definition : ClassTag](
+    def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
       names: Seq[String],
       parentName: String
     ): Assertion = {
       val lookupResult = st.lookup[T](names)
       lookupResult.headOption match {
-        case None =>
-          fail(s"Symbol '${names.mkString(".")}' not found")
+        case None => fail(s"Symbol '${names.mkString(".")}' not found")
         case Some(definition) =>
           val p = st.parentOf(definition)
           if (p.isEmpty) fail(s"Symbol '${names.mkString(".")}' has no parent")

@@ -9,8 +9,7 @@ import scala.collection.mutable
 
 case class TableOfContents(
   baseURL: URL,
-  rootContainer: RootContainer
-) {
+  rootContainer: RootContainer) {
 
   private val base = baseURL.toString
 
@@ -24,14 +23,15 @@ case class TableOfContents(
     val sb = stack.foldRight(start) { (definition, sb) =>
       definition match {
         case _: RootContainer => sb
-        case d: Definition => sb.append(d.id.format).append("/")
+        case d: Definition    => sb.append(d.id.format).append("/")
       }
     }
     sb.append(definition.id.format).toString
   }
 
   private def mkObject(d: Definition, stack: ParentStack): Obj = {
-    Obj("name" -> s"${AST.kind(d)}:${d.id.format}",
+    Obj(
+      "name" -> s"${AST.kind(d)}:${d.id.format}",
       "link" -> mkPathId(d, stack),
       "brief" -> d.brief.getOrElse(LiteralString(0 -> 0, "")).s,
       "children" -> Arr()
@@ -49,12 +49,9 @@ case class TableOfContents(
 
     Folding.foldLeft(rootObj, empty)(rootContainer) { (entry, definition, stack) =>
       definition match {
-        case _: RootContainer =>
-          entry
-        case c: Container[?] =>
-          addDef(entry, c, stack)
-        case _ =>
-          entry
+        case _: RootContainer => entry
+        case c: Container[?]  => addDef(entry, c, stack)
+        case _                => entry
       }
     }
     rootObj("children").asInstanceOf[Arr]

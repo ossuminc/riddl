@@ -63,7 +63,7 @@ trait ParsingContext {
     } else {
       stack.push(file)
       val result = this.expect[T](rule) match {
-        case Left(_) => empty
+        case Left(_)    => empty
         case Right(res) => res
       }
       stack.pop
@@ -78,9 +78,9 @@ trait ParsingContext {
 
   private def mkTerminals(list: List[Lazy[String]]): String = {
     list.map(_.force).map {
-      case s: String if s.startsWith("char-pred") => "pattern"
+      case s: String if s.startsWith("char-pred")  => "pattern"
       case s: String if s.startsWith("chars-with") => "pattern"
-      case s: String => s
+      case s: String                               => s
     }.distinct.mkString("(", " | ", ")")
   }
 

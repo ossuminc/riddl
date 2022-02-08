@@ -23,15 +23,15 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       ).!
     ) {
       case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
-      case (loc, Options.value, _) => EntityValueOption(loc)
-      case (loc, Options.aggregate, _) => EntityAggregate(loc)
-      case (loc, Options.transient, _) => EntityTransient(loc)
-      case (loc, Options.consistent, _) => EntityConsistent(loc)
-      case (loc, Options.available, _) => EntityAvailable(loc)
+      case (loc, Options.value, _)        => EntityValueOption(loc)
+      case (loc, Options.aggregate, _)    => EntityAggregate(loc)
+      case (loc, Options.transient, _)    => EntityTransient(loc)
+      case (loc, Options.consistent, _)   => EntityConsistent(loc)
+      case (loc, Options.available, _)    => EntityAvailable(loc)
       case (loc, Options.stateMachine, _) => EntityFiniteStateMachine(loc)
-      case (loc, Options.kind, args) => EntityKind(loc, args)
+      case (loc, Options.kind, args)      => EntityKind(loc, args)
       case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
-      case _ => throw new RuntimeException("Impossible case")
+      case _                              => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -43,8 +43,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
     */
   def invariant[u: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~ condition ~ close ~
-        briefly ~ description
+      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~ condition ~ close ~ briefly ~
+        description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
@@ -63,8 +63,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
   def handler[u: P]: P[Handler] = {
     P(
       Keywords.handler ~/ location ~ identifier ~ is ~
-        ((open ~ undefined(Seq.empty[OnClause]) ~ close) |
-          optionalNestedContent(onClause)) ~ briefly ~ description
+        ((open ~ undefined(Seq.empty[OnClause]) ~ close) | optionalNestedContent(onClause)) ~
+        briefly ~ description
     ).map(t => (Handler.apply _).tupled(t))
   }
 
@@ -82,8 +82,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
-        (noEntityBody | entityBody) ~ close ~ briefly ~ description
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ (noEntityBody | entityBody) ~ close ~
+        briefly ~ description
     ).map { case (loc, id, (options, entityDefs), briefly, description) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
@@ -92,9 +92,16 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       Entity(
-        loc, id,
+        loc,
+        id,
         options.fold(Seq.empty[EntityOption])(identity),
-        states, types, handlers, functions, invariants, briefly, description
+        states,
+        types,
+        handlers,
+        functions,
+        invariants,
+        briefly,
+        description
       )
     }
   }

@@ -15,7 +15,7 @@ case class MarkdownWriter(filePath: Path) {
 
   private def mkDirs(): Unit = {
     val dirFile = filePath.getParent.toFile
-    if (!dirFile.exists) {dirFile.mkdirs()}
+    if (!dirFile.exists) { dirFile.mkdirs() }
   }
 
   def write(): Unit = {
@@ -24,28 +24,27 @@ case class MarkdownWriter(filePath: Path) {
     try {
       printer.write(sb.toString())
       printer.flush()
-    } finally {printer.close()}
+    } finally { printer.close() }
     sb.clear() // release memory because content written to file
   }
 
-  def nl: this.type = {sb.append("\n"); this}
+  def nl: this.type = { sb.append("\n"); this }
 
   def fileHead(
-                name: String,
-                weight: Int,
-                desc: Option[String],
-                extras: Map[String,String] = Map.empty[String,String]
-              ): this.type = {
-    val adds: String = extras.map{ case (k: String, v: String) => s"$k: $v"}.mkString("\n")
-    val headTemplate =
-      s"""---
-         |title: "$name"
-         |weight: $weight
-         |description: "${desc.getOrElse("")}"
-         |geekdocAnchor: true
-         |$adds
-         |---
-         |""".stripMargin
+    name: String,
+    weight: Int,
+    desc: Option[String],
+    extras: Map[String, String] = Map.empty[String, String]
+  ): this.type = {
+    val adds: String = extras.map { case (k: String, v: String) => s"$k: $v" }.mkString("\n")
+    val headTemplate = s"""---
+                          |title: "$name"
+                          |weight: $weight
+                          |description: "${desc.getOrElse("")}"
+                          |geekdocAnchor: true
+                          |$adds
+                          |---
+                          |""".stripMargin
     sb.append(headTemplate)
     this
   }
@@ -53,15 +52,20 @@ case class MarkdownWriter(filePath: Path) {
   def containerWeight: Int = 2 * 5
 
   def fileHead(cont: Container[Definition]): this.type = {
-    fileHead(cont.id.format, containerWeight,
+    fileHead(
+      cont.id.format,
+      containerWeight,
       Option(cont.brief.fold(cont.id.format + " has no brief description.")(_.s)),
       Map("geekdocCollapseSection" -> "true")
     )
   }
 
   def fileHead(definition: Definition, weight: Int): this.type = {
-    fileHead(definition.id.format, weight,
-      Option(definition.brief.fold(definition.id.format + " has no brief description.")(_.s)))
+    fileHead(
+      definition.id.format,
+      weight,
+      Option(definition.brief.fold(definition.id.format + " has no brief description.")(_.s))
+    )
   }
 
   def heading(heading: String, level: Int = 2): this.type = {
@@ -106,7 +110,6 @@ case class MarkdownWriter(filePath: Path) {
     this
   }
 
-
   def p(paragraph: String): this.type = {
     sb.append(paragraph)
     nl
@@ -130,29 +133,23 @@ case class MarkdownWriter(filePath: Path) {
 
   def list[T](items: Seq[T]): this.type = {
     def emitPair(prefix: String, body: String): Unit = {
-      if (prefix.startsWith("[") && body.startsWith("(")) {
-        sb.append(s"* $prefix$body\n")
-      } else {
-        sb.append(s"* _${prefix}_: $body\n")
-      }
+      if (prefix.startsWith("[") && body.startsWith("(")) { sb.append(s"* $prefix$body\n") }
+      else { sb.append(s"* _${prefix}_: $body\n") }
     }
 
-    for {item <- items} {
+    for { item <- items } {
       item match {
-        case (prefix: String, definition: String, description: Option[Description]@unchecked) =>
+        case (prefix: String, definition: String, description: Option[Description] @unchecked) =>
           emitPair(prefix, definition)
           if (description.nonEmpty) {
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
-        case (prefix: String, body: String) =>
-          emitPair(prefix, body)
-        case (prefix: String, docBlock: Seq[String]@unchecked) =>
+        case (prefix: String, body: String) => emitPair(prefix, body)
+        case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
-        case body: String =>
-          sb.append(s"* $body\n")
-        case x: Any =>
-          sb.append(s"* ${x.toString}\n")
+        case body: String => sb.append(s"* $body\n")
+        case x: Any       => sb.append(s"* ${x.toString}\n")
       }
     }
     this
@@ -175,7 +172,7 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   private def mkTocSeq(
-    list: Seq[Definition],
+    list: Seq[Definition]
   ): Seq[String] = {
     val result = list.map(c => c.id.value)
     result
@@ -189,7 +186,7 @@ case class MarkdownWriter(filePath: Path) {
     d: Definition,
     parents: Seq[String],
     level: Int = 2
-  ) : this.type = {
+  ): this.type = {
     if (d.brief.nonEmpty) {
       heading("Briefly", level)
       p(d.brief.fold("Brief description missing.\n")(_.s))
@@ -215,11 +212,16 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitTypes(types: Seq[Type]): this.type = {
-    list[(String, String)]("Types",
+    list[(String, String)](
+      "Types",
       types.map { t =>
-        (t.id.format, AST.kind(t.typ) + t.description.fold(Seq.empty[String])(_.lines.map(_.s))
-          .mkString("\n  ", "\n  ", ""))
-      })
+        (
+          t.id.format,
+          AST.kind(t.typ) + t.description.fold(Seq.empty[String])(_.lines.map(_.s))
+            .mkString("\n  ", "\n  ", "")
+        )
+      }
+    )
   }
 
   def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
@@ -227,10 +229,8 @@ case class MarkdownWriter(filePath: Path) {
     title(domain)
     if (domain.author.nonEmpty) {
       val a = domain.author.get
-      val items = Seq(
-        "Name" -> a.name.s,
-        "Email" -> a.email.s,
-      ) ++ a.organization.fold(Seq.empty[(String, String)])(ls => Seq("Organization" -> ls.s)) ++
+      val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
+        a.organization.fold(Seq.empty[(String, String)])(ls => Seq("Organization" -> ls.s)) ++
         a.title.fold(Seq.empty[(String, String)])(ls => Seq("Title" -> ls.s))
       list("Author", items)
     }
@@ -245,34 +245,33 @@ case class MarkdownWriter(filePath: Path) {
   }
 
   def emitExample(example: Example, parents: Seq[String], level: Int = 2): this.type = {
-    val hLevel = if (example.isImplicit) {
-      level
-    } else {
-      heading(example.id.format, level)
-      level + 1
-    }
+    val hLevel =
+      if (example.isImplicit) { level }
+      else {
+        heading(example.id.format, level)
+        level + 1
+      }
     emitBriefly(example, parents, hLevel)
     emitDetails(example.description, hLevel)
     if (example.givens.nonEmpty) {
-      sb.append(example.givens.map { given =>
-        given.scenario.map(_.s).mkString("    *", "\n    *", "\n")
-      }.mkString("* GIVEN\n", "* AND\n", "\n"))
+      sb.append(
+        example.givens.map { given => given.scenario.map(_.s).mkString("    *", "\n    *", "\n") }
+          .mkString("* GIVEN\n", "* AND\n", "\n")
+      )
     }
     if (example.whens.nonEmpty) {
-      sb.append(example
-        .whens
-        .map { when => when.condition.format }
-        .mkString("* WHEN\n", "\n    * AND ", "\n"))
+      sb.append(
+        example.whens.map { when => when.condition.format }
+          .mkString("* WHEN\n", "\n    * AND ", "\n")
+      )
     }
-    sb.append(example
-      .thens
-      .map { then_ => then_.action.format }
-      .mkString("* THEN\n    * ", "\n    * ", "\n")
+    sb.append(
+      example.thens.map { then_ => then_.action.format }
+        .mkString("* THEN\n    * ", "\n    * ", "\n")
     )
     if (example.buts.nonEmpty) {
-      sb.append(example.buts
-        .map { but => but.action.format }
-        .mkString("* BUT\n    * ", "\n    * ", "\n")
+      sb.append(
+        example.buts.map { but => but.action.format }.mkString("* BUT\n    * ", "\n    * ", "\n")
       )
     }
     this
@@ -367,7 +366,7 @@ case class MarkdownWriter(filePath: Path) {
     emitDetails(entity.description)
     emitOptions(entity.options)
     emitTypes(entity.types)
-    emitStates(entity.states,parents)
+    emitStates(entity.states, parents)
     emitInvariants(entity.invariants)
     toc("Functions", mkTocSeq(entity.functions))
     emitHandlers(entity.handlers, parents)
@@ -379,17 +378,15 @@ case class MarkdownWriter(filePath: Path) {
       h3(action.id.format)
       emitBriefly(action, parents, 4)
       h4("Messaging")
-      list(
-        Seq(
-          "Entity" -> action.entity.id.format,
-          "Do" -> action.doCommand.format,
-          "Undo" -> action.undoCommand.format
-        )
-      )
+      list(Seq(
+        "Entity" -> action.entity.id.format,
+        "Do" -> action.doCommand.format,
+        "Undo" -> action.undoCommand.format
+      ))
       p(action.format)
       h4("Examples")
-      action.example.foreach(emitExample(_, parents, 5 ))
-      emitDetails(action.description,4)
+      action.example.foreach(emitExample(_, parents, 5))
+      emitDetails(action.description, 4)
     }
     this
   }
@@ -431,9 +428,7 @@ case class MarkdownWriter(filePath: Path) {
     title(pipe)
     emitBriefly(pipe, parents)
     emitDetails(pipe.description)
-    if (pipe.transmitType.nonEmpty) {
-      p(s"Transmission Type: ${pipe.transmitType.get.format} ")
-    }
+    if (pipe.transmitType.nonEmpty) { p(s"Transmission Type: ${pipe.transmitType.get.format} ") }
     this
   }
 
@@ -446,12 +441,12 @@ case class MarkdownWriter(filePath: Path) {
     proc.inlets.foreach { inlet =>
       h3(inlet.id.format + s": ${inlet.type_.format}")
       emitBriefly(inlet, parents, 4)
-      emitDetails(inlet.description,4)
+      emitDetails(inlet.description, 4)
     }
     proc.outlets.foreach { outlet =>
       h3(outlet.id.format + s": ${outlet.type_.format}")
       emitBriefly(outlet, parents, 4)
-      emitDetails(outlet.description,4)
+      emitDetails(outlet.description, 4)
     }
     this
   }
@@ -477,4 +472,3 @@ case class MarkdownWriter(filePath: Path) {
     this
   }
 }
-

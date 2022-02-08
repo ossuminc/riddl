@@ -1,5 +1,3 @@
 package com.yoppworks.ossume.riddl.generator.d3
 
-object D3Generator {
-
-}
+object D3Generator {}

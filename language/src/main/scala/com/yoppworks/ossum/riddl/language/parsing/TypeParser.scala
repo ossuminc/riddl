@@ -1,9 +1,9 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.{AST, Location}
 import com.yoppworks.ossum.riddl.language.Terminals.*
 import com.yoppworks.ossum.riddl.language.Terminals.Punctuation.*
-import com.yoppworks.ossum.riddl.language.{AST, Location}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -11,8 +11,9 @@ import fastparse.ScalaWhitespace.*
 trait TypeParser extends ReferenceParser {
 
   def referToType[u: P]: P[ReferenceType] = {
-    P(location ~ Keywords.reference ~ Readability.to ~/ entityRef)
-      .map { tpl => (ReferenceType.apply _).tupled(tpl) }
+    P(location ~ Keywords.reference ~ Readability.to ~/ entityRef).map { tpl =>
+      (ReferenceType.apply _).tupled(tpl)
+    }
   }
 
   def stringType[u: P]: P[Strng] = {
@@ -62,7 +63,7 @@ trait TypeParser extends ReferenceParser {
   def uniqueIdType[u: P]: P[UniqueId] = {
     (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose./).map {
       case (loc, Some(id)) => UniqueId(loc, id)
-      case (loc, None) => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
+      case (loc, None)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
     }
   }
 
@@ -72,7 +73,8 @@ trait TypeParser extends ReferenceParser {
 
   def enumerator[u: P]: P[Enumerator] = {
     P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
-      (Enumerator.apply _).tupled(tpl) }
+      (Enumerator.apply _).tupled(tpl)
+    }
   }
 
   /** Type reference parser that requires the 'type' keyword qualifier
@@ -90,9 +92,8 @@ trait TypeParser extends ReferenceParser {
   def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        ( Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression]) |
-          typeExpression.rep(0, P("or" | "|" | ","))
-        ) ~ close
+        (Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression]) |
+          typeExpression.rep(0, P("or" | "|" | ","))) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
@@ -102,7 +103,7 @@ trait TypeParser extends ReferenceParser {
   }
 
   def fields[u: P]: P[Seq[Field]] = {
-    P(Punctuation.undefined.!.map(_ => Seq.empty[Field]) | field.rep(min = 0, comma) )
+    P(Punctuation.undefined.!.map(_ => Seq.empty[Field]) | field.rep(min = 0, comma))
   }
 
   def aggregation[u: P]: P[Aggregation] = {
@@ -113,26 +114,32 @@ trait TypeParser extends ReferenceParser {
     P(StringIn(Keywords.command, Keywords.event, Keywords.query, Keywords.result).!).map { mk =>
       mk.toLowerCase() match {
         case kind if kind == Keywords.command => CommandKind
-        case kind if kind == Keywords.event => EventKind
-        case kind if kind == Keywords.query => QueryKind
-        case kind if kind == Keywords.result => ResultKind
+        case kind if kind == Keywords.event   => EventKind
+        case kind if kind == Keywords.query   => QueryKind
+        case kind if kind == Keywords.result  => ResultKind
       }
     }
   }
 
   def messageType[u: P]: P[MessageType] = {
     P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
-      MessageType(loc, mk, Field(loc, Identifier(loc, "sender"),
-        ReferenceType(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String]))))
-        +: agg.fields)
+      MessageType(
+        loc,
+        mk,
+        Field(
+          loc,
+          Identifier(loc, "sender"),
+          ReferenceType(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String])))
+        ) +: agg.fields
+      )
     }
   }
 
   /** Parses mappings, i.e.
-   * {{{
-   * mapping { from Integer to String }
-   * }}}
-   */
+    * {{{
+    * mapping { from Integer to String }
+    * }}}
+    */
   def mapping[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~ Readability.to ~
@@ -141,10 +148,10 @@ trait TypeParser extends ReferenceParser {
   }
 
   /** Parses ranges, i.e.
-   * {{{
-   *   range { from 1 to 2 }
-   * }}}
-   */
+    * {{{
+    *   range { from 1 to 2 }
+    * }}}
+    */
   def range[u: P]: P[RangeType] = {
     P(
       location ~ Keywords.range ~ roundOpen ~/

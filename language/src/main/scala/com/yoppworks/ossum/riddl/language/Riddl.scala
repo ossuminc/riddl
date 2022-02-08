@@ -2,16 +2,14 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.Validation.{ValidatingOptions, ValidationMessage}
-import com.yoppworks.ossum.riddl.language.parsing.{FileParserInput, RiddlParserInput,
-  TopLevelParser}
+import com.yoppworks.ossum.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 
 import java.nio.file.{Files, Path}
 import java.time.Clock
 
 case class ParsingOptions(
   showTimes: Boolean = false,
-  logger: Option[Logger] = Some(SysLogger())
-) {
+  logger: Option[Logger] = Some(SysLogger())) {
   def log: Logger = logger.getOrElse(SysLogger())
 }
 
@@ -19,25 +17,25 @@ case class ParsingOptions(
 object Riddl {
 
   /** Runs a code block and returns its result, and prints its execution time to stdout. Execution
-   * time is only written if `show` is set to `true`.
-   *
-   * e.g.
-   *
-   * timer("my-stage", true) { 1 + 1 } // 2
+    * time is only written if `show` is set to `true`.
+    *
+    * e.g.
+    *
+    * timer("my-stage", true) { 1 + 1 } // 2
     *
     * prints: Stage 'my-stage': 0.000 seconds
     *
     * @param stage
     *   The name of the stage, is included in output message
-   * @param show
-   *    if `true`, then message is printed, otherwise not
-   * @param logger
-   *    The logger to which timing messages should be put out.
-   * @param f
-   *    the code block to execute
-   * @return
-   * The result of running `f`
-   */
+    * @param show
+    *   if `true`, then message is printed, otherwise not
+    * @param logger
+    *   The logger to which timing messages should be put out.
+    * @param f
+    *   the code block to execute
+    * @return
+    *   The result of running `f`
+    */
   def timer[T](stage: String, show: Boolean = true, logger: Logger = SysLogger())(f: => T): T = {
     RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f)
   }
@@ -84,16 +82,16 @@ object Riddl {
         val style = warns.filter(_.kind.isStyle)
         val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
         log.info(s"""Validation Warnings: ${warns.length}""")
-        if (options.showWarnings) {warnings.map(_.format).foreach(log.warn(_))}
-        if (options.showMissingWarnings) {missing.map(_.format).foreach(log.warn(_))}
-        if (options.showStyleWarnings) {style.map(_.format).foreach(log.warn(_))}
+        if (options.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
+        if (options.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
+        if (options.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
         log.info(s"""Validation Errors: ${errors.length} errors""")
         errors.map(_.format).foreach(log.error(_))
         log.info(s"""Severe Errors: ${errors.length} errors""")
         severe.map(_.format).foreach(log.severe(_))
-        if (errs.nonEmpty) {None}
-        else {Option(root)}
-      } else {Option(root)}
+        if (errs.nonEmpty) { None }
+        else { Option(root) }
+      } else { Option(root) }
     }
   }
 
@@ -103,16 +101,14 @@ object Riddl {
   ): Option[RootContainer] = {
     parse(input, options.parsingOptions) match {
       case Some(root) => validate(root, options)
-      case None => None
+      case None       => None
     }
   }
 
   def parseAndValidate(
     path: Path,
     options: ValidatingOptions
-  ): Option[RootContainer] = {
-    parseAndValidate(RiddlParserInput(path), options)
-  }
+  ): Option[RootContainer] = { parseAndValidate(RiddlParserInput(path), options) }
 }
 
 /** Private implementation details which allow for more testability */
@@ -146,8 +142,7 @@ private[language] object RiddlImpl {
     out: Logger,
     stage: String,
     show: Boolean
-  )(
-    f: => T
+  )(f: => T
   ): T = {
     if (show) {
       val start = clock.millis()

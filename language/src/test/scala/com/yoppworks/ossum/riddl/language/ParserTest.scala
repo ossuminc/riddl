@@ -164,11 +164,11 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Invariant(
-          1 -> 11,
-          Identifier(1 -> 11, "large"),
-          ArbitraryCondition(LiteralString(1 -> 22, "x is greater or equal to 10")),
-          None
-        )
+            1 -> 11,
+            Identifier(1 -> 11, "large"),
+            ArbitraryCondition(LiteralString(1 -> 22, "x is greater or equal to 10")),
+            None
+          )
       }
     }
     "allow entity definitions in contexts" in {
@@ -192,34 +192,38 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-          1 -> 1,
-          Identifier(1 -> 8, "Hamburger"),
-          Seq(EntityTransient(2 -> 13), EntityAggregate(2 -> 24)),
-          Seq(State(
-            3 -> 3,
-            Identifier(3 -> 9, "foo"),
-            Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
-            None
-          )),
-          handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
-          functions = Seq(Function(
-            5 -> 3,
-            Identifier(5 -> 12, "AnAspect"),
-            examples = Seq(Example(
-              6 -> 5,
-              Identifier(6 -> 13, "foo"),
-              Seq(
-                GivenClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
-                GivenClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
-              ),
-              Seq(WhenClause(9 -> 7, ArbitraryCondition(LiteralString(9 -> 12, "I go fishing")))),
-              Seq(ThenClause(10 -> 7,
-                ArbitraryAction(10 -> 12, LiteralString(10 -> 12, "I'll just eat worms"), None))),
-              Seq(ButClause(11 -> 7,
-                ArbitraryAction(11 -> 12, LiteralString(11 -> 12, "I'm happy"), None)))
+            1 -> 1,
+            Identifier(1 -> 8, "Hamburger"),
+            Seq(EntityTransient(2 -> 13), EntityAggregate(2 -> 24)),
+            Seq(State(
+              3 -> 3,
+              Identifier(3 -> 9, "foo"),
+              Aggregation(3 -> 16, Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))),
+              None
+            )),
+            handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
+            functions = Seq(Function(
+              5 -> 3,
+              Identifier(5 -> 12, "AnAspect"),
+              examples = Seq(Example(
+                6 -> 5,
+                Identifier(6 -> 13, "foo"),
+                Seq(
+                  GivenClause(7 -> 7, Seq(LiteralString(7 -> 13, "everybody hates me"))),
+                  GivenClause(8 -> 7, Seq(LiteralString(8 -> 11, "I'm depressed")))
+                ),
+                Seq(WhenClause(9 -> 7, ArbitraryCondition(LiteralString(9 -> 12, "I go fishing")))),
+                Seq(ThenClause(
+                  10 -> 7,
+                  ArbitraryAction(10 -> 12, LiteralString(10 -> 12, "I'll just eat worms"), None)
+                )),
+                Seq(ButClause(
+                  11 -> 7,
+                  ArbitraryAction(11 -> 12, LiteralString(11 -> 12, "I'm happy"), None)
+                ))
+              ))
             ))
-          ))
-        )
+          )
       }
     }
     "allow adaptor definitions" in {
@@ -280,23 +284,28 @@ class ParserTest extends ParsingTest {
     }
 
     "allow functions" in {
-      val input =
-        """
-          |function foo is {
-          |  requires {b:Boolean}
-          |  yields {i:Integer}
-          |}
-          |""".stripMargin
+      val input = """
+                    |function foo is {
+                    |  requires {b:Boolean}
+                    |  yields {i:Integer}
+                    |}
+                    |""".stripMargin
 
       parseDefinition[Function](RiddlParserInput(input)) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content must matchPattern {
-          case Function(_, Identifier(_, "foo"),
-          Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
-          Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))), _, None, None) =>
-        }
+            case Function(
+                  _,
+                  Identifier(_, "foo"),
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
+                  _,
+                  None,
+                  None
+                ) =>
+          }
       }
     }
   }

@@ -37,24 +37,22 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
     "allow ??? in aggregate bodies without warning" in {
-      parseAndValidate[Domain](
-        """domain foo {
-          |type Empty is { ??? } explained as "empty"
-          |} explained as "nothing"
-          |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
+      parseAndValidate[Domain]("""domain foo {
+                                 |type Empty is { ??? } explained as "empty"
+                                 |} explained as "nothing"
+                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
         msgs mustBe empty
       }
     }
     "generate 'sender' field in messages" in {
       val cases = Seq("command", "event", "query", "result")
-      for {messageKind <- cases} {
-        val input =
-          s"""domain foo is {
-             |type Message is $messageKind {
-             |  two: String explained as "a field"
-             |} explained as "subject"
-             |} explained as "nothing"
-             |""".stripMargin
+      for { messageKind <- cases } {
+        val input = s"""domain foo is {
+                       |type Message is $messageKind {
+                       |  two: String explained as "a field"
+                       |} explained as "subject"
+                       |} explained as "nothing"
+                       |""".stripMargin
         parseAndValidate[Domain](input) { case (d: Domain, msgs: ValidationMessages) =>
           msgs mustBe empty
           val typ = d.types.head
@@ -63,25 +61,21 @@ class TypeValidatorTest extends ValidatingTest {
               kind.kind mustBe messageKind
               fields.head.id.value mustBe "sender"
               fields.head.typeEx match {
-                case ReferenceType(_, EntityRef(_, id)) =>
-                  id mustBe empty
-                case x: TypeExpression =>
-                  fail(s"Expected a ReferenceType but got: $x")
+                case ReferenceType(_, EntityRef(_, id)) => id mustBe empty
+                case x: TypeExpression => fail(s"Expected a ReferenceType but got: $x")
               }
-            case x: TypeExpression =>
-              fail(s"Expected an MessageType but got: $x")
+            case x: TypeExpression => fail(s"Expected an MessageType but got: $x")
           }
         }
       }
     }
 
     "identify when pattern type does not refer to a valid pattern" in {
-      parseAndValidate[Domain](
-        """
-          |domain foo is {
-          |type pat is Pattern("[")
-          |}
-          |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
+      parseAndValidate[Domain]("""
+                                 |domain foo is {
+                                 |type pat is Pattern("[")
+                                 |}
+                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
         assertValidationMessage(msgs, Validation.Error, "Unclosed character class")
       }
     }

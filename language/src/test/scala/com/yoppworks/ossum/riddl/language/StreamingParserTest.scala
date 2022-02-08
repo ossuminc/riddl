@@ -7,12 +7,11 @@ class StreamingParserTest extends ParsingTest {
 
   "StreamingParser" should {
     "recognize a source processor" in {
-      val input =
-        """
-          |source GetWeatherForecast is {
-          |  outlet Weather is Forecast
-          |} brief "foo" described by "This is a source for Forecast data"
-          |""".stripMargin
+      val input = """
+                    |source GetWeatherForecast is {
+                    |  outlet Weather is Forecast
+                    |} brief "foo" described by "This is a source for Forecast data"
+                    |""".stripMargin
       val expected = Processor(
         1 -> 1,
         Identifier(2 -> 8, "GetWeatherForecast"),
@@ -25,8 +24,10 @@ class StreamingParserTest extends ParsingTest {
         )),
         List.empty[Example],
         Some(LiteralString(4 -> 9, "foo")),
-        Option(Description(4 -> 15, List(LiteralString(4 -> 28, "This is a source for Forecast " +
-          "data"))))
+        Option(Description(
+          4 -> 15,
+          List(LiteralString(4 -> 28, "This is a source for Forecast " + "data"))
+        ))
       )
       checkDefinition[Processor, Processor](input, expected, identity)
     }
@@ -225,7 +226,7 @@ class StreamingParserTest extends ParsingTest {
             ),
             PipeRef(28 -> 65, PathIdentifier(28 -> 70, List("TemperatureChanges"))),
             None
-          ),
+          )
         ),
         None,
         Option(Description(

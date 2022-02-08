@@ -19,14 +19,14 @@ trait SagaParser extends ReferenceParser with FunctionParser {
 
   def sagaOptions[u: P]: P[Seq[SagaOption]] = {
     options[u, SagaOption](StringIn(Options.parallel, Options.sequential).!) {
-      case (loc, option, _) if option == Options.parallel => ParallelOption(loc)
+      case (loc, option, _) if option == Options.parallel   => ParallelOption(loc)
       case (loc, option, _) if option == Options.sequential => SequentialOption(loc)
       case (loc, option, _) =>
         throw new IllegalStateException(s"Unknown saga option $option at $loc")
     }
   }
 
-  def sagaInput[u: P]: P[Aggregation] = {P(Keywords.input ~ aggregation)}
+  def sagaInput[u: P]: P[Aggregation] = { P(Keywords.input ~ aggregation) }
 
   def saga[u: P]: P[Saga] = {
     P(

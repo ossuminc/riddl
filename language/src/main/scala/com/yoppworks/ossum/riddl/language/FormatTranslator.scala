@@ -4,8 +4,8 @@ import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
-import pureconfig.generic.auto.*
 import pureconfig.{ConfigReader, ConfigSource}
+import pureconfig.generic.auto.*
 
 import java.io.File
 import java.nio.file.Path
@@ -22,11 +22,9 @@ case class FormattingOptions(
   configFile: Option[File] = None,
   projectName: Option[String] = None,
   logger: Option[Logger] = None,
-  singleFile: Boolean = true
-) extends TranslatingOptions {
-  def withLogger(logger: Logger): FormattingOptions = {
-    this.copy(logger = Some(logger))
-  }
+  singleFile: Boolean = true)
+    extends TranslatingOptions {
+  def withLogger(logger: Logger): FormattingOptions = { this.copy(logger = Some(logger)) }
 }
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
@@ -72,8 +70,8 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
 
   case class FormatState(
     options: FormattingOptions,
-    config: FormatConfig
-  ) extends Folding.State[FormatState] {
+    config: FormatConfig)
+      extends Folding.State[FormatState] {
     def step(f: FormatState => FormatState): FormatState = f(this)
 
     private final val nl = "\n"
@@ -101,9 +99,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
       if (strings.sizeIs > 1) {
         lines.append("\n")
         strings.foreach(s => lines.append(s"""$spc"${s.s}"$nl"""))
-      } else {
-        strings.foreach(s => lines.append(s""" "${s.s}" """))
-      }
+      } else { strings.foreach(s => lines.append(s""" "${s.s}" """)) }
       this
     }
 
@@ -134,9 +130,8 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     def openDef(definition: Definition, withBrace: Boolean = true): FormatState = {
       lines.append(s"$spc${AST.keyword(definition)} ${definition.id.format} is ")
       if (withBrace) {
-        if (definition.isEmpty) {
-          lines.append("{ ??? }")
-        } else {
+        if (definition.isEmpty) { lines.append("{ ??? }") }
+        else {
           lines.append("{\n")
           indent
         }
@@ -164,9 +159,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     def spc: String = { " ".repeat(indentLevel) }
 
     def emitBrief(brief: Option[LiteralString]): FormatState = {
-      brief.foldLeft(this) { (s, ls: LiteralString) =>
-        s.add(s" briefly ${ls.format}")
-      }
+      brief.foldLeft(this) { (s, ls: LiteralString) => s.add(s" briefly ${ls.format}") }
     }
 
     def emitDescription(description: Option[Description]): FormatState = {
@@ -180,17 +173,17 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     def emitString(s: Strng): FormatState = {
       (s.min, s.max) match {
         case (Some(n), Some(x)) => this.add(s"String($n,$x")
-        case (None, Some(x)) => this.add(s"String(,$x")
-        case (Some(n), None) => this.add(s"String($n)")
-        case (None, None) => this.add(s"String")
+        case (None, Some(x))    => this.add(s"String(,$x")
+        case (Some(n), None)    => this.add(s"String($n)")
+        case (None, None)       => this.add(s"String")
       }
     }
 
     def mkEnumeratorDescription(description: Option[Description]): String = {
       description match {
         case Some(desc) => " described as { " + {
-          desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
-        }
+            desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
+          }
         case None => ""
       }
     }
@@ -208,9 +201,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
       this.add(s"one of {\n").indent.step { s2 =>
         s2.addIndent("").emitTypeExpression(alternation.of.head).step { s3 =>
           alternation.of.tail.foldLeft(s3) { (s4, te) => s4.add(" or ").emitTypeExpression(te) }
-            .step { s5 =>
-              s5.add("\n").outdent.addIndent("}")
-            }
+            .step { s5 => s5.add("\n").outdent.addIndent("}") }
         }
       }
     }
@@ -221,9 +212,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     }
 
     def emitFields(of: Seq[Field]): FormatState = {
-      if (of.isEmpty) {
-        this.add("{ ??? }")
-      }
+      if (of.isEmpty) { this.add("{ ??? }") }
       else if (of.sizeIs == 1) {
         val f: Field = of.head
         add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
@@ -248,9 +237,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
 
     def emitPattern(pattern: AST.Pattern): FormatState = {
       val line =
-        if (pattern.pattern.sizeIs == 1) {
-          "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
-        }
+        if (pattern.pattern.sizeIs == 1) { "Pattern(\"" + pattern.pattern.head.s + "\"" + s") " }
         else {
           s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
           s"\n) "
@@ -259,9 +246,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     }
 
     def emitMessageType(mt: AST.MessageType): FormatState = {
-      this.add(mt.messageKind.kind.toLowerCase)
-        .add(" ")
-        .emitFields(mt.fields.tail)
+      this.add(mt.messageKind.kind.toLowerCase).add(" ").emitFields(mt.fields.tail)
     }
 
     def emitMessageRef(mr: AST.MessageRef): FormatState = {
@@ -270,32 +255,32 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
 
     def emitTypeExpression(typEx: AST.TypeExpression): FormatState = {
       typEx match {
-        case string: Strng => emitString(string)
-        case b: Bool => this.add(b.kind)
-        case n: Number => this.add(n.kind)
-        case i: Integer => this.add(i.kind)
-        case d: Decimal => this.add(d.kind)
-        case r: Real => this.add(r.kind)
-        case d: Date => this.add(d.kind)
-        case t: Time => this.add(t.kind)
-        case dt: DateTime => this.add(dt.kind)
-        case ts: TimeStamp => this.add(ts.kind)
-        case ll: LatLong => this.add(ll.kind)
-        case n: Nothing => this.add(n.kind)
-        case TypeRef(_, id) => this.add(id.format)
-        case URL(_, scheme) => this.add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
+        case string: Strng            => emitString(string)
+        case b: Bool                  => this.add(b.kind)
+        case n: Number                => this.add(n.kind)
+        case i: Integer               => this.add(i.kind)
+        case d: Decimal               => this.add(d.kind)
+        case r: Real                  => this.add(r.kind)
+        case d: Date                  => this.add(d.kind)
+        case t: Time                  => this.add(t.kind)
+        case dt: DateTime             => this.add(dt.kind)
+        case ts: TimeStamp            => this.add(ts.kind)
+        case ll: LatLong              => this.add(ll.kind)
+        case n: Nothing               => this.add(n.kind)
+        case TypeRef(_, id)           => this.add(id.format)
+        case URL(_, scheme)           => this.add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
-        case mapping: Mapping => emitMapping(mapping)
-        case RangeType(_, min, max) => this.add(s"range(${min.n},${max.n}) ")
-        case ReferenceType(_, er) => this.add(s"${Keywords.reference} to ${er.format}")
-        case pattern: Pattern => emitPattern(pattern)
-        case mt: MessageType => emitMessageType(mt)
-        case UniqueId(_, id) => this.add(s"Id(${id.format}) ")
-        case Optional(_, typex) => this.emitTypeExpression(typex).add("?")
-        case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
-        case OneOrMore(_, typex) => this.emitTypeExpression(typex).add("+")
+        case mapping: Mapping         => emitMapping(mapping)
+        case RangeType(_, min, max)   => this.add(s"range(${min.n},${max.n}) ")
+        case ReferenceType(_, er)     => this.add(s"${Keywords.reference} to ${er.format}")
+        case pattern: Pattern         => emitPattern(pattern)
+        case mt: MessageType          => emitMessageType(mt)
+        case UniqueId(_, id)          => this.add(s"Id(${id.format}) ")
+        case Optional(_, typex)       => this.emitTypeExpression(typex).add("?")
+        case ZeroOrMore(_, typex)     => this.emitTypeExpression(typex).add("*")
+        case OneOrMore(_, typex)      => this.emitTypeExpression(typex).add("+")
         case x: TypeExpression =>
           require(requirement = false, s"Unknown type $x")
           this
@@ -307,13 +292,15 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
         .emitDescription(t.description).add("\n")
     }
 
-    def emitCondition(@unused condition: Condition): FormatState = {
-      this.add(condition.format)
-    }
+    def emitCondition(
+      @unused
+      condition: Condition
+    ): FormatState = { this.add(condition.format) }
 
-    def emitAction(@unused action: Action): FormatState = {
-      this.add(action.format)
-    }
+    def emitAction(
+      @unused
+      action: Action
+    ): FormatState = { this.add(action.format) }
 
     def emitGherkinStrings(strings: Seq[LiteralString]): FormatState = {
       strings.size match {
@@ -328,22 +315,17 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
 
     def emitAGherkinClause(ghc: GherkinClause): FormatState = {
       ghc match {
-        case GivenClause(_, strings) =>
-          emitGherkinStrings(strings)
-        case WhenClause(_, condition) =>
-          emitCondition(condition)
-        case ThenClause(_, action) =>
-          emitAction(action)
-        case ButClause(_, action) =>
-          emitAction(action)
+        case GivenClause(_, strings)  => emitGherkinStrings(strings)
+        case WhenClause(_, condition) => emitCondition(condition)
+        case ThenClause(_, action)    => emitAction(action)
+        case ButClause(_, action)     => emitAction(action)
       }
     }
 
     def emitGherkinClauses(kind: String, clauses: Seq[GherkinClause]): FormatState = {
       clauses.size match {
         case 0 => this
-        case 1 =>
-          addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
+        case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
         case _ =>
           add("\n").addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
           clauses.tail.foldLeft(this) { (next, clause) =>
@@ -353,12 +335,10 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     }
 
     def emitExample(example: Example): FormatState = {
-      if (!example.isImplicit) {openDef(example)}
-      emitGherkinClauses("given ", example.givens)
-        .emitGherkinClauses("when", example.whens)
-        .emitGherkinClauses("then", example.thens)
-        .emitGherkinClauses("but", example.buts)
-      if (!example.isImplicit) {closeDef(example)}
+      if (!example.isImplicit) { openDef(example) }
+      emitGherkinClauses("given ", example.givens).emitGherkinClauses("when", example.whens)
+        .emitGherkinClauses("then", example.thens).emitGherkinClauses("but", example.buts)
+      if (!example.isImplicit) { closeDef(example) }
       this
     }
 
@@ -380,94 +360,79 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
       state: FormatState,
       container: RootContainer,
       domain: Domain
-    ): FormatState = {state.openDef(domain)}
+    ): FormatState = { state.openDef(domain) }
 
     def closeRootDomain(
       state: FormatState,
       container: RootContainer,
       domain: Domain
-    ): FormatState = {state.closeDef(domain)}
+    ): FormatState = { state.closeDef(domain) }
 
     def openDomain(
       state: FormatState,
       container: Domain,
       domain: Domain
     ): FormatState = {
-      state
-        .openDef(domain)
-        .addIndent(s"author is {")
-        .step { s =>
-          if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
-            val author = domain.author.get
-            s.add("\n").indent
-            s.addIndent(s"name = ${author.name.format}\n")
-              .addIndent(s"email = ${author.email.format}\n")
-              .step { s =>
-                author.organization.map(org =>
-                  s.addIndent(s"organization =${org.format}\n")).orElse(Option(s)).get
-              }
-              .step { s =>
-                author.title.map(title =>
-                  s.addIndent(s"title = ${title.format}\n")).orElse(Option(s)).get
-              }
-              .outdent.addIndent("}\n")
-          } else {
-            s.add(" ??? }\n")
-          }
-        }
+      state.openDef(domain).addIndent(s"author is {").step { s =>
+        if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
+          val author = domain.author.get
+          s.add("\n").indent
+          s.addIndent(s"name = ${author.name.format}\n")
+            .addIndent(s"email = ${author.email.format}\n").step { s =>
+              author.organization.map(org => s.addIndent(s"organization =${org.format}\n"))
+                .orElse(Option(s)).get
+            }.step { s =>
+              author.title.map(title => s.addIndent(s"title = ${title.format}\n")).orElse(Option(s))
+                .get
+            }.outdent.addIndent("}\n")
+        } else { s.add(" ??? }\n") }
+      }
     }
 
     def closeDomain(
       state: FormatState,
       container: Domain,
       domain: Domain
-    ): FormatState = {state.closeDef(domain)}
+    ): FormatState = { state.closeDef(domain) }
 
     def openContext(
       state: FormatState,
       container: Domain,
       context: Context
-    ): FormatState = {state.openDef(context).emitOptions(context)}
+    ): FormatState = { state.openDef(context).emitOptions(context) }
 
     def closeContext(
       state: FormatState,
       container: Domain,
       context: Context
-    ): FormatState = {state.closeDef(context)}
+    ): FormatState = { state.closeDef(context) }
 
     def openStory(state: FormatState, container: Domain, story: Story): FormatState = {
-      state.openDef(story)
-        .addIndent(Keywords.role).add(" is ").add(story.role.format).addNL
+      state.openDef(story).addIndent(Keywords.role).add(" is ").add(story.role.format).addNL
         .addIndent(Keywords.capability).add(" is ").add(story.capability.format).addNL
-        .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format).addNL
-        .step { state =>
+        .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format).addNL.step { state =>
           if (story.examples.nonEmpty) {
             state.addIndent(Keywords.accepted).add(" by {").addNL.indent
-          } else {
-            state
-          }
+          } else { state }
         }
     }
 
     def closeStory(state: FormatState, container: Domain, story: Story): FormatState = {
-      (if (story.examples.nonEmpty) {
-        state.outdent.addNL.addLine("}")
-      } else {
-        state
-      }).closeDef(story)
+      (if (story.examples.nonEmpty) { state.outdent.addNL.addLine("}") }
+       else { state }).closeDef(story)
     }
 
     def openEntity(
       state: FormatState,
       container: Context,
       entity: Entity
-    ): FormatState = {state.openDef(entity).emitOptions(entity)}
+    ): FormatState = { state.openDef(entity).emitOptions(entity) }
 
     def closeEntity(
       state: FormatState,
       container: Context,
       entity: Entity
-    ): FormatState = {state.closeDef(entity)}
+    ): FormatState = { state.closeDef(entity) }
 
     def openAdaptor(
       state: FormatState,
@@ -476,12 +441,9 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     ): FormatState = {
       state.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format).add(" for ")
         .add(adaptor.ref.format).add(" is {").step { s2 =>
-        if (adaptor.isEmpty) {
-          s2.emitUndefined().add(" }\n")
-        } else {
-          s2.add("\n").indent
+          if (adaptor.isEmpty) { s2.emitUndefined().add(" }\n") }
+          else { s2.add("\n").indent }
         }
-      }
     }
 
     def doAdaptation(
@@ -490,38 +452,35 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
       adaptation: Adaptation
     ): FormatState = adaptation match {
       case Adaptation(_, _, event, command, examples, brief, description) => state
-        .addIndent(s"adapt ${adaptation.id.format} is {\n")
-        .indent.addIndent("from ").emitMessageRef(event).add(" to ").emitMessageRef(command)
-        .add(" as {\n").indent
-        .emitExamples(examples).outdent.addIndent("}\n")
-        .outdent.addIndent("}\n")
-        .emitBrief(brief)
-        .emitDescription(description)
+          .addIndent(s"adapt ${adaptation.id.format} is {\n").indent.addIndent("from ")
+          .emitMessageRef(event).add(" to ").emitMessageRef(command).add(" as {\n").indent
+          .emitExamples(examples).outdent.addIndent("}\n").outdent.addIndent("}\n").emitBrief(brief)
+          .emitDescription(description)
     }
 
     def closeAdaptor(
       state: FormatState,
       container: Context,
       adaptor: Adaptor
-    ): FormatState = {state.closeDef(adaptor)}
+    ): FormatState = { state.closeDef(adaptor) }
 
     def openInteraction(
       state: FormatState,
       container: Container[Interaction],
       interaction: Interaction
-    ): FormatState = {state.openDef(interaction).emitOptions(interaction)}
+    ): FormatState = { state.openDef(interaction).emitOptions(interaction) }
 
     def closeInteraction(
       state: FormatState,
       container: Container[Interaction],
       interaction: Interaction
-    ): FormatState = {state.closeDef(interaction)}
+    ): FormatState = { state.closeDef(interaction) }
 
     def doType(
       state: FormatState,
       container: Container[Definition],
       typeDef: Type
-    ): FormatState = {state.emitType(typeDef)}
+    ): FormatState = { state.emitType(typeDef) }
 
     def doAction(
       state: FormatState,
@@ -536,30 +495,29 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
       }
     }
 
-    override def doStoryExample(state: FormatState, container: Story, example: Example)
-    : FormatState = {
-      state.emitExample(example)
-    }
+    override def doStoryExample(
+      state: FormatState,
+      container: Story,
+      example: Example
+    ): FormatState = { state.emitExample(example) }
 
     def doFunctionExample(
       state: FormatState,
       function: Function,
       example: Example
-    ): FormatState = {state.emitExample(example)}
+    ): FormatState = { state.emitExample(example) }
 
     def doProcessorExample(
       state: FormatState,
       processor: Processor,
       example: Example
-    ): FormatState = {state.emitExample(example)}
+    ): FormatState = { state.emitExample(example) }
 
     override def doInvariant(
       state: FormatState,
       container: Entity,
       invariant: Invariant
-    ): FormatState = {
-      state.openDef(invariant).closeDef(invariant, withBrace = false)
-    }
+    ): FormatState = { state.openDef(invariant).closeDef(invariant, withBrace = false) }
 
     override def openState(state: FormatState, container: Entity, s: State): FormatState = {
       state.openDef(s, withBrace = false).emitFields(s.typeEx.fields)
@@ -623,12 +581,10 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
     override def doJoint(state: FormatState, container: Plant, joint: Joint): FormatState = {
       val s = state.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
       joint match {
-        case InletJoint(_, _, inletRef, pipeRef, _, _) =>
-          s.addIndent(s"inlet ${inletRef.id.format} from")
-            .add(s" pipe ${pipeRef.id.format}\n")
-        case OutletJoint(_, _, outletRef, pipeRef, _, _) =>
-          s.addIndent(s"outlet ${outletRef.id.format} to")
-            .add(s" pipe ${pipeRef.id.format}\n")
+        case InletJoint(_, _, inletRef, pipeRef, _, _) => s
+            .addIndent(s"inlet ${inletRef.id.format} from").add(s" pipe ${pipeRef.id.format}\n")
+        case OutletJoint(_, _, outletRef, pipeRef, _, _) => s
+            .addIndent(s"outlet ${outletRef.id.format} to").add(s" pipe ${pipeRef.id.format}\n")
       }
     }
 
@@ -674,7 +630,7 @@ object FormatTranslator extends Translator[FormattingOptions, FormatConfig] {
       state: FormatState,
       container: TCD,
       function: Function
-    ): FormatState = {state.closeDef(function)}
+    ): FormatState = { state.closeDef(function) }
   }
 
 }

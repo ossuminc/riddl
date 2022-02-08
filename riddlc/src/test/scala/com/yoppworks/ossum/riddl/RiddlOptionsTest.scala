@@ -13,8 +13,7 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           options.validatingOptions.showWarnings mustBe false
           options.validatingOptions.showStyleWarnings mustBe false
           options.validatingOptions.showMissingWarnings mustBe false
-        case None =>
-          fail("Failed to parse options")
+        case None => fail("Failed to parse options")
       }
     }
 
@@ -26,8 +25,7 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           config.validatingOptions.showWarnings mustBe true
           config.validatingOptions.showStyleWarnings mustBe true
           config.validatingOptions.showMissingWarnings mustBe false
-        case None =>
-          fail("Failed to parse options")
+        case None => fail("Failed to parse options")
       }
     }
 
@@ -39,8 +37,7 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           config.validatingOptions.showWarnings mustBe true
           config.validatingOptions.showStyleWarnings mustBe false
           config.validatingOptions.showMissingWarnings mustBe true
-        case None =>
-          fail("Failed to parse options")
+        case None => fail("Failed to parse options")
       }
     }
   }

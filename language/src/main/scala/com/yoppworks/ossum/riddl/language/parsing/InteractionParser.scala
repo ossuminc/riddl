@@ -11,16 +11,16 @@ trait InteractionParser extends ReferenceParser {
   def interactionOptions[u: P]: P[Seq[InteractionOption]] = {
     options(StringIn("gateway").!) {
       case (loc, "gateway", _) => GatewayInteraction(loc)
-      case _ => throw new RuntimeException("Impossible case")
+      case _                   => throw new RuntimeException("Impossible case")
     }
   }
 
   def messageOptions[u: P]: P[Seq[MessageOption]] = {
     options(StringIn(Options.sync, Options.async, Options.reply).!) {
-      case (loc, Options.sync, _) => SynchOption(loc)
+      case (loc, Options.sync, _)  => SynchOption(loc)
       case (loc, Options.async, _) => AsynchOption(loc)
       case (loc, Options.reply, _) => ReplyOption(loc)
-      case _ => throw new RuntimeException("invalid message option")
+      case _                       => throw new RuntimeException("invalid message option")
     }
   }
 

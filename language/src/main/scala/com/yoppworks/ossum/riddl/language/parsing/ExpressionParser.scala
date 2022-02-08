@@ -23,13 +23,9 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     P(literalString).map(ls => ArbitraryCondition(ls))
   }
 
-  def trueCondition[u: P]: P[True] = {
-    P(location ~ IgnoreCase("true")).map(True)./
-  }
+  def trueCondition[u: P]: P[True] = { P(location ~ IgnoreCase("true")).map(True)./ }
 
-  def falseCondition[u: P]: P[False] = {
-    P(location ~ IgnoreCase("false")).map(False)./
-  }
+  def falseCondition[u: P]: P[False] = { P(location ~ IgnoreCase("false")).map(False)./ }
 
   def terminalCondition[u: P]: P[Condition] = {
     P(trueCondition | falseCondition | arbitraryCondition | valueCondition | undefinedCondition)
@@ -42,9 +38,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   def arguments[u: P]: P[ArgList] = {
     P(identifier ~ Punctuation.equals ~ expression).rep(min = 0, Punctuation.comma).map {
       s: Seq[(Identifier, Expression)] =>
-        s.foldLeft(ListMap.empty[Identifier, Expression]) { case (b, (id, exp)) =>
-          b + (id -> exp)
-        }
+        s.foldLeft(ListMap.empty[Identifier, Expression]) { case (b, (id, exp)) => b + (id -> exp) }
     }.map { lm => ArgList(lm) }
   }
 
@@ -62,15 +56,19 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def operatorName[u: P]: P[String] = {
-    CharPred(x => x >= 'a' && x <= 'z').! ~~
-      CharsWhile(x => (x >= 'a' && x < 'z') || (x >= 'A' && x <= 'Z') || (x >= '0' && x <= '9')).!
+    CharPred(x => x >= 'a' && x <= 'z').! ~~ CharsWhile(x =>
+      (x >= 'a' && x < 'z') ||
+        (x >= 'A' && x <= 'Z') ||
+        (x >= '0' && x <= '9')
+    ).!
   }.map { case (x, y) => x + y }
 
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
-      location ~ (Operators.plus.! | Operators.minus.! | Operators.times.! |
-        Operators.div.! | Operators.mod.! | operatorName) ~
-        Punctuation.roundOpen ~ expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
+      location ~
+        (Operators.plus.! | Operators.minus.! | Operators.times.! | Operators.div.! |
+          Operators.mod.! | operatorName) ~ Punctuation.roundOpen ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
@@ -82,20 +80,19 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def expression[u: P]: P[Expression] = {
-    P(terminalExpression | ternaryExpression | arithmeticOperator |
-      functionCallExpression | groupExpression
+    P(
+      terminalExpression | ternaryExpression | arithmeticOperator | functionCallExpression |
+        groupExpression
     )
   }
 
   def comparator[u: P]: P[Comparator] = {
-    P(
-      StringIn("<=", "!=", "==", ">=", "<", ">")
-    ).!./.map {
+    P(StringIn("<=", "!=", "==", ">=", "<", ">")).!./.map {
       case "==" => AST.eq
       case "!=" => AST.ge
-      case "<" => AST.lt
+      case "<"  => AST.lt
       case "<=" => AST.le
-      case ">" => AST.gt
+      case ">"  => AST.gt
       case ">=" => AST.ge
     }
   }
@@ -128,17 +125,17 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def andCondition[u: P]: P[AndCondition] = {
     P(
-      location ~ Operators.and ~ Punctuation.roundOpen ~/ condition.rep(2,  Punctuation.comma) ~
+      location ~ Operators.and ~ Punctuation.roundOpen ~/ condition.rep(2, Punctuation.comma) ~
         Punctuation.roundClose./
     ).map(t => (AndCondition.apply _).tupled(t))
   }
 
   def logicalExpressions[u: P]: P[Condition] = {
-    P(orCondition | xorCondition | andCondition | notCondition | comparisonCondition |
-      functionCallExpression)
+    P(
+      orCondition | xorCondition | andCondition | notCondition | comparisonCondition |
+        functionCallExpression
+    )
   }
 
-  def condition[u: P]: P[Condition] = {
-    P(terminalCondition | logicalExpressions)
-  }
+  def condition[u: P]: P[Condition] = { P(terminalCondition | logicalExpressions) }
 }

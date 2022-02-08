@@ -6,35 +6,31 @@ import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-/** ActionParser
- * Define actions that various constructs can take for modelling behavior
- * in a message-passing system
- */
+/** ActionParser Define actions that various constructs can take for modelling behavior in a
+  * message-passing system
+  */
 trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def arbitraryAction[u: P]: P[ArbitraryAction] = {
-    P(
-      location ~ literalString ~ description
-    ).map { tpl => (ArbitraryAction.apply _).tupled(tpl) }
+    P(location ~ literalString ~ description).map { tpl => (ArbitraryAction.apply _).tupled(tpl) }
   }
 
   def setAction[u: P]: P[SetAction] = {
-    P(
-      Keywords.set ~/ location ~ pathIdentifier ~ Readability.to ~ expression ~
-        description
-    ).map { t => (SetAction.apply _).tupled(t) }
+    P(Keywords.set ~/ location ~ pathIdentifier ~ Readability.to ~ expression ~ description).map {
+      t => (SetAction.apply _).tupled(t)
+    }
   }
 
   def morphAction[u: P]: P[MorphAction] = {
-    P(
-      Keywords.morph ~/ location ~ entityRef ~ Readability.to.? ~ stateRef ~ description
-    ).map { tpl => (MorphAction.apply _).tupled(tpl) }
+    P(Keywords.morph ~/ location ~ entityRef ~ Readability.to.? ~ stateRef ~ description).map {
+      tpl => (MorphAction.apply _).tupled(tpl)
+    }
   }
 
   def becomeAction[u: P]: P[BecomeAction] = {
-    P(
-      Keywords.become ~/ location ~ entityRef ~ Readability.to ~ handlerRef ~ description
-    ).map { tpl => (BecomeAction.apply _).tupled(tpl) }
+    P(Keywords.become ~/ location ~ entityRef ~ Readability.to ~ handlerRef ~ description).map {
+      tpl => (BecomeAction.apply _).tupled(tpl)
+    }
   }
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
@@ -59,15 +55,14 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def compoundAction[u: P]: P[CompoundAction] = {
-    P(
-      location ~ open ~ anyAction.rep(1, ",") ~ close ~ description
-    ).map(tpl => (CompoundAction.apply _).tupled(tpl))
+    P(location ~ open ~ anyAction.rep(1, ",") ~ close ~ description)
+      .map(tpl => (CompoundAction.apply _).tupled(tpl))
   }
 
   def anyAction[u: P]: P[Action] = {
     P(
-      arbitraryAction | setAction | morphAction | becomeAction | publishAction |
-        tellAction | askAction | compoundAction
+      arbitraryAction | setAction | morphAction | becomeAction | publishAction | tellAction |
+        askAction | compoundAction
     )
   }
 }

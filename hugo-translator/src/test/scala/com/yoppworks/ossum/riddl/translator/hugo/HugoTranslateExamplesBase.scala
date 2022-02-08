@@ -13,9 +13,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   val directory: String = "examples/src/riddl/"
   val output: String
 
-  def outPath(path: String): Path = {
-    Path.of(output).resolve(new File(path).getName)
-  }
+  def outPath(path: String): Path = { Path.of(output).resolve(new File(path).getName) }
 
   val errorsOnly: ValidatingOptions = ValidatingOptions(
     parsingOptions = ParsingOptions(showTimes = true),
@@ -52,21 +50,17 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
       if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
     }
 
-    def ferr(line: String): Unit = {lineBuffer.append(line); hadErrorOutput = true}
+    def ferr(line: String): Unit = { lineBuffer.append(line); hadErrorOutput = true }
 
     val logger = ProcessLogger(fout, ferr)
     val proc = Process("hugo", cwd = Option(srcDir))
     proc.!(logger) match {
       case 0 =>
-        if (hadErrorOutput) {
-          fail("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  "))
-        } else if (hadWarningOutput) {
+        if (hadErrorOutput) { fail("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  ")) }
+        else if (hadWarningOutput) {
           fail("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
-        } else {
-          succeed
-        }
-      case rc: Int =>
-        fail(s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  "))
+        } else { succeed }
+      case rc: Int => fail(s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  "))
     }
   }
 

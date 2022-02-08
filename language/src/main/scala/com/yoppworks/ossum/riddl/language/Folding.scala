@@ -60,9 +60,7 @@ object Folding {
         }
       case story: Story =>
         result = f(parent, story, result)
-        story.contents.foldLeft(result) { (next, example) =>
-          f(story, example, next)
-        }
+        story.contents.foldLeft(result) { (next, example) => f(story, example, next) }
       case entity: Entity =>
         result = f(parent, entity, result)
         result = entity.types.foldLeft(result) { (next, typ) => f(entity, typ, next) }
@@ -110,19 +108,17 @@ object Folding {
   }
 
   final def foldLeft[S](
-    value: S, parents: mutable.Stack[Container[Definition]] =
-  mutable.Stack.empty[Container[Definition]]
-  )(top: Container[Definition])(
-    f: (S, Definition, mutable.Stack[Container[Definition]]) => S
+    value: S,
+    parents: mutable.Stack[Container[Definition]] = mutable.Stack.empty[Container[Definition]]
+  )(top: Container[Definition]
+  )(f: (S, Definition, mutable.Stack[Container[Definition]]) => S
   ): S = {
     val initial = f(value, top, parents)
     parents.push(top)
     val result = top.contents.foldLeft(initial) { (next, defn) =>
       defn match {
-        case cont: Container[Definition] =>
-          foldLeft(next, parents)(cont)(f)
-        case _: Definition =>
-          f(next, defn, parents)
+        case cont: Container[Definition] => foldLeft(next, parents)(cont)(f)
+        case _: Definition               => f(next, defn, parents)
       }
     }
     parents.pop()
@@ -135,18 +131,18 @@ object Folding {
     def doDomainContent(domain: Domain, state: S): S = {
       domain.contents.foldLeft(state) { case (next, dd) =>
         dd match {
-          case typ: Type => doType(next, domain, typ)
-          case context: Context => foldLeft(domain, context, next)
-          case plant: Plant => foldLeft(domain, plant, next)
-          case story: Story => foldLeft(domain, story, next)
+          case typ: Type                => doType(next, domain, typ)
+          case context: Context         => foldLeft(domain, context, next)
+          case plant: Plant             => foldLeft(domain, plant, next)
+          case story: Story             => foldLeft(domain, story, next)
           case interaction: Interaction => foldLeft(domain, interaction, next)
-          case subDomain: Domain => foldLeft(domain, subDomain, next)
+          case subDomain: Domain        => foldLeft(domain, subDomain, next)
         }
       }
     }
 
     /** Container Traversal This foldLeft allows the hierarchy of containers to be navigated
-     */
+      */
     // noinspection ScalaStyle
     final def foldLeft[CT <: Container[Definition]](
       parent: CT,
@@ -155,10 +151,10 @@ object Folding {
     ): S = {
       container match {
         case root: RootContainer => root.contents.foldLeft(initState) { (s, domain) =>
-          val s1 = openRootDomain(s, root, domain)
-          val s2 = doDomainContent(domain, s1)
-          closeRootDomain(s2, root, domain)
-        }
+            val s1 = openRootDomain(s, root, domain)
+            val s2 = doDomainContent(domain, s1)
+            closeRootDomain(s2, root, domain)
+          }
         case domain: Domain =>
           val domainContainer = parent.asInstanceOf[Domain]
           openDomain(initState, domainContainer, domain).step { state =>
@@ -169,11 +165,11 @@ object Folding {
           openContext(initState, parentDomain, context).step { state =>
             context.contents.foldLeft(state) { (next, cd) =>
               cd match {
-                case typ: Type => doType(next, context, typ)
-                case entity: Entity => foldLeft(context, entity, next)
-                case adaptor: Adaptor => foldLeft(context, adaptor, next)
-                case saga: Saga => foldLeft(context, saga, next)
-                case function: Function => foldLeft(context, function, next)
+                case typ: Type                => doType(next, context, typ)
+                case entity: Entity           => foldLeft(context, entity, next)
+                case adaptor: Adaptor         => foldLeft(context, adaptor, next)
+                case saga: Saga               => foldLeft(context, saga, next)
+                case function: Function       => foldLeft(context, function, next)
                 case interaction: Interaction => foldLeft(context, interaction, next)
               }
             }
@@ -190,11 +186,11 @@ object Folding {
           openEntity(initState, parentContext, entity).step { state =>
             entity.contents.foldLeft(state) { (st, entityDefinition) =>
               entityDefinition match {
-                case typ: Type => doType(st, entity, typ)
+                case typ: Type              => doType(st, entity, typ)
                 case entityState: AST.State => foldLeft(entity, entityState, st)
-                case handler: Handler => doHandler(st, entity, handler)
-                case function: Function => foldLeft(entity, function, st)
-                case invariant: Invariant => doInvariant(st, entity, invariant)
+                case handler: Handler       => doHandler(st, entity, handler)
+                case function: Function     => foldLeft(entity, function, st)
+                case invariant: Invariant   => doInvariant(st, entity, invariant)
               }
             }
           }.step { state => closeEntity(state, parentContext, entity) }
@@ -214,8 +210,8 @@ object Folding {
           openProcessor(initState, containingPlant, processor).step { state =>
             processor.contents.foldLeft(state) { (next, streamlet) =>
               streamlet match {
-                case inlet: Inlet => doInlet(next, processor, inlet)
-                case outlet: Outlet => doOutlet(next, processor, outlet)
+                case inlet: Inlet     => doInlet(next, processor, inlet)
+                case outlet: Outlet   => doOutlet(next, processor, outlet)
                 case example: Example => doProcessorExample(next, processor, example)
               }
             }
@@ -232,13 +228,12 @@ object Folding {
           val interactionContainer = parent.asInstanceOf[Container[Interaction]]
           openInteraction(initState, interactionContainer, interaction).step { state =>
             interaction.contents.foldLeft(state) { (next, id) =>
-              id match {case action: MessageAction => doAction(next, interaction, action)}
+              id match { case action: MessageAction => doAction(next, interaction, action) }
             }
           }.step { state => closeInteraction(state, interactionContainer, interaction) }
-        case function: Function =>
-          openFunction(initState, parent, function).step { state =>
+        case function: Function => openFunction(initState, parent, function).step { state =>
             function.contents.foldLeft(state) { (next, fd) =>
-              fd match {case example: Example => doFunctionExample(next, function, example)}
+              fd match { case example: Example => doFunctionExample(next, function, example) }
             }
           }.step { state => closeFunction(state, parent, function) }
         case adaptor: Adaptor =>

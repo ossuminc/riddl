@@ -1,7 +1,8 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.Validation.{MissingWarning, StyleWarning,
-  ValidatingOptions}
+import com.yoppworks.ossum.riddl.language.Validation.MissingWarning
+import com.yoppworks.ossum.riddl.language.Validation.StyleWarning
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 
 /** Validate files */
 class ValidateExamplesTest extends ValidatingTest {

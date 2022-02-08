@@ -1,9 +1,11 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Container, Definition}
+import com.yoppworks.ossum.riddl.language.AST.Container
+import com.yoppworks.ossum.riddl.language.AST.Definition
 import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import pureconfig.generic.auto.*
-import pureconfig.{ConfigReader, ConfigSource}
+import pureconfig.ConfigReader
+import pureconfig.ConfigSource
 
 import java.io.File
 import java.nio.file.Path
@@ -21,8 +23,8 @@ class TranslatorTest extends ValidatingTest {
     inputPath: Option[Path] = None,
     outputPath: Option[Path] = None,
     configPath: Option[Path] = None,
-    logger: Option[Logger] = None,
-  ) extends TranslatingOptions
+    logger: Option[Logger] = None)
+      extends TranslatingOptions
 
   case class TestTranslatorConfig() extends TranslatorConfiguration
 
@@ -47,10 +49,9 @@ class TranslatorTest extends ValidatingTest {
     ): Seq[File] = {
       val state = TestTranslatorState(config)
       val parents = scala.collection.mutable.Stack.empty[Container[Definition]]
-      Folding.foldLeft(state, parents)(root) {
-        case (state, definition, stack) =>
-          options.log.info(stack.reverse.mkString(".") + "." + definition.id.format)
-          state
+      Folding.foldLeft(state, parents)(root) { case (state, definition, stack) =>
+        options.log.info(stack.reverse.mkString(".") + "." + definition.id.format)
+        state
       }
       Seq.empty[File]
     }
@@ -58,13 +59,10 @@ class TranslatorTest extends ValidatingTest {
 
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
-  val roots = Map(
-    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
-    "DokN" -> "dokn/dokn.riddl"
-  )
+  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl", "DokN" -> "dokn/dokn.riddl")
 
   "Translator" should {
-    for {(name, fileName) <- roots} {
+    for { (name, fileName) <- roots } {
       s"translate $name" in {
         val tt = new TestTranslator
         val logger = StringLogger()

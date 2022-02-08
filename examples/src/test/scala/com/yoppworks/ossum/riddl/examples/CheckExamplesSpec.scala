@@ -6,16 +6,11 @@ import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslateExamplesBase
 class CheckExamplesSpec extends HugoTranslateExamplesBase {
 
   val output = "examples/target/translator/"
-  val roots = Map(
-    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
-    "DokN" -> "dokn/dokn.riddl"
-  )
+  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl", "DokN" -> "dokn/dokn.riddl")
 
   "Examples" should {
-    for {(name, path) <- roots} {
-      s"parse, validate, and generate $name" in {
-        checkExamples(name, path)
-      }
+    for { (name, path) <- roots } {
+      s"parse, validate, and generate $name" in { checkExamples(name, path) }
     }
   }
 }

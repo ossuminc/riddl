@@ -29,9 +29,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  def markdownLines[u: P]: P[Seq[LiteralString]] = {P(markdownLine.rep(1))}
+  def markdownLines[u: P]: P[Seq[LiteralString]] = { P(markdownLine.rep(1)) }
 
-  def as[u: P]: P[Unit] = {P(StringIn(Readability.as, Readability.by).?)}
+  def as[u: P]: P[Unit] = { P(StringIn(Readability.as, Readability.by).?) }
 
   def docBlock[u: P]: P[Seq[LiteralString]] = {
     P(
@@ -47,7 +47,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   def description[u: P]: P[Option[Description]] = {
     P(location ~ StringIn(Keywords.described, Keywords.explained) ~/ as ~ docBlock).?.map {
       case Some((loc, lines)) => Option(Description(loc, lines))
-      case None => None
+      case None               => None
     }
   }
 
@@ -87,32 +87,33 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(StringIn(Readability.is, Readability.are, Punctuation.colon, Punctuation.equals)).?./
   }
 
-  def open[u: P]: P[Unit] = {P(Punctuation.curlyOpen)}
+  def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
-  def close[u: P]: P[Unit] = {P(Punctuation.curlyClose)}
+  def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
 
   def maybeOptionWithArgs[u: P](
     validOptions: => P[String]
   ): P[(Location, String, Seq[LiteralString])] = {
-    P(location ~ validOptions ~ (Punctuation.roundOpen ~
-      literalString.rep(0, P(Punctuation.comma)) ~ Punctuation.roundClose).?).map {
+    P(
+      location ~ validOptions ~
+        (Punctuation.roundOpen ~ literalString.rep(0, P(Punctuation.comma)) ~
+          Punctuation.roundClose).?
+    ).map {
       case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
-      case (loc, opt, None) => (loc, opt, Seq.empty[LiteralString])
+      case (loc, opt, None)            => (loc, opt, Seq.empty[LiteralString])
     }
   }
 
   def options[u: P, TY <: RiddlValue](
     validOptions: => P[String]
-  )(
-    mapper: => (Location, String, Seq[LiteralString]) => TY
+  )(mapper: => (Location, String, Seq[LiteralString]) => TY
   ): P[Seq[TY]] = {
     P(
-      (Keywords.options ~ Punctuation.roundOpen ~/
-        maybeOptionWithArgs(validOptions).rep(1, P(Punctuation.comma)) ~
-        Punctuation.roundClose
-        ).map(_.map { case (loc, opt, arg) => mapper(loc, opt, arg) }) |
-        (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))
-          .map(tpl => Seq(mapper.tupled(tpl)))
+      (Keywords.options ~ Punctuation.roundOpen ~/ maybeOptionWithArgs(validOptions)
+        .rep(1, P(Punctuation.comma)) ~ Punctuation.roundClose).map(_.map { case (loc, opt, arg) =>
+        mapper(loc, opt, arg)
+      }) | (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))
+        .map(tpl => Seq(mapper.tupled(tpl)))
     ).?.map {
       case Some(seq) => seq
       case None      => Seq.empty[TY]
@@ -123,31 +124,18 @@ trait CommonParser extends NoWhiteSpaceParsers {
     seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 
-  def hostString[u:P]: P[String] = {
-    P(
-      CharsWhile{ch => ch.isLetterOrDigit || ch == '-'}
-        .rep(1,".", 32)
-    ).!
+  def hostString[u: P]: P[String] = {
+    P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
   }
 
-  def portNum[u:P]: P[String] = {
-    P(
-      CharsWhileIn("0-9")
-        .rep(min=1,max=5)
-    ).!
-  }
+  def portNum[u: P]: P[String] = { P(CharsWhileIn("0-9").rep(min = 1, max = 5)).! }
 
-  def urlPath[u:P]: P[String] = {
-    P(
-      CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch) )
-        .rep(min=0,max=240)
-    ).!
+  def urlPath[u: P]: P[String] = {
+    P(CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch)).rep(min = 0, max = 240)).!
   }
 
   def httpUrl[u: P]: P[java.net.URL] = {
-    P(
-      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
-    ).!.map(new URL(_))
+    P("http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath).!.map(new URL(_))
   }
 
 }

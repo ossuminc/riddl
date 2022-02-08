@@ -13,11 +13,10 @@ class CommonParserTest extends ParsingTest {
       loc.col mustBe 1
     }
     "literal strings can handle any chars except \"" in {
-      val input =
-        """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
-          | regular chars: abcdefghijklmnopqrstuvwxyz 0123456789
-          | tab and newline chars:
-          |"""".stripMargin
+      val input = """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
+                    | regular chars: abcdefghijklmnopqrstuvwxyz 0123456789
+                    | tab and newline chars:
+                    |"""".stripMargin
       parse[LiteralString, LiteralString](
         input,
         StringParser("").literalString(_),
@@ -36,13 +35,11 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) =>
-          domain.description match {
+        case Right(domain) => domain.description match {
             case Some(Description(_, lines)) =>
               lines.size mustBe 1
               lines.head.s mustBe "this is an \\\"explanation\\\""
-            case x: Any =>
-              fail(s"Expected a one line Description but got: $x")
+            case x: Any => fail(s"Expected a one line Description but got: $x")
           }
       }
     }
@@ -59,14 +56,12 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) =>
-          content.typ match {
+        case Right(content) => content.typ match {
             case Pattern(_, Seq(LiteralString(_, str))) =>
               str.head mustBe '('
               str.last mustBe ')'
               str.contains("\\\"") mustBe true
-            case _ =>
-              fail("Expected a Pattern")
+            case _ => fail("Expected a Pattern")
           }
       }
     }
@@ -80,8 +75,7 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) =>
-          content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
+        case Right(content) => content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
       }
     }
   }

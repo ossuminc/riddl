@@ -1,8 +1,10 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.{SevereError, ValidationMessage,
-  ValidationState, Warning}
+import com.yoppworks.ossum.riddl.language.Validation.SevereError
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.Validation.ValidationState
+import com.yoppworks.ossum.riddl.language.Validation.Warning
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 

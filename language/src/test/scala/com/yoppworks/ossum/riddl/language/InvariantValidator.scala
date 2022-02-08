@@ -13,13 +13,17 @@ class InvariantValidator extends ValidatingTest {
           |}
           |""".stripMargin
       ) { (_, msgs) =>
-        assertValidationMessage(msgs, Validation.MissingWarning,
+        assertValidationMessage(
+          msgs,
+          Validation.MissingWarning,
           "Condition in Invariant 'small' should not be empty"
         )
-        assertValidationMessage(msgs, Validation.Error,
-          "Entity 'user' must define a handler")
-        assertValidationMessage(msgs, Validation.MissingWarning,
-          "Entity 'user' should have a description")
+        assertValidationMessage(msgs, Validation.Error, "Entity 'user' must define a handler")
+        assertValidationMessage(
+          msgs,
+          Validation.MissingWarning,
+          "Entity 'user' should have a description"
+        )
       }
     }
     "warn about missing descriptions " in {

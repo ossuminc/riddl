@@ -1,9 +1,12 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.{ValidatingOptions, ValidationMessage,
-  ValidationMessageKind, ValidationMessages}
-import com.yoppworks.ossum.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
+import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
+import com.yoppworks.ossum.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 
 import java.io.File
@@ -12,7 +15,7 @@ import scala.reflect.*
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
-  def parseAndValidateInContext[D <: ContextDefinition : ClassTag](
+  def parseAndValidateInContext[D <: ContextDefinition: ClassTag](
     input: String
   )(validator: (D, ValidationMessages) => Assertion
   ): Seq[Assertion] = {
@@ -31,12 +34,10 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-
   def parseAndValidateContext(
     input: String,
     options: ValidatingOptions = ValidatingOptions.default
-  )(
-    validator: (Context, ValidationMessages) => Assertion
+  )(validator: (Context, ValidationMessages) => Assertion
   ): Assertion = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     parseDefinition[Domain](RiddlParserInput(parseString)) match {
@@ -50,17 +51,15 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-
-  def parseAndValidate[D <: Container[Definition] : ClassTag](
+  def parseAndValidate[D <: Container[Definition]: ClassTag](
     input: String
-  )(
-    validator: (D, ValidationMessages) => Assertion
+  )(validator: (D, ValidationMessages) => Assertion
   ): Assertion = {
     parseDefinition[D](RiddlParserInput(input)) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: D@unchecked) =>
+      case Right(model: D @unchecked) =>
         val msgs = Validation.validate(model)
         validator(model, msgs)
     }
@@ -70,8 +69,7 @@ abstract class ValidatingTest extends ParsingTest {
     input: String,
     testCaseName: String,
     options: ValidatingOptions = ValidatingOptions.default
-  )(
-    validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, testCaseName) match {
       case Left(errors) =>
@@ -83,13 +81,11 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-
   def validateFile(
     label: String,
     fileName: String,
     options: ValidatingOptions = ValidatingOptions.default
-  )(
-    validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val directory = "language/src/test/input/"
     val file = new File(directory + fileName)

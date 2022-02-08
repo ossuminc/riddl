@@ -57,7 +57,7 @@ trait Translator[OPT <: TranslatingOptions, CONF <: TranslatorConfiguration] {
               failures.toList.foreach { crf: ConfigReaderFailure =>
                 val location = crf.origin match {
                   case Some(origin) => origin.description
-                  case None => "unknown location"
+                  case None         => "unknown location"
                 }
                 logger.error(s"In $location:\n${crf.description}")
               }
@@ -79,40 +79,37 @@ trait Translator[OPT <: TranslatingOptions, CONF <: TranslatorConfiguration] {
 
   final def translate(
     root: RootContainer,
-    options: OPT,
+    options: OPT
   ): Seq[File] = {
     val showTimes = options.validatingOptions.parsingOptions.showTimes
-    val cfg = Riddl.timer(stage = "load configuration", showTimes) {
-      getConfig(options.log, options.configPath)
-    }
+    val cfg = Riddl
+      .timer(stage = "load configuration", showTimes) { getConfig(options.log, options.configPath) }
     Riddl.timer(stage = "translate", showTimes) {
       cfg.fold(Seq.empty[File])(translate(root, options, _))
     }
   }
 
   final def parseValidateTranslate(
-    options: OPT,
+    options: OPT
   ): Seq[File] = {
     Riddl.parseAndValidate(options.inputPath.get.toFile, options.validatingOptions) match {
       case Some(root) => translate(root, options)
-      case None => Seq.empty[File]
+      case None       => Seq.empty[File]
     }
   }
 
   final def parseValidateTranslate(
     input: RiddlParserInput,
-    options: OPT,
+    options: OPT
   ): Seq[File] = {
     Riddl.parseAndValidate(input, options.validatingOptions) match {
       case Some(root) => translate(root, options)
-      case None => Seq.empty[File]
+      case None       => Seq.empty[File]
     }
   }
 
   final def parseValidateTranslateFile(
     path: Path,
     options: OPT
-  ): Seq[File] = {
-    parseValidateTranslate(RiddlParserInput(path), options)
-  }
+  ): Seq[File] = { parseValidateTranslate(RiddlParserInput(path), options) }
 }

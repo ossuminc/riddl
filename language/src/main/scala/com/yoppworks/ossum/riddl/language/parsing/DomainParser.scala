@@ -18,51 +18,41 @@ trait DomainParser
     include[DomainDefinition, X](domainContent(_))
   }
 
-  def story[u: P]: P[Story] =
-    P(location ~
-      Keywords.story ~ identifier ~ is ~ open ~
-      Keywords.role ~ is ~ literalString ~
-      Keywords.capability ~ is ~ literalString ~
-      Keywords.benefit ~ is ~ literalString ~
-      (Keywords.shown ~ Readability.by ~ open ~ httpUrl.rep(1, Punctuation.comma) ~ close).?
-        .map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get } ~
+  def story[u: P]: P[Story] = P(
+    location ~ Keywords.story ~ identifier ~ is ~ open ~ Keywords.role ~ is ~ literalString ~
+      Keywords.capability ~ is ~ literalString ~ Keywords.benefit ~ is ~ literalString ~
+      (Keywords.shown ~ Readability.by ~ open ~ httpUrl.rep(1, Punctuation.comma) ~ close).?.map {
+        x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get
+      } ~
       (Keywords.implemented ~ Readability.by ~ open ~ pathIdentifier.rep(1, Punctuation.comma) ~
         close).?.map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
-      (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~
-      close ~ briefly ~ description
-    ).map {
-      case (loc, id, role, capa, bene, shown, implemented, Some(examples), briefly, description) =>
-        Story(loc, id, role, capa, bene, shown, implemented, examples, briefly, description)
-      case (loc, id, role, capa, bene, shown, implemented, None, briefly, description) =>
-        Story(loc, id, role, capa, bene, shown, implemented, Seq.empty[Example], briefly,
-          description)
-    }
+      (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~ close ~ briefly ~
+      description
+  ).map {
+    case (loc, id, role, capa, bene, shown, implemented, Some(examples), briefly, description) =>
+      Story(loc, id, role, capa, bene, shown, implemented, examples, briefly, description)
+    case (loc, id, role, capa, bene, shown, implemented, None, briefly, description) =>
+      Story(loc, id, role, capa, bene, shown, implemented, Seq.empty[Example], briefly, description)
+  }
 
   def author[u: P]: P[Option[AuthorInfo]] = {
     P(
       location ~ Keywords.author ~/ is ~ open ~
-        (
-          undefined(
-            (LiteralString(Location(), ""), LiteralString(Location(), ""),
-              Option.empty[LiteralString], Option.empty[LiteralString],
-              Option.empty[java.net.URL]
-            )
-          ) |
-            (
-              Keywords.name ~ is ~ literalString ~
-                Keywords.email ~ is ~ literalString ~
-                (Keywords.organization ~ is ~ literalString).? ~
-                (Keywords.title ~ is ~ literalString).? ~
-                (Keywords.url ~ is ~ httpUrl).?
-              )
-          ) ~ close ~ description
+        (undefined((
+          LiteralString(Location(), ""),
+          LiteralString(Location(), ""),
+          Option.empty[LiteralString],
+          Option.empty[LiteralString],
+          Option.empty[java.net.URL]
+        )) |
+          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~ literalString ~
+            (Keywords.organization ~ is ~ literalString).? ~ (Keywords.title ~ is ~ literalString)
+              .? ~ (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ description
     ).?.map {
       case Some((loc, (name, email, org, title, url), description)) =>
         if (name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty && url.isEmpty) {
           Option.empty[AuthorInfo]
-        } else {
-          Option(AuthorInfo(loc, name, email, org, title, url, description))
-        }
+        } else { Option(AuthorInfo(loc, name, email, org, title, url, description)) }
       case None => None
     }
   }
@@ -87,8 +77,19 @@ trait DomainParser
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
-      Domain(loc, id, author, types, contexts, interactions, plants, stories, domains,
-        briefly, description)
+      Domain(
+        loc,
+        id,
+        author,
+        types,
+        contexts,
+        interactions,
+        plants,
+        stories,
+        domains,
+        briefly,
+        description
+      )
     }
   }
 }

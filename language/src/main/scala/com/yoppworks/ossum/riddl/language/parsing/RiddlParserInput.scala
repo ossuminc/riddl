@@ -34,17 +34,15 @@ abstract class RiddlParserInput extends ParserInput {
       case n  => math.max(0, n - 1)
     }
   }
-  */
+   */
 
   private def lineOf(index: Int): Int = {
     val result = lineNumberLookup.search(index)
     result match {
-      case Searching.Found(foundIndex) =>
-        foundIndex
+      case Searching.Found(foundIndex) => foundIndex
       case Searching.InsertionPoint(insertionPoint) =>
         if (insertionPoint > 0) insertionPoint - 1 else insertionPoint
-      case _ =>
-        0
+      case _ => 0
     }
   }
 
@@ -59,13 +57,11 @@ abstract class RiddlParserInput extends ParserInput {
     require(loc.line > 0)
     val start = lineNumberLookup(loc.line - 1)
     val end =
-      if (lineNumberLookup.length == 1) {data.length}
+      if (lineNumberLookup.length == 1) { data.length }
       else if (loc.line >= lineNumberLookup.length) {
         // actually out of bounds but go to last line
         lineNumberLookup(lineNumberLookup.length - 1)
-      } else {
-        lineNumberLookup(loc.line)
-      }
+      } else { lineNumberLookup(loc.line) }
     start -> end
   }
 
@@ -120,7 +116,7 @@ object RiddlParserInput {
   ): RiddlParserInput = { StringParserInput(data) }
 
   implicit def apply(source: Source): RiddlParserInput = { SourceParserInput(source, source.descr) }
-  implicit def apply(file: File): RiddlParserInput = {FileParserInput(file)}
+  implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
 
-  implicit def apply(path: Path): RiddlParserInput = {FileParserInput(path.toFile)}
+  implicit def apply(path: Path): RiddlParserInput = { FileParserInput(path.toFile) }
 }

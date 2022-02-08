@@ -17,8 +17,7 @@ case class SymbolTable(container: Container[Definition]) {
 
   val parentage: Parentage = {
     Folding.foldEachDefinition[Parentage](container, container, emptyParentage) {
-      (parent, child, next) =>
-        next + (child -> parent)
+      (parent, child, next) => next + (child -> parent)
     }
   }
 
@@ -31,18 +30,18 @@ case class SymbolTable(container: Container[Definition]) {
     addToSymTab(child.id.value, child -> parent)
     child match {
       case t: Type => t.typ match {
-        case e: Enumeration => e.enumerators.foreach { etor =>
-          addToSymTab(etor.id.value, etor -> parent)
-          // type reference and identifier relations must be handled by semantic validation
+          case e: Enumeration => e.enumerators.foreach { etor =>
+              addToSymTab(etor.id.value, etor -> parent)
+            // type reference and identifier relations must be handled by semantic validation
+            }
+          case mt: MessageType => mt.fields.foreach { fld =>
+              addToSymTab(fld.id.value, fld -> parent)
+            }
+          case agg: Aggregation => agg.fields.foreach { fld =>
+              addToSymTab(fld.id.value, fld -> parent)
+            }
+          case _ => // addToSymTab(t.id.value, t -> parent) // types are definitions too
         }
-        case mt: MessageType => mt.fields.foreach { fld =>
-          addToSymTab(fld.id.value, fld -> parent)
-        }
-        case agg: Aggregation => agg.fields.foreach { fld =>
-          addToSymTab(fld.id.value, fld -> parent)
-        }
-        case _ => // addToSymTab(t.id.value, t -> parent) // types are definitions too
-      }
       case _ =>
     }
   }
@@ -81,27 +80,22 @@ case class SymbolTable(container: Container[Definition]) {
 
   type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
-  def lookupSymbol[D <: Definition : ClassTag](
+  def lookupSymbol[D <: Definition: ClassTag](
     id: Seq[String]
   ): LookupResult[D] = {
     val clazz = classTag[D].runtimeClass
     val leafName = id.head
     val containerNames = id.tail
     symbols.get(leafName) match {
-      case Some(set) => set.filter {
-        case (_: Definition, container: Container[Definition]) =>
+      case Some(set) => set.filter { case (_: Definition, container: Container[Definition]) =>
           val parentNames = (container +: parentsOf(container)).map(_.id.value)
           containerNames.zip(parentNames).forall { case (containerName, parentName) =>
             containerName == parentName
           }
-      }.map { case (d: Definition, _: Container[Definition]) =>
-        if (clazz.isInstance(d)) {
-          (d, Option(d.asInstanceOf[D]))
-        }
-        else {
-          (d, None)
-        }
-      }.toList
+        }.map { case (d: Definition, _: Container[Definition]) =>
+          if (clazz.isInstance(d)) { (d, Option(d.asInstanceOf[D])) }
+          else { (d, None) }
+        }.toList
       case None => List.empty
     }
   }
@@ -127,7 +121,7 @@ case class SymbolTable(container: Container[Definition]) {
             containerNames.zip(parentNames).forall { case (containerName, parentName) =>
               containerName == parentName
             }
-          } else {false}
+          } else { false }
         }.map(_._1.asInstanceOf[D])
         result.toList
       case None => List.empty[D]
