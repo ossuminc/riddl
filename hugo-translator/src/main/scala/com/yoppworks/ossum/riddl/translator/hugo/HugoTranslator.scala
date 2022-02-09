@@ -6,9 +6,13 @@ import com.yoppworks.ossum.riddl.language._
 
 import java.io.{File, IOException}
 import java.net.URL
-import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{FileVisitResult, Files, Path, SimpleFileVisitor}
 import scala.collection.mutable
 import scala.sys.process.Process
+import java.nio.file._
+
+
 
 case class HugoTranslatingOptions(
   validatingOptions: ValidatingOptions = ValidatingOptions(),
@@ -24,9 +28,11 @@ case class HugoTranslatingOptions(
   siteLogo: Option[URL] = None,
   siteLogoPath: Option[String] = None)
     extends TranslatingOptions {
+  lazy val inputRoot: Path = inputPath.getOrElse(Path.of("."))
+  lazy val staticAssets: Path = inputRoot.getParent.resolve("static")
   lazy val outputRoot: Path = outputPath.getOrElse(Path.of("."))
   lazy val contentRoot: Path = outputRoot.resolve("content")
-  lazy val staticRoot: Path = contentRoot.resolve("static")
+  lazy val staticRoot: Path = outputRoot.resolve("static")
   lazy val themesRoot: Path = outputRoot.resolve("themes")
   lazy val riddlThemeRoot: Path = themesRoot.resolve(HugoTranslator.riddl_hugo_theme._1)
   lazy val configFile: Path = outputRoot.resolve("config.toml")
@@ -66,6 +72,12 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
   val sitemap_xsd = "https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
 
+  def deleteAll(directory: File): Boolean = {
+    val maybeFiles = Option(directory.listFiles)
+    if (maybeFiles.nonEmpty) { for (file <- maybeFiles.get) { deleteAll(file) } }
+    directory.delete
+  }
+
   def copyURLToDir(from: Option[URL], destDir: Path): String = {
     if (from.isDefined) {
       import java.io.InputStream
@@ -100,17 +112,49 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     } else { loadATheme(Option(url), options.themesRoot.resolve(riddl_hugo_theme._1)) }
   }
 
+
+  case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path) extends
+  SimpleFileVisitor[Path] {
+
+    @throws[IOException]
+    override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult = {
+      val resolve = target.resolve(source.relativize(dir))
+      if (Files.notExists(resolve)) {
+        Files.createDirectories(resolve)
+      }
+      FileVisitResult.CONTINUE
+    }
+
+    @throws[IOException]
+    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+      val resolve = target.resolve(source.relativize(file))
+      if (!file.getFileName.startsWith(".")) {
+        Files.copy(file, resolve, StandardCopyOption.REPLACE_EXISTING)
+      }
+      FileVisitResult.CONTINUE
+    }
+
+    override def visitFileFailed(file: Path, exc: IOException): FileVisitResult = {
+      log.error(s"Unable to copy: $file: $exc\n")
+      FileVisitResult.CONTINUE
+    }
+  }
+
+  def loadStaticAssets(options: HugoTranslatingOptions): Unit = {
+    val sourceDir = options.staticAssets
+    val targetDir = options.staticRoot
+    if (Files.exists(sourceDir) && Files.isDirectory(sourceDir)) {
+      //copy source to target using Files Class
+      val visitor = TreeCopyFileVisitor(options.log, sourceDir, targetDir)
+      Files.walkFileTree(sourceDir, visitor)
+    }
+  }
+
   def loadSiteLogo(options: HugoTranslatingOptions): Path = {
     if (options.siteLogo.nonEmpty) {
       val fileName = copyURLToDir(options.siteLogo, options.staticRoot)
       options.staticRoot.resolve(fileName)
     } else { options.riddlThemeRoot.resolve("img/YWLogo.png") }
-  }
-
-  def deleteAll(directory: File): Boolean = {
-    val maybeFiles = Option(directory.listFiles)
-    if (maybeFiles.nonEmpty) { for (file <- maybeFiles.get) { deleteAll(file) } }
-    directory.delete
   }
 
   def makeDirectoryStructure(options: HugoTranslatingOptions): HugoTranslatingOptions = {
@@ -121,7 +165,10 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       require(parent.isDirectory, "Parent of output directory is not a directory!")
       if (0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!) {
         options.log.error(s"Hugo could not create a site here: $outDir")
-      } else { loadThemes(options) }
+      } else {
+        loadThemes(options)
+        loadStaticAssets(options) // for reference from riddl doc blocks
+      }
       val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
       options.copy(siteLogoPath = Option(logoPath))
     } catch {

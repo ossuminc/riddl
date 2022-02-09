@@ -13,6 +13,7 @@ include "backoffice/domain"
 include "corporate/domain"
 
 } explained as {
+|{{< figure src="/images/RBBQ.png" >}}
 |A domain to encapsulate the entire enterprise named Reactive BBQ.
 |It is divided into three subdomains:
 |* Restaurant -- handles each of the restaurant locations
