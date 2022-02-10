@@ -76,12 +76,17 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     if (from.isDefined) {
       import java.io.InputStream
       import java.nio.file.{Files, StandardCopyOption}
-      val fileName = from.get.getPath.split('/').last
-      val in: InputStream = from.get.openStream
-      destDir.toFile.mkdirs()
-      val dl_path = destDir.resolve(fileName)
-      Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
-      fileName
+      val nameParts = from.get.getFile.split('/')
+      if (nameParts.nonEmpty) {
+        val fileName = nameParts.last
+        val in: InputStream = from.get.openStream
+        destDir.toFile.mkdirs()
+        val dl_path = destDir.resolve(fileName)
+        Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
+        fileName
+      } else {
+        ""
+      }
     } else { "" }
   }
 
@@ -154,24 +159,18 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   def makeDirectoryStructure(inputPath: Path, log: Logger, options: HugoTranslatingOptions): HugoTranslatingOptions = {
-    try {
-      val outDir = options.outputRoot.toFile
-      if (outDir.exists() && options.eraseOutput) { deleteAll(outDir) }
-      val parent = outDir.getParentFile
-      require(parent.isDirectory, "Parent of output directory is not a directory!")
-      if (0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!) {
-        log.error(s"Hugo could not create a site here: $outDir")
-      } else {
-        loadThemes(log, options)
-        loadStaticAssets(inputPath, log, options) // for reference from riddl doc blocks
-      }
-      val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
-      options.copy(siteLogoPath = Option(logoPath))
-    } catch {
-      case x: Exception =>
-        log.error(s"While making directory structure: ${x.toString}")
-        options
+    val outDir = options.outputRoot.toFile
+    if (outDir.exists() && options.eraseOutput) { deleteAll(outDir) }
+    val parent = outDir.getParentFile
+    require(parent.isDirectory, "Parent of output directory is not a directory!")
+    if (0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!) {
+      log.error(s"Hugo could not create a site here: $outDir")
+    } else {
+      loadThemes(log, options)
+      loadStaticAssets(inputPath, log, options) // for reference from riddl doc blocks
     }
+    val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
+    options.copy(siteLogoPath = Option(logoPath))
   }
 
   def writeConfigToml(options: HugoTranslatingOptions, author: Option[AuthorInfo]): Unit = {

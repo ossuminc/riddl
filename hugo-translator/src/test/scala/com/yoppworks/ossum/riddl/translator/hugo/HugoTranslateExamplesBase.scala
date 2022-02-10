@@ -28,8 +28,9 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     val outDir = Some(outFile.toPath)
     val sourcePath = Path.of(directory).resolve(source)
     val htc = HugoTranslatingOptions(
+      eraseOutput = true,
+      projectName = Some(projectName),
       outputPath = outDir,
-      projectName = Some(projectName)
     )
     val ht = HugoTranslator
     ht.parseValidateTranslateFile(sourcePath, SysLogger(), showTimes, errorsOnly,  htc)

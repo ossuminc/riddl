@@ -160,7 +160,9 @@ object RiddlOptions {
         loadOptions[HugoTranslatingOptions](Option(path)) match {
           case None => None
           case Some(loadedOptions) =>
-            Some(options.copy(hugoOptions = loadedOptions))
+            Some(options.copy(
+              hugoOptions = loadedOptions
+            ))
         }
       case None => Some(options)
     }
