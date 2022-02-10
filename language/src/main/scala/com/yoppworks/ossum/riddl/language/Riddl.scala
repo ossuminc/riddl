@@ -1,17 +1,18 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Validation.{ValidatingOptions, ValidationMessage}
+import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 import com.yoppworks.ossum.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 
 import java.nio.file.{Files, Path}
 import java.time.Clock
 
-case class ParsingOptions(
+case class CommonOptions(
   showTimes: Boolean = false,
-  logger: Option[Logger] = Some(SysLogger())) {
-  def log: Logger = logger.getOrElse(SysLogger())
-}
+  verbose: Boolean = false,
+  dryRun: Boolean = false,
+  quiet: Boolean = false
+)
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
@@ -42,26 +43,28 @@ object Riddl {
 
   def parse(
     path: Path,
-    options: ParsingOptions
+    log: Logger,
+    options: CommonOptions
   ): Option[RootContainer] = {
     if (Files.exists(path)) {
       val input = new FileParserInput(path)
-      parse(input, options)
+      parse(input, log, options)
     } else {
-      options.log.error(s"Input file `${path.toString} does not exist.")
+      log.error(s"Input file `${path.toString} does not exist.")
       None
     }
   }
 
   def parse(
     input: RiddlParserInput,
-    options: ParsingOptions
+    log: Logger,
+    options: CommonOptions
   ): Option[RootContainer] = {
     timer("parse", options.showTimes) {
       TopLevelParser.parse(input) match {
         case Left(errors) =>
-          errors.map(_.format).foreach(options.log.error(_))
-          options.log.info(s"Syntax Errors: ${errors.length}")
+          errors.map(_.format).foreach(log.error(_))
+          log.info(s"Syntax Errors: ${errors.length}")
           None
         case Right(root) => Option(root)
       }
@@ -70,11 +73,12 @@ object Riddl {
 
   def validate(
     root: RootContainer,
-    options: ValidatingOptions
+    log: Logger,
+    parsingOptions: CommonOptions,
+    validatingOptions: ValidatingOptions
   ): Option[RootContainer] = {
-    timer("validation", options.parsingOptions.showTimes) {
+    timer("validation", parsingOptions.showTimes) {
       val messages: Seq[ValidationMessage] = Validation.validate[RootContainer](root)
-      val log = options.parsingOptions.log
       if (messages.nonEmpty) {
         val (warns, errs) = messages.partition(_.kind.isWarning)
         val (severe, errors) = errs.partition(_.kind.isSevereError)
@@ -82,9 +86,9 @@ object Riddl {
         val style = warns.filter(_.kind.isStyle)
         val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
         log.info(s"""Validation Warnings: ${warns.length}""")
-        if (options.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
-        if (options.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
-        if (options.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
+        if (validatingOptions.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
+        if (validatingOptions.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
+        if (validatingOptions.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
         log.info(s"""Validation Errors: ${errors.length} errors""")
         errors.map(_.format).foreach(log.error(_))
         log.info(s"""Severe Errors: ${errors.length} errors""")
@@ -97,18 +101,24 @@ object Riddl {
 
   def parseAndValidate(
     input: RiddlParserInput,
-    options: ValidatingOptions
+    logger: Logger,
+    parsingOptions: CommonOptions,
+    validatingOptions: ValidatingOptions
   ): Option[RootContainer] = {
-    parse(input, options.parsingOptions) match {
-      case Some(root) => validate(root, options)
+    parse(input, logger, parsingOptions) match {
+      case Some(root) => validate(root, logger, parsingOptions, validatingOptions)
       case None       => None
     }
   }
 
   def parseAndValidate(
     path: Path,
-    options: ValidatingOptions
-  ): Option[RootContainer] = { parseAndValidate(RiddlParserInput(path), options) }
+    logger: Logger,
+    parsingOptions: CommonOptions,
+    validatingOptions: ValidatingOptions
+  ): Option[RootContainer] = {
+    parseAndValidate(RiddlParserInput(path), logger, parsingOptions, validatingOptions)
+  }
 }
 
 /** Private implementation details which allow for more testability */

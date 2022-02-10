@@ -8,6 +8,16 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
+object ValidatingOptions {
+  val default: ValidatingOptions = ValidatingOptions()
+}
+
+case class ValidatingOptions(
+  showWarnings: Boolean = true,
+  showMissingWarnings: Boolean = true,
+  showStyleWarnings: Boolean = true
+)
+
 /** Validates an AST */
 object Validation {
 
@@ -104,17 +114,6 @@ object Validation {
 
   val NoValidationMessages: List[ValidationMessage] = List.empty[ValidationMessage]
 
-  case class ValidatingOptions(
-    parsingOptions: ParsingOptions = ParsingOptions(),
-    showWarnings: Boolean = true,
-    showMissingWarnings: Boolean = true,
-    showStyleWarnings: Boolean = true) {
-    def log: Logger = parsingOptions.log
-  }
-
-  object ValidatingOptions {
-    val default: ValidatingOptions = ValidatingOptions()
-  }
 
   case class ValidationState(
     symbolTable: SymbolTable,

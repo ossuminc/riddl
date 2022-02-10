@@ -1,10 +1,7 @@
 package com.yoppworks.ossum.riddl
 
-import com.yoppworks.ossum.riddl.language.ParsingOptions
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import pureconfig.error.ConfigReaderFailure
 
 import java.net.URL
 import java.nio.file.Path
@@ -52,23 +49,10 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
       val result = RiddlOptions.loadHugoTranslatingOptions(options)
 
       result match {
-        case Left(errors) =>
-          val failures = errors.toList.map { crf: ConfigReaderFailure =>
-            val location = crf.origin match {
-              case Some(origin) => origin.description
-              case None => "unknown location"
-            }
-            s"At $location: ${crf.description}"
-          }.mkString("", "\n", "\n")
-          fail(failures)
-        case Right(opts) =>
-          opts.validatingOptions mustBe ValidatingOptions(
-            parsingOptions = ParsingOptions(showTimes = true),
-          )
+        case None =>
+          fail("Previously reported failures")
+        case Some(opts) =>
           opts.projectName mustBe Option("Reactive BBQ")
-          opts.inputPath mustBe Option(Path.of(
-            "/Users/reid/Code/Yoppworks/Ossum/riddl/examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl"
-          ))
           opts.outputPath mustBe Option(Path.of(
             "/Users/reid/Code/Yoppworks/Ossum/riddl/examples/target/translator/ReactiveBBQ"
           ))

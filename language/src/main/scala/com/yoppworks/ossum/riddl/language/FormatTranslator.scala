@@ -3,7 +3,6 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Folding.Folding
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 
 import java.io.File
 import java.nio.file.Path
@@ -11,17 +10,10 @@ import scala.annotation.unused
 import scala.collection.mutable
 
 case class FormattingOptions(
-  validatingOptions: ValidatingOptions = ValidatingOptions(),
-  configPath: Option[Path] = None,
-  inputPath: Option[Path] = None,
   outputPath: Option[Path] = None,
-  configFile: Option[File] = None,
   projectName: Option[String] = None,
-  logger: Option[Logger] = None,
-  singleFile: Boolean = true)
-    extends TranslatingOptions {
-  def withLogger(logger: Logger): FormattingOptions = { this.copy(logger = Some(logger)) }
-}
+  singleFile: Boolean = true
+) extends TranslatingOptions
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 object FormatTranslator extends Translator[FormattingOptions] {
@@ -41,6 +33,9 @@ object FormatTranslator extends Translator[FormattingOptions] {
 
   def translateImpl(
     root: RootContainer,
+    inputPath: Path,
+    @unused log: Logger,
+    @unused commonOptions: CommonOptions,
     options: FormattingOptions
   ): Seq[File] = {
     val state = FormatState(options)
@@ -50,11 +45,13 @@ object FormatTranslator extends Translator[FormattingOptions] {
 
   def translateToString(
     root: RootContainer,
+    inputPath: Path,
+    log: Logger,
+    commonOptions: CommonOptions,
     options: FormattingOptions
   ): String = {
     val logger = StringLogger()
-    val opts = options.withLogger(logger)
-    translate(root, opts)
+    translate(root, inputPath, log, commonOptions, options)
     logger.toString()
   }
 

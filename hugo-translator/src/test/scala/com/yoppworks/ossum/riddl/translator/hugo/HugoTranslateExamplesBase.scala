@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
-import com.yoppworks.ossum.riddl.language.{ParsingOptions, ValidatingTest}
+import com.yoppworks.ossum.riddl.language.{CommonOptions, SysLogger, ValidatingOptions, ValidatingTest}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -15,8 +14,9 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
 
   def outPath(path: String): Path = { Path.of(output).resolve(new File(path).getName) }
 
+  val showTimes: CommonOptions =  CommonOptions(showTimes = true)
+
   val errorsOnly: ValidatingOptions = ValidatingOptions(
-    parsingOptions = ParsingOptions(showTimes = true),
     showWarnings = false,
     showMissingWarnings = false,
     showStyleWarnings = false
@@ -28,13 +28,11 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     val outDir = Some(outFile.toPath)
     val sourcePath = Path.of(directory).resolve(source)
     val htc = HugoTranslatingOptions(
-      validatingOptions = errorsOnly,
-      inputPath = Some(sourcePath),
       outputPath = outDir,
       projectName = Some(projectName)
     )
     val ht = HugoTranslator
-    ht.parseValidateTranslateFile(sourcePath, htc)
+    ht.parseValidateTranslateFile(sourcePath, SysLogger(), showTimes, errorsOnly,  htc)
   }
 
   def runHugo(source: Path): Assertion = {

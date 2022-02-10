@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessageKind
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages

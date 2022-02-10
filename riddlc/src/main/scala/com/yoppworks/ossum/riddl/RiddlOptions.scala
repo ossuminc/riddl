@@ -1,10 +1,10 @@
 package com.yoppworks.ossum.riddl
 
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
-import com.yoppworks.ossum.riddl.language.{BuildInfo, FormattingOptions, Logger, ParsingOptions,
-  StringLogger, SysLogger}
+import com.yoppworks.ossum.riddl.RIDDLC.log
+import com.yoppworks.ossum.riddl.language.ValidatingOptions
+import com.yoppworks.ossum.riddl.language.{BuildInfo, CommonOptions, FormattingOptions}
 import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslatingOptions
-import pureconfig.error.{CannotConvert, ConfigReaderFailures}
+import pureconfig.error.ConfigReaderFailures
 import pureconfig.*
 import scopt.*
 
@@ -13,42 +13,17 @@ import java.net.URL
 import java.nio.file.Path
 
 /** Command Line Options for Riddl compiler program */
-case class ParseOptions(
-  parsingOptions: ParsingOptions = ParsingOptions(),
-  inputPath: Option[Path] = None) {
-  def log: Logger = parsingOptions.log
-}
-
-case class ValidateOptions(
-  validatingOptions: ValidatingOptions =
-    ValidatingOptions(showMissingWarnings = false, showStyleWarnings = false),
-  inputPath: Option[Path] = None) {
-  def log: Logger = validatingOptions.parsingOptions.log
-}
-
-case class HugoOptions(
-  hugoTranslatingOptions: HugoTranslatingOptions = HugoTranslatingOptions(validatingOptions =
-    ValidatingOptions(showMissingWarnings = false, showStyleWarnings = false)
-  ))
-
-case class D3Options(
-  inputPath: Option[Path] = None)
 
 case class RiddlOptions(
-  dryRun: Boolean = false,
-  verbose: Boolean = false,
-  quiet: Boolean = false,
-  optionsPath: Option[Path] = None,
   command: RiddlOptions.Command = RiddlOptions.Unspecified,
+  optionsPath: Option[Path] = None,
+  inputFile: Option[Path] = None,
+  commonOptions: CommonOptions = CommonOptions(),
   validatingOptions: ValidatingOptions =
     ValidatingOptions(showStyleWarnings = false, showMissingWarnings = false),
-  parseOptions: ParseOptions = ParseOptions(),
-  validateOptions: ValidateOptions = ValidateOptions(),
   reformatOptions: FormattingOptions = FormattingOptions(),
   hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
-  d3Options: D3Options = D3Options()) {
-  def log: Logger = validatingOptions.parsingOptions.log
-}
+)
 
 object RiddlOptions {
 
@@ -78,9 +53,9 @@ object RiddlOptions {
   }
 
   private def optional[T](
-    objCur: ConfigObjectCursor,
-    key: String,
-    default: T)(mapIt: ConfigCursor => ConfigReader.Result[T]): ConfigReader.Result[T]
+                           objCur: ConfigObjectCursor,
+                           key: String,
+                           default: T)(mapIt: ConfigCursor => ConfigReader.Result[T]): ConfigReader.Result[T]
   = {
     objCur.atKeyOrUndefined(key) match {
       case stCur if stCur.isUndefined => Right[ConfigReaderFailures, T](default)
@@ -88,22 +63,16 @@ object RiddlOptions {
     }
   }
 
-  implicit val poReader: ConfigReader[ParsingOptions] = {
+  implicit val poReader: ConfigReader[CommonOptions] = {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
         showTimes <- optional(objCur, "showTimes", false)(cc => cc.asBoolean)
-        logger <- optional[Logger](objCur, "logger", SysLogger()) { cc =>
-          cc.asString.flatMap[ConfigReaderFailures,Logger] {
-            case "String" => Right[ConfigReaderFailures, Logger](StringLogger())
-            case "System" => Right[ConfigReaderFailures, Logger](SysLogger())
-            case "" => Right[ConfigReaderFailures, Logger](SysLogger())
-            case _ => cc.failed[Logger](CannotConvert("logger", "String",
-              "this option only supports 'String' or 'System' or blank (defaults to System)"))
-          }
-        }
+        verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
+        quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
+        dryRun <- optional(objCur, "dryRun", false)(cc => cc.asBoolean)
       } yield {
-        ParsingOptions(showTimes = showTimes, Option(logger))
+        CommonOptions(showTimes = showTimes, verbose = verbose, quiet = quiet, dryRun = dryRun)
       }
     }
   }
@@ -112,15 +81,11 @@ object RiddlOptions {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
-        parsingOptions <-
-          optional(objCur, "parsingOptions", ParsingOptions()) { poCur =>
-            poReader.from(poCur)
-          }
         showWarnings <- optional(objCur, "showWarnings", true) { cc => cc.asBoolean }
         showStyleWarnings <- optional(objCur, "showStyleWarnings", false) { cc => cc.asBoolean }
         showMissingWarnings <- optional(objCur, "showMissingWarnings", false) { cc => cc.asBoolean }
       } yield {
-        ValidatingOptions(parsingOptions, showWarnings, showMissingWarnings, showStyleWarnings)
+        ValidatingOptions(showWarnings, showMissingWarnings, showStyleWarnings)
       }
     }
   }
@@ -130,14 +95,10 @@ object RiddlOptions {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
-        validatingOptions <- optional(objCur, "validatingOptions", ValidatingOptions()) { cc=>
-          voReader.from(cc).flatMap(p => Right(p))
-        }
-        projectName <- optional(objCur, "projectName", "No Project Name Specified"){
+        eraseOutput <- optional(objCur, "eraseOutput", true) { cc => cc.asBoolean }
+        projectName <- optional(objCur, "projectName", "No Project Name Specified") {
           cur => cur.asString
         }
-        inputPathRes <- objCur.atKey("inputPath")
-        inputPath <- inputPathRes.asString
         outputPathRes <- objCur.atKey("outputPath")
         outputPath <- outputPathRes.asString
         baseURL <- optional(objCur, "baseURL", defaultURL) { cc => cc.asString }
@@ -146,13 +107,13 @@ object RiddlOptions {
           case keyCur if keyCur.isUndefined => Right()
           case keyCur => keyCur.asList
         }*/
-        sourceURL <- optional(objCur, "sourceURL", defaultURL) { cc =>cc.asString }
+        sourceURL <- optional(objCur, "sourceURL", defaultURL) { cc => cc.asString }
         editPath <-
-          optional(objCur,"editPath", "path/to/hugo/content") { cc => cc.asString }
+          optional(objCur, "editPath", "path/to/hugo/content") { cc => cc.asString }
         siteLogoURL <- optional(objCur, "siteLogoURL", defaultURL) { cc => cc.asString }
       } yield {
-        HugoTranslatingOptions(validatingOptions, Option(projectName),
-          Option(Path.of(inputPath)), Option(Path.of(outputPath)), None, None,
+        HugoTranslatingOptions(eraseOutput, Option(projectName),
+          Option(Path.of(outputPath)),
           Option(new java.net.URL(baseURL)), Seq.empty[(String, URL)],
           Option(new java.net.URL(sourceURL)), Option(editPath),
           Option(new java.net.URL(siteLogoURL)), None
@@ -161,42 +122,72 @@ object RiddlOptions {
     }
   }
 
-
-
-  final def loadHugoTranslatingOptions(options: RiddlOptions): ConfigReader
-  .Result[HugoTranslatingOptions] = {
-    loadOptions[HugoTranslatingOptions](options.optionsPath, HugoTranslatingOptions())
+  def stringifyConfigReaderErrors(errors: ConfigReaderFailures): Seq[String] = {
+    errors.toList.map { crf =>
+      val location = crf.origin match {
+        case Some(origin) => origin.description
+        case None => "unknown location"
+      }
+      s"At $location: ${crf.description}"
+    }
   }
 
-  final def loadOptions[OPT](
-    path: Option[Path],
-    defaultOptions: OPT
-  )(implicit reader: ConfigReader[OPT]): ConfigReader.Result[OPT] = {
+  final def loadHugoTranslatingOptions(options: RiddlOptions): Option[HugoTranslatingOptions] = {
+    loadOptions[HugoTranslatingOptions](options.optionsPath)
+  }
+
+  final def loadOptions[OPT](path: Option[Path])(implicit reader: ConfigReader[OPT]): Option[OPT] = {
     path match {
       case None =>
-        Right(defaultOptions)
+        None
       case Some(p) =>
-        ConfigSource.file(p).load[OPT]
+        ConfigSource.file(p).load[OPT] match {
+          case Right(loadedOptions) =>
+            Some(loadedOptions)
+          case Left(errors) =>
+            RIDDLC.log.error(s"Failed to load options from $p because:\n")
+            val failures = RiddlOptions.stringifyConfigReaderErrors(errors).mkString("", "\n", "\n")
+            RIDDLC.log.error(failures)
+            None
+        }
     }
   }
 
-  def usage: String = { OParser.usage(parser) }
-
-  def parse(args: Array[String]): Option[RiddlOptions] = {
-    OParser.runParser(RiddlOptions.parser, args, RiddlOptions(), setup) match {
-      case (result, effects) =>
-        OParser.runEffects(effects, dontTerminate)
-        result match {
-          case Some(options) => Option(options.copy(
-              parseOptions = options.parseOptions
-                .copy(parsingOptions = options.validatingOptions.parsingOptions),
-              reformatOptions = options.reformatOptions
-                .copy(validatingOptions = options.validatingOptions),
-              hugoOptions = options.hugoOptions.copy(validatingOptions = options.validatingOptions)
-            ))
+  def resolve(options: RiddlOptions): Option[RiddlOptions] = {
+    val newOptions: Option[RiddlOptions] = options.optionsPath match {
+      case Some(path) =>
+        require(options.command == Hugo, "Loading options from config file is only supported for hugo translations")
+        loadOptions[HugoTranslatingOptions](Option(path)) match {
           case None => None
+          case Some(loadedOptions) =>
+            Some(options.copy(hugoOptions = loadedOptions))
+        }
+      case None => Some(options)
+    }
+    newOptions match {
+      case None => None
+      case Some(nOptions) =>
+        if (nOptions.inputFile.isEmpty) {
+          log.error("An input file must be specified but wasn't.")
+          None
+        } else if (nOptions.command == Unspecified) {
+          log.error("A command was expected to be chosen.")
+          None
+        } else {
+          newOptions
         }
     }
+  }
+
+
+  def usage: String = {
+    OParser.usage(parser)
+  }
+
+  def parse(args: Array[String]): Option[RiddlOptions] = {
+    val (result, effects) = OParser.runParser(RiddlOptions.parser, args, RiddlOptions(), setup)
+    OParser.runEffects(effects, dontTerminate)
+    result
   }
 
   val builder: OParserBuilder[RiddlOptions] = OParser.builder[RiddlOptions]
@@ -205,24 +196,24 @@ object RiddlOptions {
   import builder.*
 
   def inputFile(f: OptionPlacer[File]): OParser[File, RiddlOptions] = {
-    opt[File]('i', "input-file").required().action((v, c) => f(v, c))
+    opt[File]('i', "input-file").optional().action((v, c) => f(v, c))
       .text("required riddl input file to read")
   }
 
   def outputDir(f: OptionPlacer[File]): OParser[File, RiddlOptions] = {
-    opt[File]('o', "output-dir").required().action((v, c) => f(v, c))
+    opt[File]('o', "output-dir").optional().action((v, c) => f(v, c))
       .text("required output directory for the generated output")
   }
 
   def projectName(f: OptionPlacer[String]): OParser[String, RiddlOptions] = {
-    opt[String]('p', "project-name").required().action((v, c) => f(v, c))
+    opt[String]('p', "project-name").optional().action((v, c) => f(v, c))
       .text("Optional project name to associate with the generated output").validate(n =>
-        if (n.isBlank) Left("optional project-name cannot be blank or empty") else Right(())
-      )
+      if (n.isBlank) Left("optional project-name cannot be blank or empty") else Right(())
+    )
   }
 
   def baseUrl(f: OptionPlacer[URL]): OParser[URL, RiddlOptions] = {
-    opt[URL]('u', "base-url").optional().action((v, c) => f(v, c))
+    opt[URL]('b', "base-url").optional().action((v, c) => f(v, c))
       .text("Optional base URL for root of generated http URLs")
   }
 
@@ -243,11 +234,17 @@ object RiddlOptions {
         "\nDrive Design, Reactive Architecture, and Agile principles.\n"
       ),
       help('h', "help").text("Print out help/usage information and exit"),
-      opt[Boolean]('d', "dry-run").optional().action((_, c) => c.copy(dryRun = true))
+      opt[Unit]('t', name = "show-times").action((_, c) =>
+        c.copy(commonOptions = c.commonOptions.copy(showTimes = true))
+      ).text("Show compilation phase execution times "),
+      opt[Boolean]('d', "dry-run").optional().action((_, c) =>
+        c.copy(commonOptions = c.commonOptions.copy(dryRun = true)))
         .text("go through the motions but don't write any changes"),
-      opt[Unit]('v', "verbose").action((_, c) => c.copy(verbose = true))
+      opt[Unit]('v', "verbose").action((_, c) =>
+        c.copy(commonOptions = c.commonOptions.copy(verbose = true)))
         .text("Provide detailed, step-by-step, output detailing riddlc's actions"),
-      opt[Unit]('q', "quiet").action((_, c) => c.copy(quiet = true))
+      opt[Unit]('q', "quiet").action((_, c) =>
+        c.copy(commonOptions = c.commonOptions.copy(quiet = true)))
         .text("Do not print out any output, just do the requested command"),
       opt[Unit]('w', name = "suppress-warnings").action((_, c) =>
         c.copy(validatingOptions =
@@ -261,40 +258,55 @@ object RiddlOptions {
       opt[Unit]('s', name = "show-style-warnings").action((_, c) =>
         c.copy(validatingOptions = c.validatingOptions.copy(showStyleWarnings = true))
       ).text("Show warnings about questionable input style. "),
-      opt[Unit]('t', name = "show-times").action((_, c) =>
-        c.copy(validatingOptions =
-          c.validatingOptions.copy(parsingOptions = ParsingOptions(showTimes = true))
+      cmd("parse").action((_, c) => c.copy(command = Parse))
+        .children(
+          inputFile((v, c) => c.copy(inputFile = Option(v.toPath)))
         )
-      ).text("Show compilation phase execution times "),
-      optionsPath((v, c) => c.copy(optionsPath = Option(v.toPath))),
-      cmd("parse").action((_, c) => c.copy(command = Parse)).children(inputFile((v, c) =>
-        c.copy(parseOptions = c.parseOptions.copy(inputPath = Option(v.toPath)))
-      )).text("""Parse the input for syntactic compliance with riddl language.
-                |No validation or translation is done on the input""".stripMargin),
-      cmd("validate").action((_, c) => c.copy(command = Validate)).children(inputFile((v, c) =>
-        c.copy(validateOptions = c.validateOptions.copy(inputPath = Option(v.toPath)))
-      )).text("""Parse the input and if successful validate the resulting model.
-                |No translation is done on the input.""".stripMargin),
-      cmd("reformat").action((_, c) => c.copy(command = Prettify)).children(
-        inputFile((v, c) =>
-          c.copy(reformatOptions = c.reformatOptions.copy(inputPath = Option(v.toPath)))
-        ),
-        outputDir((v, c) =>
-          c.copy(reformatOptions = c.reformatOptions.copy(outputPath = Option(v.toPath)))
-        ),
-        opt[Boolean]('s', name = "single-file")
-          .action((v, c) => c.copy(reformatOptions = c.reformatOptions.copy(singleFile = v)))
-          .text("""Resolve all includes and imports and write a single file with the same
-                  |file name as the input placed in the out-dir""".stripMargin)
-      ).text("""Parse and validate the input-file and then reformat it to a
-               |standard layout written to the output-dir.  """.stripMargin),
-      cmd("hugo").action((_, c) => c.copy(command = Hugo)).children(
-        inputFile((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(inputPath = Option(v.toPath)))),
-        outputDir((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(outputPath = Option(v.toPath)))),
-        baseUrl((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(v)))),
-        projectName((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(projectName = Option(v)))),
-      ).text("""Parse and validate the input-file and then translate it into the input
-               |needed for hugo to translate it to a functioning web site.""".stripMargin)
-    )
+        .text(
+          """Parse the input for syntactic compliance with riddl language.
+            |No validation or translation is done on the input""".stripMargin),
+      cmd("validate").action((_, c) => c.copy(command = Validate))
+        .children(
+          inputFile((v, c) => c.copy(inputFile = Option(v.toPath)))
+        )
+        .text(
+          """Parse the input and if successful validate the resulting model.
+            |No translation is done on the input.""".stripMargin),
+      cmd("reformat").action((_, c) => c.copy(command = Prettify))
+        .children(
+          inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
+          outputDir((v, c) =>
+            c.copy(reformatOptions = c.reformatOptions.copy(outputPath = Option(v.toPath))
+            )),
+          opt[Boolean]('s', name = "single-file")
+            .action((v, c) => c.copy(reformatOptions = c.reformatOptions.copy(singleFile = v)))
+            .text(
+              """Resolve all includes and imports and write a single file with the same
+                |file name as the input placed in the out-dir""".stripMargin)
+        ).text(
+        """Parse and validate the input-file and then reformat it to a
+          |standard layout written to the output-dir.  """.stripMargin),
+      cmd("hugo").action((_, c) => c.copy(command = Hugo))
+        .children(
+          optionsPath((v, c) => c.copy(optionsPath = Option(v.toPath))),
+          opt[Boolean]('e', name = "erase-output").text("Erase entire output directory before putting out files"),
+          inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
+          outputDir((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(outputPath = Option(v.toPath)))),
+          projectName((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(projectName = Option(v)))),
+          baseUrl((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(v)))),
+          // TODO: themes
+          opt[URL]('s', name = "source-url")
+            .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u))))
+            .text("URL to the input file's Git Repository"),
+          opt[String]('h', name = "edit-path")
+            .action((h, c) => c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h))))
+            .text("Path to add to source-url to allow editing"),
+          opt[URL]('l', name = "site-logo")
+            .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(siteLogo = Option(u))))
+            .text("URL to the site's logo image for use by site")
+        ).text(
+          """Parse and validate the input-file and then translate it into the input
+            |needed for hugo to translate it to a functioning web site.""".stripMargin)
+      )
   }
 }

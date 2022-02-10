@@ -2,10 +2,10 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.Domain
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
 import java.io.File
+import java.nio.file.Path
 import java.time.Instant
 import java.util.UUID
 import scala.io.Source
@@ -47,24 +47,26 @@ class RiddlTest extends ParsingTestBase {
 
   "parse" should {
     "parse a file" in {
-      val logger = InMemoryLogger()
+      val log = InMemoryLogger()
       val result = Riddl.parse(
-        path = new File("language/src/test/input/rbbq.riddl").toPath,
-        options = ParsingOptions(showTimes = true, Some(logger))
+        path = Path.of("language/src/test/input/rbbq.riddl"),
+        log,
+        options = CommonOptions(showTimes = true)
       )
       result mustNot be(empty)
     }
 
     "return none when file does not exist" in {
-      val options = ParsingOptions(showTimes = true, Some(InMemoryLogger()))
-      val result = Riddl.parse(path = new File(UUID.randomUUID().toString).toPath, options)
+      val log = InMemoryLogger()
+      val options = CommonOptions(showTimes = true)
+      val result = Riddl.parse(path = new File(UUID.randomUUID().toString).toPath, log, options)
       result mustBe None
     }
     "record errors" in {
       val riddlParserInput: RiddlParserInput = RiddlParserInput(UUID.randomUUID().toString)
       val logger = InMemoryLogger()
-      val options = ParsingOptions(showTimes = true, Some(logger))
-      val result = Riddl.parse(input = riddlParserInput, options)
+      val options = CommonOptions(showTimes = true)
+      val result = Riddl.parse(input = riddlParserInput, logger, options)
       result mustBe None
       assert(
         logger.lines().exists(_.level == InMemoryLogger.Lvl.Error),
@@ -146,8 +148,9 @@ class RiddlTest extends ParsingTestBase {
   "parseAndValidate" should {
     def runOne(pathname: String): (Option[RootContainer], InMemoryLogger) = {
       val logger = InMemoryLogger()
-      val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
-      Riddl.parseAndValidate(new File(pathname).toPath, options) -> logger
+      val common = CommonOptions(showTimes = true)
+      val options = ValidatingOptions()
+      Riddl.parseAndValidate(new File(pathname).toPath, logger, common, options) -> logger
     }
 
     "parse and validate a simple domain from path" in {
@@ -168,16 +171,18 @@ class RiddlTest extends ParsingTestBase {
         finally source.close()
       }
       val logger = InMemoryLogger()
-      val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
-      val result = Riddl.parseAndValidate(RiddlParserInput(content), options)
+      val common = CommonOptions(showTimes = true)
+      val options = ValidatingOptions()
+      val result = Riddl.parseAndValidate(RiddlParserInput(content), logger, common, options)
       result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) => }
     }
 
     "parse and validate nonsense input as invalid" in {
       val logger = InMemoryLogger()
-      val options = ValidatingOptions(ParsingOptions(showTimes = true, Some(logger)))
+      val common = CommonOptions(showTimes = true)
+      val options = ValidatingOptions()
       val result = Riddl
-        .parseAndValidate(RiddlParserInput("I am not valid riddl (hopefully)."), options)
+        .parseAndValidate(RiddlParserInput("I am not valid riddl (hopefully)."), logger, common, options)
       result mustBe None
       assert(logger.lines().exists(_.level == InMemoryLogger.Lvl.Error))
     }

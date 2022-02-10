@@ -17,7 +17,9 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
         fail(msg)
       case Right(roots) =>
         val options = FormattingOptions()
-        val output = FormatTranslator.translateToString(roots, options)
+        val log = SysLogger()
+        val common = CommonOptions()
+        val output = FormatTranslator.translateToString(roots, file.toPath, log, common, options)
         parseTopLevelDomains(output) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
@@ -26,7 +28,7 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
                 output + "\n"
             )
           case Right(roots2) =>
-            val output2 = FormatTranslator.translateToString(roots2, options)
+            val output2 = FormatTranslator.translateToString(roots2, file.toPath, log, common, options)
             parseTopLevelDomains(output2) match {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")

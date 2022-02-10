@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.ValidatingOptions
 
 /** Unit Tests For ValidatorTest */
 class DomainValidatorTest extends ValidatingTest {
