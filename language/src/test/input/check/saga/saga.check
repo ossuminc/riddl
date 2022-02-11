@@ -1,9 +1,11 @@
-Missing: saga.riddl(5:5): Type 'AnotherThing' should have a description
-Missing: saga.riddl(6:5): Type 'UndoAnotherThing' should have a description
+Style: saga.riddl(6:18): Field identifier 'a' is too short. The minimum length is 3
+Style: saga.riddl(6:56): Field identifier 'b' is too short. The minimum length is 3
+Style: saga.riddl(9:18): Field identifier 'a' is too short. The minimum length is 3
+Style: saga.riddl(9:56): Field identifier 'b' is too short. The minimum length is 3
+Missing: saga.riddl(12:5): Entity 'blah' in Context 'ignore2' must have content.
+Missing: saga.riddl(17:7): SagaStep 'One' should have a description
+Missing: saga.riddl(26:7): SagaStep 'Two' should have a description
+Missing: saga.riddl(22:9): Example 'A' should have a description
+Missing: saga.riddl(29:9): Example 'B' should have a description
 Missing: saga.riddl(4:5): Type 'UndoSomething' should have a description
 Missing: saga.riddl(3:5): Type 'Something' should have a description
-Missing: saga.riddl(7:5): Entity 'blah' in Context 'ignore2' must have content.
-Missing: saga.riddl(12:7): SagaStep 'One' should have a description
-Missing: saga.riddl(21:7): SagaStep 'Two' should have a description
-Missing: saga.riddl(17:9): Example 'A' should have a description
-Missing: saga.riddl(26:9): Example 'B' should have a description

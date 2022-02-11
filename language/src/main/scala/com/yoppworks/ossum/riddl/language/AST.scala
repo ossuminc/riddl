@@ -886,8 +886,9 @@ object AST {
     * @param arguments
     *   An [[ArgList]] to pass to the function.
     */
-  case class FunctionCallExpression(loc: Location, name: PathIdentifier, arguments: ArgList)
-      extends Expression with Condition {
+  case class FunctionCallExpression(
+    loc: Location, name: PathIdentifier, arguments: ArgList
+  ) extends Expression with Condition {
     override def format: String = name.format + arguments.format
   }
 
@@ -1093,6 +1094,11 @@ object AST {
     */
   sealed trait Action extends DescribedValue
 
+  /**
+   * An action that can also be used in a SagaStep
+   */
+  sealed trait SagaStepAction extends Action
+
   /** An action whose behavior is specified as a text string allowing extension to arbitrary actions
     * not otherwise handled by RIDDL's syntax.
     *
@@ -1107,7 +1113,7 @@ object AST {
     loc: Location,
     what: LiteralString,
     description: Option[Description])
-      extends Action {
+      extends SagaStepAction {
     override def format: String = what.format
   }
 
@@ -1162,8 +1168,15 @@ object AST {
     msg: MessageConstructor,
     pipe: PipeRef,
     description: Option[Description] = None)
-      extends Action {
+      extends SagaStepAction {
     override def format: String = s"publish ${msg.format} to ${pipe.format}"
+  }
+
+  case class FunctionCallAction(
+    loc: Location, function: PathIdentifier, arguments: ArgList,
+    description: Option[Description] = None
+  ) extends Expression with Condition with SagaStepAction {
+    override def format: String = s"call ${function.format}${arguments.format}"
   }
 
   /** An action that morphs the state of an entity to a new structure
@@ -1224,7 +1237,7 @@ object AST {
     msg: MessageConstructor,
     entity: EntityRef,
     description: Option[Description] = None)
-      extends Action {
+      extends SagaStepAction {
     override def format: String = s"tell ${msg.format} to ${entity.format}"
   }
 
@@ -1244,7 +1257,7 @@ object AST {
     entity: EntityRef,
     msg: MessageConstructor,
     description: Option[Description] = None)
-      extends Action {
+      extends SagaStepAction {
     override def format: String = s"ask ${entity.format} to ${msg.format}"
   }
 
@@ -2099,8 +2112,8 @@ object AST {
   case class SagaStep(
     loc: Location,
     id: Identifier,
-    doAction: Action,
-    undoAction: Action,
+    doAction: SagaStepAction,
+    undoAction: SagaStepAction,
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None

@@ -568,6 +568,9 @@ object Validation {
         case SetAction(_, path, value, _) => this.checkPathRef[Field](path)().checkExpression(value)
         case PublishAction(_, msg, pipeRef, _) => this.checkMessageConstructor(msg)
             .checkRef[Pipe](pipeRef)
+        case FunctionCallAction(loc, funcId, args, _) =>
+          val ref = FunctionRef(loc, funcId)
+          this.checkRef[Function](ref).checkArgList(args, funcId)
         case BecomeAction(_, entity, handler, _) => this.checkRef[Entity](entity)
             .checkRef[Handler](handler)
         case MorphAction(_, entity, entityState, _) => this.checkRef[Entity](entity)
@@ -667,6 +670,12 @@ object Validation {
         }
       } else { None }
     }
+
+    def checkArgList(
+      @unused args: ArgList ,
+      @unused function: PathIdentifier
+    ): ValidationState =
+      this // TODO Validate ArgLists
 
     def checkMessageConstructor(messageConstructor: MessageConstructor): ValidationState = {
       val id = messageConstructor.msg.id

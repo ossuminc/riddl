@@ -12,8 +12,9 @@ trait SagaParser extends ReferenceParser with ActionParser with GherkinParser wi
   def sagaStep[u: P]: P[SagaStep] = {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ open ~
-        anyAction ~ Keywords.reverted ~ Readability.by.? ~ anyAction ~
-        close ~ as ~ open ~ examples ~ close ~ briefly ~ description
+        sagaStepAction ~ Keywords.reverted ~ Readability.by.? ~
+        sagaStepAction ~ close ~ as ~ open ~ examples ~
+        close ~ briefly ~ description
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 

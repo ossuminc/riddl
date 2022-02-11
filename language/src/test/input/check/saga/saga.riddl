@@ -2,8 +2,13 @@ domain ignore1 is {
   context ignore2 is {
     type Something = command { ??? }
     type UndoSomething = command { ??? }
-    type AnotherThing = command { ??? }
-    type UndoAnotherThing = command { ??? }
+    function AnotherThing {
+      requires { a: Integer described by "a"} yields { b: Integer described by "b"}
+    } explained as "A simple function for another"
+    function UndoAnotherThing {
+      requires { a: Integer described by "a"} yields { b: Integer described by "b"}
+    } explained as "A reversion function for undoing AnotherThing"
+
     entity blah is { ??? }
     saga name is {
       options(parallel)
@@ -19,14 +24,13 @@ domain ignore1 is {
         }
       }
       step Two is {
-        tell command AnotherThing() to entity blah
-        reverted by
-        tell command UndoAnotherThing() to entity blah
+        call AnotherThing(a=42) reverted by call UndoAnotherThing(a=42)
      } as {
         example B is {
-          given "Step A has completed"
-          then "Pass p2 to blah via AnotherThing command"
+          given "Step One has completed"
+          then "Pass 42 to AnotherThing function"
           and "Return AnotherThing's output"
+          but "Revert it with UndoAnotherThing(a=42) if it fails"
         }
       }
     }
