@@ -1018,11 +1018,20 @@ object Validation {
       joint: Joint
     ): ValidationState = state.checkDefinition(container, joint).checkDescription(joint)
 
-    override def doSagaAction(
+    override def doSagaStep(
       state: ValidationState,
       saga: Saga,
-      action: SagaAction
-    ): ValidationState = state.checkDefinition(saga, action).checkDescription(action)
+      step: SagaStep
+    ): ValidationState = {
+      state
+        .checkDefinition(saga, step)
+        .checkDescription(step)
+        .checkExamples(step.examples)
+        .check(step.doAction.getClass == step.undoAction.getClass,
+          "The primary action and revert action must be the same kind",
+          Error, step.doAction.loc
+        )
+    }
 
     override def openProcessor(
       state: ValidationState,

@@ -525,10 +525,10 @@ object FormatTranslator extends Translator[FormattingOptions] {
       saga: Saga
     ): FormatState = { state.openDef(saga) }
 
-    override def doSagaAction(
+    override def doSagaStep(
       state: FormatState,
       container: Saga,
-      action: SagaAction
+      action: SagaStep
     ): FormatState = { state }
 
     override def closeSaga(

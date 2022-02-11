@@ -86,12 +86,12 @@ object Folding {
         processor.contents.foldLeft(result) { (next, proc) => f(processor, proc, next) }
       case saga: Saga =>
         result = f(parent, saga, result)
-        saga.contents.foldLeft(result) { (next, sagaAction) =>
-          foldEachDefinition(saga, sagaAction, next)(f)
+        saga.contents.foldLeft(result) { (next, sagaStep) =>
+          foldEachDefinition(saga, sagaStep, next)(f)
         }
-      case sagaAction: SagaAction =>
-        result = f(parent, sagaAction, result)
-        sagaAction.contents.foldLeft(result) { (next, example) => f(sagaAction, example, next) }
+      case sagaStep: SagaStep =>
+        result = f(parent, sagaStep, result)
+        sagaStep.contents.foldLeft(result) { (next, example) => f(sagaStep, example, next) }
       case interaction: Interaction =>
         result = f(parent, interaction, result)
         interaction.contents.foldLeft(result) { (next, action) => f(interaction, action, next) }
@@ -219,9 +219,9 @@ object Folding {
         case saga: Saga =>
           val parentDomain = parent.asInstanceOf[Context]
           openSaga(initState, parentDomain, saga).step { state =>
-            saga.contents.foldLeft(state) { (next, action) => doSagaAction(next, saga, action) }
+            saga.contents.foldLeft(state) { (next, action) => doSagaStep(next, saga, action) }
           }.step { state => closeSaga(state, parentDomain, saga) }
-        case _: SagaAction =>
+        case _: SagaStep =>
           // Handled by Saga
           initState
         case interaction: Interaction =>
@@ -453,10 +453,10 @@ object Folding {
       joint: Joint
     ): S
 
-    def doSagaAction(
+    def doSagaStep(
       state: S,
       container: AST.Saga,
-      definition: AST.SagaAction
+      definition: AST.SagaStep
     ): S
 
     def doAdaptation(

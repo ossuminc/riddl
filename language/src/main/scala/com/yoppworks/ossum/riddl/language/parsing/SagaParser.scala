@@ -7,14 +7,14 @@ import fastparse.ScalaWhitespace.*
 
 /** SagaParser Implements the parsing of saga definitions in context definitions.
   */
-trait SagaParser extends ReferenceParser with FunctionParser {
+trait SagaParser extends ReferenceParser with ActionParser with GherkinParser with FunctionParser {
 
-  def sagaAction[u: P]: P[SagaAction] = {
+  def sagaStep[u: P]: P[SagaStep] = {
     P(
-      location ~ Keywords.action ~/ identifier ~ Readability.for_ ~ entityRef ~ is ~ open ~
-        commandRef ~ Keywords.reverted ~ Readability.by.? ~ commandRef ~ as ~ open ~ examples ~
-        close ~ close ~ briefly ~ description
-    ).map(x => (SagaAction.apply _).tupled(x))
+      location ~ Keywords.step ~/ identifier ~ is ~ open ~
+        anyAction ~ Keywords.reverted ~ Readability.by.? ~ anyAction ~
+        close ~ as ~ open ~ examples ~ close ~ briefly ~ description
+    ).map(x => (SagaStep.apply _).tupled(x))
   }
 
   def sagaOptions[u: P]: P[Seq[SagaOption]] = {
@@ -31,7 +31,7 @@ trait SagaParser extends ReferenceParser with FunctionParser {
   def saga[u: P]: P[Saga] = {
     P(
       location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaOptions ~ optionalInputOrOutput ~
-        sagaAction.rep(2) ~ close ~ briefly ~ description
+        sagaStep.rep(2) ~ close ~ briefly ~ description
     ).map { case (location, identifier, options, (input, output), actions, briefly, description) =>
       Saga(location, identifier, options, input, output, actions, briefly, description)
     }

@@ -156,6 +156,7 @@ object Terminals {
     final val source = "source"
     final val split = "split"
     final val state = "state"
+    final val step = "step"
     final val story = "story"
     final val tell = "tell"
     final val then_ = "then"

@@ -149,7 +149,7 @@ object AST {
       case _: Processor     => Keywords.processor
       case _: RootContainer => ""
       case _: Saga          => Keywords.saga
-      case _: SagaAction    => Keywords.action
+      case _: SagaStep      => Keywords.step
       case _: State         => Keywords.state
       case _: Story         => Keywords.story
       case _: Type          => Keywords.`type`
@@ -187,7 +187,7 @@ object AST {
       case p: Processor       => p.kind.getClass.getSimpleName
       case _: RootContainer   => "Root"
       case _: Saga            => "Saga"
-      case _: SagaAction      => "SagaAction"
+      case _: SagaStep        => "SagaStep"
       case _: State           => "State"
       case _: Type            => "Type"
       case _: AskAction       => "Ask Action"
@@ -2074,41 +2074,38 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Container[PlantDefinition] with DomainDefinition {
-    lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++ outJoints
+    lazy val contents: Seq[PlantDefinition] =
+      pipes ++ processors ++ inJoints ++ outJoints
   }
 
-  /** The definition of one step in a saga with its undo step and example.
+  /** The definition of one step in a saga with its undo step and
+    * example.
     *
     * @param loc
     *   The location of the saga action definition
     * @param id
     *   The name of the SagaAction
-    * @param entity
-    *   A reference to the entity to which commands are directed
-    * @param doCommand
+    * @param doAction
     *   The command to be done.
-    * @param undoCommand
-    *   The command that undoes [[doCommand]]
-    * @param example
+    * @param undoAction
+    *   The command that undoes [[doAction]]
+    * @param examples
     *   An list of examples for the intended behavior
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
     *   An optional description of the saga action
     */
-  case class SagaAction(
+  case class SagaStep(
     loc: Location,
     id: Identifier,
-    entity: EntityRef,
-    doCommand: CommandRef,
-    undoCommand: CommandRef,
-    example: Seq[Example],
+    doAction: Action,
+    undoAction: Action,
+    examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Container[Example] {
-    override def isEmpty: Boolean = example.isEmpty
-
-    override def contents: Seq[Example] = example
+    description: Option[Description] = None
+  ) extends Container[Example] {
+    def contents: Seq[Example] = examples
   }
 
   /** Base trait for all options applicable to a saga.
@@ -2133,8 +2130,10 @@ object AST {
     def name: String = "parallel"
   }
 
-  /** The definition of a Saga based on inputs, outputs, and the set of [[SagaAction]]s involved in
-    * the saga. Sagas define a computing action based on a variety of related commands that must all
+  /** The definition of a Saga based on inputs, outputs, and the set of
+    * [[SagaStep]]s involved in
+    * the saga. Sagas define a computing action based on a variety of related
+    * commands that must all
     * succeed atomically or have their effects undone.
     *
     * @param loc
@@ -2147,8 +2146,8 @@ object AST {
     *   A definition of the aggregate input values needed to invoke the saga, if any.
     * @param output
     *   A definition of the aggregate output values resulting from invoking the saga, if any.
-    * @param sagaActions
-    *   The set of [[SagaAction]]s that comprise the saga.
+    * @param sagaSteps
+    *   The set of [[SagaStep]]s that comprise the saga.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2160,11 +2159,11 @@ object AST {
     options: Seq[SagaOption] = Seq.empty[SagaOption],
     input: Option[Aggregation],
     output: Option[Aggregation],
-    sagaActions: Seq[SagaAction] = Seq.empty[SagaAction],
+    sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[SagaAction] with ContextDefinition with OptionsDef[SagaOption] {
-    lazy val contents: Seq[SagaAction] = sagaActions
+      extends Container[SagaStep] with ContextDefinition with OptionsDef[SagaOption] {
+    lazy val contents: Seq[SagaStep] = sagaSteps
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty && input.isEmpty &&
       output.isEmpty

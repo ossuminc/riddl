@@ -9,20 +9,24 @@ domain ignore1 is {
       options(parallel)
       requires: { p1: String, p2: String }
       yields: {s: String }
-      action Step1 for entity blah is {
-        command Something reverted by command undoSomething as {
-          example A is {
-            then "Pass p1 to blah via Something command"
-          }
+      step One is {
+        tell command Something() to entity blah
+        reverted by
+        tell command UndoSomething() to entity blah
+      } as {
+        example A is {
+           then "Pass p1 to blah via Something command"
         }
       }
-      action Step2 for entity blah is {
-        command AnotherThing reverted by command undoAnotherThing as {
-          example B is {
-            given "Step A has completed"
-            then "Pass p2 to blah via AnotherThing command"
-            and "Return AnotherThing's output"
-          }
+      step Two is {
+        tell command AnotherThing() to entity blah
+        reverted by
+        tell command UndoAnotherThing() to entity blah
+     } as {
+        example B is {
+          given "Step A has completed"
+          then "Pass p2 to blah via AnotherThing command"
+          and "Return AnotherThing's output"
         }
       }
     }

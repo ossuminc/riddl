@@ -372,20 +372,19 @@ case class MarkdownWriter(filePath: Path) {
     emitHandlers(entity.handlers, parents)
   }
 
-  def emitSagaActions(actions: Seq[SagaAction], parents: Seq[String]): this.type = {
+  def emitSagaSteps(actions: Seq[SagaStep], parents: Seq[String]): this.type = {
     h2("Saga Actions")
     actions.foreach { action =>
       h3(action.id.format)
       emitBriefly(action, parents, 4)
       h4("Messaging")
       list(Seq(
-        "Entity" -> action.entity.id.format,
-        "Do" -> action.doCommand.format,
-        "Undo" -> action.undoCommand.format
+        "Do:" -> action.doAction.format,
+        "Undo:" -> action.undoAction.format
       ))
       p(action.format)
       h4("Examples")
-      action.example.foreach(emitExample(_, parents, 5))
+      action.examples.foreach(emitExample(_, parents, 5))
       emitDetails(action.description, 4)
     }
     this
@@ -397,7 +396,7 @@ case class MarkdownWriter(filePath: Path) {
     emitDetails(saga.description)
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)
-    emitSagaActions(saga.sagaActions, parents)
+    emitSagaSteps(saga.sagaSteps, parents)
   }
 
   def emitStory(story: Story, prefix: Seq[String]): this.type = {
