@@ -15,8 +15,8 @@ class TranslatorTest extends ValidatingTest {
 
   case class TestTranslatingOptions(
     projectName: Option[String] = None,
-    outputPath: Option[Path] = None,
-    inputPath: Option[Path] = None,
+    outputDir: Option[Path] = None,
+    inputFile: Option[Path] = None,
   ) extends TranslatingOptions
 
   case class TestTranslatorState(options: TestTranslatingOptions) extends TranslatorState {
@@ -56,7 +56,9 @@ class TranslatorTest extends ValidatingTest {
         val logger = StringLogger()
         val inputPath = Path.of(directory).resolve(fileName)
         val options = TestTranslatingOptions(
-          outputPath = Some(Path.of(s"language/target/translator-test").resolve(fileName)),
+          outputDir = Some(
+            Path.of(s"language/target/translator-test")
+              .resolve(fileName)),
         )
         val files = tt.parseValidateTranslate(
           inputPath,

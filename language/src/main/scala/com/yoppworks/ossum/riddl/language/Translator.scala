@@ -7,7 +7,8 @@ import java.io.File
 import java.nio.file.Path
 
 trait TranslatingOptions {
-  def inputPath: Option[Path]
+  def inputFile: Option[Path]
+  def outputDir: Option[Path]
   def projectName: Option[String]
 }
 
@@ -19,9 +20,6 @@ trait TranslatorState {
 
 /** Unit Tests For Translator */
 trait Translator[OPT <: TranslatingOptions] {
-
-  def defaultOptions: OPT
-
 
   protected def translateImpl(
     root: RootContainer,
@@ -48,8 +46,8 @@ trait Translator[OPT <: TranslatingOptions] {
     validatingOptions: ValidatingOptions,
     options: OPT
   ): Seq[File] = {
-    require(options.inputPath.nonEmpty, "Input path option must not be empty")
-    Riddl.parseAndValidate(options.inputPath.get, log, commonOptions, validatingOptions) match {
+    require(options.inputFile.nonEmpty, "Input path option must not be empty")
+    Riddl.parseAndValidate(options.inputFile.get, log, commonOptions, validatingOptions) match {
       case Some(root) => translate(root, log, commonOptions, options)
       case None       => Seq.empty[File]
     }

@@ -12,8 +12,8 @@ import scala.sys.process.Process
 import java.nio.file._
 
 case class HugoTranslatingOptions(
-  inputPath: Option[Path] = None,
-  outputPath: Option[Path] = None,
+  inputFile: Option[Path] = None,
+  outputDir: Option[Path] = None,
   eraseOutput: Boolean = false,
   projectName: Option[String] = None,
   baseUrl: Option[URL] = Option(new URL("https://example.com/")),
@@ -25,9 +25,9 @@ case class HugoTranslatingOptions(
   siteLogo: Option[URL] = None,
   siteLogoPath: Option[String] = Some("images/logo.png"))
     extends TranslatingOptions {
-  def inputRoot: Path = inputPath.getOrElse(Path.of(".")).toAbsolutePath
+  def inputRoot: Path = inputFile.getOrElse(Path.of(".")).toAbsolutePath
   def staticInput: Path = inputRoot.resolve("static")
-  def outputRoot: Path = outputPath.getOrElse(Path.of("")).toAbsolutePath
+  def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
   def contentRoot: Path = outputRoot.resolve("content")
   def staticRoot: Path = outputRoot.resolve("static")
   def themesRoot: Path = outputRoot.resolve("themes")
@@ -222,12 +222,12 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     commonOptions: CommonOptions,
     options: HugoTranslatingOptions
   ): Seq[File] = {
-    require(options.inputPath.nonEmpty, "An input path was not provided.")
-    require(options.outputPath.nonEmpty, "An output path was not provided.")
+    require(options.inputFile.nonEmpty, "An input path was not provided.")
+    require(options.outputDir.nonEmpty, "An output path was not provided.")
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
     require(options.outputRoot.getFileName.toString.nonEmpty,
       "Output path is empty")
-    val newOptions = makeDirectoryStructure(options.inputPath.get, log, options)
+    val newOptions = makeDirectoryStructure(options.inputFile.get, log, options)
     val maybeAuthor = root.domains.headOption match {
       case Some(domain) => domain.author
       case None         => Option.empty[AuthorInfo]

@@ -228,24 +228,24 @@ object RiddlOptions {
             case RiddlOptions.Prettify =>
               val p = if (o.fromOptions.inputFile.nonEmpty) {
                 o.copy(reformatOptions = o.reformatOptions.copy(
-                  inputPath = o.fromOptions.inputFile
+                  inputFile = o.fromOptions.inputFile
                 ))
               } else { o }
               val q = if (o.fromOptions.outputDir.nonEmpty) {
                 p.copy(reformatOptions = o.reformatOptions.copy(
-                  outputPath = o.fromOptions.outputDir
+                  outputDir = o.fromOptions.outputDir
                 ))
               } else { p }
               Option(q)
             case RiddlOptions.Hugo =>
               val p = if (o.fromOptions.inputFile.nonEmpty) {
                 o.copy(hugoOptions = o.hugoOptions.copy(
-                  inputPath = o.fromOptions.inputFile
+                  inputFile = o.fromOptions.inputFile
                 ))
               } else { o }
               val q = if (o.fromOptions.outputDir.nonEmpty) {
                 p.copy(hugoOptions = o.hugoOptions.copy(
-                  outputPath = o.fromOptions.outputDir
+                  outputDir = o.fromOptions.outputDir
                 ))
               } else { p }
               Option(q)
@@ -385,7 +385,7 @@ object RiddlOptions {
           inputFile((v, c) => c.copy(reformatOptions =
             c.reformatOptions.copy(Option(v.toPath)))),
           outputDir((v, c) => c.copy(reformatOptions =
-            c.reformatOptions.copy(outputPath = Option(v.toPath))
+            c.reformatOptions.copy(outputDir = Option(v.toPath))
           )),
           opt[Boolean]('s', name = "single-file")
             .action((v, c) => c.copy(reformatOptions = c.reformatOptions.copy(singleFile = v)))
@@ -399,9 +399,9 @@ object RiddlOptions {
         .children(
           opt[Boolean]('e', name = "erase-output").text("Erase entire output directory before putting out files"),
           inputFile((v, c) => c.copy(
-            hugoOptions = c.hugoOptions.copy(inputPath = Option(v.toPath)))),
+            hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))),
           outputDir((v, c) => c.copy(
-            hugoOptions = c.hugoOptions.copy(outputPath = Option(v.toPath)))),
+            hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))),
           projectName((v, c) => c.copy(
             hugoOptions = c.hugoOptions.copy(projectName = Option(v)))),
           opt[URL]('b', "base-url").optional()

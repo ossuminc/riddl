@@ -1,28 +1,56 @@
 package com.yoppworks.ossum.riddl.translator.git
 
-import com.yoppworks.ossum.riddl.language.{AST, CommonOptions, Logger, TranslatingOptions, Translator}
+import com.yoppworks.ossum.riddl.language.{AST, CommonOptions, Logger,
+  SysLogger, TranslatingOptions, Translator, ValidatingOptions}
+import com.yoppworks.ossum.riddl.translator.hugo.{HugoTranslatingOptions,
+  HugoTranslator}
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 case class GitTranslatorOptions(
-  projectName: Option[String] = None,
-  rate: FiniteDuration = 1.minute, // for git check on outstanding commits
-) extends TranslatingOptions
+  commonOptions: Option[CommonOptions] = None,
+  validatingOptions: Option[ValidatingOptions] = None,
+  hugoOptions: Option[HugoTranslatingOptions] = None,
+  gitCloneDir: Option[Path] = None,
+  refreshRate: FiniteDuration = 10.seconds,
+) extends TranslatingOptions {
+  def inputFile: Option[Path] = hugoOptions.get.inputFile
+  def outputDir: Option[Path] = hugoOptions.get.outputDir
+  def projectName: Option[String] = hugoOptions.get.projectName
+}
 
 object GitTranslator extends Translator[GitTranslatorOptions] {
-  val defaultOptions: GitTranslatorOptions = GitTranslatorOptions()
 
   override protected def translateImpl(
     root: AST.RootContainer,
-    inputPath: Path,
     log: Logger,
     commonOptions: CommonOptions,
     options: GitTranslatorOptions
   ): Seq[File] = {
+     Seq.empty[File]
+  }
 
+  def genHugo(options: GitTranslatorOptions): Seq[File] = {
+    require(options.inputFile.nonEmpty, "Empty inputFile")
+    require(options.outputDir.nonEmpty, "Empty outputDir")
+    val inFile = options.inputFile.get
+    val outDir = options.outputDir.get
+    require(Files.isRegularFile(inFile), "input is not a file")
+    require(Files.isReadable(inFile), "input is not readable")
+    require(Files.isDirectory(outDir), "output is not a directory")
+    require(Files.isWritable(outDir), "output is not writable")
+    val showTimes = options.commonOptions.getOrElse(CommonOptions())
+    val errorsOnly = options.validatingOptions
+      .getOrElse(ValidatingOptions())
+      .copy(showWarnings = false)
+    val htc = options.hugoOptions.get.copy(
+      eraseOutput = true
+    )
+    val ht = HugoTranslator
+    ht.parseValidateTranslate(SysLogger(), showTimes, errorsOnly,  htc)
   }
 
   def runHugo(source: Path, log:Logger): Boolean = {

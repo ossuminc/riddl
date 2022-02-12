@@ -61,10 +61,10 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           opts.validatingOptions.showStyleWarnings mustBe true
           opts.validatingOptions.showMissingWarnings mustBe true
           val ho = opts.hugoOptions
-          ho.inputPath mustBe Option(Path.of(
+          ho.inputFile mustBe Option(Path.of(
             "examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl"
           ))
-          ho.outputPath mustBe Option(Path.of(
+          ho.outputDir mustBe Option(Path.of(
             "examples/target/translator/ReactiveBBQ"
           ))
           ho.eraseOutput mustBe true

@@ -111,7 +111,7 @@ lazy val `git-translator`: Project = project.in(file("git-translator"))
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  ).dependsOn(`hugo-translator`)
+  ).dependsOn(`hugo-translator` % "compile->compile;test->test")
 
 lazy val examples = project.in(file("examples")).settings(
   name := "riddl-examples",

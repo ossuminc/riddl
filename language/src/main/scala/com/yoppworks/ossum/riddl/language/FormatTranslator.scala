@@ -10,8 +10,8 @@ import scala.annotation.unused
 import scala.collection.mutable
 
 case class FormattingOptions(
-  inputPath: Option[Path] = None,
-  outputPath: Option[Path] = None,
+  inputFile: Option[Path] = None,
+  outputDir: Option[Path] = None,
   projectName: Option[String] = None,
   singleFile: Boolean = true
 ) extends TranslatingOptions

@@ -16,7 +16,7 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
         val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(roots) =>
-        val options = FormattingOptions(inputPath = Some(file.toPath))
+        val options = FormattingOptions(inputFile = Some(file.toPath))
         val log = SysLogger()
         val common = CommonOptions()
         val output = FormatTranslator.translateToString(roots, log, common, options)

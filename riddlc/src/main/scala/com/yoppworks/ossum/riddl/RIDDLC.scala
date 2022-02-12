@@ -90,7 +90,7 @@ object RIDDLC {
   }
 
   def prettify(options: RiddlOptions): Boolean = {
-    options.reformatOptions.inputPath match {
+    options.reformatOptions.inputFile match {
       case Some(_) =>
         FormatTranslator.parseValidateTranslate(
           log,
@@ -110,7 +110,7 @@ object RIDDLC {
   }
 
   def translateHugo(options: RiddlOptions): Boolean = {
-    options.hugoOptions.inputPath match {
+    options.hugoOptions.inputFile match {
       case Some(_) =>
         HugoTranslator.parseValidateTranslate(
           log,
