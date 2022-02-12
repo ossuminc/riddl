@@ -16,11 +16,12 @@ class CheckExamplesSpec extends HugoTranslateExamplesBase {
         checkExamples(name, path)
         name match {
           case "Reactive BBQ" =>
-            val topDirName = Path.of(path).getFileName
-            val root = Path.of(output).resolve(topDirName)
+            val root = makeSrcDir(path)
+            Files.isDirectory(root)
             val img = root.resolve("static/images/RBBQ.png")
             Files.exists(img) mustBe true
           case _ =>
+            succeed
         }
       }
     }

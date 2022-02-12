@@ -4,7 +4,7 @@ import com.yoppworks.ossum.riddl.language.{CommonOptions, SysLogger, ValidatingO
 import org.scalatest.Assertion
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.collection.mutable.ArrayBuffer
 
 abstract class HugoTranslateExamplesBase extends ValidatingTest {
@@ -12,6 +12,9 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   val directory: String = "examples/src/riddl/"
   val output: String
 
+  def makeSrcDir(path: String): Path = {
+    Path.of(output).resolve(path)
+  }
   val showTimes: CommonOptions =  CommonOptions(showTimes = true)
 
   val errorsOnly: ValidatingOptions = ValidatingOptions(
@@ -21,7 +24,6 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   )
 
   def genHugo(projectName: String, source: String): Seq[File] = {
-    val fileName = Path.of(source).getFileName.toString
     val outDir = Path.of(output).resolve(source)
     val outDirFile = outDir.toFile
     if (!outDirFile.isDirectory) outDirFile.mkdirs()
@@ -36,23 +38,24 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     ht.parseValidateTranslate(SysLogger(), showTimes, errorsOnly,  htc)
   }
 
-  def runHugo(source: Path): Assertion = {
+  def runHugo(source: String): Assertion = {
     import scala.sys.process._
-    val srcDir = source.toFile
-    srcDir.isDirectory mustBe true
     val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
     var hadErrorOutput: Boolean = false
     var hadWarningOutput: Boolean = false
 
     def fout(line: String): Unit = {
-      lineBuffer.append(line);
+      lineBuffer.append(line)
       if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
     }
 
     def ferr(line: String): Unit = { lineBuffer.append(line); hadErrorOutput = true }
 
     val logger = ProcessLogger(fout, ferr)
-    val proc = Process("hugo", cwd = Option(srcDir))
+    val srcDir = makeSrcDir(source)
+    Files.isDirectory(srcDir)
+    val cwdFile = srcDir.toFile
+    val proc = Process("hugo", cwd = Option(cwdFile))
     proc.!(logger) match {
       case 0 =>
         if (hadErrorOutput) { fail("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  ")) }
@@ -65,7 +68,6 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
 
   def checkExamples(name: String, path: String): Assertion = {
     genHugo(name, path)
-    val outputDir = Path.of(output).resolve(new File(path).getName)
-    runHugo(outputDir)
+    runHugo(path)
   }
 }
