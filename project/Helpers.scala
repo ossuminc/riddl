@@ -1,6 +1,7 @@
+import sbt.Keys.{name, packageDoc, publishArtifact, resourceGenerators, sourceDirectory, target}
 import sbt._
-import scoverage.ScoverageKeys.{coverageEnabled, coverageFailOnMinimum,
-  coverageMinimumBranchTotal, coverageMinimumStmtTotal}
+import sbt.io.Path.allSubpaths
+import scoverage.ScoverageKeys.{coverageEnabled, coverageFailOnMinimum, coverageMinimumBranchTotal, coverageMinimumStmtTotal}
 
 /** V - Dependency Versions object */
 object V {
@@ -36,6 +37,28 @@ object C {
       coverageFailOnMinimum := true,
       coverageMinimumStmtTotal := 80,
       coverageMinimumBranchTotal := 80
+    )
+  }
+
+  private def makeThemeResource(name: String, from: File, targetDir: File): Seq[File] = {
+    val zip = name + ".zip"
+    val distTarget = targetDir / zip
+    IO.copyDirectory(from, targetDir)
+    val dirToZip = targetDir / name
+    IO.zip(allSubpaths(dirToZip), distTarget, None)
+    Seq(distTarget)
+  }
+
+
+  def zipResource(srcDir: String) (p :Project): Project = {
+    p.settings(
+      Compile / resourceGenerators += Def.task {
+        val projectName = name.value
+        val from = sourceDirectory.value / srcDir
+        val targetDir = target.value / "dist"
+        makeThemeResource(projectName, from, targetDir)
+      }.taskValue,
+      Compile / packageDoc / publishArtifact := false,
     )
   }
 }

@@ -78,31 +78,10 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
     libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse)  ++ Dep.testing,
   )
 
-def makeThemeResource(name: String, from: File, targetDir: File): Seq[File] = {
-  val zip = name + ".zip"
-  val distTarget = targetDir / zip
-  IO.copyDirectory(from, targetDir)
-  val dirToZip = targetDir / name
-  IO.zip(allSubpaths(dirToZip), distTarget, None)
-  Seq(distTarget)
-}
-
 lazy val `hugo-theme` = project.in(file("hugo-theme"))
+  .configure(C.zipResource("main"))
   .settings(
-    name := "riddl-hugo-theme",
-    Compile / resourceGenerators += Def.task {
-      val projectName = name.value
-      val from = sourceDirectory.value / "main"
-      val targetDir = target.value / "dist"
-      makeThemeResource(projectName, from, targetDir)
-    }.taskValue,
-    Compile / packageDoc / publishArtifact := false,
-    Compile / packageSrc / publishArtifact := false,
-    /* Compile / packageBin / mappings += {
-      val zip = name.value + ".zip"
-      (target.value / "dist" / zip) -> zip
-    }*/
-    // addArtifact(Artifact("riddl-hugo-theme", "zip", "zip"), themeTask)
+    name := "riddl-hugo-theme"
   )
 
 lazy val `d3-generator` = project.in(file("d3-generator")).enablePlugins(BuildInfoPlugin)
@@ -134,12 +113,14 @@ lazy val examples = project.in(file("examples")).settings(
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
-  .enablePlugins(SiteScaladocPlugin).settings(
-  name := "riddl-doc",
-  publishTo := Option(Resolver.defaultLocal),
-  Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-  publishSite
-).dependsOn(`hugo-translator` % "test->test", riddlc)
+  .enablePlugins(SiteScaladocPlugin)
+  .configure(C.zipResource("hugo"))
+  .settings(
+    name := "riddl-doc",
+    publishTo := Option(Resolver.defaultLocal),
+    Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+    publishSite
+  ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(BuildInfoPlugin)
