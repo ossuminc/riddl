@@ -103,6 +103,16 @@ lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   ).dependsOn(language % "compile->compile;test->test", `hugo-theme`)
 
+lazy val `git-translator`: Project = project.in(file("git-translator"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    name := "riddl-git-translator",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.translator.git",
+    Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
+    Test / parallelExecution := false,
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+  ).dependsOn(`hugo-translator`)
+
 lazy val examples = project.in(file("examples")).settings(
   name := "riddl-examples",
   Compile / packageBin / publishArtifact := false,
