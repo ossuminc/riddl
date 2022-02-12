@@ -60,17 +60,6 @@ object RiddlOptions {
     }
   }
 
-  val setup: OParserSetup = new DefaultOParserSetup {
-    override def showUsageOnError: Option[Boolean] = Option(true)
-
-    override def renderingMode: RenderingMode.OneColumn.type = RenderingMode.OneColumn
-  }
-
-  val dontTerminate: DefaultOEffectSetup = new DefaultOEffectSetup {
-    // ignore terminate
-    override def terminate(exitState: Either[String, Unit]): Unit = ()
-  }
-
   private def optional[T](
     objCur: ConfigObjectCursor,
     key: String,
@@ -288,6 +277,16 @@ object RiddlOptions {
   }
 
   def parse(args: Array[String]): Option[RiddlOptions] = {
+    val setup: OParserSetup = new DefaultOParserSetup {
+      override def showUsageOnError: Option[Boolean] = Option(false)
+      override def renderingMode: RenderingMode.TwoColumns.type =
+        RenderingMode.TwoColumns
+    }
+
+    val dontTerminate: DefaultOEffectSetup = new DefaultOEffectSetup {
+      // ignore terminate
+      override def terminate(exitState: Either[String, Unit]): Unit = ()
+    }
     val (result, effects) = OParser.runParser(RiddlOptions.parser, args, RiddlOptions(), setup)
     OParser.runEffects(effects, dontTerminate)
     result
@@ -313,11 +312,6 @@ object RiddlOptions {
       .text("Optional project name to associate with the generated output").validate(n =>
       if (n.isBlank) Left("optional project-name cannot be blank or empty") else Right(())
     )
-  }
-
-  def baseUrl(f: OptionPlacer[URL]): OParser[URL, RiddlOptions] = {
-    opt[URL]('b', "base-url").optional().action((v, c) => f(v, c))
-      .text("Optional base URL for root of generated http URLs")
   }
 
   private val parser: OParser[Unit, RiddlOptions] = {
@@ -410,8 +404,16 @@ object RiddlOptions {
             hugoOptions = c.hugoOptions.copy(outputPath = Option(v.toPath)))),
           projectName((v, c) => c.copy(
             hugoOptions = c.hugoOptions.copy(projectName = Option(v)))),
-          baseUrl((v, c) => c.copy(
-            hugoOptions = c.hugoOptions.copy(baseUrl = Option(v)))),
+          opt[URL]('b', "base-url").optional()
+            .action((v, c) => c.copy( hugoOptions = c.hugoOptions.copy(
+              baseUrl = Some(v)
+            )))
+            .text("Optional base URL for root of generated http URLs"),
+          opt[Map[String,String]]('t', name = "themes")
+            .action( (t, c) => c.copy(hugoOptions =
+              c.hugoOptions.copy(themes = t.toSeq.map(x =>
+                x._1 -> Some(new URL(x._2))) )
+            )),
           // TODO: themes
           opt[URL]('s', name = "source-url")
             .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u))))
@@ -419,9 +421,16 @@ object RiddlOptions {
           opt[String]('h', name = "edit-path")
             .action((h, c) => c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h))))
             .text("Path to add to source-url to allow editing"),
-          opt[URL]('l', name = "site-logo")
+          opt[URL]('l', name = "site-logo-url")
             .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(siteLogo = Option(u))))
-            .text("URL to the site's logo image for use by site")
+            .text("URL to the site's logo image for use by site"),
+          opt[String]('p', "site-logo-path")
+            .action((s, c) => c.copy(hugoOptions =
+              c.hugoOptions.copy(siteLogoPath = Option(s)))
+            ).text(
+            """Path, in 'static' directory to placement and use
+              |of the site logo.""".stripMargin
+            )
         ).text(
           """Parse and validate the input-file and then translate it into the input
             |needed for hugo to translate it to a functioning web site.""".stripMargin)

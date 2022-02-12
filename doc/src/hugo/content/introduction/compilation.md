@@ -49,7 +49,7 @@ inconsistencies in the input specification. These validity issues typically
 stop the compiler from proceeding because using an invalid input model tends
 to produce output that flawed and not useful.  
 
-# Generation
+# Translation
 A RIDDL AST, having been successfully analyzed for structure and validity, is
 ready to be translated into another form, which is the point of all this
 bother in the first place.

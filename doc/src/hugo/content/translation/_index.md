@@ -4,8 +4,16 @@ type: "section"
 weight: 40
 ---
 
-The RIDDL compiler, `riddlc` is able to translate RIDDL into a variety of other document types, 
-as described in the following sections:
+The RIDDL compiler, `riddlc` is able to translate RIDDL into a variety of other
+document types. 
+
+{{% hint ok %}}
+It is recommended that before you delve into the types of output, become 
+familiar with the `riddlc` [command line and configuration options](options) 
+
+{{% /hint %}}
+
+The various kinds of output from `riddlc` are described in the following sections:
 
 * [_BAST_](bast) - Binary Abstract Syntax Tree
 * [_Akka_](akka) - Akka, protobuffers, Alpakka infrastructure code & skeleton
