@@ -153,7 +153,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoUsePackageAsPath := true
-  ).dependsOn(language, `hugo-translator`)
+  ).dependsOn(language, `hugo-translator` % "compile->compile;test->test")
 
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)

@@ -15,7 +15,8 @@ class TranslatorTest extends ValidatingTest {
 
   case class TestTranslatingOptions(
     projectName: Option[String] = None,
-    outputPath: Option[Path] = None
+    outputPath: Option[Path] = None,
+    inputPath: Option[Path] = None,
   ) extends TranslatingOptions
 
   case class TestTranslatorState(options: TestTranslatingOptions) extends TranslatorState {
@@ -29,7 +30,6 @@ class TranslatorTest extends ValidatingTest {
 
     override def translateImpl(
       root: RootContainer,
-      inputPath: Path,
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions,

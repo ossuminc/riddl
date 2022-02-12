@@ -12,8 +12,6 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   val directory: String = "examples/src/riddl/"
   val output: String
 
-  def outPath(path: String): Path = { Path.of(output).resolve(new File(path).getName) }
-
   val showTimes: CommonOptions =  CommonOptions(showTimes = true)
 
   val errorsOnly: ValidatingOptions = ValidatingOptions(
@@ -23,17 +21,19 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   )
 
   def genHugo(projectName: String, source: String): Seq[File] = {
-    val outFile = outPath(source).toFile
-    if (!outFile.isDirectory) outFile.mkdirs()
-    val outDir = Some(outFile.toPath)
+    val fileName = Path.of(source).getFileName.toString
+    val outDir = Path.of(output).resolve(source)
+    val outDirFile = outDir.toFile
+    if (!outDirFile.isDirectory) outDirFile.mkdirs()
     val sourcePath = Path.of(directory).resolve(source)
     val htc = HugoTranslatingOptions(
+      inputPath = Some(sourcePath),
+      outputPath = Some(outDir),
       eraseOutput = true,
-      projectName = Some(projectName),
-      outputPath = outDir,
+      projectName = Some(projectName)
     )
     val ht = HugoTranslator
-    ht.parseValidateTranslateFile(sourcePath, SysLogger(), showTimes, errorsOnly,  htc)
+    ht.parseValidateTranslate(SysLogger(), showTimes, errorsOnly,  htc)
   }
 
   def runHugo(source: Path): Assertion = {
@@ -65,6 +65,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
 
   def checkExamples(name: String, path: String): Assertion = {
     genHugo(name, path)
-    runHugo(outPath(path))
+    val outputDir = Path.of(output).resolve(new File(path).getName)
+    runHugo(outputDir)
   }
 }

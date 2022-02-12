@@ -10,6 +10,7 @@ import scala.annotation.unused
 import scala.collection.mutable
 
 case class FormattingOptions(
+  inputPath: Option[Path] = None,
   outputPath: Option[Path] = None,
   projectName: Option[String] = None,
   singleFile: Boolean = true
@@ -33,7 +34,6 @@ object FormatTranslator extends Translator[FormattingOptions] {
 
   def translateImpl(
     root: RootContainer,
-    inputPath: Path,
     @unused log: Logger,
     @unused commonOptions: CommonOptions,
     options: FormattingOptions
@@ -45,13 +45,12 @@ object FormatTranslator extends Translator[FormattingOptions] {
 
   def translateToString(
     root: RootContainer,
-    inputPath: Path,
     log: Logger,
     commonOptions: CommonOptions,
     options: FormattingOptions
   ): String = {
     val logger = StringLogger()
-    translate(root, inputPath, log, commonOptions, options)
+    translate(root, log, commonOptions, options)
     logger.toString()
   }
 

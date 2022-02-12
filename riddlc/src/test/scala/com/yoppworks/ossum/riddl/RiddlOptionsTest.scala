@@ -1,9 +1,9 @@
 package com.yoppworks.ossum.riddl
 
+import com.yoppworks.ossum.riddl.RiddlOptions.Hugo
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.net.URL
 import java.nio.file.Path
 
 class RiddlOptionsTest extends AnyWordSpec with Matchers {
@@ -44,21 +44,38 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
       }
     }
     "load from a file" in {
-      val optionFile = Path.of("riddlc/src/test/input/hugoOptions.conf")
-      val options = RiddlOptions().copy(optionsPath = Option(optionFile))
-      val result = RiddlOptions.loadHugoTranslatingOptions(options)
+      val optionFile = Path.of("examples/src/riddl/ReactiveBBQ/ReactiveBBQ.conf")
+      val options = RiddlOptions()
+      val result = RiddlOptions.loadRiddlOptions(options, optionFile)
 
       result match {
         case None =>
           fail("Previously reported failures")
         case Some(opts) =>
-          opts.projectName mustBe Option("Reactive BBQ")
-          opts.outputPath mustBe Option(Path.of(
-            "/Users/reid/Code/Yoppworks/Ossum/riddl/examples/target/translator/ReactiveBBQ"
+          opts.command mustBe Hugo
+          opts.commonOptions.showTimes mustBe true
+          opts.commonOptions.verbose mustBe true
+          opts.commonOptions.quiet mustBe false
+          opts.commonOptions.dryRun mustBe false
+          opts.validatingOptions.showWarnings mustBe true
+          opts.validatingOptions.showStyleWarnings mustBe true
+          opts.validatingOptions.showMissingWarnings mustBe true
+          val ho = opts.hugoOptions
+          ho.inputPath mustBe Option(Path.of(
+            "examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl"
           ))
-          opts.baseUrl mustBe Option(new URL("https://riddl.yoppworks.com"))
-          opts.sourceURL mustBe Option(new URL( "https://gitlab.com/Yoppworks/Ossum/riddl/"))
-          opts.editPath mustBe Option("blob/main/examples/src/riddl/ReactiveBBQ")
+          ho.outputPath mustBe Option(Path.of(
+            "examples/target/translator/ReactiveBBQ"
+          ))
+          ho.eraseOutput mustBe true
+          ho.projectName mustBe Option("Reactive BBQ")
+          ho.baseUrl mustBe Option(
+            new java.net.URL("https://riddl.yoppworks.com"))
+          ho.sourceURL mustBe Option(
+            new java.net.URL("https://gitlab.com/Yoppworks/Ossum/riddl"))
+          ho.editPath mustBe Option("/-/blob/main/examples/src/riddl/ReactiveBBQ")
+          ho.siteLogo mustBe None
+          ho.siteLogoPath mustBe Option("/images/RBBQ.png")
       }
     }
   }

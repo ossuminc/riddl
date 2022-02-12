@@ -7,6 +7,7 @@ import java.io.File
 import java.nio.file.Path
 
 trait TranslatingOptions {
+  def inputPath: Option[Path]
   def projectName: Option[String]
 }
 
@@ -24,7 +25,6 @@ trait Translator[OPT <: TranslatingOptions] {
 
   protected def translateImpl(
     root: RootContainer,
-    inputPath: Path,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT,
@@ -32,51 +32,39 @@ trait Translator[OPT <: TranslatingOptions] {
 
   final def translate(
     root: RootContainer,
-    inputPath: Path,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
   ): Seq[File] = {
     val showTimes = commonOptions.showTimes
     Riddl.timer(stage = "translate", showTimes) {
-      translateImpl(root, inputPath, log, commonOptions, options)
+      translateImpl(root, log, commonOptions, options)
     }
   }
 
   final def parseValidateTranslate(
-    inputPath: Path,
     log: Logger,
     commonOptions: CommonOptions,
     validatingOptions: ValidatingOptions,
     options: OPT
   ): Seq[File] = {
-    Riddl.parseAndValidate(inputPath, log, commonOptions, validatingOptions) match {
-      case Some(root) => translate(root, inputPath, log, commonOptions, options)
+    require(options.inputPath.nonEmpty, "Input path option must not be empty")
+    Riddl.parseAndValidate(options.inputPath.get, log, commonOptions, validatingOptions) match {
+      case Some(root) => translate(root, log, commonOptions, options)
       case None       => Seq.empty[File]
     }
   }
 
   final def parseValidateTranslate(
     input: RiddlParserInput,
-    inputPath: Path,
     log: Logger,
     commonOptions: CommonOptions,
     validatingOptions: ValidatingOptions,
     options: OPT
   ): Seq[File] = {
     Riddl.parseAndValidate(input, log, commonOptions, validatingOptions) match {
-      case Some(root) => translate(root, inputPath, log, commonOptions, options)
+      case Some(root) => translate(root, log, commonOptions, options)
       case None       => Seq.empty[File]
     }
-  }
-
-  final def parseValidateTranslateFile(
-    path: Path,
-    log: Logger,
-    commonOptions: CommonOptions,
-    validatingOptions: ValidatingOptions,
-    options: OPT
-  ): Seq[File] = {
-    parseValidateTranslate(RiddlParserInput(path), path, log, commonOptions, validatingOptions, options)
   }
 }
