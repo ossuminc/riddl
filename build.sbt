@@ -110,7 +110,7 @@ lazy val `git-translator`: Project = project.in(file("git-translator"))
     buildInfoPackage := "com.yoppworks.ossum.riddl.translator.git",
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(`hugo-translator` % "compile->compile;test->test")
 
 lazy val examples = project.in(file("examples")).settings(
@@ -144,7 +144,9 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoUsePackageAsPath := true
-  ).dependsOn(language, `hugo-translator` % "compile->compile;test->test")
+  ).dependsOn(language, `hugo-translator` % "compile->compile;test->test",
+  `git-translator` % "compile->compile;test->test"
+  )
 
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)

@@ -3,14 +3,17 @@ package com.yoppworks.ossum.riddl
 import com.yoppworks.ossum.riddl.RIDDLC.log
 import com.yoppworks.ossum.riddl.language.ValidatingOptions
 import com.yoppworks.ossum.riddl.language.{BuildInfo, CommonOptions, FormattingOptions}
+import com.yoppworks.ossum.riddl.translator.git.GitTranslatorOptions
 import com.yoppworks.ossum.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.*
 import scopt.*
+import scopt.RenderingMode.OneColumn
 
 import java.io.File
 import java.net.URL
 import java.nio.file.Path
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.control.NonFatal
 
 /** Command Line Options for Riddl compiler program */
@@ -22,9 +25,20 @@ case class FromOptions(
 )
 case class ParseOptions(inputFile: Option[Path] = None)
 case class ValidateOptions(inputFile: Option[Path] = None)
+
+object RepeatOptions {
+  val defaultMaxLoops: Int = 1024
+}
+case class RepeatOptions(
+  command: RiddlOptions.Command = RiddlOptions.Unspecified,
+  refreshRate: FiniteDuration = 10.seconds,
+  maxLoops: Int = RepeatOptions.defaultMaxLoops
+)
+
 case class RiddlOptions(
   command: RiddlOptions.Command = RiddlOptions.Unspecified,
   fromOptions: FromOptions = FromOptions(),
+  repeatOptions: RepeatOptions = RepeatOptions(),
   commonOptions: CommonOptions = CommonOptions(),
   validatingOptions: ValidatingOptions =
     ValidatingOptions(showStyleWarnings = false, showMissingWarnings = false),
@@ -32,6 +46,7 @@ case class RiddlOptions(
   validateOptions: ValidateOptions = ValidateOptions(),
   reformatOptions: FormattingOptions = FormattingOptions(),
   hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
+  hugoGitCheckOptions: GitTranslatorOptions = GitTranslatorOptions()
 )
 
 object RiddlOptions {
@@ -39,21 +54,24 @@ object RiddlOptions {
   sealed trait Command
 
   final case object Unspecified extends Command
-  final case object From extends Command
   final case object Parse extends Command
   final case object Validate extends Command
   final case object Prettify extends Command
-  final case object Git extends Command
   final case object Hugo extends Command
+  final case object HugoGitCheck extends Command
+  final case object Help extends Command
+  final case object From extends Command
+  final case object Repeat extends Command
   final case object D3 extends Command
 
   def str2Command(str: String): Command = {
     str match {
       case "from" => From
+      case "repeat" => Repeat
       case "parse" => Parse
       case "validate" => Validate
       case "prettify" => Prettify
-      case "git" => Git
+      case "hugo-git-check" => HugoGitCheck
       case "hugo" => Hugo
       case "d3" => D3
       case _ => Unspecified
@@ -165,12 +183,51 @@ object RiddlOptions {
       }
     }
 
+  implicit val gitReader: ConfigReader[GitTranslatorOptions] = {
+    (cur: ConfigCursor) => {
+      for {
+        objCur <- cur.asObjectCursor
+        hugo <- optional[HugoTranslatingOptions](
+          objCur, "hugo", HugoTranslatingOptions()) {
+          cur => htoReader.from(cur)
+        }
+        gitCloneDir <- optional[File](objCur, "git-clone-dir",
+          new File(".")) { cc =>
+          cc.asString.map(s => new File(s))
+        }
+      } yield {
+        GitTranslatorOptions(
+          hugoOptions = hugo,
+          gitCloneDir = Some(gitCloneDir.toPath)
+        )
+      }
+    }
+  }
+
+  implicit val repeatReader: ConfigReader[RepeatOptions] = {
+    (cur: ConfigCursor) => {
+      for {
+        objCur <- cur.asObjectCursor
+        commandRes <- objCur.atKey("command")
+        commandStr <- commandRes.asString
+        refreshRateFD <- optional[FiniteDuration](objCur, "refresh-rate",
+          5.seconds) { cc => cc.asInt.map(d => FiniteDuration(d, "seconds")) }
+        maxLoops <- optional[Int](objCur, "max-loops",
+          GitTranslatorOptions.defaultMaxLoops) { cc => cc.asInt }
+      } yield {
+        RepeatOptions(str2Command(commandStr), refreshRateFD, maxLoops)
+      }
+    }
+  }
+
   implicit val riddlReader: ConfigReader[RiddlOptions] = {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
         commandRes <- objCur.atKey("command")
         commandStr <- commandRes.asString
+        repeat <- optional[RepeatOptions](objCur, "repeat",
+          RepeatOptions()) { cur => repeatReader.from(cur) }
         common <- optional[CommonOptions](
           objCur, "common", CommonOptions()){ cur => coReader.from(cur) }
         validation <- optional[ValidatingOptions](
@@ -179,12 +236,18 @@ object RiddlOptions {
         hugo <- optional[HugoTranslatingOptions](
           objCur, "hugo", HugoTranslatingOptions()){
           cur => htoReader.from(cur) }
+        hugoGitCheck <- optional[GitTranslatorOptions](
+          objCur, "git", GitTranslatorOptions()){
+            cur => gitReader.from(cur)
+          }
       } yield {
         RiddlOptions(
           command = str2Command(commandStr),
+          repeatOptions = repeat,
           commonOptions = common,
           validatingOptions = validation,
-          hugoOptions = hugo
+          hugoOptions = hugo,
+          hugoGitCheckOptions = hugoGitCheck
         )
       }
     }
@@ -249,7 +312,7 @@ object RiddlOptions {
                 ))
               } else { p }
               Option(q)
-            case RiddlOptions.Git => Option(o)
+            case RiddlOptions.HugoGitCheck => Option(o)
             case RiddlOptions.D3 => Option(o)
             case _ => Option(o)
           }
@@ -273,7 +336,7 @@ object RiddlOptions {
   }
 
   def usage: String = {
-    OParser.usage(parser)
+    OParser.usage(parser, OneColumn)
   }
 
   def parse(args: Array[String]): Option[RiddlOptions] = {
@@ -307,12 +370,129 @@ object RiddlOptions {
       .text("required output directory for the generated output")
   }
 
-  def projectName(f: OptionPlacer[String]): OParser[String, RiddlOptions] = {
-    opt[String]('p', "project-name").optional().action((v, c) => f(v, c))
-      .text("Optional project name to associate with the generated output").validate(n =>
-      if (n.isBlank) Left("optional project-name cannot be blank or empty") else Right(())
+  private val hugoOptionsParser = Seq(
+    inputFile((v, c) => c.copy(
+      hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))),
+    outputDir((v, c) => c.copy(
+      hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))),
+    opt[String]('p', "project-name").optional()
+      .action((v, c) => c.copy(
+        hugoOptions = c.hugoOptions.copy(projectName = Option(v)))
+      )
+      .text("Optional project name to associate with the generated output")
+      .validate(n =>
+        if (n.isBlank) {
+          Left("optional project-name cannot be blank or empty")
+        } else {
+          Right(())
+        }
+      ),
+    opt[Boolean]('e', name = "erase-output")
+      .text("Erase entire output directory before putting out files"),
+    opt[URL]('b', "base-url").optional()
+      .action((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(
+        baseUrl = Some(v)
+      )))
+      .text("Optional base URL for root of generated http URLs"),
+    opt[Map[String, String]]('t', name = "themes")
+      .action((t, c) => c.copy(hugoOptions =
+        c.hugoOptions.copy(themes = t.toSeq.map(x =>
+          x._1 -> Some(new URL(x._2))))
+      )),
+    // TODO: themes
+    opt[URL]('s', name = "source-url")
+      .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u))))
+      .text("URL to the input file's Git Repository"),
+    opt[String]('h', name = "edit-path")
+      .action((h, c) => c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h))))
+      .text("Path to add to source-url to allow editing"),
+    opt[URL]('l', name = "site-logo-url")
+      .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(siteLogo = Option(u))))
+      .text("URL to the site's logo image for use by site"),
+    opt[String]('p', "site-logo-path")
+      .action((s, c) => c.copy(hugoOptions =
+        c.hugoOptions.copy(siteLogoPath = Option(s)))
+      ).text(
+      """Path, in 'static' directory to placement and use
+        |of the site logo.""".stripMargin
     )
-  }
+  )
+
+  private val repeatableCommands: OParser[Unit, RiddlOptions] = OParser.sequence(
+    cmd("parse").action((_, c) => c.copy(command = Parse))
+      .children(
+        inputFile((v, c) => c.copy(parseOptions =
+          c.parseOptions.copy(inputFile = Option(v.toPath))))
+      )
+      .text(
+        """Parse the input for syntactic compliance with riddl language.
+          |No validation or translation is done on the input""".stripMargin),
+    cmd("validate").action((_, c) => c.copy(command = Validate))
+      .children(
+        inputFile((v, c) => c.copy(validateOptions =
+          c.validateOptions.copy(inputFile = Option(v.toPath))))
+      )
+      .text(
+        """Parse the input and if successful validate the resulting model.
+          |No translation is done on the input.""".stripMargin),
+    cmd("reformat").action((_, c) => c.copy(command = Prettify))
+      .children(
+        inputFile((v, c) => c.copy(reformatOptions =
+          c.reformatOptions.copy(Option(v.toPath)))),
+        outputDir((v, c) => c.copy(reformatOptions =
+          c.reformatOptions.copy(outputDir = Option(v.toPath))
+        )),
+        opt[Boolean]('s', name = "single-file")
+          .action((v, c) => c.copy(reformatOptions = c.reformatOptions.copy(singleFile = v)))
+          .text(
+            """Resolve all includes and imports and write a single file with the same
+              |file name as the input placed in the out-dir""".stripMargin)
+      ).text(
+      """Parse and validate the input-file and then reformat it to a
+        |standard layout written to the output-dir.  """.stripMargin),
+    cmd("hugo").action((_, c) => c.copy(command = Hugo))
+      .children(hugoOptionsParser*)
+      .text(
+        """Parse and validate the input-file and then translate it into the input
+          |needed for hugo to translate it to a functioning web site.""".stripMargin
+      ),
+      cmd("hugo-git-check")
+      .action((_, c) => c.copy(command = HugoGitCheck))
+      .children(
+        arg[File]("git-clone-dir")
+          .action((f, c) => c.copy(hugoGitCheckOptions =
+            c.hugoGitCheckOptions.copy(gitCloneDir = Some(f.toPath))
+          ))
+          .text(
+            """Provides the top directory of a git repo clone that
+              |contains the <input-file> to be processed.""".stripMargin)
+      ).children(hugoOptionsParser*)
+      .text(
+        """This command checks the <git-clone-dir> directory for new commits
+          |and does a `git pull" command there if it finds some; otherwise
+          |it does nothing. If commits were pulled from the repository, then
+          |the hugo command is run to generate the hugo source files and hugo
+          |is run to make the web site available at hugo's default local web
+          |address:  |http://localhost:1313/
+          |""".stripMargin
+      ),
+      cmd("from")
+        .action((_, c) => c.copy(command = From))
+        .children(
+          arg[File]("config-file").action { (file, ro) =>
+            ro.copy(fromOptions =
+              ro.fromOptions.copy(configFile = Some(file.toPath)))
+          }.text("A HOCON configuration file with riddlc options"),
+          inputFile((v, c) => c.copy(fromOptions =
+            c.fromOptions.copy(inputFile = Option(v.toPath)))),
+          outputDir((v, c) => c.copy(fromOptions =
+            c.fromOptions.copy(outputDir = Option(v.toPath))
+          ))
+        )
+        .text("Load riddlc options from a config file"),
+
+  )
+
 
   private val parser: OParser[Unit, RiddlOptions] = {
     OParser.sequence(
@@ -325,6 +505,7 @@ object RiddlOptions {
         "\nof documents. RIDDL is a language for system specification based on Domain",
         "\nDrive Design, Reactive Architecture, and Agile principles.\n"
       ),
+      version('V', "version"),
       help('h', "help").text("Print out help/usage information and exit"),
       opt[Unit]('t', name = "show-times").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(showTimes = true))
@@ -349,91 +530,49 @@ object RiddlOptions {
       ).text("Show warnings about things that are missing"),
       opt[Unit]('s', name = "show-style-warnings").action((_, c) =>
         c.copy(validatingOptions = c.validatingOptions.copy(showStyleWarnings = true))
-      ).text("Show warnings about questionable input style. "),
-      cmd("from")
-        .action((_, c) => c.copy(command = From))
+      ).text("Show warnings about questionable input style. ")
+    ) ++ repeatableCommands ++ OParser.sequence(
+      cmd("help").action((_,c) => c.copy(command = Help))
+        .text("Print out how to use this program" ),
+      cmd("repeat").action((_,c) => c.copy(command = Repeat))
         .children(
-          arg[File]("config-file").action { (file, ro) =>
-            ro.copy(fromOptions =
-              ro.fromOptions.copy(configFile = Some(file.toPath)))
-          }.text("A HOCON configuration file with riddlc options"),
-          inputFile((v, c) => c.copy(fromOptions =
-            c.fromOptions.copy(inputFile = Option(v.toPath)))),
-          outputDir((v, c) => c.copy(fromOptions =
-            c.fromOptions.copy(outputDir = Option(v.toPath))
-          ))
-        )
-        .text("Load riddlc options from a config file"),
-      cmd("parse").action((_, c) => c.copy(command = Parse))
-        .children(
-          inputFile((v, c) => c.copy(parseOptions =
-            c.parseOptions.copy(inputFile = Option(v.toPath))))
-        )
-        .text(
-          """Parse the input for syntactic compliance with riddl language.
-            |No validation or translation is done on the input""".stripMargin),
-      cmd("validate").action((_, c) => c.copy(command = Validate))
-        .children(
-          inputFile((v, c) => c.copy(validateOptions =
-            c.validateOptions.copy(inputFile = Option(v.toPath))))
-        )
-        .text(
-          """Parse the input and if successful validate the resulting model.
-            |No translation is done on the input.""".stripMargin),
-      cmd("reformat").action((_, c) => c.copy(command = Prettify))
-        .children(
-          inputFile((v, c) => c.copy(reformatOptions =
-            c.reformatOptions.copy(Option(v.toPath)))),
-          outputDir((v, c) => c.copy(reformatOptions =
-            c.reformatOptions.copy(outputDir = Option(v.toPath))
-          )),
-          opt[Boolean]('s', name = "single-file")
-            .action((v, c) => c.copy(reformatOptions = c.reformatOptions.copy(singleFile = v)))
-            .text(
-              """Resolve all includes and imports and write a single file with the same
-                |file name as the input placed in the out-dir""".stripMargin)
-        ).text(
-        """Parse and validate the input-file and then reformat it to a
-          |standard layout written to the output-dir.  """.stripMargin),
-      cmd("hugo").action((_, c) => c.copy(command = Hugo))
-        .children(
-          opt[Boolean]('e', name = "erase-output").text("Erase entire output directory before putting out files"),
-          inputFile((v, c) => c.copy(
-            hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))),
-          outputDir((v, c) => c.copy(
-            hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))),
-          projectName((v, c) => c.copy(
-            hugoOptions = c.hugoOptions.copy(projectName = Option(v)))),
-          opt[URL]('b', "base-url").optional()
-            .action((v, c) => c.copy( hugoOptions = c.hugoOptions.copy(
-              baseUrl = Some(v)
+          arg[FiniteDuration]("refresh-rate")
+            .optional()
+            .validate {
+              case r if r.toSeconds < 2 =>
+                Left("<refresh-rate> is too fast, minimum is 2 seconds")
+              case r if r.toDays > 1 =>
+                Left("<refresh-rate> is too slow, maximum is 1 day")
+              case _ => Right(())
+            }
+            .action((r, c) => c.copy(repeatOptions = c.repeatOptions.copy(
+              refreshRate = r
             )))
-            .text("Optional base URL for root of generated http URLs"),
-          opt[Map[String,String]]('t', name = "themes")
-            .action( (t, c) => c.copy(hugoOptions =
-              c.hugoOptions.copy(themes = t.toSeq.map(x =>
-                x._1 -> Some(new URL(x._2))) )
-            )),
-          // TODO: themes
-          opt[URL]('s', name = "source-url")
-            .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u))))
-            .text("URL to the input file's Git Repository"),
-          opt[String]('h', name = "edit-path")
-            .action((h, c) => c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h))))
-            .text("Path to add to source-url to allow editing"),
-          opt[URL]('l', name = "site-logo-url")
-            .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(siteLogo = Option(u))))
-            .text("URL to the site's logo image for use by site"),
-          opt[String]('p', "site-logo-path")
-            .action((s, c) => c.copy(hugoOptions =
-              c.hugoOptions.copy(siteLogoPath = Option(s)))
-            ).text(
-            """Path, in 'static' directory to placement and use
-              |of the site logo.""".stripMargin
+            .text(
+              """Specifies the rate at which the <git-clone-dir> is checked
+                |for updates so the process to regenerate the hugo site is
+                |started""".stripMargin
+            ),
+          arg[Int]("max-cycles")
+            .optional()
+            .validate {
+              case x if x < 1 => Left("<max-cycles> can't be less than 1")
+              case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
+              case _ => Right(())
+            }
+            .action((m, c) => c.copy(repeatOptions = c.repeatOptions.copy(
+              maxLoops = m
+            )))
+            .text(
+              """Limit the number of check cycles """
             )
-        ).text(
-          """Parse and validate the input-file and then translate it into the input
-            |needed for hugo to translate it to a functioning web site.""".stripMargin)
-      )
+        ).children(repeatableCommands)
+        .text(
+          """This command supports the edit-build-check cycle. It doesn't end
+            |until <max-cycles> has completed or EOF is reached on standard
+            |input. During that time, the selected subcommands are repeated.
+            |""".stripMargin
+        )
+    )
   }
 }

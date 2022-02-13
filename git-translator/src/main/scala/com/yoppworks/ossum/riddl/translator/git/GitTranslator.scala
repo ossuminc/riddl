@@ -8,18 +8,20 @@ import com.yoppworks.ossum.riddl.translator.hugo.{HugoTranslatingOptions,
 import java.io.File
 import java.nio.file.{Files, Path}
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration._
+import scala.concurrent.Future
+
+
+object GitTranslatorOptions {
+  val defaultMaxLoops = 1000
+}
 
 case class GitTranslatorOptions(
-  commonOptions: Option[CommonOptions] = None,
-  validatingOptions: Option[ValidatingOptions] = None,
-  hugoOptions: Option[HugoTranslatingOptions] = None,
+  hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
   gitCloneDir: Option[Path] = None,
-  refreshRate: FiniteDuration = 10.seconds,
 ) extends TranslatingOptions {
-  def inputFile: Option[Path] = hugoOptions.get.inputFile
-  def outputDir: Option[Path] = hugoOptions.get.outputDir
-  def projectName: Option[String] = hugoOptions.get.projectName
+  def inputFile: Option[Path] = hugoOptions.inputFile
+  def outputDir: Option[Path] = hugoOptions.outputDir
+  def projectName: Option[String] = hugoOptions.projectName
 }
 
 object GitTranslator extends Translator[GitTranslatorOptions] {
@@ -30,10 +32,19 @@ object GitTranslator extends Translator[GitTranslatorOptions] {
     commonOptions: CommonOptions,
     options: GitTranslatorOptions
   ): Seq[File] = {
-     Seq.empty[File]
+    val gitCloneDir = options.gitCloneDir.get
+
+      if ( gitHasCommitsToPull(gitCloneDir)) {}
+
+      genHugo(commonOptions, ValidatingOptions(), options) // FIXME: wrong validating options
+    Seq.empty[File]
   }
 
-  def genHugo(options: GitTranslatorOptions): Seq[File] = {
+  def gitHasCommitsToPull(path: Path): Boolean = {
+    false
+  }
+
+  def prepareOptions(options: GitTranslatorOptions): GitTranslatorOptions = {
     require(options.inputFile.nonEmpty, "Empty inputFile")
     require(options.outputDir.nonEmpty, "Empty outputDir")
     val inFile = options.inputFile.get
@@ -42,15 +53,24 @@ object GitTranslator extends Translator[GitTranslatorOptions] {
     require(Files.isReadable(inFile), "input is not readable")
     require(Files.isDirectory(outDir), "output is not a directory")
     require(Files.isWritable(outDir), "output is not writable")
-    val showTimes = options.commonOptions.getOrElse(CommonOptions())
-    val errorsOnly = options.validatingOptions
-      .getOrElse(ValidatingOptions())
-      .copy(showWarnings = false)
-    val htc = options.hugoOptions.get.copy(
-      eraseOutput = true
+    val htc = options.hugoOptions.copy(
+      inputFile = Some(inFile),
+      outputDir = Some(outDir),
+      projectName = options.projectName,
+      eraseOutput = true,
     )
+    GitTranslatorOptions(
+      hugoOptions = htc
+    )
+  }
+
+  def genHugo(
+    common: CommonOptions,
+    validating: ValidatingOptions,
+    options: GitTranslatorOptions
+  ): Seq[File] = {
     val ht = HugoTranslator
-    ht.parseValidateTranslate(SysLogger(), showTimes, errorsOnly,  htc)
+    ht.parseValidateTranslate(SysLogger(), common, validating,  options.hugoOptions)
   }
 
   def runHugo(source: Path, log:Logger): Boolean = {
@@ -62,7 +82,7 @@ object GitTranslator extends Translator[GitTranslatorOptions] {
     var hadWarningOutput: Boolean = false
 
     def fout(line: String): Unit = {
-      lineBuffer.append(line);
+      lineBuffer.append(line)
       if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
     }
 

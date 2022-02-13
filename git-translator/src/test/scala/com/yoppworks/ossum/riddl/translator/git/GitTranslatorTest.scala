@@ -17,8 +17,7 @@ class GitTranslatorTest extends TranslatingTestBase[GitTranslatorOptions]  {
     val gitCloneDir = Path.of(".").toAbsolutePath
     val refreshRate = 3.seconds
     GitTranslatorOptions(
-      Some(commonOptions), Some(validatingOptions), Some(hugoOptions),
-      Some(gitCloneDir), refreshRate
+      Some(hugoOptions), Some(gitCloneDir), refreshRate
     )
   }
 

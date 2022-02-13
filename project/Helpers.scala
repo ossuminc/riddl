@@ -8,6 +8,7 @@ object V {
   val cats = "2.7.0"
   val config = "1.4.1"
   val fastparse = "2.3.3"
+  val jgit = "6.0.0.202111291000-r"
   val pureconfig = "0.17.1"
   val scalacheck = "1.15.4"
   val scalatest = "3.2.9"
@@ -19,6 +20,7 @@ object Dep {
   val cats_core = "org.typelevel" %% "cats-core" % V.cats
   val config = "com.typesafe" % "config" % V.config
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
+  val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val pureconfig = "com.github.pureconfig" %% "pureconfig" % V.pureconfig
   val scalactic = "org.scalactic" %% "scalactic" % V.scalatest % "test"
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest % "test"
