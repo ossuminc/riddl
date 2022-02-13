@@ -30,7 +30,8 @@ object RepeatOptions {
 case class RepeatOptions(
   configFile: Option[Path] = None,
   refreshRate: FiniteDuration = 10.seconds,
-  maxLoops: Int = RepeatOptions.defaultMaxLoops
+  maxCycles: Int = RepeatOptions.defaultMaxLoops,
+  interactive: Boolean = false
 )
 
 case class RiddlOptions(
@@ -571,8 +572,8 @@ object RiddlOptions {
           arg[FiniteDuration]("refresh-rate")
             .optional()
             .validate {
-              case r if r.toSeconds < 2 =>
-                Left("<refresh-rate> is too fast, minimum is 2 seconds")
+              case r if r.toMillis < 1000 =>
+                Left("<refresh-rate> is too fast, minimum is 1 seconds")
               case r if r.toDays > 1 =>
                 Left("<refresh-rate> is too slow, maximum is 1 day")
               case _ => Right(())
@@ -593,7 +594,7 @@ object RiddlOptions {
               case _ => Right(())
             }
             .action((m, c) => c.copy(repeatOptions = c.repeatOptions.copy(
-              maxLoops = m
+              maxCycles = m
             )))
             .text(
               """Limit the number of check cycles that will be repeated."""
@@ -604,6 +605,15 @@ object RiddlOptions {
             |until <max-cycles> has completed or EOF is reached on standard
             |input. During that time, the selected subcommands are repeated.
             |""".stripMargin
+        ),
+      opt[Unit]('n',"interactive")
+        .optional().action((_,c) =>
+          c.copy(repeatOptions = c.repeatOptions.copy(interactive = true))
+        )
+        .text(
+          """This option causes the repeat command to read from the standard
+            |input and when it reaches EOF (Ctrl-D is entered) then it cancels
+            |the loop to exit.""".stripMargin
         )
     )
   }

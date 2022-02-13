@@ -40,7 +40,7 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
       // TODO: check options
     }
     "repeat validation of the ReactiveBBQ example" in {
-      val args = Array("repeat", validateConf, "2s", "2")
+      val args = Array("repeat", validateConf, "1s", "2", "-v", "-n")
       RIDDLC.runMain(args) mustBe 0
     }
   }

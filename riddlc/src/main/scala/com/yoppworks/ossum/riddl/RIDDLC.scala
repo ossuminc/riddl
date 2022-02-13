@@ -7,6 +7,7 @@ import com.yoppworks.ossum.riddl.translator.hugo_git_check.HugoGitCheckTranslato
 import scala.annotation.unused
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Success
 import scala.util.control.NonFatal
 
 /** RIDDL Main Program */
@@ -76,29 +77,44 @@ object RIDDLC {
     }
   }
 
+  def allowCancel(options: RepeatOptions): (Future[Boolean], () => Boolean) = {
+    if (!options.interactive) {
+      Future.successful(false) -> (() => false)
+    } else {
+      Interrupt.aFuture[Boolean] {
+        while (
+          Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
+        ) {}
+        true
+      }
+    }
+  }
+
+
   def repeat(options: RiddlOptions): Boolean = {
-    val maxLoops = options.repeatOptions.maxLoops
+    val maxCycles = options.repeatOptions.maxCycles
     val refresh = options.repeatOptions.refreshRate
     val sleepTime = refresh.toMillis
     options.repeatOptions.configFile match {
       case Some(configFile) =>
         RiddlOptions.loadRiddlOptions(options, configFile) match {
           case Some(newOptions) =>
-            val shouldQuit = Future[Unit] {
-              while (
-                Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit: ")).nonEmpty
-              ) ()
-            }
-            val counter = 1 to maxLoops
+            val (shouldQuit, cancel) = allowCancel(options.repeatOptions)
+            def userHasCancelled: Boolean =
+              shouldQuit.isCompleted && shouldQuit.value == Option(Success(true))
+            val counter = 1 to maxCycles
             var shouldContinue = true
             var i = counter.min
-            while (shouldContinue && !shouldQuit.isCompleted && i < counter.max) {
-              i += counter.step
+            while (shouldContinue && !userHasCancelled && i <= counter.max) {
               shouldContinue = run(newOptions)
               if (options.commonOptions.verbose) {
-                println(s"Waiting for $refresh, loop # $i of $maxLoops")
+                println(s"Waiting for $refresh, cycle # $i of $maxCycles")
               }
+              i += counter.step
               Thread.sleep(sleepTime)
+            }
+            if (!userHasCancelled) {
+              cancel()
             }
             shouldContinue
           case None =>
