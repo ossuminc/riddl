@@ -8,25 +8,16 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
-object ValidatingOptions {
-  val default: ValidatingOptions = ValidatingOptions()
-}
-
-case class ValidatingOptions(
-  showWarnings: Boolean = true,
-  showMissingWarnings: Boolean = true,
-  showStyleWarnings: Boolean = true
-)
 
 /** Validates an AST */
 object Validation {
 
   def validate[C <: Container[Definition]](
     root: C,
-    options: ValidatingOptions = ValidatingOptions.default
+    commonOptions: CommonOptions = CommonOptions()
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
-    val state = ValidationState(symTab, options)
+    val state = ValidationState(symTab, commonOptions)
     val folding = new ValidationFolding
     val s1 = folding.foldLeft(root, root, state)
     val result = checkOverloads(symTab, s1)
@@ -117,7 +108,7 @@ object Validation {
 
   case class ValidationState(
     symbolTable: SymbolTable,
-    options: ValidatingOptions = ValidatingOptions.default)
+    commonOptions: CommonOptions = CommonOptions())
       extends Folding.State[ValidationState] {
 
     private val msgs: ListBuffer[ValidationMessage] = ListBuffer.empty[ValidationMessage]
@@ -130,9 +121,9 @@ object Validation {
       definition: Definition
     ): Container[Definition] = { symbolTable.parentOf(definition).getOrElse(RootContainer.empty) }
 
-    def isReportMissingWarnings: Boolean = options.showMissingWarnings
+    def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
 
-    def isReportStyleWarnings: Boolean = options.showStyleWarnings
+    def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
 
     def lookup[T <: Definition: ClassTag](
       id: Seq[String]

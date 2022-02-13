@@ -66,12 +66,13 @@ lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := 
     riddlc, `sbt-riddl`
   )
 
-lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
+lazy val language = project.in(file("language"))
+  .enablePlugins(BuildInfoPlugin)
   .configure(C.withCoverage)
   .settings(
     name := "riddl-language",
     buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.language",
+    buildInfoPackage := "com.yoppworks.ossum.riddl",
     buildInfoUsePackageAsPath := true,
     coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
@@ -84,30 +85,25 @@ lazy val `hugo-theme` = project.in(file("hugo-theme"))
     name := "riddl-hugo-theme"
   )
 
-lazy val `d3-generator` = project.in(file("d3-generator")).enablePlugins(BuildInfoPlugin)
+lazy val `d3-generator` = project.in(file("d3-generator"))
   .settings(
     name := "riddl-d3-generator",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.generator.d3",
     scalacOptions := scala2_13_Options,
-    buildInfoUsePackageAsPath := true,
     libraryDependencies ++= Seq(Dep.ujson) ++ Dep.testing
   ).dependsOn(language % "compile->compile;test->test")
 
 lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
-  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "riddl-hugo-translator",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.translator.hugo",
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   ).dependsOn(language % "compile->compile;test->test", `hugo-theme`)
 
-lazy val `git-translator`: Project = project.in(file("git-translator"))
-  .enablePlugins(BuildInfoPlugin)
+lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
   .settings(
-    name := "riddl-git-translator",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.translator.git",
+    name := "riddl-hugo-git-check-translator",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.translator.hugo_git_check",
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
@@ -122,18 +118,18 @@ lazy val examples = project.in(file("examples")).settings(
   libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
-lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin).enablePlugins(HugoPlugin)
+lazy val doc = project.in(file("doc"))
+  .enablePlugins(SitePlugin)
   .enablePlugins(SiteScaladocPlugin)
   .configure(C.zipResource("hugo"))
   .settings(
-    name := "riddl-doc",
-    publishTo := Option(Resolver.defaultLocal),
-    Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    publishSite
-  ).dependsOn(`hugo-translator` % "test->test", riddlc)
+  name := "riddl-doc",
+  publishTo := Option(Resolver.defaultLocal),
+  // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+  publishSite
+).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(BuildInfoPlugin)
   .enablePlugins(JavaAppPackaging)
   .settings(
     name := "riddlc",
@@ -141,26 +137,23 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
     maintainer := "reid.spencer@yoppworks.com",
-    buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.yoppworks.ossum.riddl",
-    buildInfoUsePackageAsPath := true
   ).dependsOn(language, `hugo-translator` % "compile->compile;test->test",
-  `git-translator` % "compile->compile;test->test"
+  `hugo-git-check` % "compile->compile;test->test"
   )
 
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
-  .enablePlugins(BuildInfoPlugin).settings(
-  name := "sbt-riddl",
-  sbtPlugin := true,
-  scalaVersion := "2.12.15",
-  buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin",
-  scriptedLaunchOpts := {
-    scriptedLaunchOpts.value ++
-      Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
-  },
-  scriptedBufferLog := false
-)
+  .settings(
+    name := "sbt-riddl",
+    sbtPlugin := true,
+    scalaVersion := "2.12.15",
+    buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin",
+    scriptedLaunchOpts := {
+      scriptedLaunchOpts.value ++
+        Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
+    },
+    scriptedBufferLog := false
+  )
 
 lazy val `riddl-idea-plugin` = project.in(file("riddl-idea-plugin"))
   .enablePlugins(SbtIdeaPlugin)

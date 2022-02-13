@@ -69,7 +69,7 @@ class RiddlTest extends ParsingTestBase {
       val result = Riddl.parse(input = riddlParserInput, logger, options)
       result mustBe None
       assert(
-        logger.lines().exists(_.level == InMemoryLogger.Lvl.Error),
+        logger.lines().exists(_.level == Logger.Error),
         "When failing to parse, an error should be logged."
       )
     }
@@ -149,8 +149,7 @@ class RiddlTest extends ParsingTestBase {
     def runOne(pathname: String): (Option[RootContainer], InMemoryLogger) = {
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val options = ValidatingOptions()
-      Riddl.parseAndValidate(new File(pathname).toPath, logger, common, options) -> logger
+      Riddl.parseAndValidate(new File(pathname).toPath, logger, common) -> logger
     }
 
     "parse and validate a simple domain from path" in {
@@ -161,7 +160,7 @@ class RiddlTest extends ParsingTestBase {
     "parse and validate nonsense file as invalid" in {
       val (result, logger) = runOne("language/src/test/input/invalid.riddl")
       result mustBe None
-      assert(logger.lines().exists(_.level == InMemoryLogger.Lvl.Error))
+      assert(logger.lines().exists(_.level == Logger.Error))
     }
 
     "parse and validate a simple domain from input" in {
@@ -172,19 +171,17 @@ class RiddlTest extends ParsingTestBase {
       }
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val options = ValidatingOptions()
-      val result = Riddl.parseAndValidate(RiddlParserInput(content), logger, common, options)
+      val result = Riddl.parseAndValidate(RiddlParserInput(content), logger, common)
       result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) => }
     }
 
     "parse and validate nonsense input as invalid" in {
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val options = ValidatingOptions()
       val result = Riddl
-        .parseAndValidate(RiddlParserInput("I am not valid riddl (hopefully)."), logger, common, options)
+        .parseAndValidate(RiddlParserInput("I am not valid riddl (hopefully)."), logger, common)
       result mustBe None
-      assert(logger.lines().exists(_.level == InMemoryLogger.Lvl.Error))
+      assert(logger.lines().exists(_.level == Logger.Error))
     }
   }
 }

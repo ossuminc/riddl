@@ -43,11 +43,10 @@ trait Translator[OPT <: TranslatingOptions] {
   final def parseValidateTranslate(
     log: Logger,
     commonOptions: CommonOptions,
-    validatingOptions: ValidatingOptions,
     options: OPT
   ): Seq[File] = {
     require(options.inputFile.nonEmpty, "Input path option must not be empty")
-    Riddl.parseAndValidate(options.inputFile.get, log, commonOptions, validatingOptions) match {
+    Riddl.parseAndValidate(options.inputFile.get, log, commonOptions) match {
       case Some(root) => translate(root, log, commonOptions, options)
       case None       => Seq.empty[File]
     }
@@ -57,10 +56,9 @@ trait Translator[OPT <: TranslatingOptions] {
     input: RiddlParserInput,
     log: Logger,
     commonOptions: CommonOptions,
-    validatingOptions: ValidatingOptions,
     options: OPT
   ): Seq[File] = {
-    Riddl.parseAndValidate(input, log, commonOptions, validatingOptions) match {
+    Riddl.parseAndValidate(input, log, commonOptions) match {
       case Some(root) => translate(root, log, commonOptions, options)
       case None       => Seq.empty[File]
     }

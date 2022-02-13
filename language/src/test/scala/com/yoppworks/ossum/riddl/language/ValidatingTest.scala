@@ -35,7 +35,7 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidateContext(
     input: String,
-    options: ValidatingOptions = ValidatingOptions.default
+    options: CommonOptions = CommonOptions()
   )(validator: (Context, ValidationMessages) => Assertion
   ): Assertion = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
@@ -67,7 +67,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidate(
     input: String,
     testCaseName: String,
-    options: ValidatingOptions = ValidatingOptions.default
+    options: CommonOptions = CommonOptions()
   )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, testCaseName) match {
@@ -83,7 +83,7 @@ abstract class ValidatingTest extends ParsingTest {
   def validateFile(
     label: String,
     fileName: String,
-    options: ValidatingOptions = ValidatingOptions.default
+    options: CommonOptions = CommonOptions()
   )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val directory = "language/src/test/input/"
@@ -101,7 +101,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidateFile(
     label: String,
     file: File,
-    options: ValidatingOptions = ValidatingOptions.default
+    options: CommonOptions = CommonOptions()
   ): Assertion = {
     TopLevelParser.parse(file) match {
       case Left(errors) =>

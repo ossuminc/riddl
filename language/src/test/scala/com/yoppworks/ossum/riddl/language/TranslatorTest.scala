@@ -7,7 +7,7 @@ import java.nio.file.Path
 
 class TranslatorTest extends ValidatingTest {
 
-  val validatingOptions: ValidatingOptions = ValidatingOptions(
+  val validatingOptions: CommonOptions = CommonOptions(
     showWarnings = false,
     showMissingWarnings = false,
     showStyleWarnings = false
@@ -64,7 +64,6 @@ class TranslatorTest extends ValidatingTest {
           inputPath,
           logger,
           CommonOptions(),
-          validatingOptions,
           options)
         files mustBe empty
       }

@@ -11,7 +11,10 @@ case class CommonOptions(
   showTimes: Boolean = false,
   verbose: Boolean = false,
   dryRun: Boolean = false,
-  quiet: Boolean = false
+  quiet: Boolean = false,
+  showWarnings: Boolean = true,
+  showMissingWarnings: Boolean = true,
+  showStyleWarnings: Boolean = true
 )
 
 /** Primary Interface to Riddl Language parsing and validating */
@@ -74,10 +77,9 @@ object Riddl {
   def validate(
     root: RootContainer,
     log: Logger,
-    parsingOptions: CommonOptions,
-    validatingOptions: ValidatingOptions
+    commonOptions: CommonOptions,
   ): Option[RootContainer] = {
-    timer("validation", parsingOptions.showTimes) {
+    timer("validation", commonOptions.showTimes) {
       val messages: Seq[ValidationMessage] = Validation.validate[RootContainer](root)
       if (messages.nonEmpty) {
         val (warns, errs) = messages.partition(_.kind.isWarning)
@@ -86,9 +88,9 @@ object Riddl {
         val style = warns.filter(_.kind.isStyle)
         val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
         log.info(s"""Validation Warnings: ${warns.length}""")
-        if (validatingOptions.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
-        if (validatingOptions.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
-        if (validatingOptions.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
+        if (commonOptions.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
+        if (commonOptions.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
+        if (commonOptions.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
         log.info(s"""Validation Errors: ${errors.length} errors""")
         errors.map(_.format).foreach(log.error(_))
         log.info(s"""Severe Errors: ${errors.length} errors""")
@@ -102,11 +104,10 @@ object Riddl {
   def parseAndValidate(
     input: RiddlParserInput,
     logger: Logger,
-    parsingOptions: CommonOptions,
-    validatingOptions: ValidatingOptions
+    commonOptions: CommonOptions,
   ): Option[RootContainer] = {
-    parse(input, logger, parsingOptions) match {
-      case Some(root) => validate(root, logger, parsingOptions, validatingOptions)
+    parse(input, logger, commonOptions) match {
+      case Some(root) => validate(root, logger, commonOptions)
       case None       => None
     }
   }
@@ -114,10 +115,9 @@ object Riddl {
   def parseAndValidate(
     path: Path,
     logger: Logger,
-    parsingOptions: CommonOptions,
-    validatingOptions: ValidatingOptions
+    commonOptions: CommonOptions,
   ): Option[RootContainer] = {
-    parseAndValidate(RiddlParserInput(path), logger, parsingOptions, validatingOptions)
+    parseAndValidate(RiddlParserInput(path), logger, commonOptions)
   }
 }
 

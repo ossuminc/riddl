@@ -1,14 +1,13 @@
 package com.yoppworks.ossum.riddl
 
-import com.yoppworks.ossum.riddl.RiddlOptions.loadRiddlOptions
-import com.yoppworks.ossum.riddl.language.{FormatTranslator, Logger, Riddl,
-  SysLogger}
-import com.yoppworks.ossum.riddl.translator.git.GitTranslator
+import com.yoppworks.ossum.riddl.language.{FormatTranslator, Logger, Riddl, SysLogger}
 import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslator
-import java.io.{PrintWriter, StringWriter}
+import com.yoppworks.ossum.riddl.translator.hugo_git_check.HugoGitCheckTranslator
+
 import scala.annotation.unused
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.control.NonFatal
 
 /** RIDDL Main Program */
 object RIDDLC {
@@ -33,15 +32,12 @@ object RIDDLC {
           }
         case None =>
           // arguments are bad, error message will have been displayed
-          System.err.println("Option parsing failed, terminating.")
+          log.info("Option parsing failed, terminating.")
           2
       }
     } catch {
-      case xcptn: Throwable =>
-        val sw = new StringWriter
-        xcptn.printStackTrace(new PrintWriter(sw))
-        System.err.println(s"Exception Thrown: ${xcptn.toString}\n")
-        System.err.println(sw.toString)
+      case NonFatal(exception) =>
+        log.error("Exception Thrown:", exception)
         3
     }
   }
@@ -67,11 +63,11 @@ object RIDDLC {
   def from(options: RiddlOptions): Boolean = {
     options.fromOptions.configFile match {
       case Some(path) =>
-        loadRiddlOptions(options, path) match {
+        RiddlOptions.loadRiddlOptions(options, path) match {
           case Some(newOptions) =>
             run(newOptions)
           case None =>
-            log.error(s"Failed too load riddlc options from $path")
+            log.error(s"Failed to load riddlc options from $path, terminating.")
             false
         }
       case None =>
@@ -84,24 +80,35 @@ object RIDDLC {
     val maxLoops = options.repeatOptions.maxLoops
     val refresh = options.repeatOptions.refreshRate
     val sleepTime = refresh.toMillis
-    val opts = options.copy(command = options.repeatOptions.command)
-    val shouldQuit = Future[Unit] {
-      while (
-        Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit: ")).nonEmpty
-      ) ()
+    options.repeatOptions.configFile match {
+      case Some(configFile) =>
+        RiddlOptions.loadRiddlOptions(options, configFile) match {
+          case Some(newOptions) =>
+            val shouldQuit = Future[Unit] {
+              while (
+                Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit: ")).nonEmpty
+              ) ()
+            }
+            val counter = 1 to maxLoops
+            var shouldContinue = true
+            var i = counter.min
+            while (shouldContinue && !shouldQuit.isCompleted && i < counter.max) {
+              i += counter.step
+              shouldContinue = run(newOptions)
+              if (options.commonOptions.verbose) {
+                println(s"Waiting for $refresh, loop # $i of $maxLoops")
+              }
+              Thread.sleep(sleepTime)
+            }
+            shouldContinue
+          case None =>
+            log.error(s"Failed too load riddlc options from $configFile")
+            false
+        }
+      case None =>
+        log.error("No configuration file provided")
+        false
     }
-
-    val counter = 1 to maxLoops
-    var shouldContinue = true
-    while (shouldContinue && !shouldQuit.isCompleted && counter.nonEmpty) {
-      val i = counter.step
-      shouldContinue = run(opts)
-      if (options.commonOptions.verbose) {
-        println(s"Waiting for $refresh, loop # $i of $maxLoops")
-      }
-      Thread.sleep(sleepTime)
-    }
-    shouldContinue
   }
 
   def help(@unused options: RiddlOptions): Boolean = {
@@ -123,9 +130,8 @@ object RIDDLC {
     options: RiddlOptions
   ): Boolean = {
     options.validateOptions.inputFile match {
-      case Some(path) =>
-        Riddl.parseAndValidate(path, log, options.commonOptions,
-          options.validatingOptions).nonEmpty
+      case Some(inputFile) =>
+        Riddl.parseAndValidate(inputFile, log, options.commonOptions).nonEmpty
       case None =>
         log.error("No input file specified for validation")
         false
@@ -134,11 +140,11 @@ object RIDDLC {
 
   def prettify(options: RiddlOptions): Boolean = {
     options.reformatOptions.inputFile match {
-      case Some(_) =>
+      case Some(inputFile) =>
         FormatTranslator.parseValidateTranslate(
+          inputFile,
           log,
           options.commonOptions,
-          options.validatingOptions,
           options.reformatOptions
         ).nonEmpty
       case None =>
@@ -149,11 +155,10 @@ object RIDDLC {
 
   def translateHugo(options: RiddlOptions): Boolean = {
     options.hugoOptions.inputFile match {
-      case Some(_) =>
-        HugoTranslator.parseValidateTranslate(
+      case Some(inputFile) =>
+        HugoTranslator.parseValidateTranslate(inputFile,
           log,
           options.commonOptions,
-          options.validatingOptions,
           options.hugoOptions
         ).nonEmpty
       case None =>
@@ -164,9 +169,9 @@ object RIDDLC {
 
   def hugoGitCheck(options: RiddlOptions): Boolean = {
     options.hugoGitCheckOptions.hugoOptions.inputFile match {
-      case Some(_) =>
-        GitTranslator.parseValidateTranslate(log,
-          options.commonOptions, options.validatingOptions, options.hugoGitCheckOptions
+      case Some(inputFile) =>
+        HugoGitCheckTranslator.parseValidateTranslate(inputFile, log,
+          options.commonOptions, options.hugoGitCheckOptions
         )
         log.info("Session concluded")
       case None =>

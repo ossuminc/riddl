@@ -1,7 +1,6 @@
 package com.yoppworks.ossum.riddl.generator.d3.TableOfContentsTest
 
-import com.yoppworks.ossum.riddl.language.ValidatingOptions
-import com.yoppworks.ossum.riddl.language.ValidatingTest
+import com.yoppworks.ossum.riddl.language.{CommonOptions, ValidatingTest}
 import com.yoppworks.ossume.riddl.generator.d3.TableOfContents
 
 import java.net.URL
@@ -24,7 +23,7 @@ class TableOfContentsTest extends ValidatingTest {
       parseAndValidate(
         input,
         "TableOfContents.build-correct-data-hierarchy",
-        ValidatingOptions(
+        CommonOptions(
           showWarnings = false,
           showMissingWarnings = false,
           showStyleWarnings = false

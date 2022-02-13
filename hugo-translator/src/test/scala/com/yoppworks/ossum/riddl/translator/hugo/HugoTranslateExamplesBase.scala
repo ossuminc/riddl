@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.translator.hugo
 
-import com.yoppworks.ossum.riddl.language.{CommonOptions, SysLogger, ValidatingOptions, ValidatingTest}
+import com.yoppworks.ossum.riddl.language.{CommonOptions, SysLogger, ValidatingTest}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -15,9 +15,8 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   def makeSrcDir(path: String): Path = {
     Path.of(output).resolve(path)
   }
-  val showTimes: CommonOptions =  CommonOptions(showTimes = true)
-
-  val errorsOnly: ValidatingOptions = ValidatingOptions(
+  val commonOptions: CommonOptions =  CommonOptions(
+    showTimes = true,
     showWarnings = false,
     showMissingWarnings = false,
     showStyleWarnings = false
@@ -35,7 +34,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
       projectName = Some(projectName)
     )
     val ht = HugoTranslator
-    ht.parseValidateTranslate(SysLogger(), showTimes, errorsOnly,  htc)
+    ht.parseValidateTranslate(SysLogger(), commonOptions, htc)
   }
 
   def runHugo(source: String): Assertion = {

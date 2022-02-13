@@ -13,33 +13,33 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
       val result = RiddlOptions.parse(args)
       result match {
         case Some(options) =>
-          options.validatingOptions.showWarnings mustBe false
-          options.validatingOptions.showStyleWarnings mustBe false
-          options.validatingOptions.showMissingWarnings mustBe false
+          options.commonOptions.showWarnings mustBe false
+          options.commonOptions.showStyleWarnings mustBe false
+          options.commonOptions.showMissingWarnings mustBe false
         case None => fail("Failed to parse options")
       }
     }
 
-    "handle --show-style-warnings options" in {
-      val args = Array("--show-style-warnings")
+    "handle --suppress-style-warnings options" in {
+      val args = Array("--suppress-style-warnings")
       val result = RiddlOptions.parse(args)
       result match {
         case Some(config) =>
-          config.validatingOptions.showWarnings mustBe true
-          config.validatingOptions.showStyleWarnings mustBe true
-          config.validatingOptions.showMissingWarnings mustBe false
+          config.commonOptions.showWarnings mustBe true
+          config.commonOptions.showStyleWarnings mustBe false
+          config.commonOptions.showMissingWarnings mustBe true
         case None => fail("Failed to parse options")
       }
     }
 
-    "handle --show-missing-warnings options" in {
-      val args = Array("--show-missing-warnings")
+    "handle --suppress-missing-warnings options" in {
+      val args = Array("--suppress-missing-warnings")
       val result = RiddlOptions.parse(args)
       result match {
         case Some(config) =>
-          config.validatingOptions.showWarnings mustBe true
-          config.validatingOptions.showStyleWarnings mustBe false
-          config.validatingOptions.showMissingWarnings mustBe true
+          config.commonOptions.showWarnings mustBe true
+          config.commonOptions.showStyleWarnings mustBe true
+          config.commonOptions.showMissingWarnings mustBe false
         case None => fail("Failed to parse options")
       }
     }
@@ -57,9 +57,9 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           opts.commonOptions.verbose mustBe true
           opts.commonOptions.quiet mustBe false
           opts.commonOptions.dryRun mustBe false
-          opts.validatingOptions.showWarnings mustBe true
-          opts.validatingOptions.showStyleWarnings mustBe true
-          opts.validatingOptions.showMissingWarnings mustBe true
+          opts.commonOptions.showWarnings mustBe true
+          opts.commonOptions.showStyleWarnings mustBe true
+          opts.commonOptions.showMissingWarnings mustBe true
           val ho = opts.hugoOptions
           ho.inputFile mustBe Option(Path.of(
             "examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl"

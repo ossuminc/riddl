@@ -2,7 +2,6 @@ package com.yoppworks.ossum.riddl
 
 /** Unit Tests To Run Riddlc On Examples */
 import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslateExamplesBase
-import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
 
@@ -12,15 +11,26 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
   val name = "ReactiveBBQ"
   val path = "ReactiveBBQ/ReactiveBBQ.riddl"
   val conf = s"$directory/ReactiveBBQ/ReactiveBBQ.conf"
-
-  def runRiddlcFromConfig: Assertion = {
-    val args = Array("from", conf, "-o", makeSrcDir(path).toString)
-    RIDDLC.runMain(args) mustBe true
-  }
+  val validateConf = s"$directory/ReactiveBBQ/validate.conf"
+  val inputFile = s"$directory/$path"
+  val outputDir = s"$output/$path"
 
   "riddlc" should {
-    "handle the ReactiveBBQ example from config" in {
-      runRiddlcFromConfig
+    "handle parse" in {
+      val args = Array("parse", "-i", inputFile)
+      RIDDLC.runMain(args) mustBe 0
+    }
+    "handle validate" in {
+      val args = Array("validate", "-i", inputFile)
+      RIDDLC.runMain(args) mustBe 0
+    }
+    "handle hugo" in {
+      val args = Array("hugo", "-i", inputFile.toString, "-o", outputDir )
+      RIDDLC.runMain(args) mustBe 0
+    }
+    "handle hugo from config" in {
+      val args = Array("from", conf, "-o", makeSrcDir(path).toString)
+      RIDDLC.runMain(args) mustBe 0
       runHugo(path)
       val root = Path.of(output)
       val img = root.resolve("static/images/RBBQ.png")
@@ -28,6 +38,10 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
       // TODO: check themes dir
       // TODO: check config.toml setting values
       // TODO: check options
+    }
+    "repeat validation of the ReactiveBBQ example" in {
+      val args = Array("repeat", validateConf, "2s", "2")
+      RIDDLC.runMain(args) mustBe 0
     }
   }
 }

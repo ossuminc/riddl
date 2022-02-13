@@ -1,10 +1,9 @@
 package com.yoppworks.ossum.riddl
 
 import com.yoppworks.ossum.riddl.RIDDLC.log
-import com.yoppworks.ossum.riddl.language.ValidatingOptions
-import com.yoppworks.ossum.riddl.language.{BuildInfo, CommonOptions, FormattingOptions}
-import com.yoppworks.ossum.riddl.translator.git.GitTranslatorOptions
+import com.yoppworks.ossum.riddl.language.{CommonOptions, FormattingOptions}
 import com.yoppworks.ossum.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
+import com.yoppworks.ossum.riddl.translator.hugo_git_check.HugoGitCheckOptions
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.*
 import scopt.*
@@ -23,14 +22,13 @@ case class FromOptions(
   inputFile: Option[Path] = None,
   outputDir: Option[Path] = None
 )
-case class ParseOptions(inputFile: Option[Path] = None)
-case class ValidateOptions(inputFile: Option[Path] = None)
+case class InputFileOptions(inputFile: Option[Path] = None)
 
 object RepeatOptions {
   val defaultMaxLoops: Int = 1024
 }
 case class RepeatOptions(
-  command: RiddlOptions.Command = RiddlOptions.Unspecified,
+  configFile: Option[Path] = None,
   refreshRate: FiniteDuration = 10.seconds,
   maxLoops: Int = RepeatOptions.defaultMaxLoops
 )
@@ -40,13 +38,11 @@ case class RiddlOptions(
   fromOptions: FromOptions = FromOptions(),
   repeatOptions: RepeatOptions = RepeatOptions(),
   commonOptions: CommonOptions = CommonOptions(),
-  validatingOptions: ValidatingOptions =
-    ValidatingOptions(showStyleWarnings = false, showMissingWarnings = false),
-  parseOptions: ParseOptions = ParseOptions(),
-  validateOptions: ValidateOptions = ValidateOptions(),
+  parseOptions: InputFileOptions = InputFileOptions(),
+  validateOptions: InputFileOptions = InputFileOptions(),
   reformatOptions: FormattingOptions = FormattingOptions(),
   hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
-  hugoGitCheckOptions: GitTranslatorOptions = GitTranslatorOptions()
+  hugoGitCheckOptions: HugoGitCheckOptions = HugoGitCheckOptions()
 )
 
 object RiddlOptions {
@@ -97,22 +93,47 @@ object RiddlOptions {
         verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
         quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
         dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
-      } yield {
-        CommonOptions(showTimes = showTimes, verbose = verbose, quiet = quiet, dryRun = dryRun)
-      }
-    }
-  }
-
-  implicit val voReader: ConfigReader[ValidatingOptions] = {
-    (cur: ConfigCursor) => {
-      for {
-        objCur <- cur.asObjectCursor
         showWarnings <- optional(objCur, "show-warnings", true) { cc => cc.asBoolean }
         showStyleWarnings <- optional(objCur, "show-style-warnings", false) { cc => cc.asBoolean }
         showMissingWarnings <- optional(objCur, "show-missing-warnings", false) { cc => cc.asBoolean }
       } yield {
-        ValidatingOptions(showWarnings, showMissingWarnings, showStyleWarnings)
+        CommonOptions(showTimes, verbose, dryRun, quiet,
+          showWarnings, showMissingWarnings, showStyleWarnings)
       }
+    }
+  }
+
+  implicit val ifReader: ConfigReader[InputFileOptions] = {
+    (cur: ConfigCursor) => {
+      for {
+        objCur <- cur.asObjectCursor
+        inFileRes <- objCur.atKey("input-file").map(_.asString)
+        inFile <- inFileRes
+      } yield {
+        InputFileOptions(inputFile = Some(Path.of(inFile)))
+      }
+    }
+  }
+
+  implicit val reformatReader: ConfigReader[FormattingOptions] = {
+    (cur: ConfigCursor) => {
+      for {
+        objCur <- cur.asObjectCursor
+        inputPathRes <- objCur.atKey("input-file")
+        inputPath <- inputPathRes.asString
+        outputPathRes <- objCur.atKey("output-dir")
+        outputPath <- outputPathRes.asString
+        projectName <- optional(objCur, "project-name",
+          "No Project Name Specified") { cur => cur.asString }
+        singleFileRes <- objCur.atKey("single-file")
+        singleFile <- singleFileRes.asBoolean
+      } yield
+        FormattingOptions(
+          Option(Path.of(inputPath)),
+          Option(Path.of(outputPath)),
+          Option(projectName),
+          singleFile
+        )
     }
   }
 
@@ -183,7 +204,7 @@ object RiddlOptions {
       }
     }
 
-  implicit val gitReader: ConfigReader[GitTranslatorOptions] = {
+  implicit val hugoGitCheckReader: ConfigReader[HugoGitCheckOptions] = {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
@@ -195,27 +216,17 @@ object RiddlOptions {
           new File(".")) { cc =>
           cc.asString.map(s => new File(s))
         }
+        userNameRes <- objCur.atKey("user-name")
+        userNameStr <- userNameRes.asString
+        accessTokenRes <- objCur.atKey("access-token")
+        accessTokenStr <- accessTokenRes.asString
       } yield {
-        GitTranslatorOptions(
+        HugoGitCheckOptions(
           hugoOptions = hugo,
-          gitCloneDir = Some(gitCloneDir.toPath)
+          gitCloneDir = Some(gitCloneDir.toPath),
+          userName = userNameStr,
+          accessToken = accessTokenStr
         )
-      }
-    }
-  }
-
-  implicit val repeatReader: ConfigReader[RepeatOptions] = {
-    (cur: ConfigCursor) => {
-      for {
-        objCur <- cur.asObjectCursor
-        commandRes <- objCur.atKey("command")
-        commandStr <- commandRes.asString
-        refreshRateFD <- optional[FiniteDuration](objCur, "refresh-rate",
-          5.seconds) { cc => cc.asInt.map(d => FiniteDuration(d, "seconds")) }
-        maxLoops <- optional[Int](objCur, "max-loops",
-          GitTranslatorOptions.defaultMaxLoops) { cc => cc.asInt }
-      } yield {
-        RepeatOptions(str2Command(commandStr), refreshRateFD, maxLoops)
       }
     }
   }
@@ -226,27 +237,32 @@ object RiddlOptions {
         objCur <- cur.asObjectCursor
         commandRes <- objCur.atKey("command")
         commandStr <- commandRes.asString
-        repeat <- optional[RepeatOptions](objCur, "repeat",
-          RepeatOptions()) { cur => repeatReader.from(cur) }
         common <- optional[CommonOptions](
           objCur, "common", CommonOptions()){ cur => coReader.from(cur) }
-        validation <- optional[ValidatingOptions](
-          objCur, "validation", ValidatingOptions()){ cur =>
-          voReader.from(cur)}
+        parse <- optional[InputFileOptions](objCur, "parse", InputFileOptions()){
+          cur => ifReader.from(cur)
+        }
+        validate <- optional[InputFileOptions](objCur, "validate",
+          InputFileOptions()){ cur =>ifReader.from(cur)}
+        reformat <- optional[FormattingOptions](objCur, "reformat",
+          FormattingOptions()){ cur => reformatReader.from(cur) }
         hugo <- optional[HugoTranslatingOptions](
           objCur, "hugo", HugoTranslatingOptions()){
           cur => htoReader.from(cur) }
-        hugoGitCheck <- optional[GitTranslatorOptions](
-          objCur, "git", GitTranslatorOptions()){
-            cur => gitReader.from(cur)
+        hugoGitCheck <- optional[HugoGitCheckOptions](
+          objCur, "git", HugoGitCheckOptions()){
+            cur => hugoGitCheckReader.from(cur)
           }
       } yield {
         RiddlOptions(
-          command = str2Command(commandStr),
-          repeatOptions = repeat,
-          commonOptions = common,
-          validatingOptions = validation,
-          hugoOptions = hugo,
+          str2Command(commandStr),
+          FromOptions(),
+          RepeatOptions(),
+          common,
+          parse,
+          validate,
+          reformat,
+          hugo,
           hugoGitCheckOptions = hugoGitCheck
         )
       }
@@ -266,7 +282,7 @@ object RiddlOptions {
           val o = options.copy(
             command = loadedOptions.command,
             commonOptions = loadedOptions.commonOptions,
-            validatingOptions = loadedOptions.validatingOptions,
+            validateOptions = loadedOptions.validateOptions,
             reformatOptions = loadedOptions.reformatOptions,
             hugoOptions = loadedOptions.hugoOptions
           )
@@ -347,6 +363,19 @@ object RiddlOptions {
     }
 
     val dontTerminate: DefaultOEffectSetup = new DefaultOEffectSetup {
+      override def displayToOut(msg: String): Unit = {
+        log.info(msg)
+      }
+      override def displayToErr(msg: String): Unit = {
+        log.error(msg)
+      }
+      override def reportError(msg: String): Unit = {
+        log.error(msg)
+      }
+      override def reportWarning(msg: String): Unit = {
+        log.warn(msg)
+      }
+
       // ignore terminate
       override def terminate(exitState: Either[String, Unit]): Unit = ()
     }
@@ -399,7 +428,6 @@ object RiddlOptions {
         c.hugoOptions.copy(themes = t.toSeq.map(x =>
           x._1 -> Some(new URL(x._2))))
       )),
-    // TODO: themes
     opt[URL]('s', name = "source-url")
       .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u))))
       .text("URL to the input file's Git Repository"),
@@ -489,8 +517,7 @@ object RiddlOptions {
             c.fromOptions.copy(outputDir = Option(v.toPath))
           ))
         )
-        .text("Load riddlc options from a config file"),
-
+        .text("Load riddlc options from a config file")
   )
 
 
@@ -498,7 +525,7 @@ object RiddlOptions {
     OParser.sequence(
       programName("riddlc"),
       head(
-        "RIDDL Compiler (c) 2021 Yoppworks Inc. All rights reserved.",
+        "RIDDL Compiler (c) 2022 Reactive Software LLC. All rights reserved.",
         "\nVersion: ",
         BuildInfo.version,
         "\n\nThis program parses, validates and translates RIDDL sources to other kinds",
@@ -520,22 +547,27 @@ object RiddlOptions {
         c.copy(commonOptions = c.commonOptions.copy(quiet = true)))
         .text("Do not print out any output, just do the requested command"),
       opt[Unit]('w', name = "suppress-warnings").action((_, c) =>
-        c.copy(validatingOptions =
-          c.validatingOptions
-            .copy(showWarnings = false, showMissingWarnings = false, showStyleWarnings = false)
+        c.copy(commonOptions = c.commonOptions.copy(
+          showWarnings = false, showMissingWarnings = false, showStyleWarnings = false)
         )
       ).text("Suppress all warning messages so only errors are shown"),
-      opt[Unit]('m', name = "show-missing-warnings").action((_, c) =>
-        c.copy(validatingOptions = c.validatingOptions.copy(showMissingWarnings = true))
+      opt[Unit]('m', name = "suppress-missing-warnings").action((_, c) =>
+        c.copy(commonOptions = c.commonOptions.copy(showMissingWarnings = false))
       ).text("Show warnings about things that are missing"),
-      opt[Unit]('s', name = "show-style-warnings").action((_, c) =>
-        c.copy(validatingOptions = c.validatingOptions.copy(showStyleWarnings = true))
+      opt[Unit]('s', name = "suppress-style-warnings").action((_, c) =>
+        c.copy(commonOptions = c.commonOptions.copy(showStyleWarnings = false))
       ).text("Show warnings about questionable input style. ")
     ) ++ repeatableCommands ++ OParser.sequence(
       cmd("help").action((_,c) => c.copy(command = Help))
         .text("Print out how to use this program" ),
       cmd("repeat").action((_,c) => c.copy(command = Repeat))
         .children(
+          arg[File]("config-file")
+            .required()
+            .action((f, c) => c.copy(repeatOptions = c.repeatOptions.copy(
+              configFile = Some(f.toPath)
+            )))
+            .text("The path to the configuration file that should be repeated"),
           arg[FiniteDuration]("refresh-rate")
             .optional()
             .validate {
@@ -564,9 +596,9 @@ object RiddlOptions {
               maxLoops = m
             )))
             .text(
-              """Limit the number of check cycles """
-            )
-        ).children(repeatableCommands)
+              """Limit the number of check cycles that will be repeated."""
+            ),
+        )
         .text(
           """This command supports the edit-build-check cycle. It doesn't end
             |until <max-cycles> has completed or EOF is reached on standard

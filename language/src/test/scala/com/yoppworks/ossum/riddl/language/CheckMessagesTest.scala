@@ -24,7 +24,7 @@ class CheckMessagesTest extends ValidatingTest {
   override def validateFile(
     label: String,
     fileName: String,
-    options: ValidatingOptions = ValidatingOptions.default
+    options: CommonOptions = CommonOptions()
   )(validation: (RootContainer, ValidationMessages) => Assertion
   ): Assertion = {
     val file = new File(fileName)

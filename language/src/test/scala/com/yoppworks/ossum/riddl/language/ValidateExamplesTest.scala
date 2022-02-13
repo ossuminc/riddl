@@ -57,7 +57,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidatingOptions(showStyleWarnings = false)
+        options = CommonOptions(showStyleWarnings = false)
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isStyle))
@@ -66,7 +66,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidatingOptions()
+        options = CommonOptions()
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isStyle))
@@ -79,7 +79,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidatingOptions(showMissingWarnings = false)
+        options = CommonOptions(showMissingWarnings = false)
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isMissing))
@@ -87,7 +87,7 @@ class ValidateExamplesTest extends ValidatingTest {
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
-        options = ValidatingOptions()
+        options = CommonOptions()
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isMissing))

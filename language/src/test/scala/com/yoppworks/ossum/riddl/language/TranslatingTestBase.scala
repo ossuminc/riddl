@@ -5,8 +5,8 @@ import java.nio.file.Path
 abstract class TranslatingTestBase[OPTS <: TranslatingOptions] extends
   ValidatingTest {
 
-  val commonOptions: CommonOptions = CommonOptions(showTimes = true)
-  val validatingOptions: ValidatingOptions = ValidatingOptions(
+  val commonOptions: CommonOptions = CommonOptions(
+    showTimes = true,
     showWarnings = false,
     showMissingWarnings = false,
     showStyleWarnings = false
@@ -30,13 +30,12 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions] extends
         s"translate $name" in {
           val options = makeTranslatorOptions(fileName)
           val translator = getTranslator
-          val files = translator.parseValidateTranslate(
+          translator.parseValidateTranslate(
             logger,
             commonOptions,
-            validatingOptions,
             options
           )
-          files mustBe empty
+          succeed
         }
       }
     }
