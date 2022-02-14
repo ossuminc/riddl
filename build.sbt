@@ -1,6 +1,5 @@
 import org.jetbrains.sbtidea.Keys.IntelliJPlatform
 import sbt.Keys.scalaVersion
-import sbt.io.Path.allSubpaths
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 maintainer := "reid@reactific.com"

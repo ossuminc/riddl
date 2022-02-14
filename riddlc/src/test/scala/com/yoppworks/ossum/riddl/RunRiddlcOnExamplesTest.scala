@@ -32,7 +32,7 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
       val args = Array("from", conf, "-o", makeSrcDir(path).toString)
       RIDDLC.runMain(args) mustBe 0
       runHugo(path)
-      val root = Path.of(output)
+      val root = Path.of(output).resolve(path)
       val img = root.resolve("static/images/RBBQ.png")
       Files.exists(img) mustBe true
       // TODO: check themes dir
