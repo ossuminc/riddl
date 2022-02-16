@@ -126,26 +126,27 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
     }
   }
 
-  def plantDefinitions[u: P]: P[(Seq[Pipe], Seq[Processor], Seq[InletJoint], Seq[OutletJoint])] = {
-    P(pipeDefinition | processor | joint).rep(0).map { seq =>
-      val groups = seq.groupBy(_.getClass)
-      (
-        mapTo[Pipe](groups.get(classOf[Pipe])),
-        mapTo[Processor](groups.get(classOf[Processor])),
-        mapTo[InletJoint](groups.get(classOf[InletJoint])),
-        mapTo[OutletJoint](groups.get(classOf[OutletJoint]))
-      )
-    }
+  def plantInclude[X: P]: P[Include] = {
+    include[PlantDefinition, X](plantDefinitions(_))
+  }
+
+  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
+    P(pipeDefinition | processor | joint | plantInclude ).rep(0)
   }
 
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        (undefined(
-          (Seq.empty[Pipe], Seq.empty[Processor], Seq.empty[InletJoint], Seq.empty[OutletJoint])
-        ) | plantDefinitions) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (pipes, processors, inletJoints, outletJoints), briefly, description) =>
-      Plant(loc, id, pipes, processors, inletJoints, outletJoints, briefly, description)
+        (undefined(Seq.empty[PlantDefinition]) | plantDefinitions) ~
+        close ~ briefly ~ description
+    ).map { case (loc, id, defs, briefly, description) =>
+      val groups = defs.groupBy(_.getClass)
+      val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
+      val processors = mapTo[Processor](groups.get(classOf[Processor]))
+      val inJoints = mapTo[InletJoint](groups.get(classOf[InletJoint]))
+      val outJoints = mapTo[OutletJoint](groups.get(classOf[OutletJoint]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
+      Plant(loc, id, pipes, processors, inJoints, outJoints, includes, briefly, description)
     }
   }
 }

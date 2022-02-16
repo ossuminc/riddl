@@ -26,13 +26,15 @@ trait ContextParser
     }
   }
 
-  def contextInclude[X: P]: P[Seq[ContextDefinition]] = {
+  def contextInclude[X: P]: P[Include] = {
     include[ContextDefinition, X](contextDefinitions(_))
   }
 
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
-    P((typeDef | entity | adaptor | interaction | function | saga).map(Seq(_)) | contextInclude)
-      .rep(0).map(_.flatten)
+    P( undefined(Seq.empty[ContextDefinition]) |
+      (typeDef | entity | adaptor | interaction | function | saga | contextInclude
+      ).rep(0)
+    )
   }
 
   def context[u: P]: P[Context] = {
@@ -47,6 +49,7 @@ trait ContextParser
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       Context(
         loc,
@@ -58,6 +61,7 @@ trait ContextParser
         sagas,
         functions,
         interactions,
+        includes,
         briefly,
         description
       )

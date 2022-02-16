@@ -7,14 +7,17 @@ class DomainValidatorTest extends ValidatingTest {
 
   "DomainValidator" should {
     "identify duplicate domain definitions" in {
-      val errors = Validation.validate(
+      val theErrors: Validation.ValidationMessages =
+        Validation.validate(
         RootContainer(
-          Seq(Domain((0, 0), Identifier((0, 0), "foo")), Domain((1, 1), Identifier((1, 1), "foo")))
+          Seq(Domain((1, 1), Identifier((1, 7), "foo")), Domain((2, 2), Identifier((2, 8), "foo")))
         ),
         CommonOptions()
       )
-      errors must not be empty
-      errors.head.message must include("'foo' is defined multiple times")
+      theErrors must not be empty
+      val messages = theErrors.map(_.format)
+      val notOccur = "Style: default(2:2): Domain 'foo' overloads Domain 'foo' at default(1:1)"
+      assert(messages.exists(_.startsWith(notOccur)))
     }
     "allow author information" in {
       val input = """domain foo is {

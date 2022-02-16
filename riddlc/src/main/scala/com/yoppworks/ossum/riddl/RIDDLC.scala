@@ -147,7 +147,8 @@ object RIDDLC {
   ): Boolean = {
     options.validateOptions.inputFile match {
       case Some(inputFile) =>
-        Riddl.parseAndValidate(inputFile, log, options.commonOptions).nonEmpty
+        val result = Riddl.parseAndValidate(inputFile, log, options.commonOptions)
+        result.nonEmpty
       case None =>
         log.error("No input file specified for validation")
         false
@@ -157,12 +158,13 @@ object RIDDLC {
   def prettify(options: RiddlOptions): Boolean = {
     options.reformatOptions.inputFile match {
       case Some(inputFile) =>
-        FormatTranslator.parseValidateTranslate(
+        val result = FormatTranslator.parseValidateTranslate(
           inputFile,
           log,
           options.commonOptions,
           options.reformatOptions
-        ).nonEmpty
+        )
+        result.nonEmpty
       case None =>
         log.error("No input file specified for prettify")
         false

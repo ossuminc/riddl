@@ -11,3 +11,4 @@ target
 **/*.gzip
 /chroma-riddl-lexer/go.sum
 /.riddl-timestamp
+/foo

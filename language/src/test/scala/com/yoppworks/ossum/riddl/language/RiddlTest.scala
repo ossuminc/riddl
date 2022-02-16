@@ -154,7 +154,7 @@ class RiddlTest extends ParsingTestBase {
 
     "parse and validate a simple domain from path" in {
       val (result, _) = runOne("language/src/test/input/domains/simpleDomain.riddl")
-      result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) => }
+      result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
 
     "parse and validate nonsense file as invalid" in {
@@ -172,7 +172,7 @@ class RiddlTest extends ParsingTestBase {
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
       val result = Riddl.parseAndValidate(RiddlParserInput(content), logger, common)
-      result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) => }
+      result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
 
     "parse and validate nonsense input as invalid" in {

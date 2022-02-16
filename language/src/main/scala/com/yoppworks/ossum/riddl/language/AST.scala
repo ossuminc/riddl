@@ -2,8 +2,9 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.Terminals.Keywords
 
+import java.nio.file.Path
 import scala.collection.immutable.ListMap
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 
 // scalastyle:off number.of.methods
 
@@ -28,6 +29,7 @@ object AST {
   /** The root trait of all parsable values. If a parser returns something, its a RiddlValue */
   sealed trait RiddlValue extends RiddlNode {
     def loc: Location
+    def isContainer: Boolean = false
   }
 
   /** A RiddlValue that is a parsed identifier, typically the name of a definition.
@@ -91,8 +93,12 @@ object AST {
     * @tparam T
     *   The type of definition to which the references refers.
     */
-  sealed abstract class Reference[+T <: Definition] extends RiddlValue {
+  sealed abstract class Reference[+T <: Definition : ClassTag] extends RiddlValue {
     def id: PathIdentifier
+    def identify: String = {
+      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
+    }
+
 
     override def isEmpty: Boolean = id.isEmpty
   }
@@ -105,17 +111,6 @@ object AST {
     */
   sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
-  }
-
-  /** Base trait of all values that contain definitions
-    *
-    * @tparam CT
-    *   The contained type of definition
-    */
-  sealed trait ContainerValue[+CT <: Definition] extends RiddlValue {
-    def contents: Seq[CT]
-
-    override def isEmpty: Boolean = contents.isEmpty
   }
 
   /** A function to translate between a definition and the keyword that introduces them.
@@ -202,15 +197,40 @@ object AST {
     }
   }
 
+  def kind(c: Container[Definition]): String = {
+    c match {
+      case _: Type => "Type"
+      case _: Enumeration => "Enumeration"
+      case _: Aggregation => "Aggregation"
+      case _: State => "State"
+      case _: Entity => "Entity"
+      case _: Context => "Context"
+      case _: Function => "Function"
+      case _: Adaptation => "Adaptation"
+      case _: Adaptor => "Adaptor"
+      case _: Processor => "Processor"
+      case _: Plant => "Plant"
+      case _: SagaStep => "SagaStep"
+      case _: Saga => "Saga"
+      case _: Interaction => "Interaction"
+      case _: Story => "Story"
+      case _: Domain => "Domain"
+      case _: Include => "Include"
+      case _: RootContainer => "Root"
+      case _ => throw new IllegalStateException("No other kinds of Containers")
+    }
+  }
+
   /** Base trait for all definitions requiring an identifier for the definition and providing the
     * identify method to yield a string that provides the kind and name
     */
   sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
     def id: Identifier
 
-    def identify: String = s"${AST.kind(this)} '${id.format}'"
+    def kindId: String = s"${AST.kind(this)} '${id.format}'"
+    def identify: String = kindId
+    def identifyWithLoc: String = s"$kindId at $loc"
     def isImplicit: Boolean = false
-    def isContainer: Boolean = false
   }
 
   /** Base trait of any definition that is in the content of an adaptor
@@ -229,38 +249,65 @@ object AST {
     */
   sealed trait EntityDefinition extends Definition
 
+  /** Base trait of any definition that occurs in the body of a plant
+   */
+  sealed trait PlantDefinition extends Definition
+
   /** Base trait of any definition that is also a ContainerValue
     *
-    * @tparam CV
+    * @tparam D
     *   The kind of definition that is contained by the container
     */
-  sealed trait Container[+CV <: Definition] extends Definition with ContainerValue[CV] {
+  sealed trait Container[+D <: Definition] extends RiddlValue {
+    def contents: Seq[D]
+    override def isEmpty: Boolean = contents.isEmpty
     override def isContainer: Boolean = true
-
     def isRootContainer: Boolean = false
   }
 
-  /** The root of the containment hierarchy, corresponding roughly to a level about a file.
-    *
-    * @param domains
-    *   The sequence of domains contained by the root
-    */
-  case class RootContainer(
-    domains: Seq[Domain],
-    path: Option[String] = None)
-      extends Container[Domain] {
+  sealed trait ParentDefOf[+D <: Definition] extends Definition with Container[D]
 
-    override def isRootContainer: Boolean = true
+  sealed trait WithIncludes {
+    def includes: Seq[Include]
+  }
 
-    def id: Identifier = Identifier((0, 0), path.getOrElse("<path>"))
+  case class Include(
+                      loc: Location = Location(),
+                      contents: Seq[Definition] =
+      Seq.empty[ParentDefOf[Definition]],
+                      path: Option[Path] = None,
+  ) extends ParentDefOf[Definition] with AdaptorDefinition with ContextDefinition
+    with DomainDefinition with EntityDefinition with PlantDefinition {
+
+    def id: Identifier = Identifier((0, 0), path.map(_.toString).getOrElse(""))
 
     def brief: Option[LiteralString] = Option.empty[LiteralString]
 
     def description: Option[Description] = None
 
-    def loc: Location = (0, 0)
+  }
+  /** The root of the containment hierarchy, corresponding roughly to a level about a file.
+    *
+    * @param contents
+    *   The sequence of domains contained by this root container
+    */
+  case class RootContainer(
+    contents: Seq[Domain]
+  ) extends ParentDefOf[Domain] {
 
-    override def contents: Seq[Domain] = domains
+    override def isRootContainer: Boolean = true
+
+    def loc: Location = Location(0, 0, "Root")
+
+    override def id: Identifier = Identifier(loc, "Root")
+
+    override def identify: String = "Root"
+
+    override def identifyWithLoc: String = "Root"
+
+    override def description: Option[Description] = None
+
+    override def brief: Option[LiteralString] = None
   }
 
   object RootContainer {
@@ -332,10 +379,6 @@ object AST {
       case _                              => "<unknown type expression>"
     }
   }
-
-  /** Base trait for a type expression that is also a container value
-    */
-  sealed trait TypeContainer extends TypeExpression with ContainerValue[Type]
 
   /** A reference to a type definition
     *
@@ -489,7 +532,7 @@ object AST {
   case class Enumeration(
     loc: Location,
     enumerators: Seq[Enumerator])
-      extends TypeExpression with ContainerValue[Enumerator] {
+      extends TypeExpression with Container[Enumerator] {
     lazy val contents: Seq[Enumerator] = enumerators
   }
 
@@ -546,7 +589,7 @@ object AST {
   case class Aggregation(
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field])
-      extends TypeExpression with ContainerValue[Field] {
+      extends TypeExpression with Container[Field] {
     lazy val contents: Seq[Field] = fields
   }
 
@@ -815,7 +858,17 @@ object AST {
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition with ContextDefinition with EntityDefinition with DomainDefinition {}
+      extends ParentDefOf[Definition] with ContextDefinition
+        with EntityDefinition with DomainDefinition {
+    override def contents: Seq[Definition] = {
+      typ match {
+        case Aggregation(_,fields) => fields
+        case Enumeration(_,enumerators) => enumerators
+        case MessageType(_,_,fields) => fields
+        case _ => Seq.empty[Definition]
+      }
+    }
+  }
 
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
 
@@ -1261,6 +1314,27 @@ object AST {
     override def format: String = s"ask ${entity.format} to ${msg.format}"
   }
 
+  /** An action that tells a message to an entity. This is very analagous to the tell operator in
+   * Akka.
+   *
+   * @param loc
+   *   The location of the tell action
+   * @param entity
+   *   The entity to which the message is directed
+   * @param msg
+   *   A constructed message value to send to the entity, probably a command
+   * @param description
+   *   An optional description for this action
+   */
+  case class ReplyAction(
+    loc: Location,
+    msg: MessageConstructor,
+    description: Option[Description] = None)
+    extends SagaStepAction {
+    override def format: String = s"reply with ${msg.format}"
+  }
+
+
   /** An action that is a set of other actions.
     *
     * @param loc
@@ -1500,7 +1574,8 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[Example] with EntityDefinition with ContextDefinition {
+      extends ParentDefOf[Example] with EntityDefinition
+        with ContextDefinition {
     override lazy val contents: Seq[Example] = examples
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty && output.isEmpty
@@ -1616,7 +1691,7 @@ object AST {
     typeEx: Aggregation,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends EntityDefinition with Container[Field] {
+      extends ParentDefOf[Field] with EntityDefinition  {
 
     override def contents: Seq[Field] = typeEx.fields
   }
@@ -1664,12 +1739,14 @@ object AST {
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
+    includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption] {
+      extends ParentDefOf[EntityDefinition] with ContextDefinition with OptionsDef[EntityOption]
+      with WithIncludes {
 
     lazy val contents: Seq[EntityDefinition] = {
-      (states ++ types ++ handlers ++ functions ++ invariants).toList
+      states ++ types ++ handlers ++ functions ++ invariants ++ includes
     }
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1700,7 +1777,7 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends AdaptorDefinition with ContainerValue[Example] {
+      extends ParentDefOf[Example]  with AdaptorDefinition {
     override def contents: Seq[Example] = examples
   }
 
@@ -1733,10 +1810,12 @@ object AST {
     id: Identifier,
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
+    includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[Adaptation] with ContextDefinition {
-    lazy val contents: Seq[Adaptation] = adaptations
+      extends ParentDefOf[AdaptorDefinition] with ContextDefinition
+        with WithIncludes {
+    lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
   }
 
   /** Base trait for all options a Context can have.
@@ -1833,18 +1912,17 @@ object AST {
     sagas: Seq[Saga] = Seq.empty[Saga],
     functions: Seq[Function] = Seq.empty[Function],
     interactions: Seq[Interaction] = Seq.empty[Interaction],
+    includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[ContextDefinition] with DomainDefinition with OptionsDef[ContextOption] {
+      extends ParentDefOf[ContextDefinition] with DomainDefinition
+        with OptionsDef[ContextOption] with WithIncludes {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++ sagas ++
-      functions ++ interactions
+      functions ++ interactions ++ includes
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
 
-  /** Base trait of any definition that occurs in the body of a plant
-    */
-  sealed trait PlantDefinition extends Definition
 
   /** Definition of a pipe for data streaming purposes. Pipes are conduits through which data of a
     * particular type flows.
@@ -1961,7 +2039,7 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends PlantDefinition with Container[ProcessorDefinition] {
+      extends ParentDefOf[ProcessorDefinition] with PlantDefinition{
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++ examples
   }
 
@@ -2084,11 +2162,13 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
     outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
+    includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[PlantDefinition] with DomainDefinition {
+      extends ParentDefOf[PlantDefinition] with DomainDefinition
+        with WithIncludes {
     lazy val contents: Seq[PlantDefinition] =
-      pipes ++ processors ++ inJoints ++ outJoints
+      pipes ++ processors ++ inJoints ++ outJoints ++ includes
   }
 
   /** The definition of one step in a saga with its undo step and
@@ -2117,7 +2197,7 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Container[Example] {
+  ) extends ParentDefOf[Example] {
     def contents: Seq[Example] = examples
   }
 
@@ -2175,11 +2255,12 @@ object AST {
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[SagaStep] with ContextDefinition with OptionsDef[SagaOption] {
+      extends ParentDefOf[SagaStep] with OptionsDef[SagaOption]
+        with ContextDefinition  {
     lazy val contents: Seq[SagaStep] = sagaSteps
 
-    override def isEmpty: Boolean = super.isEmpty && options.isEmpty && input.isEmpty &&
-      output.isEmpty
+    override def isEmpty: Boolean =
+      super.isEmpty && options.isEmpty && input.isEmpty && output.isEmpty
   }
 
   sealed trait InteractionOption extends OptionValue
@@ -2194,8 +2275,9 @@ object AST {
 
   /** Definition of an Interaction
     *
-    * Interactions define an exemplary interaction between the system being designed and other
-    * actors. The basic ideas of an Interaction are much like UML Sequence Diagram.
+    * Interactions define an exemplary interaction between the system being
+    * designed and other actors. The basic ideas of an Interaction are much
+    * like UML Sequence Diagram.
     *
     * @param loc
     *   Where in the input the Scenario is defined
@@ -2211,10 +2293,9 @@ object AST {
     actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[ActionDefinition]
-      with DomainDefinition
-      with ContextDefinition
-      with OptionsDef[InteractionOption] {
+      extends ParentDefOf[ActionDefinition]
+        with OptionsDef[InteractionOption] with DomainDefinition
+        with ContextDefinition {
     lazy val contents: Seq[ActionDefinition] = actions
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty
@@ -2320,7 +2401,7 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[Example] with DomainDefinition {
+      extends ParentDefOf[Example] with DomainDefinition {
     override def contents: Seq[Example] = examples
   }
 
@@ -2397,11 +2478,15 @@ object AST {
     plants: Seq[Plant] = Seq.empty[Plant],
     stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
+    includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Container[DomainDefinition] with DomainDefinition {
+      extends ParentDefOf[DomainDefinition] with DomainDefinition
+        with WithIncludes {
     override def isEmpty: Boolean = super.isEmpty && author.isEmpty
-    lazy val contents: Seq[DomainDefinition] =
-      (domains ++ types.iterator ++ contexts ++ interactions ++ plants ++ stories).toList
+    def contents: Seq[DomainDefinition] = {
+      domains ++ types.iterator ++ contexts ++ interactions ++ plants ++
+        stories ++ includes
+    }
   }
 }

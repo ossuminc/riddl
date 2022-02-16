@@ -8,7 +8,8 @@ case class Location(
   col: Int = 0,
   source: String = Location.defaultSourceName)
     extends Ordered[Location] {
-  override def toString: String = { s"$source($line:$col)" }
+  override def toString: String = { s"$source$toShort" }
+  def toShort: String = { s"($line:$col)"}
 
   override def compare(that: Location): Int = {
     if (that.line == line) {

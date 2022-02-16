@@ -3,6 +3,7 @@ import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
 maintainer := "reid@reactific.com"
+
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
   Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer,
@@ -33,6 +34,7 @@ buildInfoKeys := Seq[BuildInfoKey](
 
 lazy val scala2_13_Options = Seq(
   "-target:17",
+  // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
   "-Xsource:3",
   "-Wdead-code",
   "-deprecation",

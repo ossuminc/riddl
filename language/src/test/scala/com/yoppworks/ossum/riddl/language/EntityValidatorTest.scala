@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.{Domain, Entity, EntityAggregate, EntityAvailable, EntityFiniteStateMachine, EntityMessageQueue, EntityTransient, Function}
+import com.yoppworks.ossum.riddl.language.AST.*
 import com.yoppworks.ossum.riddl.language.Validation.ValidationMessages
 
 /** Unit Tests For EntityValidatorTest */
@@ -10,7 +10,8 @@ class EntityValidatorTest extends ValidatingTest {
     "handle a variety of options" in {
       val input = """entity WithOptions is {
                     | options(fsm, mq, aggregate, transient, available)
-                    | }
+                    |
+                    |}
                     |""".stripMargin
       parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
         msgs.count(_.kind.isError) mustBe 2
@@ -30,7 +31,7 @@ class EntityValidatorTest extends ValidatingTest {
                     |  handler fum is { ??? }
                     |}""".stripMargin
       parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
-        msgs.filter(_.kind.isError) mustBe (empty)
+        msgs.filter(_.kind.isError) mustBe empty
         entity.states.size mustBe 2
       }
     }
@@ -43,7 +44,7 @@ class EntityValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "Entity 'MultiState' is declared as a finite-state-machine, but does not have " +
+          "Entity 'MultiState' is declared as an fsm, but doesn't have " +
             "at least two states"
         )
       }

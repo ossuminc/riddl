@@ -50,7 +50,7 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def parseAndValidate[D <: Container[Definition]: ClassTag](
+  def parseAndValidate[D <: ParentDefOf[Definition]: ClassTag](
     input: String
   )(validator: (D, ValidationMessages) => Assertion
   ): Assertion = {
@@ -126,11 +126,11 @@ abstract class ValidatingTest extends ParsingTest {
   def assertValidationMessage(
     msgs: ValidationMessages,
     expectedKind: ValidationMessageKind,
-    expectedMessageSnippet: String
+    content: String
   ): Assertion = {
     assert(
-      msgs.exists(m => m.kind == expectedKind && m.message.contains(expectedMessageSnippet)),
-      s"; expecting, but didn't find '$expectedMessageSnippet', in:\n${msgs.mkString("\n")}"
+      msgs.exists(m => m.kind == expectedKind && m.message.contains(content)),
+      s"; expecting, but didn't find '$content', in:\n${msgs.mkString("\n")}"
     )
   }
 }

@@ -2,7 +2,6 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.reflect.*
 
@@ -10,93 +9,116 @@ import scala.reflect.*
   * parsing is complete. It will also work for any sub-tree of the model that is rooted by a
   * Container node.
   */
-case class SymbolTable(container: Container[Definition]) {
-  type Parentage = Map[Definition, Container[Definition]]
+case class SymbolTable(container: ParentDefOf[Definition]) {
 
-  private val emptyParentage: Parentage = Map.empty[Definition, Container[Definition]]
+  type Parents = Seq[ParentDefOf[Definition]]
+  type Parentage = mutable.HashMap[Definition, Parents]
+  type SymTabItem = (Definition, Parents)
+  type SymTab = mutable.HashMap[String, Seq[SymTabItem]]
 
-  val parentage: Parentage = {
-    Folding.foldEachDefinition[Parentage](container, container, emptyParentage) {
-      (parent, child, next) => next + (child -> parent)
+  private def emptySymTab: SymTab =
+    mutable.HashMap.empty[String, Seq[SymTabItem]]
+  private def emptyParentage: Parentage =
+    mutable.HashMap.empty[Definition, Parents]
+
+  private def makeSymTab(
+    top: ParentDefOf[Definition]
+  ): (SymTab,Parentage) = {
+    val symTab: SymTab = emptySymTab
+    val parentage: Parentage = emptyParentage
+    Folding.foldLeftWithStack[Unit](())(top) {
+      case (_, _: RootContainer, _) =>
+        // RootContainers don't go in the symbol table
+      case (_, _: Include, _) =>
+        // includes don't go in the symbol table
+      case (_, definition, stack) =>
+        val name = definition.id.value
+        val copy: Parents = stack.toSeq.filter {
+          case _: RootContainer => false
+          case _ => true
+        }
+        val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
+        val included: Seq[SymTabItem] = existing :+ (definition -> copy)
+        symTab.update(name, included)
+        parentage.update(definition, copy)
     }
+    symTab -> parentage
   }
 
+  final val (symbols2: SymTab, parentage: Parentage) = makeSymTab(container)
+
+/*
   type Symbols = mutable.HashMap[String, mutable.Set[(Definition, Container[Definition])]]
 
   final val symbols = mutable.HashMap
     .empty[String, mutable.Set[(Definition, Container[Definition])]]
 
-  Folding.foldEachDefinition[Unit](container, container, ()) { (parent, child, _) =>
-    addToSymTab(child.id.value, child -> parent)
-    child match {
-      case t: Type => t.typ match {
-          case e: Enumeration => e.enumerators.foreach { etor =>
-              addToSymTab(etor.id.value, etor -> parent)
-            // type reference and identifier relations must be handled by semantic validation
-            }
-          case mt: MessageType => mt.fields.foreach { fld =>
-              addToSymTab(fld.id.value, fld -> parent)
-            }
-          case agg: Aggregation => agg.fields.foreach { fld =>
-              addToSymTab(fld.id.value, fld -> parent)
-            }
-          case _ => // addToSymTab(t.id.value, t -> parent) // types are definitions too
-        }
-      case _ =>
-    }
-  }
-
-  def parentOf(definition: Definition): Option[Container[Definition]] = {
-    parentage.get(definition)
-  }
-
-  def parentsOf(definition: Definition): List[Container[Definition]] = {
-    @tailrec
-    def recurse(
-      init: List[Container[Definition]],
-      examine: Definition
-    ): List[Container[Definition]] = {
-      parentage.get(examine) match {
-        case None                                  => init
-        case Some(parent) if init.contains(parent) => init
-        case Some(parent) =>
-          val newList = init :+ parent
-          recurse(newList, parent)
+  Folding.foldEachDefinition[Unit](container, container, ()) {
+    (parent, child, _) =>
+      child match {
+        case _: Include => // includes don't go in the symbol table
+        case _ =>
+          val name = child.id.value
+          val extracted = symbols.getOrElse(name, mutable.Set.empty[(Definition, Container[Definition])])
+          val included = extracted += (child -> parent)
+          symbols.update(name, included)
       }
+
+  }
+*/
+
+  def parentOf(definition: Definition): Option[ParentDefOf[Definition]] =
+    parentage.get(definition) match {
+      case Some(container) => container.headOption
+      case None => None
     }
 
-    recurse(List.empty[Container[Definition]], definition)
+  def parentsOf(definition: Definition): Seq[ParentDefOf[Definition]] = {
+    parentage.get(definition) match {
+      case Some(list) => list
+      case None => Seq.empty[ParentDefOf[Definition]]
+    }
   }
 
   def pathOf(definition: Definition): Seq[String] = {
     definition.id.value +: parentsOf(definition).map(_.id.value)
   }
 
-  private def addToSymTab(name: String, pair: (Definition, Container[Definition])): Unit = {
-    val extracted = symbols.getOrElse(name, mutable.Set.empty[(Definition, Container[Definition])])
-    val included = extracted += pair
-    symbols.update(name, included)
-  }
-
   type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
+  private def hasSameParentNames(id: Seq[String], parents: Parents): Boolean = {
+    val containerNames = id.tail
+    val parentNames = parents.map(_.id.value)
+    containerNames.zip(parentNames).forall {
+      case (containerName, parentName) => containerName == parentName
+    }
+
+  }
   def lookupSymbol[D <: Definition: ClassTag](
     id: Seq[String]
   ): LookupResult[D] = {
+    require(id.nonEmpty , "No name elements provided to lookupSymbol")
     val clazz = classTag[D].runtimeClass
     val leafName = id.head
-    val containerNames = id.tail
-    symbols.get(leafName) match {
-      case Some(set) => set.filter { case (_: Definition, container: Container[Definition]) =>
-          val parentNames = (container +: parentsOf(container)).map(_.id.value)
-          containerNames.zip(parentNames).forall { case (containerName, parentName) =>
-            containerName == parentName
-          }
-        }.map { case (d: Definition, _: Container[Definition]) =>
-          if (clazz.isInstance(d)) { (d, Option(d.asInstanceOf[D])) }
-          else { (d, None) }
+    symbols2.get(leafName) match {
+      case Some(set) => set.filter {
+        case (_: Definition, parents: Seq[ParentDefOf[Definition]]) =>
+          // whittle down the list of matches to the ones whose parents names
+          // have the same as the id provided
+          hasSameParentNames(id, parents)
+        }.map {
+          case (d: Definition, _: Seq[ParentDefOf[Definition]]) =>
+            // If a name match is also the same type as desired by the caller
+            // then give them the definition in the requested type, optionally
+            if (clazz.isInstance(d)) {
+              (d, Option(d.asInstanceOf[D]))
+            } else {
+              (d, None)
+            }
         }.toList
-      case None => List.empty
+      case None =>
+        // Symbol wasn't found
+        List.empty
     }
   }
 
@@ -109,18 +131,15 @@ case class SymbolTable(container: Container[Definition]) {
   ): List[D] = {
     val clazz = classTag[D].runtimeClass
     val leafName = id.head
-    val containerNames = id.tail
-    symbols.get(leafName) match {
+    symbols2.get(leafName) match {
       case Some(set) =>
-        val result = set.filter { case (d: Definition, container: Container[Definition]) =>
+        val result = set.filter {
+          case (d: Definition, parents: Parents) =>
           if (clazz.isInstance(d)) {
             // It is in the result set as long as the container names
             // given in the provided id are the same as the container
             // names in the symbol table.
-            val parentNames = (container +: parentsOf(container)).map(_.id.value)
-            containerNames.zip(parentNames).forall { case (containerName, parentName) =>
-              containerName == parentName
-            }
+            hasSameParentNames(id, parents)
           } else { false }
         }.map(_._1.asInstanceOf[D])
         result.toList
@@ -128,33 +147,9 @@ case class SymbolTable(container: Container[Definition]) {
     }
   }
 
-  def foreachOverloadedSymbol[T](entries: Seq[Seq[Definition]] => T): T = {
-    val overloads = symbols.filter(_._2.size > 1).filter(_._1 != "sender")
+  def foreachOverloadedSymbol[T](process: Seq[Seq[Definition]] => T): T = {
+    val overloads = symbols2.filter(_._2.size > 1).filter(_._1 != "sender")
     val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
-    entries(defs)
+    process(defs)
   }
-
-  /*
-
-  def lookup[D <: Definition: ClassTag](
-    id: Seq[String],
-    context: Definition
-  ): List[D] = {
-    lookup[D](id) match {
-      case Nil =>
-        Nil
-      case definition :: Nil =>
-        List(definition)
-      case head :: tail =>
-        if (head == id.head) {
-          tail.find { d =>
-          }
-          if (id.tail == (tail)) {}
-        } else {
-          Nil
-        }
-    }
-  }
-
-   */
 }

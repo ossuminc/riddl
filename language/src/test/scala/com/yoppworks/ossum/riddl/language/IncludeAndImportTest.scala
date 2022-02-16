@@ -22,7 +22,10 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into domain" in {
       val domain = checkFile("Domain Includes", "domainIncludes.riddl")
-      domain.contents.head.types.head mustBe Type(
+      domain.contents mustNot be(empty)
+      domain.contents.head.includes mustNot be(empty)
+      domain.contents.head.includes.head.contents mustNot be(empty)
+      domain.contents.head.includes.head.contents.head mustBe Type(
         (1, 1, "domainIncluded.riddl"),
         Identifier((1, 6, "domainIncluded.riddl"), "foo"),
         Strng((1, 13, "domainIncluded.riddl")),
@@ -31,7 +34,11 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into contexts" in {
       val domain = checkFile("Context Includes", "contextIncludes.riddl")
-      domain.contents.head.contexts.head.types.head mustBe Type(
+      domain.contents mustNot be(empty)
+      domain.contents.head.contexts mustNot be(empty)
+      domain.contents.head.contexts.head.includes mustNot be(empty)
+      domain.contents.head.contexts.head.includes.head.contents mustNot be(empty)
+      domain.contents.head.contexts.head.includes.head.contents.head mustBe Type(
         (1, 1, "contextIncluded.riddl"),
         Identifier((1, 6, "contextIncluded.riddl"), "foo"),
         Strng((1, 12, "contextIncluded.riddl")),
@@ -43,9 +50,9 @@ class IncludeAndImportTest extends ParsingTest {
   "Import" should {
     "work syntactically" in {
       val root = checkFile("Import", "import.riddl")
-      root.domains must not(be(empty))
-      root.domains.head.domains must not(be(empty))
-      root.domains.head.domains.head.id.value must be("NotImplemented")
+      root.contents must not(be(empty))
+      root.contents.head.domains must not(be(empty))
+      root.contents.head.domains.head.id.value must be("NotImplemented")
     }
     "handle missing files" in {
       val input = "domain foo is { import domain foo from \"nonexisting\" } described as \"foo\""

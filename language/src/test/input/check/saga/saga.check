@@ -9,3 +9,4 @@ Missing: saga.riddl(22:9): Example 'A' should have a description
 Missing: saga.riddl(29:9): Example 'B' should have a description
 Missing: saga.riddl(4:5): Type 'UndoSomething' should have a description
 Missing: saga.riddl(3:5): Type 'Something' should have a description
+Missing: saga.riddl(12:5): Entity 'blah' should have a description

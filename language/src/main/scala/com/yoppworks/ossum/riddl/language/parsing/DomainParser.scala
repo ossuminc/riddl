@@ -14,10 +14,6 @@ trait DomainParser
     with StreamingParser
     with TypeParser {
 
-  def domainInclude[X: P]: P[Seq[DomainDefinition]] = {
-    include[DomainDefinition, X](domainContent(_))
-  }
-
   def story[u: P]: P[Story] = P(
     location ~ Keywords.story ~ identifier ~ is ~ open ~ Keywords.role ~ is ~ literalString ~
       Keywords.capability ~ is ~ literalString ~ Keywords.benefit ~ is ~ literalString ~
@@ -57,11 +53,15 @@ trait DomainParser
     }
   }
 
+  def domainInclude[X: P]: P[Include] = {
+    include[DomainDefinition, X](domainContent(_))
+  }
+
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (typeDef | interaction | context | plant | story | domain | importDef).map(Seq(_)) |
-        domainInclude
-    ).rep(0).map(_.flatten)
+      (typeDef | interaction | context | plant | story | domain | importDef |
+        domainInclude).rep(0)
+    )
   }
 
   def domain[u: P]: P[Domain] = {
@@ -77,6 +77,7 @@ trait DomainParser
       val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
       Domain(
         loc,
         id,
@@ -87,6 +88,7 @@ trait DomainParser
         plants,
         stories,
         domains,
+        includes,
         briefly,
         description
       )

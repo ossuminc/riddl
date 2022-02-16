@@ -22,8 +22,8 @@ class MarkdownWriterTest extends ParsingTest {
       parseTopLevelDomains(input) match {
         case Left(errors) => fail("Parse Failed:\n" + errors.map(_.format).mkString("\n"))
         case Right(root) =>
-          root.domains mustNot be(empty)
-          val domain = root.domains.head
+          root.contents mustNot be(empty)
+          val domain = root.contents.head
           mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
           val expected = """---

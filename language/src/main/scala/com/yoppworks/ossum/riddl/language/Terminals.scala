@@ -142,6 +142,7 @@ object Terminals {
     final val range = "range"
     final val reference = "reference"
     final val remove = "remove"
+    final val reply = "reply"
     final val requires = "requires"
     final val result = "result"
     final val results = "results"
@@ -203,6 +204,7 @@ object Terminals {
     final val of = "of"
     final val on = "on"
     final val to = "to"
+    final val with_ = "with"
   }
 
   object Operators {
