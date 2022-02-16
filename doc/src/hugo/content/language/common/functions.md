@@ -17,7 +17,7 @@ it generates a riddle in any subject.
 ```riddl
 type Subject = String
 type Riddle = String
-function riddle is { requires Subject yields Riddle }  
+function riddle is { requires {s: Subject}  yields { r: Riddle } }  
 ```
 ## Applicability
 Functions have applicability across several RIDDL definitions:
