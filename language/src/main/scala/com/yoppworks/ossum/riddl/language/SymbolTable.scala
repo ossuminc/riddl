@@ -5,10 +5,19 @@ import com.yoppworks.ossum.riddl.language.AST.*
 import scala.collection.mutable
 import scala.reflect.*
 
-/** Symbol Table for Validation This symbol table is built from the AST model after syntactic
-  * parsing is complete. It will also work for any sub-tree of the model that is rooted by a
-  * Container node.
-  */
+/** Symbol Table for Validation and other purposes.
+ *  This symbol table is built from the AST model after syntactic parsing is
+ *  complete. It will also work for any sub-tree of the model that is rooted
+ *  by a ParentDefOf[Definition] node.
+ *
+ *  The symbol tree contains a mapping from leaf name to the entire list
+ *  of parent definitions (symbols)  as well as a mapping from definitions
+ *  to their parents (parentage). Bot maps are built during a single pass
+ *  of the AST.
+ *
+ * @param container
+ * The node from which to build the symbol table
+ */
 case class SymbolTable(container: ParentDefOf[Definition]) {
 
   type Parents = Seq[ParentDefOf[Definition]]
@@ -45,34 +54,27 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
     symTab -> parentage
   }
 
-  final val (symbols2: SymTab, parentage: Parentage) = makeSymTab(container)
+  final private val (symbols: SymTab, parentage: Parentage) =
+    makeSymTab(container)
 
-/*
-  type Symbols = mutable.HashMap[String, mutable.Set[(Definition, Container[Definition])]]
-
-  final val symbols = mutable.HashMap
-    .empty[String, mutable.Set[(Definition, Container[Definition])]]
-
-  Folding.foldEachDefinition[Unit](container, container, ()) {
-    (parent, child, _) =>
-      child match {
-        case _: Include => // includes don't go in the symbol table
-        case _ =>
-          val name = child.id.value
-          val extracted = symbols.getOrElse(name, mutable.Set.empty[(Definition, Container[Definition])])
-          val included = extracted += (child -> parent)
-          symbols.update(name, included)
-      }
-
-  }
-*/
-
+  /** Get the parent of a definition
+   *
+   * @param definition
+   * The definition whose parent is to be sought.
+   * @return optionally, the parent definition of the given definition
+   */
   def parentOf(definition: Definition): Option[ParentDefOf[Definition]] =
     parentage.get(definition) match {
       case Some(container) => container.headOption
       case None => None
     }
 
+  /** Get all parents of a definition
+   *
+   * @param definition
+   * The defintiion whose parents are to be sought.
+   * @return the sequence of ParentDefOf parents or empty if none.
+   */
   def parentsOf(definition: Definition): Seq[ParentDefOf[Definition]] = {
     parentage.get(definition) match {
       case Some(list) => list
@@ -80,11 +82,17 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
     }
   }
 
+  /** Get the full path of a definition
+   *
+   * @param definition
+   * The definition for which the path name is sought.
+   * @return
+   * A list of strings from leaf to root giving the names of the definition
+   * and its parents.
+   */
   def pathOf(definition: Definition): Seq[String] = {
     definition.id.value +: parentsOf(definition).map(_.id.value)
   }
-
-  type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
   private def hasSameParentNames(id: Seq[String], parents: Parents): Boolean = {
     val containerNames = id.tail
@@ -92,15 +100,27 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
     containerNames.zip(parentNames).forall {
       case (containerName, parentName) => containerName == parentName
     }
-
   }
+
+  type LookupResult[D <: Definition] = List[(Definition, Option[D])]
+
+  /** Look up a symbol in the table
+   *
+   * @param id
+   * The multi-part identifier of the symbol, from leaf to root, that is from
+   * most nested to least nested.
+   * @tparam D The expected type of definition
+   * @return
+   * A list of matching definitions of 2-tuples giving the definition as
+   * a Definition type and optionally as the requested type
+   */
   def lookupSymbol[D <: Definition: ClassTag](
     id: Seq[String]
   ): LookupResult[D] = {
     require(id.nonEmpty , "No name elements provided to lookupSymbol")
     val clazz = classTag[D].runtimeClass
     val leafName = id.head
-    symbols2.get(leafName) match {
+    symbols.get(leafName) match {
       case Some(set) => set.filter {
         case (_: Definition, parents: Seq[ParentDefOf[Definition]]) =>
           // whittle down the list of matches to the ones whose parents names
@@ -131,7 +151,7 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   ): List[D] = {
     val clazz = classTag[D].runtimeClass
     val leafName = id.head
-    symbols2.get(leafName) match {
+    symbols.get(leafName) match {
       case Some(set) =>
         val result = set.filter {
           case (d: Definition, parents: Parents) =>
@@ -148,7 +168,7 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   }
 
   def foreachOverloadedSymbol[T](process: Seq[Seq[Definition]] => T): T = {
-    val overloads = symbols2.filter(_._2.size > 1).filter(_._1 != "sender")
+    val overloads = symbols.filter(_._2.size > 1).filter(_._1 != "sender")
     val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
     process(defs)
   }
