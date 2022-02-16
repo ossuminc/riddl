@@ -232,12 +232,26 @@ object RiddlOptions {
     }
   }
 
+  private def noBool = Option.empty[Boolean]
+
   implicit val riddlReader: ConfigReader[RiddlOptions] = {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
         commandRes <- objCur.atKey("command")
         commandStr <- commandRes.asString
+        showTimes <- optional(objCur, "show-times", noBool)(c =>
+          c.asBoolean.map(Option(_)))
+        verbose <- optional(objCur, "verbose", noBool)(cc =>
+          cc.asBoolean.map(Option(_)))
+        dryRun <- optional(objCur, "dry-run", noBool)(cc => cc.asBoolean.map(Option(_)))
+        quiet <- optional(objCur, "quiet", noBool)(cc => cc.asBoolean.map(Option(_)))
+        suppressWarnings <- optional(objCur, "suppress-warnings", noBool) {
+          cc => cc.asBoolean.map(Option(_)) }
+        suppressStyleWarnings <- optional(objCur, "suppress-style-warnings",
+          noBool) { cc => cc.asBoolean.map(Option(_)) }
+        suppressMissingWarnings <- optional(objCur,
+          "suppress-missing-warnings", noBool) { cc => cc.asBoolean.map(Option(_)) }
         common <- optional[CommonOptions](
           objCur, "common", CommonOptions()){ cur => coReader.from(cur) }
         parse <- optional[InputFileOptions](objCur, "parse", InputFileOptions()){
@@ -259,7 +273,15 @@ object RiddlOptions {
           str2Command(commandStr),
           FromOptions(),
           RepeatOptions(),
-          common,
+          common.copy(
+            showTimes.getOrElse(common.showTimes),
+            verbose.getOrElse(common.verbose),
+            dryRun.getOrElse(common.dryRun),
+            quiet.getOrElse(common.quiet),
+            showWarnings = suppressWarnings.map(!_).getOrElse(common.showWarnings),
+            showMissingWarnings = suppressMissingWarnings.map(!_).getOrElse(common.showMissingWarnings),
+            showStyleWarnings = suppressStyleWarnings.map(!_).getOrElse(common.showStyleWarnings),
+          ),
           parse,
           validate,
           reformat,

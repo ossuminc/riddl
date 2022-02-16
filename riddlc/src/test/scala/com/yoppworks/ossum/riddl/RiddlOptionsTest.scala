@@ -78,5 +78,20 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           ho.siteLogoPath mustBe Option("/images/RBBQ.png")
       }
     }
+    "common opts override properly" in {
+      val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
+      val options = RiddlOptions()
+      val result = RiddlOptions.loadRiddlOptions(options, optionFile)
+
+      result match {
+        case None =>
+          fail("Previously reported failures")
+        case Some(opts) =>
+          opts.commonOptions.showWarnings mustBe true
+          opts.commonOptions.showStyleWarnings mustBe false
+          opts.commonOptions.showMissingWarnings mustBe false
+          true
+      }
+    }
   }
 }
