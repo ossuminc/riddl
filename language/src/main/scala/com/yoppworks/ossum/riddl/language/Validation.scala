@@ -12,38 +12,49 @@ import scala.util.matching.Regex
 /** Validates an AST */
 object Validation {
 
-  def validate[C <: Container[Definition]](
-    root: C,
-    commonOptions: CommonOptions = CommonOptions()
+  def validate(
+                root: ParentDefOf[Definition],
+                commonOptions: CommonOptions = CommonOptions()
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, commonOptions)
     val folding = new ValidationFolding
-    val s1 = folding.foldLeft(root, root, state)
+    val s1 = root match {
+      case r: RootContainer =>
+        folding.foldRootLeft(r, state)
+      case i: Include =>
+        folding.foldIncludeLeft(root, i, state)
+      case c : ParentDefOf[Definition] =>
+        folding.foldLeft(root, c, state)
+    }
     val result = checkOverloads(symTab, s1)
     result.messages.sortBy(_.loc)
   }
 
-  def checkOverloads(symbolTable: SymbolTable, state: ValidationState): ValidationState = {
+  def checkOverloads(
+    symbolTable: SymbolTable,
+    state: ValidationState
+  ): ValidationState = {
     symbolTable.foreachOverloadedSymbol { defs: Seq[Seq[Definition]] =>
-      defs.foldLeft(state) { (s, defs) =>
-        if (defs.sizeIs == 2) {
-          val first = defs.head
-          val last = defs.last
-
-          state
-            .addStyle(last.loc, s"${last.identify} overloads ${first.identify} at ${first.id.loc}")
-        } else {
-          val first = defs.head
-          val tail = defs.tail.map(d => d.identify + " at " + d.loc).mkString(s",\n    ")
+      defs.foldLeft(state) { (s, defs2) =>
+        if (defs2.sizeIs == 2) {
+          val first = defs2.head
+          val last = defs2.last
+          s.addStyle(last.loc,
+            s"${last.identify} overloads ${first.identifyWithLoc}")
+        } else if (defs2.sizeIs > 2) {
+          val first = defs2.head
+          val tail = defs2.tail
+            .map(d => d.identifyWithLoc)
+            .mkString(s",\n    ")
           s.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
-        }
+        } else { s }
       }
     }
   }
 
   sealed trait ValidationMessageKind {
-    def isSevereError: Boolean = true
+    def isSevereError: Boolean = false
 
     def isError: Boolean = false
 
@@ -251,12 +262,16 @@ object Validation {
       agg: Aggregation
     ): ValidationState = {
       agg.fields.foldLeft(this) { case (state, field) =>
-        state.checkIdentifierLength(field).check(
-          field.id.value.head.isLower,
-          "Field names in aggregates should start with a lower case letter",
-          StyleWarning,
-          field.loc
-        ).checkTypeExpression(field.typeEx, field).checkDescription(field)
+        state
+          .checkIdentifierLength(field)
+          .check(
+            field.id.value.head.isLower,
+            "Field names in aggregates should start with a lower case letter",
+            StyleWarning,
+            field.loc
+          )
+          .checkTypeExpression(field.typeEx, field)
+          .checkDescription(field)
       }
     }
 
@@ -333,38 +348,39 @@ object Validation {
     ): ValidationState = {
       symbolTable.lookupSymbol[DT](symbol) match {
         case Nil            => checkEmpty()
-        case (d, _) :: Nil  => checkSingle(d.asInstanceOf[DT]) // FIXME:
-        case (d, _) :: tail => checkMulti(d.asInstanceOf[DT], tail) // FIXME:
+        case (d, _) :: Nil  => checkSingle(d.asInstanceOf[DT])
+        case (d, _) :: tail => checkMulti(d.asInstanceOf[DT], tail)
       }
     }
 
     def checkMessageRef(ref: MessageRef, kind: MessageKind): ValidationState = {
       symbolTable.lookupSymbol[Type](ref.id.value) match {
-        case Nil => add(ValidationMessage(
+        case Nil =>
+          add(ValidationMessage(
             ref.id.loc,
-            s"'${ref.id.format}' is not defined but should be ${article(kind.kind)} type",
+            s"${ref.identify} is not defined but should be ${article(kind.kind)} type",
             Error
           ))
         case (d, _) :: Nil => d match {
             case Type(_, _, typ, _, _) => typ match {
                 case MessageType(_, mk, _) => check(
                     mk == kind,
-                    s"'${ref.id.format}' should be ${article(kind.kind)} type" +
+                    s"'${ref.identify} should be ${article(kind.kind)} type" +
                       s" but is ${article(mk.kind)} type instead",
                     Error,
                     ref.id.loc
                   )
                 case te: TypeExpression => add(ValidationMessage(
                     ref.id.loc,
-                    s"'${ref.id.format}' should reference ${article(kind.kind)} type but is a ${AST
+                    s"'${ref.identify} should reference ${article(kind.kind)} type but is a ${AST
                       .kind(te)} type instead",
                     Error
                   ))
               }
             case _ => add(ValidationMessage(
                 ref.id.loc,
-                s"'${ref.id.format}' was expected to be ${article(kind.kind)} type but is ${article(AST.kind(d))} instead",
-                Error
+                s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${
+                  article(AST.kind(d))} instead", Error
               ))
           }
         case (d, optT) :: tail => handleMultipleResultsCase[Type](ref.id, d, optT, tail)
@@ -488,8 +504,8 @@ object Validation {
       check(options.sizeIs == options.distinct.size, "Options should not be repeated", Error, loc)
     }
 
-    def checkDefinition[TCD <: Container[Definition], TD <: Definition](
-      container: TCD,
+    def checkDefinition[TCD <: ParentDefOf[Definition], TD <: Definition](
+      parent: TCD,
       definition: TD
     ): ValidationState = {
       var result = this.check(
@@ -508,16 +524,24 @@ object Validation {
           SevereError
         ))
       } else if (matches.sizeIs >= 2) {
-        matches.groupBy(result.symbolTable.parentOf(_)).get(Option(container)) match {
+        val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
+        parentGroups.get(Option(parent))  match {
           case Some(head :: tail) if tail.nonEmpty =>
-            result = result.add(ValidationMessage(
-              head.id.loc,
-              s"${definition.identify} is defined multiple times; other " +
-                s"definitions are:\n  " + matches.map(x => x.identify + " " + x.loc)
-                  .mkString("\n  "),
-              Error
+            result = result.add(ValidationMessage(head.id.loc,
+              s"${definition.identify} has same name as other definitions in ${
+                parent.identifyWithLoc}:  " +
+                tail.map(x => x.identifyWithLoc).mkString(",  "),
+              Warning
+            ))
+          case Some(head:: tail) if tail.isEmpty =>
+            result = result.add(ValidationMessage(head.id.loc,
+              s"${definition.identify} has same name as other definitions: " +
+                matches.filterNot(_ == definition).map(x =>
+                  x.identifyWithLoc).mkString(",  "),
+              StyleWarning
             ))
           case _ =>
+            // ignore
         }
       }
       result
@@ -525,13 +549,13 @@ object Validation {
 
     def checkDescription[TD <: DescribedValue](id: String, value: TD): ValidationState = {
       val description: Option[Description] = value.description
-      if (description.isEmpty && value.nonEmpty) {
+      if (description.isEmpty) {
         this.check(predicate = false, s"$id should have a description", MissingWarning, value.loc)
       } else if (description.nonEmpty) {
         val desc = description.get
         this.check(
           desc.nonEmpty,
-          s"For $id, description is declared but empty",
+          s"For $id, description at ${desc.loc} is declared but empty",
           MissingWarning,
           desc.loc
         )
@@ -542,7 +566,7 @@ object Validation {
       definition: TD
     ): ValidationState = { checkDescription(definition.identify, definition) }
 
-    def checkContainer[P <: Container[Definition], T <: Container[Definition]](
+    def checkParentDefOf[P <: ParentDefOf[Definition], T <: ParentDefOf[Definition]](
       parent: P,
       container: T
     ): ValidationState = {
@@ -554,9 +578,23 @@ object Validation {
       )
     }
 
+    def checkContainer[C <: Container[Definition]](
+      container: C
+    ): ValidationState = {
+      this.check(
+        container.nonEmpty,
+        s"${AST.kind(container)} must have content.",
+        MissingWarning,
+        container.loc
+      )
+    }
+
+
     def checkAction(action: Action): ValidationState = {
       action match {
-        case SetAction(_, path, value, _) => this.checkPathRef[Field](path)().checkExpression(value)
+        case SetAction(_, path, value, _) =>
+          this.checkPathRef[Field](path)()
+            .checkExpression(value)
         case PublishAction(_, msg, pipeRef, _) => this.checkMessageConstructor(msg)
             .checkRef[Pipe](pipeRef)
         case FunctionCallAction(loc, funcId, args, _) =>
@@ -570,6 +608,7 @@ object Validation {
             .checkMessageConstructor(msg)
         case AskAction(_, entity, msg, _) => this.checkRef[Entity](entity)
             .checkMessageConstructor(msg)
+        case ReplyAction(_, msg, _) => this.checkMessageConstructor(msg)
         case CompoundAction(loc, actions, _) =>
           val vs = this.check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
           actions.foldLeft(vs) { (s, action) => s.checkAction(action) }
@@ -686,7 +725,7 @@ object Validation {
                   unset.filterNot(_.isImplicit).foldLeft(this) { (next, field) =>
                     next.add(ValidationMessage(
                       messageConstructor.msg.loc,
-                      s"Field '${field.id.format}' was not set in message constructor"
+                      s"${field.identify} was not set in message constructor"
                     ))
                   }
                 } else {
@@ -698,21 +737,21 @@ object Validation {
                 }
               case te: TypeExpression => add(ValidationMessage(
                   id.loc,
-                  s"'${id.format}' should reference a message type but is a ${AST.kind(te)} type " +
-                    s"instead",
+                  s"'${id.format}' should reference a message type but is a ${
+                    AST.kind(te)} type instead.",
                   Error
                 ))
             }
           case _ => add(ValidationMessage(
               id.loc,
-              s"'${id.format}' was expected to be a message type but is ${article(AST.kind(d))} instead",
-              Error
+              s"'${id.format}' was expected to be a message type but is ${
+                article(AST.kind(d))} instead", Error
             ))
         }
       } { (d: Definition, tail) =>
         add(ValidationMessage(
           id.loc,
-          s"ambiguous assignment from ${d.identify} which as ${tail.size} other definitions"
+          s"ambiguous assignment from ${d.identify} which has ${tail.size} other definitions"
         ))
       }
     }
@@ -774,24 +813,28 @@ object Validation {
       state: ValidationState,
       container: RootContainer,
       domain: Domain
-    ): ValidationState = { state.checkContainer(container, domain) }
+    ): ValidationState = {
+      state.checkParentDefOf(container, domain)
+    }
 
     override def closeRootDomain(
       state: ValidationState,
       container: RootContainer,
       domain: Domain
-    ): ValidationState = { state.checkDescription(domain) }
+    ): ValidationState = {
+      state.checkDescription(domain)
+    }
 
     override def openDomain(
-      state: ValidationState,
-      container: Domain,
-      domain: Domain
-    ): ValidationState = { state.checkContainer(container, domain) }
+                             state: ValidationState,
+                             container: ParentDefOf[Definition],
+                             domain: Domain
+    ): ValidationState = { state.checkParentDefOf(container, domain) }
 
     override def closeDomain(
-      state: ValidationState,
-      container: Domain,
-      domain: Domain
+                              state: ValidationState,
+                              container: ParentDefOf[Definition],
+                              domain: Domain
     ): ValidationState = { state.checkDescription(domain) }
 
     override def openContext(
@@ -799,7 +842,7 @@ object Validation {
       container: Domain,
       context: AST.Context
     ): ValidationState = {
-      state.checkContainer(container, context)
+      state.checkParentDefOf(container, context)
         .checkOptions[ContextOption](context.options, context.loc)
     }
 
@@ -810,7 +853,7 @@ object Validation {
     ): ValidationState = { state.checkDescription(context) }
 
     def openStory(state: ValidationState, container: Domain, story: Story): ValidationState = {
-      state.checkContainer(container, story)
+      state.checkParentDefOf(container, story)
         .checkNonEmptyValue(story.role, "role", story, MissingWarning)
         .checkNonEmptyValue(story.capability, "capability", story, MissingWarning)
         .checkNonEmptyValue(story.benefit, "benefit", story, MissingWarning)
@@ -828,25 +871,48 @@ object Validation {
       container: Context,
       entity: AST.Entity
     ): ValidationState = {
-      state.checkContainer(container, entity).checkOptions[EntityOption](entity.options, entity.loc)
+      state.checkParentDefOf(container, entity).checkOptions[EntityOption](entity.options, entity.loc)
         .checkSequence(entity.states) { (next, state) =>
           next.checkTypeExpression(state.typeEx, state)
         }.addIf(entity.handlers.isEmpty && !entity.isEmpty) {
-          ValidationMessage(entity.loc, s"Entity '${entity.id.format}' must define a handler")
+          ValidationMessage(entity.loc, s"${entity.identify} must define a handler")
         }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
           ValidationMessage(
             entity.loc,
-            s"Entity '${entity.id.format}' has only empty handlers",
+            s"${entity.identify} has only empty handlers",
             MissingWarning
           )
         }.addIf(entity.hasOption[EntityFiniteStateMachine] && entity.states.sizeIs < 2) {
           ValidationMessage(
             entity.loc,
-            s"Entity '${entity.id.format}' is declared as a finite-state-machine, but does not " +
-              s"have at least two states",
+            s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
             Error
           )
         }
+    }
+
+    override def openInclude(
+                              state: ValidationState,
+                              container: ParentDefOf[Definition],
+                              include: Include
+    ): ValidationState = {
+      state
+        .check(include.nonEmpty, "Include has no included content", Error, include.loc)
+        .check(include.path.nonEmpty, "Include has no path provided", Error, include.loc)
+        .step { s =>
+          if (include.path.nonEmpty) {
+            s.check( include.path.get.toString.nonEmpty,
+              "Include path provided is empty", Error, include.loc)
+          } else { s }
+        }
+    }
+
+    override def closeInclude(
+                               state: ValidationState,
+                               container: ParentDefOf[Definition],
+                               include: Include)
+    : ValidationState = {
+       state
     }
 
     override def doHandler(
@@ -873,18 +939,18 @@ object Validation {
     ): ValidationState = { state.checkDescription(entity) }
 
     override def openInteraction(
-      state: ValidationState,
-      container: Container[Interaction],
-      interaction: Interaction
+                                  state: ValidationState,
+                                  container: ParentDefOf[Interaction],
+                                  interaction: Interaction
     ): ValidationState = {
-      state.checkDefinition(container, interaction)
+      state.checkParentDefOf(container, interaction)
         .checkNonEmpty(interaction.actions, "Actions", interaction)
     }
 
     override def closeInteraction(
-      state: ValidationState,
-      container: Container[Interaction],
-      interaction: Interaction
+                                   state: ValidationState,
+                                   container: ParentDefOf[Interaction],
+                                   interaction: Interaction
     ): ValidationState = { state.checkDescription(interaction) }
 
     override def openAdaptor(
@@ -900,16 +966,20 @@ object Validation {
     ): ValidationState = { state.checkDescription(adaptor) }
 
     override def doType(
-      state: ValidationState,
-      container: Container[Definition],
-      typeDef: Type
+                         state: ValidationState,
+                         container: ParentDefOf[Definition],
+                         typeDef: Type
     ): ValidationState = {
-      state.checkDefinition(container, typeDef).check(
-        typeDef.id.value.head.isUpper,
-        s"${typeDef.identify} should start with a capital letter",
-        StyleWarning,
-        typeDef.loc
-      ).checkTypeExpression(typeDef.typ, container).checkDescription(typeDef)
+      state
+        .checkDefinition(container, typeDef)
+        .check(
+          typeDef.id.value.head.isUpper,
+          s"${typeDef.identify} should start with a capital letter",
+          StyleWarning,
+          typeDef.loc
+        )
+        .checkTypeExpression(typeDef.typ, container)
+        .checkDescription(typeDef)
     }
 
     override def doAction(
@@ -980,7 +1050,7 @@ object Validation {
       state: ValidationState,
       container: Entity,
       s: AST.State
-    ): ValidationState = state.checkContainer(container, s)
+    ): ValidationState = state.checkParentDefOf(container, s)
 
     override def closeState(
       state: ValidationState,
@@ -1050,7 +1120,7 @@ object Validation {
       processor: Processor
     ): ValidationState = state.checkDescription(processor)
 
-    def openFunction[TCD <: Container[Definition]](
+    def openFunction[TCD <: ParentDefOf[Definition]](
       state: ValidationState,
       container: TCD,
       function: Function

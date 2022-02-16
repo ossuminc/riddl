@@ -1,10 +1,7 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Validation.SevereError
-import com.yoppworks.ossum.riddl.language.Validation.ValidationMessage
-import com.yoppworks.ossum.riddl.language.Validation.ValidationState
-import com.yoppworks.ossum.riddl.language.Validation.Warning
+import com.yoppworks.ossum.riddl.language.Validation.*
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -38,11 +35,12 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       }
       "checkNonEmpty" in {
         ValidationState(SymbolTable(RootContainer.empty))
-          .checkNonEmpty(Nil, "foo", RootContainer.empty).messages mustBe List(ValidationMessage(
-          Location(),
-          "foo in Root '<path>' should not be empty",
-          Validation.Error
-        ))
+          .checkNonEmpty(Nil, "foo", RootContainer.empty)
+          .messages mustBe List(
+            ValidationMessage(Location(0,0,"Root"),
+            "foo in Root should not be empty",
+            Validation.Error)
+          )
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(List(1, 2, 3), "foo", RootContainer.empty).messages mustBe Nil
       }
@@ -64,25 +62,25 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
 
   "ValidationMessageKind" should {
     "have correct field values" in {
-      Validation.MissingWarning.isWarning mustBe true
-      Validation.MissingWarning.isError mustBe false
-      Validation.MissingWarning.isSevereError mustBe true
-      Validation.MissingWarning.toString mustBe "Missing"
+      MissingWarning.isWarning mustBe true
+      MissingWarning.isError mustBe false
+      MissingWarning.isSevereError mustBe false
+      MissingWarning.toString mustBe "Missing"
 
-      Validation.StyleWarning.isWarning mustBe true
-      Validation.StyleWarning.isError mustBe false
-      Validation.StyleWarning.isSevereError mustBe true
-      Validation.StyleWarning.toString mustBe "Style"
+      StyleWarning.isWarning mustBe true
+      StyleWarning.isError mustBe false
+      StyleWarning.isSevereError mustBe false
+      StyleWarning.toString mustBe "Style"
 
-      Validation.Warning.isWarning mustBe true
-      Validation.Warning.isError mustBe false
-      Validation.Warning.isSevereError mustBe true
-      Validation.Warning.toString mustBe "Warning"
+      Warning.isWarning mustBe true
+      Warning.isError mustBe false
+      Warning.isSevereError mustBe false
+      Warning.toString mustBe "Warning"
 
-      Validation.Error.isWarning mustBe false
-      Validation.Error.isError mustBe true
-      Validation.Error.isSevereError mustBe true
-      Validation.Error.toString mustBe "Error"
+      Error.isWarning mustBe false
+      Error.isError mustBe true
+      Error.isSevereError mustBe false
+      Error.toString mustBe "Error"
 
       SevereError.isWarning mustBe false
       SevereError.isError mustBe true

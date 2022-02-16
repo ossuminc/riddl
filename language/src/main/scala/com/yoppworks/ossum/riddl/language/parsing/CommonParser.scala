@@ -12,8 +12,10 @@ import scala.language.postfixOps
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
 
-  def include[K, u: P](parser: P[?] => P[Seq[K]]): P[Seq[K]] = {
-    P(Keywords.include ~/ literalString).map { str => doInclude(str, Seq.empty[K])(parser) }
+  def include[K <: Definition, u: P](parser: P[?] => P[Seq[K]]): P[Include] = {
+    P(Keywords.include ~/ literalString).map { str: LiteralString =>
+      doInclude[K](str)(parser)
+    }
   }
 
   def importDef[u: P]: P[DomainDefinition] = {

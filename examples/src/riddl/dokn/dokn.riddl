@@ -69,17 +69,17 @@ domain dokn is {
             }
             handler DriverBaseHandler is {
                 on command AddDriverToCompany {
-                  then tell event DriverAddedToCompany (
+                  then reply with event DriverAddedToCompany (
                     name = @AddDriverToCompany.name,
                     mobile = @AddDriverToCompany.mobile,
                     companyId = @AddDriverToCompany.companyId
-                  ) to sender
+                  )
                 }
                 on command RemoveDriverFromCompany {
-                  then tell event DriverRemovedFromCompany(
+                  then reply with event DriverRemovedFromCompany(
                     mobile = @RemoveDriverFromCompany.mobile,
                     companyId = @RemoveDriverFromCompany.companyId
-                  ) to sender
+                  )
                 }
             }
         }
@@ -147,19 +147,21 @@ domain dokn is {
                 loadingMethod: LoadingMethod
             }
             handler Base is {
-                on command AddDeliveryLocation { then tell event DeliveryLocationAdded() to sender }
+                on command AddDeliveryLocation { then reply event DeliveryLocationAdded() }
                 on command ChangeLocationName {
-                    then tell event LocationNameChanged(
+                    then reply with event LocationNameChanged(
                         newName = @ChangeLocationName.newName
-                    ) to sender
+                    )
                 }
-                on command ReportTicketReceived { then tell event TicketReportedAtLocation() to sender }
+                on command ReportTicketReceived { then reply event TicketReportedAtLocation()  }
                 on command ModifyNotesAtLocation {
-                    then tell event NotesForLocationModified(
+                    then reply with event NotesForLocationModified(
                         note = @ModifyNotesAtLocation.newNote
-                    ) to sender
+                    )
                 }
-                on event LocationAddressReceived { then set LocationBase.address to @newAddress }
+                on event LocationAddressReceived {
+                    then set LocationBase.address to @newAddress
+                }
                 on query getLocationDetails { then tell result LocationDetails() to Driver }
                 on query getLocationNotes { then tell result LocationNotes(notes=empty()) to Driver }
             }

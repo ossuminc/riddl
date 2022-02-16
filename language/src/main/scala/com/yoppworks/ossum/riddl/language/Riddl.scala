@@ -80,7 +80,8 @@ object Riddl {
     commonOptions: CommonOptions,
   ): Option[RootContainer] = {
     timer("validation", commonOptions.showTimes) {
-      val messages: Seq[ValidationMessage] = Validation.validate[RootContainer](root)
+      val messages: Seq[ValidationMessage] =
+        Validation.validate(root, commonOptions)
       if (messages.nonEmpty) {
         val (warns, errs) = messages.partition(_.kind.isWarning)
         val (severe, errors) = errs.partition(_.kind.isSevereError)
@@ -91,9 +92,9 @@ object Riddl {
         if (commonOptions.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
         if (commonOptions.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
         if (commonOptions.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
-        log.info(s"""Validation Errors: ${errors.length} errors""")
+        log.info(s"""Validation Errors: ${errors.length}""")
         errors.map(_.format).foreach(log.error(_))
-        log.info(s"""Severe Errors: ${errors.length} errors""")
+        log.info(s"""Severe Errors: ${severe.length}""")
         severe.map(_.format).foreach(log.severe(_))
         if (errs.nonEmpty) { None }
         else { Option(root) }

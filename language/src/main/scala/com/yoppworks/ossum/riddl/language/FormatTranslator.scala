@@ -40,7 +40,7 @@ object FormatTranslator extends Translator[FormattingOptions] {
   ): Seq[File] = {
     val state = FormatState(options)
     val folding = new FormatFolding()
-    folding.foldLeft(root, root, state).files
+    folding.foldRootLeft(root, state).files
   }
 
   def translateToString(
@@ -351,10 +351,11 @@ object FormatTranslator extends Translator[FormattingOptions] {
       domain: Domain
     ): FormatState = { state.closeDef(domain) }
 
+
     def openDomain(
-      state: FormatState,
-      container: Domain,
-      domain: Domain
+                    state: FormatState,
+                    container: ParentDefOf[Definition],
+                    domain: Domain
     ): FormatState = {
       state.openDef(domain).addIndent(s"author is {").step { s =>
         if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
@@ -373,9 +374,9 @@ object FormatTranslator extends Translator[FormattingOptions] {
     }
 
     def closeDomain(
-      state: FormatState,
-      container: Domain,
-      domain: Domain
+                     state: FormatState,
+                     container: ParentDefOf[Definition],
+                     domain: Domain
     ): FormatState = { state.closeDef(domain) }
 
     def openContext(
@@ -448,21 +449,21 @@ object FormatTranslator extends Translator[FormattingOptions] {
     ): FormatState = { state.closeDef(adaptor) }
 
     def openInteraction(
-      state: FormatState,
-      container: Container[Interaction],
-      interaction: Interaction
+                         state: FormatState,
+                         container: ParentDefOf[Interaction],
+                         interaction: Interaction
     ): FormatState = { state.openDef(interaction).emitOptions(interaction) }
 
     def closeInteraction(
-      state: FormatState,
-      container: Container[Interaction],
-      interaction: Interaction
+                          state: FormatState,
+                          container: ParentDefOf[Interaction],
+                          interaction: Interaction
     ): FormatState = { state.closeDef(interaction) }
 
     def doType(
-      state: FormatState,
-      container: Container[Definition],
-      typeDef: Type
+                state: FormatState,
+                container: ParentDefOf[Definition],
+                typeDef: Type
     ): FormatState = { state.emitType(typeDef) }
 
     def doAction(
@@ -597,7 +598,7 @@ object FormatTranslator extends Translator[FormattingOptions] {
       plant: Plant
     ): FormatState = { state.closeDef(plant) }
 
-    def openFunction[TCD <: Container[Definition]](
+    def openFunction[TCD <: ParentDefOf[Definition]](
       state: FormatState,
       container: TCD,
       function: Function
@@ -609,11 +610,28 @@ object FormatTranslator extends Translator[FormattingOptions] {
       }
     }
 
-    def closeFunction[TCD <: Container[Definition]](
+    def closeFunction[TCD <: ParentDefOf[Definition]](
       state: FormatState,
       container: TCD,
       function: Function
     ): FormatState = { state.closeDef(function) }
-  }
 
+    def openInclude(
+                     state: FormatState,
+                     @unused container: ParentDefOf[Definition],
+                     @unused include: Include
+    ): FormatState = {
+      // TODO: Implement Include handling, switching I/O etc.
+      state
+    }
+
+    def closeInclude(
+                      state: FormatState,
+                      @unused container: ParentDefOf[Definition],
+                      @unused include: Include)
+    : FormatState = {
+      // TODO: Implement Include handling, switching I/O etc.
+      state
+    }
+  }
 }

@@ -1,4 +1,3 @@
-import sbt.Resolver
 
 ThisBuild / resolvers ++= Seq(
   "Artima Maven Repository" at "https://repo.artima.com/releases"
@@ -19,3 +18,8 @@ addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.7")
 
 addSbtPlugin("org.jetbrains" % "sbt-idea-plugin" % "3.13.5")
+
+// This enables sbt-bloop to create bloop config files for Metals editors
+// Uncomment locally if you use metals, otherwise don't slow down other
+// people's builds by leavin git commented in the repo.
+// addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.4.6")

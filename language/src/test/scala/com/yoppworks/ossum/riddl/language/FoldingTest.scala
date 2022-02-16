@@ -41,72 +41,72 @@ class FoldingTest extends ParsingTest {
           fail(msg)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeft(empty)(content) { case (track, definition, stack) =>
-            val path = stack.toSeq.map(_.identify).reverse :+ definition.identify
+          val result = Folding.foldLeftWithStack(empty)(content) { case (track, definition, stack) =>
+            val path = stack.toSeq.map(_.kindId).reverse :+ definition.kindId
             track :+ path
           }
           val expectedCount = 23
           result.length must be(expectedCount)
           val expectedResult = List(
-            List("Root '<path>'"),
-            List("Root '<path>'", "Domain 'one'"),
-            List("Root '<path>'", "Domain 'one'", "Context 'one'"),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'"),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'"),
+            List("Root 'Root'"),
+            List("Root 'Root'", "Domain 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Entity 'one'"),
             List(
-              "Root '<path>'",
+              "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'one'",
               "State " + "'entityState'"
             ),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'one'", "Handler 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Entity 'one'", "Handler 'one'"),
             List(
-              "Root '<path>'",
+              "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'one'",
               "Function " + "'one'"
             ),
             List(
-              "Root '<path>'",
+              "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'one'",
               "Invariant " + "'one'"
             ),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Entity 'two'"),
             List(
-              "Root '<path>'",
+              "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'two'",
               "State " + "'entityState'"
             ),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Entity 'two'", "Handler 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Entity 'two'", "Handler 'one'"),
             List(
-              "Root '<path>'",
+              "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'two'",
               "Function " + "'one'"
             ),
             List(
-              "Root '<path>'",
+              "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'two'",
               "Invariant " + "'one'"
             ),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Adaptor 'one'"),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Function 'foo'"),
-            List("Root '<path>'", "Domain 'one'", "Context 'two'", "Interaction 'two'"),
-            List("Root '<path>'", "Domain 'one'", "Interaction 'one'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Pipe 'a'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Flow 'b'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Flow 'b'", "Inlet 'b_in'"),
-            List("Root '<path>'", "Domain 'one'", "Plant 'one'", "Flow 'b'", "Outlet 'b_out'")
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Adaptor 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Function 'foo'"),
+            List("Root 'Root'", "Domain 'one'", "Context 'two'", "Interaction 'two'"),
+            List("Root 'Root'", "Domain 'one'", "Interaction 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Plant 'one'"),
+            List("Root 'Root'", "Domain 'one'", "Plant 'one'", "Pipe 'a'"),
+            List("Root 'Root'", "Domain 'one'", "Plant 'one'", "Flow 'b'"),
+            List("Root 'Root'", "Domain 'one'", "Plant 'one'", "Flow 'b'", "Inlet 'b_in'"),
+            List("Root 'Root'", "Domain 'one'", "Plant 'one'", "Flow 'b'", "Outlet 'b_out'")
           )
           result mustBe expectedResult
       }

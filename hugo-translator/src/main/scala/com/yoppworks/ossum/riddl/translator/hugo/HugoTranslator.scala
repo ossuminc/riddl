@@ -188,7 +188,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
   }
 
-  def parents(stack: mutable.Stack[Container[Definition]]): Seq[String] = {
+  def parents(stack: mutable.Stack[ParentDefOf[Definition]]): Seq[String] = {
     // The stack goes from most nested to highest. We don't want to change the
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
@@ -198,9 +198,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   def setUpContainer(
-    c: Container[Definition],
-    state: HugoTranslatorState,
-    stack: mutable.Stack[Container[Definition]]
+                      c: ParentDefOf[Definition],
+                      state: HugoTranslatorState,
+                      stack: mutable.Stack[ParentDefOf[Definition]]
   ): (MarkdownWriter, Seq[String]) = {
     state.addDir(c.id.format)
     val pars = parents(stack)
@@ -210,7 +210,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   def setUpDefinition(
     d: Definition,
     state: HugoTranslatorState,
-    stack: mutable.Stack[Container[Definition]]
+    stack: mutable.Stack[ParentDefOf[Definition]]
   ): (MarkdownWriter, Seq[String]) = {
     val pars = parents(stack)
     state.addFile(pars, d.id.format + ".md") -> pars
@@ -228,15 +228,15 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     require(options.outputRoot.getFileName.toString.nonEmpty,
       "Output path is empty")
     val newOptions = makeDirectoryStructure(options.inputFile.get, log, options)
-    val maybeAuthor = root.domains.headOption match {
+    val maybeAuthor = root.contents.headOption match {
       case Some(domain) => domain.author
       case None         => Option.empty[AuthorInfo]
     }
     writeConfigToml(newOptions, maybeAuthor)
     val state = HugoTranslatorState(options)
-    val parents = mutable.Stack[Container[Definition]]()
+    val parents = mutable.Stack[ParentDefOf[Definition]]()
 
-    val newState = Folding.foldLeft(state, parents)(root) {
+    val newState = Folding.foldLeftWithStack(state, parents)(root) {
       case (st, e: AST.Entity, stack) =>
         val (mkd, parents) = setUpContainer(e, st, stack)
         mkd.emitEntity(e, parents)

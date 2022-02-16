@@ -66,7 +66,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   }
 
   def checkExamples(name: String, path: String): Assertion = {
-    genHugo(name, path)
+    genHugo(name, path) mustNot be(empty) // translation must have happened
     runHugo(path)
   }
 }

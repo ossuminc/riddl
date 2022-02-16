@@ -228,6 +228,7 @@ class StreamingParserTest extends ParsingTest {
             None
           )
         ),
+        Seq.empty[Include],
         None,
         Option(Description(
           31 -> 3,

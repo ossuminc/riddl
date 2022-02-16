@@ -24,12 +24,12 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityCommand' is not defined but should be a command type"
+          "Reference[Type] 'EntityCommand'(7:8) is not defined but should be a command type"
         )
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'EntityEvent' is not defined but should be an event type"
+          "Reference[Type] 'EntityEvent'(8:8) is not defined but should be an event type"
         )
       }
     }
@@ -51,7 +51,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' is not defined but should be an event type"
+          "Reference[Type] 'Incoming'(7:8) is not defined but should be an event type"
         )
       }
     }
@@ -73,7 +73,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Validation.Error,
-          "'Incoming' should reference an event type but is a String type instead"
+          "Reference[Type] 'Incoming'(7:8) should reference an event type but is a String type instead"
         )
       }
     }
@@ -103,11 +103,11 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause sets state from a message field that does not exist" in {
-      pending
+      pending // TODO: write this test case
     }
 
     "produce an error when on clause sets state from incompatible type of message field" in {
-      pending
+      pending // TODO: write this test case
     }
   }
 }

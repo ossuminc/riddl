@@ -31,7 +31,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       case (loc, Options.stateMachine, _) => EntityFiniteStateMachine(loc)
       case (loc, Options.kind, args)      => EntityKind(loc, args)
       case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
-      case _                              => throw new RuntimeException("Impossible case")
+      case _                              =>
+        throw new RuntimeException("Impossible case")
     }
   }
 
@@ -68,8 +69,12 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
     ).map(t => (Handler.apply _).tupled(t))
   }
 
-  def entityDefinition[u: P]: P[EntityDefinition] = {
-    P(handler | function | invariant | typeDef | state)
+  def entityInclude[X: P]: P[Include] = {
+    include[EntityDefinition, X](entityDefinitions(_))
+  }
+
+  def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
+    P(handler | function | invariant | typeDef | state | entityInclude).rep
   }
 
   type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
@@ -78,7 +83,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
     P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
   }
 
-  def entityBody[u: P]: P[EntityBody] = entityOptions.? ~ entityDefinition.rep
+  def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
 
   def entity[u: P]: P[Entity] = {
     P(
@@ -91,6 +96,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
       Entity(
         loc,
         id,
@@ -100,6 +106,7 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
         handlers,
         functions,
         invariants,
+        includes,
         briefly,
         description
       )

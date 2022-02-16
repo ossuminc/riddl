@@ -55,6 +55,13 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
       .map { t => (TellAction.apply _).tupled(t) }
   }
 
+  def replyAction[u: P]: P[ReplyAction] = {
+    P(Keywords.reply ~/ Readability.with_.? ~ location ~ messageConstructor ~
+       description)
+      .map { t => (ReplyAction.apply _).tupled(t) }
+  }
+
+
   def askAction[u: P]: P[AskAction] = {
     P(Keywords.ask ~/ location ~ entityRef ~ Readability.to.? ~/ messageConstructor ~ description)
       .map { tpl => (AskAction.apply _).tupled(tpl) }
@@ -66,7 +73,7 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def sagaStepAction[u:P]: P[SagaStepAction] = {
-    P( arbitraryAction | publishAction | tellAction | askAction |
+    P( arbitraryAction | publishAction | tellAction | askAction | replyAction |
       functionCallAction)
   }
 

@@ -7,6 +7,7 @@ import fastparse.Parsed.{Failure, Success}
 import fastparse.internal.Lazy
 
 import java.io.File
+import java.nio.file.Files
 import scala.annotation.unused
 import scala.collection.mutable
 
@@ -28,7 +29,8 @@ trait ParsingContext {
 
   protected val stack: InputStack = InputStack()
 
-  protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer.empty[ParserError]
+  protected val errors: mutable.ListBuffer[ParserError] =
+    mutable.ListBuffer.empty[ParserError]
 
   def current: RiddlParserInput = { stack.current }
 
@@ -41,7 +43,8 @@ trait ParsingContext {
     val name = fileName.s
     val file = new File(current.root, name)
     if (!file.exists()) {
-      error(fileName.loc, s"File '$name` does not exist, can't be imported.")
+      error(fileName.loc,
+        s"File '$name` does not exist, can't be imported.")
       Domain(loc, domainName)
     } else { importDomain(file) }
   }
@@ -54,20 +57,34 @@ trait ParsingContext {
     Domain(Location(), Identifier(Location(), "NotImplemented"))
   }
 
-  def doInclude[T](str: LiteralString, empty: T)(rule: P[?] => P[T]): T = {
+  def doInclude[T <: Definition](str: LiteralString)(
+    rule: P[?] => P[Seq[T]]
+  ): Include = {
     val name = str.s + ".riddl"
-    val file = new File(current.root, name)
-    if (!file.exists()) {
-      error(str.loc, s"File '$name' does not exist, can't be included.")
-      empty
-    } else {
-      stack.push(file)
-      val result = this.expect[T](rule) match {
-        case Left(_)    => empty
-        case Right(res) => res
+    val path = current.root.toPath.resolve(name)
+    if (Files.exists(path) && !Files.isHidden(path)) {
+      if (Files.isReadable(path)) {
+        stack.push(path)
+        try {
+          this.expect[Seq[T]](rule) match {
+            case Left(theErrors) =>
+              theErrors.foreach(errors.append)
+              Include(str.loc, Seq.empty[T], Some(path))
+            case Right(parseResult) =>
+              Include(str.loc, parseResult, Some(path))
+          }
+        } finally {
+          stack.pop
+        }
+      } else {
+        error(str.loc,
+          s"File '$name' exits but can't be read, so it can't be included.")
+        Include(str.loc, Seq.empty[ParentDefOf[Definition]],  Some(path))
       }
-      stack.pop
-      result
+    } else {
+      error(str.loc,
+        s"File '$name' does not exist, so it can't be included.")
+      Include(str.loc, Seq.empty[ParentDefOf[Definition]], Some(path))
     }
   }
 
@@ -104,8 +121,10 @@ trait ParsingContext {
       case failure: Failure =>
         makeParseFailureError(failure)
         Left(errors.toSeq)
-      case _ => throw new IllegalStateException("Parsed[T] should have matched Success or Failure")
-
+      case _ =>
+        throw new IllegalStateException(
+          "Parsed[T] should have matched Success or Failure"
+        )
     }
   }
 }
