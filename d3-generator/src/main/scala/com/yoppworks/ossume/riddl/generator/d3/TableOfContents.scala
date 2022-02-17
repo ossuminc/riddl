@@ -1,7 +1,12 @@
 package com.yoppworks.ossume.riddl.generator.d3
 
-import com.yoppworks.ossum.riddl.language.AST.{Container, ParentDefOf, Definition, LiteralString, RootContainer}
-import com.yoppworks.ossum.riddl.language.{AST, Folding}
+import com.yoppworks.ossum.riddl.language.AST.Container
+import com.yoppworks.ossum.riddl.language.AST.ParentDefOf
+import com.yoppworks.ossum.riddl.language.AST.Definition
+import com.yoppworks.ossum.riddl.language.AST.LiteralString
+import com.yoppworks.ossum.riddl.language.AST.RootContainer
+import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.Folding
 import ujson.*
 
 import java.net.URL
@@ -15,7 +20,7 @@ case class TableOfContents(
 
   case class Entry(name: String, children: Seq[Entry], link: String)
 
-  type ParentStack = mutable.Stack[ParentDefOf[Definition]]
+  type ParentStack = Seq[ParentDefOf[Definition]]
   private val empty = mutable.Stack.empty[ParentDefOf[Definition]]
 
   private def mkPathId(definition: Definition, stack: ParentStack): String = {
@@ -45,11 +50,10 @@ case class TableOfContents(
   }
 
   def makeData: Arr = {
-    val rootObj = mkObject(rootContainer, empty)
+    val rootObj = mkObject(rootContainer, Seq.empty[ParentDefOf[Definition]])
 
     Folding.foldLeftWithStack(rootObj, empty)(rootContainer) {
-      case (entry, definition, stack) =>
-        definition match {
+      case (entry, definition, stack) => definition match {
           case _: RootContainer => entry
           case c: Container[?]  => addDef(entry, c, stack)
           case _                => entry
