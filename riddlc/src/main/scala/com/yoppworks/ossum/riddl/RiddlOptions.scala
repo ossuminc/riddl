@@ -1,7 +1,7 @@
 package com.yoppworks.ossum.riddl
 
 import com.yoppworks.ossum.riddl.RIDDLC.log
-import com.yoppworks.ossum.riddl.language.{CommonOptions, FormattingOptions}
+import com.yoppworks.ossum.riddl.language.{CommonOptions, ReformattingOptions}
 import com.yoppworks.ossum.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
 import com.yoppworks.ossum.riddl.translator.hugo_git_check.HugoGitCheckOptions
 import pureconfig.error.ConfigReaderFailures
@@ -41,7 +41,7 @@ case class RiddlOptions(
   commonOptions: CommonOptions = CommonOptions(),
   parseOptions: InputFileOptions = InputFileOptions(),
   validateOptions: InputFileOptions = InputFileOptions(),
-  reformatOptions: FormattingOptions = FormattingOptions(),
+  reformatOptions: ReformattingOptions = ReformattingOptions(),
   hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
   hugoGitCheckOptions: HugoGitCheckOptions = HugoGitCheckOptions()
 )
@@ -116,7 +116,7 @@ object RiddlOptions {
     }
   }
 
-  implicit val reformatReader: ConfigReader[FormattingOptions] = {
+  implicit val reformatReader: ConfigReader[ReformattingOptions] = {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
@@ -129,7 +129,7 @@ object RiddlOptions {
         singleFileRes <- objCur.atKey("single-file")
         singleFile <- singleFileRes.asBoolean
       } yield
-        FormattingOptions(
+        ReformattingOptions(
           Option(Path.of(inputPath)),
           Option(Path.of(outputPath)),
           Option(projectName),
@@ -259,8 +259,8 @@ object RiddlOptions {
         }
         validate <- optional[InputFileOptions](objCur, "validate",
           InputFileOptions()){ cur =>ifReader.from(cur)}
-        reformat <- optional[FormattingOptions](objCur, "reformat",
-          FormattingOptions()){ cur => reformatReader.from(cur) }
+        reformat <- optional[ReformattingOptions](objCur, "reformat",
+          ReformattingOptions()){ cur => reformatReader.from(cur) }
         hugo <- optional[HugoTranslatingOptions](
           objCur, "hugo", HugoTranslatingOptions()){
           cur => htoReader.from(cur) }

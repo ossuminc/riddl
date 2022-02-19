@@ -1,6 +1,6 @@
 package com.yoppworks.ossum.riddl
 
-import com.yoppworks.ossum.riddl.language.{FormatTranslator, Logger, Riddl, SysLogger}
+import com.yoppworks.ossum.riddl.language.{ReformatTranslator, Logger, Riddl, SysLogger}
 import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslator
 import com.yoppworks.ossum.riddl.translator.hugo_git_check.HugoGitCheckTranslator
 
@@ -158,7 +158,7 @@ object RIDDLC {
   def prettify(options: RiddlOptions): Boolean = {
     options.reformatOptions.inputFile match {
       case Some(inputFile) =>
-        val result = FormatTranslator.parseValidateTranslate(
+        val result = ReformatTranslator.parseValidateTranslate(
           inputFile,
           log,
           options.commonOptions,

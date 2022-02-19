@@ -6,8 +6,8 @@ import org.scalatest.Assertion
 import java.io.File
 import java.nio.file.Path
 
-/** Test The FormatTranslator's ability to generate consistent output */
-class FormatTranslatorTest extends RiddlFilesTestBase {
+/** Test The ReformatTranslator's ability to generate consistent output */
+class ReformatTranslatorTest extends RiddlFilesTestBase {
 
   def checkAFile(rootDir: Path, file: File): Assertion = {
     val input = RiddlParserInput(file)
@@ -16,10 +16,10 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
         val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(roots) =>
-        val options = FormattingOptions(inputFile = Some(file.toPath))
+        val options = ReformattingOptions(inputFile = Some(file.toPath))
         val log = SysLogger()
         val common = CommonOptions()
-        val output = FormatTranslator.translateToString(roots, log, common, options)
+        val output = ReformatTranslator.translateToString(roots, log, common, options)
         parseTopLevelDomains(output) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
@@ -28,7 +28,7 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
                 output + "\n"
             )
           case Right(roots2) =>
-            val output2 = FormatTranslator.translateToString(roots2, log, common, options)
+            val output2 = ReformatTranslator.translateToString(roots2, log, common, options)
             parseTopLevelDomains(output2) match {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")
@@ -56,5 +56,5 @@ class FormatTranslatorTest extends RiddlFilesTestBase {
     "language/src/test/input/rbbq.riddl" -> false
   )
 
-  "FormatTranslator" should { checkItems(items) }
+  "ReformatTranslator" should { checkItems(items) }
 }
