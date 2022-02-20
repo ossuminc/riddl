@@ -1,8 +1,11 @@
 package com.yoppworks.ossum.riddl.language.parsing
 
 import com.yoppworks.ossum.riddl.language.AST.*
-import com.yoppworks.ossum.riddl.language.Terminals.{Keywords, Punctuation, Readability}
-import com.yoppworks.ossum.riddl.language.{AST, Location}
+import com.yoppworks.ossum.riddl.language.Terminals.Keywords
+import com.yoppworks.ossum.riddl.language.Terminals.Punctuation
+import com.yoppworks.ossum.riddl.language.Terminals.Readability
+import com.yoppworks.ossum.riddl.language.AST
+import com.yoppworks.ossum.riddl.language.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -10,25 +13,69 @@ import fastparse.ScalaWhitespace.*
 trait DomainParser
     extends CommonParser
     with ContextParser
-    with InteractionParser
     with StreamingParser
     with TypeParser {
 
   def story[u: P]: P[Story] = P(
-    location ~ Keywords.story ~ identifier ~ is ~ open ~ Keywords.role ~ is ~ literalString ~
-      Keywords.capability ~ is ~ literalString ~ Keywords.benefit ~ is ~ literalString ~
-      (Keywords.shown ~ Readability.by ~ open ~ httpUrl.rep(1, Punctuation.comma) ~ close).?.map {
-        x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get
+    location ~ Keywords.story ~ identifier ~ is ~ open ~ Keywords.role ~ is ~
+      literalString ~ Keywords.capability ~ is ~ literalString ~
+      Keywords.benefit ~ is ~ literalString ~
+      (Keywords.shown ~ Readability.by ~ open ~
+        httpUrl.rep(1, Punctuation.comma) ~ close).?.map { x =>
+        if (x.isEmpty) Seq.empty[java.net.URL] else x.get
       } ~
-      (Keywords.implemented ~ Readability.by ~ open ~ pathIdentifier.rep(1, Punctuation.comma) ~
-        close).?.map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
-      (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~ close ~ briefly ~
-      description
+      (Keywords.implemented ~ Readability.by ~ open ~
+        pathIdentifier.rep(1, Punctuation.comma) ~ close).?
+        .map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
+      (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~ close ~
+      briefly ~ description
   ).map {
-    case (loc, id, role, capa, bene, shown, implemented, Some(examples), briefly, description) =>
-      Story(loc, id, role, capa, bene, shown, implemented, examples, briefly, description)
-    case (loc, id, role, capa, bene, shown, implemented, None, briefly, description) =>
-      Story(loc, id, role, capa, bene, shown, implemented, Seq.empty[Example], briefly, description)
+    case (
+          loc,
+          id,
+          role,
+          capa,
+          bene,
+          shown,
+          implemented,
+          Some(examples),
+          briefly,
+          description
+        ) => Story(
+        loc,
+        id,
+        role,
+        capa,
+        bene,
+        shown,
+        implemented,
+        examples,
+        briefly,
+        description
+      )
+    case (
+          loc,
+          id,
+          role,
+          capa,
+          bene,
+          shown,
+          implemented,
+          None,
+          briefly,
+          description
+        ) => Story(
+        loc,
+        id,
+        role,
+        capa,
+        bene,
+        shown,
+        implemented,
+        Seq.empty[Example],
+        briefly,
+        description
+      )
   }
 
   def author[u: P]: P[Option[AuthorInfo]] = {
@@ -41,14 +88,19 @@ trait DomainParser
           Option.empty[LiteralString],
           Option.empty[java.net.URL]
         )) |
-          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~ literalString ~
-            (Keywords.organization ~ is ~ literalString).? ~ (Keywords.title ~ is ~ literalString)
-              .? ~ (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ description
+          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+            (Keywords.title ~ is ~ literalString).? ~
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ description
     ).?.map {
       case Some((loc, (name, email, org, title, url), description)) =>
-        if (name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty && url.isEmpty) {
-          Option.empty[AuthorInfo]
-        } else { Option(AuthorInfo(loc, name, email, org, title, url, description)) }
+        if (
+          name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty &&
+          url.isEmpty
+        ) { Option.empty[AuthorInfo] }
+        else {
+          Option(AuthorInfo(loc, name, email, org, title, url, description))
+        }
       case None => None
     }
   }
@@ -59,7 +111,7 @@ trait DomainParser
 
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (typeDef | interaction | context | plant | story | domain | importDef |
+      (typeDef | context | plant | story | domain | term | importDef |
         domainInclude).rep(0)
     )
   }
@@ -74,9 +126,9 @@ trait DomainParser
       val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
-      val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       Domain(
         loc,
@@ -84,10 +136,10 @@ trait DomainParser
         author,
         types,
         contexts,
-        interactions,
         plants,
         stories,
         domains,
+        terms,
         includes,
         briefly,
         description

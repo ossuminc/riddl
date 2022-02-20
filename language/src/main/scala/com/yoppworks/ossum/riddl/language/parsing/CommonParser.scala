@@ -140,4 +140,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P("http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath).!.map(new URL(_))
   }
 
+  def term[u: P]: P[Term] = {
+    P(
+      location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description
+    ).map(tpl => (Term.apply _).tupled(tpl))
+  }
 }

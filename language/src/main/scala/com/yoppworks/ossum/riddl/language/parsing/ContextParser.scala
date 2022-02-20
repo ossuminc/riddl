@@ -10,7 +10,6 @@ trait ContextParser
     extends GherkinParser
     with AdaptorParser
     with EntityParser
-    with InteractionParser
     with SagaParser
     with TypeParser {
 
@@ -32,7 +31,7 @@ trait ContextParser
 
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P( undefined(Seq.empty[ContextDefinition]) |
-      (typeDef | entity | adaptor | interaction | function | saga | contextInclude
+      (typeDef | entity | adaptor  | function | saga | term | contextInclude
       ).rep(0)
     )
   }
@@ -48,7 +47,7 @@ trait ContextParser
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
-      val interactions = mapTo[Interaction](groups.get(classOf[Interaction]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       Context(
@@ -60,7 +59,7 @@ trait ContextParser
         adaptors,
         sagas,
         functions,
-        interactions,
+        terms,
         includes,
         briefly,
         description

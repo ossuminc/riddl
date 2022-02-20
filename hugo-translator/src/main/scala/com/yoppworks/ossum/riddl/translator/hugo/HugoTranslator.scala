@@ -3,10 +3,14 @@ package com.yoppworks.ossum.riddl.translator.hugo
 import com.yoppworks.ossum.riddl.language.AST._
 import com.yoppworks.ossum.riddl.language._
 
-import java.io.{File, IOException}
+import java.io.File
+import java.io.IOException
 import java.net.URL
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.{FileVisitResult, Files, Path, SimpleFileVisitor}
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import scala.collection.mutable
 import scala.sys.process.Process
 import java.nio.file._
@@ -17,9 +21,8 @@ case class HugoTranslatingOptions(
   eraseOutput: Boolean = false,
   projectName: Option[String] = None,
   baseUrl: Option[URL] = Option(new URL("https://example.com/")),
-  themes: Seq[(String, Option[URL])] = Seq(
-    "hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url)
-  ),
+  themes: Seq[(String, Option[URL])] =
+    Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url)),
   sourceURL: Option[URL] = Some(new URL("http://localhost:1313/")),
   editPath: Option[String] = None,
   siteLogo: Option[URL] = None,
@@ -31,16 +34,20 @@ case class HugoTranslatingOptions(
   def contentRoot: Path = outputRoot.resolve("content")
   def staticRoot: Path = outputRoot.resolve("static")
   def themesRoot: Path = outputRoot.resolve("themes")
-  def riddlThemeRoot: Path = themesRoot.resolve(HugoTranslator.riddl_hugo_theme._1)
+  def riddlThemeRoot: Path = themesRoot
+    .resolve(HugoTranslator.riddl_hugo_theme._1)
   def configFile: Path = outputRoot.resolve("config.toml")
 }
 
 case class HugoTranslatorState(options: HugoTranslatingOptions) {
-  val files: mutable.ListBuffer[MarkdownWriter] = mutable.ListBuffer.empty[MarkdownWriter]
+  val files: mutable.ListBuffer[MarkdownWriter] = mutable.ListBuffer
+    .empty[MarkdownWriter]
   val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
   dirs.push(options.contentRoot)
 
-  def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) => path.resolve(nm) }
+  def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) =>
+    path.resolve(nm)
+  }
 
   def addDir(name: String): Path = {
     dirs.push(Path.of(name))
@@ -48,7 +55,9 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
   }
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
-    val parDir = parents.foldLeft(options.contentRoot) { (next, par) => next.resolve(par) }
+    val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
+      next.resolve(par)
+    }
     val path = parDir.resolve(fileName)
     val mdw = MarkdownWriter(path)
     files.append(mdw)
@@ -59,7 +68,8 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
 object HugoTranslator extends Translator[HugoTranslatingOptions] {
   val defaultOptions: HugoTranslatingOptions = HugoTranslatingOptions()
 
-  val riddl_hugo_theme: (String, String) = "riddl-hugo-theme" -> "riddl-hugo-theme.zip"
+  val riddl_hugo_theme: (String, String) = "riddl-hugo-theme" ->
+    "riddl-hugo-theme.zip"
   val geekdoc_dest_dir = "hugo-geekdoc"
   val geekDoc_version = "v0.25.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
@@ -71,14 +81,16 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
   def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
-    if (maybeFiles.nonEmpty) { for (file <- maybeFiles.get) { deleteAll(file) } }
+    if (maybeFiles.nonEmpty) {
+      for (file <- maybeFiles.get) { deleteAll(file) }
+    }
     directory.delete
   }
 
   def copyURLToDir(from: Option[URL], destDir: Path): String = {
     if (from.isDefined) {
       import java.io.InputStream
-      import java.nio.file.{Files, StandardCopyOption}
+      import java.nio.file.{ Files, StandardCopyOption }
       val nameParts = from.get.getFile.split('/')
       if (nameParts.nonEmpty) {
         val fileName = nameParts.last
@@ -87,9 +99,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
         val dl_path = destDir.resolve(fileName)
         Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
         fileName
-      } else {
-        ""
-      }
+      } else { "" }
     } else { "" }
   }
 
@@ -111,24 +121,29 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     val url = this.getClass.getClassLoader.getResource(riddl_hugo_theme._2)
     if (url == null) {
       log.severe(s"Build Botch: Can't load resource '${riddl_hugo_theme._2}'")
-    } else { loadATheme(Option(url), options.themesRoot.resolve(riddl_hugo_theme._1)) }
+    } else {
+      loadATheme(Option(url), options.themesRoot.resolve(riddl_hugo_theme._1))
+    }
   }
 
-
-  case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path) extends
-  SimpleFileVisitor[Path] {
+  case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
+      extends SimpleFileVisitor[Path] {
 
     @throws[IOException]
-    override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult = {
+    override def preVisitDirectory(
+      dir: Path,
+      attrs: BasicFileAttributes
+    ): FileVisitResult = {
       val resolve = target.resolve(source.relativize(dir))
-      if (Files.notExists(resolve)) {
-        Files.createDirectories(resolve)
-      }
+      if (Files.notExists(resolve)) { Files.createDirectories(resolve) }
       FileVisitResult.CONTINUE
     }
 
     @throws[IOException]
-    override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+    override def visitFile(
+      file: Path,
+      attrs: BasicFileAttributes
+    ): FileVisitResult = {
       val resolve = target.resolve(source.relativize(file))
       if (!file.getFileName.startsWith(".")) {
         Files.copy(file, resolve, StandardCopyOption.REPLACE_EXISTING)
@@ -136,19 +151,26 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       FileVisitResult.CONTINUE
     }
 
-    override def visitFileFailed(file: Path, exc: IOException): FileVisitResult = {
+    override def visitFileFailed(
+      file: Path,
+      exc: IOException
+    ): FileVisitResult = {
       log.error(s"Unable to copy: $file: $exc\n")
       FileVisitResult.CONTINUE
     }
   }
 
-  def loadStaticAssets(inputPath: Path, log: Logger, options: HugoTranslatingOptions): Unit = {
+  def loadStaticAssets(
+    inputPath: Path,
+    log: Logger,
+    options: HugoTranslatingOptions
+  ): Unit = {
     val inputRoot: Path = inputPath.toAbsolutePath
     val sourceDir: Path = inputRoot.getParent.resolve("static")
 
     val targetDir = options.staticRoot
     if (Files.exists(sourceDir) && Files.isDirectory(sourceDir)) {
-      //copy source to target using Files Class
+      // copy source to target using Files Class
       val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
       Files.walkFileTree(sourceDir, visitor)
     }
@@ -161,26 +183,38 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     } else { options.riddlThemeRoot.resolve("img/YWLogo.png") }
   }
 
-  def makeDirectoryStructure(inputPath: Path, log: Logger, options: HugoTranslatingOptions): HugoTranslatingOptions = {
+  def makeDirectoryStructure(
+    inputPath: Path,
+    log: Logger,
+    options: HugoTranslatingOptions
+  ): HugoTranslatingOptions = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) {
-      if (options.eraseOutput) { deleteAll(outDir) }
-    } else {
-      outDir.mkdirs()
-    }
+    if (outDir.exists()) { if (options.eraseOutput) { deleteAll(outDir) } }
+    else { outDir.mkdirs() }
     val parent = outDir.getParentFile
-    require(parent.isDirectory, "Parent of output directory is not a directory!")
-    if (0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!) {
-      log.error(s"Hugo could not create a site here: $outDir")
-    } else {
+    require(
+      parent.isDirectory,
+      "Parent of output directory is not a directory!"
+    )
+    if (
+      0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!
+    ) { log.error(s"Hugo could not create a site here: $outDir") }
+    else {
       loadThemes(log, options)
-      loadStaticAssets(inputPath, log, options) // for reference from riddl doc blocks
+      loadStaticAssets(
+        inputPath,
+        log,
+        options
+      ) // for reference from riddl doc blocks
     }
     val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
     options.copy(siteLogoPath = Option(logoPath))
   }
 
-  def writeConfigToml(options: HugoTranslatingOptions, author: Option[AuthorInfo]): Unit = {
+  def writeConfigToml(
+    options: HugoTranslatingOptions,
+    author: Option[AuthorInfo]
+  ): Unit = {
     import java.nio.charset.StandardCharsets
     import java.nio.file.Files
     val content = configTemplate(options, author)
@@ -193,14 +227,15 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
     // and then map to just the name of that domain.
-    val result = stack.toSeq.reverse.dropWhile(_.isRootContainer).map(_.id.format)
+    val result = stack.toSeq.reverse.dropWhile(_.isRootContainer)
+      .map(_.id.format)
     result
   }
 
   def setUpContainer(
-                      c: ParentDefOf[Definition],
-                      state: HugoTranslatorState,
-                      stack: Seq[ParentDefOf[Definition]]
+    c: ParentDefOf[Definition],
+    state: HugoTranslatorState,
+    stack: Seq[ParentDefOf[Definition]]
   ): (MarkdownWriter, Seq[String]) = {
     state.addDir(c.id.format)
     val pars = parents(stack)
@@ -225,8 +260,10 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     require(options.inputFile.nonEmpty, "An input path was not provided.")
     require(options.outputDir.nonEmpty, "An output path was not provided.")
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
-    require(options.outputRoot.getFileName.toString.nonEmpty,
-      "Output path is empty")
+    require(
+      options.outputRoot.getFileName.toString.nonEmpty,
+      "Output path is empty"
+    )
     val newOptions = makeDirectoryStructure(options.inputFile.get, log, options)
     val maybeAuthor = root.contents.headOption match {
       case Some(domain) => domain.author
@@ -292,7 +329,10 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   // scalastyle:off method.length
-  def configTemplate(options: HugoTranslatingOptions, author: Option[AuthorInfo]): String = {
+  def configTemplate(
+    options: HugoTranslatingOptions,
+    author: Option[AuthorInfo]
+  ): String = {
     val auth: AuthorInfo = author.getOrElse(AuthorInfo(
       1 -> 1,
       name = LiteralString(1 -> 1, "Not Provided"),
@@ -314,7 +354,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
        |languageCode = 'en-us'
        |title = '${options.projectName.getOrElse("Unspecified Project Title")}'
        |name = "${options.projectName.getOrElse("Unspecified Project Name")}"
-       |description = "${options.projectName.getOrElse("Unspecified Project Description")}"
+       |description = "${options.projectName
+      .getOrElse("Unspecified Project Description")}"
        |baseUrl = "${options.baseUrl.fold("https://example.prg/")(_.toString)}"
        |homepage = "https://example.org/"
        |demosite = "https://example.org/"

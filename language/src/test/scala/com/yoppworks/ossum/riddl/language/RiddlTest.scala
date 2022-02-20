@@ -153,7 +153,14 @@ class RiddlTest extends ParsingTestBase {
     }
 
     "parse and validate a simple domain from path" in {
-      val (result, _) = runOne("language/src/test/input/domains/simpleDomain.riddl")
+      val (result, logger: InMemoryLogger) = {
+        runOne("language/src/test/input/domains/simpleDomain.riddl")
+      }
+      val errors =
+      logger.lines().filter(line =>
+        line.level == Logger.Severe || line.level == Logger.Error
+      ).toSeq
+      errors mustBe empty
       result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
     }
 

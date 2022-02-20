@@ -131,7 +131,7 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   }
 
   def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
-    P(pipeDefinition | processor | joint | plantInclude ).rep(0)
+    P(pipeDefinition | processor | joint | term | plantInclude).rep(0)
   }
 
   def plant[u: P]: P[Plant] = {
@@ -145,8 +145,9 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val inJoints = mapTo[InletJoint](groups.get(classOf[InletJoint]))
       val outJoints = mapTo[OutletJoint](groups.get(classOf[OutletJoint]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
-      Plant(loc, id, pipes, processors, inJoints, outJoints, includes, briefly, description)
+      Plant(loc, id, pipes, processors, inJoints, outJoints, terms, includes, briefly, description)
     }
   }
 }

@@ -8,15 +8,15 @@ class FoldingTest extends ParsingTest {
   val input = """domain one is {
                 |  plant one is {
                 |    pipe a is { ??? }
+                |    term whomprat is described by "a 2m long rat on Tatooine"
                 |    flow b is {
                 |      inlet b_in is String
                 |      outlet b_out is Number
                 |    }
                 |  }
-                |  interaction one is { ??? }
                 |  context one is { ??? }
                 |  context two is {
-                |    interaction two is { ??? }
+                |    term ForcePush is described by "an ability of the Jedi"
                 |    function foo is {
                 |       requires { a: Integer, b: String }
                 |     }
@@ -144,9 +144,8 @@ class FoldingTest extends ParsingTest {
               "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
-              "Interaction 'two'"
+              "Term 'ForcePush'"
             ),
-            List("Root 'Root'", "Domain 'one'", "Interaction 'one'"),
             List("Root 'Root'", "Domain 'one'", "Plant 'one'"),
             List("Root 'Root'", "Domain 'one'", "Plant 'one'", "Pipe 'a'"),
             List("Root 'Root'", "Domain 'one'", "Plant 'one'", "Flow 'b'"),
@@ -163,6 +162,12 @@ class FoldingTest extends ParsingTest {
               "Plant 'one'",
               "Flow 'b'",
               "Outlet 'b_out'"
+            ),
+            List(
+              "Root 'Root'",
+              "Domain 'one'",
+              "Plant 'one'",
+              "Term 'whomprat'"
             )
           )
           result mustBe expectedResult
@@ -215,8 +220,8 @@ class FoldingTest extends ParsingTest {
           }
           val tracking = new Tracking
           val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 19
-          val expectedDefinitions = 5
+          val expectedContainers = 17
+          val expectedDefinitions = 7
           tracked.contPush mustBe expectedContainers
           tracked.contPush mustBe tracked.contPop
           tracked.defs mustBe expectedDefinitions

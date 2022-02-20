@@ -55,9 +55,6 @@ class SymbolTableTest extends ParsingTest {
     }
 
     "capture expected state field references with appropriate parent" in {
-      // TODO: WIP - broken case, fix outstanding
-      // some interesting lookups
-      // lookup of a state field does not resolve at all
       st.lookup[Definition](Seq("field")) mustNot be(empty)
     }
   }

@@ -33,7 +33,6 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Type]        => typeDef(_)
       case x if x == classOf[AST.Domain]      => domain(_)
       case x if x == classOf[AST.Context]     => context(_)
-      case x if x == classOf[AST.Interaction] => interaction(_)
       case x if x == classOf[AST.Entity]      => entity(_)
       case x if x == classOf[AST.Adaptor]     => adaptor(_)
       case x if x == classOf[AST.Invariant]   => invariant(_)
@@ -44,13 +43,16 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.InletJoint]  => joint(_)
       case x if x == classOf[AST.OutletJoint] => joint(_)
       case x if x == classOf[AST.Saga]        => saga(_)
-      case _ =>
-        throw new RuntimeException(s"No parser defined for class ${classTag[T].runtimeClass}")
+      case _ => throw new RuntimeException(
+          s"No parser defined for class ${classTag[T].runtimeClass}"
+        )
     }
     parser.asInstanceOf[P[?] => P[T]]
   }
 
-  def parseTopLevelDomains: Either[Seq[ParserError], RootContainer] = { expect(fileRoot(_)) }
+  def parseTopLevelDomains: Either[Seq[ParserError], RootContainer] = {
+    expect(fileRoot(_))
+  }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     extract: RootContainer => TO
@@ -69,7 +71,9 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     result.map(extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag]: Either[Seq[ParserError], FROM] = {
+  def parseDefinition[
+    FROM <: Definition: ClassTag
+  ]: Either[Seq[ParserError], FROM] = {
     val parser = parserFor[FROM]
     expect[FROM](parser)
   }
@@ -167,7 +171,9 @@ class ParsingTest extends ParsingTestBase {
 
   def parseDefinition[FROM <: Definition: ClassTag](
     input: String
-  ): Either[Seq[ParserError], FROM] = { parseDefinition(RiddlParserInput(input)) }
+  ): Either[Seq[ParserError], FROM] = {
+    parseDefinition(RiddlParserInput(input))
+  }
 
   def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
     input: String,

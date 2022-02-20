@@ -7,11 +7,12 @@ class StreamingParserTest extends ParsingTest {
 
   "StreamingParser" should {
     "recognize a source processor" in {
-      val input = """
-                    |source GetWeatherForecast is {
-                    |  outlet Weather is Forecast
-                    |} brief "foo" described by "This is a source for Forecast data"
-                    |""".stripMargin
+      val input =
+        """
+          |source GetWeatherForecast is {
+          |  outlet Weather is Forecast
+          |} brief "foo" described by "This is a source for Forecast data"
+          |""".stripMargin
       val expected = Processor(
         1 -> 1,
         Identifier(2 -> 8, "GetWeatherForecast"),
@@ -26,7 +27,9 @@ class StreamingParserTest extends ParsingTest {
         Some(LiteralString(4 -> 9, "foo")),
         Option(Description(
           4 -> 15,
-          List(LiteralString(4 -> 28, "This is a source for Forecast " + "data"))
+          List(
+            LiteralString(4 -> 28, "This is a source for Forecast " + "data")
+          )
         ))
       )
       checkDefinition[Processor, Processor](input, expected, identity)
@@ -49,17 +52,24 @@ class StreamingParserTest extends ParsingTest {
       val expected = InletJoint(
         1 -> 1,
         Identifier(1 -> 7, "temp_in"),
-        InletRef(1 -> 18, PathIdentifier(1 -> 24, Seq("weather", "GetCurrentTemperature"))),
+        InletRef(
+          1 -> 18,
+          PathIdentifier(1 -> 24, Seq("weather", "GetCurrentTemperature"))
+        ),
         PipeRef(1 -> 59, PathIdentifier(1 -> 64, Seq("WeatherForecast")))
       )
       checkDefinition[InletJoint, InletJoint](input, expected, identity)
     }
     "recognize an OutJoint" in {
-      val input = """joint forecast is outlet GetWeatherForecast.Weather to pipe WeatherForecast"""
+      val input =
+        """joint forecast is outlet GetWeatherForecast.Weather to pipe WeatherForecast"""
       val expected = OutletJoint(
         1 -> 1,
         Identifier(1 -> 7, "forecast"),
-        OutletRef(1 -> 19, PathIdentifier(1 -> 26, Seq("Weather", "GetWeatherForecast"))),
+        OutletRef(
+          1 -> 19,
+          PathIdentifier(1 -> 26, Seq("Weather", "GetWeatherForecast"))
+        ),
         PipeRef(1 -> 56, PathIdentifier(1 -> 61, Seq("WeatherForecast")))
       )
       checkDefinition[OutletJoint, OutletJoint](input, expected, identity)
@@ -108,21 +118,31 @@ class StreamingParserTest extends ParsingTest {
           Pipe(
             18 -> 3,
             Identifier(18 -> 8, "WeatherForecast"),
-            Option(TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))),
+            Option(
+              TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))
+            ),
             None,
             Option(Description(
               20 -> 5,
-              List(LiteralString(20 -> 18, "Carries changes in the current weather forecast"))
+              List(LiteralString(
+                20 -> 18,
+                "Carries changes in the current weather forecast"
+              ))
             ))
           ),
           Pipe(
             22 -> 3,
             Identifier(22 -> 8, "TemperatureChanges"),
-            Option(TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))),
+            Option(
+              TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))
+            ),
             None,
             Option(Description(
               24 -> 5,
-              List(LiteralString(24 -> 18, "Carries changes in the current temperature"))
+              List(LiteralString(
+                24 -> 18,
+                "Carries changes in the current temperature"
+              ))
             ))
           )
         ),
@@ -197,15 +217,27 @@ class StreamingParserTest extends ParsingTest {
           InletJoint(
             27 -> 3,
             Identifier(27 -> 9, "temp_in"),
-            InletRef(27 -> 20, PathIdentifier(27 -> 26, List("weather", "GetCurrentTemperature"))),
-            PipeRef(27 -> 61, PathIdentifier(27 -> 66, List("WeatherForecast"))),
+            InletRef(
+              27 -> 20,
+              PathIdentifier(27 -> 26, List("weather", "GetCurrentTemperature"))
+            ),
+            PipeRef(
+              27 -> 61,
+              PathIdentifier(27 -> 66, List("WeatherForecast"))
+            ),
             None
           ),
           InletJoint(
             29 -> 3,
             Identifier(29 -> 9, "temp_changes"),
-            InletRef(29 -> 25, PathIdentifier(29 -> 31, List("CurrentTemp", "AttenuateSensor"))),
-            PipeRef(29 -> 64, PathIdentifier(29 -> 69, List("TemperatureChanges"))),
+            InletRef(
+              29 -> 25,
+              PathIdentifier(29 -> 31, List("CurrentTemp", "AttenuateSensor"))
+            ),
+            PipeRef(
+              29 -> 64,
+              PathIdentifier(29 -> 69, List("TemperatureChanges"))
+            ),
             None
           )
         ),
@@ -213,8 +245,14 @@ class StreamingParserTest extends ParsingTest {
           OutletJoint(
             26 -> 3,
             Identifier(26 -> 9, "forecast"),
-            OutletRef(26 -> 21, PathIdentifier(26 -> 28, List("Weather", "GetWeatherForecast"))),
-            PipeRef(26 -> 58, PathIdentifier(26 -> 63, List("WeatherForecast"))),
+            OutletRef(
+              26 -> 21,
+              PathIdentifier(26 -> 28, List("Weather", "GetWeatherForecast"))
+            ),
+            PipeRef(
+              26 -> 58,
+              PathIdentifier(26 -> 63, List("WeatherForecast"))
+            ),
             None
           ),
           OutletJoint(
@@ -222,12 +260,19 @@ class StreamingParserTest extends ParsingTest {
             Identifier(28 -> 9, "temp_out"),
             OutletRef(
               28 -> 21,
-              PathIdentifier(28 -> 28, List("CurrentTemp", "GetCurrentTemperature"))
+              PathIdentifier(
+                28 -> 28,
+                List("CurrentTemp", "GetCurrentTemperature")
+              )
             ),
-            PipeRef(28 -> 65, PathIdentifier(28 -> 70, List("TemperatureChanges"))),
+            PipeRef(
+              28 -> 65,
+              PathIdentifier(28 -> 70, List("TemperatureChanges"))
+            ),
             None
           )
         ),
+        Seq.empty[Term],
         Seq.empty[Include],
         None,
         Option(Description(

@@ -136,32 +136,32 @@ object AST {
     */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptation    => Keywords.adapt
-      case _: Adaptor       => Keywords.adaptor
-      case _: Context       => Keywords.context
-      case _: Domain        => Keywords.domain
-      case _: Entity        => Keywords.entity
-      case _: Enumerator    => ""
-      case _: Example       => Keywords.example
-      case _: Field         => ""
-      case _: Function      => Keywords.function
-      case _: Handler       => Keywords.handler
-      case _: Inlet         => Keywords.inlet
-      case _: Interaction   => Keywords.interaction
-      case _: Invariant     => Keywords.invariant
-      case _: Joint         => Keywords.joint
-      case _: MessageAction => Keywords.message
-      case _: Outlet        => Keywords.outlet
-      case _: Pipe          => Keywords.pipe
-      case _: Plant         => Keywords.plant
-      case _: Processor     => Keywords.processor
-      case _: RootContainer => ""
-      case _: Saga          => Keywords.saga
-      case _: SagaStep      => Keywords.step
-      case _: State         => Keywords.state
-      case _: Story         => Keywords.story
-      case _: Type          => Keywords.`type`
-      case _                => "unknown"
+      case _: Adaptor         => Keywords.adaptor
+      case _: EventActionA8n  => Keywords.adapt
+      case _: EventCommandA8n => Keywords.adapt
+      case _: Context         => Keywords.context
+      case _: Domain          => Keywords.domain
+      case _: Entity          => Keywords.entity
+      case _: Enumerator      => ""
+      case _: Example         => Keywords.example
+      case _: Field           => ""
+      case _: Function        => Keywords.function
+      case _: Handler         => Keywords.handler
+      case _: Inlet           => Keywords.inlet
+      case _: Invariant       => Keywords.invariant
+      case _: Joint           => Keywords.joint
+      case _: Outlet          => Keywords.outlet
+      case _: Pipe            => Keywords.pipe
+      case _: Plant           => Keywords.plant
+      case _: Processor       => Keywords.processor
+      case _: RootContainer   => ""
+      case _: Saga            => Keywords.saga
+      case _: SagaStep        => Keywords.step
+      case _: State           => Keywords.state
+      case _: Story           => Keywords.story
+      case _: Term            => Keywords.term
+      case _: Type            => Keywords.`type`
+      case _                  => "unknown"
     }
   }
 
@@ -174,7 +174,8 @@ object AST {
     */
   def kind(definition: DescribedValue): String = {
     definition match {
-      case _: Adaptation      => "Adaptation"
+      case _: EventActionA8n  => "Event Action Adaptation"
+      case _: EventCommandA8n => "Event Command Adaptation"
       case _: Adaptor         => "Adaptor"
       case _: Context         => "Context"
       case _: Domain          => "Domain"
@@ -185,10 +186,8 @@ object AST {
       case _: Function        => "Function"
       case _: Handler         => "Handler"
       case _: Inlet           => "Inlet"
-      case _: Interaction     => "Interaction"
       case _: Invariant       => "Invariant"
       case _: Joint           => "Joint"
-      case _: MessageAction   => "Message"
       case _: Outlet          => "Outlet"
       case _: Pipe            => "Pipe"
       case _: Plant           => "Plant"
@@ -197,6 +196,7 @@ object AST {
       case _: Saga            => "Saga"
       case _: SagaStep        => "SagaStep"
       case _: State           => "State"
+      case _: Term            => "Term"
       case _: Type            => "Type"
       case _: AskAction       => "Ask Action"
       case _: BecomeAction    => "Become Action"
@@ -212,24 +212,23 @@ object AST {
 
   def kind(c: Container[Definition]): String = {
     c match {
-      case _: Type          => "Type"
-      case _: Enumeration   => "Enumeration"
-      case _: Aggregation   => "Aggregation"
-      case _: State         => "State"
-      case _: Entity        => "Entity"
-      case _: Context       => "Context"
-      case _: Function      => "Function"
-      case _: Adaptation    => "Adaptation"
-      case _: Adaptor       => "Adaptor"
-      case _: Processor     => "Processor"
-      case _: Plant         => "Plant"
-      case _: SagaStep      => "SagaStep"
-      case _: Saga          => "Saga"
-      case _: Interaction   => "Interaction"
-      case _: Story         => "Story"
-      case _: Domain        => "Domain"
-      case _: Include       => "Include"
-      case _: RootContainer => "Root"
+      case _: Type            => "Type"
+      case _: Enumeration     => "Enumeration"
+      case _: Aggregation     => "Aggregation"
+      case _: State           => "State"
+      case _: Entity          => "Entity"
+      case _: Context         => "Context"
+      case _: Function        => "Function"
+      case _: EventCommandA8n => "Event Command Adaptation"
+      case _: Adaptor         => "Adaptor"
+      case _: Processor       => "Processor"
+      case _: Plant           => "Plant"
+      case _: SagaStep        => "SagaStep"
+      case _: Saga            => "Saga"
+      case _: Story           => "Story"
+      case _: Domain          => "Domain"
+      case _: Include         => "Include"
+      case _: RootContainer   => "Root"
       case _ => throw new IllegalStateException("No other kinds of Containers")
     }
   }
@@ -272,16 +271,38 @@ object AST {
     * @tparam D
     *   The kind of definition that is contained by the container
     */
-  sealed trait Container[+D <: Definition] extends RiddlValue {
+  sealed trait Container[+D <: RiddlValue] extends RiddlValue {
     def contents: Seq[D]
     override def isEmpty: Boolean = contents.isEmpty
     override def isContainer: Boolean = true
     def isRootContainer: Boolean = false
   }
 
+  /** The parent of a definition as a definition and a container. This type is
+    * widely used to reference any definition that contains other definitions
+    * and is therefore the basis for traveersla of the tree.
+    * @tparam D
+    *   The kind of definition that is contained by the container
+    */
   sealed trait ParentDefOf[+D <: Definition]
       extends Definition with Container[D]
 
+  /** Added to definitions that support a list of term definitions */
+  sealed trait WithTerms {
+    def terms: Seq[Term]
+  }
+
+  /** A term definition for the glossary */
+  case class Term(
+    loc: Location,
+    id: Identifier,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends DomainDefinition with ContextDefinition with PlantDefinition {
+    override def isEmpty: Boolean = description.isEmpty
+  }
+
+  /** Added to definitions that support includes */
   sealed trait WithIncludes {
     def includes: Seq[Include]
   }
@@ -1853,14 +1874,19 @@ object AST {
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
 
+  sealed trait Adaptation extends AdaptorDefinition with ParentDefOf[Example] {
+    def messageRef: EventRef
+    def examples: Seq[Example]
+  }
+
   /** The specification of a single adaptation based on message
     *
     * @param loc
     *   The location of the adaptation definition
     * @param id
     *   The name of the adaptation
-    * @param event
-    *   The event that triggers the adaptation
+    * @param messageRef
+    *   The event that triggers the adaptation, inherited from [[Adaptation]]
     * @param command
     *   The command that adapts the event to the bounded context
     * @param examples
@@ -1870,23 +1896,45 @@ object AST {
     * @param description
     *   Optional description of the adaptation.
     */
-  case class Adaptation(
+  case class EventCommandA8n(
     loc: Location,
     id: Identifier,
-    event: EventRef,
+    messageRef: EventRef,
     command: CommandRef,
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] with AdaptorDefinition {
+      extends Adaptation {
     override def contents: Seq[Example] = examples
   }
 
-  case class ActionAdaptation(
+  /** An adaptation that takes an action on event receipt
+    *
+    * @param loc
+    *   The location of the ActionAdaptation
+    * @param id
+    *   The identifier for this ActionAdaptation
+    * @param messageRef
+    *   The event to which this adaptation adapts, inherited from [[Adaptation]]
+    * @param actions
+    *   The actions to be taken when [[messageRef]] is received
+    * @param brief
+    *   The brief description of this adaptation
+    * @param description
+    *   The full description of this adaptation
+    */
+  case class EventActionA8n(
     loc: Location,
     id: Identifier,
-    event: EventRef,
-    action: Action)
+    messageRef: EventRef,
+    actions: Seq[Action] = Seq.empty[Action],
+    examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = Option.empty[Description])
+      extends Adaptation {
+    def contents: Seq[Example] = examples
+    override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
+  }
 
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
     * messages from another bounded context. Adaptors translate incoming
@@ -1901,8 +1949,8 @@ object AST {
     * @param ref
     *   A reference to the bounded context from which messages are adapted
     * @param adaptations
-    *   A set of [[Adaptation]] definitions that indicate what to do when
-    *   messages occur.
+    *   A set of [[AdaptorDefinition]]s that indicate what to do when messages
+    *   occur.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2003,8 +2051,6 @@ object AST {
     *   Sagas with all-or-none semantics across various entities
     * @param functions
     *   Features specified for the context
-    * @param interactions
-    *   TBD
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2019,16 +2065,17 @@ object AST {
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
     sagas: Seq[Saga] = Seq.empty[Saga],
     functions: Seq[Function] = Seq.empty[Function],
-    interactions: Seq[Interaction] = Seq.empty[Interaction],
+    terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ParentDefOf[ContextDefinition]
       with DomainDefinition
       with OptionsDef[ContextOption]
-      with WithIncludes {
+      with WithIncludes
+      with WithTerms {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
-      sagas ++ functions ++ interactions ++ includes
+      sagas ++ functions ++ terms ++ includes
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
@@ -2275,14 +2322,15 @@ object AST {
     processors: Seq[Processor] = Seq.empty[Processor],
     inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
     outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
+    terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ParentDefOf[PlantDefinition]
       with DomainDefinition
-      with WithIncludes {
+      with WithIncludes with WithTerms{
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
-      outJoints ++ includes
+      outJoints ++ terms ++ includes
   }
 
   /** The definition of one step in a saga with its undo step and example.
@@ -2385,103 +2433,6 @@ object AST {
     def name: String = "gateway"
   }
 
-  sealed trait ActionDefinition extends Definition {
-    def reactions: Seq[Reaction]
-  }
-
-  /** Definition of an Interaction
-    *
-    * Interactions define an exemplary interaction between the system being
-    * designed and other actors. The basic ideas of an Interaction are much like
-    * UML Sequence Diagram.
-    *
-    * @param loc
-    *   Where in the input the Scenario is defined
-    * @param id
-    *   The name of the scenario
-    * @param actions
-    *   The actions that constitute the interaction
-    */
-  case class Interaction(
-    loc: Location,
-    id: Identifier,
-    options: Seq[InteractionOption] = Seq.empty[InteractionOption],
-    actions: Seq[ActionDefinition] = Seq.empty[ActionDefinition],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends ParentDefOf[ActionDefinition]
-      with OptionsDef[InteractionOption]
-      with DomainDefinition
-      with ContextDefinition {
-    lazy val contents: Seq[ActionDefinition] = actions
-
-    override def isEmpty: Boolean = super.isEmpty && options.isEmpty
-  }
-
-  sealed trait RoleOption extends RiddlValue
-
-  case class HumanOption(loc: Location) extends RoleOption
-
-  case class DeviceOption(loc: Location) extends RoleOption
-
-  /** Used to capture reactions to actions. Actions include reactions in their
-    * definition to model the precipitating reactions to the action.
-    */
-  case class Reaction(
-    loc: Location,
-    id: Identifier,
-    entity: EntityRef,
-    function: FunctionRef,
-    arguments: Seq[LiteralString],
-    description: Option[Description] = None)
-      extends DescribedValue
-
-  type Actions = Seq[ActionDefinition]
-
-  sealed trait MessageOption extends OptionValue
-
-  case class SynchOption(loc: Location) extends MessageOption {
-    def name: String = "synch"
-  }
-
-  case class AsynchOption(loc: Location) extends MessageOption {
-    def name: String = "async"
-  }
-
-  case class ReplyOption(loc: Location) extends MessageOption {
-    def name: String = "reply"
-  }
-
-  /** An Interaction based on entity messaging between two entities in the
-    * system.
-    *
-    * @param options
-    *   Options for the message
-    * @param loc
-    *   Where the message is located in the input
-    * @param id
-    *   The displayable text that describes the interaction
-    * @param sender
-    *   A reference to the entity sending the message
-    * @param receiver
-    *   A reference to the entity receiving the message
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param message
-    *   A reference to the kind of message sent & received
-    */
-  case class MessageAction(
-    loc: Location,
-    id: Identifier,
-    options: Seq[MessageOption] = Seq.empty[MessageOption],
-    sender: EntityRef,
-    receiver: EntityRef,
-    message: MessageRef,
-    reactions: Seq[Reaction],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends ActionDefinition with OptionsDef[MessageOption]
-
   /** The definition of an agile user story. Stories define functionality from
     * the perspective of a certain kind of user (man or machine), interacting
     * with the system via some role. RIDDL extends the notion of an agile user
@@ -2579,12 +2530,13 @@ object AST {
     *   The types defined in the scope of the domain
     * @param contexts
     *   The contexts defined in the scope of the domain
-    * @param interactions
-    *   TBD
     * @param plants
     *   The plants defined in the scope of the domain
     * @param domains
     *   Nested sub-domains within this domain
+    * @param terms
+    *   Definition of terms pertaining to this domain that provide explanation
+    *   of concepts from the domain.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2596,20 +2548,21 @@ object AST {
     author: Option[AuthorInfo] = Option.empty[AuthorInfo],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
-    interactions: Seq[Interaction] = Seq.empty[Interaction],
     plants: Seq[Plant] = Seq.empty[Plant],
     stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
+    terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ParentDefOf[DomainDefinition]
       with DomainDefinition
-      with WithIncludes {
+      with WithIncludes
+      with WithTerms {
     override def isEmpty: Boolean = super.isEmpty && author.isEmpty
     def contents: Seq[DomainDefinition] = {
-      domains ++ types.iterator ++ contexts ++ interactions ++ plants ++
-        stories ++ includes
+      domains ++ types.iterator ++ contexts ++ plants ++ stories ++ terms ++
+        includes
     }
   }
 }

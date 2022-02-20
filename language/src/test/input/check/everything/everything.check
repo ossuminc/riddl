@@ -68,3 +68,8 @@ Style: everything.riddl(67:20): Field identifier 'n' is too short. The minimum l
 Style: everything.riddl(68:18): Field identifier 'b' is too short. The minimum length is 3
 Missing: everything.riddl(68:18): Field 'b' should have a description
 Missing: everything.riddl(67:20): Field 'n' should have a description
+Missing: everything.riddl(11:3): Plant 'APlant' should have a description
+Missing: everything.riddl(71:15): Handler 'foo' should have a description
+Missing: everything.riddl(86:12): On Clause 'On event ItHappened' should have a description
+Missing: everything.riddl(85:15): Handler 'fee' should have a description
+Missing: everything.riddl(72:12): On Clause 'On command Something' should have a description

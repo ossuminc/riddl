@@ -1,32 +1,26 @@
 package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.*
+import com.yoppworks.ossum.riddl.language.Folding.Folder
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
 import scala.collection.mutable.ListBuffer
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 import scala.util.matching.Regex
-
 
 /** Validates an AST */
 object Validation {
 
   def validate(
-                root: ParentDefOf[Definition],
-                commonOptions: CommonOptions = CommonOptions()
+    root: ParentDefOf[Definition],
+    commonOptions: CommonOptions = CommonOptions()
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, commonOptions)
-    val folding = new ValidationFolding
-    val s1 = root match {
-      case r: RootContainer =>
-        folding.foldRootLeft(r, state)
-      case i: Include =>
-        folding.foldIncludeLeft(root, i, state)
-      case c : ParentDefOf[Definition] =>
-        folding.foldLeft(root, c, state)
-    }
+    val folder = new ValidationFolder
+    val s1 = Folding.foldAround(state, root, folder)
     val result = checkOverloads(symTab, s1)
     result.messages.sortBy(_.loc)
   }
@@ -40,13 +34,13 @@ object Validation {
         if (defs2.sizeIs == 2) {
           val first = defs2.head
           val last = defs2.last
-          s.addStyle(last.loc,
-            s"${last.identify} overloads ${first.identifyWithLoc}")
+          s.addStyle(
+            last.loc,
+            s"${last.identify} overloads ${first.identifyWithLoc}"
+          )
         } else if (defs2.sizeIs > 2) {
           val first = defs2.head
-          val tail = defs2.tail
-            .map(d => d.identifyWithLoc)
-            .mkString(s",\n    ")
+          val tail = defs2.tail.map(d => d.identifyWithLoc).mkString(s",\n    ")
           s.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
         } else { s }
       }
@@ -109,20 +103,22 @@ object Validation {
 
     def format: String = { s"$kind: $loc: $message" }
 
-    override def compare(that: ValidationMessage): Int = this.loc.compare(that.loc)
+    override def compare(that: ValidationMessage): Int = this.loc
+      .compare(that.loc)
   }
 
   type ValidationMessages = List[ValidationMessage]
 
-  val NoValidationMessages: List[ValidationMessage] = List.empty[ValidationMessage]
-
+  val NoValidationMessages: List[ValidationMessage] = List
+    .empty[ValidationMessage]
 
   case class ValidationState(
     symbolTable: SymbolTable,
     commonOptions: CommonOptions = CommonOptions())
       extends Folding.State[ValidationState] {
 
-    private val msgs: ListBuffer[ValidationMessage] = ListBuffer.empty[ValidationMessage]
+    private val msgs: ListBuffer[ValidationMessage] = ListBuffer
+      .empty[ValidationMessage]
 
     def messages: ValidationMessages = msgs.toList
 
@@ -130,7 +126,9 @@ object Validation {
 
     def parentOf(
       definition: Definition
-    ): Container[Definition] = { symbolTable.parentOf(definition).getOrElse(RootContainer.empty) }
+    ): Container[Definition] = {
+      symbolTable.parentOf(definition).getOrElse(RootContainer.empty)
+    }
 
     def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
 
@@ -210,7 +208,10 @@ object Validation {
         val compound = p.pattern.map(_.s).reduce(_ + _)
         java.util.regex.Pattern.compile(compound)
         this
-      } catch { case x: PatternSyntaxException => add(ValidationMessage(p.loc, x.getMessage)) }
+      } catch {
+        case x: PatternSyntaxException =>
+          add(ValidationMessage(p.loc, x.getMessage))
+      }
     }
 
     def checkEnumeration(
@@ -262,16 +263,12 @@ object Validation {
       agg: Aggregation
     ): ValidationState = {
       agg.fields.foldLeft(this) { case (state, field) =>
-        state
-          .checkIdentifierLength(field)
-          .check(
-            field.id.value.head.isLower,
-            "Field names in aggregates should start with a lower case letter",
-            StyleWarning,
-            field.loc
-          )
-          .checkTypeExpression(field.typeEx, field)
-          .checkDescription(field)
+        state.checkIdentifierLength(field).check(
+          field.id.value.head.isLower,
+          "Field names in aggregates should start with a lower case letter",
+          StyleWarning,
+          field.loc
+        ).checkTypeExpression(field.typeEx, field).checkDescription(field)
       }
     }
 
@@ -295,8 +292,10 @@ object Validation {
                   SevereError,
                   loc
                 )
-              case other: TypeExpression => state
-                  .addError(mt.loc, s"The implicit 'sender must be Reference type, not $other")
+              case other: TypeExpression => state.addError(
+                  mt.loc,
+                  s"The implicit 'sender must be Reference type, not $other"
+                )
             }
           }
         case None => this
@@ -315,7 +314,8 @@ object Validation {
       definition: TD,
       mapping: AST.Mapping
     ): ValidationState = {
-      this.checkTypeExpression(mapping.from, definition).checkTypeExpression(mapping.to, definition)
+      this.checkTypeExpression(mapping.from, definition)
+        .checkTypeExpression(mapping.to, definition)
     }
 
     def checkTypeExpression[TD <: Definition](
@@ -323,20 +323,25 @@ object Validation {
       definition: TD
     ): ValidationState = {
       typ match {
-        case p @ Pattern(_, _)                    => checkPattern(p)
-        case UniqueId(_, entityName)              => this.checkPathRef[Entity](entityName)()
-        case _: AST.PredefinedType                => this
-        case AST.TypeRef(_, id: PathIdentifier)   => checkPathRef[Type](id)()
-        case Optional(_, typex: TypeExpression)   => checkTypeExpression(typex, definition)
-        case OneOrMore(_, typex: TypeExpression)  => checkTypeExpression(typex, definition)
-        case ZeroOrMore(_, typex: TypeExpression) => checkTypeExpression(typex, definition)
-        case Enumeration(_, enumerators)          => checkEnumeration(definition, enumerators)
-        case alt: Alternation                     => checkAlternation(definition, alt)
-        case agg: Aggregation                     => checkAggregation(definition, agg)
-        case mt: MessageType                      => checkMessageType(definition, mt)
-        case mapping: Mapping                     => checkMapping(definition, mapping)
-        case rt: RangeType                        => checkRangeType(definition, rt)
-        case ReferenceType(_, entity: EntityRef)  => this.checkRef[Entity](entity)
+        case p @ Pattern(_, _)       => checkPattern(p)
+        case UniqueId(_, entityName) => this.checkPathRef[Entity](entityName)()
+        case _: AST.PredefinedType   => this
+        case AST.TypeRef(_, id: PathIdentifier) => checkPathRef[Type](id)()
+        case Optional(_, typex: TypeExpression) =>
+          checkTypeExpression(typex, definition)
+        case OneOrMore(_, typex: TypeExpression) =>
+          checkTypeExpression(typex, definition)
+        case ZeroOrMore(_, typex: TypeExpression) =>
+          checkTypeExpression(typex, definition)
+        case Enumeration(_, enumerators) =>
+          checkEnumeration(definition, enumerators)
+        case alt: Alternation => checkAlternation(definition, alt)
+        case agg: Aggregation => checkAggregation(definition, agg)
+        case mt: MessageType  => checkMessageType(definition, mt)
+        case mapping: Mapping => checkMapping(definition, mapping)
+        case rt: RangeType    => checkRangeType(definition, rt)
+        case ReferenceType(_, entity: EntityRef) => this
+            .checkRef[Entity](entity)
       }
     }
 
@@ -355,8 +360,7 @@ object Validation {
 
     def checkMessageRef(ref: MessageRef, kind: MessageKind): ValidationState = {
       symbolTable.lookupSymbol[Type](ref.id.value) match {
-        case Nil =>
-          add(ValidationMessage(
+        case Nil => add(ValidationMessage(
             ref.id.loc,
             s"${ref.identify} is not defined but should be ${article(kind.kind)} type",
             Error
@@ -379,12 +383,13 @@ object Validation {
               }
             case _ => add(ValidationMessage(
                 ref.id.loc,
-                s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${
-                  article(AST.kind(d))} instead", Error
+                s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(AST.kind(d))} instead",
+                Error
               ))
           }
-        case (d, optT) :: tail => handleMultipleResultsCase[Type](ref.id, d, optT, tail)
-        case _                 => this
+        case (d, optT) :: tail =>
+          handleMultipleResultsCase[Type](ref.id, d, optT, tail)
+        case _ => this
       }
     }
 
@@ -397,7 +402,8 @@ object Validation {
       Option[Definition]
     ) => ValidationState
 
-    private val defaultSingleMatchValidationFunction: SingleMatchValidationFunction =
+    private val defaultSingleMatchValidationFunction
+      : SingleMatchValidationFunction =
       (state, foundClass, id, defClass, _, _) => {
         state.check(
           foundClass.isAssignableFrom(defClass),
@@ -417,9 +423,12 @@ object Validation {
       // Handle domain, context, entity same name
       val tc = classTag[T].runtimeClass
       val definitions = d :: tail.map { case (definition, _) => definition }
-      val types = (optT :: tail.map { case (_, t) => t }) collect { case Some(tpe) => tpe }
+      val types = (optT :: tail.map { case (_, t) => t }) collect {
+        case Some(tpe) => tpe
+      }
       val exactlyOneMatch = types.count(_.getClass == tc) == 1
-      val allDifferent = definitions.map(AST.kind).distinct.sizeIs == definitions.size
+      val allDifferent = definitions.map(AST.kind).distinct.sizeIs ==
+        definitions.size
       if (exactlyOneMatch && allDifferent) { this }
       else if (!d.isImplicit) {
         add(ValidationMessage(
@@ -434,7 +443,8 @@ object Validation {
 
     def checkPathRef[T <: Definition: ClassTag](
       id: PathIdentifier
-    )(validator: SingleMatchValidationFunction = defaultSingleMatchValidationFunction
+    )(validator: SingleMatchValidationFunction =
+        defaultSingleMatchValidationFunction
     ): ValidationState = {
       if (id.value.nonEmpty) {
         val tc = classTag[T].runtimeClass
@@ -447,28 +457,34 @@ object Validation {
           // Single match, defer to validation function
           case (d, optT) :: Nil => validator(this, tc, id, d.getClass, d, optT)
           // Too many matches / non-unique
-          case (d, optT) :: tail => handleMultipleResultsCase[T](id, d, optT, tail)
+          case (d, optT) :: tail =>
+            handleMultipleResultsCase[T](id, d, optT, tail)
         }
       } else { this }
     }
 
-    def checkRef[T <: Definition: ClassTag](reference: Reference[T]): ValidationState = {
-      checkPathRef[T](reference.id)()
-    }
+    def checkRef[T <: Definition: ClassTag](
+      reference: Reference[T]
+    ): ValidationState = { checkPathRef[T](reference.id)() }
 
-    def checkRef[T <: Definition: ClassTag](reference: Option[Reference[T]]): ValidationState = {
+    def checkRef[T <: Definition: ClassTag](
+      reference: Option[Reference[T]]
+    ): ValidationState = {
       if (reference.nonEmpty) { checkPathRef[T](reference.get.id)() }
       else { this }
     }
 
     private def formatDefinitions[T <: Definition](list: List[T]): String = {
-      list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }.mkString("\n")
+      list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }
+        .mkString("\n")
     }
 
     def checkSequence[A](
       elements: Seq[A]
     )(fold: (ValidationState, A) => ValidationState
-    ): ValidationState = elements.foldLeft(this) { case (next, element) => fold(next, element) }
+    ): ValidationState = elements.foldLeft(this) { case (next, element) =>
+      fold(next, element)
+    }
 
     def checkNonEmptyValue(
       value: RiddlValue,
@@ -479,7 +495,8 @@ object Validation {
     ): ValidationState = {
       check(
         value.nonEmpty,
-        message = s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
+        message =
+          s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
         kind,
         thing.loc
       )
@@ -494,14 +511,23 @@ object Validation {
     ): ValidationState = {
       check(
         list.nonEmpty,
-        message = s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
+        message =
+          s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
         kind,
         thing.loc
       )
     }
 
-    def checkOptions[T](options: Seq[T], loc: Location): ValidationState = {
-      check(options.sizeIs == options.distinct.size, "Options should not be repeated", Error, loc)
+    def checkOptions[T <: OptionValue](
+      options: Seq[T],
+      loc: Location
+    ): ValidationState = {
+      check(
+        options.sizeIs == options.distinct.size,
+        "Options should not be repeated",
+        Error,
+        loc
+      )
     }
 
     def checkDefinition[TCD <: ParentDefOf[Definition], TD <: Definition](
@@ -509,7 +535,7 @@ object Validation {
       definition: TD
     ): ValidationState = {
       var result = this.check(
-        definition.id.nonEmpty,
+        definition.id.nonEmpty | definition.isImplicit,
         "Definitions may not have empty names",
         Error,
         definition.loc
@@ -525,32 +551,41 @@ object Validation {
         ))
       } else if (matches.sizeIs >= 2) {
         val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
-        parentGroups.get(Option(parent))  match {
+        parentGroups.get(Option(parent)) match {
           case Some(head :: tail) if tail.nonEmpty =>
-            result = result.add(ValidationMessage(head.id.loc,
-              s"${definition.identify} has same name as other definitions in ${
-                parent.identifyWithLoc}:  " +
+            result = result.add(ValidationMessage(
+              head.id.loc,
+              s"${definition.identify} has same name as other definitions in ${parent.identifyWithLoc}:  " +
                 tail.map(x => x.identifyWithLoc).mkString(",  "),
               Warning
             ))
-          case Some(head:: tail) if tail.isEmpty =>
-            result = result.add(ValidationMessage(head.id.loc,
+          case Some(head :: tail) if tail.isEmpty =>
+            result = result.add(ValidationMessage(
+              head.id.loc,
               s"${definition.identify} has same name as other definitions: " +
-                matches.filterNot(_ == definition).map(x =>
-                  x.identifyWithLoc).mkString(",  "),
+                matches.filterNot(_ == definition).map(x => x.identifyWithLoc)
+                  .mkString(",  "),
               StyleWarning
             ))
           case _ =>
-            // ignore
+          // ignore
         }
       }
       result
     }
 
-    def checkDescription[TD <: DescribedValue](id: String, value: TD): ValidationState = {
+    def checkDescription[TD <: DescribedValue](
+      id: String,
+      value: TD
+    ): ValidationState = {
       val description: Option[Description] = value.description
       if (description.isEmpty) {
-        this.check(predicate = false, s"$id should have a description", MissingWarning, value.loc)
+        this.check(
+          predicate = false,
+          s"$id should have a description",
+          MissingWarning,
+          value.loc
+        )
       } else if (description.nonEmpty) {
         val desc = description.get
         this.check(
@@ -566,8 +601,10 @@ object Validation {
       definition: TD
     ): ValidationState = { checkDescription(definition.identify, definition) }
 
-    def checkParentDefOf[P <: ParentDefOf[Definition], T <: ParentDefOf[Definition]](
-      parent: P,
+    def checkParentDefOf[
+      P <: ParentDefOf[Definition],
+      T <: ParentDefOf[Definition]
+    ](parent: P,
       container: T
     ): ValidationState = {
       this.checkDefinition(parent, container).check(
@@ -589,28 +626,31 @@ object Validation {
       )
     }
 
-
     def checkAction(action: Action): ValidationState = {
       action match {
-        case SetAction(_, path, value, _) =>
-          this.checkPathRef[Field](path)()
+        case SetAction(_, path, value, _) => this.checkPathRef[Field](path)()
             .checkExpression(value)
-        case PublishAction(_, msg, pipeRef, _) => this.checkMessageConstructor(msg)
-            .checkRef[Pipe](pipeRef)
+        case PublishAction(_, msg, pipeRef, _) => this
+            .checkMessageConstructor(msg).checkRef[Pipe](pipeRef)
         case FunctionCallAction(loc, funcId, args, _) =>
           val ref = FunctionRef(loc, funcId)
           this.checkRef[Function](ref).checkArgList(args, funcId)
-        case BecomeAction(_, entity, handler, _) => this.checkRef[Entity](entity)
-            .checkRef[Handler](handler)
-        case MorphAction(_, entity, entityState, _) => this.checkRef[Entity](entity)
-            .checkRef[State](entityState)
+        case BecomeAction(_, entity, handler, _) => this
+            .checkRef[Entity](entity).checkRef[Handler](handler)
+        case MorphAction(_, entity, entityState, _) => this
+            .checkRef[Entity](entity).checkRef[State](entityState)
         case TellAction(_, msg, entity, _) => this.checkRef[Entity](entity)
             .checkMessageConstructor(msg)
         case AskAction(_, entity, msg, _) => this.checkRef[Entity](entity)
             .checkMessageConstructor(msg)
         case ReplyAction(_, msg, _) => this.checkMessageConstructor(msg)
         case CompoundAction(loc, actions, _) =>
-          val vs = this.check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
+          val vs = this.check(
+            actions.nonEmpty,
+            "Compound action is empty",
+            MissingWarning,
+            loc
+          )
           actions.foldLeft(vs) { (s, action) => s.checkAction(action) }
 
         case ArbitraryAction(loc, what, _) => this.check(
@@ -622,12 +662,22 @@ object Validation {
       }
     }
 
+    def checkActions(actions: Seq[Action]): ValidationState = {
+      actions.foldLeft(this)((s, a) => s.checkAction(a))
+    }
+
     def checkExample(example: Example): ValidationState = {
       if (example.nonEmpty) {
         example.givens.foldLeft(this) { (state, givenClause) =>
-          val s = state.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
+          val s = state.checkNonEmpty(
+            givenClause.scenario,
+            "Givens",
+            example,
+            MissingWarning
+          )
           givenClause.scenario.foldLeft(s) { (state, ls) =>
-            state.checkNonEmptyValue(ls, "Given String", example, MissingWarning)
+            state
+              .checkNonEmptyValue(ls, "Given String", example, MissingWarning)
           }
         }.step { state: ValidationState =>
           example.whens.foldLeft(state) { (state, whenClause) =>
@@ -639,7 +689,9 @@ object Validation {
               state.checkAction(thenClause.action)
             }
         }.step { state: ValidationState =>
-          example.buts.foldLeft(state) { (state, butClause) => state.checkAction(butClause.action) }
+          example.buts.foldLeft(state) { (state, butClause) =>
+            state.checkAction(butClause.action)
+          }
         }.checkDescription(example)
       } else this
     }
@@ -648,31 +700,48 @@ object Validation {
       examples.foldLeft(this) { (next, example) => next.checkExample(example) }
     }
 
-    def checkFunctionCall(loc: Location, pathId: PathIdentifier, args: ArgList): ValidationState = {
-      checkPathRef[Function](pathId) { (state, foundClass, id, defClass, defn, optN) =>
-        val s = defaultSingleMatchValidationFunction(state, foundClass, id, defClass, defn, optN)
-        defn match {
-          case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _) =>
-            val paramNames = fields.map(_.id.value)
-            val argNames = args.args.keys.map(_.value).toSeq
-            val s1 = s.check(
-              argNames.size == paramNames.size,
-              s"Wrong number of arguments for ${fid.format}. Expected ${paramNames.size}, got ${argNames.size}",
-              Error,
-              loc
-            )
-            val missing = paramNames.filterNot(argNames.contains(_))
-            val unexpected = argNames.filterNot(paramNames.contains(_))
-            val s2 = s1
-              .check(missing.isEmpty, s"Missing arguments: ${missing.mkString(", ")}", Error, loc)
-            s2.check(
-              unexpected.isEmpty,
-              s"Arguments do not correspond to parameters; ${unexpected.mkString(",")}",
-              Error,
-              loc
-            )
-          case _ => s
-        }
+    def checkFunctionCall(
+      loc: Location,
+      pathId: PathIdentifier,
+      args: ArgList
+    ): ValidationState = {
+      checkPathRef[Function](pathId) {
+        (state, foundClass, id, defClass, defn, optN) =>
+          val s = defaultSingleMatchValidationFunction(
+            state,
+            foundClass,
+            id,
+            defClass,
+            defn,
+            optN
+          )
+          defn match {
+            case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _) =>
+              val paramNames = fields.map(_.id.value)
+              val argNames = args.args.keys.map(_.value).toSeq
+              val s1 = s.check(
+                argNames.size == paramNames.size,
+                s"Wrong number of arguments for ${fid
+                  .format}. Expected ${paramNames.size}, got ${argNames.size}",
+                Error,
+                loc
+              )
+              val missing = paramNames.filterNot(argNames.contains(_))
+              val unexpected = argNames.filterNot(paramNames.contains(_))
+              val s2 = s1.check(
+                missing.isEmpty,
+                s"Missing arguments: ${missing.mkString(", ")}",
+                Error,
+                loc
+              )
+              s2.check(
+                unexpected.isEmpty,
+                s"Arguments do not correspond to parameters; ${unexpected.mkString(",")}",
+                Error,
+                loc
+              )
+            case _ => s
+          }
       }
     }
 
@@ -683,10 +752,16 @@ object Validation {
         case FunctionCallExpression(loc, pathId, arguments) =>
           checkFunctionCall(loc, pathId, arguments)
         case ArithmeticOperator(loc, op, operands) =>
-          val s1 = check(op.nonEmpty, "Operator is empty in abstract binary operator", Error, loc)
+          val s1 = check(
+            op.nonEmpty,
+            "Operator is empty in abstract binary operator",
+            Error,
+            loc
+          )
           operands.foldLeft(s1) { (st, operand) => st.checkExpression(operand) }
-        case Comparison(_, _, arg1, arg2) => checkExpression(arg1).checkExpression(arg2)
-        case _: Expression                => this // everything else doesn't need validation
+        case Comparison(_, _, arg1, arg2) => checkExpression(arg1)
+            .checkExpression(arg2)
+        case _: Expression => this // everything else doesn't need validation
       }
     }
 
@@ -702,12 +777,15 @@ object Validation {
     }
 
     def checkArgList(
-      @unused args: ArgList ,
-      @unused function: PathIdentifier
-    ): ValidationState =
-      this // TODO Validate ArgLists
+      @unused
+      args: ArgList,
+      @unused
+      function: PathIdentifier
+    ): ValidationState = this // TODO Validate ArgLists
 
-    def checkMessageConstructor(messageConstructor: MessageConstructor): ValidationState = {
+    def checkMessageConstructor(
+      messageConstructor: MessageConstructor
+    ): ValidationState = {
       val id = messageConstructor.msg.id
       checkSymbolLookup(id.value) { () =>
         add(ValidationMessage(
@@ -720,13 +798,16 @@ object Validation {
           case Type(_, _, typ, _, _) => typ match {
               case mt: MessageType =>
                 val names = messageConstructor.args.args.keys.map(_.value).toSeq
-                val unset = mt.fields.filterNot { fName => names.contains(fName.id.value) }
+                val unset = mt.fields.filterNot { fName =>
+                  names.contains(fName.id.value)
+                }
                 if (unset.nonEmpty) {
-                  unset.filterNot(_.isImplicit).foldLeft(this) { (next, field) =>
-                    next.add(ValidationMessage(
-                      messageConstructor.msg.loc,
-                      s"${field.identify} was not set in message constructor"
-                    ))
+                  unset.filterNot(_.isImplicit).foldLeft(this) {
+                    (next, field) =>
+                      next.add(ValidationMessage(
+                        messageConstructor.msg.loc,
+                        s"${field.identify} was not set in message constructor"
+                      ))
                   }
                 } else {
                   mt.fields.foldLeft(this) { (next, _: Field) =>
@@ -737,15 +818,15 @@ object Validation {
                 }
               case te: TypeExpression => add(ValidationMessage(
                   id.loc,
-                  s"'${id.format}' should reference a message type but is a ${
-                    AST.kind(te)} type instead.",
+                  s"'${id.format}' should reference a message type but is a ${AST
+                    .kind(te)} type instead.",
                   Error
                 ))
             }
           case _ => add(ValidationMessage(
               id.loc,
-              s"'${id.format}' was expected to be a message type but is ${
-                article(AST.kind(d))} instead", Error
+              s"'${id.format}' was expected to be a message type but is ${article(AST.kind(d))} instead",
+              Error
             ))
         }
       } { (d: Definition, tail) =>
@@ -807,82 +888,123 @@ object Validation {
 
   }
 
-  class ValidationFolding extends Folding.Folding[ValidationState] {
+  class ValidationFolder extends Folder[ValidationState] {
 
-    override def openRootDomain(
+    def openContainer(
       state: ValidationState,
-      container: RootContainer,
-      domain: Domain
+      container: ParentDefOf[Definition],
+      parents: Seq[ParentDefOf[Definition]]
     ): ValidationState = {
-      state.checkParentDefOf(container, domain)
+      container match {
+        case typ: Type          => openType(state, parents.head, typ)
+        case function: Function => openFunction(state, parents.head, function)
+        case entity: Entity     => openEntity(state, parents.head, entity)
+        case onClause: OnClause => state
+            .checkMessageRef(onClause.msg, onClause.msg.messageKind)
+        case processor: Processor => openProcessor(state, parents.head, processor)
+        case story: Story         => openStory(state, parents.head, story)
+        case sagaStep: SagaStep   => openSagaStep(state, parents.head, sagaStep)
+        case context: Context     => openContext(state, parents.head, context)
+        case include: Include     => openInclude(state, include)
+        case adaptation: AdaptorDefinition =>
+          openAdaptation(state, parents.head, adaptation)
+        case _: RootContainer =>
+          // we don't validate root containers
+          state
+        case domain: Domain =>
+          val parent = parents.headOption.getOrElse(RootContainer(Seq(domain)))
+          state.checkParentDefOf(parent, container)
+        case container: ParentDefOf[Definition] =>
+          // Adaptor, Plant, State, Saga, Handler
+          state.checkParentDefOf(parents.head, container)
+      }
     }
 
-    override def closeRootDomain(
+    def doDefinition(
       state: ValidationState,
-      container: RootContainer,
-      domain: Domain
+      definition: Definition,
+      parents: Seq[ParentDefOf[Definition]]
     ): ValidationState = {
-      state.checkDescription(domain)
+      definition match {
+        case example: Example => state.checkDefinition(parents.head, example)
+            .checkExample(example)
+        case _: Field             => state // handled by Type/State
+        case invariant: Invariant => doInvariant(state, parents.head, invariant)
+        case definition: Definition => // generic case
+          // Pipe, Joint, Inlet, Outlet, Term
+          state.checkDefinition(parents.head, definition)
+            .checkDescription(definition)
+      }
     }
 
-    override def openDomain(
-                             state: ValidationState,
-                             container: ParentDefOf[Definition],
-                             domain: Domain
-    ): ValidationState = { state.checkParentDefOf(container, domain) }
+    def closeContainer(
+      state: ValidationState,
+      container: ParentDefOf[Definition],
+      parents: Seq[ParentDefOf[Definition]]
+    ): ValidationState = {
+      container match {
+        case _: Include                      => state // nothing to validate
+        case _: RootContainer =>
+          // we don't validate root containers
+          state
+        case parent: ParentDefOf[Definition] =>
+          // RootContainer, Domain, Context, Entity, Story, Adaptor, Plant,
+          // State, Saga, Processor, Function, Handler, OnClause, Type,
+          // Adaptation
+          state.checkDescription(parent)
+      }
+    }
 
-    override def closeDomain(
-                              state: ValidationState,
-                              container: ParentDefOf[Definition],
-                              domain: Domain
-    ): ValidationState = { state.checkDescription(domain) }
-
-    override def openContext(
+    def openContext(
       state: Validation.ValidationState,
-      container: Domain,
+      container: ParentDefOf[Definition],
       context: AST.Context
     ): ValidationState = {
       state.checkParentDefOf(container, context)
         .checkOptions[ContextOption](context.options, context.loc)
     }
 
-    def closeContext(
-      state: Validation.ValidationState,
-      container: Domain,
-      context: AST.Context
-    ): ValidationState = { state.checkDescription(context) }
-
-    def openStory(state: ValidationState, container: Domain, story: Story): ValidationState = {
+    def openStory(
+      state: ValidationState,
+      container: ParentDefOf[Definition],
+      story: Story
+    ): ValidationState = {
       state.checkParentDefOf(container, story)
         .checkNonEmptyValue(story.role, "role", story, MissingWarning)
-        .checkNonEmptyValue(story.capability, "capability", story, MissingWarning)
-        .checkNonEmptyValue(story.benefit, "benefit", story, MissingWarning)
+        .checkNonEmptyValue(
+          story.capability,
+          "capability",
+          story,
+          MissingWarning
+        ).checkNonEmptyValue(story.benefit, "benefit", story, MissingWarning)
         .checkExamples(story.examples)
     }
 
-    override def closeStory(
-      state: ValidationState,
-      container: Domain,
-      story: Story
-    ): ValidationState = { state.checkDescription(story) }
-
     def openEntity(
       state: Validation.ValidationState,
-      container: Context,
+      container: ParentDefOf[Definition],
       entity: AST.Entity
     ): ValidationState = {
-      state.checkParentDefOf(container, entity).checkOptions[EntityOption](entity.options, entity.loc)
+      state.checkParentDefOf(container, entity)
+        .checkOptions[EntityOption](entity.options, entity.loc)
         .checkSequence(entity.states) { (next, state) =>
           next.checkTypeExpression(state.typeEx, state)
         }.addIf(entity.handlers.isEmpty && !entity.isEmpty) {
-          ValidationMessage(entity.loc, s"${entity.identify} must define a handler")
-        }.addIf(entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)) {
+          ValidationMessage(
+            entity.loc,
+            s"${entity.identify} must define a handler"
+          )
+        }.addIf(
+          entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)
+        ) {
           ValidationMessage(
             entity.loc,
             s"${entity.identify} has only empty handlers",
             MissingWarning
           )
-        }.addIf(entity.hasOption[EntityFiniteStateMachine] && entity.states.sizeIs < 2) {
+        }.addIf(
+          entity.hasOption[EntityFiniteStateMachine] && entity.states.sizeIs < 2
+        ) {
           ValidationMessage(
             entity.loc,
             s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
@@ -891,263 +1013,117 @@ object Validation {
         }
     }
 
-    override def openInclude(
-                              state: ValidationState,
-                              container: ParentDefOf[Definition],
-                              include: Include
+    def openInclude(
+      state: ValidationState,
+      include: Include
     ): ValidationState = {
-      state
-        .check(include.nonEmpty, "Include has no included content", Error, include.loc)
-        .check(include.path.nonEmpty, "Include has no path provided", Error, include.loc)
-        .step { s =>
-          if (include.path.nonEmpty) {
-            s.check( include.path.get.toString.nonEmpty,
-              "Include path provided is empty", Error, include.loc)
-          } else { s }
-        }
+      state.check(
+        include.nonEmpty,
+        "Include has no included content",
+        Error,
+        include.loc
+      ).check(
+        include.path.nonEmpty,
+        "Include has no path provided",
+        Error,
+        include.loc
+      ).step { s =>
+        if (include.path.nonEmpty) {
+          s.check(
+            include.path.get.toString.nonEmpty,
+            "Include path provided is empty",
+            Error,
+            include.loc
+          )
+        } else { s }
+      }
     }
 
-    override def closeInclude(
-                               state: ValidationState,
-                               container: ParentDefOf[Definition],
-                               include: Include)
-    : ValidationState = {
-       state
-    }
-
-    override def doHandler(
+    def openType(
       state: ValidationState,
-      container: Entity,
-      handler: Handler
+      container: ParentDefOf[Definition],
+      typeDef: Type
     ): ValidationState = {
-      handler.clauses.foldLeft(state) { (state, onClause) => doOnClause(state, handler, onClause) }
+      state.checkDefinition(container, typeDef).check(
+        typeDef.id.value.head.isUpper,
+        s"${typeDef.identify} should start with a capital letter",
+        StyleWarning,
+        typeDef.loc
+      ).checkTypeExpression(typeDef.typ, container)
     }
 
-    def doOnClause(
+    def doInvariant(
       state: ValidationState,
-      @unused
-      parent: Handler,
-      onClause: OnClause
-    ): ValidationState = {
-      state.checkMessageRef(onClause.msg, onClause.msg.messageKind).checkExamples(onClause.examples)
-    }
-
-    override def closeEntity(
-      state: Validation.ValidationState,
-      container: Context,
-      entity: AST.Entity
-    ): ValidationState = { state.checkDescription(entity) }
-
-    override def openInteraction(
-                                  state: ValidationState,
-                                  container: ParentDefOf[Interaction],
-                                  interaction: Interaction
-    ): ValidationState = {
-      state.checkParentDefOf(container, interaction)
-        .checkNonEmpty(interaction.actions, "Actions", interaction)
-    }
-
-    override def closeInteraction(
-                                   state: ValidationState,
-                                   container: ParentDefOf[Interaction],
-                                   interaction: Interaction
-    ): ValidationState = { state.checkDescription(interaction) }
-
-    override def openAdaptor(
-      state: ValidationState,
-      container: Context,
-      adaptor: Adaptor
-    ): ValidationState = { state.checkDefinition(container, adaptor) }
-
-    override def closeAdaptor(
-      state: ValidationState,
-      container: Context,
-      adaptor: Adaptor
-    ): ValidationState = { state.checkDescription(adaptor) }
-
-    override def doType(
-                         state: ValidationState,
-                         container: ParentDefOf[Definition],
-                         typeDef: Type
-    ): ValidationState = {
-      state
-        .checkDefinition(container, typeDef)
-        .check(
-          typeDef.id.value.head.isUpper,
-          s"${typeDef.identify} should start with a capital letter",
-          StyleWarning,
-          typeDef.loc
-        )
-        .checkTypeExpression(typeDef.typ, container)
-        .checkDescription(typeDef)
-    }
-
-    override def doAction(
-      state: ValidationState,
-      container: Interaction,
-      action: ActionDefinition
-    ): ValidationState = {
-      state.checkDefinition(container, action).checkDescription(action)
-      // FIXME: do some validation of action
-    }
-
-    override def doStoryExample(
-      state: ValidationState,
-      container: Story,
-      example: Example
-    ): ValidationState = { state.checkDefinition(container, example).checkExample(example) }
-
-    override def doFunctionExample(
-      state: ValidationState,
-      function: Function,
-      example: Example
-    ): ValidationState = { state.checkDefinition(function, example).checkExample(example) }
-
-    override def doProcessorExample(
-      state: ValidationState,
-      processor: Processor,
-      example: Example
-    ): ValidationState = { state.checkDefinition(processor, example).checkExample(example) }
-
-    override def doInvariant(
-      state: ValidationState,
-      container: Entity,
+      container: ParentDefOf[Definition],
       invariant: Invariant
     ): ValidationState = {
-      state.checkDefinition(container, invariant)
-        .checkNonEmptyValue(invariant.expression, "Condition", invariant, MissingWarning)
-        .checkExpression(invariant.expression).checkDescription(invariant)
+      state.checkDefinition(container, invariant).checkNonEmptyValue(
+        invariant.expression,
+        "Condition",
+        invariant,
+        MissingWarning
+      ).checkExpression(invariant.expression).checkDescription(invariant)
     }
 
-    override def doAdaptation(
+    def openAdaptation(
       state: ValidationState,
-      container: Adaptor,
-      adaptation: Adaptation
+      container: ParentDefOf[Definition],
+      adaptation: AdaptorDefinition
     ): ValidationState = {
       adaptation match {
-        case Adaptation(_, _, event, command, examples, _, _) => state
-            .checkDefinition(container, adaptation).checkRef[Type](event).checkRef[Type](command)
-            .checkExamples(examples).checkDescription(adaptation)
+        case eaa: EventActionA8n => state.checkDefinition(container, adaptation)
+            .checkRef[Type](eaa.messageRef).checkActions(eaa.actions)
+        case eca: EventCommandA8n => state
+            .checkDefinition(container, adaptation)
+            .checkRef[Type](eca.messageRef).checkRef[Type](eca.command)
         case _ =>
           require(requirement = false, "Unknown adaptation")
           state
       }
     }
 
-    override def openPlant(
+    def openSagaStep(
       state: ValidationState,
-      container: Domain,
-      plant: Plant
-    ): ValidationState = state
-
-    def closePlant(
-      state: ValidationState,
-      container: Domain,
-      plant: Plant
-    ): ValidationState = state
-
-    override def openState(
-      state: ValidationState,
-      container: Entity,
-      s: AST.State
-    ): ValidationState = state.checkParentDefOf(container, s)
-
-    override def closeState(
-      state: ValidationState,
-      container: Entity,
-      s: AST.State
-    ): ValidationState = { state.checkDescription(s) }
-
-    override def openSaga(
-      state: ValidationState,
-      container: Context,
-      saga: Saga
-    ): ValidationState = state.checkDefinition(container, saga)
-
-    override def closeSaga(
-      state: ValidationState,
-      container: Context,
-      saga: Saga
-    ): ValidationState = state.checkDescription(container)
-
-    override def doStateField(
-      state: ValidationState,
-      container: State,
-      field: Field
-    ): ValidationState = state.checkDescription(field)
-
-    override def doPipe(
-      state: ValidationState,
-      container: Plant,
-      pipe: Pipe
-    ): ValidationState = { state.checkDefinition(container, pipe).checkDescription(pipe) }
-
-    override def doJoint(
-      state: ValidationState,
-      container: Plant,
-      joint: Joint
-    ): ValidationState = state.checkDefinition(container, joint).checkDescription(joint)
-
-    override def doSagaStep(
-      state: ValidationState,
-      saga: Saga,
+      saga: ParentDefOf[Definition],
       step: SagaStep
     ): ValidationState = {
-      state
-        .checkDefinition(saga, step)
-        .checkDescription(step)
-        .checkExamples(step.examples)
-        .check(step.doAction.getClass == step.undoAction.getClass,
-          "The primary action and revert action must be the same kind",
-          Error, step.doAction.loc
-        )
+      state.checkDefinition(saga, step).checkDescription(step).check(
+        step.doAction.getClass == step.undoAction.getClass,
+        "The primary action and revert action must be the same kind",
+        Error,
+        step.doAction.loc
+      )
     }
 
-    override def openProcessor(
+    def openProcessor(
       state: ValidationState,
-      container: Plant,
+      container: ParentDefOf[Definition],
       processor: Processor
     ): ValidationState = {
-      state.checkDefinition(container, processor).checkProcessorKind(processor).step { s2 =>
-        val s3 = processor.inlets.foldLeft(s2) { (s, n) => s.checkRef[Entity](n.entity) }
-        processor.outlets.foldLeft(s3) { (s, n) => s.checkRef[Entity](n.entity) }
-      }.step { s5 => s5.checkExamples(processor.examples) }
+      state.checkDefinition(container, processor).checkProcessorKind(processor)
+        .step { s2 =>
+          val s3 = processor.inlets.foldLeft(s2) { (s, n) =>
+            s.checkRef[Entity](n.entity)
+          }
+          processor.outlets.foldLeft(s3) { (s, n) =>
+            s.checkRef[Entity](n.entity)
+          }
+        }.step { s5 => s5.checkExamples(processor.examples) }
     }
-
-    override def closeProcessor(
-      state: ValidationState,
-      container: Plant,
-      processor: Processor
-    ): ValidationState = state.checkDescription(processor)
 
     def openFunction[TCD <: ParentDefOf[Definition]](
       state: ValidationState,
       container: TCD,
       function: Function
     ): ValidationState = {
-      state.checkDefinition(container, function)
-        .checkTypeExpression(function.input.getOrElse(Nothing(function.loc)), function)
-        .checkTypeExpression(function.output.getOrElse(Nothing(function.loc)), function)
-        .checkExamples(function.examples)
+      state.checkDefinition(container, function).checkTypeExpression(
+        function.input.getOrElse(Nothing(function.loc)),
+        function
+      ).checkTypeExpression(
+        function.output.getOrElse(Nothing(function.loc)),
+        function
+      ).checkExamples(function.examples)
     }
-
-    def closeFunction[TCD <: Container[Definition]](
-      state: ValidationState,
-      container: TCD,
-      function: Function
-    ): ValidationState = { state.checkDescription(function) }
-
-    override def doInlet(
-      state: ValidationState,
-      container: Processor,
-      inlet: Inlet
-    ): ValidationState = state.checkDefinition(container, inlet).checkDescription(inlet)
-
-    override def doOutlet(
-      state: ValidationState,
-      container: Processor,
-      outlet: Outlet
-    ): ValidationState = state.checkDefinition(container, outlet).checkDescription(outlet)
 
   }
 }
