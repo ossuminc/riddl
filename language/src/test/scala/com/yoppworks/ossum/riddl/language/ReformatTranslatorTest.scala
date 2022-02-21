@@ -15,11 +15,12 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(roots) =>
+      case Right(root) =>
         val options = ReformattingOptions(inputFile = Some(file.toPath))
+        val common: CommonOptions = CommonOptions()
         val log = SysLogger()
-        val common = CommonOptions()
-        val output = ReformatTranslator.translateToString(roots, log, common, options)
+        val output = ReformatTranslator.translateToString(root, log, common,
+          options)
         parseTopLevelDomains(output) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
@@ -27,8 +28,9 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
               s"In '${file.getPath}': on first generation:\n" + message + "\nIn Source:\n" +
                 output + "\n"
             )
-          case Right(roots2) =>
-            val output2 = ReformatTranslator.translateToString(roots2, log, common, options)
+          case Right(root2) =>
+            val output2 = ReformatTranslator.translateToString(root2,
+              log, common, options)
             parseTopLevelDomains(output2) match {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")

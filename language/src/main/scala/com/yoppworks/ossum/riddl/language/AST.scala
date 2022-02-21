@@ -153,7 +153,7 @@ object AST {
       case _: Outlet          => Keywords.outlet
       case _: Pipe            => Keywords.pipe
       case _: Plant           => Keywords.plant
-      case _: Processor       => Keywords.processor
+      case p: Processor       => p.shape.keyword
       case _: RootContainer   => ""
       case _: Saga            => Keywords.saga
       case _: SagaStep        => Keywords.step
@@ -2155,19 +2155,33 @@ object AST {
     description: Option[Description] = None)
       extends Streamlet
 
-  sealed trait ProcessorShape extends RiddlValue
+  sealed trait ProcessorShape extends RiddlValue {
+    def keyword: String
+  }
 
-  case class Source(loc: Location) extends ProcessorShape
+  case class Source(loc: Location) extends ProcessorShape {
+    def keyword: String = Keywords.source
+  }
 
-  case class Sink(loc: Location) extends ProcessorShape
+  case class Sink(loc: Location) extends ProcessorShape {
+    def keyword: String = Keywords.sink
+  }
 
-  case class Flow(loc: Location) extends ProcessorShape
+  case class Flow(loc: Location) extends ProcessorShape {
+    def keyword: String = Keywords.flow
+  }
 
-  case class Merge(loc: Location) extends ProcessorShape
+  case class Merge(loc: Location) extends ProcessorShape {
+    def keyword: String = Keywords.merge
+  }
 
-  case class Split(loc: Location) extends ProcessorShape
+  case class Split(loc: Location) extends ProcessorShape {
+    def keyword: String = Keywords.split
+  }
 
-  case class Multi(loc: Location) extends ProcessorShape
+  case class Multi(loc: Location) extends ProcessorShape {
+    def keyword: String = Keywords.multi
+  }
 
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
