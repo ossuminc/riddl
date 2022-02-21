@@ -63,6 +63,29 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
     files.append(mdw)
     mdw
   }
+
+  var terms = Seq.empty[GlossaryEntry]
+
+  def addToGlossary(
+    d: Definition,
+    parents: Seq[String]
+  ): HugoTranslatorState = {
+    val entry = GlossaryEntry(
+      d.id.value,
+      d.kind,
+      d.brief.map(_.s).getOrElse("--"),
+      (parents :+ d.id.value)
+    )
+    terms = terms :+ entry
+    this
+  }
+  def close(): Seq[File] = {
+    val mdw = addFile(Seq.empty[String], "glossary.md")
+    val lastFileWeight = 999
+    mdw.emitGlossary(lastFileWeight, terms)
+    files.foreach(_.write())
+    files.map(_.filePath.toFile).toSeq
+  }
 }
 
 object HugoTranslator extends Translator[HugoTranslatingOptions] {
@@ -227,8 +250,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
     // and then map to just the name of that domain.
-    val result = stack.toSeq.reverse.dropWhile(_.isRootContainer)
-      .map(_.id.format)
+    val result = stack.reverse.dropWhile(_.isRootContainer).map(_.id.format)
     result
   }
 
@@ -271,45 +293,46 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     }
     writeConfigToml(newOptions, maybeAuthor)
     val state = HugoTranslatorState(options)
-    val parents = mutable.Stack[ParentDefOf[Definition]]()
+    val parentStack = mutable.Stack[ParentDefOf[Definition]]()
 
-    val newState = Folding.foldLeftWithStack(state, parents)(root) {
+    val newState = Folding.foldLeftWithStack(state, parentStack)(root) {
       case (st, e: AST.Entity, stack) =>
         val (mkd, parents) = setUpContainer(e, st, stack)
         mkd.emitEntity(e, parents)
+        st.addToGlossary(e, parents)
         st
       case (st, f: AST.Function, stack) =>
         val (mkd, parents) = setUpContainer(f, st, stack)
         mkd.emitFunction(f, parents)
-        st
+        st.addToGlossary(f, parents)
       case (st, c: AST.Context, stack) =>
         val (mkd, parents) = setUpContainer(c, st, stack)
         mkd.emitContext(c, parents)
-        st
+        st.addToGlossary(c, parents)
       case (st, a: AST.Adaptor, stack) =>
         val (mkd, parents) = setUpContainer(a, st, stack)
         mkd.emitAdaptor(a, parents)
-        st
+        st.addToGlossary(a, parents)
       case (st, s: AST.Saga, stack) =>
         val (mkd, parents) = setUpContainer(s, st, stack)
         mkd.emitSaga(s, parents)
-        st
+        st.addToGlossary(s, parents)
       case (st, s: AST.Story, stack) =>
         val (mkd, parents) = setUpContainer(s, st, stack)
         mkd.emitStory(s, parents)
-        st
+        st.addToGlossary(s, parents)
       case (st, p: AST.Plant, stack) =>
         val (mkd, parents) = setUpContainer(p, st, stack)
         mkd.emitPlant(p, parents)
-        st
+        st.addToGlossary(p, parents)
       case (st, p: AST.Processor, stack) =>
         val (mkd, parents) = setUpContainer(p, st, stack)
         mkd.emitProcessor(p, parents)
-        st
+        st.addToGlossary(p, parents)
       case (st, d: AST.Domain, stack) =>
         val (mkd, parents) = setUpContainer(d, st, stack)
         mkd.emitDomain(d, parents)
-        st
+        st.addToGlossary(d, parents)
       case (st, a: AST.Adaptation, stack) =>
         val (mkd, parents) = setUpDefinition(a, st, stack)
         mkd.emitAdaptation(a, parents)
@@ -317,15 +340,15 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       case (st, p: AST.Pipe, stack) =>
         val (mkd, parents) = setUpDefinition(p, st, stack)
         mkd.emitPipe(p, parents)
-        st
+        st.addToGlossary(p, parents)
+      case (st, t: AST.Term, stack)  => st.addToGlossary(t, parents(stack))
       case (st, _: RootContainer, _) =>
         // skip, not needed
         st
       case (st, _, _) => // skip, handled by the MarkdownWriter
         st
     }
-    newState.files.foreach(_.write())
-    newState.files.map(_.filePath.toFile).toSeq
+    newState.close()
   }
 
   // scalastyle:off method.length

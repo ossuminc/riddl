@@ -18,14 +18,18 @@ case class MarkdownWriter(filePath: Path) {
     if (!dirFile.exists) { dirFile.mkdirs() }
   }
 
+  def write(writer: PrintWriter): Unit = {
+    try {
+      writer.write(sb.toString())
+      writer.flush()
+    } finally { writer.close() }
+    sb.clear() // release memory because content written to file
+  }
+
   def write(): Unit = {
     mkDirs()
-    val printer = new PrintWriter(filePath.toFile)
-    try {
-      printer.write(sb.toString())
-      printer.flush()
-    } finally { printer.close() }
-    sb.clear() // release memory because content written to file
+    val writer = new PrintWriter(filePath.toFile)
+    write(writer)
   }
 
   def nl: this.type = { sb.append("\n"); this }
@@ -504,4 +508,37 @@ case class MarkdownWriter(filePath: Path) {
     adaptation.examples.foreach(emitExample(_, parents, 3))
     this
   }
+
+  def emitTableHead(columnTitles: Seq[String]): this.type = {
+    sb.append(columnTitles.mkString("| ", " | ", " |\n"))
+    val dashes = columnTitles.map(s => "-".repeat(s.length))
+    sb.append(dashes.mkString("| ", " | ", " |\n"))
+    this
+  }
+
+  def emitTableRow(firstCol: String, remainingCols: String*): this.type = {
+    val row = firstCol +: remainingCols
+    sb.append(row.mkString("| ", " | ", " |\n"))
+    this
+  }
+
+  def emitGlossary(
+    weight: Int,
+    terms: Seq[GlossaryEntry]
+  ): this.type = {
+    fileHead("Glossary Of Terms", weight, Some("A generated glossary of terms"))
+    emitTableHead(Seq("Term", "Type", "Brief", "Path"))
+    terms.sortBy(_.term).foreach { entry =>
+      val linkPath = entry.path :+ entry.term
+      val termLink = s"[${entry.term}](${linkPath.mkString("/")})"
+      emitTableRow(termLink, entry.typ, entry.brief, entry.path.mkString("."))
+    }
+    this
+  }
 }
+
+case class GlossaryEntry(
+  term: String,
+  typ: String,
+  brief: String,
+  path: Seq[String])

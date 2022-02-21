@@ -840,7 +840,7 @@ object Validation {
     def checkProcessorKind(proc: Processor): ValidationState = {
       val ins = proc.inlets.size
       val outs = proc.outlets.size
-      proc.kind match {
+      proc.shape match {
         case AST.Source(loc) =>
           if (ins != 0 || outs != 1) {
             this.addError(
@@ -901,11 +901,12 @@ object Validation {
         case entity: Entity     => openEntity(state, parents.head, entity)
         case onClause: OnClause => state
             .checkMessageRef(onClause.msg, onClause.msg.messageKind)
-        case processor: Processor => openProcessor(state, parents.head, processor)
-        case story: Story         => openStory(state, parents.head, story)
-        case sagaStep: SagaStep   => openSagaStep(state, parents.head, sagaStep)
-        case context: Context     => openContext(state, parents.head, context)
-        case include: Include     => openInclude(state, include)
+        case processor: Processor =>
+          openProcessor(state, parents.head, processor)
+        case story: Story       => openStory(state, parents.head, story)
+        case sagaStep: SagaStep => openSagaStep(state, parents.head, sagaStep)
+        case context: Context   => openContext(state, parents.head, context)
+        case include: Include   => openInclude(state, include)
         case adaptation: AdaptorDefinition =>
           openAdaptation(state, parents.head, adaptation)
         case _: RootContainer =>
@@ -943,7 +944,7 @@ object Validation {
       parents: Seq[ParentDefOf[Definition]]
     ): ValidationState = {
       container match {
-        case _: Include                      => state // nothing to validate
+        case _: Include       => state // nothing to validate
         case _: RootContainer =>
           // we don't validate root containers
           state
@@ -1089,7 +1090,7 @@ object Validation {
     ): ValidationState = {
       state.checkDefinition(saga, step).checkDescription(step).check(
         step.doAction.getClass == step.undoAction.getClass,
-        "The primary action and revert action must be the same kind",
+        "The primary action and revert action must be the same shape",
         Error,
         step.doAction.loc
       )

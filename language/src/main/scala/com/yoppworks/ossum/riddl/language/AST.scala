@@ -191,7 +191,7 @@ object AST {
       case _: Outlet          => "Outlet"
       case _: Pipe            => "Pipe"
       case _: Plant           => "Plant"
-      case p: Processor       => p.kind.getClass.getSimpleName
+      case p: Processor       => p.shape.getClass.getSimpleName
       case _: RootContainer   => "Root"
       case _: Saga            => "Saga"
       case _: SagaStep        => "SagaStep"
@@ -240,7 +240,8 @@ object AST {
   sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
     def id: Identifier
 
-    def kindId: String = s"${AST.kind(this)} '${id.format}'"
+    def kind: String = AST.kind(this)
+    def kindId: String = s"$kind '${id.format}'"
     def identify: String = kindId
     def identifyWithLoc: String = s"$kindId at $loc"
     def isImplicit: Boolean = false
@@ -2154,19 +2155,19 @@ object AST {
     description: Option[Description] = None)
       extends Streamlet
 
-  sealed trait ProcessorKind extends RiddlValue
+  sealed trait ProcessorShape extends RiddlValue
 
-  case class Source(loc: Location) extends ProcessorKind
+  case class Source(loc: Location) extends ProcessorShape
 
-  case class Sink(loc: Location) extends ProcessorKind
+  case class Sink(loc: Location) extends ProcessorShape
 
-  case class Flow(loc: Location) extends ProcessorKind
+  case class Flow(loc: Location) extends ProcessorShape
 
-  case class Merge(loc: Location) extends ProcessorKind
+  case class Merge(loc: Location) extends ProcessorShape
 
-  case class Split(loc: Location) extends ProcessorKind
+  case class Split(loc: Location) extends ProcessorShape
 
-  case class Multi(loc: Location) extends ProcessorKind
+  case class Multi(loc: Location) extends ProcessorShape
 
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
@@ -2175,6 +2176,8 @@ object AST {
     *   The location of the Processor definition
     * @param id
     *   The name of the processor
+    * @param shape
+    *   The shape of the processor's inputs and outputs
     * @param inlets
     *   The list of inlets that provide the data the processor needs
     * @param outlets
@@ -2189,7 +2192,7 @@ object AST {
   case class Processor(
     loc: Location,
     id: Identifier,
-    kind: ProcessorKind,
+    shape: ProcessorShape,
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],
@@ -2328,7 +2331,8 @@ object AST {
     description: Option[Description] = None)
       extends ParentDefOf[PlantDefinition]
       with DomainDefinition
-      with WithIncludes with WithTerms{
+      with WithIncludes
+      with WithTerms {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
       outJoints ++ terms ++ includes
   }

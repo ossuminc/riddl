@@ -28,13 +28,13 @@ RIDDL supports six kinds of processors that are used as the keyword to introduce
 kind of processor depends solely on the number of inlet sand outlets that are defined. The keyword
 used ensures RIDDL knows how to validate the intention for the number of inlets and outlets.
 
-| # of Inlets | # of Outlets | Kind   | Description                                                 |
+| # of Inlets | # of Outlets | Kind   | Description                                 |
 |-----|------|--------|-------------------------------------------------------------|
 | 0   | 1    | Source | Sources originate their data, and publish it to an outlet   |
 | 1   | 0    | Sink   | Sinks terminate their data, and consume it from their inlet |
 | 1   | 1    | Flow   | Flows transform their data from inlet to outlet             |
-| 1   | any  | Merge  | Merges their data from multiple intles to a single outlet   |
-| any | 1    | Split  | Splits their data from one source to multiple outlets       |
+| 1   | any  | Split  | Splits their data from one source to multiple outlets       |
+| any | 1    | Merge  | Merges their data from multiple intles to a single outlet   |
 | any | any  | Multi  | Any other combination is a many-to-many flow                |
 
 ## Syntax Examples
