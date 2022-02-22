@@ -79,12 +79,12 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
     terms = terms :+ entry
     this
   }
-  def close(): Seq[File] = {
+  def close(): Seq[Path] = {
     val mdw = addFile(Seq.empty[String], "glossary.md")
     val lastFileWeight = 999
     mdw.emitGlossary(lastFileWeight, terms)
     files.foreach(_.write())
-    files.map(_.filePath.toFile).toSeq
+    files.map(_.filePath).toSeq
   }
 }
 
@@ -278,7 +278,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoTranslatingOptions
-  ): Seq[File] = {
+  ): Seq[Path] = {
     require(options.inputFile.nonEmpty, "An input path was not provided.")
     require(options.outputDir.nonEmpty, "An output path was not provided.")
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")

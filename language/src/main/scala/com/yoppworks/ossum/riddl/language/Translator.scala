@@ -3,7 +3,6 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.AST.RootContainer
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 
-import java.io.File
 import java.nio.file.Path
 
 trait TranslatingOptions {
@@ -13,9 +12,9 @@ trait TranslatingOptions {
 }
 
 trait TranslatorState {
-  def generatedFiles: Seq[File]
+  def generatedFiles: Seq[Path]
 
-  def addFile(file: File): TranslatorState
+  def addFile(file: Path): TranslatorState
 }
 
 /** Unit Tests For Translator */
@@ -26,14 +25,14 @@ trait Translator[OPT <: TranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT,
-  ): Seq[File]
+  ): Seq[Path]
 
   final def translate(
     root: RootContainer,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Seq[File] = {
+  ): Seq[Path] = {
     val showTimes = commonOptions.showTimes
     Riddl.timer(stage = "translate", showTimes) {
       translateImpl(root, log, commonOptions, options)
@@ -44,11 +43,11 @@ trait Translator[OPT <: TranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Seq[File] = {
+  ): Seq[Path] = {
     require(options.inputFile.nonEmpty, "Input path option must not be empty")
     Riddl.parseAndValidate(options.inputFile.get, log, commonOptions) match {
       case Some(root) => translate(root, log, commonOptions, options)
-      case None       => Seq.empty[File]
+      case None       => Seq.empty[Path]
     }
   }
 
@@ -57,10 +56,10 @@ trait Translator[OPT <: TranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Seq[File] = {
+  ): Seq[Path] = {
     Riddl.parseAndValidate(input, log, commonOptions) match {
       case Some(root) => translate(root, log, commonOptions, options)
-      case None       => Seq.empty[File]
+      case None       => Seq.empty[Path]
     }
   }
 }

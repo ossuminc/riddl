@@ -22,7 +22,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     showStyleWarnings = false
   )
 
-  def genHugo(projectName: String, source: String): Seq[File] = {
+  def genHugo(projectName: String, source: String): Seq[Path] = {
     val outDir = Path.of(output).resolve(source)
     val outDirFile = outDir.toFile
     if (!outDirFile.isDirectory) outDirFile.mkdirs()

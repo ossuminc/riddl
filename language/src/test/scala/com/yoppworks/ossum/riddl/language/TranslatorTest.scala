@@ -2,7 +2,6 @@ package com.yoppworks.ossum.riddl.language
 
 import com.yoppworks.ossum.riddl.language.AST.{ParentDefOf, Definition, RootContainer}
 
-import java.io.File
 import java.nio.file.Path
 
 class TranslatorTest extends ValidatingTest {
@@ -20,9 +19,8 @@ class TranslatorTest extends ValidatingTest {
   ) extends TranslatingOptions
 
   case class TestTranslatorState(options: TestTranslatingOptions) extends TranslatorState {
-    override def generatedFiles: Seq[File] = Seq.empty[File]
-
-    override def addFile(file: File): TranslatorState = this
+    override def generatedFiles: Seq[Path] = Seq.empty[Path]
+    override def addFile(file: Path): TranslatorState = this
   }
 
   class TestTranslator extends Translator[TestTranslatingOptions] {
@@ -33,15 +31,14 @@ class TranslatorTest extends ValidatingTest {
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions,
-    ): Seq[File] = {
+    ): Seq[Path] = {
       val state = TestTranslatorState(options)
 
       val parents = scala.collection.mutable.Stack.empty[ParentDefOf[Definition]]
       Folding.foldLeftWithStack(state, parents)(root) { case (state, definition, stack) =>
         log.info(stack.reverse.mkString(".") + "." + definition.id.format)
         state
-      }
-      Seq.empty[File]
+      }.generatedFiles
     }
   }
 

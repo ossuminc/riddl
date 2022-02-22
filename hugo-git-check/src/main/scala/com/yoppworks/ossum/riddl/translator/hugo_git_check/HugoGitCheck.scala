@@ -48,7 +48,7 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoGitCheckOptions
-  ): Seq[File] = {
+  ): Seq[Path] = {
     require(options.gitCloneDir.nonEmpty, s"Option 'gitCloneDir' must have a value.")
     val gitCloneDir = options.gitCloneDir.get
     require(Files.isDirectory(gitCloneDir), s"$gitCloneDir is not a directory.")
@@ -65,7 +65,7 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
       val ht = HugoTranslator
       ht.translate(root, log, commonOptions, options.hugoOptions)
     } else {
-      Seq.empty[File]
+      Seq.empty[Path]
     }
   }
 

@@ -9,14 +9,23 @@ import java.nio.file.Path
 /** Test The ReformatTranslator's ability to generate consistent output */
 class ReformatTranslatorTest extends RiddlFilesTestBase {
 
+
   def checkAFile(rootDir: Path, file: File): Assertion = {
+    checkAFile(file, singleFile=true)
+  }
+
+  def checkAFile(
+    file: File,
+    singleFile: Boolean = true
+  ) : Assertion = {
     val input = RiddlParserInput(file)
     parseTopLevelDomains(input) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
       case Right(root) =>
-        val options = ReformattingOptions(inputFile = Some(file.toPath))
+        val options = ReformattingOptions(inputFile = Some(file.toPath),
+          singleFile = singleFile)
         val common: CommonOptions = CommonOptions()
         val log = SysLogger()
         val output = ReformatTranslator.translateToString(root, log, common,
@@ -58,5 +67,16 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
     "language/src/test/input/rbbq.riddl" -> false
   )
 
-  "ReformatTranslator" should { checkItems(items) }
+  "ReformatTranslator" should {
+    checkItems(items)
+  }
+
+  "ReformatTranslator2" should {
+    "handle includes with singleFile==false" in {
+      val input = items.head._1
+      val dirFile = new File(input)
+      require(dirFile.exists(), s"Test item '$input' doesn't exist!")
+      checkAFile(dirFile, singleFile = false)
+    }
+  }
 }
