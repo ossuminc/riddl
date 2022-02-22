@@ -11,4 +11,18 @@ case class Finder(root: ParentDefOf[Definition]) {
         if (select(definition)) state :+ definition else state
     }
   }
+
+  type DefWithParents = Seq[(Definition, Seq[ParentDefOf[Definition]])]
+
+  def findWithParents(
+    select: Definition => Boolean
+  ): DefWithParents = {
+    Folding.foldLeftWithStack(Seq.empty[(Definition,
+      Seq[ParentDefOf[Definition]])])(root) {
+      case (state, definition, parents) =>
+        if (select(definition)) state :+ (definition -> parents)  else state
+    }
+  }
+
+  def findEmpty: DefWithParents = findWithParents(_.isEmpty)
 }

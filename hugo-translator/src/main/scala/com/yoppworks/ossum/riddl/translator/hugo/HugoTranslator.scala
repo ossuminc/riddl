@@ -26,8 +26,11 @@ case class HugoTranslatingOptions(
   sourceURL: Option[URL] = Some(new URL("http://localhost:1313/")),
   editPath: Option[String] = None,
   siteLogo: Option[URL] = None,
-  siteLogoPath: Option[String] = Some("images/logo.png"))
-    extends TranslatingOptions {
+  siteLogoPath: Option[String] = Some("images/logo.png"),
+  withGlossary: Boolean = true,
+  withTODOList: Boolean = true,
+  withGraphicalTOC: Boolean = false
+) extends TranslatingOptions {
   def inputRoot: Path = inputFile.getOrElse(Path.of(".")).toAbsolutePath
   def staticInput: Path = inputRoot.resolve("static")
   def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
@@ -70,19 +73,44 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
     d: Definition,
     parents: Seq[String]
   ): HugoTranslatorState = {
-    val entry = GlossaryEntry(
-      d.id.value,
-      d.kind,
-      d.brief.map(_.s).getOrElse("--"),
-      (parents :+ d.id.value)
-    )
-    terms = terms :+ entry
+    if (options.withGlossary) {
+      val entry = GlossaryEntry(
+        d.id.value,
+        d.kind,
+        d.brief.map(_.s).getOrElse("--"),
+        (parents :+ d.id.value)
+      )
+      terms = terms :+ entry
+    }
     this
   }
-  def close(): Seq[Path] = {
-    val mdw = addFile(Seq.empty[String], "glossary.md")
-    val lastFileWeight = 999
-    mdw.emitGlossary(lastFileWeight, terms)
+
+  def makeGlossary(): Unit = {
+    if (options.withGlossary) {
+      val mdw = addFile(Seq.empty[String], "glossary.md")
+      val lastFileWeight = 999
+      mdw.emitGlossary(lastFileWeight, terms)
+    }
+  }
+
+  def makeToDoList(root: RootContainer): Unit = {
+    if (options.withTODOList) {
+      val mdw = addFile(Seq.empty[String], "todolist.md")
+      val finder = Finder(root)
+      val items = for {
+        list <- finder.findEmpty
+        item = list._1.identify
+        path = list._2.map(_.id.value).mkString(".")
+        link = list._2.map(_.id.value).mkString("/") + list._1.id.value
+      } yield {
+        s"[$item At $path]($link)"
+      }
+      mdw.list(items)
+    }
+  }
+  def close(root: RootContainer): Seq[Path] = {
+    makeGlossary()
+    makeToDoList(root)
     files.foreach(_.write())
     files.map(_.filePath).toSeq
   }
@@ -348,7 +376,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       case (st, _, _) => // skip, handled by the MarkdownWriter
         st
     }
-    newState.close()
+    newState.close(root)
   }
 
   // scalastyle:off method.length
