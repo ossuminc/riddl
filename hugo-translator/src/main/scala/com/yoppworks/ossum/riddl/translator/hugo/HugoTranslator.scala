@@ -29,8 +29,8 @@ case class HugoTranslatingOptions(
   siteLogoPath: Option[String] = Some("images/logo.png"),
   withGlossary: Boolean = true,
   withTODOList: Boolean = true,
-  withGraphicalTOC: Boolean = false
-) extends TranslatingOptions {
+  withGraphicalTOC: Boolean = false)
+    extends TranslatingOptions {
   def inputRoot: Path = inputFile.getOrElse(Path.of(".")).toAbsolutePath
   def staticInput: Path = inputRoot.resolve("static")
   def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
@@ -85,30 +85,60 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
     this
   }
 
+  val lastFileWeight = 999
+
+  def makeIndex(root: RootContainer): Unit = {
+    val mdw = addFile(Seq.empty[String], "_index.md")
+    mdw.fileHead("Top Index", 10, Option("The main index to the content"))
+    mdw.h2("Domains")
+    val domains = root.contents.sortBy(_.id.value)
+      .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
+    mdw.list(domains)
+    mdw.h2("Indices")
+    val glossary =
+      if (options.withGlossary) { Seq("[Glossary](glossary)") }
+      else { Seq.empty[String] }
+    val todoList =
+      if (options.withTODOList) { Seq("[To Do List](todolist)") }
+      else { Seq.empty[String] }
+    mdw.list(glossary ++ todoList)
+  }
+
   def makeGlossary(): Unit = {
     if (options.withGlossary) {
       val mdw = addFile(Seq.empty[String], "glossary.md")
-      val lastFileWeight = 999
+      mdw.fileHead(
+        "Glossary Of Terms",
+        lastFileWeight - 1,
+        Option("A list of definitions needing more work")
+      )
       mdw.emitGlossary(lastFileWeight, terms)
     }
   }
 
   def makeToDoList(root: RootContainer): Unit = {
     if (options.withTODOList) {
-      val mdw = addFile(Seq.empty[String], "todolist.md")
       val finder = Finder(root)
       val items = for {
         list <- finder.findEmpty
         item = list._1.identify
-        path = list._2.map(_.id.value).mkString(".")
-        link = list._2.map(_.id.value).mkString("/") + list._1.id.value
-      } yield {
-        s"[$item At $path]($link)"
-      }
+        parents = list._2.dropRight(1).reverse
+        path = parents.map(_.id.value).mkString(".")
+        link = parents.map(_.id.value).mkString("/") + list._1.id.value
+      } yield { s"[$item At $path]($link)" }
+      val mdw = addFile(Seq.empty[String], "todolist.md")
+      mdw.fileHead(
+        "To Do List",
+        lastFileWeight - 1,
+        Option("A list of definitions needing more work")
+      )
+      mdw.h2("Definitions With Missing Content")
       mdw.list(items)
     }
   }
+
   def close(root: RootContainer): Seq[Path] = {
+    makeIndex(root)
     makeGlossary()
     makeToDoList(root)
     files.foreach(_.write())
@@ -455,7 +485,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
        |  # (Optional, default 6) Set how many table of contents levels to be showed on page.
        |  # Use false to hide ToC, note that 0 will default to 6 (https://gohugo.io/functions/default/)
        |  # You can also specify this parameter per page in front matter.
-       |  geekdocToC = 4
+       |  geekdocToC = false
        |
        |  # (Optional, default static/brand.svg) Set the path to a logo for the Geekdoc
        |  # relative to your 'static/' folder.
