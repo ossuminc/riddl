@@ -8,6 +8,7 @@ import scala.annotation.unused
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 import scala.reflect.classTag
+import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 /** Validates an AST */
@@ -19,9 +20,16 @@ object Validation {
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, commonOptions)
-    val folder = new ValidationFolder
-    val s1 = Folding.foldAround(state, root, folder)
-    val result = checkOverloads(symTab, s1)
+    val result = try {
+      val folder = new ValidationFolder
+      val s1 = Folding.foldAround(state, root, folder)
+      checkOverloads(symTab, s1)
+    } catch {
+      case NonFatal(xcptn) =>
+      state.add(ValidationMessage(0->0,
+          s"Exception Occurred: $xcptn", SevereError
+        ))
+    }
     result.messages.sortBy(_.loc)
   }
 
