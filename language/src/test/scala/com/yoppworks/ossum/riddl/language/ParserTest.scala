@@ -3,6 +3,8 @@ package com.yoppworks.ossum.riddl.language
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput
 import com.yoppworks.ossum.riddl.language.parsing.RiddlParserInput.*
 
+import java.nio.file.Path
+
 /** Unit Tests For ParserTest */
 class ParserTest extends ParsingTest {
 
@@ -303,6 +305,20 @@ class ParserTest extends ParsingTest {
                 ) =>
           }
       }
+    }
+    "allow descriptions from files" in {
+      val input = """domain foo is { ??? } explained in file "foo.md"
+                    |""".stripMargin
+      parseTopLevelDomains(input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+        case Right(content) => content mustBe RootContainer(Seq[Domain](
+          Domain(1 -> 1, Identifier(1 -> 8, "foo"),
+            description = Some(FileDescription(1->36,Path.of("foo.md")))),
+        ))
+      }
+
     }
   }
 }

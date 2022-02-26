@@ -25,8 +25,8 @@ class StreamingParserTest extends ParsingTest {
         )),
         List.empty[Example],
         Some(LiteralString(4 -> 9, "foo")),
-        Option(Description(
-          4 -> 15,
+        Option(BlockDescription(
+          4 -> 28,
           List(
             LiteralString(4 -> 28, "This is a source for Forecast " + "data")
           )
@@ -122,8 +122,8 @@ class StreamingParserTest extends ParsingTest {
               TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))
             ),
             None,
-            Option(Description(
-              20 -> 5,
+            Option(BlockDescription(
+              20 -> 18,
               List(LiteralString(
                 20 -> 18,
                 "Carries changes in the current weather forecast"
@@ -137,8 +137,8 @@ class StreamingParserTest extends ParsingTest {
               TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))
             ),
             None,
-            Option(Description(
-              24 -> 5,
+            Option(BlockDescription(
+              24 -> 18,
               List(LiteralString(
                 24 -> 18,
                 "Carries changes in the current temperature"
@@ -160,8 +160,8 @@ class StreamingParserTest extends ParsingTest {
             )),
             List.empty[Example],
             None,
-            Option(Description(
-              7 -> 5,
+            Option(BlockDescription(
+              7 -> 18,
               List(LiteralString(7 -> 18, "This is a source for Forecast data"))
             ))
           ),
@@ -183,8 +183,8 @@ class StreamingParserTest extends ParsingTest {
             )),
             List.empty[Example],
             None,
-            Option(Description(
-              12 -> 5,
+            Option(BlockDescription(
+              12 -> 18,
               List(LiteralString(
                 12 -> 18,
                 "This is a Flow for the current temperature, when it changes"
@@ -204,8 +204,8 @@ class StreamingParserTest extends ParsingTest {
             List.empty[Outlet],
             List.empty[Example],
             None,
-            Option(Description(
-              16 -> 5,
+            Option(BlockDescription(
+              16 -> 18,
               List(LiteralString(
                 16 -> 18,
                 "This is a Sink for making sensor adjustments based on temperature"
@@ -275,8 +275,8 @@ class StreamingParserTest extends ParsingTest {
         Seq.empty[Term],
         Seq.empty[Include],
         None,
-        Option(Description(
-          31 -> 3,
+        Option(BlockDescription(
+          32 -> 1,
           List(LiteralString(
             32 -> 1,
             "A complete plant definition for temperature based sensor attenuation."
