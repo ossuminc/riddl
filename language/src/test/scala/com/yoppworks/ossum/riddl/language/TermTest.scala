@@ -1,9 +1,6 @@
 package com.yoppworks.ossum.riddl.language
 
-import com.yoppworks.ossum.riddl.language.AST.Description
-import com.yoppworks.ossum.riddl.language.AST.Identifier
-import com.yoppworks.ossum.riddl.language.AST.LiteralString
-import com.yoppworks.ossum.riddl.language.AST.Term
+import com.yoppworks.ossum.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term}
 class TermTest extends ParsingTest {
 
   "Term" should {
@@ -25,13 +22,13 @@ class TermTest extends ParsingTest {
             2 -> 3,
             Identifier(Location(), "one"),
             None,
-            Some(Description(2 -> 15, Seq(LiteralString(2 -> 28, "uno"))))
+            Some(BlockDescription(2 -> 15, Seq(LiteralString(2 -> 28, "uno"))))
           )
           found contains Term(
             4 -> 5,
             Identifier(Location(), "two"),
             None,
-            Some(Description(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
+            Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
           )
       }
     }

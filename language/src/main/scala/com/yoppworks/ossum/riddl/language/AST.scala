@@ -86,18 +86,33 @@ object AST {
   }
 
   /** The description of a definition. All definitions have a name and an
-    * optional description. This class provides the description part.
-    *
-    * @param loc
-    *   The location in the input of the description
-    * @param lines
-    *   The lines of markdown that provide the description
-    */
-  case class Description(
+   * optional description. This class provides the description part.
+   *
+   * @param loc
+   *   The location in the input of the description
+   * @param lines
+   *   The lines of markdown that provide the description
+   */
+  abstract trait Description extends RiddlValue {
+    def loc: Location
+    def lines: Seq[LiteralString]
+    override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
+  }
+
+  case class BlockDescription(
     loc: Location = 0 -> 0,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends RiddlValue {
-    override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.s.isEmpty)
+      extends Description {
+  }
+
+  case class FileDescription(
+    loc: Location,
+    file: Path
+  ) extends Description {
+    lazy val lines: Seq[LiteralString] = {
+      val src = scala.io.Source.fromFile(file.toFile)
+      src.getLines().toSeq.map(LiteralString(loc, _))
+    }
   }
 
   /** A reference to a definition of a specific type.

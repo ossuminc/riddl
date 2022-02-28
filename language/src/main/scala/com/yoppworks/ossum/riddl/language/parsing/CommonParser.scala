@@ -7,6 +7,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 import java.net.URL
+import java.nio.file.Path
 import scala.language.postfixOps
 
 /** Common Parsing Rules */
@@ -36,22 +37,28 @@ trait CommonParser extends NoWhiteSpaceParsers {
   def as[u: P]: P[Unit] = { P(StringIn(Readability.as, Readability.by).?) }
 
   def docBlock[u: P]: P[Seq[LiteralString]] = {
-    P(
-      (open ~ (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~ close) |
-        literalString.map(Seq(_))
-    )
+    P((open ~ (markdownLines | literalStrings |
+      undefined(Seq.empty[LiteralString]) ) ~ close)
+      | literalString.map(Seq(_)))
+  }
+
+  def blockDescription[u: P]: P[BlockDescription] = {
+    P(location  ~ docBlock).map(tpl => BlockDescription(tpl._1,tpl._2))
+  }
+
+  def fileDescription[u: P]: P[FileDescription] = {
+    P(location ~ Keywords.file ~ literalString)
+      .map(tpl => FileDescription(tpl._1,Path.of(tpl._2.s)))
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
     P(StringIn(Keywords.brief, Keywords.briefly) ~/ literalString).?
   }
 
-  def description[u: P]: P[Option[Description]] = {
-    P(location ~ StringIn(Keywords.described, Keywords.explained) ~/ as ~ docBlock).?.map {
-      case Some((loc, lines)) => Option(Description(loc, lines))
-      case None               => None
-    }
-  }
+  def description[u: P]: P[Option[Description]] =
+    P(StringIn(Keywords.described, Keywords.explained) ~/
+      ((as ~ blockDescription) | (Readability.in ~ fileDescription))).?
+
 
   def literalInteger[u: P]: P[LiteralInteger] = {
     P(location ~ StringIn(Operators.plus, Operators.minus).? ~ CharIn("0-9").rep(1).!.map(_.toInt))

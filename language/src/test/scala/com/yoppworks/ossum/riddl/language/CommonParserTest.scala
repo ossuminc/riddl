@@ -36,7 +36,7 @@ class CommonParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(domain) => domain.description match {
-            case Some(Description(_, lines)) =>
+            case Some(BlockDescription(_,lines)) =>
               lines.size mustBe 1
               lines.head.s mustBe "this is an \\\"explanation\\\""
             case x: Any => fail(s"Expected a one line Description but got: $x")

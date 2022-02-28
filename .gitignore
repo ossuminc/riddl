@@ -12,3 +12,5 @@ target
 /chroma-riddl-lexer/go.sum
 /.riddl-timestamp
 /foo
+doc2/src/main/hugo/public/
+doc/src/main/hugo/public/

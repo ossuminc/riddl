@@ -1,2 +1,2 @@
-Missing: main.riddl(2:3): For Domain 'foo', description at main.riddl(2:3) is declared but empty
+Missing: main.riddl(2:16): For Domain 'foo', description at main.riddl(2:16) is declared but empty
 Missing: main.riddl(1:1): Domain 'foo' in Root must have content.
