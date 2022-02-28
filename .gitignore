@@ -14,3 +14,4 @@ target
 /foo
 doc2/src/main/hugo/public/
 doc/src/main/hugo/public/
+*.lock
