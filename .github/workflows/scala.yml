@@ -13,15 +13,26 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up JDK 17
+    - name: Set Up JDK 17    
       uses: actions/setup-java@v2
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: 'maven'
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
-    - name: Run tests
-      run: sbt test
+    - name: Coursier Caching
+      uses: coursier/cache-action@v6
+    - name: Build & Run Tests
+      run: sbt -v +test      
+    - name: Cleanup Before Caching
+      shell: bash
+      run: |
+        rm -rf "$HOME/.ivy2/local" || true
+        find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
+        find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+        find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
+        find $HOME/.sbt                              -name "*.lock"               -delete || true
