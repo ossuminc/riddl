@@ -18,7 +18,6 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: 'maven'
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
