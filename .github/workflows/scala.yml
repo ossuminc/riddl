@@ -18,5 +18,10 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+    - name: Setup Hugo
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: 'latest'
+        extended: true
     - name: Run tests
       run: sbt test
