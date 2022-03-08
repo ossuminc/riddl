@@ -14,7 +14,7 @@ jobs:
     steps:
     - name: Install Ubuntu Packages
       run: |
-        sudo apt-get install -y zip
+        sudo apt-get install -y zip unzip git curl
     - uses: actions/checkout@v2
     - name: Set Up JDK 17    
       uses: actions/setup-java@v2
@@ -38,3 +38,20 @@ jobs:
         find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
         find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
         find $HOME/.sbt                              -name "*.lock"               -delete || true
+
+  slack-workflow-status:
+    if: always()
+    name: Post Workflow Status To Slack
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack Workflow Notification
+        uses: Gamesight/slack-workflow-status@master
+        with:
+          # Required Input
+          repo_token: ${{secrets.API_TOKEN}}
+          slack_webhook_url: ${{secrets.SLACK_WEBHOOK}}
+          # Optional Input
+          channel: '#riddl-notifications'
+          name: 'GitHub Workflow'
