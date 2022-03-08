@@ -1,3 +1,5 @@
+![example workflow](https://github.com/github/docs/actions/workflows/scala.yml/badge.svg)
+
 # riddl
 
 ## Introduction
