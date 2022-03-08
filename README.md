@@ -1,4 +1,4 @@
-![example workflow](https://github.com/reactific/riddl/actions/workflows/<WORKFLOW_FILE>/badge.svg)
+![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yaml/badge.svg)
 
 
 # riddl
