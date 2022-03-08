@@ -1,4 +1,4 @@
-![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yaml/badge.svg)
+![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
 
 
 # riddl
