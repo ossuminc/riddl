@@ -15,22 +15,22 @@
 
     <actions>
         <action id="org.jetbrains.scala.samples.actions.PopupDialogAction"
-                class="com.yoppworks.ossum.riddl.idea.actions.PopupDialogAction">
+                class="com.reactific.riddl.idea.actions.PopupDialogAction">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
         </action>
     </actions>
 
     <applicationListeners>
-        <listener class="com.yoppworks.ossum.riddl.idea.listeners.FileOpenedListener"
+        <listener class="com.reactific.riddl.idea.listeners.FileOpenedListener"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </applicationListeners>
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup displayType="BALLOON" id="Riddl Plugin Notification" />
-        <toolWindow factoryClass="com.yoppworks.ossum.riddl.idea.ui.RiddlToolWindowFactory" id="RiddlToolWindow"
+        <toolWindow factoryClass="com.reactific.riddl.idea.ui.RiddlToolWindowFactory" id="RiddlToolWindow"
                     anchor="bottom"/>
         <completion.contributor
-                implementationClass="com.yoppworks.ossum.riddl.idea.completion.RiddlCompletionContributor"
+                implementationClass="com.reactific.riddl.idea.completion.RiddlCompletionContributor"
                 language="Properties"/>
     </extensions>
 

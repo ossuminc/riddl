@@ -15,7 +15,7 @@ ThisBuild / dynverVTagPrefix := false
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator := "-"
-ThisBuild / organization := "com.yoppworks"
+ThisBuild / organization := "com.reactific"
 ThisBuild / scalaVersion := "2.13.7"
 buildInfoOptions := Seq(ToMap, BuildTime)
 buildInfoKeys := Seq[BuildInfoKey](
@@ -67,13 +67,21 @@ lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := 
     riddlc, `sbt-riddl`
   )
 
+lazy val utils = project.in(file("utils"))
+  .configure(C.withCoverage)
+  .settings(
+    name := "riddl-utils",
+    coverageExcludedPackages := "<empty>",
+    scalacOptions := scala2_13_Options,
+  )
+
 lazy val language = project.in(file("language"))
   .enablePlugins(BuildInfoPlugin)
   .configure(C.withCoverage)
   .settings(
     name := "riddl-language",
     buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.yoppworks.ossum.riddl",
+    buildInfoPackage := "com.reactific.riddl",
     buildInfoUsePackageAsPath := true,
     coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
@@ -100,11 +108,11 @@ lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   ).dependsOn(language % "compile->compile;test->test", `hugo-theme`)
+  .dependsOn(utils)
 
 lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
   .settings(
     name := "riddl-hugo-git-check-translator",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.translator.hugo_git_check",
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
@@ -145,10 +153,10 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging)
   .settings(
     name := "riddlc",
-    mainClass := Option("com.yoppworks.ossum.riddl.RIDDLC"),
+    mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
-    maintainer := "reid.spencer@yoppworks.com",
+    maintainer := "reid@reactific.com",
   ).dependsOn(language, `hugo-translator` % "compile->compile;test->test",
   `hugo-git-check` % "compile->compile;test->test"
   )
@@ -159,7 +167,6 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.15",
-    buildInfoPackage := "com.yoppworks.ossum.riddl.sbt.plugin",
     scriptedLaunchOpts := {
       scriptedLaunchOpts.value ++
         Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
