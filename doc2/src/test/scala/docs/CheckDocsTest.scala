@@ -1,8 +1,6 @@
 package docs
 
-import com.yoppworks.ossum.riddl.translator.hugo.HugoTranslateExamplesBase
-
-import java.nio.file.Path
+import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
 
 /** Unit Tests To Check Documentation Examples */
 class CheckDocsTest extends HugoTranslateExamplesBase {
