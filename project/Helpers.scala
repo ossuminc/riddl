@@ -33,9 +33,9 @@ object Dep {
 }
 
 object C {
-  def withCoverage(p: Project): Project = {
+  def withCoverage(enabled: Boolean = false)(p: Project): Project = {
     p.settings(
-      coverageEnabled := true,
+      coverageEnabled := enabled,
       coverageFailOnMinimum := true,
       coverageMinimumStmtTotal := 80,
       coverageMinimumBranchTotal := 80

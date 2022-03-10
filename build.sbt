@@ -2,7 +2,10 @@ import org.jetbrains.sbtidea.Keys.IntelliJPlatform
 import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
 
-maintainer := "reid@reactific.com"
+ThisBuild / maintainer := "reid@reactific.com"
+ThisBuild / organizationName := "Reactific Software LLC"
+ThisBuild / startYear := Some(2019)
+ThisBuild / licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
@@ -68,7 +71,7 @@ lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := 
   )
 
 lazy val utils = project.in(file("utils"))
-  .configure(C.withCoverage)
+  .configure(C.withCoverage())
   .settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
@@ -77,7 +80,7 @@ lazy val utils = project.in(file("utils"))
 
 lazy val language = project.in(file("language"))
   .enablePlugins(BuildInfoPlugin)
-  .configure(C.withCoverage)
+  .configure(C.withCoverage())
   .settings(
     name := "riddl-language",
     buildInfoObject := "BuildInfo",
