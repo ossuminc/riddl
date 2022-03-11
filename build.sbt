@@ -8,8 +8,7 @@ ThisBuild / licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer,
-    intellijAttachSources)
+  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
 
 ThisBuild / versionScheme := Option("semver-spec")
 ThisBuild / dynverVTagPrefix := false
