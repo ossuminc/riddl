@@ -1,6 +1,6 @@
 package com.reactific.riddl.translator.hugo
 
-import com.reactific.riddl.language.ParsingTest
+import com.reactific.riddl.language.testkit.ParsingTest
 
 import java.io.{PrintWriter, StringWriter}
 import java.nio.file.Path

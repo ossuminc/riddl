@@ -1,8 +1,5 @@
 package com.reactific.riddl.generator.d3.TableOfContentsTest
 
-import com.reactific.riddl.generator.d3.TableOfContents
-import com.reactific.riddl.language.{CommonOptions, ValidatingTest}
-
 import java.net.URL
 import scala.io.{Codec, Source}
 

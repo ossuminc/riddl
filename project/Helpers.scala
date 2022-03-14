@@ -1,4 +1,4 @@
-import sbt.Keys.{name, packageDoc, publishArtifact, resourceGenerators, sourceDirectory, target}
+import sbt.Keys._
 import sbt._
 import sbt.io.Path.allSubpaths
 import scoverage.ScoverageKeys.{coverageEnabled, coverageFailOnMinimum, coverageMinimumBranchTotal, coverageMinimumStmtTotal}
@@ -22,13 +22,14 @@ object Dep {
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val pureconfig = "com.github.pureconfig" %% "pureconfig" % V.pureconfig
-  val scalactic = "org.scalactic" %% "scalactic" % V.scalatest % "test"
-  val scalatest = "org.scalatest" %% "scalatest" % V.scalatest % "test"
-  val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck % "test"
+  val scalactic = "org.scalactic" %% "scalactic" % V.scalatest
+  val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
+  val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val ujson = "com.lihaoyi" %% "ujson" % V.ujson
 
-  val testing = Seq(scalactic, scalatest, scalacheck)
+  val testing = Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
+  val testKitDeps = Seq(scalactic, scalatest, scalacheck)
 
 }
 

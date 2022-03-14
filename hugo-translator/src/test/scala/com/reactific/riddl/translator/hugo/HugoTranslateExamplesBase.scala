@@ -1,6 +1,7 @@
 package com.reactific.riddl.translator.hugo
 
-import com.reactific.riddl.language.{CommonOptions, SysLogger, ValidatingTest}
+import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.language.{CommonOptions, SysLogger}
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}

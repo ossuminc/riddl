@@ -61,7 +61,7 @@ lazy val scala2_13_Options = Seq(
 lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
   .aggregate(
     language,
-    `d3-generator`,
+    testkit,
     `hugo-theme`,
     `hugo-translator`,
     examples, doc,
@@ -86,8 +86,16 @@ lazy val language = project.in(file("language"))
     buildInfoUsePackageAsPath := true,
     coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse)  ++ Dep.testing,
+    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse) ++ Dep.testing,
   )
+
+lazy val testkit = project.in(file("testkit"))
+  .settings(
+    name := "riddl-language-testkit",
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Dep.testKitDeps
+  )
+  .dependsOn(language)
 
 lazy val `hugo-theme` = project.in(file("hugo-theme"))
   .configure(C.zipResource("main"))
@@ -95,20 +103,14 @@ lazy val `hugo-theme` = project.in(file("hugo-theme"))
     name := "riddl-hugo-theme"
   )
 
-lazy val `d3-generator` = project.in(file("d3-generator"))
-  .settings(
-    name := "riddl-d3-generator",
-    scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.ujson) ++ Dep.testing
-  ).dependsOn(language % "compile->compile;test->test")
-
 lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
   .settings(
     name := "riddl-hugo-translator",
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  ).dependsOn(language % "compile->compile;test->test", `hugo-theme`)
+  ).dependsOn(language % "compile->compile", `hugo-theme`)
+  .dependsOn(testkit % "test->compile")
   .dependsOn(utils)
 
 lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
