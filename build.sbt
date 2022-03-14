@@ -164,7 +164,6 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   `hugo-git-check` % "compile->compile;test->test"
   )
 
-
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-riddl",
