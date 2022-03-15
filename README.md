@@ -3,7 +3,8 @@
 
 # riddl
 
-## (Full Documentation)[https://riddl.tech]
+## Full Documentation
+Is here: https://riddl.tech
 
 
 ## Introduction
