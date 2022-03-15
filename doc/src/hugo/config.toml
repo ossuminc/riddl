@@ -1,21 +1,21 @@
 # Configure GeekDocs
-baseURL = "https://riddl.yoppworks.com/"
+baseURL = "https://riddl.tech/"
 languageCode = 'en-us'
 title = "RIDDL Documentation"
 theme = ["hugo-geekdoc", "riddl-hugo-theme"]
 name = "riddl"
 description = "Technical documentation for Reactive Interace to Domain Design Language"
-homepage = "https://riddl.yoppworks.com/"
-demosite = "https://riddl.yoppworks.com/"
+homepage = "https://riddl.tech/"
+demosite = "https://riddl.tech/"
 tags = ["docs", "documentation", "responsive", "simple", "riddl"]
 min_version = "0.83.0"
 # googleAnalytics = "" # example : UA-123-45
 disableLanguages = [] # disable language from here
 
 [author]
-  name = "Reid Spencer"
-  email = "reid.spencer@yoppworks.com"
-  homepage = "https://www.yoppworks.com/"
+name = "Reid Spencer"
+email = "reid.spencer@yoppworks.com"
+homepage = "https://www.yoppworks.com/"
 
 
 # Required to get well formatted code blocks
