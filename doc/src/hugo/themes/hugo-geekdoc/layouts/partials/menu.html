@@ -19,12 +19,14 @@
         {{ range $name, $taxonomy := .Site.Taxonomies.tags }}
           {{ with $.Site.GetPage (printf "/tags/%s" $name) }}
             <li>
-              <a
-                class="gdoc-nav__entry {{ if eq $currentPage .RelPermalink }}is-active{{ end }}"
+                <a
+                        class="gdoc-nav__entry{{- if eq $currentPage .RelPermalink }}
+                  {{- printf " is-active" }}
+                {{- end }}"
                 href="{{ .RelPermalink }}"
-              >
-                {{ .Title }}
-              </a>
+                >
+                {{ partial "utils/title" . }}
+                </a>
             </li>
           {{ end }}
         {{ end }}

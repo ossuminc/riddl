@@ -1,29 +1,30 @@
-# Configure GeekDocs
+# Configure Hugo & GeekDocs
 baseURL = "https://riddl.tech/"
 languageCode = 'en-us'
 title = "RIDDL Documentation"
-theme = ["hugo-geekdoc", "riddl-hugo-theme"]
+theme = ["riddl-hugo-theme", "hugo-geekdoc"]
+
 name = "riddl"
-description = "Technical documentation for Reactive Interace to Domain Design Language"
+description = "Technical documentation for RIDDL"
 homepage = "https://riddl.tech/"
 demosite = "https://riddl.tech/"
 tags = ["docs", "documentation", "responsive", "simple", "riddl"]
-min_version = "0.83.0"
+min_version = "0.94.2"
 # googleAnalytics = "" # example : UA-123-45
-disableLanguages = [] # disable language from here
+#disableLanguages = [] # disable language from here
 
 [author]
 name = "Reid Spencer"
-email = "reid.spencer@yoppworks.com"
-homepage = "https://www.yoppworks.com/"
+email = "reid@reactific.com"
+homepage = "https://reactific.com/"
 
 
 # Required to get well formatted code blocks
 pygmentsUseClasses = true
 pygmentsCodeFences = true
 disablePathToLower = true
-enableGitInfo      = true
-pygmentsStyle      =  "monokailight"
+enableGitInfo = true
+pygmentsStyle = "monokailight"
 
 # hugo outputs
 [outputs]

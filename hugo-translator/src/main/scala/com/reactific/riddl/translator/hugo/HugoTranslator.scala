@@ -164,7 +164,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   val riddl_hugo_theme: (String, String) = "riddl-hugo-theme" ->
     "riddl-hugo-theme.zip"
   val geekdoc_dest_dir = "hugo-geekdoc"
-  val geekDoc_version = "v0.25.1"
+  val geekDoc_version = "v0.27.4"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"

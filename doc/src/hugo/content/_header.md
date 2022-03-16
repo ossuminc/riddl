@@ -1,2 +1,2 @@
-[![logo](https://yoppworks.com/wp-content/uploads/2021/04/YWLogo.png)
+[![logo](/images/RIDDL-Logo-128x128.png)
 RIDDL Documentation](/) 

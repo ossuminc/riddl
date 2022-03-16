@@ -1,2 +1,1 @@
-&copy;2021 Yoppworks Inc. All 
-Rights Reserved 
+&copy;2022 Reactific Software LLC. All Rights Reserved. 
