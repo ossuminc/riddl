@@ -8,7 +8,7 @@ description = "A theme for riddl generated hugo documentation"
 homepage = "http://example.com/"
 tags = []
 features = []
-min_version = "0.89.4"
+min_version = "0.93.2"
 
 [author]
   name = "Reid Spencer"
