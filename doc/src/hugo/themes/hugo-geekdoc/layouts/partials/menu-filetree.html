@@ -67,16 +67,16 @@
               {{ if or .Content .Params.GeekdocFlatSection }}
                 <span class="flex">
                   <a
-                          href="{{ .RelPermalink }}"
-                          class="gdoc-nav__entry{{- if eq $current . }}
+                    href="{{ .RelPermalink }}"
+                    class="gdoc-nav__entry{{- if eq $current . }}
                       {{- printf " is-active" }}
                     {{- end }}"
                   >
                     {{ partial "utils/title" . }}
-                    </a>
+                  </a>
                 </span>
               {{ else }}
-              <span class="flex">{{ partial "utils/title" . }}</span>
+                <span class="flex">{{ partial "utils/title" . }}</span>
               {{ end }}
               {{ if $doCollapse }}
                 <svg class="icon toggle gdoc_keyboard_arrow_left">

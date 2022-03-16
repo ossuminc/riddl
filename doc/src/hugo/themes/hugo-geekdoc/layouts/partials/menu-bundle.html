@@ -47,17 +47,17 @@
                 <svg class="icon {{ .icon }}"><use xlink:href="#{{ .icon }}"></use></svg>
               {{ end }}
               <a
-                      href="{{ if .external }}
+                href="{{ if .external }}
                   {{ .ref }}
                 {{ else }}
                   {{ relref $current .ref }}
                 {{ end }}"
-                      class="gdoc-nav__entry{{- if not .external }}
+                class="gdoc-nav__entry{{- if not .external }}
                   {{- if $isCurrent }}{{ printf " is-active" }}{{ end }}
                 {{- end }}"
               >
                 {{ $name }}
-                </a>
+              </a>
             </span>
             {{ if $doCollapse }}
               <svg class="icon toggle gdoc_keyboard_arrow_left">

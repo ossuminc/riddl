@@ -1,13 +1,13 @@
 {{ define "main" }}
-{{ range .Paginator.Pages.ByTitle }}
-<article class="gdoc-post">
-    <header class="gdoc-post__header">
+  {{ range .Paginator.Pages.ByTitle }}
+    <article class="gdoc-post">
+      <header class="gdoc-post__header">
         <h1 class="gdoc-post__title">
-            <a href="{{ .RelPermalink }}">{{ partial "utils/title" . }}</a>
+          <a href="{{ .RelPermalink }}">{{ partial "utils/title" . }}</a>
         </h1>
-    </header>
+      </header>
 
-    <footer class="gdoc-post__meta flex align-center">
+      <footer class="gdoc-post__meta flex align-center">
         <span class="flex align-center no-wrap">
           {{ $pageCount := len .Pages }}
           <svg class="icon gdoc_tag"><use xlink:href="#gdoc_tag"></use></svg>
@@ -25,7 +25,7 @@
             {{ end }}
           </span>
         </span>
-    </footer>
-</article>
-{{ end }}
+      </footer>
+    </article>
+  {{ end }}
 {{ end }}

@@ -3,11 +3,11 @@
   <head>
     {{ partial "head/meta" . }}
     <title>
-        {{- if eq .Kind "home" -}}
+      {{- if eq .Kind "home" -}}
         {{ .Site.Title }}
-        {{- else -}}
+      {{- else -}}
         {{ printf "%s | %s" (partial "utils/title" .) .Site.Title }}
-        {{- end -}}
+      {{- end -}}
     </title>
 
     {{ partial "head/favicons" . }}

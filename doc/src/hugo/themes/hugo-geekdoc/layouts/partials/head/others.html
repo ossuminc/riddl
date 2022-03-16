@@ -49,23 +49,22 @@
 />
 
 <link
-        rel="preload"
-        href="{{ index (index .Site.Data.assets " custom.css") "src" | relURL }}"
-as="style"
+  rel="preload"
+  href="{{ index (index .Site.Data.assets "custom.css") "src" | relURL }}"
+  as="style"
 />
 <link
-        rel="stylesheet"
-        href="{{ index (index .Site.Data.assets " custom.css") "src" | relURL }}"
-media="all"
+  rel="stylesheet"
+  href="{{ index (index .Site.Data.assets "custom.css") "src" | relURL }}"
+  media="all"
 />
 
 {{- with .OutputFormats.Get "html" }}
-{{ printf `
-<link href=%q rel=%q type=%q/>` .Permalink .Rel .MediaType.Type | safeHTML }}
+  {{ printf `<link href=%q rel=%q type=%q />` .Permalink .Rel .MediaType.Type | safeHTML }}
 {{- end }}
 
 {{- if (default false $.Site.Params.GeekdocOverwriteHTMLBase) }}
-<base href="{{ .Site.BaseURL }}"/>
+  <base href="{{ .Site.BaseURL }}" />
 {{- end }}
 
 {{ printf "<!-- %s -->" "Made with Geekdoc theme https://github.com/thegeeklab/hugo-geekdoc" | safeHTML }}
