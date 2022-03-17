@@ -1,5 +1,6 @@
 ---
 title: "Corporate"
-weight: 60 draft: false
+weight: 60
+draft: "false"
 ---
 

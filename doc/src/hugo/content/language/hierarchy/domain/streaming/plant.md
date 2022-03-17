@@ -1,6 +1,8 @@
 ---
 title: "Plants"
-weight: 40 draft: false
+type: "page"
+draft: "false"
+weight: 40
 ---
 
 A RIDDL `plant` is a definition that combines [pipes](pipe) with 

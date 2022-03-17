@@ -1,6 +1,6 @@
 ---
 title: "Domain"
-draft: false
+draft: "false"
 weight: 30
 ---
 

@@ -1,7 +1,8 @@
 ---
 title: "Akka"
 type: "page"
-weight: 10 draft: false
+weight: 10
+draft: "false"
 ---
 
 The goal of the Akka translator is to generate all the infrastructure code 

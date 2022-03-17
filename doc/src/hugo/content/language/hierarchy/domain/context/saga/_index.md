@@ -1,6 +1,6 @@
 ---
 title: "Saga"
-type: page
+type: "page"
 weight: 23
 ---
 

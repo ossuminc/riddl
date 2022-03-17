@@ -1,6 +1,6 @@
 ---
 title: "Terminals"
-draft: false
+draft: "false"
 weight: 10
 ---
 

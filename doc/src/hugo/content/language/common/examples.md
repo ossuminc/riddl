@@ -1,7 +1,8 @@
 ---
 title: "Examples"
 type: "page"
-weight: 30 draft: false
+weight: 30
+draft: "false"
 ---
 
 RIDDL uses Gherkin examples in various places to express a functionality or behavior requirement on

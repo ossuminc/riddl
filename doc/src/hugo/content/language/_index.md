@@ -1,7 +1,7 @@
 ---
 title: "Language"
-type: "docs"
-draft: false
+type: "page"
+draft: "false"
 weight: 20
 ---
 

@@ -1,7 +1,8 @@
 ---
 title: "Adaptors"
 type: "page"
-weight: 20 draft: false
+weight: 20 
+draft: "false"
 ---
 Adaptors are translators between contexts and (sub-)domains. 
 DDD calls these "anti-corruption layers" which we find awkward, hence we

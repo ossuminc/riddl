@@ -1,6 +1,8 @@
 ---
 title: "Streaming"
-type: page weight: 40 draft: false
+type: "page"
+draft: "false"
+weight: 40
 ---
 
 RIDDL supports the definition of complex data streaming models. There are two basic definitions

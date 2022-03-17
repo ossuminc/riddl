@@ -1,6 +1,8 @@
 ---
 title: "Imports"
-weight: 60 draft: false
+type: "page"
+draft: "false"
+weight: 60
 ---
 
 {{% notice warning %}}

@@ -1,6 +1,6 @@
 ---
 title: "Common"
-draft: false
+draft: "false"
 weight: 20
 ---
 

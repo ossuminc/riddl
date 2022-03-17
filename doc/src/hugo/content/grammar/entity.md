@@ -1,7 +1,7 @@
 ---
 title: "Entity"
 weight: 50
-draft: false
+draft: "false"
 ----
 {{% code file=grammar/ebnf/entity.ebnf language=ebnf %}}
 

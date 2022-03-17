@@ -1,6 +1,8 @@
 ---
 title: "Reactive BBQ"
-weight: 30 draft: false
+type: "page"
+draft: "false"
+weight: 30
 ---
 
 

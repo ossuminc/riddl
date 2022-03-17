@@ -1,6 +1,8 @@
 ---
 title: "State"
-type: page weight: 10 draft: false
+type: "page"
+draft: "false"
+weight: 10
 ---
 
 The state definitions of an entity define the structure of the information that the entity 

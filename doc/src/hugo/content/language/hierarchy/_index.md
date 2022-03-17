@@ -1,6 +1,8 @@
 ---
 title: "Definitional Hierarchy"
-weight: 20 draft: false
+type: "page"
+draft: "false"
+weight: 20
 ---
 
 RIDDL utilizes a hierarchy of nested definitions. This hierarchy 

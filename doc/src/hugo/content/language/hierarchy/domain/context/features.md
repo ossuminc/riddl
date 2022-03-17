@@ -1,5 +1,8 @@
 ---
-title: Features type: page weight: 40 draft: false
+title: "Features" 
+type: "page"
+weight: 40
+draft: "false"
 ---
 A Feature is a requirement on a context. Features are specified very similarly to the
 [Gherkin language](https://cucumber.io/docs/gherkin/reference/). The same keywords are used and the

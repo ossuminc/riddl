@@ -1,6 +1,8 @@
 ---
 title: "RBBQ Scenarios"
-weight: 20 draft: false
+type: "page"
+draft: "false"
+weight: 20
 ---
 
 ## Case Study

@@ -1,6 +1,8 @@
 ---
 title: "Story"
-type: page weight: 20 draft: false
+type: "page"
+draft: "false"
+weight: 20
 ---
 
 A story is a domain definition the defines an agile user story. This is the same concept that Kent

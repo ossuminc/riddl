@@ -1,6 +1,8 @@
 ---
 title: "Principles"
-weight: 40 draft: false
+type: "page"
+draft: "false"
+weight: 40
 ---
 RIDDL is a high level system specification language and as such must obey 
 some principles of such languages. This page provides those principles.

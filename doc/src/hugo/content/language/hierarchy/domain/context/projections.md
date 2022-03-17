@@ -1,6 +1,8 @@
 ---
 title: "Projections"
-type: page weight: 30 draft: false
+type: "page"
+draft: "false"
+weight: 30
 ---
 
 # Introduction

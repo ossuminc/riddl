@@ -1,7 +1,7 @@
 ---
 title: "Documentation Conventions"
-draft: false
-type: page
+type: "page"
+draft: "false"
 weight: 20
 ---
 

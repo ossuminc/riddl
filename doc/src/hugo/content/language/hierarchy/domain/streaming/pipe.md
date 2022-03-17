@@ -1,6 +1,8 @@
 ---
 title: "Pipes"
-weight: 20 draft: false
+type: "page"
+draft: "false"
+weight: 20
 ---
 
 Pipes are uni-directional conduits for reliably transmitting data of a 

@@ -1,6 +1,8 @@
 ---
 title: "Language Conventions"
-weight: 10 draft: false
+type: "page"
+draft: "false"
+weight: 10 
 ---
 
 ### Introduction

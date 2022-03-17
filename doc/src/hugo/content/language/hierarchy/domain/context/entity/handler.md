@@ -1,5 +1,8 @@
 ---
-title: Handler type: page weight: 50 draft: false
+title: "Handler"
+type: "page"
+weight: 50
+draft: "false"
 ---
 
 A _handler_ in an `entity` specifies how an entity handles its input messages.  

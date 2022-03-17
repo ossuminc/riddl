@@ -2,7 +2,7 @@
 baseURL = "https://riddl.tech/"
 languageCode = 'en-us'
 title = "RIDDL Documentation"
-theme = ["riddl-hugo-theme", "hugo-geekdoc"]
+theme = ["hugo-geekdoc"]
 
 name = "riddl"
 description = "Technical documentation for RIDDL"
