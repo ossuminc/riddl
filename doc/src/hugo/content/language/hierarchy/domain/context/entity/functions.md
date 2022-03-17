@@ -1,4 +1,6 @@
 ---
-title: Function type: page weight: 55 draft: false
+title: "Function"
+type: "page"
+weight: 55 draft: false
 ---
 TBD

@@ -1,6 +1,7 @@
 ---
 title: "Entities"
-type: page weight: 10 draft: false
+type: "page"
+weight: 10 draft: false
 ---
 
 An entity in RIDDL is the same as it is in DDD which defines it this way:
