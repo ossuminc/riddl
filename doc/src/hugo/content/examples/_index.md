@@ -1,8 +1,7 @@
 ---
 title: "Example"
 type: "docs"
-weight: 10
-summary: "RIDDL Example: Reactive BBQ"
+weight: 10 draft: false summary: "RIDDL Example: Reactive BBQ"
 ---
 
 Some people can learn RIDDL faster by looking at examples than by reading 

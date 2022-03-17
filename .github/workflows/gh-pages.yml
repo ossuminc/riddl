@@ -22,7 +22,7 @@ jobs:
           extended: true
 
       - name: Build
-        run: cd doc/src/hugo ; hugo --minify
+        run: cd doc/src/hugo ; hugo --minify -D -v --printMemoryUsage
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

@@ -1,7 +1,5 @@
 ---
-title: Descriptions
-type: page
-weight: 15
+title: Descriptions type: page weight: 15 draft: false
 ---
 
 The RIDDL syntax is simply a hierarchical arrangement of definitions. Each definition can have a

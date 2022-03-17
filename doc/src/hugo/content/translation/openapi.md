@@ -1,5 +1,5 @@
 ---
 title: "OpenAPI"
 type: "page"
-weight: 40
+weight: 40 draft: false
 ---

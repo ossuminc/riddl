@@ -1,7 +1,7 @@
 ---
 title: "Options"
-weight: 15
-type: "page"
+weight: 15 type: "page"
+draft: false
 ---
 
 The optional entity kind prefix is a directive that suggests how the entity

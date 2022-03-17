@@ -2,6 +2,7 @@
 title: "Frequently Asked Questions"
 description: "Answers to the most frequently asked questions"
 type: "docs"
+draft: false
 ---
 
 {{< faq "Is RIDDL a programming language?" >}}

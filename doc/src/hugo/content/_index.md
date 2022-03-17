@@ -2,9 +2,7 @@
 title: "Introduction"
 type: "home"
 date: "2021-12-01T15:34:22-05:00"
-draft: true
-weight: 1
-creatordisplayname: "Reid Spencer"
+draft: false weight: 1 creatordisplayname: "Reid Spencer"
 creatoremail: "reid@reactific.com"
 ---
 

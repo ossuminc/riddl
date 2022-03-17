@@ -1,7 +1,7 @@
 ---
 title: "Binary AST"
 type: "page"
-weight: 30
+weight: 30 draft: false
 ---
 
 When the `riddlc` compiler parses a RIDDL document, it translates it to an Abstract 

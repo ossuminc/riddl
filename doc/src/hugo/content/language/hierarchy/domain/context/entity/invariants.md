@@ -1,7 +1,5 @@
 ---
-title: Invariants
-type: page
-weight: 20
+title: Invariants type: page weight: 20 draft: false
 ---
 Invariants specify rules about the state of an entity that must never be
 violated. Invariants typically come from business logic assertions. For example,

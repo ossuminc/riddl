@@ -1,7 +1,7 @@
 ---
 title: "riddlc options"
 type: "page"
-weight: 5
+weight: 5 draft: false
 ---
 
 ## Introduction

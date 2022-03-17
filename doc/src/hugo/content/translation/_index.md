@@ -1,7 +1,7 @@
 ---
 title: "Translation"
 type: "section"
-weight: 40
+weight: 40 draft: false
 ---
 
 The RIDDL compiler, `riddlc` is able to translate RIDDL into a variety of other

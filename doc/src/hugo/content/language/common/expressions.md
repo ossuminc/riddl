@@ -1,7 +1,5 @@
 ---
-title: Expressions
-type: page
-weight: 35
+title: Expressions type: page weight: 35 draft: false
 ---
 
 RIDDL allows expressions to be specified in various places. Most frequently

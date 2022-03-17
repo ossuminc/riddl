@@ -1,6 +1,6 @@
 ---
 title: "Common"
-weight: 12
+weight: 12 draft: false
 ---
 Some definitions are fundamental to RIDDL and can appear in many RIDDL 
 container definitions. Before exploring the hierarchy of definitions, we 

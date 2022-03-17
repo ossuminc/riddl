@@ -1,7 +1,6 @@
 ---
 title: "Compilation"
-type: page
-weight: 30
+type: page weight: 30 draft: false
 ---
 
 # Introduction

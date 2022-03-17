@@ -1,6 +1,6 @@
 ---
 title: "Includes"
-weight: 40
+weight: 40 draft: false
 ---
 
 An `include` statement is not a RIDDL definition but an instruction to the 

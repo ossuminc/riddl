@@ -1,7 +1,6 @@
 ---
-type: page
-title: "Root"
-weight: 15
+type: page title: "Root"
+weight: 15 draft: false
 ---
 
 At the root (file) level you can only do two things: include definitions

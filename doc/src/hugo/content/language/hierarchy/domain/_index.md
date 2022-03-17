@@ -1,7 +1,6 @@
 ---
 title: "Domains"
-type: page
-weight: 40
+type: page weight: 40 draft: false
 ---
 
 A domain is the top definitional level in RIDDL. Domains in RIDDL are

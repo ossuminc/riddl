@@ -1,6 +1,6 @@
 ---
 title: "Processors"
-weight: 30
+weight: 30 draft: false
 ---
 
 As the name indicates, a RIDDL `processor` definition specifies the 
