@@ -1,5 +1,5 @@
 ![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
-
+![Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
 
 # RIDDL
 
