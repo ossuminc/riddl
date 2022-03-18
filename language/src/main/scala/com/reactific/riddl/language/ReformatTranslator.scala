@@ -602,6 +602,11 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
             .addIndent("from ").emitMessageRef(ec8.messageRef).add(" to ")
             .emitMessageRef(ec8.command).add(" as {\n").indent)
 
+        case cc8: CommandCommandA8n => state.withCurrent(
+          _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
+            .addIndent("from ").emitMessageRef(cc8.messageRef).add(" to ")
+            .emitMessageRef(cc8.command).add(" as {\n").indent)
+
         case ea8: EventActionA8n => state.withCurrent(
             _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
             .addIndent("from ").emitMessageRef(ea8.messageRef).add(" to ")

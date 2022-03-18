@@ -169,6 +169,7 @@ object AST {
       case _: Adaptor         => Keywords.adaptor
       case _: EventActionA8n  => Keywords.adapt
       case _: EventCommandA8n => Keywords.adapt
+      case _: CommandCommandA8n => Keywords.adapt
       case _: Context         => Keywords.context
       case _: Domain          => Keywords.domain
       case _: Entity          => Keywords.entity
@@ -204,8 +205,9 @@ object AST {
     */
   def kind(definition: DescribedValue): String = {
     definition match {
-      case _: EventActionA8n  => "Event Action Adaptation"
-      case _: EventCommandA8n => "Event Command Adaptation"
+      case _: EventActionA8n  => "Event -> Action Adaptation"
+      case _: EventCommandA8n => "Event -> Command Adaptation"
+      case _: CommandCommandA8n => "Command -> Command Adaptation"
       case _: Adaptor         => "Adaptor"
       case _: Context         => "Context"
       case _: Domain          => "Domain"
@@ -249,7 +251,8 @@ object AST {
       case _: Entity          => "Entity"
       case _: Context         => "Context"
       case _: Function        => "Function"
-      case _: EventCommandA8n => "Event Command Adaptation"
+      case _: EventCommandA8n => "Event -> Command Adaptation"
+      case _: CommandCommandA8n => "Command -> Command Adaptation"
       case _: Adaptor         => "Adaptor"
       case _: Processor       => "Processor"
       case _: Plant           => "Plant"
@@ -1906,7 +1909,7 @@ object AST {
   }
 
   sealed trait Adaptation extends AdaptorDefinition with ParentDefOf[Example] {
-    def messageRef: EventRef
+    def messageRef: MessageRef
     def examples: Seq[Example]
   }
 
@@ -1936,6 +1939,36 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Adaptation {
+    override def contents: Seq[Example] = examples
+  }
+
+  /** The specification of a single adaptation based on message
+   *
+   * @param loc
+   *   The location of the adaptation definition
+   * @param id
+   *   The name of the adaptation
+   * @param messageRef
+   *   The command that triggers the adaptation, inherited from [[Adaptation]]
+   * @param command
+   *   The command resulting from the adaptation of the [[messageRef]] to the
+   *   bounded context
+   * @param examples
+   *   Optional set of Gherkin [[Example]]s to define the adaptation
+   * @param brief
+   *   A brief description (one sentence) for use in documentation
+   * @param description
+   *   Optional description of the adaptation.
+   */
+  case class CommandCommandA8n(
+    loc: Location,
+    id: Identifier,
+    messageRef: CommandRef,
+    command: CommandRef,
+    examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None)
+    extends Adaptation {
     override def contents: Seq[Example] = examples
   }
 

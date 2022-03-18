@@ -38,5 +38,25 @@ class AdaptorTest extends ValidatingTest {
       parseAndValidate[Domain](input) { (_, messages) =>
         messages mustBe empty }
     }
+
+    "allow wrapper adaptations" in {
+      val input =
+        """domain ignore is { context Foo is {
+          |type ItWillHappen = command { abc: String described as "abc" } described as "?"
+          |type LetsDoIt = command { bcd: String described as "abc" } described as "?"
+          |adaptor PaymentAdapter for context Foo is {
+          |  adapt sendAMessage is {
+          |    from command ItWillHappen to command LetsDoIt as {
+          |      example one is { ??? }
+          |    }
+          |  } explained as "?"
+          |} explained as "?"
+          |} explained as "?"
+          |} explained as "?"
+          |""".stripMargin
+      parseAndValidate[Domain](input) { (_, messages) =>
+        messages mustBe empty }
+    }
+
   }
 }

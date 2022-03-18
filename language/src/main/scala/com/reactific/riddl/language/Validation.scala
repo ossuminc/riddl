@@ -745,7 +745,7 @@ object Validation {
               val s1 = s.check(
                 argNames.size == paramNames.size,
                 s"Wrong number of arguments for ${fid
-                  .format}. Expected ${paramNames.size}, got ${argNames.size}",
+                  .format}. Expected ${paramNames.size}, but got ${argNames.size}",
                 Error,
                 loc
               )
@@ -1097,6 +1097,10 @@ object Validation {
       adaptation match {
         case eaa: EventActionA8n => state.checkDefinition(container, adaptation)
             .checkRef[Type](eaa.messageRef).checkActions(eaa.actions)
+        case cca: CommandCommandA8n =>
+          state
+            .checkDefinition(container, adaptation)
+            .checkRef[Type](cca.messageRef).checkRef[Type](cca.command)
         case eca: EventCommandA8n => state
             .checkDefinition(container, adaptation)
             .checkRef[Type](eca.messageRef).checkRef[Type](eca.command)

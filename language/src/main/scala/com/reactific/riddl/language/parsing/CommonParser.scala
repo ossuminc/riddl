@@ -68,11 +68,11 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
-    P(StringIn(Keywords.brief, Keywords.briefly) ~/ literalString).?
+    P(StringIn(Keywords.brief, Keywords.briefly) ~ literalString).?
   }
 
   def description[u: P]: P[Option[Description]] =
-    P(StringIn(Keywords.described, Keywords.explained) ~/
+    P(StringIn(Keywords.described, Keywords.explained) ~
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))).?
 
 
@@ -109,7 +109,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[u: P]: P[Unit] = {
-    P(StringIn(Readability.is, Readability.are, Punctuation.colon, Punctuation.equals)).?./
+    P(StringIn(Readability.is, Readability.are, Punctuation.colon, Punctuation.equals)).?
   }
 
   def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
