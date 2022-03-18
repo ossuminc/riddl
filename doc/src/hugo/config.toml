@@ -28,7 +28,7 @@ pygmentsStyle = "monokailight"
 
 # hugo outputs
 [outputs]
-home = [ "HTML", "JSON", "RSS"]
+home = [ "HTML", "RSS"]
 
 # Required if you want to render robots.txt template
 enableRobotsTXT = true
@@ -94,7 +94,7 @@ enableRobotsTXT = true
 
 # (Optional, default none) Set source repository location. Used for 'Edit page' links.
 # You can also specify this parameter per page in front matter.
-  geekdocRepo = "https://github.com/Yoppworks/riddl"
+  geekdocRepo = "https://github.com/reactific/riddl"
 
 # (Optional, default none) Enable 'Edit page' links. Requires 'GeekdocRepo' param
 # and path must point to 'content' directory of repo.
@@ -112,11 +112,11 @@ enableRobotsTXT = true
 
 # (Optional, default none) Add a link to your Legal Notice page to the site footer.
 # It can be either a remote url or a local file path relative to your content directory.
-  geekdocLegalNotice = "https://www.yoppworks.com/legal"
+#  geekdocLegalNotice = "legal"
 
 # (Optional, default none) Add a link to your Privacy Policy page to the site footer.
 # It can be either a remote url or a local file path relative to your content directory.
-  geekdocPrivacyPolicy = "https://www.yoppworks.com/privacy"
+  geekdocPrivacyPolicy = "privacy"
 
 # (Optional, default true) Add an anchor link to headlines.
   geekdocAnchor = true
@@ -237,14 +237,14 @@ link = "contact"
 [[params.social]]
 title = "twitter"
 icon = "fab fa-twitter" # fontawesome icon : https://fontawesome.com/icons
-link = "https://twitter.com/yoppworks"
+link = "https://twitter.com/reactific"
 
 [[params.social]]
 title = "github"
 icon = "fab fa-github" # fontawesome icon : https://fontawesome.com/icons
-link = "https://github.com/yoppworks"
+link = "https://github.com/reactific"
 
 [[params.social]]
 title = "linkedin"
 icon = "fab fa-linkedin" # fontawesome icon : https://fontawesome.com/icons
-link = "https://linkedin.com/company/yoppworks"
+link = "https://linkedin.com/company/reactific"

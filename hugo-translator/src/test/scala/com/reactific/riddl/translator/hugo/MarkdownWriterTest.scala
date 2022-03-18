@@ -15,7 +15,7 @@ class MarkdownWriterTest extends ParsingTest {
       val mkd = MarkdownWriter(output)
       val input =
         """domain TestDomain {
-          |  author is { name="Reid Spencer" email="reid.spencer@yoppworks.com" }
+          |  author is { name="Reid Spencer" email="reid@reactific.com" }
           |  type MyString is String described as "Just a renamed string"
           |} brief "Just For Testing" described as {
           ||A test domain for ensuring that documentation for domains is
@@ -42,7 +42,7 @@ class MarkdownWriterTest extends ParsingTest {
               |
               |## Author
               |* _Name_: Reid Spencer
-              |* _Email_: reid.spencer@yoppworks.com
+              |* _Email_: reid@reactific.com
               |
               |## Briefly
               |Just For Testing

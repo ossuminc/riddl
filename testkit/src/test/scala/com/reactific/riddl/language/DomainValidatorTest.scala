@@ -24,9 +24,9 @@ class DomainValidatorTest extends ValidatingTest {
       val input = """domain foo is {
                     |  author is {
                     |    name: "Reid Spencer"
-                    |    email: "reid.spencer@yoppworks.com"
-                    |    organization: "Yoppworks, Inc."
-                    |    title: "VP Technology"
+                    |    email: "reid@reactific.com"
+                    |    organization: "Reactific Software Inc."
+                    |    title: "President"
                     |  }
                     |} described as "example"
                     |""".stripMargin
@@ -36,9 +36,9 @@ class DomainValidatorTest extends ValidatingTest {
         domain.author mustBe Some(AuthorInfo(
           2 -> 3,
           LiteralString(3 -> 11, "Reid Spencer"),
-          LiteralString(4 -> 12, "reid.spencer@yoppworks.com"),
-          Some(LiteralString(5 -> 19, "Yoppworks, Inc.")),
-          Some(LiteralString(6 -> 12, "VP Technology"))
+          LiteralString(4 -> 12, "reid@reactific.com"),
+          Some(LiteralString(5 -> 19, "Reactific Software Inc.")),
+          Some(LiteralString(6 -> 12, "President"))
         ))
         messages mustBe empty
       }

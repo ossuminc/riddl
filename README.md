@@ -1,7 +1,7 @@
 ![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
 
 
-# riddl
+# RIDDL
 
 ## Full Documentation
 Is here: https://riddl.tech
@@ -18,39 +18,9 @@ developers of the burden of maintaining infrastructural code through evolution
 of the domain abstractions.
 
 ## Usage
-To get the most recent options, run `riddlc --help`. As of version 0.1.1, that 
-will print out:
-```text
-RIDDL Compiler (c) 2019 Yoppworks Inc. All rights reserved. 
-Version:  0.1.1
-Usage: riddlc [parse|prettify|validate|translate] [options]
+To get the most recent options, run `riddlc --help`. That command will give you
+the syntax for doing various things with the riddl compiler (`riddlc`)
 
-  -h, --help
-  -v, --verbose
-  -q, --quiet
-  -w, --suppress-warnings
-  -m, --suppress-missing-warnings
-  -s, --suppress-style-warnings
-  -t, --show-times
-Command: parse [options]
-Parse the input for syntactic compliance with riddl language
-  -i, --input-file <value>
-                           required riddl input file to compile
-Command: prettify [options]
-Parse the input and print it out in prettified style
-  -i, --input-file <value>
-                           required riddl input file to compile
-Command: validate [options]
-
-  -i, --input-file <value>
-                           required riddl input file to compile
-Command: translate [options]
-translate riddl as specified in configuration file 
-  -i, --input-file <value>
-                           required riddl input file to compile
-  -c, --configuration-file <value>
-                           configuration that specifies how to do the translation
-``` 
 ## Goals
 This project is currently nascent. It doesn't do anything yet, but eventually
 we hope it will do all the following things:

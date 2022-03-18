@@ -47,7 +47,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   import autoImport.*
-  override lazy val globalSettings: Seq[Setting[_]] = {
+  override lazy val globalSettings: Seq[Setting[?]] = {
     Seq(
       riddlcPath := file("riddlc"),
       riddlcOptions := Seq.empty[RIDDLCOption],
@@ -60,7 +60,7 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   lazy val compileTask = taskKey[Seq[File]]("A task to invoke riddlc compiler")
 
-  override lazy val projectSettings: Seq[Setting[_]] =
+  override lazy val projectSettings: Seq[Setting[?]] =
     Seq((Compile / compile) := ((Compile / compile) dependsOn compileTask).value)
 
   compileTask := {

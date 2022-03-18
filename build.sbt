@@ -62,7 +62,6 @@ lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := 
   .aggregate(
     language,
     testkit,
-    `hugo-theme`,
     `hugo-translator`,
     examples, doc,
     riddlc, `sbt-riddl`
@@ -97,20 +96,13 @@ lazy val testkit = project.in(file("testkit"))
   )
   .dependsOn(language)
 
-lazy val `hugo-theme` = project.in(file("hugo-theme"))
-  .configure(C.zipResource("main"))
-  .settings(
-    name := "riddl-hugo-theme"
-  )
-
 lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
   .settings(
     name := "riddl-hugo-translator",
     Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  ).dependsOn(language % "compile->compile", `hugo-theme`)
-  .dependsOn(testkit % "test->compile")
+  ).dependsOn(language % "compile->compile", testkit % "test->compile")
   .dependsOn(utils)
 
 lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
