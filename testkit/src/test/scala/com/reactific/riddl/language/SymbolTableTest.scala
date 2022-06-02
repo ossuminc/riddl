@@ -1,6 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 import org.scalatest.Assertion
 
@@ -17,8 +18,10 @@ class SymbolTableTest extends ParsingTest {
 
     val st = captureEverythingSymbols
 
-    def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
-      names: Seq[String],
+    def assertRefWithParent[
+      T <: Definition: ClassTag,
+      P <: Definition: ClassTag
+    ](names: Seq[String],
       parentName: String
     ): Assertion = {
       val lookupResult = st.lookup[T](names)
@@ -46,7 +49,10 @@ class SymbolTableTest extends ParsingTest {
       assertRefWithParent[Context, Domain](Seq("full"), "Everything")
       assertRefWithParent[Type, Context](Seq("boo"), "full")
       assertRefWithParent[Entity, Context](Seq("Something"), "full")
-      assertRefWithParent[Function, Entity](Seq("whenUnderTheInfluence"), "Something")
+      assertRefWithParent[Function, Entity](
+        Seq("whenUnderTheInfluence"),
+        "Something"
+      )
       assertRefWithParent[Handler, Entity](Seq("foo"), "Something")
       assertRefWithParent[Type, Entity](Seq("somethingDate"), "Something")
     }
@@ -57,6 +63,28 @@ class SymbolTableTest extends ParsingTest {
 
     "capture expected state field references with appropriate parent" in {
       st.lookup[Definition](Seq("field")) mustNot be(empty)
+    }
+
+    "handle #116 - https://github.com/reactific/riddl/issues/116" in {
+      val src = """
+                  |domain ImprovingApp is {
+                  |  context Vendor is {
+                  |    entity Product is {???}
+                  |  }
+                  |  domain Inventory is {
+                  |    context Product is {
+                  |      entity Product is {???}
+                  |    }
+                  |  }
+                  |}""".stripMargin
+      val input = RiddlParserInput(src)
+      Riddl.parseAndValidate(input, SysLogger(), CommonOptions()) match {
+        case None => fail("failed to parse & validate")
+        case Some(model) =>
+          model.isRootContainer must be(true)
+          model.contents.headOption must not(be(empty))
+          model.contents.head.contexts.size must be(1)
+      }
     }
   }
 }
