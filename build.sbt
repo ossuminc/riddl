@@ -146,6 +146,7 @@ lazy val doc2 = project.in(file("doc2"))
 
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging)
+  .configure(C.mavenPublish)
   .settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),

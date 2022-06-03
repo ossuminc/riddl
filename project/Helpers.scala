@@ -64,4 +64,53 @@ object C {
       Compile / packageDoc / publishArtifact := false,
     )
   }
+
+  def mavenPublish(p: Project): Project = {
+    p.settings(
+      organization := "com.reactific",
+      organizationName := "Reactific Software LLC",
+      organizationHomepage := Some(url("https://riddl.tech")),
+
+      scmInfo := Some(ScmInfo(
+          url("https://github.com/reactific/riddl"),
+          "scm:git@github.reactific/riddl.git"
+        )
+      ),
+
+      developers := List(
+        Developer(
+          id    = "reid-spencer",
+          name  = "Reid Spencer",
+          email = "reid@reactific.com",
+          url   = url("https://riddl.tech")
+        )
+      ),
+
+      description :=
+        """RIDDL is a language and toolset for specifying a system design using ideas from
+          |DDD, reactive architecture, distributed systems patterns, and other software
+          |architecture practices."""
+          .stripMargin,
+      licenses := List("Apache License, Version 2.0" ->
+        new URL("https://www.apache.org/licenses/LICENSE-2.0")),
+      homepage := Some(url("https://riddl.tech")),
+
+      // Remove all additional repository other than Maven Central from POM
+      pomIncludeRepository := { _ => false },
+
+      publishTo := {
+        val nexus = "https://s01.oss.sonatype.org/"
+        if (isSnapshot.value) {
+          Some("snapshots" at nexus + "content/repositories/snapshots")
+        }
+        else {
+          Some("releases" at nexus + "service/local/staging/deploy/maven2")
+        }
+      },
+
+      publishMavenStyle := true,
+
+      versionScheme := Some("early-semver")
+    )
+  }
 }
