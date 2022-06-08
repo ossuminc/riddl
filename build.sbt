@@ -145,7 +145,7 @@ lazy val doc2 = project.in(file("doc2")).enablePlugins(SitePlugin)
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging).configure(C.mavenPublish).settings(
+  .enablePlugins(JavaAppPackaging,UniversalDeployPlugin).configure(C.mavenPublish).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
