@@ -1,8 +1,8 @@
 .bloop/
 /.bsp/
-/.idea/
 !.idea/runConfigurations/
 !.idea/dictionaries
+/.idea/
 target
 **/target
 **/.DS_Store

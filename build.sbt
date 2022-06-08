@@ -1,10 +1,13 @@
 import sbt.Keys.scalaVersion
-import sbtbuildinfo.BuildInfoOption.{BuildTime, ToMap}
+
+import sbtbuildinfo.BuildInfoOption.BuildTime
+import sbtbuildinfo.BuildInfoOption.ToMap
 
 ThisBuild / maintainer := "reid@reactific.com"
 ThisBuild / organizationName := "Reactific Software LLC"
 ThisBuild / startYear := Some(2019)
-ThisBuild / licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
+ThisBuild / licenses +=
+  ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
@@ -58,57 +61,60 @@ lazy val scala2_13_Options = Seq(
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
-lazy val riddl = (project in file(".")).settings(publish := {}, publishLocal := {})
-  .aggregate(
+lazy val riddl = (project in file("."))
+  .settings(publish := {}, publishLocal := {}).aggregate(
     language,
     testkit,
     `hugo-translator`,
-    examples, doc,
-    riddlc, `sbt-riddl`
+    examples,
+    doc,
+    riddlc,
+    `sbt-riddl`
   )
 
-lazy val utils = project.in(file("utils"))
-  .configure(C.withCoverage())
-  .settings(
+lazy val utils = project.in(file("utils")).configure(C.withCoverage())
+  .configure(C.mavenPublish).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
-    scalacOptions := scala2_13_Options,
+    scalacOptions := scala2_13_Options
   )
 
-lazy val language = project.in(file("language"))
-  .enablePlugins(BuildInfoPlugin)
-  .configure(C.withCoverage())
-  .settings(
+lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
+  .configure(C.withCoverage()).configure(C.mavenPublish).settings(
     name := "riddl-language",
     buildInfoObject := "BuildInfo",
     buildInfoPackage := "com.reactific.riddl",
     buildInfoUsePackageAsPath := true,
-    coverageExcludedPackages := "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
+    coverageExcludedPackages :=
+      "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse) ++ Dep.testing,
+    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse) ++ Dep.testing
   )
 
-lazy val testkit = project.in(file("testkit"))
+lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
   .settings(
     name := "riddl-language-testkit",
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Dep.testKitDeps
-  )
-  .dependsOn(language)
+  ).dependsOn(language)
 
 lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
-  .settings(
+  .configure(C.mavenPublish).settings(
     name := "riddl-hugo-translator",
-    Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
+    Compile / unmanagedResourceDirectories += {
+      baseDirectory.value / "resources"
+    },
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   ).dependsOn(language % "compile->compile", testkit % "test->compile")
   .dependsOn(utils)
 
 lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
-  .settings(
+  .configure(C.mavenPublish).settings(
     name := "riddl-hugo-git-check-translator",
-    Compile / unmanagedResourceDirectories += {baseDirectory.value / "resources"},
+    Compile / unmanagedResourceDirectories += {
+      baseDirectory.value / "resources"
+    },
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(`hugo-translator` % "compile->compile;test->test")
@@ -122,22 +128,16 @@ lazy val examples = project.in(file("examples")).settings(
   libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
-lazy val doc = project.in(file("doc"))
-  .enablePlugins(SitePlugin)
-  .enablePlugins(SiteScaladocPlugin)
-  .configure(C.zipResource("hugo"))
-  .settings(
-  name := "riddl-doc",
-  publishTo := Option(Resolver.defaultLocal),
-  // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-  publishSite
-).dependsOn(`hugo-translator` % "test->test", riddlc)
+lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
+  .enablePlugins(SiteScaladocPlugin).configure(C.zipResource("hugo")).settings(
+    name := "riddl-doc",
+    publishTo := Option(Resolver.defaultLocal),
+    // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+    publishSite
+  ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
-lazy val doc2 = project.in(file("doc2"))
-  .enablePlugins(SitePlugin)
-  .enablePlugins(SiteScaladocPlugin)
-  .configure(C.zipResource("hugo"))
-  .settings(
+lazy val doc2 = project.in(file("doc2")).enablePlugins(SitePlugin)
+  .enablePlugins(SiteScaladocPlugin).configure(C.zipResource("hugo")).settings(
     name := "riddl-doc2",
     publishTo := Option(Resolver.defaultLocal),
     // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
@@ -145,20 +145,20 @@ lazy val doc2 = project.in(file("doc2"))
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging)
-  .configure(C.mavenPublish)
-  .settings(
+  .enablePlugins(JavaAppPackaging).configure(C.mavenPublish).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
-    maintainer := "reid@reactific.com",
-  ).dependsOn(language, `hugo-translator` % "compile->compile;test->test",
-  `hugo-git-check` % "compile->compile;test->test"
+    maintainer := "reid@reactific.com"
+  ).dependsOn(
+    language,
+    `hugo-translator` % "compile->compile;test->test",
+    `hugo-git-check` % "compile->compile;test->test"
   )
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
-  .settings(
+  .configure(C.mavenPublish).settings(
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.15",
