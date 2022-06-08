@@ -125,7 +125,7 @@ lazy val examples = project.in(file("examples")).settings(
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
-  libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.9" % "test")
+  libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)

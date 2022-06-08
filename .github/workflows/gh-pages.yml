@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - main  # Set a branch to deploy
-  pull_request:
+    paths:
+      - doc/src/hugo/content/**
+      - doc/src/hugo/layouts/**
+      - doc/src/hugo/static/**
 
 jobs:
   deploy:
