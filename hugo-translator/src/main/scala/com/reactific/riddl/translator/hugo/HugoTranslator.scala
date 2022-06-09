@@ -278,6 +278,29 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     }
   }
 
+  def copyResource(destination: Path):Unit = {
+    import java.nio.file.Files
+    import java.nio.file.StandardCopyOption
+    val name = destination.getFileName.toString
+    val src = ClassLoader.getSystemClassLoader.getResourceAsStream(name)
+    Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
+  }
+
+  def manuallyMakeNewHugoSite(where: File): Unit = {
+    val path = where.toPath
+    if (Files.isDirectory(path)) {
+      Files.createDirectories(path.resolve("archetypes"))
+      Files.createDirectories(path.resolve("content"))
+      Files.createDirectories(path.resolve("data"))
+      Files.createDirectories(path.resolve("layouts"))
+      Files.createDirectories(path.resolve("public"))
+      Files.createDirectories(path.resolve("static"))
+      Files.createDirectories(path.resolve("themes"))
+      copyResource(path.resolve("config.toml"))
+      copyResource(path.resolve("archetypes").resolve("default.md"))
+    }
+  }
+
   def makeDirectoryStructure(
     inputPath: Path,
     log: Logger,
@@ -298,25 +321,33 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
     val hugoPath = options.hugoPath match {
       case Some(path) if Files.isExecutable(path) =>
-        path.toString
+        Some(path.toString)
       case Some(path) if existsInPath(path.toString) =>
-        path.toString
+        Some(path.toString)
       case Some(path) =>
         log.error(s"Unable to find hugo at: $path")
-        "hugo"
+        None
       case None =>
-        "hugo"
+        Some("hugo")
     }
-    if (
-      0 != Process(s"${hugoPath} new site ${outDir.getAbsolutePath}", cwd = parent).!
-    ) { log.error(s"Hugo could not create a site here: $outDir") }
-    else {
-      loadThemes(options)
-      loadStaticAssets(
-        inputPath,
-        log,
-        options
-      ) // for reference from riddl doc blocks
+    hugoPath match {
+      case Some(path) =>
+        if (0 !=
+          Process(s"$path new site ${outDir.getAbsolutePath}", cwd = parent).!
+        ) {
+          log.error(s"Hugo could not create a site here: $outDir")
+        }
+        else {
+          loadThemes(options)
+          loadStaticAssets(
+            inputPath,
+            log,
+            options
+          ) // for reference from riddl doc blocks
+        }
+      case None =>
+        log.info("Setting up hugo site manually, no 'hugo' found")
+        manuallyMakeNewHugoSite(outDir)
     }
     val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
     options.copy(siteLogoPath = Option(logoPath))
