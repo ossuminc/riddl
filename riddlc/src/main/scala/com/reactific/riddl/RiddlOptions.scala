@@ -418,7 +418,10 @@ object RiddlOptions {
       // ignore terminate
       override def terminate(exitState: Either[String, Unit]): Unit = ()
     }
-    val (result, effects) = OParser.runParser(RiddlOptions.parser, args, RiddlOptions(), setup)
+
+    val saneOptions = args.map(_.trim).filterNot(_.isEmpty)
+    val (result, effects) = OParser.runParser(RiddlOptions.parser, saneOptions,
+      RiddlOptions(), setup)
     OParser.runEffects(effects, dontTerminate)
     result
   }
