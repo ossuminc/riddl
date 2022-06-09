@@ -93,5 +93,15 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           true
       }
     }
+
+    "empty args are eliminated" in {
+      val opts = Array("parse", "", " -i", "  ", "file.riddl")
+      RiddlOptions.parse(opts) match {
+        case Some(opts) =>
+          opts.parseOptions.inputFile mustBe Some(Path.of("file.riddl"))
+        case None =>
+          fail("Failed to parse options")
+      }
+    }
   }
 }
