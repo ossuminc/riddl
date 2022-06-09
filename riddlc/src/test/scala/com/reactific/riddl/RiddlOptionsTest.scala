@@ -103,5 +103,15 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           fail("Failed to parse options")
       }
     }
+
+    "--hugo-path is supported" in {
+      val opts = Array("from", "input.riddl", "--hugo-path", "/path/to/hugo")
+      RiddlOptions.parse(opts) match {
+        case Some(opts) =>
+          opts.fromOptions.hugoPath mustBe(Some(Path.of("/path/to/hugo")))
+        case None =>
+          fail("failed to parse options")
+      }
+    }
   }
 }

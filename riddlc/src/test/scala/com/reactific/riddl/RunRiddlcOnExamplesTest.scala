@@ -30,7 +30,7 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
       RIDDLC.runMain(args) mustBe 0
     }
     "handle hugo from config" in {
-      val args = Array("from", conf, "-o", makeSrcDir(path).toString)
+      val args = Array("from", conf, "-o", makeSrcDir(path).toString, "-H", "hugo")
       RIDDLC.runMain(args) mustBe 0
       runHugo(path)
       val root = Path.of(output).resolve(path)

@@ -30,6 +30,7 @@ import scala.sys.process.Process
 case class HugoTranslatingOptions(
   inputFile: Option[Path] = None,
   outputDir: Option[Path] = None,
+  hugoPath: Option[Path] = None,
   eraseOutput: Boolean = false,
   projectName: Option[String] = None,
   baseUrl: Option[URL] = Option(new URL("https://example.com/")),
@@ -290,8 +291,24 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
+    def existsInPath(path: String): Boolean =
+      System.getenv("PATH").split(java.util.regex.Pattern.quote(
+        File.pathSeparator)
+      ).map(Path.of(_)).exists(p => Files.isExecutable(p.resolve(path)))
+
+    val hugoPath = options.hugoPath match {
+      case Some(path) if Files.isExecutable(path) =>
+        path.toString
+      case Some(path) if existsInPath(path.toString) =>
+        path.toString
+      case Some(path) =>
+        log.error(s"Unable to find hugo at: $path")
+        "hugo"
+      case None =>
+        "hugo"
+    }
     if (
-      0 != Process(s"hugo new site ${outDir.getAbsolutePath}", cwd = parent).!
+      0 != Process(s"${hugoPath} new site ${outDir.getAbsolutePath}", cwd = parent).!
     ) { log.error(s"Hugo could not create a site here: $outDir") }
     else {
       loadThemes(options)
