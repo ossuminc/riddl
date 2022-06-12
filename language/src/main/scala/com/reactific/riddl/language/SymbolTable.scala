@@ -118,6 +118,11 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
     }
   }
 
+  /** The result of a lookupSymbol request
+   * A lookupSymbol request returns a list of tuples that contain the
+   * generic definition, as a Definition, and, if the definition matches the type
+   * of interest, D, then an Option[D] for convenience.
+   *  */
   type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
   /** Look up a symbol in the table

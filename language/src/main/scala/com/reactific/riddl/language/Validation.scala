@@ -411,7 +411,8 @@ object Validation {
               ))
           }
         case (d, optT) :: tail =>
-          handleMultipleResultsCase[Type](ref.id, d, optT, tail)
+          val list = (d,optT)::tail
+          handleMultipleResultsCase[Type](ref.id, list)
         case _ => this
       }
     }
@@ -437,27 +438,20 @@ object Validation {
         )
       }
 
-    private def handleMultipleResultsCase[T <: Definition: ClassTag](
-      id: PathIdentifier,
-      d: Definition,
-      optT: Option[T],
-      tail: List[(Definition, Option[T])]
+    private def handleMultipleResultsCase[T <: Definition](
+      id: PathIdentifier, list: List[(Definition,Option[T])]
     ): ValidationState = {
       // Handle domain, context, entity same name
-      val tc = classTag[T].runtimeClass
-      val definitions = d :: tail.map { case (definition, _) => definition }
-      val types = (optT :: tail.map { case (_, t) => t }) collect {
-        case Some(tpe) => tpe
-      }
-      val exactlyOneMatch = types.count(_.getClass == tc) == 1
-      val allDifferent = definitions.map(AST.kind).distinct.sizeIs ==
-        definitions.size
-      if (exactlyOneMatch && allDifferent) { this }
-      else if (!d.isImplicit) {
+      require(list.size > 1) // must be so or caller logic isn't right
+      // val tc = classTag[T].runtimeClass
+      val definitions = list.map { case (definition, _) => definition }
+      val allDifferent =
+        definitions.map(AST.kind).distinct.sizeIs == definitions.size
+      if (allDifferent) { this }
+      else if (!definitions.head.isImplicit) {
         add(ValidationMessage(
           id.loc,
-          s"""'${id.format}' is not uniquely defined.
-             |Definitions are:
+          s"""Path reference '${id.format}' is ambiguous. Definitions are:
              |${formatDefinitions(definitions)}""".stripMargin,
           Error
         ))
@@ -472,16 +466,20 @@ object Validation {
       if (id.value.nonEmpty) {
         val tc = classTag[T].runtimeClass
         symbolTable.lookupSymbol[T](id.value) match {
-          case Nil => add(ValidationMessage(
+          case Nil =>
+            // Symbol is not in the symbol table
+            add(ValidationMessage(
               id.loc,
               s"'${id.format}' is not defined but should be ${article(tc.getSimpleName)}",
               Error
             ))
-          // Single match, defer to validation function
-          case (d, optT) :: Nil => validator(this, tc, id, d.getClass, d, optT)
-          // Too many matches / non-unique
+          case (d, optT) :: Nil =>
+            // Single match, defer to validation function
+            validator(this, tc, id, d.getClass, d, optT)
           case (d, optT) :: tail =>
-            handleMultipleResultsCase[T](id, d, optT, tail)
+            // Too many matches / non-unique / ambiguous
+            val list = (d,optT):: tail
+            handleMultipleResultsCase[T](id, list)
         }
       } else { this }
     }

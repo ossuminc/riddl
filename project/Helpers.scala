@@ -83,7 +83,7 @@ object C {
       organizationHomepage := Some(url("https://riddl.tech")),
       scmInfo := Some(ScmInfo(
         url("https://github.com/reactific/riddl"),
-        "scm:git@github.reactific/riddl.git"
+        "scm:git:git://github.com/reactific/riddl.git"
       )),
       developers := List(Developer(
         id = "reid-spencer",
