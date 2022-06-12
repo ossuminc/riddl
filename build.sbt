@@ -1,5 +1,5 @@
+import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
 import sbt.Keys.scalaVersion
-
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
 
@@ -62,10 +62,15 @@ lazy val scala2_13_Options = Seq(
 )
 
 lazy val riddl = (project in file("."))
-  .settings(publish := {}, publishLocal := {}).aggregate(
+  .settings(
+    publish := {}, publishLocal := {}, pgpSigner / skip := true,
+    publishTo:= Some(Resolver.defaultLocal)
+  ).aggregate(
+    utils,
     language,
     testkit,
     `hugo-translator`,
+    `hugo-git-check`,
     examples,
     doc,
     riddlc,
