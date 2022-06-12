@@ -190,6 +190,7 @@ object Terminals {
   }
 
   object Predefined {
+    final val Abstract = "Abstract"
     final val Boolean = "Boolean"
     final val Date = "Date"
     final val DateTime = "DateTime"

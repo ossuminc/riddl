@@ -52,6 +52,7 @@ trait TypeParser extends ReferenceParser {
   def simplePredefinedTypes[u: P]: P[TypeExpression] = {
     P(
       stringType | urlType |
+        (location ~ Predefined.Abstract).map(AST.Abstract) |
         (location ~ Predefined.Boolean).map(AST.Bool) |
         (location ~ Predefined.Number).map(AST.Number) |
         (location ~ Predefined.Integer).map(AST.Integer) |

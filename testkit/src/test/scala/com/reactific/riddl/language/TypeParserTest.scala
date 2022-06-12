@@ -18,6 +18,11 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(1 -> 1, Identifier(1 -> 6, "num"), Number(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
+    "allow rename of Abstract" in {
+      val input = "type abs = Abstract"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "abs"), Abstract(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
     "allow rename of Boolean" in {
       val input = "type boo = Boolean"
       val expected = Type(1 -> 1, Identifier(1 -> 6, "boo"), Bool(1 -> 12))

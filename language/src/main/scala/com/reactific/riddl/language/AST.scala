@@ -546,6 +546,8 @@ object AST {
     def messageKind: MessageKind = ResultKind
   }
 
+////////////////////////////////////////////////////////////////////////// TYPES
+
   /** Base trait of the cardinality type expressions */
   sealed trait Cardinality extends TypeExpression
 
@@ -800,13 +802,29 @@ object AST {
     override lazy val kind: String = "String"
   }
 
+  /** The simplest type expression: Abstract
+   *  An abstract type expression is one that is not defined explicitly. It is
+   *  treated as a concrete type but without any structural or type information.
+   *  This is useful for types that are defined only at implementation time or
+   *  for types whose variations are so complicated they need to remain abstract
+   *  at the specification level.
+   * @param loc
+   *   The location of the Bool type expression
+   *
+   */
+  case class Abstract(
+    loc: Location
+  ) extends PredefinedType {
+    def kind: String = "Abstract"
+  }
+
   /** A predefined type expression for boolean values (true / false)
     *
     * @param loc
-    *   The locatin of the Bool type expression
+    *   The location of the Bool type expression
     */
   case class Bool(loc: Location) extends PredefinedType {
-    override lazy val kind: String = "Boolean"
+    def kind: String = "Boolean"
   }
 
   /** A predefined type expression for an arbitrary number value
