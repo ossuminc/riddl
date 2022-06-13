@@ -23,7 +23,7 @@ import fastparse.Parsed.{Failure, Success}
 import fastparse.internal.Lazy
 
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 import scala.annotation.unused
 import scala.collection.mutable
 
@@ -35,31 +35,46 @@ case class ParserError(
     extends Throwable {
 
   def format: String = {
-    val errorLine = input.annotateErrorLine(loc)
-    s"Error: ${input.origin}$loc: $msg but got:\n${errorLine}Context: $context"
+    if (loc.isEmpty) {
+      s"Error: ${input.origin}: $msg${if (context.nonEmpty) { "\nContext: " + context}}"
+
+    } else {
+      val errorLine = input.annotateErrorLine(loc)
+      s"Error: ${input.origin}$loc: $msg but got:\n$errorLine${if (context.nonEmpty) { " Context: " + context}}"
+    }
   }
 }
 
 /** Unit Tests For ParsingContext */
 trait ParsingContext {
 
-  protected val stack: InputStack = InputStack()
+  private val stack: InputStack = InputStack()
 
   protected val errors: mutable.ListBuffer[ParserError] =
     mutable.ListBuffer.empty[ParserError]
 
-  def current: RiddlParserInput = { stack.current }
+  @inline def current: RiddlParserInput = { stack.current }
+  @inline def push(path: Path): Unit = { stack.push(path) }
+  @inline def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
+  @inline def pop: RiddlParserInput = {
+    val rpi = stack.pop
+    filesSeen.append(rpi)
+    rpi
+  }
+  private val filesSeen: mutable.ListBuffer[RiddlParserInput] =
+    mutable.ListBuffer.empty[RiddlParserInput]
+
+  def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
 
   def location[u: P]: P[Location] = {
-    val cur = current
-    P(Index).map(idx => cur.location(idx, cur.origin))
+    P ( Index.map(idx => current.location(idx)) )
   }
 
   def doImport(loc: Location, domainName: Identifier, fileName: LiteralString): Domain = {
     val name = fileName.s
     val file = new File(current.root, name)
     if (!file.exists()) {
-      error(fileName.loc,
+      error(
         s"File '$name` does not exist, can't be imported.")
       Domain(loc, domainName)
     } else { importDomain(file) }
@@ -80,7 +95,7 @@ trait ParsingContext {
     val path = current.root.toPath.resolve(name)
     if (Files.exists(path) && !Files.isHidden(path)) {
       if (Files.isReadable(path)) {
-        stack.push(path)
+        push(path)
         try {
           this.expect[Seq[T]](rule) match {
             case Left(theErrors) =>
@@ -90,7 +105,7 @@ trait ParsingContext {
               Include(str.loc, parseResult, Some(path))
           }
         } finally {
-          stack.pop
+          pop
         }
       } else {
         error(str.loc,
@@ -104,6 +119,10 @@ trait ParsingContext {
     }
   }
 
+  def error(msg: String): Unit = {
+    val error = ParserError(current, Location.empty, msg)
+    errors.append(error)
+  }
   def error(loc: Location, msg: String, context: String = ""): Unit = {
     val error = ParserError(current, loc, msg, context)
     errors.append(error)

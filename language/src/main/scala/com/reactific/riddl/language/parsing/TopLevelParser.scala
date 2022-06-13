@@ -26,7 +26,7 @@ import java.nio.file.Path
 
 /** Top level parsing rules */
 class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
-  stack.push(rpi)
+  push(rpi)
 
   def fileRoot[u: P]: P[RootContainer] = { P(Start ~ P(domain).rep(0) ~ End).map(RootContainer(_)) }
 }

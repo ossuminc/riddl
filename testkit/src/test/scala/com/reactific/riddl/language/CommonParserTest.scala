@@ -11,7 +11,8 @@ class CommonParserTest extends ParsingTest {
     "location should construct from pair" in {
       val loc = Location((1, 1))
       loc.line mustBe 1
-      loc.col mustBe 1
+      val column = loc.col
+      column mustBe 1
     }
     "literal strings can handle any chars except \"" in {
       val input = """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
@@ -26,7 +27,9 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
+        case Right(content) =>
+          val expected = LiteralString((1, 1), input.drop(1).dropRight(1))
+          content mustBe expected
 
       }
     }

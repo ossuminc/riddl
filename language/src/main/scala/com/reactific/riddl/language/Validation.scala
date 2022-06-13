@@ -41,7 +41,7 @@ object Validation {
       checkOverloads(symTab, s1)
     } catch {
       case NonFatal(xcptn) =>
-      state.add(ValidationMessage(0->0,
+      state.add(ValidationMessage(Location.empty,
           s"Exception Occurred: $xcptn", SevereError
         ))
     }

@@ -15,7 +15,7 @@ trait ParsingTestBase extends AnyWordSpec with Matchers
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   extends TopLevelParser(input) with Matchers {
-  stack.push(input)
+  push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
     parser: P[?] => P[T],
@@ -233,13 +233,14 @@ class ParsingTest extends ParsingTestBase {
     label: String,
     fileName: String,
     directory: String = "testkit/src/test/input/"
-  ): RootContainer = {
+  ): (RootContainer, RiddlParserInput) = {
     val file = new File(directory + fileName)
-    TopLevelParser.parse(file) match {
+    val rpi = RiddlParserInput(file)
+    TopLevelParser.parse(rpi) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(model) => model
+      case Right(model) => model -> rpi
     }
   }
 }

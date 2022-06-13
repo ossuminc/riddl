@@ -47,7 +47,7 @@ class MarkdownWriterTest extends ParsingTest {
               |## Briefly
               |Just For Testing
               |_Path_: hugo-translator.target.test-output.TestDomain
-              |_Defined At_: default(1:1)
+              |_Defined At_: <string>(1:1)
               |
               |## Details
               |A test domain for ensuring that documentation for domains is
