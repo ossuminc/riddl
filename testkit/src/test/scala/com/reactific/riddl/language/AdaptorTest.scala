@@ -1,6 +1,7 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Adaptor, Domain}
+import com.reactific.riddl.language.AST.Adaptor
+import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 /** Unit Tests For ConsumerTest */
@@ -35,8 +36,9 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |} explained as "?"
           |""".stripMargin
-      parseAndValidate[Domain](input) { (_, messages) =>
-        messages mustBe empty }
+      parseAndValidate[Domain](input) { (_, _, messages) =>
+        messages mustBe empty
+      }
     }
 
     "allow wrapper adaptations" in {
@@ -54,8 +56,9 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |} explained as "?"
           |""".stripMargin
-      parseAndValidate[Domain](input) { (_, messages) =>
-        messages mustBe empty }
+      parseAndValidate[Domain](input) { (_, _, messages) =>
+        messages mustBe empty
+      }
     }
 
   }

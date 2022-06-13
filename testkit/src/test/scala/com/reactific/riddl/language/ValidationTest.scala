@@ -2,14 +2,18 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Validation.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 
 class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationMessage#format" should {
     "produce a correct string" in {
-      ValidationMessage(Location(1, 2, "the_source"), "the_message", Warning)
-        .format mustBe s"Warning: the_source(1:2): the_message"
+      ValidationMessage(
+        Location(1, 2, RiddlParserInput.empty),
+        "the_message",
+        Warning
+      ).format mustBe s"Warning: empty(1:2): the_message"
     }
     "compare based on locations" in {
       val v1 =
@@ -47,7 +51,7 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(Nil, "foo", RootContainer.empty).messages mustBe
           List(ValidationMessage(
-            Location(0, 0, "Root"),
+            Location(1, 1, RiddlParserInput.empty),
             "foo in Root should not be empty",
             Validation.Error
           ))

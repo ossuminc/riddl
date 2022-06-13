@@ -1,8 +1,10 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Domain, RootContainer}
+import com.reactific.riddl.language.AST.Domain
+import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.testkit.{AdjustableClock, ParsingTestBase}
+import com.reactific.riddl.language.testkit.AdjustableClock
+import com.reactific.riddl.language.testkit.ParsingTestBase
 
 import java.io.File
 import java.nio.file.Path
@@ -33,10 +35,11 @@ class RiddlTest extends ParsingTestBase {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl.timer(clock, SysLogger(), "MyStage", show = false) {
-        clock.updateInstant(_.plusSeconds(2))
-        123
-      }
+      val result = RiddlImpl
+        .timer(clock, SysLogger(), "MyStage", show = false) {
+          clock.updateInstant(_.plusSeconds(2))
+          123
+        }
 
       result mustBe 123
 
@@ -59,11 +62,13 @@ class RiddlTest extends ParsingTestBase {
     "return none when file does not exist" in {
       val log = InMemoryLogger()
       val options = CommonOptions(showTimes = true)
-      val result = Riddl.parse(path = new File(UUID.randomUUID().toString).toPath, log, options)
+      val result = Riddl
+        .parse(path = new File(UUID.randomUUID().toString).toPath, log, options)
       result mustBe None
     }
     "record errors" in {
-      val riddlParserInput: RiddlParserInput = RiddlParserInput(UUID.randomUUID().toString)
+      val riddlParserInput: RiddlParserInput =
+        RiddlParserInput(UUID.randomUUID().toString)
       val logger = InMemoryLogger()
       val options = CommonOptions(showTimes = true)
       val result = Riddl.parse(input = riddlParserInput, logger, options)
@@ -75,8 +80,9 @@ class RiddlTest extends ParsingTestBase {
     }
   }
 
-  /** Executes a function while capturing system's stderr, return the result of the function and the
-    * captured output. Switches stderr back once code block finishes or throws exception e.g.
+  /** Executes a function while capturing system's stderr, return the result of
+    * the function and the captured output. Switches stderr back once code block
+    * finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.err.println("hi there!")
@@ -97,8 +103,9 @@ class RiddlTest extends ParsingTestBase {
     } finally { System.setErr(out) }
   }
 
-  /** Executes a function while capturing system's stdout, return the result of the function and the
-    * captured output. Switches stdout back once code block finishes or throws exception e.g.
+  /** Executes a function while capturing system's stdout, return the result of
+    * the function and the captured output. Switches stdout back once code block
+    * finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.out.println("hi there!")
@@ -121,12 +128,18 @@ class RiddlTest extends ParsingTestBase {
 
   "SysLogger" should {
     val sl = SysLogger()
-    "print error message" in { capturingStdOut(() => sl.error("asdf"))._2 mustBe "[error] asdf\n" }
+    "print error message" in {
+      capturingStdOut(() => sl.error("asdf"))._2 mustBe "[error] asdf\n"
+    }
     "print severe message" in {
       capturingStdOut(() => sl.severe("asdf"))._2 mustBe "[severe] asdf\n"
     }
-    "print warn message" in { capturingStdOut(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n" }
-    "print info message" in { capturingStdOut(() => sl.info("asdf"))._2 mustBe "[info] asdf\n" }
+    "print warning message" in {
+      capturingStdOut(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n"
+    }
+    "print info message" in {
+      capturingStdOut(() => sl.info("asdf"))._2 mustBe "[info] asdf\n"
+    }
     "print many message" in {
       capturingStdOut { () =>
         sl.error("a")
@@ -149,19 +162,20 @@ class RiddlTest extends ParsingTestBase {
     def runOne(pathname: String): (Option[RootContainer], InMemoryLogger) = {
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      Riddl.parseAndValidate(new File(pathname).toPath, logger, common) -> logger
+      Riddl.parseAndValidate(new File(pathname).toPath, logger, common) ->
+        logger
     }
 
     "parse and validate a simple domain from path" in {
       val (result, logger: InMemoryLogger) = {
         runOne("testkit/src/test/input/domains/simpleDomain.riddl")
       }
-      val errors =
-      logger.lines().filter(line =>
+      val errors = logger.lines().filter(line =>
         line.level == Logger.Severe || line.level == Logger.Error
       ).toSeq
       errors mustBe empty
-      result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
+      result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) =>
+      }
     }
 
     "parse and validate nonsense file as invalid" in {
@@ -172,21 +186,28 @@ class RiddlTest extends ParsingTestBase {
 
     "parse and validate a simple domain from input" in {
       val content: String = {
-        val source = Source.fromFile(new File("testkit/src/test/input/domains/simpleDomain.riddl"))
+        val source = Source.fromFile(new File(
+          "testkit/src/test/input/domains/simpleDomain.riddl"
+        ))
         try source.mkString
         finally source.close()
       }
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val result = Riddl.parseAndValidate(RiddlParserInput(content), logger, common)
-      result must matchPattern { case Some(RootContainer(Seq(_: Domain))) => }
+      val result = Riddl
+        .parseAndValidate(RiddlParserInput(content), logger, common)
+      result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) =>
+      }
     }
 
     "parse and validate nonsense input as invalid" in {
       val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val result = Riddl
-        .parseAndValidate(RiddlParserInput("I am not valid riddl (hopefully)."), logger, common)
+      val result = Riddl.parseAndValidate(
+        RiddlParserInput("I am not valid riddl (hopefully)."),
+        logger,
+        common
+      )
       result mustBe None
       assert(logger.lines().exists(_.level == Logger.Error))
     }

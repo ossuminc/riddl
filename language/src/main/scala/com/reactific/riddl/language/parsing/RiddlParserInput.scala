@@ -41,18 +41,20 @@ abstract class RiddlParserInput extends ParserInput {
 
   def checkTraceable(): Unit = ()
 
-  private[this] lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
+  private lazy val lineNumberLookup: Array[Int] =
+    Util.lineNumberLookup(data)
 
-  /* Uses Linear Search but linNumbersLookup.search (see below) is faster?
-  private def lineOf(index: Int): Int = {
-    lineNumberLookup.indexWhere(_ > index) match {
-      case -1 => 0
-      case n  => math.max(0, n - 1)
+  private[language] def offsetOf(line: Int): Int = {
+    if (line < 0) {
+      lineNumberLookup(line)
+    } else if (line < lineNumberLookup.length) {
+      lineNumberLookup(line)
+    } else {
+      lineNumberLookup(lineNumberLookup.length-1)
     }
   }
-   */
 
-  private def lineOf(index: Int): Int = {
+  private[language] def lineOf(index: Int): Int = {
     val result = lineNumberLookup.search(index)
     result match {
       case Searching.Found(foundIndex) => foundIndex
@@ -81,11 +83,7 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  def location(index: Int, origin: String = ""): Location = {
-    val line = lineOf(index)
-    val col = index - lineNumberLookup(line)
-    Location(line + 1, col + 1, origin)
-  }
+  @inline final def location(index: Int): Location = { Location(this,index) }
 
   def prettyIndex(index: Int): String = { location(index).toString }
 
@@ -96,6 +94,17 @@ abstract class RiddlParserInput extends ParserInput {
     val col = index.col - 1
     slice(start, end).stripTrailing() + nl + " ".repeat(col) + "^" + nl
   }
+}
+
+private case class EmptyParserInput() extends RiddlParserInput {
+  override def origin: String = "empty"
+
+  override def data: String = ""
+
+  override def root: File = File.listRoots().head
+
+  override def offsetOf(line: Int): Int = { line * 80 }
+  override def lineOf(offset: Int): Int = { offset / 80 }
 }
 
 case class StringParserInput(
@@ -126,6 +135,8 @@ case class SourceParserInput(source: Source, origin: String) extends RiddlParser
 }
 
 object RiddlParserInput {
+
+  val empty: RiddlParserInput = EmptyParserInput()
 
   implicit def apply(
     data: String

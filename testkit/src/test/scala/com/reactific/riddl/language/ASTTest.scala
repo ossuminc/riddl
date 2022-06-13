@@ -59,7 +59,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
 
   "RootContainer" should {
     "be at location 0,0" in {
-      RootContainer(Nil).loc mustBe Location(0, 0, "Root")
+      RootContainer(Nil).loc mustBe Location.empty
     }
     "have no description" in { RootContainer(Nil).description mustBe None }
     "have no brief" in { RootContainer(Nil).brief mustBe None }

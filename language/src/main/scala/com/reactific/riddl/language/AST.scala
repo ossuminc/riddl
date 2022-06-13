@@ -17,6 +17,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
 import scala.collection.immutable.ListMap
@@ -62,12 +63,15 @@ object AST {
     * @param loc
     *   The location in the input where the identifier starts
     * @param value
-    *   The parsed value of the identifer
+    *   The parsed value of the identifier
     */
   case class Identifier(loc: Location, value: String) extends RiddlValue {
     override def format: String = value
 
     override def isEmpty: Boolean = value.isEmpty
+  }
+  object Identifier {
+    val empty: Identifier = Identifier(Location.empty, "")
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -91,7 +95,7 @@ object AST {
     * @param loc
     *   Location in the input of the first letter of the path identifier
     * @param value
-    *   The list of strings that make up the path identifer
+    *   The list of strings that make up the path identifier
     */
   case class PathIdentifier(loc: Location, value: Seq[String])
       extends RiddlValue {
@@ -103,19 +107,15 @@ object AST {
   /** The description of a definition. All definitions have a name and an
    * optional description. This class provides the description part.
    *
-   * @param loc
-   *   The location in the input of the description
-   * @param lines
-   *   The lines of markdown that provide the description
    */
-  abstract trait Description extends RiddlValue {
+  trait Description extends RiddlValue {
     def loc: Location
     def lines: Seq[LiteralString]
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
   }
 
   case class BlockDescription(
-    loc: Location = 0 -> 0,
+    loc: Location = Location.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
       extends Description {
   }
@@ -314,7 +314,7 @@ object AST {
 
   /** The parent of a definition as a definition and a container. This type is
     * widely used to reference any definition that contains other definitions
-    * and is therefore the basis for traveersla of the tree.
+    * and is therefore the basis for traversal of the tree.
     * @tparam D
     *   The kind of definition that is contained by the container
     */
@@ -342,7 +342,7 @@ object AST {
   }
 
   case class Include(
-    loc: Location = Location(),
+    loc: Location = Location(RiddlParserInput.empty),
     contents: Seq[Definition] = Seq.empty[ParentDefOf[Definition]],
     path: Option[Path] = None)
       extends ParentDefOf[Definition]
@@ -352,7 +352,7 @@ object AST {
       with EntityDefinition
       with PlantDefinition {
 
-    def id: Identifier = Identifier((0, 0), path.map(_.toString).getOrElse(""))
+    def id: Identifier = Identifier.empty
 
     def brief: Option[LiteralString] = Option.empty[LiteralString]
 
@@ -367,12 +367,14 @@ object AST {
     *   The sequence of domains contained by this root container
     */
   case class RootContainer(
-    contents: Seq[Domain])
+    contents: Seq[Domain] = Nil,
+    inputs: Seq[RiddlParserInput] = Nil
+  )
       extends ParentDefOf[Domain] {
 
     override def isRootContainer: Boolean = true
 
-    def loc: Location = Location(0, 0, "Root")
+    def loc: Location = Location.empty
 
     override def id: Identifier = Identifier(loc, "Root")
 
@@ -386,7 +388,8 @@ object AST {
   }
 
   object RootContainer {
-    val empty: RootContainer = RootContainer(Seq.empty[Domain])
+    val empty: RootContainer =
+      RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
   }
 
   /** Base trait for option values for any option of a definition.
@@ -839,7 +842,7 @@ object AST {
   /** A predefined type expression for an integer value
     *
     * @param loc
-    *   The locaiton of the integer type expression
+    *   The location of the integer type expression
     */
   case class Integer(loc: Location) extends PredefinedType {
     def kind: String = "Integer"
@@ -1111,7 +1114,7 @@ object AST {
 
   /** An expression that is a liberal constant decimal value
     * @param loc
-    *   The loation of the decimal value
+    *   The location of the decimal value
     * @param d
     *   The decimal number to use as the value of the expression
     */
@@ -1156,7 +1159,7 @@ object AST {
     * shows the use of an arbitrary expression as the operand to an addition.
     *
     * Note that since the expression is arbitrary, it could be a boolean value
-    * and is thus considered to be a conditioanl expression too, hence the name.
+    * and is thus considered to be a conditional expression too, hence the name.
     *
     * @param cond
     *   The arbitrary condition provided as a quoted string
@@ -1422,7 +1425,7 @@ object AST {
     override def format: String = s"become ${}"
   }
 
-  /** An action that tells a message to an entity. This is very analagous to the
+  /** An action that tells a message to an entity. This is very analogous to the
     * tell operator in Akka.
     *
     * @param loc
@@ -1464,7 +1467,7 @@ object AST {
     override def format: String = s"ask ${entity.format} to ${msg.format}"
   }
 
-  /** An action that tells a message to an entity. This is very analagous to the
+  /** An action that tells a message to an entity. This is very analogous to the
     * tell operator in Akka.
     *
     * @param loc

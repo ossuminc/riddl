@@ -11,7 +11,8 @@ class CommonParserTest extends ParsingTest {
     "location should construct from pair" in {
       val loc = Location((1, 1))
       loc.line mustBe 1
-      loc.col mustBe 1
+      val column = loc.col
+      column mustBe 1
     }
     "literal strings can handle any chars except \"" in {
       val input = """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
@@ -26,18 +27,21 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
+        case Right((actual, _)) =>
+          val expected = LiteralString((1, 1), input.drop(1).dropRight(1))
+          actual mustBe expected
 
       }
     }
     "literal strings can successfully escape a quote" in {
-      val input = """domain foo is { ??? } explained as "this is an \"explanation\"" """
+      val input =
+        """domain foo is { ??? } explained as "this is an \"explanation\"" """
       parseDefinition[Domain](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) => domain.description match {
-            case Some(BlockDescription(_,lines)) =>
+        case Right((domain, _)) => domain.description match {
+            case Some(BlockDescription(_, lines)) =>
               lines.size mustBe 1
               lines.head.s mustBe "this is an \\\"explanation\\\""
             case x: Any => fail(s"Expected a one line Description but got: $x")
@@ -57,7 +61,7 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content.typ match {
+        case Right((content, _)) => content.typ match {
             case Pattern(_, Seq(LiteralString(_, str))) =>
               str.head mustBe '('
               str.last mustBe ')'
@@ -76,7 +80,8 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
+        case Right((actual, rpi)) => actual mustBe
+            LiteralString((1, 1, rpi), input.drop(1).dropRight(1))
       }
     }
   }

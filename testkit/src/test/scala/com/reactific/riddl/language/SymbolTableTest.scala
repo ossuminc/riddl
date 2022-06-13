@@ -12,16 +12,14 @@ class SymbolTableTest extends ParsingTest {
   "Symbol table" should {
 
     def captureEverythingSymbols: SymbolTable = {
-      val domain = checkFile("everything", "everything.riddl")
-      SymbolTable(domain)
+      val root = checkFile("everything", "everything.riddl")
+      SymbolTable(root)
     }
 
     val st = captureEverythingSymbols
 
-    def assertRefWithParent[
-      T <: Definition: ClassTag,
-      P <: Definition: ClassTag
-    ](names: Seq[String],
+    def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
+      names: Seq[String],
       parentName: String
     ): Assertion = {
       val lookupResult = st.lookup[T](names)

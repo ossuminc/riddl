@@ -12,10 +12,11 @@ class TopLevelParserTest extends ParsingTestBase {
   val origin = "simpleDomain.riddl"
 
   val simpleDomainFile = new File(s"testkit/src/test/input/domains/$origin")
+  val rip = RiddlParserInput(simpleDomainFile)
 
   val simpleDomain = RootContainer(List(Domain(
-    (1, 1, origin),
-    Identifier((1, 8, origin), "foo"),
+    Location(1, 1, rip),
+    Identifier(Location(1, 8, rip), "foo"),
     None,
     List(),
     List(),

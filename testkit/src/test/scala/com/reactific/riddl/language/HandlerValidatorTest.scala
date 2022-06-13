@@ -8,47 +8,50 @@ class HandlerValidatorTest extends ValidatingTest {
 
   "Handler Validation" should {
     "produce an error when on clause references a command that does not exist" in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  state HamburgerState = { field1: Number, field2: String }
-                    |  handler foo is {
-                    |    on command EntityCommand { example only { then set field1 to 445 } }
-                    |    on event EntityEvent { example only { then set field1 to 678 } }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
-        assertValidationMessage(
-          msgs,
-          Validation.Error,
-          "Reference[Type] 'EntityCommand'(7:8) is not defined but should be a command type"
-        )
-        assertValidationMessage(
-          msgs,
-          Validation.Error,
-          "Reference[Type] 'EntityEvent'(8:8) is not defined but should be an event type"
-        )
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  state HamburgerState = { field1: Number, field2: String }
+          |  handler foo is {
+          |    on command EntityCommand { example only { then set field1 to 445 } }
+          |    on event EntityEvent { example only { then set field1 to 678 } }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
+      parseAndValidate[Domain](input) {
+        case (_: Domain, _, msgs: ValidationMessages) =>
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "Reference[Type] 'EntityCommand'(7:8) is not defined but should be a command type"
+          )
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "Reference[Type] 'EntityEvent'(8:8) is not defined but should be an event type"
+          )
       }
     }
 
     "produce an error when on clause references a message of the wrong type" in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on event Incoming { example only { then set field1 to 678 } }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  state HamburgerState = { field1: Number }
+          |  handler foo is {
+          |    on event Incoming { example only { then set field1 to 678 } }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, _, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,
@@ -58,19 +61,20 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause doesn't reference a message type" in {
-      val input = """domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  type Incoming is String
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on event Incoming { example only { then set field1 to 678 } }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      val input =
+        """domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type Incoming is String
+          |  state HamburgerState = { field1: Number }
+          |  handler foo is {
+          |    on event Incoming { example only { then set field1 to 678 } }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, _, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,
@@ -94,7 +98,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: ValidationMessages) =>
         assertValidationMessage(
           msgs,
           Validation.Error,

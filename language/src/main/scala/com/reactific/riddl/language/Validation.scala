@@ -18,6 +18,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
@@ -41,7 +42,7 @@ object Validation {
       checkOverloads(symTab, s1)
     } catch {
       case NonFatal(xcptn) =>
-      state.add(ValidationMessage(0->0,
+      state.add(ValidationMessage(Location.empty,
           s"Exception Occurred: $xcptn", SevereError
         ))
     }
@@ -934,7 +935,8 @@ object Validation {
           // we don't validate root containers
           state
         case domain: Domain =>
-          val parent = parents.headOption.getOrElse(RootContainer(Seq(domain)))
+          val parent = parents.headOption.getOrElse(
+            RootContainer(Seq(domain),Seq.empty[RiddlParserInput]))
           state.checkParentDefOf(parent, container)
         case container: ParentDefOf[Definition] =>
           // Adaptor, Plant, State, Saga, Handler

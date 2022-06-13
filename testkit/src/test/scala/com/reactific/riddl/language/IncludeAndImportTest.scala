@@ -20,27 +20,27 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle inclusions into domain" in {
-      val domain = checkFile("Domain Includes", "domainIncludes.riddl")
-      domain.contents mustNot be(empty)
-      domain.contents.head.includes mustNot be(empty)
-      domain.contents.head.includes.head.contents mustNot be(empty)
-      domain.contents.head.includes.head.contents.head mustBe Type(
-        (1, 1, "domainIncluded.riddl"),
-        Identifier((1, 6, "domainIncluded.riddl"), "foo"),
-        Strng((1, 13, "domainIncluded.riddl")),
+      val rc = checkFile("Domain Includes", "domainIncludes.riddl")
+      rc.contents mustNot be(empty)
+      rc.contents.head.includes mustNot be(empty)
+      rc.contents.head.includes.head.contents mustNot be(empty)
+      rc.contents.head.includes.head.contents.head mustBe Type(
+        (1, 1, rc.inputs.head),
+        Identifier((1, 6, rc.inputs.head), "foo"),
+        Strng((1, 13, rc.inputs.head)),
         None
       )
     }
     "handle inclusions into contexts" in {
-      val domain = checkFile("Context Includes", "contextIncludes.riddl")
-      domain.contents mustNot be(empty)
-      domain.contents.head.contexts mustNot be(empty)
-      domain.contents.head.contexts.head.includes mustNot be(empty)
-      domain.contents.head.contexts.head.includes.head.contents mustNot be(empty)
-      domain.contents.head.contexts.head.includes.head.contents.head mustBe Type(
-        (1, 1, "contextIncluded.riddl"),
-        Identifier((1, 6, "contextIncluded.riddl"), "foo"),
-        Strng((1, 12, "contextIncluded.riddl")),
+      val rc = checkFile("Context Includes", "contextIncludes.riddl")
+      rc.contents mustNot be(empty)
+      rc.contents.head.contexts mustNot be(empty)
+      rc.contents.head.contexts.head.includes mustNot be(empty)
+      rc.contents.head.contexts.head.includes.head.contents mustNot be(empty)
+      rc.contents.head.contexts.head.includes.head.contents.head mustBe Type(
+        (1, 1, rc.inputs.head),
+        Identifier((1, 6, rc.inputs.head), "foo"),
+        Strng((1, 12, rc.inputs.head)),
         None
       )
     }
