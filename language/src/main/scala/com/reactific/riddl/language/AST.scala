@@ -17,6 +17,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
 import scala.collection.immutable.ListMap
@@ -341,7 +342,7 @@ object AST {
   }
 
   case class Include(
-    loc: Location = Location(),
+    loc: Location = Location(RiddlParserInput.empty),
     contents: Seq[Definition] = Seq.empty[ParentDefOf[Definition]],
     path: Option[Path] = None)
       extends ParentDefOf[Definition]
@@ -366,7 +367,9 @@ object AST {
     *   The sequence of domains contained by this root container
     */
   case class RootContainer(
-    contents: Seq[Domain])
+    contents: Seq[Domain] = Nil,
+    inputs: Seq[RiddlParserInput] = Nil
+  )
       extends ParentDefOf[Domain] {
 
     override def isRootContainer: Boolean = true
@@ -385,7 +388,8 @@ object AST {
   }
 
   object RootContainer {
-    val empty: RootContainer = RootContainer(Seq.empty[Domain])
+    val empty: RootContainer =
+      RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
   }
 
   /** Base trait for option values for any option of a definition.

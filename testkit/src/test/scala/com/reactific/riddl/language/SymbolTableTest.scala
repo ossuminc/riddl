@@ -12,8 +12,8 @@ class SymbolTableTest extends ParsingTest {
   "Symbol table" should {
 
     def captureEverythingSymbols: SymbolTable = {
-      val (domain,_) = checkFile("everything", "everything.riddl")
-      SymbolTable(domain)
+      val root = checkFile("everything", "everything.riddl")
+      SymbolTable(root)
     }
 
     val st = captureEverythingSymbols

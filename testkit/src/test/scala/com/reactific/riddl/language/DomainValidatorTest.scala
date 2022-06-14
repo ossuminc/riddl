@@ -33,13 +33,14 @@ class DomainValidatorTest extends ValidatingTest {
       parseAndValidate[Domain](input) { (domain, messages) =>
         domain mustNot be(empty)
         domain.contents mustBe empty
-        domain.author mustBe Some(AuthorInfo(
+        val expectedAuthor = Some(AuthorInfo(
           2 -> 3,
           LiteralString(3 -> 11, "Reid Spencer"),
           LiteralString(4 -> 12, "reid@reactific.com"),
           Some(LiteralString(5 -> 19, "Reactific Software Inc.")),
           Some(LiteralString(6 -> 12, "President"))
         ))
+        domain.author mustBe expectedAuthor
         messages mustBe empty
       }
     }

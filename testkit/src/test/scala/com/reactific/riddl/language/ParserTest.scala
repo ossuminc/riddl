@@ -39,47 +39,48 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow an empty funky-name domain" in {
-      val input = "domain 'foo-fah|roo' is { }"
+      val input = RiddlParserInput("domain 'foo-fah|roo' is { }")
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe
-            Domain(1 -> 1, Identifier(1 -> 8, "foo-fah|roo"))
+            Domain((1,1,input), Identifier((1,8,input), "foo-fah|roo"))
       }
     }
     "allow nested domains" in {
-      val input = """domain foo is {
-                    |domain bar is { }
-                    |}
-                    |""".stripMargin
+      val input = RiddlParserInput(
+        """domain foo is {
+          |domain bar is { }
+          |}
+          |""".stripMargin)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe RootContainer(Seq[Domain](Domain(
-            1 -> 1,
-            Identifier(1 -> 8, "foo"),
-            domains = Seq(Domain(2 -> 1, Identifier(2 -> 8, "bar")))
+            (1,1,input),
+            Identifier((1,8,input), "foo"),
+            domains = Seq(Domain((2,1,input), Identifier((2,8,input), "bar")))
           )))
       }
     }
     "allow multiple domains" in {
-      val input = """domain foo is { }
+      val input = RiddlParserInput("""domain foo is { }
                     |domain bar is { }
-                    |""".stripMargin
+                    |""".stripMargin)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe RootContainer(Seq[Domain](
-            Domain(1 -> 1, Identifier(1 -> 8, "foo")),
-            Domain(2 -> 1, Identifier(2 -> 8, "bar"))
+            Domain((1,1,input), Identifier((1,8,input), "foo")),
+            Domain((2,1,input), Identifier((2,8,input), "bar"))
           ))
       }
     }
     "allow major definitions to be stubbed with ???" in {
-      val input = """domain one is { ??? }
+      val input = RiddlParserInput("""domain one is { ??? }
                     |domain two is {
                     |  plant one is { ??? }
                     |  plant two is {
@@ -100,7 +101,7 @@ class ParserTest extends ParsingTest {
                     |    adaptor one for context over.consumption is { ??? }
                     |  }
                     |}
-                    |""".stripMargin
+                    |""".stripMargin)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -111,78 +112,81 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow context definitions in domains" in {
-      val input = "domain foo is { context bar is { } }"
+      val input = RiddlParserInput("domain foo is { context bar is { } }")
       parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe
-            Context(1 -> 17, id = Identifier(1 -> 25, "bar"))
+            Context((1,17,input), id = Identifier((1,25,input), "bar"))
       }
     }
     "allow options on context definitions" in {
-      val input = "context bar is { options (function, wrapper, gateway ) }"
+      val input = RiddlParserInput(
+        "context bar is { options (function, wrapper, gateway ) }")
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Context(
-            1 -> 1,
-            Identifier(1 -> 9, "bar"),
+            (1,1,input),
+            Identifier((1,9,input), "bar"),
             Seq(
-              FunctionOption(1 -> 27),
-              WrapperOption(1 -> 37),
-              GatewayOption(1 -> 46)
+              FunctionOption((1,27,input)),
+              WrapperOption((1,37,input)),
+              GatewayOption((1,46,input))
             )
           )
       }
     }
     "allow type definitions in contexts" in {
-      val input = """type Vikings = any of {
+      val input = RiddlParserInput("""type Vikings = any of {
                     |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
-                    |}""".stripMargin
+                    |}""".stripMargin)
       parseInContext(input, _.types.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe Type(
-            2 -> 1,
-            Identifier(2 -> 6, "Vikings"),
+        case Right(content) => 
+          val expected = Type((2,1, input),
+            Identifier((2, 6, input), "Vikings"),
             Enumeration(
-              2 -> 16,
+              (2,16,input),
               Seq(
-                Enumerator(3 -> 3, Identifier(3 -> 3, "Ragnar"), None),
-                Enumerator(3 -> 10, Identifier(3 -> 10, "Lagertha"), None),
-                Enumerator(3 -> 19, Identifier(3 -> 19, "Bjorn"), None),
-                Enumerator(3 -> 25, Identifier(3 -> 25, "Floki"), None),
-                Enumerator(3 -> 31, Identifier(3 -> 31, "Rollo"), None),
-                Enumerator(3 -> 37, Identifier(3 -> 37, "Ivar"), None),
-                Enumerator(3 -> 42, Identifier(3 -> 42, "Aslaug"), None),
-                Enumerator(3 -> 49, Identifier(3 -> 49, "Ubbe"), None)
+                Enumerator((3,3,input), Identifier((3,3,input), "Ragnar"), None),
+                Enumerator((3,10,input), Identifier((3,10,input), "Lagertha"), None),
+                Enumerator((3,19,input), Identifier((3,19,input), "Bjorn"), None),
+                Enumerator((3,25,input), Identifier((3,25,input), "Floki"), None),
+                Enumerator((3,31,input), Identifier((3,31,input), "Rollo"), None),
+                Enumerator((3,37,input), Identifier((3,37,input), "Ivar"), None),
+                Enumerator((3,42,input), Identifier((3,42,input), "Aslaug"), None),
+                Enumerator((3,49,input), Identifier((3,49,input), "Ubbe"), None)
               )
             )
           )
+          content mustBe expected
       }
     }
     "allow invariant definitions" in {
-      val input: String =
-        """invariant large is { "x is greater or equal to 10" }"""
+      val input = RiddlParserInput(
+        """invariant large is { "x is greater or equal to 10" }""")
       parseDefinition[Invariant](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Invariant(
-            1 -> 11,
-            Identifier(1 -> 11, "large"),
+            (1,11,input),
+            Identifier((1,11,input), "large"),
             ArbitraryCondition(
-              LiteralString(1 -> 22, "x is greater or equal to 10")
+              LiteralString((1,22,input), "x is greater or equal to 10")
             ),
             None
           )
       }
     }
     "allow entity definitions in contexts" in {
-      val input: String = """entity Hamburger is {
+      val input=
+        RiddlParserInput("""entity Hamburger is {
                             |  options ( transient, aggregate )
                             |  state foo is { x: String }
                             |  handler foo is {}
@@ -196,58 +200,58 @@ class ParserTest extends ParsingTest {
                             |    }
                             |  }
                             |}
-                            |""".stripMargin
+                            |""".stripMargin)
       parseDefinition[Entity](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Entity(
-            1 -> 1,
-            Identifier(1 -> 8, "Hamburger"),
-            Seq(EntityTransient(2 -> 13), EntityAggregate(2 -> 24)),
+            (1,1,input),
+            Identifier((1,8,input), "Hamburger"),
+            Seq(EntityTransient((2,13,input)), EntityAggregate((2,24,input))),
             Seq(State(
-              3 -> 3,
-              Identifier(3 -> 9, "foo"),
+              (3,3,input),
+              Identifier((3,9,input), "foo"),
               Aggregation(
-                3 -> 16,
-                Seq(Field(3 -> 18, Identifier(3 -> 18, "x"), Strng(3 -> 21)))
+                (3,16,input),
+                Seq(Field((3,18,input), Identifier((3,18,input), "x"), Strng((3,21,input))))
               ),
               None
             )),
-            handlers = Seq(Handler(4 -> 11, Identifier(4 -> 11, "foo"))),
+            handlers = Seq(Handler((4,11,input), Identifier((4,11,input), "foo"))),
             functions = Seq(Function(
-              5 -> 3,
-              Identifier(5 -> 12, "AnAspect"),
+              (5,3,input),
+              Identifier((5,12,input), "AnAspect"),
               examples = Seq(Example(
-                6 -> 5,
-                Identifier(6 -> 13, "foo"),
+                (6,5,input),
+                Identifier((6,13,input), "foo"),
                 Seq(
                   GivenClause(
-                    7 -> 7,
-                    Seq(LiteralString(7 -> 13, "everybody hates me"))
+                    (7,7,input),
+                    Seq(LiteralString((7,13,input), "everybody hates me"))
                   ),
                   GivenClause(
-                    8 -> 7,
-                    Seq(LiteralString(8 -> 11, "I'm depressed"))
+                    (8,7,input),
+                    Seq(LiteralString((8,11,input), "I'm depressed"))
                   )
                 ),
                 Seq(WhenClause(
-                  9 -> 7,
-                  ArbitraryCondition(LiteralString(9 -> 12, "I go fishing"))
+                  (9,7,input),
+                  ArbitraryCondition(LiteralString((9,12,input), "I go fishing"))
                 )),
                 Seq(ThenClause(
-                  10 -> 7,
+                  (10,7,input),
                   ArbitraryAction(
-                    10 -> 12,
-                    LiteralString(10 -> 12, "I'll just eat worms"),
+                    (10,12,input),
+                    LiteralString((10,12,input), "I'll just eat worms"),
                     None
                   )
                 )),
                 Seq(ButClause(
-                  11 -> 7,
+                  (11,7,input),
                   ArbitraryAction(
-                    11 -> 12,
-                    LiteralString(11 -> 12, "I'm happy"),
+                    (11,12,input),
+                    LiteralString((11,12,input), "I'm happy"),
                     None
                   )
                 ))
@@ -257,15 +261,16 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow adaptor definitions" in {
-      val input = "adaptor fuzz for context foo.bar is { ??? }"
+      val input =
+        RiddlParserInput("adaptor fuzz for context foo.bar is { ??? }")
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe Adaptor(
-            1 -> 1,
-            Identifier(1 -> 9, "fuzz"),
-            ContextRef(1 -> 18, PathIdentifier(1 -> 26, Seq("bar", "foo"))),
+            (1,1,input),
+            Identifier((1,9,input), "fuzz"),
+            ContextRef((1,18,input), PathIdentifier((1,26,input), Seq("bar", "foo"))),
             Seq.empty[Adaptation]
           )
       }
@@ -307,14 +312,15 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow descriptions from files" in {
-      val input = """domain foo is { ??? } explained in file "foo.md"
-                    |""".stripMargin
+      val input = RiddlParserInput(
+      """domain foo is { ??? } explained in file "foo.md"
+        |""".stripMargin)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) => content mustBe RootContainer(Seq[Domain](
-          Domain(1 -> 1, Identifier(1 -> 8, "foo"),
+          Domain((1,1,input), Identifier((1,8,input), "foo"),
             description = Some(FileDescription(1->36,Path.of("foo.md")))),
         ))
       }

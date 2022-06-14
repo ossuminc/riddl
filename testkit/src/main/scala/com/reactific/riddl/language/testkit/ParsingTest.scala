@@ -175,11 +175,10 @@ class ParsingTest extends ParsingTestBase {
   }
 
   def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
-    input: String,
+    rip: RiddlParserInput,
     expected: TO,
     extract: FROM => TO
   ): Unit = {
-    val rip = RiddlParserInput(input)
     TestParser(rip).parseDefinition[FROM, TO](extract) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
@@ -206,26 +205,11 @@ class ParsingTest extends ParsingTestBase {
 
   def parseInContext[TO <: RiddlNode](
     input: RiddlParserInput,
-    extract: Context => TO
+    extract: (Context, RiddlParserInput) => TO
   ): Either[Seq[ParserError], TO] = {
-    val tp = TestParser(RiddlParserInput(s"context foo is {\n${input.data}\n}"))
+    val rpi = RiddlParserInput(s"context foo is {\n${input.data}\n}")
+    val tp = TestParser(rpi)
     tp.parseContextDefinition[TO](extract)
-  }
-
-  def checkContextDefinitions[TO <: RiddlNode](
-    cases: Map[String, TO],
-    extract: Context => TO
-  ): Unit = {
-    cases.foreach { case (statement: String, expected: TO @unchecked) =>
-      val input = s"context foo is {\n$statement\n}"
-      val tp = TestParser(RiddlParserInput(input))
-      tp.parseContextDefinition(extract) match {
-        case Right(content) => content mustBe expected
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-      }
-    }
   }
 
   def checkFile(
@@ -233,14 +217,14 @@ class ParsingTest extends ParsingTestBase {
     label: String,
     fileName: String,
     directory: String = "testkit/src/test/input/"
-  ): (RootContainer, RiddlParserInput) = {
+  ): RootContainer = {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
     TopLevelParser.parse(rpi) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(model) => model -> rpi
+      case Right(model) => model
     }
   }
 }

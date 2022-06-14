@@ -17,7 +17,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.RootContainer
-import com.reactific.riddl.language.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -28,7 +27,9 @@ import java.nio.file.Path
 class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
   push(rpi)
 
-  def fileRoot[u: P]: P[RootContainer] = { P(Start ~ P(domain).rep(0) ~ End).map(RootContainer(_)) }
+  def fileRoot[u: P]: P[RootContainer] = {
+    P(Start ~ domain.rep(0) ~ End).map(RootContainer(_,inputSeen))
+  }
 }
 
 case class FileParser(topFile: File) extends TopLevelParser(RiddlParserInput(topFile))
@@ -58,7 +59,7 @@ object TopLevelParser {
 
   def parse(
     input: String,
-    origin: String = Location.defaultSourceName
+    origin: String = "string"
   ): Either[Seq[ParserError], RootContainer] = {
     val sp = StringParserInput(input, origin)
     val tlp = new TopLevelParser(sp)

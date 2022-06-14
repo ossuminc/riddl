@@ -21,7 +21,7 @@ import scala.language.implicitConversions
 
 /** A location of an item in the input */
 case class Location(
-  source: RiddlParserInput = RiddlParserInput.empty,
+  source: RiddlParserInput,
   offset: Int = 0
 )
   extends Ordered[Location] {
@@ -55,11 +55,14 @@ case class Location(
 }
 
 object Location {
-  val empty: Location = Location()
+  val empty: Location = Location(RiddlParserInput.empty)
   final val defaultSourceName = RiddlParserInput.empty.origin
 
+  implicit def apply(): Location = {
+    Location(RiddlParserInput.empty)
+  }
   implicit def apply(line: Int): Location = {
-    apply(line, RiddlParserInput.empty)
+    Location(RiddlParserInput.empty, line)
   }
 
   implicit def apply(line: Int, src: RiddlParserInput): Location = {
@@ -78,6 +81,12 @@ object Location {
   ): Location = {
     apply(pair._1, pair._2, src)
   }
+
+  implicit def apply(
+    triple: (Int, Int, RiddlParserInput)): Location = {
+    apply(triple._1, triple._2, triple._3)
+  }
+
 
   implicit def apply(
     line: Int,
