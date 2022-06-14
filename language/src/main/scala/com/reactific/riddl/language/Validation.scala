@@ -22,7 +22,8 @@ import com.reactific.riddl.language.Folding.Folder
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
 import scala.collection.mutable.ListBuffer
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
@@ -35,16 +36,18 @@ object Validation {
   ): ValidationMessages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, commonOptions)
-    val result = try {
-      val folder = new ValidationFolder
-      val s1 = Folding.foldAround(state, root, folder)
-      checkOverloads(symTab, s1)
-    } catch {
-      case NonFatal(xcptn) =>
-      state.add(ValidationMessage(0->0,
-          s"Exception Occurred: $xcptn", SevereError
-        ))
-    }
+    val result =
+      try {
+        val folder = new ValidationFolder
+        val s1 = Folding.foldAround(state, root, folder)
+        checkOverloads(symTab, s1)
+      } catch {
+        case NonFatal(xcptn) => state.add(ValidationMessage(
+            0 -> 0,
+            s"Exception Occurred: $xcptn",
+            SevereError
+          ))
+      }
     result.messages.sortBy(_.loc)
   }
 
@@ -198,9 +201,39 @@ object Validation {
     }
 
     private val vowels: Regex = "[aAeEiIoOuU]".r
+
     def article(thing: String): String = {
       val article = if (vowels.matches(thing.substring(0, 1))) "an" else "a"
       s"$article $thing"
+    }
+
+    private def getPathIdType(id: PathIdentifier): Option[TypeExpression] = {
+      if (id.value.nonEmpty) {
+        val results = symbolTable.lookupSymbol[Definition](id.value)
+        results match {
+          case Nil => None
+          case (d, optT) :: Nil | (e, _) :: _ => d match {
+              case f: Field  => Some(f.typeEx)
+              case s: State  => Some(s.typeEx)
+              case p: Pipe   => Some(p.transmitType.getOrElse(Abstract(id.loc)))
+              case in: Inlet => Some(in.type_)
+              case out: Outlet => Some(out.type_)
+              case t: Type     => Some(t.typ)
+              case _           => None
+            }
+        }
+      } else { None }
+    }
+
+    def getFieldType(path: PathIdentifier): Option[TypeExpression] = {
+      val results = symbolTable.lookup[Definition](path.value)
+      if (results.size == 1) {
+        results.head match {
+          case f: Field => Option(f.typeEx)
+          case t: Type  => Option(t.typ)
+          case _        => None
+        }
+      } else { None }
     }
 
     def check(
@@ -411,7 +444,7 @@ object Validation {
               ))
           }
         case (d, optT) :: tail =>
-          val list = (d,optT)::tail
+          val list = (d, optT) :: tail
           handleMultipleResultsCase[Type](ref.id, list)
         case _ => this
       }
@@ -439,14 +472,15 @@ object Validation {
       }
 
     private def handleMultipleResultsCase[T <: Definition](
-      id: PathIdentifier, list: List[(Definition,Option[T])]
+      id: PathIdentifier,
+      list: List[(Definition, Option[T])]
     ): ValidationState = {
       // Handle domain, context, entity same name
       require(list.size > 1) // must be so or caller logic isn't right
       // val tc = classTag[T].runtimeClass
       val definitions = list.map { case (definition, _) => definition }
-      val allDifferent =
-        definitions.map(AST.kind).distinct.sizeIs == definitions.size
+      val allDifferent = definitions.map(AST.kind).distinct.sizeIs ==
+        definitions.size
       if (allDifferent) { this }
       else if (!definitions.head.isImplicit) {
         add(ValidationMessage(
@@ -478,7 +512,7 @@ object Validation {
             validator(this, tc, id, d.getClass, d, optT)
           case (d, optT) :: tail =>
             // Too many matches / non-unique / ambiguous
-            val list = (d,optT):: tail
+            val list = (d, optT) :: tail
             handleMultipleResultsCase[T](id, list)
         }
       } else { this }
@@ -650,7 +684,7 @@ object Validation {
     def checkAction(action: Action): ValidationState = {
       action match {
         case SetAction(_, path, value, _) => this.checkPathRef[Field](path)()
-            .checkExpression(value)
+            .checkExpression(value).checkAssignmentCompatability(path, value)
         case PublishAction(_, msg, pipeRef, _) => this
             .checkMessageConstructor(msg).checkRef[Pipe](pipeRef)
         case FunctionCallAction(loc, funcId, args, _) =>
@@ -742,8 +776,8 @@ object Validation {
               val argNames = args.args.keys.map(_.value).toSeq
               val s1 = s.check(
                 argNames.size == paramNames.size,
-                s"Wrong number of arguments for ${fid
-                  .format}. Expected ${paramNames.size}, but got ${argNames.size}",
+                s"Wrong number of arguments for ${fid.format}. Expected ${paramNames
+                  .size}, but got ${argNames.size}",
                 Error,
                 loc
               )
@@ -786,15 +820,24 @@ object Validation {
       }
     }
 
-    def getFieldType(path: PathIdentifier): Option[TypeExpression] = {
-      val results = symbolTable.lookup[Definition](path.value)
-      if (results.size == 1) {
-        results.head match {
-          case f: Field => Option(f.typeEx)
-          case t: Type  => Option(t.typ)
-          case _        => None
-        }
-      } else { None }
+    def checkAssignmentCompatability(
+      path: PathIdentifier,
+      value: Expression
+    ): ValidationState = {
+      val pathType = getPathRefType(path)
+      val valueType = value match {
+        case AndCondition(loc, _)          => Bool(loc)
+        case ArbitraryCondition(_)         => Abstract(value.loc)
+        case ArithmeticOperator(loc, _, _) => Number(loc)
+        case Comparison(loc, _, _, _)      => Bool(loc)
+        case False(loc)                    => Bool(loc)
+        case FunctionCallExpression(loc, func, _) =>
+          val funcTy = getPathRefType(path)
+        case OrCondition(loc, _)  => Bool(loc)
+        case True(loc)            => Bool(loc)
+        case XorCondition(loc, _) => Bool(loc)
+      }
+
     }
 
     def checkArgList(
@@ -1095,8 +1138,7 @@ object Validation {
       adaptation match {
         case eaa: EventActionA8n => state.checkDefinition(container, adaptation)
             .checkRef[Type](eaa.messageRef).checkActions(eaa.actions)
-        case cca: CommandCommandA8n =>
-          state
+        case cca: CommandCommandA8n => state
             .checkDefinition(container, adaptation)
             .checkRef[Type](cca.messageRef).checkRef[Type](cca.command)
         case eca: EventCommandA8n => state
