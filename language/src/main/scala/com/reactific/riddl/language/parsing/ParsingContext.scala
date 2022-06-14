@@ -19,11 +19,13 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Location
 import fastparse.*
-import fastparse.Parsed.{Failure, Success}
+import fastparse.Parsed.Failure
+import fastparse.Parsed.Success
 import fastparse.internal.Lazy
 
 import java.io.File
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.mutable
 
@@ -36,11 +38,13 @@ case class ParserError(
 
   def format: String = {
     if (loc.isEmpty) {
-      s"Error: ${input.origin}: $msg${if (context.nonEmpty) { "\nContext: " + context}}"
+      s"Error: ${input.origin}: $msg${if (context.nonEmpty) {
+        "\nContext: " + context
+      }}"
 
     } else {
       val errorLine = input.annotateErrorLine(loc)
-      s"Error: ${input.origin}$loc: $msg but got:\n$errorLine${if (context.nonEmpty) { " Context: " + context}}"
+      s"Error: ${input.origin}$loc: $msg but got:\n$errorLine${if (context.nonEmpty) { " Context: " + context }}"
     }
   }
 }
@@ -50,32 +54,39 @@ trait ParsingContext {
 
   private val stack: InputStack = InputStack()
 
-  protected val errors: mutable.ListBuffer[ParserError] =
-    mutable.ListBuffer.empty[ParserError]
+  protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer
+    .empty[ParserError]
 
-  @inline def current: RiddlParserInput = { stack.current }
-  @inline def push(path: Path): Unit = { stack.push(path) }
-  @inline def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
-  @inline def pop: RiddlParserInput = {
+  @inline
+  def current: RiddlParserInput = { stack.current }
+  @inline
+  def push(path: Path): Unit = { stack.push(path) }
+  @inline
+  def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
+  @inline
+  def pop: RiddlParserInput = {
     val rpi = stack.pop
     filesSeen.append(rpi)
     rpi
   }
-  private val filesSeen: mutable.ListBuffer[RiddlParserInput] =
-    mutable.ListBuffer.empty[RiddlParserInput]
+  private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable
+    .ListBuffer.empty[RiddlParserInput]
 
   def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
 
   def location[u: P]: P[Location] = {
-    P ( Index.map(idx => current.location(idx)) )
+    P(Index.map(idx => current.location(idx)))
   }
 
-  def doImport(loc: Location, domainName: Identifier, fileName: LiteralString): Domain = {
+  def doImport(
+    loc: Location,
+    domainName: Identifier,
+    fileName: LiteralString
+  ): Domain = {
     val name = fileName.s
     val file = new File(current.root, name)
     if (!file.exists()) {
-      error(
-        s"File '$name` does not exist, can't be imported.")
+      error(s"File '$name` does not exist, can't be imported.")
       Domain(loc, domainName)
     } else { importDomain(file) }
   }
@@ -88,8 +99,9 @@ trait ParsingContext {
     Domain(Location(), Identifier(Location(), "NotImplemented"))
   }
 
-  def doInclude[T <: Definition](str: LiteralString)(
-    rule: P[?] => P[Seq[T]]
+  def doInclude[T <: Definition](
+    str: LiteralString
+  )(rule: P[?] => P[Seq[T]]
   ): Include = {
     val name = str.s + ".riddl"
     val path = current.root.toPath.resolve(name)
@@ -101,20 +113,19 @@ trait ParsingContext {
             case Left(theErrors) =>
               theErrors.foreach(errors.append)
               Include(str.loc, Seq.empty[T], Some(path))
-            case Right(parseResult) =>
+            case Right((parseResult, _)) =>
               Include(str.loc, parseResult, Some(path))
           }
-        } finally {
-          pop
-        }
+        } finally { pop }
       } else {
-        error(str.loc,
-          s"File '$name' exits but can't be read, so it can't be included.")
-        Include(str.loc, Seq.empty[ParentDefOf[Definition]],  Some(path))
+        error(
+          str.loc,
+          s"File '$name' exits but can't be read, so it can't be included."
+        )
+        Include(str.loc, Seq.empty[ParentDefOf[Definition]], Some(path))
       }
     } else {
-      error(str.loc,
-        s"File '$name' does not exist, so it can't be included.")
+      error(str.loc, s"File '$name' does not exist, so it can't be included.")
       Include(str.loc, Seq.empty[ParentDefOf[Definition]], Some(path))
     }
   }
@@ -148,16 +159,18 @@ trait ParsingContext {
     error(location, msg, context)
   }
 
-  def expect[T](parser: P[?] => P[T]): Either[Seq[ParserError], T] = {
-    fastparse.parse(current, parser(_)) match {
+  def expect[T](
+    parser: P[?] => P[T]
+  ): Either[Seq[ParserError], (T, RiddlParserInput)] = {
+    val input = current
+    fastparse.parse(input, parser(_)) match {
       case Success(content, _) =>
         if (errors.nonEmpty) { Left(errors.toSeq) }
-        else { Right(content) }
+        else { Right(content -> input) }
       case failure: Failure =>
         makeParseFailureError(failure)
         Left(errors.toSeq)
-      case _ =>
-        throw new IllegalStateException(
+      case _ => throw new IllegalStateException(
           "Parsed[T] should have matched Success or Failure"
         )
     }

@@ -14,7 +14,7 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |    yields {r: Integer }
                                           |  }
                                           |}
-                                          |""".stripMargin) { (e, msgs) =>
+                                          |""".stripMargin) { (e, _, msgs) =>
         e.functions must matchPattern {
           case Seq(
                 AST.Function(
@@ -28,7 +28,9 @@ class FunctionValidatorTest extends ValidatingTest {
                 )
               ) =>
         }
-        assert(msgs.exists(_.message == "Function 'foo' should have a description"))
+        assert(
+          msgs.exists(_.message == "Function 'foo' should have a description")
+        )
       }
     }
   }

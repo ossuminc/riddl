@@ -2,7 +2,8 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.testkit.ParsingTest
 
-import java.io.{PrintWriter, StringWriter}
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.nio.file.Path
 
 class MarkdownWriterTest extends ParsingTest {
@@ -47,7 +48,7 @@ class MarkdownWriterTest extends ParsingTest {
               |## Briefly
               |Just For Testing
               |_Path_: hugo-translator.target.test-output.TestDomain
-              |_Defined At_: <string>(1:1)
+              |_Defined At_: empty(1:1)
               |
               |## Details
               |A test domain for ensuring that documentation for domains is

@@ -27,20 +27,21 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) =>
+        case Right((actual, _)) =>
           val expected = LiteralString((1, 1), input.drop(1).dropRight(1))
-          content mustBe expected
+          actual mustBe expected
 
       }
     }
     "literal strings can successfully escape a quote" in {
-      val input = """domain foo is { ??? } explained as "this is an \"explanation\"" """
+      val input =
+        """domain foo is { ??? } explained as "this is an \"explanation\"" """
       parseDefinition[Domain](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) => domain.description match {
-            case Some(BlockDescription(_,lines)) =>
+        case Right((domain, _)) => domain.description match {
+            case Some(BlockDescription(_, lines)) =>
               lines.size mustBe 1
               lines.head.s mustBe "this is an \\\"explanation\\\""
             case x: Any => fail(s"Expected a one line Description but got: $x")
@@ -60,7 +61,7 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content.typ match {
+        case Right((content, _)) => content.typ match {
             case Pattern(_, Seq(LiteralString(_, str))) =>
               str.head mustBe '('
               str.last mustBe ')'
@@ -79,7 +80,8 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe LiteralString((1, 1), input.drop(1).dropRight(1))
+        case Right((actual, rpi)) => actual mustBe
+            LiteralString((1, 1, rpi), input.drop(1).dropRight(1))
       }
     }
   }

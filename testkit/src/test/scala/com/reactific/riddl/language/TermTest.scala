@@ -1,6 +1,9 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term}
+import com.reactific.riddl.language.AST.BlockDescription
+import com.reactific.riddl.language.AST.Identifier
+import com.reactific.riddl.language.AST.LiteralString
+import com.reactific.riddl.language.AST.Term
 import com.reactific.riddl.language.testkit.ParsingTest
 class TermTest extends ParsingTest {
 
@@ -16,7 +19,7 @@ class TermTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(model) =>
+        case Right((model, _)) =>
           val finder = Finder(model)
           val found = finder.find(_.isInstanceOf[Term])
           found contains Term(

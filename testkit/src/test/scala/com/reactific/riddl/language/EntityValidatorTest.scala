@@ -14,13 +14,14 @@ class EntityValidatorTest extends ValidatingTest {
                     |
                     |}
                     |""".stripMargin
-      parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
-        msgs.count(_.kind.isError) mustBe 2
-        entity.options must contain(EntityFiniteStateMachine(3 -> 10))
-        entity.options must contain(EntityMessageQueue(3 -> 15))
-        entity.options must contain(EntityAggregate(3 -> 19))
-        entity.options must contain(EntityTransient(3 -> 30))
-        entity.options must contain(EntityAvailable(3 -> 41))
+      parseAndValidateInContext[Entity](input) {
+        case (entity: Entity, rpi, msgs: ValidationMessages) =>
+          msgs.count(_.kind.isError) mustBe 2
+          entity.options must contain(EntityFiniteStateMachine((3, 10, rpi)))
+          entity.options must contain(EntityMessageQueue((3, 15, rpi)))
+          entity.options must contain(EntityAggregate((3, 19, rpi)))
+          entity.options must contain(EntityTransient((3, 30, rpi)))
+          entity.options must contain(EntityAvailable((3, 41, rpi)))
       }
     }
 
@@ -31,9 +32,10 @@ class EntityValidatorTest extends ValidatingTest {
                     |  state bar is { field2: Number }
                     |  handler fum is { ??? }
                     |}""".stripMargin
-      parseAndValidateInContext[Entity](input) { case (entity: Entity, msgs: ValidationMessages) =>
-        msgs.filter(_.kind.isError) mustBe empty
-        entity.states.size mustBe 2
+      parseAndValidateInContext[Entity](input) {
+        case (entity: Entity, _, msgs: ValidationMessages) =>
+          msgs.filter(_.kind.isError) mustBe empty
+          entity.states.size mustBe 2
       }
     }
     "error for finite-state-machine entities without at least two states" in {
@@ -41,29 +43,35 @@ class EntityValidatorTest extends ValidatingTest {
                     |  options(fsm)
                     |  state foo is { field: String }
                     |}""".stripMargin
-      parseAndValidateInContext[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
-        assertValidationMessage(
-          msgs,
-          Validation.Error,
-          "Entity 'MultiState' is declared as an fsm, but doesn't have " +
-            "at least two states"
-        )
+      parseAndValidateInContext[Entity](input) {
+        case (_: Entity, _, msgs: ValidationMessages) =>
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "Entity 'MultiState' is declared as an fsm, but doesn't have " +
+              "at least two states"
+          )
       }
     }
     "catch missing things" in {
       val input = "entity Hamburger is { state foo is {field:  SomeType } }"
-      parseAndValidateInContext[Entity](input) { case (_: Entity, msgs: ValidationMessages) =>
-        assertValidationMessage(
-          msgs,
-          Validation.Error,
-          "'SomeType' is not defined but should be a Type"
-        )
-        assertValidationMessage(msgs, Validation.Error, "Entity 'Hamburger' must define a handler")
-        assertValidationMessage(
-          msgs,
-          Validation.MissingWarning,
-          "Entity 'Hamburger' should have a description"
-        )
+      parseAndValidateInContext[Entity](input) {
+        case (_: Entity, _, msgs: ValidationMessages) =>
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "'SomeType' is not defined but should be a Type"
+          )
+          assertValidationMessage(
+            msgs,
+            Validation.Error,
+            "Entity 'Hamburger' must define a handler"
+          )
+          assertValidationMessage(
+            msgs,
+            Validation.MissingWarning,
+            "Entity 'Hamburger' should have a description"
+          )
       }
     }
 
@@ -79,12 +87,13 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
-        assertValidationMessage(
-          msgs,
-          Validation.MissingWarning,
-          "Entity 'Hamburger' has only empty handler"
-        )
+      parseAndValidate[Domain](input) {
+        case (_: Domain, _, msgs: ValidationMessages) =>
+          assertValidationMessage(
+            msgs,
+            Validation.MissingWarning,
+            "Entity 'Hamburger' has only empty handler"
+          )
       }
     }
     "validate function examples" in {
@@ -101,11 +110,12 @@ class EntityValidatorTest extends ValidatingTest {
                                             |     "detailed description"
                                             |    }
                                             |  } described as "foo"
-                                            |""".stripMargin) { case (feature, msgs) =>
-        feature.id.value mustBe "AnAspect"
-        assert(feature.examples.nonEmpty)
-        assert(msgs.isEmpty)
-        assert(msgs.forall(_.message.contains("should have a description")))
+                                            |""".stripMargin) {
+        case (feature, _, msgs) =>
+          feature.id.value mustBe "AnAspect"
+          assert(feature.examples.nonEmpty)
+          assert(msgs.isEmpty)
+          assert(msgs.forall(_.message.contains("should have a description")))
       }
     }
     "produce correct field references" in {
@@ -125,9 +135,11 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, msgs: ValidationMessages) =>
-        msgs.map(_.format) must
-          contain("Error: default(10:19): Field 'a' was not set in message constructor")
+      parseAndValidate[Domain](input) {
+        case (_: Domain, rpi, msgs: ValidationMessages) => msgs
+            .map(_.format) must contain(
+            s"Error: ${rpi.origin}(10:19): Field 'a' was not set in message constructor"
+          )
       }
 
     }

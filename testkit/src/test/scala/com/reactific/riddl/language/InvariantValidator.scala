@@ -13,13 +13,17 @@ class InvariantValidator extends ValidatingTest {
           | invariant small is { ??? } described as { "self explanatory!" }
           |}
           |""".stripMargin
-      ) { (_, msgs) =>
+      ) { (_, _, msgs) =>
         assertValidationMessage(
           msgs,
           Validation.MissingWarning,
           "Condition in Invariant 'small' should not be empty"
         )
-        assertValidationMessage(msgs, Validation.Error, "Entity 'user' must define a handler")
+        assertValidationMessage(
+          msgs,
+          Validation.Error,
+          "Entity 'user' must define a handler"
+        )
         assertValidationMessage(
           msgs,
           Validation.MissingWarning,
@@ -34,8 +38,12 @@ class InvariantValidator extends ValidatingTest {
           | invariant large is { "x must be greater or equal to 10" }
           |}
           |""".stripMargin
-      ) { (_, msgs) =>
-        assertValidationMessage(msgs, MissingWarning, "Invariant 'large' should have a description")
+      ) { (_, _, msgs) =>
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "Invariant 'large' should have a description"
+        )
       }
     }
     "allow conditional expressions" in {
@@ -45,8 +53,12 @@ class InvariantValidator extends ValidatingTest {
           | invariant large is { and(@Field.name1,@Field.name2) }
           |}
           |""".stripMargin
-      ) { (_, msgs) =>
-        assertValidationMessage(msgs, MissingWarning, "Invariant 'large' should have a description")
+      ) { (_, _, msgs) =>
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "Invariant 'large' should have a description"
+        )
       }
 
     }

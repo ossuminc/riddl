@@ -1,6 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.StringParser
 import com.reactific.riddl.language.testkit.ParsingTest
 import org.scalatest.Assertion
@@ -10,43 +11,62 @@ import scala.collection.immutable.ListMap
 /** Unit Tests For ConditionParser */
 class ConditionParserTest extends ParsingTest {
 
-  def parseCondition(input: String)(check: Condition => Assertion): Assertion = {
-    parse[Condition, Condition](input, StringParser("").condition(_), identity) match {
+  def parseCondition(
+    input: String
+  )(check: Condition => Assertion
+  ): Assertion = {
+    val rpi = RiddlParserInput(input)
+    parse[Condition, Condition](
+      rpi,
+      StringParser("").condition(_),
+      identity
+    ) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(content) => check(content)
+      case Right((content, _)) => check(content)
     }
   }
 
   "ConditionParser" should {
     "accept true" in {
-      parseCondition("true") { cond: Condition => cond mustBe True(Location(1 -> 1)) }
+      parseCondition("true") { cond: Condition =>
+        cond mustBe True(Location(1 -> 1))
+      }
     }
     "accept false" in {
-      parseCondition("false") { cond: Condition => cond mustBe False(Location(1 -> 1)) }
+      parseCondition("false") { cond: Condition =>
+        cond mustBe False(Location(1 -> 1))
+      }
     }
     "accept literal string" in {
       parseCondition("\"decide\"") { cond: Condition =>
-        cond mustBe ArbitraryCondition(LiteralString(Location(1 -> 1), "decide"))
+        cond mustBe
+          ArbitraryCondition(LiteralString(Location(1 -> 1), "decide"))
       }
     }
     "accept and(true,false)" in {
       parseCondition("and(true,false)") { cond: Condition =>
-        cond mustBe
-          AndCondition(Location(1 -> 1), Seq(True(Location(1 -> 5)), False(Location(1 -> 10))))
+        cond mustBe AndCondition(
+          Location(1 -> 1),
+          Seq(True(Location(1 -> 5)), False(Location(1 -> 10)))
+        )
       }
     }
     "accept or(true,false)" in {
       parseCondition("or(true,false)") { cond: Condition =>
-        cond mustBe
-          OrCondition(Location(1 -> 1), Seq(True(Location(1 -> 4)), False(Location(1 -> 9))))
+        cond mustBe OrCondition(
+          Location(1 -> 1),
+          Seq(True(Location(1 -> 4)), False(Location(1 -> 9)))
+        )
       }
     }
     "accept xor(true,false)" in {
       parseCondition("xor(true,false)") { cond: Condition =>
-        cond mustBe
-          XorCondition(Location(1 -> 1), Seq(True(Location(1 -> 5)), False(Location(1 -> 10))))
+        cond mustBe XorCondition(
+          Location(1 -> 1),
+          Seq(True(Location(1 -> 5)), False(Location(1 -> 10)))
+        )
       }
     }
     "accept not(true,false)" in {
@@ -60,7 +80,8 @@ class ConditionParserTest extends ParsingTest {
           Location(1 -> 1),
           PathIdentifier(Location(1 -> 1), Seq("That", "This")),
           ArgList(ListMap(
-            Identifier(Location(1 -> 11), "x") -> LiteralInteger(Location(1 -> 13), BigInt(42))
+            Identifier(Location(1 -> 11), "x") ->
+              LiteralInteger(Location(1 -> 13), BigInt(42))
           ))
         )
       }
@@ -80,14 +101,19 @@ class ConditionParserTest extends ParsingTest {
               1 -> 13,
               lt,
               ValueCondition(1 -> 15, PathIdentifier(1 -> 16, Seq("b"))),
-              FunctionCallExpression(1 -> 18, PathIdentifier(1 -> 18, Seq("SomeFunc")), ArgList())
+              FunctionCallExpression(
+                1 -> 18,
+                PathIdentifier(1 -> 18, Seq("SomeFunc")),
+                ArgList()
+              )
             )
           )
         )
       }
     }
     "accept complicated conditional expression" in {
-      val input = """or(and(not(==("sooth", false)),SomeFunc(x=42)),true)""".stripMargin
+      val input =
+        """or(and(not(==("sooth", false)),SomeFunc(x=42)),true)""".stripMargin
       parseCondition(input) { cond: Condition =>
         cond mustBe OrCondition(
           1 -> 1,
@@ -107,7 +133,10 @@ class ConditionParserTest extends ParsingTest {
                 FunctionCallExpression(
                   1 -> 32,
                   PathIdentifier(1 -> 32, Seq("SomeFunc")),
-                  ArgList(ListMap(Identifier(1 -> 41, "x") -> LiteralInteger(1 -> 43, BigInt(42))))
+                  ArgList(ListMap(
+                    Identifier(1 -> 41, "x") ->
+                      LiteralInteger(1 -> 43, BigInt(42))
+                  ))
                 )
               )
             ),
