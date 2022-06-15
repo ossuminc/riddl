@@ -16,9 +16,13 @@
 
 package com.reactific.riddl
 
-import com.reactific.riddl.language.{Logger, ReformatTranslator, Riddl, SysLogger}
+import com.reactific.riddl.language.Logger
+import com.reactific.riddl.language.ReformatTranslator
+import com.reactific.riddl.language.Riddl
+import com.reactific.riddl.language.SysLogger
 import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
+import com.reactific.riddl.translator.kalix.KalixTranslator
 
 import scala.annotation.unused
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -31,9 +35,7 @@ object RIDDLC {
 
   final def main(args: Array[String]): Unit = {
     val resultCode = runMain(args)
-    if (resultCode != 0) {
-      System.exit(resultCode)
-    }
+    if (resultCode != 0) { System.exit(resultCode) }
   }
 
   val log: Logger = SysLogger()
@@ -42,11 +44,8 @@ object RIDDLC {
     try {
       RiddlOptions.parse(args) match {
         case Some(options) =>
-          if ( run(options)) {
-            0
-          } else {
-            1
-          }
+          if (run(options)) { 0 }
+          else { 1 }
         case None =>
           // arguments are bad, error message will have been displayed
           log.info("Option parsing failed, terminating.")
@@ -61,15 +60,15 @@ object RIDDLC {
 
   def run(options: RiddlOptions): Boolean = {
     options.command match {
-      case RiddlOptions.From => from(options)
-      case RiddlOptions.Repeat => repeat(options)
-      case RiddlOptions.Help => help(options)
-      case RiddlOptions.Parse => parse(options)
-      case RiddlOptions.Validate => validate(options)
-      case RiddlOptions.Prettify => prettify(options)
-      case RiddlOptions.Hugo => translateHugo(options)
+      case RiddlOptions.From         => from(options)
+      case RiddlOptions.Repeat       => repeat(options)
+      case RiddlOptions.Help         => help(options)
+      case RiddlOptions.Parse        => parse(options)
+      case RiddlOptions.Validate     => validate(options)
+      case RiddlOptions.Prettify     => prettify(options)
+      case RiddlOptions.Hugo         => translateHugo(options)
       case RiddlOptions.HugoGitCheck => hugoGitCheck(options)
-      case RiddlOptions.D3 => generateD3(options)
+      case RiddlOptions.D3           => generateD3(options)
       case _ =>
         log.error(s"A command must be specified as an option")
         log.info(RiddlOptions.usage)
@@ -79,10 +78,8 @@ object RIDDLC {
 
   def from(options: RiddlOptions): Boolean = {
     options.fromOptions.configFile match {
-      case Some(path) =>
-        RiddlOptions.loadRiddlOptions(options, path) match {
-          case Some(newOptions) =>
-            run(newOptions)
+      case Some(path) => RiddlOptions.loadRiddlOptions(options, path) match {
+          case Some(newOptions) => run(newOptions)
           case None =>
             log.error(s"Failed to load riddlc options from $path, terminating.")
             false
@@ -94,9 +91,8 @@ object RIDDLC {
   }
 
   def allowCancel(options: RepeatOptions): (Future[Boolean], () => Boolean) = {
-    if (!options.interactive) {
-      Future.successful(false) -> (() => false)
-    } else {
+    if (!options.interactive) { Future.successful(false) -> (() => false) }
+    else {
       Interrupt.aFuture[Boolean] {
         while (
           Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
@@ -105,7 +101,6 @@ object RIDDLC {
       }
     }
   }
-
 
   def repeat(options: RiddlOptions): Boolean = {
     val maxCycles = options.repeatOptions.maxCycles
@@ -116,8 +111,8 @@ object RIDDLC {
         RiddlOptions.loadRiddlOptions(options, configFile) match {
           case Some(newOptions) =>
             val (shouldQuit, cancel) = allowCancel(options.repeatOptions)
-            def userHasCancelled: Boolean =
-              shouldQuit.isCompleted && shouldQuit.value == Option(Success(true))
+            def userHasCancelled: Boolean = shouldQuit.isCompleted &&
+              shouldQuit.value == Option(Success(true))
             val counter = 1 to maxCycles
             var shouldContinue = true
             var i = counter.min
@@ -129,9 +124,7 @@ object RIDDLC {
               i += counter.step
               Thread.sleep(sleepTime)
             }
-            if (!userHasCancelled) {
-              cancel()
-            }
+            if (!userHasCancelled) { cancel() }
             shouldContinue
           case None =>
             log.error(s"Failed too load riddlc options from $configFile")
@@ -143,15 +136,17 @@ object RIDDLC {
     }
   }
 
-  def help(@unused options: RiddlOptions): Boolean = {
+  def help(
+    @unused
+    options: RiddlOptions
+  ): Boolean = {
     println(RiddlOptions.usage)
     true
   }
 
   def parse(options: RiddlOptions): Boolean = {
     options.parseOptions.inputFile match {
-      case Some(path) =>
-        Riddl.parse(path, log, options.commonOptions).nonEmpty
+      case Some(path) => Riddl.parse(path, log, options.commonOptions).nonEmpty
       case None =>
         log.error("No input file provided in options")
         false
@@ -163,7 +158,8 @@ object RIDDLC {
   ): Boolean = {
     options.validateOptions.inputFile match {
       case Some(inputFile) =>
-        val result = Riddl.parseAndValidate(inputFile, log, options.commonOptions)
+        val result = Riddl
+          .parseAndValidate(inputFile, log, options.commonOptions)
         result.nonEmpty
       case None =>
         log.error("No input file specified for validation")
@@ -189,8 +185,8 @@ object RIDDLC {
 
   def translateHugo(options: RiddlOptions): Boolean = {
     options.hugoOptions.inputFile match {
-      case Some(inputFile) =>
-        HugoTranslator.parseValidateTranslate(inputFile,
+      case Some(inputFile) => HugoTranslator.parseValidateTranslate(
+          inputFile,
           log,
           options.commonOptions,
           options.hugoOptions
@@ -204,17 +200,36 @@ object RIDDLC {
   def hugoGitCheck(options: RiddlOptions): Boolean = {
     options.hugoGitCheckOptions.hugoOptions.inputFile match {
       case Some(inputFile) =>
-        HugoGitCheckTranslator.parseValidateTranslate(inputFile, log,
-          options.commonOptions, options.hugoGitCheckOptions
+        HugoGitCheckTranslator.parseValidateTranslate(
+          inputFile,
+          log,
+          options.commonOptions,
+          options.hugoGitCheckOptions
         )
         log.info("Session concluded")
-      case None =>
-        log.error(s"Hugo options were not specified")
+      case None => log.error(s"Hugo options were not specified")
     }
     false
   }
 
-  def generateD3(@unused options: RiddlOptions): Boolean = {
+  def translateKalix(options: RiddlOptions): Boolean = {
+    options.kalixOptions.inputFile match {
+      case Some(inputFile) => KalixTranslator.parseValidateTranslate(
+          inputFile,
+          log,
+          options.commonOptions,
+          options.kalixOptions
+        ).nonEmpty
+      case None =>
+        log.error(s"Hugo options were not specified")
+        false
+    }
+  }
+
+  def generateD3(
+    @unused
+    options: RiddlOptions
+  ): Boolean = {
     log.info(s"D3 Generation  is not yet supported.")
     false
   }

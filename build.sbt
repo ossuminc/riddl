@@ -1,4 +1,5 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
+
 import sbt.Keys.scalaVersion
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import sbtbuildinfo.BuildInfoOption.ToMap
@@ -61,21 +62,23 @@ lazy val scala2_13_Options = Seq(
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
-lazy val riddl = (project in file("."))
-  .settings(
-    publish := {}, publishLocal := {}, pgpSigner / skip := true,
-    publishTo:= Some(Resolver.defaultLocal)
-  ).aggregate(
-    utils,
-    language,
-    testkit,
-    `hugo-translator`,
-    `hugo-git-check`,
-    examples,
-    doc,
-    riddlc,
-    `sbt-riddl`
-  )
+lazy val riddl = (project in file(".")).settings(
+  publish := {},
+  publishLocal := {},
+  pgpSigner / skip := true,
+  publishTo := Some(Resolver.defaultLocal)
+).aggregate(
+  utils,
+  language,
+  testkit,
+  `hugo-translator`,
+  `hugo-git-check`,
+  kalix,
+  examples,
+  doc,
+  riddlc,
+  `sbt-riddl`
+)
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
   .configure(C.mavenPublish).settings(
@@ -124,13 +127,19 @@ lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(`hugo-translator` % "compile->compile;test->test")
 
+lazy val kalix = project.in(file("kalix")).configure(C.mavenPublish).settings(
+  name := "riddl-kalix-translator",
+  libraryDependencies ++= Dep.testing
+).dependsOn(language % "compile->compile", testkit % "test->compile")
+
 lazy val examples = project.in(file("examples")).settings(
   name := "riddl-examples",
   Compile / packageBin / publishArtifact := false,
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
-  libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
+  libraryDependencies ++=
+    Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
@@ -150,7 +159,8 @@ lazy val doc2 = project.in(file("doc2")).enablePlugins(SitePlugin)
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging,UniversalDeployPlugin).configure(C.mavenPublish).settings(
+  .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
+  .configure(C.mavenPublish).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
@@ -159,7 +169,8 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   ).dependsOn(
     language,
     `hugo-translator` % "compile->compile;test->test",
-    `hugo-git-check` % "compile->compile;test->test"
+    `hugo-git-check` % "compile->compile;test->test",
+    kalix % "compile->compile;test->test"
   )
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
