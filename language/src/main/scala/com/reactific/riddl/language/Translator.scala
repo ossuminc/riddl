@@ -18,7 +18,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
-
+import com.reactific.riddl.utils.Logger
 import java.nio.file.Path
 
 trait TranslatingOptions {
@@ -40,7 +40,7 @@ trait Translator[OPT <: TranslatingOptions] {
     root: RootContainer,
     log: Logger,
     commonOptions: CommonOptions,
-    options: OPT,
+    options: OPT
   ): Seq[Path]
 
   final def translate(

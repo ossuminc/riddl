@@ -18,9 +18,12 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language._
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.TreeCopyFileVisitor
 import com.reactific.riddl.utils.Zip
 
-import java.io.{File, IOException}
+import java.io.File
+import java.io.IOException
 import java.net.URL
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
@@ -180,7 +183,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   def copyURLToDir(from: Option[URL], destDir: Path): String = {
     if (from.isDefined) {
       import java.io.InputStream
-      import java.nio.file.{Files, StandardCopyOption}
+      import java.nio.file.{ Files, StandardCopyOption }
       val nameParts = from.get.getFile.split('/')
       if (nameParts.nonEmpty) {
         val fileName = nameParts.last
@@ -203,10 +206,11 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
           zip_path.toFile.delete()
         case name if name.endsWith(".tar.gz") =>
           val rc = Process(s"tar zxf $fileName", cwd = destDir.toFile).!
-          if (rc != 0) {throw new IOException(s"Failed to unzip $zip_path")}
+          if (rc != 0) { throw new IOException(s"Failed to unzip $zip_path") }
           zip_path.toFile.delete()
-        case _ =>
-          throw new IllegalArgumentException("Can only load a theme from .tar.gz or .zip file")
+        case _ => throw new IllegalArgumentException(
+            "Can only load a theme from .tar.gz or .zip file"
+          )
       }
     }
   }
@@ -215,40 +219,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     for ((name, url) <- options.themes) {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url, destDir)
-    }
-  }
-
-  case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
-      extends SimpleFileVisitor[Path] {
-
-    @throws[IOException]
-    override def preVisitDirectory(
-      dir: Path,
-      attrs: BasicFileAttributes
-    ): FileVisitResult = {
-      val resolve = target.resolve(source.relativize(dir))
-      if (Files.notExists(resolve)) { Files.createDirectories(resolve) }
-      FileVisitResult.CONTINUE
-    }
-
-    @throws[IOException]
-    override def visitFile(
-      file: Path,
-      attrs: BasicFileAttributes
-    ): FileVisitResult = {
-      val resolve = target.resolve(source.relativize(file))
-      if (!file.getFileName.startsWith(".")) {
-        Files.copy(file, resolve, StandardCopyOption.REPLACE_EXISTING)
-      }
-      FileVisitResult.CONTINUE
-    }
-
-    override def visitFileFailed(
-      file: Path,
-      exc: IOException
-    ): FileVisitResult = {
-      log.error(s"Unable to copy: $file: $exc\n")
-      FileVisitResult.CONTINUE
     }
   }
 
@@ -273,12 +243,11 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       case Some(_) =>
         val fileName = copyURLToDir(options.siteLogo, options.staticRoot)
         options.staticRoot.resolve(fileName)
-      case None =>
-        options.staticRoot.resolve("logo.png")
+      case None => options.staticRoot.resolve("logo.png")
     }
   }
 
-  def copyResource(destination: Path):Unit = {
+  def copyResource(destination: Path): Unit = {
     import java.nio.file.Files
     import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
@@ -314,29 +283,24 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    def existsInPath(path: String): Boolean =
-      System.getenv("PATH").split(java.util.regex.Pattern.quote(
-        File.pathSeparator)
-      ).map(Path.of(_)).exists(p => Files.isExecutable(p.resolve(path)))
+    def existsInPath(path: String): Boolean = System.getenv("PATH")
+      .split(java.util.regex.Pattern.quote(File.pathSeparator)).map(Path.of(_))
+      .exists(p => Files.isExecutable(p.resolve(path)))
 
     val hugoPath = options.hugoPath match {
-      case Some(path) if Files.isExecutable(path) =>
-        Some(path.toString)
-      case Some(path) if existsInPath(path.toString) =>
-        Some(path.toString)
+      case Some(path) if Files.isExecutable(path)    => Some(path.toString)
+      case Some(path) if existsInPath(path.toString) => Some(path.toString)
       case Some(path) =>
         log.error(s"Unable to find hugo at: $path")
         None
-      case None =>
-        Some("hugo")
+      case None => Some("hugo")
     }
     hugoPath match {
       case Some(path) =>
-        if (0 !=
-          Process(s"$path new site ${outDir.getAbsolutePath}", cwd = parent).!
-        ) {
-          log.error(s"Hugo could not create a site here: $outDir")
-        }
+        if (
+          0 !=
+            Process(s"$path new site ${outDir.getAbsolutePath}", cwd = parent).!
+        ) { log.error(s"Hugo could not create a site here: $outDir") }
         else {
           loadThemes(options)
           loadStaticAssets(

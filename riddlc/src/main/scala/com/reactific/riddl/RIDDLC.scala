@@ -16,13 +16,13 @@
 
 package com.reactific.riddl
 
-import com.reactific.riddl.language.Logger
 import com.reactific.riddl.language.ReformatTranslator
 import com.reactific.riddl.language.Riddl
-import com.reactific.riddl.language.SysLogger
 import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
 import com.reactific.riddl.translator.kalix.KalixTranslator
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.SysLogger
 
 import scala.annotation.unused
 import scala.concurrent.ExecutionContext.Implicits.global

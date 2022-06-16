@@ -1,7 +1,9 @@
 package com.reactific.riddl.translator.hugo_git_check
 
 import com.reactific.riddl.language._
-import com.reactific.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
+import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
+import com.reactific.riddl.translator.hugo.HugoTranslator
+import com.reactific.riddl.utils.Logger
 import org.eclipse.jgit.api._
 import org.eclipse.jgit.api.errors.GitAPIException
 import org.eclipse.jgit.lib.ProgressMonitor
@@ -11,7 +13,8 @@ import org.eclipse.jgit.submodule.SubmoduleWalk
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
 import java.nio.file.attribute.FileTime
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
@@ -25,8 +28,8 @@ case class HugoGitCheckOptions(
   gitCloneDir: Option[Path] = None,
   relativeDir: Option[Path] = None,
   userName: String = "",
-  accessToken: String = ""
-) extends TranslatingOptions {
+  accessToken: String = "")
+    extends TranslatingOptions {
   def inputFile: Option[Path] = hugoOptions.inputFile
   def outputDir: Option[Path] = hugoOptions.outputDir
   def projectName: Option[String] = hugoOptions.projectName
@@ -46,24 +49,26 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
     commonOptions: CommonOptions,
     options: HugoGitCheckOptions
   ): Seq[Path] = {
-    require(options.gitCloneDir.nonEmpty, s"Option 'gitCloneDir' must have a value.")
+    require(
+      options.gitCloneDir.nonEmpty,
+      s"Option 'gitCloneDir' must have a value."
+    )
     val gitCloneDir = options.gitCloneDir.get
     require(Files.isDirectory(gitCloneDir), s"$gitCloneDir is not a directory.")
     val builder = new FileRepositoryBuilder
-    val repository = builder.setGitDir(gitCloneDir.resolve(".git").toFile)
-      .build // scan up the file system tree
+    val repository =
+      builder.setGitDir(gitCloneDir.resolve(".git").toFile)
+        .build // scan up the file system tree
     val git = new Git(repository)
 
     val when = getTimeStamp(gitCloneDir)
     val opts = prepareOptions(options)
 
-    if ( gitHasChanges(log, commonOptions, opts, git, when)) {
+    if (gitHasChanges(log, commonOptions, opts, git, when)) {
       pullCommits(log, commonOptions, options, git)
       val ht = HugoTranslator
       ht.translate(root, log, commonOptions, options.hugoOptions)
-    } else {
-      Seq.empty[Path]
-    }
+    } else { Seq.empty[Path] }
   }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
@@ -88,30 +93,27 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
   ): Boolean = {
     val repo = git.getRepository
     val top = repo.getDirectory.getParentFile.toPath.toAbsolutePath
-    val subPath = if (options.relativeDir.nonEmpty) {
-      val relativeDir = options.relativeDir.get.toAbsolutePath
-      val relativized = top.relativize(relativeDir)
-      if (relativized.getNameCount > 1) relativized.toString else "."
-    } else { "."}
+    val subPath =
+      if (options.relativeDir.nonEmpty) {
+        val relativeDir = options.relativeDir.get.toAbsolutePath
+        val relativized = top.relativize(relativeDir)
+        if (relativized.getNameCount > 1) relativized.toString else "."
+      } else { "." }
     val status = git.status()
-      .setProgressMonitor(DotWritingProgressMonitor(log,commonOptions))
+      .setProgressMonitor(DotWritingProgressMonitor(log, commonOptions))
       .setIgnoreSubmodules(SubmoduleWalk.IgnoreSubmoduleMode.ALL)
-      .addPath(subPath)
-      .call()
+      .addPath(subPath).call()
 
-    val potentiallyChangedFiles = (
-      status.getAdded.asScala ++
-      status.getChanged.asScala ++ status.getModified.asScala
-    ).toSet[String]
+    val potentiallyChangedFiles =
+      (status.getAdded.asScala ++ status.getChanged.asScala ++
+        status.getModified.asScala).toSet[String]
 
     val maybeModified = for {
       fName <- potentiallyChangedFiles
       timestamp = Files.getLastModifiedTime(Path.of(fName))
       isModified = timestamp.compareTo(minTime) > 0
-    } yield {
-      isModified
-    }
-    maybeModified.exists( x => x )
+    } yield { isModified }
+    maybeModified.exists(x => x)
   }
 
   def pullCommits(
@@ -119,17 +121,16 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
     commonOptions: CommonOptions,
     options: HugoGitCheckOptions,
     git: Git
-  ) : Boolean = {
+  ): Boolean = {
     try {
       if (commonOptions.verbose) {
         log.info("Pulling latest changes from remote")
       }
       val pullCommand = git.pull
-      pullCommand
-        .setCredentialsProvider(creds(options))
+      pullCommand.setCredentialsProvider(creds(options))
         .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
         .setStrategy(MergeStrategy.THEIRS)
-        pullCommand.call.isSuccessful
+      pullCommand.call.isSuccessful
     } catch {
       case e: GitAPIException =>
         log.error("Error when pulling latest changes:", e)
@@ -144,22 +145,19 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
     val outDir = options.outputDir.get
     require(Files.isRegularFile(inFile), "input is not a file")
     require(Files.isReadable(inFile), "input is not readable")
-    if (!Files.isDirectory(outDir)) {
-      outDir.toFile.mkdirs()
-    }
+    if (!Files.isDirectory(outDir)) { outDir.toFile.mkdirs() }
     require(Files.isDirectory(outDir), "output is not a directory")
     require(Files.isWritable(outDir), "output is not writable")
     val htc = options.hugoOptions.copy(
       inputFile = Some(inFile),
       outputDir = Some(outDir),
       projectName = options.projectName,
-      eraseOutput = true,
+      eraseOutput = true
     )
     options.copy(hugoOptions = htc)
   }
 
-
-  def runHugo(source: Path, log:Logger): Boolean = {
+  def runHugo(source: Path, log: Logger): Boolean = {
     import scala.sys.process._
     val srcDir = source.toFile
     require(srcDir.isDirectory, "Source directory is not a directory!")
@@ -172,7 +170,9 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
       if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
     }
 
-    def ferr(line: String): Unit = { lineBuffer.append(line); hadErrorOutput = true }
+    def ferr(line: String): Unit = {
+      lineBuffer.append(line); hadErrorOutput = true
+    }
 
     val logger = ProcessLogger(fout, ferr)
     val proc = Process("hugo", cwd = Option(srcDir))
@@ -184,47 +184,37 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
         } else if (hadWarningOutput) {
           log.warn("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
           true
-        } else {
-          true
-        }
+        } else { true }
       case rc: Int =>
-        log.error(s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  "))
+        log.error(
+          s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  ")
+        )
         false
     }
   }
 
-  case class DotWritingProgressMonitor(log: Logger, options: CommonOptions) extends
-    ProgressMonitor {
+  case class DotWritingProgressMonitor(log: Logger, options: CommonOptions)
+      extends ProgressMonitor {
     override def start(totalTasks: Int): Unit = {
       if (options.verbose) {
         log.info(s"Starting Fetch with $totalTasks tasks.")
-      } else {
-        System.out.print("\n.")
-      }
+      } else { System.out.print("\n.") }
     }
 
     override def beginTask(title: String, totalWork: Int): Unit = {
       if (options.verbose) {
         log.info(s"Starting Task '$title', $totalWork remaining.")
-      } else {
-        System.out.print(".")
-      }
+      } else { System.out.print(".") }
     }
 
     override def update(completed: Int): Unit = {
-      if (options.verbose) {
-        log.info(s"$completed tasks completed.")
-      } else {
-        System.out.print(".")
-      }
+      if (options.verbose) { log.info(s"$completed tasks completed.") }
+      else { System.out.print(".") }
     }
 
     override def endTask(): Unit = {
-      if (options.verbose) {
-        log.info(s"Task completed.")
-      } else {
-        System.out.println(".")
-      }
+      if (options.verbose) { log.info(s"Task completed.") }
+      else { System.out.println(".") }
     }
 
     override def isCancelled: Boolean = false

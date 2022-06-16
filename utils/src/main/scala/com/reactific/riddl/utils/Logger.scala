@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.utils
 
-import java.io.{PrintWriter, StringWriter}
+import java.io.PrintWriter
+import java.io.StringWriter
 import scala.collection.mutable.ArrayBuffer
 
 object Logger {
   sealed trait Lvl {
-    override def toString: String = this.getClass.getSimpleName.dropRight(1).toLowerCase
+    override def toString: String = this.getClass.getSimpleName.dropRight(1)
+      .toLowerCase
   }
 
   case object Severe extends Lvl
@@ -61,13 +63,14 @@ case class SysLogger() extends Logger {
 case class StringLogger(capacity: Int = 512 * 2) extends Logger {
   private val stringBuilder = new StringBuilder(capacity)
 
-  def write(level: Logger.Lvl, s: String): Unit =
-    stringBuilder.append("[").append(level).append("] ").append(s).append("\n")
+  def write(level: Logger.Lvl, s: String): Unit = stringBuilder.append("[")
+    .append(level).append("] ").append(s).append("\n")
 
   override def toString: String = stringBuilder.toString()
 }
 
-/** A Logger which captures logged lines into an in-memory buffer, useful for testing purposes.
+/** A Logger which captures logged lines into an in-memory buffer, useful for
+  * testing purposes.
   */
 case class InMemoryLogger() extends Logger {
   case class Line(level: Logger.Lvl, msg: String)
@@ -77,7 +80,5 @@ case class InMemoryLogger() extends Logger {
   /** Returns an Iterator of all lines logged to this logger, oldest-first */
   def lines(): Iterator[Line] = buffer.iterator
 
-  def write(level: Logger.Lvl, s: String): Unit = {
-    buffer += Line(level, s)
-  }
+  def write(level: Logger.Lvl, s: String): Unit = { buffer += Line(level, s) }
 }

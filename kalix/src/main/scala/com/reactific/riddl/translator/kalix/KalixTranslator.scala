@@ -2,9 +2,9 @@ package com.reactific.riddl.translator.kalix
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Logger
 import com.reactific.riddl.language.TranslatingOptions
 import com.reactific.riddl.language.Translator
+import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
 
