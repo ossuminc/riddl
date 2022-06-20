@@ -19,6 +19,7 @@ package com.reactific.riddl.translator.hugo
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language._
 import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
 import com.reactific.riddl.utils.Zip
 
@@ -180,25 +181,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     directory.delete
   }
 
-  def copyURLToDir(from: Option[URL], destDir: Path): String = {
-    if (from.isDefined) {
-      import java.io.InputStream
-      import java.nio.file.{ Files, StandardCopyOption }
-      val nameParts = from.get.getFile.split('/')
-      if (nameParts.nonEmpty) {
-        val fileName = nameParts.last
-        val in: InputStream = from.get.openStream
-        destDir.toFile.mkdirs()
-        val dl_path = destDir.resolve(fileName)
-        Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
-        fileName
-      } else { "" }
-    } else { "" }
-  }
-
   def loadATheme(from: Option[URL], destDir: Path): Unit = {
     if (from.isDefined) {
-      val fileName = copyURLToDir(from, destDir)
+      val fileName = TextFileWriter.copyURLToDir(from, destDir)
       val zip_path = destDir.resolve(fileName)
       fileName match {
         case name if name.endsWith(".zip") =>
@@ -241,7 +226,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   def loadSiteLogo(options: HugoTranslatingOptions): Path = {
     options.siteLogo match {
       case Some(_) =>
-        val fileName = copyURLToDir(options.siteLogo, options.staticRoot)
+        val fileName = TextFileWriter
+          .copyURLToDir(options.siteLogo, options.staticRoot)
         options.staticRoot.resolve(fileName)
       case None => options.staticRoot.resolve("logo.png")
     }
@@ -251,8 +237,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     import java.nio.file.Files
     import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
-    val src = ClassLoader.getSystemClassLoader.getResourceAsStream(name)
-    Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
+    TextFileWriter.copyResource(name, destination)
   }
 
   def manuallyMakeNewHugoSite(where: File): Unit = {

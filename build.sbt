@@ -84,7 +84,8 @@ lazy val utils = project.in(file("utils")).configure(C.withCoverage())
   .configure(C.mavenPublish).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
-    scalacOptions := scala2_13_Options
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Dep.testing
   )
 
 lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)

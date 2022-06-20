@@ -18,37 +18,13 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST._
+import com.reactific.riddl.utils.TextFileWriter
 
 import java.io.PrintWriter
 import java.nio.file.Path
 import scala.collection.mutable
 
-case class MarkdownWriter(filePath: Path) {
-
-  private val sb: StringBuilder = new mutable.StringBuilder()
-
-  override def toString: String = sb.toString
-
-  private def mkDirs(): Unit = {
-    val dirFile = filePath.getParent.toFile
-    if (!dirFile.exists) { dirFile.mkdirs() }
-  }
-
-  def write(writer: PrintWriter): Unit = {
-    try {
-      writer.write(sb.toString())
-      writer.flush()
-    } finally { writer.close() }
-    sb.clear() // release memory because content written to file
-  }
-
-  def write(): Unit = {
-    mkDirs()
-    val writer = new PrintWriter(filePath.toFile)
-    write(writer)
-  }
-
-  def nl: this.type = { sb.append("\n"); this }
+case class MarkdownWriter(filePath: Path) extends TextFileWriter(filePath) {
 
   def fileHead(
     name: String,
