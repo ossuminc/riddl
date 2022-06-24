@@ -50,8 +50,7 @@ abstract class TextFileWriter(filePath: Path) {
     val templateBytes = src.readAllBytes()
     val template = new String(templateBytes, StandardCharsets.UTF_8)
     val result = substitute(template, substitutions)
-    val bytes: Array[Byte] = result.getBytes(StandardCharsets.UTF_8)
-    Files.write(filePath, bytes, StandardOpenOption.TRUNCATE_EXISTING)
+    sb.append(result)
   }
 }
 
