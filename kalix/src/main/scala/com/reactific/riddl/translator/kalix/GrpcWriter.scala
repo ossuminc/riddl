@@ -10,18 +10,15 @@ import java.nio.file.Path
 case class GrpcWriter(
   filePath: Path,
   root: RootContainer,
-  context: Context,
   symtab: SymbolTable)
     extends TextFileWriter(filePath) {
 
-  def superScopeTypes(): GrpcWriter = {
-    val parents = symtab.parentsOf(context)
-    for {
-      parent <- symtab.parentsOf(context) ++ Seq(context)
-    } yield parent match {
-      case d: Domain  => for { t <- d.types } yield { emitType(t) }
-      case c: Context => for { t <- c.types } yield { emitType(t) }
-    }
+  def emitKalixFileHeader(packages: Seq[String]): GrpcWriter = {
+    sb.append("syntax = \"proto3\";\n\n")
+    sb.append(s"package ${packages.mkString(".")};\n\n")
+
+    sb.append("import \"google/api/annotations.proto\";\n")
+    sb.append("import \"kalix/annotations.proto\";\n")
     this
   }
 
@@ -29,18 +26,17 @@ case class GrpcWriter(
     id.value // FIXME: remove non-identifier chars?
   }
 
-  def emitKalixFileHeader: GrpcWriter = {
-    sb.append("syntax = \"proto3\";\n\n")
-    sb.append("package com.improving.app.gateway.api;\n\n")
-
-    sb.append("import \"google/api/annotations.proto\";\n")
-    sb.append("import \"kalix/annotations.proto\";\n")
+  def emitTypeExpression(tye: TypeExpression): GrpcWriter = {
+    tye match {
+      case s: Strng => sb.append("string")
+      case n: Number => sb.append("sint64")
+      case _ => ???
+    }
     this
   }
 
   def emitType(ty: Type): GrpcWriter = {
     sb.append(s"message ${sanitizeId(ty.id)} { // ${ty.format}")
-    ty.typ match { case n: Number => sb.append("one of ") }
     // TODO: finish implementation
     this
   }

@@ -2057,7 +2057,11 @@ object AST {
 
   /** Base trait for all options a Context can have.
     */
-  sealed trait ContextOption extends OptionValue
+  sealed abstract class ContextOption(val name: String) extends OptionValue
+
+  case class ContextPackageOption(loc: Location, override val args: Seq[LiteralString])
+    extends ContextOption("package")
+
 
   /** A context's "wrapper" option. This option suggests the bounded context is
     * to be used as a wrapper around an external system and is therefore at the
@@ -2066,9 +2070,7 @@ object AST {
     * @param loc
     *   The location of the wrapper option
     */
-  case class WrapperOption(loc: Location) extends ContextOption {
-    def name: String = "wrapper"
-  }
+  case class WrapperOption(loc: Location) extends ContextOption("wrapper")
 
   /** A context's "service" option. This option suggests the bounded context is
     * intended to be a DDD service, similar to a wrapper but without any
@@ -2077,18 +2079,14 @@ object AST {
     * @param loc
     *   The location at which the option occurs
     */
-  case class ServiceOption(loc: Location) extends ContextOption {
-    def name: String = "service"
-  }
+  case class ServiceOption(loc: Location) extends ContextOption("service")
 
   /** A context's "function" option that suggests
     *
     * @param loc
     *   The location of the function option
     */
-  case class FunctionOption(loc: Location) extends ContextOption {
-    def name: String = "function"
-  }
+  case class FunctionOption(loc: Location) extends ContextOption("function")
 
   /** A context's "gateway" option that suggests the bounded context is intended
     * to be an application gateway to the model. Gateway's provide
@@ -2098,9 +2096,7 @@ object AST {
     * @param loc
     *   The location of the gateway option
     */
-  case class GatewayOption(loc: Location) extends ContextOption {
-    def name: String = "gateway"
-  }
+  case class GatewayOption(loc: Location) extends ContextOption("gateway")
 
   /** A reference to a bounded context
     *
@@ -2466,7 +2462,7 @@ object AST {
 
   /** Base trait for all options applicable to a saga.
     */
-  sealed trait SagaOption extends OptionValue
+  sealed abstract class SagaOption(val name: String) extends OptionValue
 
   /** A [[SagaOption]] that indicates sequential (serial) execution of the saga
     * actions.
@@ -2474,18 +2470,14 @@ object AST {
     * @param loc
     *   The location of the sequential option
     */
-  case class SequentialOption(loc: Location) extends SagaOption {
-    def name: String = "sequential"
-  }
+  case class SequentialOption(loc: Location) extends SagaOption ("sequential")
 
   /** A [[SagaOption]] that indicates parallel execution of the saga actions.
     *
     * @param loc
     *   The location of the parallel option
     */
-  case class ParallelOption(loc: Location) extends SagaOption {
-    def name: String = "parallel"
-  }
+  case class ParallelOption(loc: Location) extends SagaOption ("parallel")
 
   /** The definition of a Saga based on inputs, outputs, and the set of
     * [[SagaStep]]s involved in the saga. Sagas define a computing action based
@@ -2527,12 +2519,6 @@ object AST {
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
-  }
-
-  sealed trait InteractionOption extends OptionValue
-
-  case class GatewayInteraction(loc: Location) extends InteractionOption {
-    def name: String = "gateway"
   }
 
   /** The definition of an agile user story. Stories define functionality from
@@ -2619,6 +2605,20 @@ object AST {
     }
   }
 
+  /** Base trait for all options a Domain can have.
+   */
+  sealed abstract class DomainOption(val name: String) extends OptionValue
+
+  /** A context's "wrapper" option. This option suggests the bounded context is
+   * to be used as a wrapper around an external system and is therefore at the
+   * boundary of the context map
+   *
+   * @param loc
+   *   The location of the wrapper option
+   */
+  case class DomainPackageOption(loc: Location, override val args: Seq[LiteralString])
+    extends DomainOption("package")
+
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
     * Generally, domains follow hierarchical organization structure but other
@@ -2647,6 +2647,7 @@ object AST {
   case class Domain(
     loc: Location,
     id: Identifier,
+    options: Seq[DomainOption] = Seq.empty[DomainOption],
     author: Option[AuthorInfo] = Option.empty[AuthorInfo],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
@@ -2658,6 +2659,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ParentDefOf[DomainDefinition]
+      with OptionsDef[DomainOption]
       with DomainDefinition
       with WithIncludes
       with WithTerms {
