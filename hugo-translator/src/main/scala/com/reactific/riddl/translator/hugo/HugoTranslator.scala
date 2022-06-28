@@ -27,7 +27,6 @@ import java.io.File
 import java.io.IOException
 import java.net.URL
 import java.nio.file._
-import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable
 import scala.sys.process.Process
 
@@ -57,20 +56,9 @@ case class HugoTranslatingOptions(
   def configFile: Path = outputRoot.resolve("config.toml")
 }
 
-case class HugoTranslatorState(options: HugoTranslatingOptions) {
-  val files: mutable.ListBuffer[MarkdownWriter] = mutable.ListBuffer
-    .empty[MarkdownWriter]
-  val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
-  dirs.push(options.contentRoot)
+case class HugoTranslatorState(options: HugoTranslatingOptions)
+  extends TranslatorState[MarkdownWriter] {
 
-  def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) =>
-    path.resolve(nm)
-  }
-
-  def addDir(name: String): Path = {
-    dirs.push(Path.of(name))
-    parentDirs
-  }
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -78,7 +66,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
     }
     val path = parDir.resolve(fileName)
     val mdw = MarkdownWriter(path)
-    files.append(mdw)
+    addFile(mdw)
     mdw
   }
 
@@ -234,8 +222,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   def copyResource(destination: Path): Unit = {
-    import java.nio.file.Files
-    import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
     TextFileWriter.copyResource(name, destination)
   }
@@ -347,13 +333,13 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     commonOptions: CommonOptions,
     options: HugoTranslatingOptions
   ): Seq[Path] = {
-    require(options.inputFile.nonEmpty, "An input path was not provided.")
-    require(options.outputDir.nonEmpty, "An output path was not provided.")
+    super.translateImpl(root, log, commonOptions, options)
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
     require(
       options.outputRoot.getFileName.toString.nonEmpty,
       "Output path is empty"
     )
+
     val newOptions = makeDirectoryStructure(options.inputFile.get, log, options)
     val maybeAuthor = root.contents.headOption match {
       case Some(domain) => domain.author

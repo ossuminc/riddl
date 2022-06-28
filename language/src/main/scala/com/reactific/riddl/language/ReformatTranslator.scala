@@ -36,13 +36,16 @@ case class ReformattingOptions(
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 object ReformatTranslator extends Translator[ReformattingOptions] {
 
-  def translateImpl(
+  override def translateImpl(
     root: RootContainer,
     @unused
     log: Logger,
     commonOptions: CommonOptions,
     options: ReformattingOptions
-  ): Seq[Path] = { doTranslation(root, log, commonOptions, options).files }
+  ): Seq[Path] = {
+    super.translateImpl(root, log, commonOptions, options)
+    doTranslation(root, log, commonOptions, options).files
+  }
 
   def doTranslation(
     root: RootContainer,
@@ -565,7 +568,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
           .add(" for ").add(adaptor.ref.format).add(" is {")
       ).step { s2 =>
         if (adaptor.isEmpty) { s2.withCurrent(_.emitUndefined().add(" }\n")) }
-        else { s2.withCurrent(_.add("\n").indent) }
+        else s2.withCurrent(_.add("\n").indent)
       }
     }
 

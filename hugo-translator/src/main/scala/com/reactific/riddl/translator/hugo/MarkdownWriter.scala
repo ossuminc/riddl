@@ -24,7 +24,7 @@ import java.io.PrintWriter
 import java.nio.file.Path
 import scala.collection.mutable
 
-case class MarkdownWriter(filePath: Path) extends TextFileWriter(filePath) {
+case class MarkdownWriter(filePath: Path) extends TextFileWriter {
 
   def fileHead(
     name: String,

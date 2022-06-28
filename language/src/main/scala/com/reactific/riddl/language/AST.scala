@@ -46,7 +46,7 @@ object AST {
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     )
-    def nonEmpty: Boolean = !isEmpty
+    final def nonEmpty: Boolean = !isEmpty
   }
 
   /** The root trait of all parsable values. If a parser returns something, its
@@ -424,7 +424,7 @@ object AST {
       }
     }
 
-    override def isEmpty: Boolean = options.isEmpty
+    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
   }
 
   // ////////////////////////////////////////////////////////// TYPES
@@ -2663,7 +2663,9 @@ object AST {
       with DomainDefinition
       with WithIncludes
       with WithTerms {
-    override def isEmpty: Boolean = super.isEmpty && author.isEmpty
+    override def isEmpty: Boolean = {
+      author.isEmpty && options.isEmpty && contents.isEmpty
+    }
     def contents: Seq[DomainDefinition] = {
       domains ++ types.iterator ++ contexts ++ plants ++ stories ++ terms ++
         includes

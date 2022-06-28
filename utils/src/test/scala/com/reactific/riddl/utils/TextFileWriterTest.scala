@@ -14,12 +14,14 @@ class TextFileWriterTest extends AnyWordSpec with Matchers {
       val result = TextFileWriter.substitute(template, substitutions)
       result mustBe ("blah dee blah dee blah")
     }
-    case class TestTextFileWriter(path: Path) extends TextFileWriter(path)
+
+    case class TestTextFileWriter(filePath: Path) extends TextFileWriter
     "fill a template from a resource" in {
       val path = Files.createTempFile("test", "txt")
       val ttfw = TestTextFileWriter(path)
       val substitutions = Map("foo1" -> "dee", "foo2" -> "dee")
       ttfw.fillTemplateFromResource("blah-foo.txt", substitutions)
+      ttfw.write()
       val content = Files.readString(path)
       Files.delete(path)
       content mustBe ("blah dee blah dee blah\n")

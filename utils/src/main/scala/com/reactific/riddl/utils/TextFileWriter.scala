@@ -12,8 +12,13 @@ import java.nio.file.StandardCopyOption
 import scala.annotation.tailrec
 import scala.collection.mutable
 
+trait OutputFile {
+  def write(): Unit
+  def filePath: Path
+}
+
 /** Unit Tests For TextFileWriter */
-abstract class TextFileWriter(filePath: Path) {
+abstract class TextFileWriter extends OutputFile {
 
   protected val sb: mutable.StringBuilder = new mutable.StringBuilder()
 

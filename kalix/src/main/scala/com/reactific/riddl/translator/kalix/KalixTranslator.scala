@@ -1,9 +1,6 @@
 package com.reactific.riddl.translator.kalix
 
-import com.reactific.riddl.language.AST
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.TranslatingOptions
-import com.reactific.riddl.language.Translator
+import com.reactific.riddl.language._
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -15,8 +12,14 @@ case class KalixOptions(
   projectName: Option[String] = None)
     extends TranslatingOptions
 
+object KalixOptions {
+  val default: KalixOptions = KalixOptions()
+}
+
+case class KalixState(options: KalixOptions)
+  extends TranslatorState[GrpcWriter] {}
+
 object KalixTranslator extends Translator[KalixOptions] {
-  val defaultOptions: KalixOptions = KalixOptions()
 
   override protected def translateImpl(
     root: AST.RootContainer,
@@ -24,9 +27,9 @@ object KalixTranslator extends Translator[KalixOptions] {
     commonOptions: CommonOptions,
     options: KalixOptions
   ): Seq[Path] = {
-    require(options.inputFile.nonEmpty, "An input path was not provided.")
-    require(options.outputDir.nonEmpty, "An output path was not provided.")
+    val paths = super.translateImpl(root, log, commonOptions, options)
     require(options.projectName.nonEmpty, "A project name must be provided")
-    Seq.empty[Path]
+
+    paths
   }
 }

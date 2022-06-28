@@ -11,7 +11,7 @@ case class GrpcWriter(
   filePath: Path,
   root: RootContainer,
   symtab: SymbolTable)
-    extends TextFileWriter(filePath) {
+    extends TextFileWriter {
 
   def emitKalixFileHeader(packages: Seq[String]): GrpcWriter = {
     sb.append("syntax = \"proto3\";\n\n")

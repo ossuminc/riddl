@@ -4,8 +4,7 @@ import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.AST.ParentDefOf
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.testkit.ValidatingTest
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.StringLogger
+import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
 
 import java.nio.file.Path
 
@@ -24,9 +23,8 @@ class TranslatorTest extends ValidatingTest {
       extends TranslatingOptions
 
   case class TestTranslatorState(options: TestTranslatingOptions)
-      extends TranslatorState {
+      extends TranslatorState[OutputFile] {
     override def generatedFiles: Seq[Path] = Seq.empty[Path]
-    override def addFile(file: Path): TranslatorState = this
   }
 
   class TestTranslator extends Translator[TestTranslatingOptions] {
