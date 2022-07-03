@@ -31,13 +31,16 @@ trait ContextParser
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](
-      StringIn(Options.wrapper, Options.function, Options.gateway, Options.service).!
+      StringIn(Options.wrapper, Options.function, Options.gateway,
+        Options.service, Options.package_).!
     ) {
       case (loc, Options.wrapper, _)  => WrapperOption(loc)
       case (loc, Options.function, _) => FunctionOption(loc)
       case (loc, Options.gateway, _)  => GatewayOption(loc)
       case (loc, Options.service, _)  => ServiceOption(loc)
-      case (_, _, _)                  => throw new RuntimeException("Impossible case")
+      case (loc, Options.package_, args) => ContextPackageOption(loc, args)
+      case (_, _, _)                  =>
+        throw new RuntimeException("Impossible case")
     }
   }
 

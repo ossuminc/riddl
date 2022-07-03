@@ -52,9 +52,8 @@ trait TranslatorState[OF <: OutputFile] {
     files.map(_.filePath).toSeq
   }
 
-  def addFile(file: OF): TranslatorState[OF] = {
+  def addFile(file: OF): Unit = {
     files.append(file)
-    this
   }
 }
 

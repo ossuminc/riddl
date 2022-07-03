@@ -321,6 +321,18 @@ object AST {
   sealed trait ParentDefOf[+D <: Definition]
       extends Definition with Container[D]
 
+  /** Base trait of any definition that is a container and contains types
+   */
+  sealed trait TypeContainer[+D <: Definition] extends ParentDefOf[D] {
+    def types: Seq[Type]
+    def collectMessages: Seq[Type] = {
+      types.filter(_.isMessageKind)
+    }
+  }
+
+
+  type Parent = ParentDefOf[Definition]
+
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms {
     def terms: Seq[Term]
@@ -357,6 +369,8 @@ object AST {
     def brief: Option[LiteralString] = Option.empty[LiteralString]
 
     def description: Option[Description] = None
+
+    override def isRootContainer: Boolean = true
 
   }
 
@@ -414,6 +428,11 @@ object AST {
 
     def hasOption[OPT <: T: ClassTag]: Boolean = options
       .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+
+    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] =
+      options
+        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+        .map(_.args)
 
     override def format: String = {
       options.size match {
@@ -587,6 +606,25 @@ object AST {
     */
   case class OneOrMore(loc: Location, typeExp: TypeExpression)
       extends Cardinality
+
+  /** A cardinality type expression that indicates another type expression as
+   * having a specific range of instances
+   *
+   * @param loc
+   *   The location of the one-or-more cardinality
+   * @param typeExp
+   *   The type expression that is indicated with a cardinality of one or more.
+   * @param min
+   *   The minimum number of items
+   * @param max
+   *   The maximum number of items
+   */
+  case class SpecificRange(
+    loc: Location,
+    typeExp: TypeExpression,
+    min: Long,
+    max: Long
+  ) extends Cardinality
 
   /** Represents one variant among (one or) many variants that comprise an
     * [[Enumeration]]
@@ -988,6 +1026,9 @@ object AST {
         case MessageType(_, _, fields)   => fields
         case _                           => Seq.empty[Definition]
       }
+    }
+    def isMessageKind: Boolean = {
+      typ.isInstanceOf[MessageType]
     }
   }
 
@@ -1917,7 +1958,7 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[EntityDefinition]
+      extends TypeContainer[EntityDefinition]
       with ContextDefinition
       with OptionsDef[EntityOption]
       with WithIncludes {
@@ -2150,7 +2191,7 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[ContextDefinition]
+      extends TypeContainer[ContextDefinition]
       with DomainDefinition
       with OptionsDef[ContextOption]
       with WithIncludes
@@ -2658,7 +2699,7 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[DomainDefinition]
+      extends TypeContainer[DomainDefinition]
       with OptionsDef[DomainOption]
       with DomainDefinition
       with WithIncludes

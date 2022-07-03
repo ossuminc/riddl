@@ -347,16 +347,32 @@ object Validation {
       definition: TD
     ): ValidationState = {
       typ match {
-        case p @ Pattern(_, _)       => checkPattern(p)
-        case UniqueId(_, entityName) => this.checkPathRef[Entity](entityName)()
+        case p @ Pattern(_, _)       =>
+          checkPattern(p)
+        case UniqueId(_, entityName) =>
+          this.checkPathRef[Entity](entityName)()
         case _: AST.PredefinedType   => this
-        case AST.TypeRef(_, id: PathIdentifier) => checkPathRef[Type](id)()
+        case AST.TypeRef(_, id: PathIdentifier) =>
+          checkPathRef[Type](id)()
         case Optional(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
         case OneOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
         case ZeroOrMore(_, typex: TypeExpression) =>
           checkTypeExpression(typex, definition)
+        case SpecificRange(_, typex: TypeExpression, min, max) =>
+          checkTypeExpression(typex, definition)
+          check(min >= 0,
+            "Minimum cardinality must be non-negative", Error,
+            typ.loc)
+          check(max >= 0,
+            "Maximum cardinality must be non-negative", Error,
+            typ.loc)
+          check(min < max,
+            "Minimum cardinality must be less than maximum cardinality",
+            Error,
+            typ.loc
+          )
         case Enumeration(_, enumerators) =>
           checkEnumeration(definition, enumerators)
         case alt: Alternation => checkAlternation(definition, alt)
