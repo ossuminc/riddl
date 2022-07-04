@@ -17,8 +17,12 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Keywords, Options, Punctuation, Readability}
-import com.reactific.riddl.language.{AST, Location}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Options
+import com.reactific.riddl.language.Terminals.Punctuation
+import com.reactific.riddl.language.Terminals.Readability
+import com.reactific.riddl.language.AST
+import com.reactific.riddl.language.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -119,10 +123,8 @@ trait DomainParser
   }
 
   def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](
-      StringIn(Options.package_).!
-    ) {
-      case (loc, Options.package_, args)  => DomainPackageOption(loc,args)
+    options[X, DomainOption](StringIn(Options.package_).!) {
+      case (loc, Options.package_, args) => DomainPackageOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
@@ -141,10 +143,13 @@ trait DomainParser
   def domain[u: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
-        (undefined((Seq.empty[DomainOption], Option.empty[AuthorInfo], Seq.empty[DomainDefinition])) |
-          (domainOptions ~ author ~ domainContent)) ~ close ~/ briefly ~ description
+        (undefined((
+          Seq.empty[DomainOption],
+          Option.empty[AuthorInfo],
+          Seq.empty[DomainDefinition]
+        )) | (domainOptions ~ author ~ domainContent)) ~ close ~/ briefly ~
+        description
     ).map { case (loc, id, (options, author, defs), briefly, description) =>
-
       val groups = defs.groupBy(_.getClass)
       val subdomains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))

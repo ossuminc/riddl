@@ -4,7 +4,9 @@ import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import scala.io.Source
 
 class GrpcWriterTest extends ParsingTest {
@@ -16,12 +18,11 @@ class GrpcWriterTest extends ParsingTest {
       s"domain foo is {\n  options(package(\"com.foo\"))\n\n$domainInput\n}"
 
     parseTopLevelDomains(input) match {
-      case Left(error) =>
-        fail(error.map(_.format).mkString("\n"))
+      case Left(error) => fail(error.map(_.format).mkString("\n"))
       case Right(root) =>
         val pkgs = Seq("com", "foo", "api")
-        val path = Paths.get("src",
-          (Seq("main", "proto") ++ pkgs :+ "foo.proto"): _*)
+        val path = Paths
+          .get("src", (Seq("main", "proto") ++ pkgs :+ "foo.proto"): _*)
         val file = testDir.resolve(path)
         GrpcWriter(file, pkgs, Seq.empty[Parent]) -> root.contents.head
     }
@@ -35,84 +36,79 @@ class GrpcWriterTest extends ParsingTest {
     content
   }
 
-    "GrpcWriter" must {
+  "GrpcWriter" must {
     "emit a kalix file header" in {
       val (gw, domain) = run("")
       gw.emitKalixFileHeader
       val content = load(gw)
-      val expected: String =
-        """syntax = "proto3";
-          |
-          |package com.foo.api;
-          |
-          |import "google/api/annotations.proto";
-          |import "kalix/annotations.proto";
-          |import "validate/validate.proto";""".stripMargin
+      val expected: String = """syntax = "proto3";
+                               |
+                               |package com.foo.api;
+                               |
+                               |import "google/api/annotations.proto";
+                               |import "kalix/annotations.proto";
+                               |import "validate/validate.proto";""".stripMargin
       content must be(expected)
     }
 
     "emit a simple message type" in {
-      val input =
-        """type bar is command {
-          |  num: Number,
-          |  str: String,
-          |  bool: Boolean,
-          |  int: Integer,
-          |  dec: Decimal,
-          |  real: Real,
-          |  date: Date,
-          |  time: Time,
-          |  dateTime: DateTime,
-          |  ts: TimeStamp,
-          |  dur: Duration,
-          |  latLong: LatLong,
-          |  url: URL,
-          |  bstr: String(3,30),
-          |  phone:  pattern("\(?([0-9]{3})\)?-?([0-9]{3})-?([0-9]{4})"),
-          |  range: range(0,100),
-          |  id: Id(That.Entity)
-          |}
-          |""".stripMargin
-      val (gw,domain) =
-        run(input)
+      val input = """type bar is command {
+                    |  num: Number,
+                    |  str: String,
+                    |  bool: Boolean,
+                    |  int: Integer,
+                    |  dec: Decimal,
+                    |  real: Real,
+                    |  date: Date,
+                    |  time: Time,
+                    |  dateTime: DateTime,
+                    |  ts: TimeStamp,
+                    |  dur: Duration,
+                    |  latLong: LatLong,
+                    |  url: URL,
+                    |  bstr: String(3,30),
+                    |  range: range(0,100),
+                    |  id: Id(That.Entity)
+                    |}
+                    |""".stripMargin
+      val (gw, domain) = run(input)
       val typ = domain.types.head
       gw.emitMessageType(typ)
       val content = load(gw)
-      val expected =
-        """message bar { // bar
-          |  sint64 num = 1;
-          |  string str = 2;
-          |  bool bool = 3;
-          |  sint32 int = 4;
-          |  sint64 dec = 5;
-          |  double real = 6;
-          |  Date date = 7;
-          |  Time time = 8;
-          |  DateTime dateTime = 9;
-          |  TimeStamp ts = 10;
-          |  Duration dur = 11;
-          |  LatLong latLong = 12;
-          |  string url = 13;
-          |  string bstr = 14;
-          |  string phone = 15;
-          |  sint32 range = 16;
-          |  string id = 17;
-          |}
-          |""".stripMargin
+      val expected = """message bar { // bar
+                       |  sint64 num = 1;
+                       |  string str = 2;
+                       |  bool bool = 3;
+                       |  sint32 int = 4;
+                       |  string dec = 5;
+                       |  double real = 6;
+                       |  Date date = 7;
+                       |  Time time = 8;
+                       |  DateTime dateTime = 9;
+                       |  sint64 ts = 10;
+                       |  Duration dur = 11;
+                       |  LatLong latLong = 12;
+                       |  string url = 13;
+                       |  string bstr = 14;
+                       |  sint32 range = 15;
+                       |  string id = 16;
+                       |}""".stripMargin
       content must be(expected)
     }
 
     "emit an event sourced entity for a riddl entity" in {
-      val input = new FileParserInput(Path.of(
-        "kalix/src/test/input/entity/event-sourced/ExampleApp.riddl"))
+      val input = new FileParserInput(
+        Path.of("kalix/src/test/input/entity/event-sourced/ExampleApp.riddl")
+      )
       parseTopLevelDomains(input) match {
-        case Left(errors) =>
-          fail(errors.map(_.format).mkString("\n"))
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
         case Right(root) =>
-          val path = Paths.get("src","main","proto", "com", "foo", "api", "foo.proto")
+          val path = Paths
+            .get("src", "main", "proto", "com", "foo", "api", "foo.proto")
           val file = testDir.resolve(path)
           val gw = GrpcWriter(file, Seq("com", "foo", "api"), Seq.empty[Parent])
-          val context: Context = root.contents.head.includes.head.contents.head.asInstanceOf[Context]
+          val context: Context = root.contents.head.includes.head.contents.head
+            .asInstanceOf[Context]
           // val entity = context.entities.head
           // gw.emitEntityApi(entity, Seq.empty[ParentDefOf[Definition]])
           gw.write()
@@ -178,12 +174,10 @@ class GrpcWriterTest extends ParsingTest {
               |  }
               |
               |}""".stripMargin
-            content must be(expected)
+          content must be(expected)
 
       }
     }
-    "emit an action for a service/gateway context" in {
-      pending
-    }
+    "emit an action for a service/gateway context" in { pending }
   }
 }

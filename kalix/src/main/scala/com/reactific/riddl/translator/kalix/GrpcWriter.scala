@@ -9,8 +9,8 @@ import java.nio.file.Path
 case class GrpcWriter(
   filePath: Path,
   packages: Seq[String],
-  parents: Seq[Parent]
-) extends TextFileWriter {
+  parents: Seq[Parent])
+    extends TextFileWriter {
 
   def emitKalixFileHeader: GrpcWriter = {
     sb.append("syntax = \"proto3\";\n\n")
@@ -32,9 +32,7 @@ case class GrpcWriter(
     s // TODO: remove non-identifier chars?
   }
 
-  def sanitizeId(id: Identifier): String = {
-    sanitize(id.value)
-  }
+  def sanitizeId(id: Identifier): String = { sanitize(id.value) }
 
   def sanitizePathId(pathId: PathIdentifier): String = {
     reducePathId(pathId).map(sanitize).mkString(".")
@@ -42,36 +40,26 @@ case class GrpcWriter(
 
   def emitValidation(tye: TypeExpression): GrpcWriter = {
     tye match {
-      case OneOrMore(_, _) =>
-        sb.append(s"[(validate.rules).repeated = {min_items: 1}];")
-      case SpecificRange(_, _, min, max) =>
-        sb.append(
+      case OneOrMore(_, _) => sb
+          .append(s"[(validate.rules).repeated = {min_items: 1}];")
+      case SpecificRange(_, _, min, max) => sb.append(
           s"[(validate.rules).repeated = {min_items: $min, max_items: $max}];"
         )
       case RangeType(_, min, max) =>
         if (max.n < Int.MaxValue) {
-          sb.append(
-            s"[(validate.rules).sint32 = {gte:${min.n}, lt: ${max.n}];"
-          )
+          sb.append(s"[(validate.rules).sint32 = {gte:${min.n}, lt: ${max.n}];")
+        } else if (max.n < Long.MaxValue) {
+          sb.append(s"[(validate.rules).sint64 = {gte:${min.n}, lt: ${max.n}];")
         }
-        else if (max.n < Long.MaxValue) {
-          sb.append(
-            s"[(validate.rules).sint64 = {gte:${min.n}, lt: ${max.n}];"
-          )
-        }
-        // TODO: consider BigInt case validation? Possible?
-      case Strng(_,min,max) =>
+      // TODO: consider BigInt case validation? Possible?
+      case Strng(_, min, max) =>
         val mn = min.map(_.n.toLong).getOrElse(0)
         val mx = max.map(_.n.toLong).getOrElse(Long.MaxValue)
-        sb.append(
-          s"[(validate.rules).string = {min_len: $mn, max_len: $mx}];"
-        )
-      case Pattern(_, regex) =>
-        sb.append(
-          s"[(validate.rules).string.pattern =\"$regex\"];"
-        )
+        sb.append(s"[(validate.rules).string = {min_len: $mn, max_len: $mx}];")
+      case Pattern(_, regex) => sb
+          .append(s"[(validate.rules).string.pattern =\"$regex\"];")
       case _ =>
-        // TODO: validate other types
+      // TODO: validate other types
     }
     this
   }
@@ -80,73 +68,63 @@ case class GrpcWriter(
     tye match {
       case Abstract(_) =>
         sb.append("bytes ") // Structure is unknown, encode as byte string
-      case Optional(_,tye2) =>
-        emitTypeExpression(tye2)
-      case ZeroOrMore(_,tye2) =>
+      case Optional(_, tye2) => emitTypeExpression(tye2)
+      case ZeroOrMore(_, tye2) =>
         sb.append("repeated ")
         emitTypeExpression(tye2)
       case OneOrMore(_, tye2) =>
         sb.append("repeated ")
         emitTypeExpression(tye2)
-      case SpecificRange(_, tye2, _, _)=>
+      case SpecificRange(_, tye2, _, _) =>
         sb.append("repeated ")
         emitTypeExpression(tye2)
-      case MessageType(_,kind, fields) =>
-        sb.append("// message type not implemented\n")
-        // TODO: implement message type
-      case _: Date =>
-        sb.append("Date")
-      case _: DateTime =>
-        sb.append("DateTime")
-      case RangeType(_,_,max) =>
-        if (max.n <= Int.MaxValue) {
-          sb.append("sint32")
-        } else if (max.n <= Long.MaxValue) {
-          sb.append("sint64")
-        } else {
-          sb.append("BigInt")
-        }
-      case _: Strng => sb.append("string")
-      case _: Number => sb.append("sint64")
-      case _: Bool => sb.append("bool")
-      case _: Integer => sb.append("sint32")
-      case _: Decimal => sb.append("")
-      case _: Date => sb.append("string")
-      case _: Time => sb.append("string")
-      case _: DateTime => sb.append("string")
+      case MessageType(_, kind, fields) => sb
+          .append("// message type not implemented\n")
+      // TODO: implement message type
+      case RangeType(_, _, max) =>
+        if (max.n <= Int.MaxValue) { sb.append("sint32") }
+        else if (max.n <= Long.MaxValue) { sb.append("sint64") }
+        else { sb.append("BigInt") }
+      case _: Strng     => sb.append("string")
+      case _: Number    => sb.append("sint64")
+      case _: Bool      => sb.append("bool")
+      case _: Integer   => sb.append("sint32")
+      case _: Decimal   => sb.append("string")
+      case _: Real      => sb.append("double")
+      case _: Date      => sb.append("Date")
+      case _: DateTime  => sb.append("DateTime")
+      case _: Time      => sb.append("Time")
       case _: TimeStamp => sb.append("sint64")
-      case _: Duration => sb.append("Duration")
-      case _: LatLong => sb.append("LatLong")
-      case _: URL => sb.append("string")
-      case _: Pattern => sb.append("string")
-      case _: UniqueId => sb.append("string")
-      case _ => ???
+      case _: Duration  => sb.append("Duration")
+      case _: LatLong   => sb.append("LatLong")
+      case _: URL       => sb.append("string")
+      case _: Pattern   => sb.append("string")
+      case _: UniqueId  => sb.append("string")
+      case _            => ???
     }
     this
   }
 
-  def emitMessageType(typ: Type ): GrpcWriter = {
+  def emitMessageType(typ: Type): GrpcWriter = {
     require(typ.isMessageKind, "Not a message kind")
     val id: Identifier = typ.id
     val ty: MessageType = typ.typ.asInstanceOf[MessageType]
-    sb.append(s"message ${sanitizeId(id)} { // ${id.format}\n  ")
-    for { (field,n) <- ty.fields.drop(1).zipWithIndex } {
+    sb.append(s"message ${sanitizeId(id)} { // ${id.format}\n")
+    for { (field, n) <- ty.fields.drop(1).zipWithIndex } {
 
       field.typeEx match {
-        case mt: TypeRef =>
-          sb.append(s"  ${sanitizePathId(mt.id)}")
+        case mt: TypeRef => sb.append(s"  ${sanitizePathId(mt.id)}")
         case _ =>
+          sb.append("  ")
           emitTypeExpression(field.typeEx)
       }
-      sb.append(s" ${sanitizeId(field.id)} = ${n+1};")
+      sb.append(s" ${sanitizeId(field.id)} = ${n + 1};\n")
     }
-    sb.append("\n}")
+    sb.append("}\n")
     // TODO: finish implementation
     this
   }
 
-  def emitTypes(types: Seq[Type]): GrpcWriter = {
-    this
-  }
+  def emitTypes(types: Seq[Type]): GrpcWriter = { this }
 
 }
