@@ -60,6 +60,16 @@ case class GrpcWriter(
           )
         }
         // TODO: consider BigInt case validation? Possible?
+      case Strng(_,min,max) =>
+        val mn = min.map(_.n.toLong).getOrElse(0)
+        val mx = max.map(_.n.toLong).getOrElse(Long.MaxValue)
+        sb.append(
+          s"[(validate.rules).string = {min_len: $mn, max_len: $mx}];"
+        )
+      case Pattern(_, regex) =>
+        sb.append(
+          s"[(validate.rules).string.pattern =\"$regex\"];"
+        )
       case _ =>
         // TODO: validate other types
     }
@@ -70,8 +80,6 @@ case class GrpcWriter(
     tye match {
       case Abstract(_) =>
         sb.append("bytes ") // Structure is unknown, encode as byte string
-      case _: Bool =>
-        sb.append("bool")
       case Optional(_,tye2) =>
         emitTypeExpression(tye2)
       case ZeroOrMore(_,tye2) =>
@@ -84,7 +92,8 @@ case class GrpcWriter(
         sb.append("repeated ")
         emitTypeExpression(tye2)
       case MessageType(_,kind, fields) =>
-
+        sb.append("// message type not implemented\n")
+        // TODO: implement message type
       case _: Date =>
         sb.append("Date")
       case _: DateTime =>
@@ -99,6 +108,18 @@ case class GrpcWriter(
         }
       case _: Strng => sb.append("string")
       case _: Number => sb.append("sint64")
+      case _: Bool => sb.append("bool")
+      case _: Integer => sb.append("sint32")
+      case _: Decimal => sb.append("")
+      case _: Date => sb.append("string")
+      case _: Time => sb.append("string")
+      case _: DateTime => sb.append("string")
+      case _: TimeStamp => sb.append("sint64")
+      case _: Duration => sb.append("Duration")
+      case _: LatLong => sb.append("LatLong")
+      case _: URL => sb.append("string")
+      case _: Pattern => sb.append("string")
+      case _: UniqueId => sb.append("string")
       case _ => ???
     }
     this
@@ -109,16 +130,17 @@ case class GrpcWriter(
     val id: Identifier = typ.id
     val ty: MessageType = typ.typ.asInstanceOf[MessageType]
     sb.append(s"message ${sanitizeId(id)} { // ${id.format}\n  ")
-    for { (field,n) <- ty.fields.zipWithIndex } {
+    for { (field,n) <- ty.fields.drop(1).zipWithIndex } {
+
       field.typeEx match {
         case mt: TypeRef =>
           sb.append(s"  ${sanitizePathId(mt.id)}")
-
         case _ =>
           emitTypeExpression(field.typeEx)
       }
-      sb.append(s" ${sanitizeId(field.id)} = ${n+1}")
+      sb.append(s" ${sanitizeId(field.id)} = ${n+1};")
     }
+    sb.append("\n}")
     // TODO: finish implementation
     this
   }

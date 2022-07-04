@@ -13,7 +13,7 @@ class GrpcWriterTest extends ParsingTest {
 
   def run(domainInput: String): (GrpcWriter, Domain) = {
     val input =
-      s"domain foo is {\n  options(package(\"com.foo\"))\n  $domainInput\n}"
+      s"domain foo is {\n  options(package(\"com.foo\"))\n\n$domainInput\n}"
 
     parseTopLevelDomains(input) match {
       case Left(error) =>
@@ -52,14 +52,51 @@ class GrpcWriterTest extends ParsingTest {
     }
 
     "emit a simple message type" in {
+      val input =
+        """type bar is command {
+          |  num: Number,
+          |  str: String,
+          |  bool: Boolean,
+          |  int: Integer,
+          |  dec: Decimal,
+          |  real: Real,
+          |  date: Date,
+          |  time: Time,
+          |  dateTime: DateTime,
+          |  ts: TimeStamp,
+          |  dur: Duration,
+          |  latLong: LatLong,
+          |  url: URL,
+          |  bstr: String(3,30),
+          |  phone:  pattern("\(?([0-9]{3})\)?-?([0-9]{3})-?([0-9]{4})"),
+          |  range: range(0,100),
+          |  id: Id(That.Entity)
+          |}
+          |""".stripMargin
       val (gw,domain) =
-        run("type bar is command { fld: Number }")
+        run(input)
       val typ = domain.types.head
       gw.emitMessageType(typ)
       val content = load(gw)
       val expected =
-        """message bar {
-          |  sint64 fld = 1;
+        """message bar { // bar
+          |  sint64 num = 1;
+          |  string str = 2;
+          |  bool bool = 3;
+          |  sint32 int = 4;
+          |  sint64 dec = 5;
+          |  double real = 6;
+          |  Date date = 7;
+          |  Time time = 8;
+          |  DateTime dateTime = 9;
+          |  TimeStamp ts = 10;
+          |  Duration dur = 11;
+          |  LatLong latLong = 12;
+          |  string url = 13;
+          |  string bstr = 14;
+          |  string phone = 15;
+          |  sint32 range = 16;
+          |  string id = 17;
           |}
           |""".stripMargin
       content must be(expected)
