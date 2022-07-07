@@ -3,15 +3,24 @@ package com.reactific.riddl.translator.kalix
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
+import org.scalactic.source.Position
+import org.scalatest.BeforeAndAfter
+import org.scalatest.BeforeAndAfterAll
 
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import scala.io.Source
+import org.apache.commons.io.FileUtils
 
-class GrpcWriterTest extends ParsingTest {
+class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
 
   val testDir: Path = Files.createTempDirectory("grpc-writer")
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    FileUtils.deleteDirectory(testDir.toFile)
+  }
 
   def run(domainInput: String): (GrpcWriter, Domain) = {
     val input =
@@ -109,8 +118,9 @@ class GrpcWriterTest extends ParsingTest {
           val gw = GrpcWriter(file, Seq("com", "foo", "api"), Seq.empty[Parent])
           val context: Context = root.contents.head.includes.head.contents.head
             .asInstanceOf[Context]
-          // val entity = context.entities.head
-          // gw.emitEntityApi(entity, Seq.empty[ParentDefOf[Definition]])
+          val entity = context.entities.head
+          gw.emitKalixFileHeader
+          gw.emitEntityApi(entity)
           gw.write()
           val writtenContent = Source.fromFile(file.toFile, "utf-8")
           val content = writtenContent.getLines().mkString("\n")

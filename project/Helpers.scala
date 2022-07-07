@@ -12,6 +12,7 @@ import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 /** V - Dependency Versions object */
 object V {
   val cats = "2.7.0"
+  val commons_io = "2.11.0"
   val config = "1.4.1"
   val fastparse = "2.3.3"
   val jgit = "6.0.0.202111291000-r"
@@ -24,6 +25,7 @@ object V {
 
 object Dep {
   val cats_core = "org.typelevel" %% "cats-core" % V.cats
+  val commons_io = "commons-io" % "commons-io" % V.commons_io
   val config = "com.typesafe" % "config" % V.config
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit

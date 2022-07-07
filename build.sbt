@@ -97,7 +97,8 @@ lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
     coverageExcludedPackages :=
       "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse, Dep.commons_io) ++
+      Dep.testing
   ).dependsOn(utils)
 
 lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)

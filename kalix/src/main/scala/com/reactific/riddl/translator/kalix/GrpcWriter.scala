@@ -127,4 +127,65 @@ case class GrpcWriter(
 
   def emitTypes(types: Seq[Type]): GrpcWriter = { this }
 
+  def emitEntityApi(entity: Entity): GrpcWriter = {
+    if (entity.hasOption[EntityEventSourced]) {
+      emitEventSourcedEntityApi(entity)
+    } else if (entity.hasOption[EntityValueOption]) {
+      emitValueEntityApi(entity)
+    } else if (entity.hasOption[EntityTransient]) {
+      emitTransientEntityApi(entity)
+    } else { emitEventSourcedEntityApi(entity) }
+  }
+
+  private def emitEventSourcedEntityApi(
+    entity: Entity,
+    packages: Seq[String]
+  ): GrpcWriter = {
+    val pkgs = (packages :+ "domain").mkString(".")
+    val name = sanitizeId(entity.id)
+    val fullName = pkgs ++ sanitizeId(entity.id)
+    val stateName = fullName + "State"
+    val events = for {
+      handler <- entity.handlers
+      clause <- handler.clauses
+    } yield { clause.format }
+    val template = s"""service ${sanitizeId(entity.id)}Service {
+                      |  option (kalix.codegen) = {
+                      |    event_sourced_entity: {
+                      |      name: "$fullName"
+                      |      entity_type: "$name"
+                      |      state: "$stateName"
+                      |      events: [
+                      |        "com.improving.app.organization.api.OrganizationEstablished"
+                      |      ]
+                      |    }
+                      |  };
+                      |
+                      |""".stripMargin
+
+    val id = sb.append(s"").append("  \n")
+    """service OrganizationService {
+      |  option (kalix.codegen) = {
+      |    event_sourced_entity: {
+      |      name: "com.improving.app.organization.domain.Organization"
+      |      entity_type: "organization"
+      |      state: "com.improving.app.organization.domain.OrgState"
+      |      events: [
+      |        "com.improving.app.organization.api.OrganizationEstablished"
+      |      ]
+      |    }
+      |  };
+      |
+      |  rpc establishOrganization (EstablishOrganization) returns (OrganizationEstablished) {
+      |    option (google.api.http) = {
+      |      post: "/org/{org_name}/"
+      |      body: "*"
+      |    };
+      |  }
+      |""".stripMargin
+  }
+  private def emitValueEntityApi(entity: Entity): GrpcWriter = { this }
+  private def emitTransientEntityApi(entity: Entity): GrpcWriter = { thiis }
+
+  def emitEntityImpl(entity: Entity): GrpcWriter = { this }
 }
