@@ -58,7 +58,9 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
                                |
                                |import "google/api/annotations.proto";
                                |import "kalix/annotations.proto";
-                               |import "validate/validate.proto";""".stripMargin
+                               |import "validate/validate.proto";
+                               |import "google/protobuf/empty.proto";
+                               |""".stripMargin
       content must be(expected)
     }
 
@@ -114,7 +116,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
       parseTopLevelDomains(input) match {
         case Left(errors) => fail(errors.map(_.format).mkString("\n"))
         case Right(root) =>
-          val packages = Seq("com", "example", "app", "organization")
+          val packages = Seq("com", "example", "app", "organization", "api")
           val path = Paths
             .get("src", "main", "proto")
             .resolve(Paths.get(packages.head, packages.tail:_*))
@@ -126,6 +128,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
             .asInstanceOf[Context]
           val entity = context.entities.head
           gw.emitKalixFileHeader
+          gw.emitEntityTypes(entity)
           gw.emitEntityApi(entity, packages)
           gw.write()
           val writtenContent = Source.fromFile(file.toFile, "utf-8")
@@ -136,9 +139,10 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
               |
               |package com.example.app.organization.api;
               |
-              |import "kalix/annotations.proto";
               |import "google/api/annotations.proto";
-              |// import "google/protobuf/empty.proto";
+              |import "kalix/annotations.proto";
+              |import "validate/validate.proto";
+              |import "google/protobuf/empty.proto";
               |
               |message OrganizationId {
               |  string orgId = 1 [(kalix.field).entity_key = true];
@@ -182,12 +186,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
               |    }
               |  };
               |
-              |  rpc establishOrganization (EstablishOrganization) returns (OrganizationEstablished) {
-              |    option (google.api.http) = {
-              |      post: "/org/{org_name}/"
-              |      body: "*"
-              |    };
-              |  }
+              |  rpc establishOrganization (EstablishOrganization) returns (OrganizationEstablished) { }
               |
               |}""".stripMargin
           content must be(expected)

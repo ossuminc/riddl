@@ -22,13 +22,17 @@ case class GrpcWriter(
     sb.append("import \"google/api/annotations.proto\";\n")
     sb.append("import \"kalix/annotations.proto\";\n")
     sb.append("import \"validate/validate.proto\";\n")
+    sb.append("import \"google/protobuf/empty.proto\";\n\n")
     this
   }
 
-  def reducePathId(pathId: PathIdentifier): Seq[String] = {
-    val pidNames = pathId.value
-    pidNames // TODO: implement
+  def reducePathId(pathId: Seq[String]): Seq[String] = {
+    pathId // TODO: implement
     // TODO: change RIDDL path ids to package ids
+  }
+
+  def reducePathId(pathId: PathIdentifier): Seq[String] = {
+    reducePathId(pathId.value)
   }
 
   def sanitize(s: String): String = {
@@ -37,8 +41,11 @@ case class GrpcWriter(
 
   def sanitizeId(id: Identifier): String = { sanitize(id.value) }
 
+  def sanitizePathId(pathId: Seq[String]): String = {
+    pathId.map(sanitize).mkString(".")
+  }
   def sanitizePathId(pathId: PathIdentifier): String = {
-    reducePathId(pathId).map(sanitize).mkString(".")
+    sanitizePathId(pathId.value)
   }
 
   def emitValidation(tye: TypeExpression): GrpcWriter = {
@@ -130,6 +137,11 @@ case class GrpcWriter(
 
   def emitTypes(types: Seq[Type]): GrpcWriter = { this }
 
+  def emitEntityTypes(entity: Entity): GrpcWriter = {
+    val types: Seq[Type] = Seq.empty[Type] // FiXME: Implement
+    emitTypes(types)
+  }
+
   def emitEntityApi(entity: Entity, packages: Seq[String]): GrpcWriter = {
     if (entity.hasOption[EntityEventSourced]) {
       emitEventSourcedEntityApi(entity, packages)
@@ -147,22 +159,61 @@ case class GrpcWriter(
     }
   }
 
+  private def extractMessagePairsFromEntity(
+    entity: Entity
+  ): Seq[(MessageRef,Option[MessageRef])] = {
+    for {
+      handler <- entity.handlers
+      clause <- handler.clauses
+      independentMessage = clause.msg
+      example <- clause.examples
+      then_ <- example.thens
+      action = then_.action
+      dependentMessage = action match {
+        case PublishAction(_, msg, _, _) => Some(msg.msg)
+        case ReplyAction(_, msg, _) => Some(msg.msg)
+        case _ => None
+      }
+    } yield {
+      independentMessage -> dependentMessage
+    }
+  }
+
+  private def extractEventsFromExamples(examples: Seq[Example]): Seq[MessageRef] = {
+    for {
+      example <- examples
+      then_ <- example.thens
+      action = then_.action
+      if action.isInstanceOf[PublishAction] || action.isInstanceOf[ReplyAction]
+    } yield {
+      action match {
+        case PublishAction(_, msg, _, _) => msg.msg
+        case ReplyAction(_, msg, _) => msg.msg
+      }
+    }
+  }
+
+  private def extractEventsFromClauses(clauses: Seq[OnClause]): Seq[MessageRef] = {
+    for {
+      clause <- clauses
+      if clause.msg.messageKind == CommandKind
+      msgs <- extractEventsFromExamples(clause.examples)
+    } yield {
+      msgs
+    }
+  }
+
   private def emitEventSourcedEntityApi(
     entity: Entity,
     packages: Seq[String]
   ): GrpcWriter = {
     val name = sanitizeId(entity.id)
-    val pkgs = (packages :+ "api").mkString(".")
+    val pkgs = packages.mkString(".")
     val fullName = pkgs ++ "." ++ name
     val stateName = fullName + "State"
-    val events = (for {
-      handler <- entity.handlers
-      clause <- handler.clauses
-      if clause.msg.messageKind == EventKind
-      names = reducePathId(clause.msg.id)
-    } yield {
-      s"\"${names.mkString(".")}\""
-    }).mkString("\n")
+    val pairs = extractMessagePairsFromEntity(entity)
+    val events = pairs.map(_._2).filterNot(_.isEmpty).map(mr =>
+      "\"" ++ pkgs ++ "." ++ sanitizePathId(mr.get.id) ++ "\"").mkString(",\n")
     sb.append(
       s"""service ${name}Service {
          |  option (kalix.codegen) = {
@@ -179,51 +230,49 @@ case class GrpcWriter(
          |""".stripMargin
     )
 
-    val entityName = name
-
     for {
-      handler <- entity.handlers
-      clause <- handler.clauses
-      if clause.msg.messageKind == CommandKind
-      commandRef = clause.msg
-      eventRef = clause.yields.get
-      commandName = referenceToType(commandRef)
-      eventName = referenceToType(eventRef)
-      argName = commandRef.id.value.last.toLowerCase
-    } {
+      pair <- pairs
+      (indep, dep) = pair
+      (inputName, outputName) = indep.messageKind match {
+        case CommandKind =>
+          val maybeCommandName = referenceToType(indep)
+          val maybeEventName = if (dep.nonEmpty) {
+            referenceToType(dep.get)
+          } else None
+          val commandName = if (maybeCommandName.nonEmpty) {
+            sanitizeId(maybeCommandName.get.id)
+          } else { "Empty" }
+          val eventName = if (maybeEventName.nonEmpty) {
+            sanitizeId(maybeEventName.get.id)
+          } else { "Empty" }
+          commandName -> eventName
+        case QueryKind =>
+          val maybeQueryName = referenceToType(indep)
+          val maybeResultName = if (dep.nonEmpty) {
+            referenceToType(dep.get)
+          } else None
+          val queryName = if (maybeQueryName.nonEmpty) {
+            sanitizeId(maybeQueryName.get.id)
+          } else { "Empty" }
+          val resultName = if (maybeResultName.nonEmpty) {
+            sanitizeId(maybeResultName.get.id)
+          } else { "Empty" }
+          queryName -> resultName
+        case EventKind =>
+          val maybeEventName = referenceToType(indep)
+          val eventName = if (maybeEventName.nonEmpty)
+            sanitizeId(maybeEventName.get.id)
+          else "Empty"
+          eventName -> "Empty"
+        case _ =>
+          require(requirement = false, "Should not be here")
+      }
+    } yield {
       sb.append(
-        s"""  rpc establishOrganization ($commandName) returns ($eventName) {
-           |    option (google.api.http) = {
-           |      post: "/$entityName/{$argName}/"
-           |      body: "*"
-           |    };
-           |  }
-           |
-           |""".stripMargin
+        s"  rpc establishOrganization ($inputName) returns ($outputName) {}\n"
       )
     }
-
-    for {
-      handler <- entity.handlers
-      clause <- handler.clauses
-      if clause.msg.messageKind == QueryKind
-      queryRef = clause.msg
-      resultRef = clause.yields.get
-      queryName = referenceToType(queryRef)
-      resultName = referenceToType(resultRef)
-      argName = queryRef.id.value.last.toLowerCase
-    } {
-      sb.append(
-        s"""  rpc getMemberInfo($queryName) returns ($resultName) {
-           |   has been determined
-           |    option(google.api.http) = {
-           |      get:"$entityName/{$argName}/"
-           |      body:"*"
-           |    };
-           |  }
-           |""".stripMargin
-      )
-    }
+    sb.append("}\n")
     this
   }
 

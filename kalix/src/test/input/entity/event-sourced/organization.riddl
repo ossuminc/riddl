@@ -46,11 +46,12 @@ context OrganizationContext is {
         state Draft is {
             oid: OrganizationId,
             orgDetails: OrganizationInfo
-        } handler DraftOrganizationHandler is { ???
-            // on command EstablishOrganization {
-            //     when == (@EstablishOrganization.orgId, @OrganizationId)
-            //     then publish event OrganizationEstablished () to OrganizationEventPipe
-            // }
+        }
+        handler DraftOrganizationHandler is {
+            on command EstablishOrganization {
+              when == (@EstablishOrganization.orgId, @OrganizationId)
+              then publish event OrganizationEstablished () to OrganizationEventPipe
+            }
         } 
         
         state Active is {
