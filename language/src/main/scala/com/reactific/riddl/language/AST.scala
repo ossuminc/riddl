@@ -1835,6 +1835,7 @@ object AST {
   case class OnClause(
     loc: Location,
     msg: MessageRef,
+    yields: Option[MessageRef] = None,
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)

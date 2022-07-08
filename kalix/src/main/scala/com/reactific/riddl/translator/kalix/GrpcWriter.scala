@@ -1,6 +1,7 @@
 package com.reactific.riddl.translator.kalix
 
 import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.SymbolTable
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
@@ -9,7 +10,9 @@ import java.nio.file.Path
 case class GrpcWriter(
   filePath: Path,
   packages: Seq[String],
-  parents: Seq[Parent])
+  parents: Seq[Parent],
+  symTab: SymbolTable
+)
     extends TextFileWriter {
 
   def emitKalixFileHeader: GrpcWriter = {
@@ -127,65 +130,105 @@ case class GrpcWriter(
 
   def emitTypes(types: Seq[Type]): GrpcWriter = { this }
 
-  def emitEntityApi(entity: Entity): GrpcWriter = {
+  def emitEntityApi(entity: Entity, packages: Seq[String]): GrpcWriter = {
     if (entity.hasOption[EntityEventSourced]) {
-      emitEventSourcedEntityApi(entity)
+      emitEventSourcedEntityApi(entity, packages)
     } else if (entity.hasOption[EntityValueOption]) {
       emitValueEntityApi(entity)
     } else if (entity.hasOption[EntityTransient]) {
       emitTransientEntityApi(entity)
-    } else { emitEventSourcedEntityApi(entity) }
+    } else { emitEventSourcedEntityApi(entity, packages) }
+  }
+
+  private def referenceToType(ref: Reference[Type]): Option[Type] = {
+    symTab.lookup(ref) match {
+      case t :: Nil => Some(t)
+      case _ => None
+    }
   }
 
   private def emitEventSourcedEntityApi(
     entity: Entity,
     packages: Seq[String]
   ): GrpcWriter = {
-    val pkgs = (packages :+ "domain").mkString(".")
     val name = sanitizeId(entity.id)
-    val fullName = pkgs ++ sanitizeId(entity.id)
+    val pkgs = (packages :+ "api").mkString(".")
+    val fullName = pkgs ++ "." ++ name
     val stateName = fullName + "State"
-    val events = for {
+    val events = (for {
       handler <- entity.handlers
       clause <- handler.clauses
-    } yield { clause.format }
-    val template = s"""service ${sanitizeId(entity.id)}Service {
-                      |  option (kalix.codegen) = {
-                      |    event_sourced_entity: {
-                      |      name: "$fullName"
-                      |      entity_type: "$name"
-                      |      state: "$stateName"
-                      |      events: [
-                      |        "com.improving.app.organization.api.OrganizationEstablished"
-                      |      ]
-                      |    }
-                      |  };
-                      |
-                      |""".stripMargin
+      if clause.msg.messageKind == EventKind
+      names = reducePathId(clause.msg.id)
+    } yield {
+      s"\"${names.mkString(".")}\""
+    }).mkString("\n")
+    sb.append(
+      s"""service ${name}Service {
+         |  option (kalix.codegen) = {
+         |    event_sourced_entity: {
+         |      name: "$fullName"
+         |      entity_type: "$name"
+         |      state: "$stateName"
+         |      events: [
+         |        $events
+         |      ]
+         |    }
+         |  };
+         |
+         |""".stripMargin
+    )
 
-    val id = sb.append(s"").append("  \n")
-    """service OrganizationService {
-      |  option (kalix.codegen) = {
-      |    event_sourced_entity: {
-      |      name: "com.improving.app.organization.domain.Organization"
-      |      entity_type: "organization"
-      |      state: "com.improving.app.organization.domain.OrgState"
-      |      events: [
-      |        "com.improving.app.organization.api.OrganizationEstablished"
-      |      ]
-      |    }
-      |  };
-      |
-      |  rpc establishOrganization (EstablishOrganization) returns (OrganizationEstablished) {
-      |    option (google.api.http) = {
-      |      post: "/org/{org_name}/"
-      |      body: "*"
-      |    };
-      |  }
-      |""".stripMargin
+    val entityName = name
+
+    for {
+      handler <- entity.handlers
+      clause <- handler.clauses
+      if clause.msg.messageKind == CommandKind
+      commandRef = clause.msg
+      eventRef = clause.yields.get
+      commandName = referenceToType(commandRef)
+      eventName = referenceToType(eventRef)
+      argName = commandRef.id.value.last.toLowerCase
+    } {
+      sb.append(
+        s"""  rpc establishOrganization ($commandName) returns ($eventName) {
+           |    option (google.api.http) = {
+           |      post: "/$entityName/{$argName}/"
+           |      body: "*"
+           |    };
+           |  }
+           |
+           |""".stripMargin
+      )
+    }
+
+    for {
+      handler <- entity.handlers
+      clause <- handler.clauses
+      if clause.msg.messageKind == QueryKind
+      queryRef = clause.msg
+      resultRef = clause.yields.get
+      queryName = referenceToType(queryRef)
+      resultName = referenceToType(resultRef)
+      argName = queryRef.id.value.last.toLowerCase
+    } {
+      sb.append(
+        s"""  rpc getMemberInfo($queryName) returns ($resultName) {
+           |   has been determined
+           |    option(google.api.http) = {
+           |      get:"$entityName/{$argName}/"
+           |      body:"*"
+           |    };
+           |  }
+           |""".stripMargin
+      )
+    }
+    this
   }
+
   private def emitValueEntityApi(entity: Entity): GrpcWriter = { this }
-  private def emitTransientEntityApi(entity: Entity): GrpcWriter = { thiis }
+  private def emitTransientEntityApi(entity: Entity): GrpcWriter = { this }
 
   def emitEntityImpl(entity: Entity): GrpcWriter = { this }
 }

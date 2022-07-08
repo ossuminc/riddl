@@ -1,6 +1,7 @@
 package com.reactific.riddl.translator.kalix
 
 import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.SymbolTable
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 import org.scalactic.source.Position
@@ -31,9 +32,10 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
       case Right(root) =>
         val pkgs = Seq("com", "foo", "api")
         val path = Paths
-          .get("src", (Seq("main", "proto") ++ pkgs :+ "foo.proto"): _*)
+          .get("src", Seq("main", "proto") ++ pkgs :+ "foo.proto": _*)
         val file = testDir.resolve(path)
-        GrpcWriter(file, pkgs, Seq.empty[Parent]) -> root.contents.head
+        val symTab = SymbolTable(root)
+        GrpcWriter(file, pkgs, Seq.empty[Parent], symTab) -> root.contents.head
     }
   }
 
@@ -47,7 +49,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
 
   "GrpcWriter" must {
     "emit a kalix file header" in {
-      val (gw, domain) = run("")
+      val (gw, _) = run("")
       gw.emitKalixFileHeader
       val content = load(gw)
       val expected: String = """syntax = "proto3";
@@ -112,15 +114,19 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
       parseTopLevelDomains(input) match {
         case Left(errors) => fail(errors.map(_.format).mkString("\n"))
         case Right(root) =>
+          val packages = Seq("com", "example", "app", "organization")
           val path = Paths
-            .get("src", "main", "proto", "com", "foo", "api", "foo.proto")
+            .get("src", "main", "proto")
+            .resolve(Paths.get(packages.head, packages.tail:_*))
+            .resolve("Organization.proto")
           val file = testDir.resolve(path)
-          val gw = GrpcWriter(file, Seq("com", "foo", "api"), Seq.empty[Parent])
+          val symtab = SymbolTable(root)
+          val gw = GrpcWriter(file, packages, Seq.empty[Parent], symtab)
           val context: Context = root.contents.head.includes.head.contents.head
             .asInstanceOf[Context]
           val entity = context.entities.head
           gw.emitKalixFileHeader
-          gw.emitEntityApi(entity)
+          gw.emitEntityApi(entity, packages)
           gw.write()
           val writtenContent = Source.fromFile(file.toFile, "utf-8")
           val content = writtenContent.getLines().mkString("\n")

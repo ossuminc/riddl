@@ -19,7 +19,10 @@ object KalixOptions {
   val default: KalixOptions = KalixOptions()
 }
 
-case class KalixState(options: KalixOptions)
+case class KalixState(
+  options: KalixOptions,
+  symTab: SymbolTable
+)
   extends TranslatorState[GrpcWriter] {}
 
 object KalixTranslator extends Translator[KalixOptions] {
@@ -80,7 +83,7 @@ object KalixTranslator extends Translator[KalixOptions] {
     val name = prefix  :+ c.id.value
     val path = Path.of("src", name:_*)
     val fullPath: Path = options.outputDir.get.resolve(path)
-    val writer = GrpcWriter(fullPath, pkgs, pars)
+    val writer = GrpcWriter(fullPath, pkgs, pars, state.symTab)
     state.addFile(writer)
     writer
   }
@@ -94,7 +97,7 @@ object KalixTranslator extends Translator[KalixOptions] {
     val paths = super.translateImpl(root, log, commonOptions, options)
     require(options.projectName.nonEmpty, "A project name must be provided")
 
-    val state = KalixState(options)
+    val state = KalixState(options, SymbolTable(root))
     val parentStack = mutable.Stack[ParentDefOf[Definition]]()
 
     val newState = Folding.foldLeftWithStack(state, parentStack)(root) {
