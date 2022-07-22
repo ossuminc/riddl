@@ -17,6 +17,20 @@ if they were coding directly in a programming language. It aims to relieve
 developers of the burden of maintaining infrastructural code through evolution 
 of the domain abstractions.
 
+## Getting Started Locally
+* `git pull` or `git clone` the latest content and change directory to that repository
+* Start `sbt`
+* Run `project riddlc` and then `universal:packageBin` from sbt command line
+* It should successfully buil you a `.tgz` file in the target/universal directory
+* Unpack that tgz with `tar zxf <path-to-tgz>` in some directory in your home directory
+* That will give you a directory like `riddl-0.5.6/bin` (the version # might be different)
+* Put that `bin` directory  in your path
+* Now you can just run “riddlc” from anywhere
+* Some day we will have a packaged installer.
+
+## Adding `riddlc` to your project
+* See the reactific/riddl-actions project for actions that make riddlc invokable in your own github pipelines
+
 ## Usage
 To get the most recent options, run `riddlc --help`. That command will give you
 the syntax for doing various things with the riddl compiler (`riddlc`)
@@ -25,6 +39,7 @@ the syntax for doing various things with the riddl compiler (`riddlc`)
 This project is currently nascent. It doesn't do anything yet, but eventually
 we hope it will do all the following things:
 
+* Generate Kalix Protobuffers 
 * Generate Swagger (OpenAPI) YAML files containing API documentation for 
  REST APIs
 * Generate Akka Serverless based microservices to implement bounded contexts
