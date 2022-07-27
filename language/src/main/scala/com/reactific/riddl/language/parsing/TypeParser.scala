@@ -27,7 +27,7 @@ import fastparse.ScalaWhitespace.*
 /** Parsing rules for Type definitions */
 trait TypeParser extends ReferenceParser {
 
-  def referToType[u: P]: P[ReferenceType] = {
+  def referToEntity[u: P]: P[ReferenceType] = {
     P(location ~ Keywords.reference ~ Readability.to ~/ entityRef).map { tpl =>
       (ReferenceType.apply _).tupled(tpl)
     }
@@ -120,8 +120,17 @@ trait TypeParser extends ReferenceParser {
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
+  def fieldTypeExpression[u:P]: P[TypeExpression] = {
+    P(
+      cardinality(
+        simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+        alternation | referToEntity | mapping | range | typeRef
+      )
+    )
+  }
+
   def field[u: P]: P[Field] = {
-    P(location ~ identifier ~ is ~ typeExpression ~ briefly ~ description)
+    P(location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description)
       .map(tpl => (Field.apply _).tupled(tpl))
   }
 
@@ -225,7 +234,7 @@ trait TypeParser extends ReferenceParser {
   def typeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(P(
       simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-        alternation | referToType | aggregation | messageType | mapping |
+        alternation | referToEntity | aggregation | messageType | mapping |
         range | typeRef
     )))
   }

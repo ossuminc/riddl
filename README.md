@@ -21,7 +21,7 @@ of the domain abstractions.
 * `git pull` or `git clone` the latest content and change directory to that repository
 * Start `sbt`
 * Run `project riddlc` and then `universal:packageBin` from sbt command line
-* It should successfully buil you a `.tgz` file in the target/universal directory
+* It should successfully build a `.tgz` file in the target/universal directory
 * Unpack that tgz with `tar zxf <path-to-tgz>` in some directory in your home directory
 * That will give you a directory like `riddl-0.5.6/bin` (the version # might be different)
 * Put that `bin` directory  in your path

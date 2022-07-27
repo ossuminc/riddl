@@ -755,13 +755,14 @@ object AST {
     max: LiteralInteger)
       extends TypeExpression
 
-  /** A type expression whose value is a reference to an entity.
-    *
-    * @param loc
-    *   The location of the reference type expression
-    * @param entity
-    *   The entity referenced by this type expression.
-    */
+  /** A type expression whose value is a reference to an instance of an
+   * entity.
+   *
+   * @param loc
+   *   The location of the reference type expression
+   * @param entity
+   *   The type of entity referenced by this type expression.
+   */
   case class ReferenceType(
     loc: Location,
     entity: EntityRef)

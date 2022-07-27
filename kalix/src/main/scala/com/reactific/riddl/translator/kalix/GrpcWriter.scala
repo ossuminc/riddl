@@ -88,6 +88,10 @@ case class GrpcWriter(
       case SpecificRange(_, tye2, _, _) =>
         sb.append("repeated ")
         emitTypeExpression(tye2)
+      case rt: ReferenceType =>
+        sb.append(s"string ")
+      case mt: TypeRef =>
+        sb.append(s"  ${sanitizePathId(mt.id)}")
       case MessageType(_, kind, fields) => sb
           .append("// message type not implemented\n")
       // TODO: implement message type
@@ -120,26 +124,40 @@ case class GrpcWriter(
     val id: Identifier = typ.id
     val ty: MessageType = typ.typ.asInstanceOf[MessageType]
     sb.append(s"message ${sanitizeId(id)} { // ${id.format}\n")
-    for { (field, n) <- ty.fields.drop(1).zipWithIndex } {
-
+    for {
+      (field, n) <- ty.fields.drop(1).zipWithIndex
+    } yield {
       field.typeEx match {
-        case mt: TypeRef => sb.append(s"  ${sanitizePathId(mt.id)}")
+        // alternation | referToEntity | mapping | range | typeRef
+        case alt: Alternation =>
+          sb.append(s"  oneof ${sanitizeId(field.id)} {")
+          for { (typ, n) <- alt.of.zipWithIndex } yield {
+            emitTypeExpression(typ)
+            sb.append(s"f_$n")
+          }
         case _ =>
           sb.append("  ")
           emitTypeExpression(field.typeEx)
       }
       sb.append(s" ${sanitizeId(field.id)} = ${n + 1};\n")
     }
-    sb.append("}\n")
-    // TODO: finish implementation
+    sb.append("}\n\n")
     this
   }
 
-  def emitTypes(types: Seq[Type]): GrpcWriter = { this }
+  def emitTypes(types: Seq[Type]): GrpcWriter = {
+    this
+  }
 
   def emitEntityTypes(entity: Entity): GrpcWriter = {
-    val types: Seq[Type] = Seq.empty[Type] // FiXME: Implement
-    emitTypes(types)
+    extractMessagePairsFromEntity(entity).flatMap {
+      case (ref, maybe_ref) =>
+        val indep = referenceToType(ref).map(Seq(_)).getOrElse(Seq.empty)
+        val dep = maybe_ref.flatMap(referenceToType(_))
+          .map(Seq(_)).getOrElse(Seq.empty)
+        indep ++ dep
+    }.map { typ => emitMessageType(typ) }
+    this
   }
 
   def emitEntityApi(entity: Entity, packages: Seq[String]): GrpcWriter = {
@@ -176,30 +194,6 @@ case class GrpcWriter(
       }
     } yield {
       independentMessage -> dependentMessage
-    }
-  }
-
-  private def extractEventsFromExamples(examples: Seq[Example]): Seq[MessageRef] = {
-    for {
-      example <- examples
-      then_ <- example.thens
-      action = then_.action
-      if action.isInstanceOf[PublishAction] || action.isInstanceOf[ReplyAction]
-    } yield {
-      action match {
-        case PublishAction(_, msg, _, _) => msg.msg
-        case ReplyAction(_, msg, _) => msg.msg
-      }
-    }
-  }
-
-  private def extractEventsFromClauses(clauses: Seq[OnClause]): Seq[MessageRef] = {
-    for {
-      clause <- clauses
-      if clause.msg.messageKind == CommandKind
-      msgs <- extractEventsFromExamples(clause.examples)
-    } yield {
-      msgs
     }
   }
 

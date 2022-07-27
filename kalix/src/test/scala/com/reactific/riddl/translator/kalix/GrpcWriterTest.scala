@@ -4,8 +4,6 @@ import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language.SymbolTable
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
-import org.scalactic.source.Position
-import org.scalatest.BeforeAndAfter
 import org.scalatest.BeforeAndAfterAll
 
 import java.nio.file.Files
@@ -105,7 +103,8 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
                        |  string bstr = 14;
                        |  sint32 range = 15;
                        |  string id = 16;
-                       |}""".stripMargin
+                       |}
+                       |""".stripMargin
       content must be(expected)
     }
 
