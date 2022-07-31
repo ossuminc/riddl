@@ -69,6 +69,7 @@ object RIDDLC {
       case RiddlOptions.Hugo         => translateHugo(options)
       case RiddlOptions.HugoGitCheck => hugoGitCheck(options)
       case RiddlOptions.D3           => generateD3(options)
+      case RiddlOptions.Kalix        => translateKalix(options)
       case _ =>
         log.error(s"A command must be specified as an option")
         log.info(RiddlOptions.usage)
