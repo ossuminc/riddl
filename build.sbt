@@ -141,14 +141,6 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
     publishSite
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
-lazy val doc2 = project.in(file("doc2")).enablePlugins(SitePlugin)
-  .enablePlugins(SiteScaladocPlugin).configure(C.zipResource("hugo")).settings(
-    name := "riddl-doc2",
-    publishTo := Option(Resolver.defaultLocal),
-    // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    publishSite
-  ).dependsOn(`hugo-translator` % "test->test", riddlc)
-
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging,UniversalDeployPlugin).configure(C.mavenPublish).settings(
     name := "riddlc",

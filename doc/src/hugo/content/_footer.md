@@ -1,1 +1,1 @@
-&copy;2022 Reactific Software LLC. All Rights Reserved. 
+&copy;2022 Ossum Inc. All Rights Reserved. 
