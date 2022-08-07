@@ -1,27 +1,27 @@
 ---
-title: "What is RIDDL?"
+title: "What is RIDDL Based On?"
 date: 2022-02-24T14:15:51-07:00
 draft: true
-weight: 10
+weight: 30
 ---
 
-RIDDL is a specification language for (potentially large) distributed systems
-borrowing concepts from:
+The RIDDL specification language borrows concepts from:
 * [Domain Driven Design (DDD)](https://en.wikipedia.org/wiki/Domain-driven_design)
-* [Reactive System Architecture](https://www.reactivemanifesto.org/)
-* [UML (Unified Modeling Language)](https://en.wikipedia.org/wiki/Unified_Modeling_Language) 
-* [agile user stories](https://en.wikipedia.org/wiki/User_story)
+* [Reactive System Architecture (RSA)](https://www.reactivemanifesto.org/)
+* [Unified Modeling Language (UML)](https://en.wikipedia.org/wiki/Unified_Modeling_Language) 
+* [Agile User Stories](https://en.wikipedia.org/wiki/User_story)
 * [Behavior Driven Development (BDD)](https://en.wikipedia.org/wiki/Behavior-driven_development) 
 * and other widely adopted software development and design practices. 
 
 RIDDL aims to capture business concepts and architectural details in a way that
-is consumable by business oriented professionals yet can be directly translated
-into varied technical and non-technical artifacts, including: 
-* a documentation web site 
+is consumable by business oriented professionals yet can also be directly
+translated into various technical and non-technical artifacts, including: 
+* a documentation web-site 
 * various architectural diagrams (context maps, sequence diagrams, and so on)
-* design input to code generators (e.g. Kalix)
+* design input to code generators (e.g. Kalix, protobuffers)
+* Kubernetes deployment descriptors
 * code scaffolding that implements the design captured in the RIDDL specification 
-* and many more
+* and more; please see the [future projects section](/extensions)
 
 Using these outputs, delivery teams are well-equipped to quickly begin
 the task of implementation. Regeneration of the model in subsequent 
@@ -44,9 +44,10 @@ DDD concepts. For a four-minute overview
 [watch this video](https://elearn.domainlanguage.com/). 
 For a more in depth understanding we recommend reading Vaughn Vernon's more 
 concise book
-[Domain Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon/dp/0134434420/)** or Eric Evans' original tome **[Domain Driven Design: Tackling Complexity in the Heart of Software](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215/).
+[Domain Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon/dp/0134434420/),
+or Eric Evans' original tome [Domain Driven Design: Tackling Complexity in the Heart of Software](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215/)
 
-## Reactive Architecture
+## Reactive System Architecture (RSA)
 The [Reactive Manifesto](https://www.reactivemanifesto.org/) was authored in
 2014 by Jonas Bonér, David Farley, Roland Kunh, and Martin Thompson. As the
 computing landscape evolved and companies began to operate at "internet scale"
@@ -79,7 +80,7 @@ To get more information on Reactive Architecture please refer to the excellent
 
 {{< figure src="images/ReactiveArchitectureOverview.svg" >}}
 
-## UML
+## Unified Modeling Language (UML)
 One of the key insights brought forward by UML is that it is far easier for 
 humans to comprehend the intended design of a system by communicating these 
 ideas with pictures. UML is a language of very precise graphical symbols that
