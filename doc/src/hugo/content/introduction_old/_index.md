@@ -4,7 +4,7 @@ summary: "An introduction to the RIDDL language and tools"
 type: "page"
 date: "2021-12-01T15:34:22-05:00"
 draft: "false"
-weight: 1
+weight: 999
 creatordisplayname: "Reid Spencer"
 creatoremail: "reid@reactific.com"
 ---
