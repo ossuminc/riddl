@@ -2,7 +2,7 @@
 title: "Documentation Conventions"
 type: "page"
 draft: "false"
-weight: 20
+weight: 60
 ---
 
 This page defines the conventions we use throughout this documentation. 

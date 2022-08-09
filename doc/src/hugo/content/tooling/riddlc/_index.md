@@ -6,7 +6,7 @@ draft: "false"
 weight: 10
 ---
 
-This section covers how to build, install and use the `riddlc` tool. 
+This section covers how use the `riddlc` tool. 
 
 {{< toc-tree >}}
 

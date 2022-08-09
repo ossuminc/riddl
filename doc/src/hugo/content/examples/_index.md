@@ -1,7 +1,7 @@
 ---
 title: "Example"
 type: "page"
-weight: 10
+weight: 70
 draft: "false"
 summary: "RIDDL Example: Reactive BBQ"
 ---

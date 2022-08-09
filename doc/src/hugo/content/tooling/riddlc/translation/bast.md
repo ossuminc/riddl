@@ -1,7 +1,7 @@
 ---
 title: "Binary AST"
 type: "page"
-weight: 30 
+weight: 10 
 draft: "false"
 ---
 

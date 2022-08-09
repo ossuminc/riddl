@@ -9,26 +9,22 @@ weight: 50
 The RIDDL compiler, `riddlc` is able to translate RIDDL into a variety of other
 document types, after the input passes the [compilation phases](../compilation).  
 
-{{% hint ok %}}
-It is recommended that before you delve into the types of output, become 
-familiar with the `riddlc` [command line and configuration options](options)
-{{% /hint %}}
+The various kinds of output from `riddlc` are described in the following 
+sections:
 
-The various kinds of output from `riddlc` are described in the following sections:
-
-* [_BAST_](bast) - Binary Abstract Syntax Tree
+* [_BAST_](bast) - Binary Abstract Syntax Tree. Generates files that capture the 
+  abstract syntax tree (AST) in a transportable binary format
+* [_Diagrams_](diagrams) - Data flow, sequence, entity, context maps, and other
+* [_Hugo_](hugo) - Hugo source input for producing an HTML website
+  diagrams are all automatically deduced from the RIDDL model
+* [_OpenAPI_](openapi) - OpenAPI (formerly called Swagger) specifications for APIs 
+  implied in the RIDDL model
+* [_Kalix_](kalix) - Kalix protobuffers source generation as input to the Kalix
+  code generator.
 * [_Akka_](akka) - Akka, protobuffers, Alpakka infrastructure code & skeleton
-* [_Hugo_](hugo) - Hugo source input for producing HTML web site
-* [_OpenAPI_](openapi) - OpenAPI (nee Swagger) specifications 
+* [_Others_](others) - plugins can be written to convert the AST into any other
+  kind of needed data
 
-# Translation
-A RIDDL AST, having been successfully analyzed for structure and validity, is
-ready to be translated into another form, which is the point of all this
-bother in the first place.
-
-RIDDL supports translation to:
-* [Hugo Websites](https://gohugo.io/) - Complete documentation of the RIDDL
-  model with structural diagrams to facilitate rapid comprehension.
-* [Kalix](https://kalix.io/) - Protobuffers input to the Kalix code generator
-* [Akka](https://akka.io/) - An implementation of the model.
-* Anything else you like since RIDDL code generators are extensible. 
+{{% hint ok %}}
+It is recommended that you become familiar with the `riddlc` [command line and configuration options](options) as these control the kind of output generated.
+{{% /hint %}}

@@ -1,13 +1,15 @@
 ---
 title: "riddlc --help"
+description: "How to get riddlc to produce help output"
 date: 2022-02-24T14:19:59-07:00
 draft: true
 weight: 10
 ---
 
-riddlc is the command that makes all the magic happen. As you will see, riddlc is a rich and powerful command. 
+riddlc is the command that makes all the magic happen. As you will see, riddlc 
+is a rich and powerful command. 
 
-You can get this help text on the command line by running ```riddlc --help```.
+You can get a complete list of the command syntax and help text on the command line by running ```riddlc --help```.
 
 ```
 RIDDL Compiler (c) 2022 Reactive Software LLC. All rights reserved. 

@@ -2,7 +2,7 @@
 title: "Introduction"
 date: 2022-02-24T15:08:30-07:00
 draft: true
-weight: 11
+weight: 10
 ---
 
 In this section we will explore what RIDDL is, by answering these questions:
@@ -11,5 +11,6 @@ In this section we will explore what RIDDL is, by answering these questions:
 * [What is RIDDL based on?](what-is-riddl-based-on)
 * [What can RIDDL do?](what-can-riddl-do)
 * [Why is RIDDL needed?](why-is-riddl-needed)
+* [What documentation conventions are used?](conventions)
 
 Click on the above links to explore. 

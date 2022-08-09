@@ -82,7 +82,7 @@ enableRobotsTXT = true
 
 # (Optional, default false) Collapse all menu entries, can not be overwritten
 # per page if enabled. Can be enabled per page via `geekdocCollapseSection`.
-  geekdocCollapseAllSections = false
+  geekdocCollapseAllSections = true
 
 # (Optional, default true) Show page navigation links at the bottom of each
 # docs page (bundle menu only).
@@ -122,7 +122,7 @@ enableRobotsTXT = true
   geekdocAnchor = true
 
 # (Optional, default true) Copy anchor url to clipboard on click.
-  geekdocAnchorCopy = false
+  geekdocAnchorCopy = true
 
 # (Optional, default true) Enable or disable image lazy loading for images rendered
 # by the 'img' shortcode.
