@@ -22,7 +22,7 @@ end-to-end. This is done by using:
 * the definition of a `joint` to connect pipes and processors
 
 For example, consider this complete plant definition:
-{{% code file="content/language/hierarchy/domain/streaming/riddl/plant.riddl"
+{{% code file="content/language/root/domain/streaming/riddl/plant.riddl"
 language="riddl" %}}
 
 In other words, the above plant definition produces this kind of data pipeline:

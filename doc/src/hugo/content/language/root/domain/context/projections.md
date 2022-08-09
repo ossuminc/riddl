@@ -14,4 +14,4 @@ Here's the projection process. Usually, events are logged as they are kept appen
 the log file. Logs are string and text. To retrieving meaningful information out of logs, logs are
 transformed into a more query-friendly format and stored in queriable repository or DB.
 
-![CQRS/ES](../../../../static/images/cqrs-es.png "CQRS/ES")
+![CQRS/ES](../../../../../static/images/cqrs-es.png "CQRS/ES")

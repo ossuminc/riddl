@@ -60,7 +60,7 @@ domain Foo {
 ```
 Notes:
 * `Path.To.Context.ThingThatHappend` is known as a
-  [path identifier](../../../../hierarchy#Path_Identifiers).
+  [path identifier](../../../../root#Path_Identifiers).
 
 ## Query Handler
 

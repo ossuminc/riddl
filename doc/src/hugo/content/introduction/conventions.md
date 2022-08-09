@@ -8,7 +8,7 @@ weight: 60
 This page defines the conventions we use throughout this documentation. 
 
 ### RIDDL Snippets
-Whenever we include RIDDL code in the documentation it will be in a fixed
+Whenever we include RIDDL source code in the documentation it will be in a fixed
 sized font like this:
 ```riddl
 domain MyDomain is { ??? }

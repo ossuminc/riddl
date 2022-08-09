@@ -154,8 +154,8 @@ type dictionary = mapping from Pattern("[a-z]+") to DictionaryEntry
 An aggregate type (_value object_ in DDD) can be declared to be one of four
 kinds of message types using the `command`, `event`, `query`, and `result` 
 keywords. These type definitions are useful for sending messages to 
-[entities](../hierarchy/domain/context/entity) or across
-[pipelines](../hierarchy/domain/pipeline).  
+[entities](../root/domain/context/entity) or across
+[pipelines](../root/domain/pipeline).  
 
 For example, here is a command definition:
 ```riddl

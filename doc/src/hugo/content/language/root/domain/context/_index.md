@@ -1,5 +1,5 @@
 ---
-title: "Bounded Contexts"
+title: "Contexts"
 type: "page"
 weight: 10 
 draft: "false"
@@ -34,3 +34,4 @@ the state of entities, etc. For more on type definitions see [types](../../../co
 
 ### Projection
 
+{{< toc-tree >}}
