@@ -41,7 +41,13 @@ trait ReferenceParser extends CommonParser {
     P(location ~ Keywords.result ~ pathIdentifier).map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
-  def messageRef[u: P]: P[MessageRef] = { P(commandRef | eventRef | queryRef | resultRef) }
+  def anyRef[u:P]: P[AnyRef] = {
+    P(location ~ Keywords.any).map(AnyRef)
+  }
+
+  def messageRef[u: P]: P[MessageRef] = {
+    P(commandRef | eventRef | queryRef | resultRef | anyRef)
+  }
 
   def entityRef[u: P]: P[EntityRef] = {
     P(location ~ maybe(Keywords.entity) ~ pathIdentifier)

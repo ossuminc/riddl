@@ -1,11 +1,31 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.Entity
+import com.reactific.riddl.language.AST.{Context, Entity}
 import com.reactific.riddl.language.testkit.ParsingTest
 
-/** Unit Tests For HandlerTest */
+/** Unit Tests For Handler */
 class HandlerTest extends ParsingTest {
   "Handlers" should {
+    "allowed in contexts" in {
+      val input =
+        """context Foo is {
+          |  type DoFoo is command { flux: Integer }
+          |  type FooDone is event { flux: Integer }
+          |  handler FooHandler is {
+          |    on command FooMessage {
+          |      then yield event FooDone( flux = 42 )
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseDefinition[Context](input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString("\n")
+          fail(msg)
+        case Right(_) => succeed
+      }
+
+    }
     "accept shortcut syntax for single example on clauses " in {
       val input = """entity DistributionItem is {
                     |  state DistributionState is { ??? }
@@ -34,6 +54,7 @@ class HandlerTest extends ParsingTest {
                     |      }
                     |      // anything else needing to be updated?
                     |    } explained as { "Helps update this item's location" }
+                    |    on any { then "do nothing" }
                     |  }
                     |  handler FromDistributionItem  is {
                     |    on command CreateItem { example only {

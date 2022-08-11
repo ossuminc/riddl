@@ -498,6 +498,10 @@ object AST {
     def kind: String = "result"
   }
 
+  final case object AnyKind extends MessageKind {
+    def kind: String = "any"
+  }
+
   /** Base trait for the four kinds of message references */
   sealed trait MessageRef extends Reference[Type] {
     def messageKind: MessageKind
@@ -547,6 +551,12 @@ object AST {
     */
   case class ResultRef(loc: Location, id: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = ResultKind
+  }
+
+  case class AnyRef(loc: Location) extends MessageRef {
+    def id: PathIdentifier = PathIdentifier(loc, Seq.empty[String])
+    def messageKind: MessageKind = AnyKind
+
   }
 
 ////////////////////////////////////////////////////////////////////////// TYPES

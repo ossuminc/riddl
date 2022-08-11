@@ -24,12 +24,16 @@ import fastparse.ScalaWhitespace.*
 
 trait HandlerParser extends GherkinParser with FunctionParser {
 
-  def onClause[u: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ open ~
+  def onClauseBody[u:P]: P[Seq[Example]] = {
+    open ~
       ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
         Seq(Example(l, Identifier(l, ""), g, w, t, b))
-      } | examples | undefined(Seq.empty[Example])) ~ close ~ briefly ~
-      description
+      } | examples | undefined(Seq.empty[Example])) ~ close
+  }
+
+  def onClause[u: P]: P[OnClause] = {
+    Keywords.on ~/ location ~ messageRef ~
+      onClauseBody ~ briefly ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def contextHandler[u: P]: P[Handler] = {

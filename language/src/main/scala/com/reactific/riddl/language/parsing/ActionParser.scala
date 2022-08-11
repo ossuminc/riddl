@@ -60,9 +60,10 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def yieldAction[u: P]: P[YieldAction] = {
-    P(Keywords.yield_ ~ location ~ messageConstructor ~ description)
+    P(Keywords.yield_ ~/ location ~ messageConstructor ~ description)
       .map(t => (YieldAction.apply _).tupled(t))
   }
+
   def publishAction[u: P]: P[PublishAction] = {
     P(
       Keywords.publish ~/ location ~ messageConstructor ~
@@ -110,8 +111,8 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def anyAction[u: P]: P[Action] = {
     P(
-      sagaStepAction | replyAction | setAction | morphAction | becomeAction |
-        compoundAction
+      replyAction | setAction | morphAction | becomeAction |
+        yieldAction | sagaStepAction | compoundAction
     )
   }
 
