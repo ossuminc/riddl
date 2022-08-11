@@ -1,10 +1,10 @@
 ---
-title: "Welcome"
+title: "Home"
 date: "2021-12-01T15:34:22-05:00"
 draft: "false" 
 weight: 1 
 creatordisplayname: "Reid Spencer"
-creatoremail: "reid@reactific.com"
+creatoremail: "reid@ossuminc.com"
 ---
 
 ![RIDDL Logo](/images/RIDDL-Logo-128x128.png)
