@@ -440,7 +440,8 @@ object Validation {
       }
 
     private def handleMultipleResultsCase[T <: Definition](
-      id: PathIdentifier, list: List[(Definition,Option[T])]
+      id: PathIdentifier,
+      list: List[(Definition, Option[T])]
     ): ValidationState = {
       // Handle domain, context, entity same name
       require(list.size > 1) // must be so or caller logic isn't right
@@ -479,7 +480,7 @@ object Validation {
             validator(this, tc, id, d.getClass, d, optT)
           case (d, optT) :: tail =>
             // Too many matches / non-unique / ambiguous
-            val list = (d,optT):: tail
+            val list = (d, optT) :: tail
             handleMultipleResultsCase[T](id, list)
         }
       } else { this }
@@ -652,6 +653,7 @@ object Validation {
       action match {
         case SetAction(_, path, value, _) => this.checkPathRef[Field](path)()
             .checkExpression(value)
+        case YieldAction(_, msg, _) => this.checkMessageConstructor(msg)
         case PublishAction(_, msg, pipeRef, _) => this
             .checkMessageConstructor(msg).checkRef[Pipe](pipeRef)
         case FunctionCallAction(loc, funcId, args, _) =>

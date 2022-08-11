@@ -18,7 +18,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Terminals
-import com.reactific.riddl.language.Terminals.{Keywords, Readability}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -58,6 +59,10 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
     P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
   }
 
+  def yieldAction[u: P]: P[YieldAction] = {
+    P(Keywords.yield_ ~ location ~ messageConstructor ~ description)
+      .map(t => (YieldAction.apply _).tupled(t))
+  }
   def publishAction[u: P]: P[PublishAction] = {
     P(
       Keywords.publish ~/ location ~ messageConstructor ~

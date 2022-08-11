@@ -166,33 +166,33 @@ object AST {
     */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptor         => Keywords.adaptor
-      case _: EventActionA8n  => Keywords.adapt
-      case _: EventCommandA8n => Keywords.adapt
+      case _: Adaptor           => Keywords.adaptor
+      case _: EventActionA8n    => Keywords.adapt
+      case _: EventCommandA8n   => Keywords.adapt
       case _: CommandCommandA8n => Keywords.adapt
-      case _: Context         => Keywords.context
-      case _: Domain          => Keywords.domain
-      case _: Entity          => Keywords.entity
-      case _: Enumerator      => ""
-      case _: Example         => Keywords.example
-      case _: Field           => ""
-      case _: Function        => Keywords.function
-      case _: Handler         => Keywords.handler
-      case _: Inlet           => Keywords.inlet
-      case _: Invariant       => Keywords.invariant
-      case _: Joint           => Keywords.joint
-      case _: Outlet          => Keywords.outlet
-      case _: Pipe            => Keywords.pipe
-      case _: Plant           => Keywords.plant
-      case p: Processor       => p.shape.keyword
-      case _: RootContainer   => ""
-      case _: Saga            => Keywords.saga
-      case _: SagaStep        => Keywords.step
-      case _: State           => Keywords.state
-      case _: Story           => Keywords.story
-      case _: Term            => Keywords.term
-      case _: Type            => Keywords.`type`
-      case _                  => "unknown"
+      case _: Context           => Keywords.context
+      case _: Domain            => Keywords.domain
+      case _: Entity            => Keywords.entity
+      case _: Enumerator        => ""
+      case _: Example           => Keywords.example
+      case _: Field             => ""
+      case _: Function          => Keywords.function
+      case _: Handler           => Keywords.handler
+      case _: Inlet             => Keywords.inlet
+      case _: Invariant         => Keywords.invariant
+      case _: Joint             => Keywords.joint
+      case _: Outlet            => Keywords.outlet
+      case _: Pipe              => Keywords.pipe
+      case _: Plant             => Keywords.plant
+      case p: Processor         => p.shape.keyword
+      case _: RootContainer     => ""
+      case _: Saga              => Keywords.saga
+      case _: SagaStep          => Keywords.step
+      case _: State             => Keywords.state
+      case _: Story             => Keywords.story
+      case _: Term              => Keywords.term
+      case _: Type              => Keywords.`type`
+      case _                    => "unknown"
     }
   }
 
@@ -205,63 +205,63 @@ object AST {
     */
   def kind(definition: DescribedValue): String = {
     definition match {
-      case _: EventActionA8n  => "Event -> Action Adaptation"
-      case _: EventCommandA8n => "Event -> Command Adaptation"
+      case _: EventActionA8n    => "Event -> Action Adaptation"
+      case _: EventCommandA8n   => "Event -> Command Adaptation"
       case _: CommandCommandA8n => "Command -> Command Adaptation"
-      case _: Adaptor         => "Adaptor"
-      case _: Context         => "Context"
-      case _: Domain          => "Domain"
-      case _: Entity          => "Entity"
-      case _: Enumerator      => "Enumerator"
-      case _: Example         => "Example"
-      case _: Field           => "Field"
-      case _: Function        => "Function"
-      case _: Handler         => "Handler"
-      case _: Inlet           => "Inlet"
-      case _: Invariant       => "Invariant"
-      case _: Joint           => "Joint"
-      case _: Outlet          => "Outlet"
-      case _: Pipe            => "Pipe"
-      case _: Plant           => "Plant"
-      case p: Processor       => p.shape.getClass.getSimpleName
-      case _: RootContainer   => "Root"
-      case _: Saga            => "Saga"
-      case _: SagaStep        => "SagaStep"
-      case _: State           => "State"
-      case _: Term            => "Term"
-      case _: Type            => "Type"
-      case _: AskAction       => "Ask Action"
-      case _: BecomeAction    => "Become Action"
-      case _: MorphAction     => "Morph Action"
-      case _: SetAction       => "Set Action"
-      case _: PublishAction   => "Publish Action"
-      case _: TellAction      => "Tell Action"
-      case _: ArbitraryAction => "Arbitrary Action"
-      case _: OnClause        => "On Clause"
-      case _                  => "Definition"
+      case _: Adaptor           => "Adaptor"
+      case _: Context           => "Context"
+      case _: Domain            => "Domain"
+      case _: Entity            => "Entity"
+      case _: Enumerator        => "Enumerator"
+      case _: Example           => "Example"
+      case _: Field             => "Field"
+      case _: Function          => "Function"
+      case _: Handler           => "Handler"
+      case _: Inlet             => "Inlet"
+      case _: Invariant         => "Invariant"
+      case _: Joint             => "Joint"
+      case _: Outlet            => "Outlet"
+      case _: Pipe              => "Pipe"
+      case _: Plant             => "Plant"
+      case p: Processor         => p.shape.getClass.getSimpleName
+      case _: RootContainer     => "Root"
+      case _: Saga              => "Saga"
+      case _: SagaStep          => "SagaStep"
+      case _: State             => "State"
+      case _: Term              => "Term"
+      case _: Type              => "Type"
+      case _: AskAction         => "Ask Action"
+      case _: BecomeAction      => "Become Action"
+      case _: MorphAction       => "Morph Action"
+      case _: SetAction         => "Set Action"
+      case _: PublishAction     => "Publish Action"
+      case _: TellAction        => "Tell Action"
+      case _: ArbitraryAction   => "Arbitrary Action"
+      case _: OnClause          => "On Clause"
+      case _                    => "Definition"
     }
   }
 
   def kind(c: Container[Definition]): String = {
     c match {
-      case _: Type            => "Type"
-      case _: Enumeration     => "Enumeration"
-      case _: Aggregation     => "Aggregation"
-      case _: State           => "State"
-      case _: Entity          => "Entity"
-      case _: Context         => "Context"
-      case _: Function        => "Function"
-      case _: EventCommandA8n => "Event -> Command Adaptation"
+      case _: Type              => "Type"
+      case _: Enumeration       => "Enumeration"
+      case _: Aggregation       => "Aggregation"
+      case _: State             => "State"
+      case _: Entity            => "Entity"
+      case _: Context           => "Context"
+      case _: Function          => "Function"
+      case _: EventCommandA8n   => "Event -> Command Adaptation"
       case _: CommandCommandA8n => "Command -> Command Adaptation"
-      case _: Adaptor         => "Adaptor"
-      case _: Processor       => "Processor"
-      case _: Plant           => "Plant"
-      case _: SagaStep        => "SagaStep"
-      case _: Saga            => "Saga"
-      case _: Story           => "Story"
-      case _: Domain          => "Domain"
-      case _: Include         => "Include"
-      case _: RootContainer   => "Root"
+      case _: Adaptor           => "Adaptor"
+      case _: Processor         => "Processor"
+      case _: Plant             => "Plant"
+      case _: SagaStep          => "SagaStep"
+      case _: Saga              => "Saga"
+      case _: Story             => "Story"
+      case _: Domain            => "Domain"
+      case _: Include           => "Include"
+      case _: RootContainer     => "Root"
       case _ => throw new IllegalStateException("No other kinds of Containers")
     }
   }
@@ -1354,6 +1354,23 @@ object AST {
     }
   }
 
+  /** An action that places a message on an entity's event channel
+    *
+    * @param loc
+    *   The location in the source of the publish action
+    * @param msg
+    *   The constructed message to be yielded
+    * @param description
+    *   An optional description of the yield action
+    */
+  case class YieldAction(
+    loc: Location,
+    msg: MessageConstructor,
+    description: Option[Description] = None)
+      extends Action {
+    override def format: String = s"yield ${msg.format}"
+  }
+
   /** An action that publishes a message to a pipe
     *
     * @param loc
@@ -1824,10 +1841,13 @@ object AST {
   case class Handler(
     loc: Location,
     id: Identifier,
+    stateName: Option[Identifier] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[OnClause] with EntityDefinition {
+      extends ParentDefOf[OnClause]
+      with ContextDefinition
+      with EntityDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[OnClause] = clauses
   }
@@ -2152,6 +2172,7 @@ object AST {
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ParentDefOf[ContextDefinition]
@@ -2527,12 +2548,6 @@ object AST {
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
-  }
-
-  sealed trait InteractionOption extends OptionValue
-
-  case class GatewayInteraction(loc: Location) extends InteractionOption {
-    def name: String = "gateway"
   }
 
   /** The definition of an agile user story. Stories define functionality from

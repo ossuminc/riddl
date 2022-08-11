@@ -106,6 +106,7 @@ object Terminals {
     final val condition = "condition"
     final val consumer = "consumer"
     final val context = "context"
+    final val create = "create"
     final val described = "described"
     final val details = "details"
     final val do_ = "do"
@@ -187,6 +188,7 @@ object Terminals {
     final val value = "value"
     final val when = "when"
     final val yields = "yields"
+    final val yield_ = "yield"
   }
 
   object Predefined {
