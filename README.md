@@ -22,7 +22,7 @@ To use `riddlc` locally and be able to update it with new changes, use this
 approach:
 * `git clone` the latest content and change directory to that cloned repository
 * Put the `.../riddl/riddlc/target/stage/bin` directory in your PATH variable
-* Run `sbt "project riddlc ; stage"` to build the program
+* Run `sbt "stage"` to build the program
 * To update, run `git pull` from the `riddl` cloned repository directory and
   rerun the sbt command above to rebuild. 
 
