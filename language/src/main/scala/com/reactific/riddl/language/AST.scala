@@ -498,8 +498,8 @@ object AST {
     def kind: String = "result"
   }
 
-  final case object AnyKind extends MessageKind {
-    def kind: String = "any"
+  final case object OtherKind extends MessageKind {
+    def kind: String = "other"
   }
 
   /** Base trait for the four kinds of message references */
@@ -553,9 +553,9 @@ object AST {
     def messageKind: MessageKind = ResultKind
   }
 
-  case class AnyRef(loc: Location) extends MessageRef {
+  case class OtherRef(loc: Location) extends MessageRef {
     def id: PathIdentifier = PathIdentifier(loc, Seq.empty[String])
-    def messageKind: MessageKind = AnyKind
+    def messageKind: MessageKind = OtherKind
 
   }
 
@@ -1325,6 +1325,26 @@ object AST {
       extends SagaStepAction {
     override def format: String = what.format
   }
+
+
+  /** An action that is intended to generate a runtime error in the
+   * generated application or otherwise indicate an error condition
+   *
+   * @param loc
+   * The location where the action occurs in the source
+   * @param message
+   * The error message to report
+   * @param description
+   * An optional description of the action
+   */
+  case class ErrorAction(
+    loc: Location,
+    message: LiteralString,
+    description: Option[Description])
+    extends SagaStepAction {
+    override def format: String = message.format
+  }
+
 
   /** An action whose behavior is to set the value of a state field to some
     * expression
