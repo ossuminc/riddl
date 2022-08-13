@@ -42,7 +42,7 @@ class ConditionParserTest extends ParsingTest {
     "accept literal string" in {
       parseCondition("\"decide\"") { cond: Condition =>
         cond mustBe
-          ArbitraryCondition(LiteralString(Location(1 -> 1), "decide"))
+          ArbitraryExpression(LiteralString(Location(1 -> 1), "decide"))
       }
     }
     "accept and(true,false)" in {
@@ -94,13 +94,13 @@ class ConditionParserTest extends ParsingTest {
             Comparison(
               1 -> 4,
               lt,
-              ValueCondition(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
+              ValueExpression(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
               LiteralInteger(1 -> 9, BigInt(42))
             ),
             Comparison(
               1 -> 13,
               lt,
-              ValueCondition(1 -> 15, PathIdentifier(1 -> 16, Seq("b"))),
+              ValueExpression(1 -> 15, PathIdentifier(1 -> 16, Seq("b"))),
               FunctionCallExpression(
                 1 -> 18,
                 PathIdentifier(1 -> 18, Seq("SomeFunc")),
@@ -126,7 +126,7 @@ class ConditionParserTest extends ParsingTest {
                   Comparison(
                     1 -> 12,
                     AST.eq,
-                    ArbitraryCondition(LiteralString(1 -> 15, "sooth")),
+                    ArbitraryExpression(LiteralString(1 -> 15, "sooth")),
                     False(1 -> 24)
                   )
                 ),

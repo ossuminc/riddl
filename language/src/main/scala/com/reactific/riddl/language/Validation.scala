@@ -361,12 +361,15 @@ object Validation {
         case Enumeration(_, enumerators) =>
           checkEnumeration(definition, enumerators)
         case alt: Alternation => checkAlternation(definition, alt)
-        case agg: Aggregation => checkAggregation(definition, agg)
-        case mt: MessageType  => checkMessageType(definition, mt)
         case mapping: Mapping => checkMapping(definition, mapping)
         case rt: RangeType    => checkRangeType(definition, rt)
         case ReferenceType(_, entity: EntityRef) => this
             .checkRef[Entity](entity)
+        case ate: AggregateTypeExpression =>
+          ate match {
+            case agg: Aggregation => checkAggregation(definition, agg)
+            case mt: MessageType => checkMessageType(definition, mt)
+          }
       }
     }
 
@@ -783,7 +786,7 @@ object Validation {
 
     def checkExpression(expression: Expression): ValidationState = {
       expression match {
-        case ValueCondition(_, path)  => checkPathRef[Field](path)()
+        case ValueExpression(_, path)  => checkPathRef[Field](path)()
         case GroupExpression(_, expr) => checkExpression(expr)
         case FunctionCallExpression(loc, pathId, arguments) =>
           checkFunctionCall(loc, pathId, arguments)
