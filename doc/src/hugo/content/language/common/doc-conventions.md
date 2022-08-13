@@ -2,7 +2,7 @@
 title: "Documentation Conventions"
 type: "page"
 draft: "false"
-weight: 60
+weight: 12
 ---
 
 This page defines the conventions we use throughout this documentation. 
@@ -14,15 +14,6 @@ sized font like this:
 domain MyDomain is { ??? }
 ``` 
 
-### Extended Backus-Naur Form
-When RIDDL grammar definitions are made, we utilize the EBNF grammar
-meta-language to specify the grammar.  You can read about this 
-[grammar meta-language on Wikipedia](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
-For example, here's how EBNF can define a quoted string:
-```ebnf
-all characters = ? any utf-8 character ? ;
-quoted string =  '"', { all characters - '"' }, '"';
-```
 ### Notes
 {{% hint info %}}
 Whenever an incidental note needs to be presented, it will be shown in blue

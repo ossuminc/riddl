@@ -2,7 +2,7 @@
 title: "Language Conventions"
 type: "page"
 draft: "false"
-weight: 10 
+weight: 13
 ---
 
 ### Introduction
@@ -36,7 +36,7 @@ Every thing you can define can has a `described by` or `explained by` suffix whi
 lets you document the definition using markdown. 
 
 ### Hierarchy Of Definitions
-Definitions are specified in a [strict containment hierarchy](./root). Definitions that can 
+Definitions are specified in a [strict containment hierarchy](../root). Definitions that can 
 contain other definitions are known as _containers_. For example, 
 a domain definition is a recursively nested definition, as follows:
 ```riddl

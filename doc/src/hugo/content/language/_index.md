@@ -34,7 +34,7 @@ and user interface ideas are also included.
 
 ## Prerequisites
 
-We recommend that you first read the [Language Conventions](conventions) 
+We recommend that you first read the [Language Conventions](common/lang-conventions.md) 
 (not documentation conventions!) to which RIDDL adheres. These conventions
 are aimed at making RIDDL models consistent, simple, and free of special cases
 and exceptions.
