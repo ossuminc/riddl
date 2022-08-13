@@ -26,6 +26,7 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
+import org.apache.commons.lang3.exception.ExceptionUtils
 
 /** Validates an AST */
 object Validation {
@@ -42,9 +43,9 @@ object Validation {
       checkOverloads(symTab, s1)
     } catch {
       case NonFatal(xcptn) =>
-      state.add(ValidationMessage(Location.empty,
-          s"Exception Occurred: $xcptn", SevereError
-        ))
+        val message =
+          ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
+        state.add(ValidationMessage(Location.empty, message, SevereError))
     }
     result.messages.sortBy(_.loc)
   }
