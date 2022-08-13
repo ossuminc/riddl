@@ -54,7 +54,7 @@ object RIDDLC {
       }
     } catch {
       case NonFatal(exception) =>
-        log.error("Exception Thrown:", exception)
+        log.severe("Exception Thrown:", exception)
         3
     }
   }
