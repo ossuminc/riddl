@@ -18,19 +18,36 @@ developers of the burden of maintaining infrastructural code through evolution
 of the domain abstractions.
 
 ## Getting Started Locally
-* `git pull` or `git clone` the latest content and change directory to that repository
-* Start `sbt`
-* Run `project riddlc` and then `universal:packageBin` from sbt command line
-* It should successfully build a `.zip` file in the `riddlc/target/universal` directory
-* Copy that `.zip` file somewhere in your home directory
+To use `riddlc` locally and be able to update it with new changes, use this 
+approach:
+* `git clone` the latest content and change directory to that cloned repository
+* Put the `.../riddl/riddlc/target/stage/bin` directory in your PATH variable
+* Run `sbt "project riddlc ; stage"` to build the program
+* To update, run `git pull` from the `riddl` cloned repository directory and
+  rerun the sbt command above to rebuild. 
+
+This allows you to both make local changes and pull in changes from others to
+keep your local copy of `riddlc` up to date. 
+
+## Using A Release
+Starting with the 0.6.0 a "universal" release bundle is made avalable for 
+Linux and MacOS Systems directly from GitHub. You can find them in the 
+[GitHub Releases](https://github.com/reactific/riddl/releases) section 
+under "Assets"
+
+After downloading the `.zip` asset, you should:
+
+* Move that `.zip` file to somewhere in your home directory
 * Unpack that `.zip` file with  `unzip <path-to-tgz>` 
-* That will give you a directory like `riddl-0.5.6/bin` (the version # might be different)
-* Put that `bin` directory  in your path
+* That will give you a directory like `riddl-0.6.0/bin` (the version # might
+  be different)
+* Put that `bin` directory in your path
 * Now you can just run “riddlc” from anywhere
 * Some day we will have a packaged installer.
 
-## Adding `riddlc` to your project
-* See the reactific/riddl-actions project for actions that make riddlc invokable in your own github pipelines
+## Adding `riddlc` to your project workflow
+* See the reactific/riddl-actions project for actions that make riddlc invokable 
+  in your own GitHub workflows
 
 ## Usage
 To get the most recent options, run `riddlc --help`. That command will give you
