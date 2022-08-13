@@ -2233,6 +2233,7 @@ object AST {
     entities: Seq[Entity] = Seq.empty[Entity],
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
     sagas: Seq[Saga] = Seq.empty[Saga],
+    processors: Seq[Processor] = Seq.empty[Processor],
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
@@ -2270,7 +2271,7 @@ object AST {
     transmitType: Option[TypeRef],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends PlantDefinition
+      extends PlantDefinition with ContextDefinition
 
   /** Base trait of definitions defined in a processor
     */
@@ -2381,7 +2382,8 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[ProcessorDefinition] with PlantDefinition {
+      extends ParentDefOf[ProcessorDefinition] with PlantDefinition
+      with ContextDefinition {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
       examples
   }
@@ -2431,7 +2433,7 @@ object AST {
 
   /** Sealed base trait for both kinds of Joint definitions
     */
-  sealed trait Joint extends PlantDefinition
+  sealed trait Joint extends PlantDefinition with ContextDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *
