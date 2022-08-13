@@ -10,7 +10,7 @@ This is a "how to" guide on releasing the software.
 ## Build & Test
 ```shell
 > cd riddl # top level directory of repository 
-> sbt test
+> sbt "clean ; test"
 ...
 [info] All tests passed.
 ```
@@ -25,6 +25,18 @@ If all tests do not pass, stop and fix the software
 > git tag -a ${x.y.z} "${desc}"
 > git push --tags
 ```
+3. Verify Version
+```shell
+sbt "show version"
+```
+Run the above to ensure you are about to build and release the correct
+
+{{% hint warning "Running From SBT" %}}
+If you run the git commands from the SBT command prompt, you must 
+reload, clean, and retest in order to get the correct build version
+number into the artifacts. Failing to do this will attempt to release
+a snapshot version which won't go well for you.
+{{% /hint %}}
 
 ## Build Release Artifacts
 
