@@ -26,6 +26,7 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
+import org.apache.commons.lang3.exception.ExceptionUtils
 
 /** Validates an AST */
 object Validation {
@@ -42,9 +43,9 @@ object Validation {
       checkOverloads(symTab, s1)
     } catch {
       case NonFatal(xcptn) =>
-      state.add(ValidationMessage(Location.empty,
-          s"Exception Occurred: $xcptn", SevereError
-        ))
+        val message =
+          ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
+        state.add(ValidationMessage(Location.empty, message, SevereError))
     }
     result.messages.sortBy(_.loc)
   }
@@ -383,38 +384,46 @@ object Validation {
     }
 
     def checkMessageRef(ref: MessageRef, kind: MessageKind): ValidationState = {
-      symbolTable.lookupSymbol[Type](ref.id.value) match {
-        case Nil => add(ValidationMessage(
-            ref.id.loc,
-            s"${ref.identify} is not defined but should be ${article(kind.kind)} type",
-            Error
-          ))
-        case (d, _) :: Nil => d match {
-            case Type(_, _, typ, _, _) => typ match {
-                case MessageType(_, mk, _) => check(
-                    mk == kind,
-                    s"'${ref.identify} should be ${article(kind.kind)} type" +
-                      s" but is ${article(mk.kind)} type instead",
-                    Error,
-                    ref.id.loc
-                  )
-                case te: TypeExpression => add(ValidationMessage(
-                    ref.id.loc,
-                    s"'${ref.identify} should reference ${article(kind.kind)} type but is a ${AST
-                      .kind(te)} type instead",
-                    Error
-                  ))
-              }
-            case _ => add(ValidationMessage(
-                ref.id.loc,
-                s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(AST.kind(d))} instead",
-                Error
-              ))
-          }
-        case (d, optT) :: tail =>
-          val list = (d,optT)::tail
-          handleMultipleResultsCase[Type](ref.id, list)
-        case _ => this
+      if (ref.isEmpty) {
+        add(ValidationMessage(
+          ref.id.loc,
+          s"${ref.identify} is empty",
+          Error
+        ))
+      } else {
+        symbolTable.lookupSymbol[Type](ref.id.value) match {
+          case Nil => add(ValidationMessage(
+              ref.id.loc,
+              s"${ref.identify} is not defined but should be ${article(kind.kind)} type",
+              Error
+            ))
+          case (d, _) :: Nil => d match {
+              case Type(_, _, typ, _, _) => typ match {
+                  case MessageType(_, mk, _) => check(
+                      mk == kind,
+                      s"'${ref.identify} should be ${article(kind.kind)} type" +
+                        s" but is ${article(mk.kind)} type instead",
+                      Error,
+                      ref.id.loc
+                    )
+                  case te: TypeExpression => add(ValidationMessage(
+                      ref.id.loc,
+                      s"'${ref.identify} should reference ${article(kind.kind)} type but is a ${AST
+                        .kind(te)} type instead",
+                      Error
+                    ))
+                }
+              case _ => add(ValidationMessage(
+                  ref.id.loc,
+                  s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(AST.kind(d))} instead",
+                  Error
+                ))
+            }
+          case (d, optT) :: tail =>
+            val list = (d,optT)::tail
+            handleMultipleResultsCase[Type](ref.id, list)
+          case _ => this
+        }
       }
     }
 
@@ -565,33 +574,35 @@ object Validation {
       )
       result = result.checkIdentifierLength(definition)
       val path = symbolTable.pathOf(definition)
-      val matches = result.lookup[Definition](path)
-      if (matches.isEmpty) {
-        result = result.add(ValidationMessage(
-          definition.id.loc,
-          s"'${definition.id.value}' evaded inclusion in symbol table!",
-          SevereError
-        ))
-      } else if (matches.sizeIs >= 2) {
-        val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
-        parentGroups.get(Option(parent)) match {
-          case Some(head :: tail) if tail.nonEmpty =>
-            result = result.add(ValidationMessage(
-              head.id.loc,
-              s"${definition.identify} has same name as other definitions in ${parent.identifyWithLoc}:  " +
-                tail.map(x => x.identifyWithLoc).mkString(",  "),
-              Warning
-            ))
-          case Some(head :: tail) if tail.isEmpty =>
-            result = result.add(ValidationMessage(
-              head.id.loc,
-              s"${definition.identify} has same name as other definitions: " +
-                matches.filterNot(_ == definition).map(x => x.identifyWithLoc)
-                  .mkString(",  "),
-              StyleWarning
-            ))
-          case _ =>
-          // ignore
+      if (!definition.id.isEmpty) {
+        val matches = result.lookup[Definition](path)
+        if (matches.isEmpty) {
+          result = result.add(ValidationMessage(
+            definition.id.loc,
+            s"'${definition.id.value}' evaded inclusion in symbol table!",
+            SevereError
+          ))
+        } else if (matches.sizeIs >= 2) {
+          val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
+          parentGroups.get(Option(parent)) match {
+            case Some(head :: tail) if tail.nonEmpty =>
+              result = result.add(ValidationMessage(
+                head.id.loc,
+                s"${definition.identify} has same name as other definitions in ${parent.identifyWithLoc}:  " +
+                  tail.map(x => x.identifyWithLoc).mkString(",  "),
+                Warning
+              ))
+            case Some(head :: tail) if tail.isEmpty =>
+              result = result.add(ValidationMessage(
+                head.id.loc,
+                s"${definition.identify} has same name as other definitions: " +
+                  matches.filterNot(_ == definition).map(x => x.identifyWithLoc)
+                    .mkString(",  "),
+                StyleWarning
+              ))
+            case _ =>
+            // ignore
+          }
         }
       }
       result
@@ -923,8 +934,11 @@ object Validation {
         case typ: Type          => openType(state, parents.head, typ)
         case function: Function => openFunction(state, parents.head, function)
         case entity: Entity     => openEntity(state, parents.head, entity)
-        case onClause: OnClause => state
-            .checkMessageRef(onClause.msg, onClause.msg.messageKind)
+        case onClause: OnClause =>
+          if (!onClause.msg.isEmpty)
+            state.checkMessageRef(onClause.msg, onClause.msg.messageKind)
+          else
+            state
         case processor: Processor =>
           openProcessor(state, parents.head, processor)
         case story: Story       => openStory(state, parents.head, story)
