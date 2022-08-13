@@ -27,6 +27,7 @@ trait ContextParser
     with AdaptorParser
     with EntityParser
     with SagaParser
+    with StreamingParser
     with TypeParser {
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
@@ -48,8 +49,8 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (typeDef | contextHandler | entity | adaptor | function | saga | term |
-          contextInclude).rep(0)
+        (typeDef | contextHandler | entity | adaptor | function | saga |
+          plantDefinition | term | contextInclude).rep(0)
     )
   }
 
@@ -65,6 +66,7 @@ trait ContextParser
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
+      val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
@@ -76,6 +78,7 @@ trait ContextParser
         entities,
         adaptors,
         sagas,
+        processors,
         functions,
         terms,
         includes,
