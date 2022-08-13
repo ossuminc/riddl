@@ -36,6 +36,67 @@ class HandlerTest extends ParsingTest {
       }
 
     }
+    "only one syntax error" in {
+      val input =
+        """domain foo is {
+          |context Members is {
+          |
+          |    type RegisterMember is command {}
+          |    type MemberRegistered is event {}
+          |    type RegisterMemberList is command {}
+          |    type MemberListRegistered is event {}
+          |    type UpdateMemberInfo is command {}
+          |    type MemberInfoUpdated is event {}
+          |    type UpdateMemberStatus is command {}
+          |    type MemberStatusUpdated is event {}
+          |    type GetMemberData is query {}
+          |    type MemberData is result {}
+          |    type GetMembersByMetaInfo is query {}
+          |    type MemberListResult is result {}
+          |
+          |    entity Member is {
+          |        option is aggregate
+          |
+          |        handler MemberHandler is {
+          |            on command RegisterMember {
+          |                then morph entity Member to state Member.Active
+          |                and set Active.memberId to @RegisterMember.memberId
+          |                and set Active.memberInfo to @RegisterMember.memberInfo
+          |            }
+          |
+          |        }
+          |
+          |        state Active is {
+          |            memberId: MemberId,
+          |            memberInfo: Info,
+          |            metaInfo: MetaInfo
+          |        }
+          |        handler ActiveMemberHandler /*for state Active */ is {
+          |            on command UpdateMemberInfo {
+          |                then set Active.memberInfo to @UpdateMemberInfo.memberInfo
+          |            }
+          |            on command UpdateMemberStatus { ???
+          |            }
+          |            on query GetMemberData {  }
+          |        }
+          |
+          |        state Terminated is {
+          |            memberId: MemberId
+          |        }
+          |        handler TerminatedMemberHandler is {
+          |            on other { then error "Terminated members cannot process messages" }
+          |        }
+          |    }
+          |
+          |}""".stripMargin
+      parseTopLevelDomains(input) match {
+        case Left(errors) =>
+          errors must not(be(empty))
+          errors.size must be(1)
+        case Right(_) =>
+          fail("Test case should have failed")
+      }
+    }
     "accept shortcut syntax for single example on clauses " in {
       val input = """entity DistributionItem is {
                     |  state DistributionState is { ??? }
