@@ -218,7 +218,7 @@ object Validation {
       d: T,
       min: Int = 3
     ): ValidationState = {
-      if (d.id.value.length < min) {
+      if (d.id.value.nonEmpty && d.id.value.length < min) {
         add(ValidationMessage(
           d.id.loc,
           s"${AST.kind(d)} identifier '${d.id.value}' is too short. The minimum length is $min",
