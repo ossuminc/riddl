@@ -30,6 +30,7 @@ object Terminals {
     final val equals = "="
     final val ellipsis = "..."
     final val ellipsisQuestion = "...?"
+    final val exclamation = "!"
     final val plus = "+"
     final val question = "?"
     final val quote = "\""

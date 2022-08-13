@@ -680,6 +680,15 @@ object AST {
     }
   }
 
+  /** A type expression that contains an aggregation of fields
+   *
+   * This is used as the base trait of Aggregations and Messages
+   */
+  trait AggregateTypeExpression extends TypeExpression with Container[Field] {
+    def fields: Seq[Field]
+    final lazy val contents: Seq[Field] = fields
+  }
+
   /** A type expression that takes a set of named fields as its value.
     *
     * @param loc
@@ -689,10 +698,8 @@ object AST {
     */
   case class Aggregation(
     loc: Location,
-    fields: Seq[Field] = Seq.empty[Field])
-      extends TypeExpression with Container[Field] {
-    lazy val contents: Seq[Field] = fields
-  }
+    fields: Seq[Field] = Seq.empty[Field]
+  ) extends AggregateTypeExpression
 
   /** A type expressions that defines a mapping from a key to a value. The value
     * of a mapping is the set of mapped key -> value pairs, based on which keys
@@ -781,8 +788,8 @@ object AST {
   case class MessageType(
     loc: Location,
     messageKind: MessageKind,
-    fields: Seq[Field] = Seq.empty[Field])
-      extends TypeExpression with EntityValue
+    fields: Seq[Field] = Seq.empty[Field]
+  ) extends AggregateTypeExpression with EntityValue
 
   /** Base class of all pre-defined type expressions
     */
@@ -1039,37 +1046,49 @@ object AST {
     * @param path
     *   The path to the value for this expression
     */
-  case class ValueCondition(loc: Location, path: PathIdentifier)
-      extends Condition {
+  case class ValueExpression(loc: Location, path: PathIdentifier)
+      extends Expression with Condition {
     override def format: String = "@" + path.format
   }
 
-  /** A syntactic convenience for grouping another expression.
-    * @param loc
-    *   The location of the expression group
-    * @param expression
-    *   The expression that is grouped
-    */
-  case class GroupExpression(loc: Location, expression: Expression)
-      extends Expression {
-    override def format: String = s"(${expression.format})"
-  }
-
-  /** The arguments of a [[FunctionCallExpression]] which is a mapping between
-    * an argument name and the expression that provides the value for that
-    * argument.
-    * @param args
-    *   A mapping of Identifier to Expression to provide the arguments for the
-    *   function call.
-    */
+  /** The arguments of a [[FunctionCallExpression]] and
+   * [[AggregateConstructionExpression]] is a mapping between
+   * an argument name and the expression that provides the value for that
+   * argument.
+   *
+   * @param args
+   * A mapping of Identifier to Expression to provide the arguments for the
+   * function call.
+   */
   case class ArgList(
     args: ListMap[Identifier, Expression] = ListMap
       .empty[Identifier, Expression])
-      extends RiddlNode {
+    extends RiddlNode {
     override def format: String = args.map { case (id, exp) =>
       id.format + "=" + exp.format
     }.mkString("(", ", ", ")")
   }
+
+  /** A helper class for creating aggregates and messages that represents
+   * the construction of the message or aggregate value from parameters
+   *
+   * @param msg
+   * A message reference that specifies the specific type of message to
+   * construct
+   * @param args
+   * An argument list that should correspond to teh fields of the message
+   */
+  case class AggregateConstructionExpression(
+    loc: Location,
+    msg: TypeRef,
+    args: ArgList = ArgList()
+  ) extends Expression {
+    override def format: String = msg.format + {
+      if (args.nonEmpty) {args.format}
+      else {"()"}
+    }
+  }
+
 
   /** A RIDDL Function call. The only callable thing here is a function
     * identified by its path identifier with a matching set of arguments
@@ -1088,6 +1107,19 @@ object AST {
       extends Expression with Condition {
     override def format: String = name.format + arguments.format
   }
+
+  /** A syntactic convenience for grouping another expression.
+   *
+   * @param loc
+   * The location of the expression group
+   * @param expression
+   * The expression that is grouped
+   */
+  case class GroupExpression(loc: Location, expression: Expression)
+    extends Expression {
+    override def format: String = s"(${expression.format})"
+  }
+
 
   /** Ternary operator to accept a conditional and two expressions and choose
     * one of the expressions as the resulting value based on the conditional.
@@ -1174,7 +1206,8 @@ object AST {
     * @param cond
     *   The arbitrary condition provided as a quoted string
     */
-  case class ArbitraryCondition(cond: LiteralString) extends Condition {
+  case class ArbitraryExpression(cond: LiteralString)
+    extends Expression with Condition {
     override def loc: Location = cond.loc
 
     override def format: String = cond.format
@@ -1289,7 +1322,8 @@ object AST {
     * @param loc
     *   The location of the undefined condition
     */
-  case class UndefinedCondition(loc: Location) extends Condition {
+  case class UndefinedExpression(loc: Location)
+    extends Expression with Condition {
     override def format: String = Terminals.Punctuation.undefined
 
     override def isEmpty: Boolean = true

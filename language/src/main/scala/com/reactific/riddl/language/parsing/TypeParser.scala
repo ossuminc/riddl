@@ -138,17 +138,25 @@ trait TypeParser extends ReferenceParser {
     }
   }
 
+  def makeMessageType(
+    loc: Location,
+    mk: MessageKind,
+    agg: Aggregation
+  ): MessageType = {
+    MessageType(
+      loc,
+      mk,
+      Field(
+        loc,
+        Identifier(loc, "sender"),
+        ReferenceType(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String])))
+      ) +: agg.fields
+    )
+  }
+
   def messageType[u: P]: P[MessageType] = {
     P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
-      MessageType(
-        loc,
-        mk,
-        Field(
-          loc,
-          Identifier(loc, "sender"),
-          ReferenceType(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String])))
-        ) +: agg.fields
-      )
+      makeMessageType(loc, mk, agg)
     }
   }
 
@@ -207,8 +215,18 @@ trait TypeParser extends ReferenceParser {
   }
 
   def typeDef[u: P]: P[Type] = {
-    P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~ description).map {
-      tpl => (Type.apply _).tupled(tpl)
-    }
+    P(
+      ( location ~ Keywords.`type` ~/ identifier ~ is ~
+        typeExpression ~ briefly ~ description).map {
+          tpl => (Type.apply _).tupled(tpl)
+        }
+      | (
+        location ~ messageKind ~/ identifier ~ is ~ location ~ aggregation  ~
+        briefly ~ description
+      ).map { case (loc, mk, id, loc2, agg, b, d) =>
+          val mt = makeMessageType(loc2, mk, agg)
+          Type(loc, id, mt, b, d)
+      }
+    )
   }
 }
