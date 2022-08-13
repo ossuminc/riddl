@@ -18,11 +18,13 @@ package com.reactific.riddl.language
 
 import org.apache.commons.lang3.exception.ExceptionUtils
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object Logger {
   sealed trait Lvl {
-    override def toString: String = this.getClass.getSimpleName.dropRight(1).toLowerCase
+    override def toString: String =
+      this.getClass.getSimpleName.dropRight(1).toLowerCase
   }
 
   case object Severe extends Lvl
@@ -67,7 +69,7 @@ case class SysLogger() extends Logger {
 }
 
 case class StringLogger(capacity: Int = 512 * 2) extends Logger {
-  private val stringBuilder = new StringBuilder(capacity)
+  private val stringBuilder = new mutable.StringBuilder(capacity)
 
   def write(level: Logger.Lvl, s: String): Unit =
     stringBuilder.append("[").append(level).append("] ").append(s).append("\n")
