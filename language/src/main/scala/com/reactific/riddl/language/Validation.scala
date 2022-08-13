@@ -662,6 +662,7 @@ object Validation {
 
     def checkAction(action: Action): ValidationState = {
       action match {
+        case _: ErrorAction => this
         case SetAction(_, path, value, _) => this.checkPathRef[Field](path)()
             .checkExpression(value)
         case YieldAction(_, msg, _) => this.checkMessageConstructor(msg)

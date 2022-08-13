@@ -28,7 +28,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     open ~
       ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
         Seq(Example(l, Identifier(l, ""), g, w, t, b))
-      } | examples | undefined(Seq.empty[Example])) ~ close
+      } | nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
   }
 
   def onClause[u: P]: P[OnClause] = {
