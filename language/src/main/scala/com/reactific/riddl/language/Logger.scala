@@ -16,7 +16,8 @@
 
 package com.reactific.riddl.language
 
-import java.io.{PrintWriter, StringWriter}
+import org.apache.commons.lang3.exception.ExceptionUtils
+
 import scala.collection.mutable.ArrayBuffer
 
 object Logger {
@@ -34,14 +35,21 @@ trait Logger {
   import Logger.*
 
   final def severe(s: => String): Unit = { write(Severe, s) }
+  final def severe(s: => String, xcptn: Throwable): Unit = {
+    val message =
+      s"""$s: $xcptn
+         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
+         |""".stripMargin
+    write(Severe, message)
+  }
 
   final def error(s: => String): Unit = { write(Error, s) }
   final def error(s: => String, xcptn: Throwable): Unit = {
-    val sw = new StringWriter
-    val pw = new PrintWriter(sw)
-    pw.println(s"$s: $xcptn\n")
-    xcptn.printStackTrace(pw)
-    write(Error, sw.toString)
+    val message =
+      s"""$s: $xcptn
+         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
+         |""".stripMargin
+    write(Error, message)
   }
 
   final def warn(s: => String): Unit = { write(Warning, s) }
