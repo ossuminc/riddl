@@ -18,7 +18,7 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language._
-import com.reactific.riddl.utils.Zip
+import com.reactific.riddl.utils.{Tar, Zip}
 
 import java.io.{File, IOException}
 import java.net.URL
@@ -161,7 +161,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   val defaultOptions: HugoTranslatingOptions = HugoTranslatingOptions()
 
   val geekdoc_dest_dir = "hugo-geekdoc"
-  val geekDoc_version = "v0.27.4"
+  val geekDoc_version = "v0.34.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -202,8 +202,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
           Zip.unzip(zip_path, destDir)
           zip_path.toFile.delete()
         case name if name.endsWith(".tar.gz") =>
-          val rc = Process(s"tar zxf $fileName", cwd = destDir.toFile).!
-          if (rc != 0) {throw new IOException(s"Failed to unzip $zip_path")}
+          Tar.untar(zip_path, destDir)
           zip_path.toFile.delete()
         case _ =>
           throw new IllegalArgumentException("Can only load a theme from .tar.gz or .zip file")
