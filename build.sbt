@@ -95,7 +95,7 @@ lazy val `hugo-translator`: Project = project.in(file("hugo-translator"))
       baseDirectory.value / "resources"
     },
     Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.pureconfig, Dep.compress) ++ Dep.testing
   ).dependsOn(language % "compile->compile", testkit % "test->compile")
   .dependsOn(utils)
 
