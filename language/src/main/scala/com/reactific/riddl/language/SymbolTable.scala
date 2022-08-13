@@ -58,14 +58,16 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
         // includes don't go in the symbol table
       case (_, definition, stack) =>
         val name = definition.id.value
-        val copy: Parents = stack.toSeq.filter {
-          case _: RootContainer => false
-          case _ => true
+        if (name.nonEmpty) {
+          val copy: Parents = stack.toSeq.filter {
+            case _: RootContainer => false
+            case _ => true
+          }
+          val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
+          val included: Seq[SymTabItem] = existing :+ (definition -> copy)
+          symTab.update(name, included)
+          parentage.update(definition, copy)
         }
-        val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
-        val included: Seq[SymTabItem] = existing :+ (definition -> copy)
-        symTab.update(name, included)
-        parentage.update(definition, copy)
     }
     symTab -> parentage
   }
@@ -189,7 +191,10 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   }
 
   def foreachOverloadedSymbol[T](process: Seq[Seq[Definition]] => T): T = {
-    val overloads = symbols.filter(_._2.size > 1).filter(_._1 != "sender")
+    val overloads = symbols
+      .filterNot(_._1.isEmpty)
+      .filterNot(_._1 == "sender")
+      .filter(_._2.size > 1)
     val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
     process(defs)
   }
