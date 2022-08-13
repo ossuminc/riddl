@@ -24,6 +24,16 @@ class HandlerTest extends ParsingTest {
           fail(msg)
         case Right(_) => succeed
       }
+    }
+    "empty example disallowed" in {
+      val input = "handler foo is { on other { } "
+      parseDefinition[Context](input) match {
+        case Left(errors) =>
+          errors must not(be(empty))
+          succeed
+        case Right(_) =>
+          fail("Did not catch empty on clause examples")
+      }
 
     }
     "accept shortcut syntax for single example on clauses " in {
@@ -54,7 +64,7 @@ class HandlerTest extends ParsingTest {
                     |      }
                     |      // anything else needing to be updated?
                     |    } explained as { "Helps update this item's location" }
-                    |    on any { then "do nothing" }
+                    |    on other { then "do nothing" }
                     |  }
                     |  handler FromDistributionItem  is {
                     |    on command CreateItem { example only {
