@@ -2,7 +2,7 @@
 title: "Developer's Guide"
 description: "RIDDL documentation focused on developers' usage"
 date: 2022-08-06T10:50:32-07:00
-draft: true
+draft: false
 weight: 40
 ---
 
@@ -20,3 +20,5 @@ Developers must be experts in:
 * Test Driven Development
 * Build Automation
 * Agile Engineering Practices
+
+{{< toc-tree >}}
