@@ -70,6 +70,7 @@ object RIDDLC {
       case RiddlOptions.Hugo => translateHugo(options)
       case RiddlOptions.HugoGitCheck => hugoGitCheck(options)
       case RiddlOptions.D3 => generateD3(options)
+      case RiddlOptions.Info => info(options)
       case _ =>
         log.error(s"A command must be specified as an option")
         log.info(RiddlOptions.usage)
@@ -217,5 +218,19 @@ object RIDDLC {
   def generateD3(@unused options: RiddlOptions): Boolean = {
     log.info(s"D3 Generation  is not yet supported.")
     false
+  }
+
+  def info(@unused options: RiddlOptions): Boolean = {
+    log.info("About riddlc:")
+    log.info(s"           name: ${BuildInfo.name}")
+    log.info(s"        version: ${BuildInfo.version}")
+    log.info(s"     start year: ${BuildInfo.startYear}")
+    log.info(s"       built at: ${BuildInfo.builtAtString}")
+    log.info(s"       licenses: ${BuildInfo.licenses}")
+    log.info(s"      org. name: ${BuildInfo.organizationName}")
+    log.info(s"      org. page: ${BuildInfo.organizationHomepage}")
+    log.info(s"  scala version: ${BuildInfo.scalaVersion}")
+    log.info(s"    sbt version: ${BuildInfo.sbtVersion}")
+    true
   }
 }

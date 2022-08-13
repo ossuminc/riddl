@@ -77,6 +77,7 @@ object RiddlOptions {
   final case object From extends Command
   final case object Repeat extends Command
   final case object D3 extends Command
+  final case object Info extends Command
 
   def str2Command(str: String): Command = {
     str match {
@@ -88,6 +89,7 @@ object RiddlOptions {
       case "hugo-git-check" => HugoGitCheck
       case "hugo" => Hugo
       case "d3" => D3
+      case "info" => Info
       case _ => Unspecified
     }
   }
@@ -590,8 +592,8 @@ object RiddlOptions {
         "\nof documents. RIDDL is a language for system specification based on Domain",
         "\nDrive Design, Reactive Architecture, and Agile principles.\n"
       ),
-      version('V', "version"),
       help('h', "help").text("Print out help/usage information and exit"),
+      version('V', "version"),
       opt[Unit]('t', name = "show-times").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(showTimes = true))
       ).text("Show compilation phase execution times "),
@@ -618,6 +620,8 @@ object RiddlOptions {
     ) ++ repeatableCommands ++ OParser.sequence(
       cmd("help").action((_,c) => c.copy(command = Help))
         .text("Print out how to use this program" ),
+      cmd("info").action((_,c) => c.copy(command = Info))
+        .text("Print out build information about this program"),
       cmd("repeat").action((_,c) => c.copy(command = Repeat))
         .children(
           arg[File]("config-file")

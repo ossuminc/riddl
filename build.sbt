@@ -1,10 +1,11 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
 import sbt.Keys.scalaVersion
-import sbtbuildinfo.BuildInfoOption.BuildTime
-import sbtbuildinfo.BuildInfoOption.ToMap
+import sbtbuildinfo.BuildInfoOption.{ToJson, ToMap, BuildTime}
 
 ThisBuild / maintainer := "reid@reactific.com"
-ThisBuild / organizationName := "Reactific Software LLC"
+ThisBuild / organization := "com.reactific"
+ThisBuild / organizationHomepage := Some(new URL("https://reactific.com/"))
+ThisBuild / organizationName := "Ossum Inc."
 ThisBuild / startYear := Some(2019)
 ThisBuild / licenses +=
   ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
@@ -19,22 +20,7 @@ ThisBuild / dynverVTagPrefix := false
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator := "-"
-ThisBuild / organization := "com.reactific"
-ThisBuild / scalaVersion := "2.13.7"
-buildInfoOptions := Seq(ToMap, BuildTime)
-buildInfoKeys := Seq[BuildInfoKey](
-  name,
-  normalizedName,
-  description,
-  homepage,
-  startYear,
-  organization,
-  organizationName,
-  organizationHomepage,
-  version,
-  scalaVersion,
-  sbtVersion
-)
+ThisBuild / scalaVersion := "2.13.8"
 
 lazy val scala2_13_Options = Seq(
   "-target:17",
@@ -78,18 +64,17 @@ lazy val riddl = (project in file("."))
   )
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
-  .configure(C.mavenPublish).settings(
+  .configure(C.mavenPublish)
+  .settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
     scalacOptions := scala2_13_Options
+
   )
 
-lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
+lazy val language = project.in(file("language"))
   .configure(C.withCoverage()).configure(C.mavenPublish).settings(
     name := "riddl-language",
-    buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.reactific.riddl",
-    buildInfoUsePackageAsPath := true,
     coverageExcludedPackages :=
       "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
@@ -142,16 +127,45 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging,UniversalDeployPlugin).configure(C.mavenPublish).settings(
+  .enablePlugins(JavaAppPackaging,UniversalDeployPlugin,BuildInfoPlugin)
+  .enablePlugins(MiniDependencyTreePlugin)
+  .configure(C.mavenPublish)
+  .dependsOn(
+    language,
+    `hugo-translator` % "compile->compile;test->test",
+    `hugo-git-check` % "compile->compile;test->test"
+  )
+  .settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
-    maintainer := "reid@reactific.com"
-  ).dependsOn(
-    language,
-    `hugo-translator` % "compile->compile;test->test",
-    `hugo-git-check` % "compile->compile;test->test"
+    maintainer := "reid@reactific.com",
+    buildInfoObject := "BuildInfo",
+    buildInfoPackage := "com.reactific.riddl",
+    buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
+    buildInfoUsePackageAsPath := true,
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      name,
+      version,
+      description,
+      organization,
+      organizationName,
+      BuildInfoKey.map(organizationHomepage) {
+        case (k, v) => k -> v.get.toString
+      },
+      BuildInfoKey.map(homepage) {
+        case (k, v) => "projectHomepage" -> v.map(_.toString).getOrElse("http://riddl.tech")
+      },
+      BuildInfoKey.map(startYear) {
+        case (k, v) => k -> v.get.toString
+      },
+      scalaVersion,
+      sbtVersion,
+      BuildInfoKey.map(licenses) {
+        case (k,v) => k -> v.map(_._1).mkString(", ")
+      }
+    )
   )
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
