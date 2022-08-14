@@ -1,5 +1,5 @@
-![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
-![Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
+![Code Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
+![Documentation Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
 
 # RIDDL
 
@@ -21,8 +21,9 @@ of the domain abstractions.
 To use `riddlc` locally and be able to update it with new changes, use this 
 approach:
 * `git clone` the latest content and change directory to that cloned repository
-* Put the `.../riddl/riddlc/target/stage/bin` directory in your PATH variable
-* Run `sbt "stage"` to build the program
+* Put the `.../riddl/riddlc/target/universal/stage/bin` directory in your PATH 
+  variable
+* Run `sbt stage` to build the program
 * To update, run `git pull` from the `riddl` cloned repository directory and
   rerun the sbt command above to rebuild. 
 
@@ -48,6 +49,12 @@ After downloading the `.zip` asset, you should:
 ## Adding `riddlc` to your project workflow
 * See the reactific/riddl-actions project for actions that make riddlc invokable 
   in your own GitHub workflows
+
+## Using RIDDL From Code
+In your `project/plugins.sbt` file, use:
+```shell
+addSbtPlugin("com.reactific" % "sbt-riddl" % "<version>")
+```
 
 ## Usage
 To get the most recent options, run `riddlc --help`. That command will give you
