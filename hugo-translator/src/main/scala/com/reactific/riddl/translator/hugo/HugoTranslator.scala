@@ -432,8 +432,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
        |title = "$siteTitle"
        |name = "$siteName"
        |description = "$siteDescription"
-       |homepage = "https://example.org/"
-       |demosite = "https://example.org/"
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = $themes
