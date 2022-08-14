@@ -30,7 +30,7 @@ class DomainValidatorTest extends ValidatingTest {
 
     "allow author information" in {
       val input = """domain foo is {
-                    |  author is {
+                    |  author Reid is {
                     |    name: "Reid Spencer"
                     |    email: "reid@reactific.com"
                     |    organization: "Reactific Software Inc."
@@ -42,14 +42,14 @@ class DomainValidatorTest extends ValidatingTest {
         (domain: Domain, rpi: RiddlParserInput, messages: ValidationMessages) =>
           domain mustNot be(empty)
           domain.contents mustBe empty
-          val expectedAuthor = Some(AuthorInfo(
-            (2, 3, rpi),
+          val expectedAuthor = AuthorInfo(
+            (2, 3, rpi), Identifier((2,10,rpi), "Reid"),
             LiteralString((3, 11, rpi), "Reid Spencer"),
             LiteralString((4, 12, rpi), "reid@reactific.com"),
             Some(LiteralString((5, 19, rpi), "Reactific Software Inc.")),
             Some(LiteralString((6, 12, rpi), "President"))
-          ))
-          domain.author mustBe expectedAuthor
+          )
+          domain.authors must contain(expectedAuthor)
           messages mustBe empty
       }
     }

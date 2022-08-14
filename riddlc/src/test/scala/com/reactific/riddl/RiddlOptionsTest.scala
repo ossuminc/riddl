@@ -3,7 +3,6 @@ package com.reactific.riddl
 import com.reactific.riddl.RiddlOptions.Hugo
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import java.nio.file.Path
 
 class RiddlOptionsTest extends AnyWordSpec with Matchers {
@@ -74,7 +73,6 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           ho.sourceURL mustBe Option(
             new java.net.URL("https://github.com/reactific/riddl"))
           ho.editPath mustBe Option("/-/blob/main/examples/src/riddl/ReactiveBBQ")
-          ho.siteLogo mustBe None
           ho.siteLogoPath mustBe Option("/images/RBBQ.png")
       }
     }

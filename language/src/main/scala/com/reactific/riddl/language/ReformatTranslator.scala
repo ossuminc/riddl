@@ -531,26 +531,23 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       state: ReformatState,
       domain: Domain
     ): ReformatState = {
-      state.withCurrent(_.openDef(domain)).step { s1 =>
-        if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
-          val author = domain.author.get
-          s1.withCurrent(_.addIndent(s"author is {\n")
+      state.withCurrent(_.openDef(domain)).step { s1: ReformatState =>
+        domain.authors.foldLeft(s1) { (st, author) =>
+          st.withCurrent(_.addIndent(s"author is {\n")
             .indent
             .addIndent(s"name = ${author.name.format}\n")
             .addIndent(s"email = ${author.email.format}\n")
           ).step { s2 =>
-              author.organization
-                .map(org => s2.withCurrent(
-                  _.addIndent(s"organization =${org.format}\n")))
-                .orElse(Option(s2)).get
-            }.step { s3 =>
-              author.title
-                .map(title => s3.withCurrent(
-                  _.addIndent(s"title = ${title.format}\n")))
-                .orElse(Option(s3)).get
-            }.withCurrent(_.outdent.addIndent("}\n"))
-        } else {
-          s1
+            author.organization
+              .map(org => s2.withCurrent(
+                _.addIndent(s"organization =${org.format}\n")))
+              .orElse(Option(s2)).get
+          }.step { s3 =>
+            author.title
+              .map(title => s3.withCurrent(
+                _.addIndent(s"title = ${title.format}\n")))
+              .orElse(Option(s3)).get
+          }.withCurrent(_.outdent.addIndent("}\n"))
         }
       }
     }
