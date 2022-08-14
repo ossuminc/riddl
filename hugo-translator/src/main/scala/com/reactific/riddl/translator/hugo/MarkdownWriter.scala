@@ -263,8 +263,7 @@ case class MarkdownWriter(filePath: Path) {
   def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
     fileHead(domain)
     title(domain)
-    if (domain.author.nonEmpty) {
-      val a = domain.author.get
+    for (a <- domain.authors) {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
         a.organization.fold(Seq.empty[(String, String)])(ls =>
           Seq("Organization" -> ls.s)

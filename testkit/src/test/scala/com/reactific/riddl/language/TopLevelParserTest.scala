@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Domain, Identifier, RootContainer}
+import com.reactific.riddl.language.AST.{AuthorInfo, Domain, Identifier, RootContainer}
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.language.testkit.ParsingTestBase
 
@@ -17,7 +17,7 @@ class TopLevelParserTest extends ParsingTestBase {
   val simpleDomain = RootContainer(List(Domain(
     Location(1, 1, rip),
     Identifier(Location(1, 8, rip), "foo"),
-    None,
+    Seq.empty[AuthorInfo],
     List(),
     List(),
     List(),

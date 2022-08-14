@@ -161,14 +161,22 @@ object RiddlOptions {
     (cur: ConfigCursor) => {
       for {
         objCur <- cur.asObjectCursor
-        eraseOutput <- optional(objCur, "erase-output",
-          true) { cc => cc.asBoolean }
-        projectName <- optional(objCur, "project-name",
-          "No Project Name Specified") { cur => cur.asString }
         inputPathRes <- objCur.atKey("input-file")
         inputPath <- inputPathRes.asString
         outputPathRes <- objCur.atKey("output-dir")
         outputPath <- outputPathRes.asString
+        eraseOutput <- optional(objCur, "erase-output",
+          true) { cc => cc.asBoolean }
+        projectName <- optional(objCur, "project-name",
+          "No Project Name") { cur => cur.asString }
+        siteTitle <- optional(objCur, "site-title", "No Site Title") {
+          cur => cur.asString
+        }
+        siteDescription <- optional(objCur, "site-description", "No Site Description") {
+          cur => cur.asString
+        }
+        siteLogoPath <- optional(objCur, "site-logo-path",
+          "static/somewhere") { cc => cc.asString }
         baseURL <- optional(
           objCur, "base-url", Option.empty[String]) { cc =>
           cc.asString.map(Option[String])
@@ -180,11 +188,15 @@ object RiddlOptions {
         }
         editPath <- optional(objCur, "edit-path",
           "path/to/hugo/content") { cc => cc.asString }
-        siteLogoURL <- optional(objCur, "site-logo-url", Option.empty[String]) {
-          cc => cc.asString.map(Option[String])
+        withGlossary <- optional(objCur, "with-glossary", true) {
+          cc => cc.asBoolean
         }
-        siteLogoPath <- optional(objCur, "site-logo-path",
-          "static/somewhere") { cc => cc.asString }
+        withToDoList <- optional(objCur, "with-todo-list", true) {
+          cc => cc.asBoolean
+        }
+        withGraphicalTOC <- optional(objCur, "with-graphical-toc", false) {
+          cc => cc.asBoolean
+        }
       } yield {
         def handleURL(url: Option[String]): Option[URL] = {
           if (url.isEmpty || url.get.isEmpty) {
@@ -205,21 +217,27 @@ object RiddlOptions {
         } else {
           val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
           themesEither.map { case (name, maybeUrl) =>
-            name -> (maybeUrl match {
-              case Right(s) => handleURL(Option(s))
-              case Left(x) =>
-                val errs = stringifyConfigReaderErrors(x).mkString("\n")
-                log.error(errs)
-                None
-          })}}
-          HugoTranslatingOptions(
-            Option(Path.of(inputPath)),
-            Option(Path.of(outputPath)),
-            eraseOutput, Option(projectName),
-            handleURL(baseURL), themes,
-            handleURL(sourceURL), Option(editPath),
-            handleURL(siteLogoURL), Option(siteLogoPath)
-          )
+            name -> {
+              maybeUrl match {
+                case Right(s) => handleURL(Option(s))
+                case Left(x) =>
+                  val errs = stringifyConfigReaderErrors(x).mkString("\n")
+                  log.error(errs)
+                  None
+              }
+            }
+          }
+        }
+        HugoTranslatingOptions(
+          Option(Path.of(inputPath)),
+          Option(Path.of(outputPath)),
+          eraseOutput, Option(projectName), Option(siteTitle),
+          Option(siteDescription),
+          Option(siteLogoPath),
+          handleURL(baseURL), themes,
+          handleURL(sourceURL), Option(editPath),
+
+          withGlossary, withToDoList, withGraphicalTOC)
         }
       }
     }
@@ -479,9 +497,6 @@ object RiddlOptions {
     opt[String]('h', name = "edit-path")
       .action((h, c) => c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h))))
       .text("Path to add to source-url to allow editing"),
-    opt[URL]('l', name = "site-logo-url")
-      .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(siteLogo = Option(u))))
-      .text("URL to the site's logo image for use by site"),
     opt[String]('m', "site-logo-path")
       .action((s, c) => c.copy(hugoOptions =
         c.hugoOptions.copy(siteLogoPath = Option(s)))

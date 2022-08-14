@@ -2688,13 +2688,15 @@ object AST {
     */
   case class AuthorInfo(
     loc: Location,
+    id: Identifier,
     name: LiteralString,
     email: LiteralString,
     organization: Option[LiteralString] = None,
     title: Option[LiteralString] = None,
     url: Option[java.net.URL] = None,
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends DescribedValue {
+      extends DomainDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
@@ -2728,7 +2730,7 @@ object AST {
   case class Domain(
     loc: Location,
     id: Identifier,
-    author: Option[AuthorInfo] = Option.empty[AuthorInfo],
+    authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
     plants: Seq[Plant] = Seq.empty[Plant],
@@ -2742,10 +2744,9 @@ object AST {
       with DomainDefinition
       with WithIncludes
       with WithTerms {
-    override def isEmpty: Boolean = super.isEmpty && author.isEmpty
     def contents: Seq[DomainDefinition] = {
       domains ++ types.iterator ++ contexts ++ plants ++ stories ++ terms ++
-        includes
+        includes ++ authors
     }
   }
 }
