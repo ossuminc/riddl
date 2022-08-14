@@ -35,21 +35,24 @@ class DomainValidatorTest extends ValidatingTest {
                     |    email: "reid@reactific.com"
                     |    organization: "Reactific Software Inc."
                     |    title: "President"
-                    |  }
+                    |  } described as "identifying"
                     |} described as "example"
                     |""".stripMargin
       parseAndValidate[Domain](input) {
         (domain: Domain, rpi: RiddlParserInput, messages: ValidationMessages) =>
           domain mustNot be(empty)
-          domain.contents mustBe empty
+          domain.contents mustNot be(empty)
           val expectedAuthor = AuthorInfo(
             (2, 3, rpi), Identifier((2,10,rpi), "Reid"),
             LiteralString((3, 11, rpi), "Reid Spencer"),
             LiteralString((4, 12, rpi), "reid@reactific.com"),
             Some(LiteralString((5, 19, rpi), "Reactific Software Inc.")),
-            Some(LiteralString((6, 12, rpi), "President"))
+            Some(LiteralString((6, 12, rpi), "President")),
+            None,None,Some(BlockDescription((7,18,rpi),
+              Seq(LiteralString((7,18,rpi),"identifying"))))
           )
-          domain.authors must contain(expectedAuthor)
+          domain.authors mustNot be(empty)
+          domain.authors.head must be(expectedAuthor)
           messages mustBe empty
       }
     }
