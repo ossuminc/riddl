@@ -68,8 +68,8 @@ lazy val utils = project.in(file("utils")).configure(C.withCoverage())
   .settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
-    scalacOptions := scala2_13_Options
-
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Seq(Dep.compress) ++ Dep.testing
   )
 
 lazy val language = project.in(file("language"))

@@ -169,8 +169,6 @@ object RiddlOptions {
         inputPath <- inputPathRes.asString
         outputPathRes <- objCur.atKey("output-dir")
         outputPath <- outputPathRes.asString
-        hugoPathRes <- objCur.atKey("hugo-path")
-        hugoPath <- hugoPathRes.asString
         baseURL <- optional(
           objCur, "base-url", Option.empty[String]) { cc =>
           cc.asString.map(Option[String])
@@ -217,7 +215,6 @@ object RiddlOptions {
           HugoTranslatingOptions(
             Option(Path.of(inputPath)),
             Option(Path.of(outputPath)),
-            Option(Path.of(hugoPath)),
             eraseOutput, Option(projectName),
             handleURL(baseURL), themes,
             handleURL(sourceURL), Option(editPath),
@@ -372,12 +369,7 @@ object RiddlOptions {
                   outputDir = o.fromOptions.outputDir
                 ))
               } else { p }
-              val r = if (o.fromOptions.hugoPath.nonEmpty) {
-                q.copy(hugoOptions = o.hugoOptions.copy(
-                  hugoPath = o.fromOptions.hugoPath
-                ))
-              } else { q }
-              Option(r)
+              Option(q)
             case RiddlOptions.HugoGitCheck => Option(o)
             case RiddlOptions.D3 => Option(o)
             case _ => Option(o)
@@ -457,9 +449,6 @@ object RiddlOptions {
       hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))),
     outputDir((v, c) => c.copy(
       hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))),
-    opt[File]('H', "hugo-path").optional().action((v, c) => c.copy(
-      hugoOptions = c.hugoOptions.copy(hugoPath = Option(v.toPath))
-    )).text("optional path to the hugo web site generator"),
     opt[String]('p', "project-name").optional()
       .action((v, c) => c.copy(
         hugoOptions = c.hugoOptions.copy(projectName = Option(v)))

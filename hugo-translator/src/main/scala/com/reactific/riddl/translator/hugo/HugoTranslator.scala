@@ -18,19 +18,17 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language._
-import com.reactific.riddl.utils.Zip
+import com.reactific.riddl.utils.{PathUtils, Tar, Zip}
 
 import java.io.{File, IOException}
 import java.net.URL
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable
-import scala.sys.process.Process
 
 case class HugoTranslatingOptions(
   inputFile: Option[Path] = None,
   outputDir: Option[Path] = None,
-  hugoPath: Option[Path] = None,
   eraseOutput: Boolean = false,
   projectName: Option[String] = None,
   baseUrl: Option[URL] = Option(new URL("https://example.com/")),
@@ -44,8 +42,6 @@ case class HugoTranslatingOptions(
   withTODOList: Boolean = true,
   withGraphicalTOC: Boolean = false)
     extends TranslatingOptions {
-  def inputRoot: Path = inputFile.getOrElse(Path.of(".")).toAbsolutePath
-  def staticInput: Path = inputRoot.resolve("static")
   def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
   def contentRoot: Path = outputRoot.resolve("content")
   def staticRoot: Path = outputRoot.resolve("static")
@@ -158,10 +154,9 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
 }
 
 object HugoTranslator extends Translator[HugoTranslatingOptions] {
-  val defaultOptions: HugoTranslatingOptions = HugoTranslatingOptions()
 
   val geekdoc_dest_dir = "hugo-geekdoc"
-  val geekDoc_version = "v0.27.4"
+  val geekDoc_version = "v0.34.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -177,33 +172,16 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     directory.delete
   }
 
-  def copyURLToDir(from: Option[URL], destDir: Path): String = {
-    if (from.isDefined) {
-      import java.io.InputStream
-      import java.nio.file.{Files, StandardCopyOption}
-      val nameParts = from.get.getFile.split('/')
-      if (nameParts.nonEmpty) {
-        val fileName = nameParts.last
-        val in: InputStream = from.get.openStream
-        destDir.toFile.mkdirs()
-        val dl_path = destDir.resolve(fileName)
-        Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
-        fileName
-      } else { "" }
-    } else { "" }
-  }
-
   def loadATheme(from: Option[URL], destDir: Path): Unit = {
     if (from.isDefined) {
-      val fileName = copyURLToDir(from, destDir)
+      val fileName = PathUtils.copyURLToDir(from.get, destDir)
       val zip_path = destDir.resolve(fileName)
       fileName match {
         case name if name.endsWith(".zip") =>
           Zip.unzip(zip_path, destDir)
           zip_path.toFile.delete()
         case name if name.endsWith(".tar.gz") =>
-          val rc = Process(s"tar zxf $fileName", cwd = destDir.toFile).!
-          if (rc != 0) {throw new IOException(s"Failed to unzip $zip_path")}
+          Tar.untar(zip_path, destDir)
           zip_path.toFile.delete()
         case _ =>
           throw new IllegalArgumentException("Can only load a theme from .tar.gz or .zip file")
@@ -270,8 +248,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
   def loadSiteLogo(options: HugoTranslatingOptions): Path = {
     options.siteLogo match {
-      case Some(_) =>
-        val fileName = copyURLToDir(options.siteLogo, options.staticRoot)
+      case Some(url) =>
+        val fileName = PathUtils.copyURLToDir(url, options.staticRoot)
         options.staticRoot.resolve(fileName)
       case None =>
         options.staticRoot.resolve("logo.png")
@@ -282,7 +260,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     import java.nio.file.Files
     import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
-    val src = ClassLoader.getSystemClassLoader.getResourceAsStream(name)
+    val src = this.getClass.getClassLoader.getResourceAsStream(name)
+    require(src != null, s"Cannot find resource named '$name' ")
     Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
   }
 
@@ -314,41 +293,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    def existsInPath(path: String): Boolean =
-      System.getenv("PATH").split(java.util.regex.Pattern.quote(
-        File.pathSeparator)
-      ).map(Path.of(_)).exists(p => Files.isExecutable(p.resolve(path)))
-
-    val hugoPath = options.hugoPath match {
-      case Some(path) if Files.isExecutable(path) =>
-        Some(path.toString)
-      case Some(path) if existsInPath(path.toString) =>
-        Some(path.toString)
-      case Some(path) =>
-        log.error(s"Unable to find hugo at: $path")
-        None
-      case None =>
-        Some("hugo")
-    }
-    hugoPath match {
-      case Some(path) =>
-        if (0 !=
-          Process(s"$path new site ${outDir.getAbsolutePath}", cwd = parent).!
-        ) {
-          log.error(s"Hugo could not create a site here: $outDir")
-        }
-        else {
-          loadThemes(options)
-          loadStaticAssets(
-            inputPath,
-            log,
-            options
-          ) // for reference from riddl doc blocks
-        }
-      case None =>
-        log.info("Setting up hugo site manually, no 'hugo' found")
-        manuallyMakeNewHugoSite(outDir)
-    }
+    manuallyMakeNewHugoSite(outDir)
+    loadThemes(options)
+    loadStaticAssets(inputPath, log, options)
     val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
     options.copy(siteLogoPath = Option(logoPath))
   }
