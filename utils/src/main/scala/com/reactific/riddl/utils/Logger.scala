@@ -16,8 +16,6 @@
 
 package com.reactific.riddl.utils
 
-import java.io.PrintWriter
-import java.io.StringWriter
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.collection.mutable
@@ -25,8 +23,8 @@ import scala.collection.mutable.ArrayBuffer
 
 object Logger {
   sealed trait Lvl {
-    override def toString: String =
-      this.getClass.getSimpleName.dropRight(1).toLowerCase
+    override def toString: String = this.getClass.getSimpleName.dropRight(1)
+      .toLowerCase
   }
 
   case object Severe extends Lvl
@@ -40,19 +38,19 @@ trait Logger {
 
   final def severe(s: => String): Unit = { write(Severe, s) }
   final def severe(s: => String, xcptn: Throwable): Unit = {
-    val message =
-      s"""$s: $xcptn
-         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
-         |""".stripMargin
+    val message = s"""$s: $xcptn
+                     |${ExceptionUtils.getRootCauseStackTrace(xcptn)
+      .mkString("\n")}
+                     |""".stripMargin
     write(Severe, message)
   }
 
   final def error(s: => String): Unit = { write(Error, s) }
   final def error(s: => String, xcptn: Throwable): Unit = {
-    val message =
-      s"""$s: $xcptn
-         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
-         |""".stripMargin
+    val message = s"""$s: $xcptn
+                     |${ExceptionUtils.getRootCauseStackTrace(xcptn)
+      .mkString("\n")}
+                     |""".stripMargin
     write(Error, message)
   }
 

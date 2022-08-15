@@ -18,7 +18,10 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Location
-import com.reactific.riddl.language.Terminals.{Keywords, Operators, Punctuation, Readability}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Operators
+import com.reactific.riddl.language.Terminals.Punctuation
+import com.reactific.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -36,15 +39,19 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def importDef[u: P]: P[DomainDefinition] = {
-    P(location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString)
-      .map { tuple => doImport(tuple._1, tuple._2, tuple._3) }
+    P(
+      location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~
+        Readability.from ~ literalString
+    ).map { tuple => doImport(tuple._1, tuple._2, tuple._3) }
   }
 
   def optionalNestedContent[u: P, T](parser: => P[T]): P[Seq[T]] = {
     P(open ~ parser.rep(0) ~ close)
   }
 
-  def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined /).map(_ => ret) }
+  def undefined[u: P, RT](ret: RT): P[RT] = {
+    P(Punctuation.undefined /).map(_ => ret)
+  }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
@@ -53,40 +60,46 @@ trait CommonParser extends NoWhiteSpaceParsers {
   def as[u: P]: P[Unit] = { P(StringIn(Readability.as, Readability.by).?) }
 
   def docBlock[u: P]: P[Seq[LiteralString]] = {
-    P((open ~ (markdownLines | literalStrings |
-      undefined(Seq.empty[LiteralString]) ) ~ close)
-      | literalString.map(Seq(_)))
+    P(
+      (open ~
+        (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~
+        close) | literalString.map(Seq(_))
+    )
   }
 
   def blockDescription[u: P]: P[BlockDescription] = {
-    P(location  ~ docBlock).map(tpl => BlockDescription(tpl._1,tpl._2))
+    P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
 
   def fileDescription[u: P]: P[FileDescription] = {
     P(location ~ Keywords.file ~ literalString)
-      .map(tpl => FileDescription(tpl._1,Path.of(tpl._2.s)))
+      .map(tpl => FileDescription(tpl._1, Path.of(tpl._2.s)))
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
     P(StringIn(Keywords.brief, Keywords.briefly) ~ literalString).?
   }
 
-  def description[u: P]: P[Option[Description]] =
-    P(StringIn(Keywords.described, Keywords.explained) ~
-      ((as ~ blockDescription) | (Readability.in ~ fileDescription))).?
-
+  def description[u: P]: P[Option[Description]] = P(
+    StringIn(Keywords.described, Keywords.explained) ~
+      ((as ~ blockDescription) | (Readability.in ~ fileDescription))
+  ).?
 
   def literalInteger[u: P]: P[LiteralInteger] = {
-    P(location ~ StringIn(Operators.plus, Operators.minus).? ~ CharIn("0-9").rep(1).!.map(_.toInt))
-      .map(s => LiteralInteger(s._1, BigInt(s._2)))
+    P(
+      location ~ StringIn(Operators.plus, Operators.minus).? ~ CharIn("0-9")
+        .rep(1).!.map(_.toInt)
+    ).map(s => LiteralInteger(s._1, BigInt(s._2)))
   }
 
   def literalDecimal[u: P]: P[LiteralDecimal] = {
     P(
-      location ~ StringIn(Operators.plus, Operators.minus).?.! ~ CharIn("0-9").rep(1).! ~
-        Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
+      location ~ StringIn(Operators.plus, Operators.minus).?.! ~ CharIn("0-9")
+        .rep(1).! ~ Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
-    ).map { case (loc, a, b, c, d, e) => LiteralDecimal(loc, BigDecimal(a + b + c + d + e)) }
+    ).map { case (loc, a, b, c, d, e) =>
+      LiteralDecimal(loc, BigDecimal(a + b + c + d + e))
+    }
   }
 
   def simpleIdentifier[u: P]: P[String] = {
@@ -97,7 +110,9 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P("'" ~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
   }
 
-  def anyIdentifier[u: P]: P[String] = { P(simpleIdentifier | quotedIdentifier) }
+  def anyIdentifier[u: P]: P[String] = {
+    P(simpleIdentifier | quotedIdentifier)
+  }
 
   def identifier[u: P]: P[Identifier] = {
     P(location ~ anyIdentifier).map(tpl => (Identifier.apply _).tupled(tpl))
@@ -109,7 +124,12 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[u: P]: P[Unit] = {
-    P(StringIn(Readability.is, Readability.are, Punctuation.colon, Punctuation.equals)).?
+    P(StringIn(
+      Readability.is,
+      Readability.are,
+      Punctuation.colon,
+      Punctuation.equals
+    )).?
   }
 
   def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
@@ -134,11 +154,13 @@ trait CommonParser extends NoWhiteSpaceParsers {
   )(mapper: => (Location, String, Seq[LiteralString]) => TY
   ): P[Seq[TY]] = {
     P(
-      (Keywords.options ~ Punctuation.roundOpen ~/ maybeOptionWithArgs(validOptions)
-        .rep(1, P(Punctuation.comma)) ~ Punctuation.roundClose).map(_.map { case (loc, opt, arg) =>
+      (Keywords.options ~ Punctuation.roundOpen ~/
+        maybeOptionWithArgs(validOptions).rep(1, P(Punctuation.comma)) ~
+        Punctuation.roundClose).map(_.map { case (loc, opt, arg) =>
         mapper(loc, opt, arg)
-      }) | (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))
-        .map(tpl => Seq(mapper.tupled(tpl)))
+      }) |
+        (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))
+          .map(tpl => Seq(mapper.tupled(tpl)))
     ).?.map {
       case Some(seq) => seq
       case None      => Seq.empty[TY]
@@ -153,19 +175,24 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
   }
 
-  def portNum[u: P]: P[String] = { P(CharsWhileIn("0-9").rep(min = 1, max = 5)).! }
+  def portNum[u: P]: P[String] = {
+    P(CharsWhileIn("0-9").rep(min = 1, max = 5)).!
+  }
 
   def urlPath[u: P]: P[String] = {
-    P(CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch)).rep(min = 0, max = 240)).!
+    P(
+      CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch))
+        .rep(min = 0, max = 240)
+    ).!
   }
 
   def httpUrl[u: P]: P[java.net.URL] = {
-    P("http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath).!.map(new URL(_))
+    P("http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath).!
+      .map(new URL(_))
   }
 
   def term[u: P]: P[Term] = {
-    P(
-      location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description
-    ).map(tpl => (Term.apply _).tupled(tpl))
+    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
+      .map(tpl => (Term.apply _).tupled(tpl))
   }
 }

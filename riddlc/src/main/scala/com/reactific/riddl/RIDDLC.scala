@@ -35,9 +35,7 @@ object RIDDLC {
 
   final def main(args: Array[String]): Unit = {
     val resultCode = runMain(args)
-    if (resultCode != 0) {
-      System.exit(resultCode)
-    }
+    if (resultCode != 0) { System.exit(resultCode) }
   }
 
   val log: Logger = SysLogger()
@@ -238,7 +236,10 @@ object RIDDLC {
     false
   }
 
-  def info(@unused options: RiddlOptions): Boolean = {
+  def info(
+    @unused
+    options: RiddlOptions
+  ): Boolean = {
     log.info("About riddlc:")
     log.info(s"           name: ${BuildInfo.name}")
     log.info(s"        version: ${BuildInfo.version}")
