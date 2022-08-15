@@ -17,29 +17,31 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Keywords, Readability}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For StreamingParser */
-trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser {
+trait StreamingParser
+    extends ReferenceParser with TypeParser with GherkinParser {
 
   def pipeDefinition[u: P]: P[Pipe] = {
     location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
-      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~ close ~ briefly ~
-      description
+      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~ close ~
+      briefly ~ description
   }.map { tpl => (Pipe.apply _).tupled(tpl) }
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ toEntity.? ~
+      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ fromEntity.? ~
         briefly ~ description
     ).map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ fromEntity.? ~
+      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ toEntity.? ~
         briefly ~ description
     ).map { tpl => (Outlet.apply _).tupled(tpl) }
   }
@@ -51,8 +53,8 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   def source[u: P]: P[Processor] = {
     P(
       location ~ Keywords.source ~/ identifier ~ is ~ open ~
-        (outlet.map(Seq(_)) | undefined(Seq.empty[Outlet])) ~ close ~ testedWithExamples ~ briefly ~
-        description
+        (outlet.map(Seq(_)) | undefined(Seq.empty[Outlet])) ~ close ~
+        testedWithExamples ~ briefly ~ description
     ).map { case (location, id, outlets, examples, brief, description) =>
       Processor(
         location,
@@ -70,8 +72,8 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
   def sink[u: P]: P[Processor] = {
     P(
       location ~ Keywords.sink ~/ identifier ~ is ~ open ~
-        (inlet.map(Seq(_)) | undefined(Seq.empty[Inlet])) ~ close ~ testedWithExamples ~ briefly ~
-        description
+        (inlet.map(Seq(_)) | undefined(Seq.empty[Inlet])) ~ close ~
+        testedWithExamples ~ briefly ~ description
     ).map { case (location, id, inlets, examples, brief, description) =>
       Processor(
         location,
@@ -90,50 +92,94 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
     P(
       location ~ Keywords.flow ~/ identifier ~ is ~ open ~
         ((inlet.map(Seq(_)) ~ outlet.map(Seq(_))) |
-          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~ testedWithExamples ~ briefly ~
-        description
-    ).map { case (location, id, (inlet, outlet), examples, brief, description) =>
-      Processor(location, id, Flow(location), inlet, outlet, examples, brief, description)
+          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
+        testedWithExamples ~ briefly ~ description
+    ).map {
+      case (location, id, (inlet, outlet), examples, brief, description) =>
+        Processor(
+          location,
+          id,
+          Flow(location),
+          inlet,
+          outlet,
+          examples,
+          brief,
+          description
+        )
     }
   }
 
   def split[u: P]: P[Processor] = {
     P(
       location ~ Keywords.split ~/ identifier ~ is ~ open ~
-        ((inlet.map(Seq(_)) ~ outlet.rep(2)) | undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~
-        close ~ testedWithExamples ~ briefly ~ description
-    ).map { case (location, id, (inlets, outlets), examples, brief, description) =>
-      Processor(location, id, Split(location), inlets, outlets, examples, brief, description)
+        ((inlet.map(Seq(_)) ~ outlet.rep(2)) |
+          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
+        testedWithExamples ~ briefly ~ description
+    ).map {
+      case (location, id, (inlets, outlets), examples, brief, description) =>
+        Processor(
+          location,
+          id,
+          Split(location),
+          inlets,
+          outlets,
+          examples,
+          brief,
+          description
+        )
     }
   }
 
   def merge[u: P]: P[Processor] = {
     P(
       location ~ Keywords.merge ~/ identifier ~ is ~ open ~
-        ((inlet.rep(2) ~ outlet.map(Seq(_))) | undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~
-        close ~ testedWithExamples ~ briefly ~ description
-    ).map { case (location, id, (inlets, outlets), examples, brief, description) =>
-      Processor(location, id, Merge(location), inlets, outlets, examples, brief, description)
+        ((inlet.rep(2) ~ outlet.map(Seq(_))) |
+          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
+        testedWithExamples ~ briefly ~ description
+    ).map {
+      case (location, id, (inlets, outlets), examples, brief, description) =>
+        Processor(
+          location,
+          id,
+          Merge(location),
+          inlets,
+          outlets,
+          examples,
+          brief,
+          description
+        )
     }
   }
 
   def multi[u: P]: P[Processor] = {
     P(
       location ~ Keywords.multi ~/ identifier ~ is ~ open ~
-        ((inlet.rep(2) ~ outlet.rep(2)) | undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~
-        close ~ testedWithExamples ~ briefly ~ description
-    ).map { case (location, id, (inlets, outlets), examples, brief, description) =>
-      Processor(location, id, Multi(location), inlets, outlets, examples, brief, description)
+        ((inlet.rep(2) ~ outlet.rep(2)) |
+          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
+        testedWithExamples ~ briefly ~ description
+    ).map {
+      case (location, id, (inlets, outlets), examples, brief, description) =>
+        Processor(
+          location,
+          id,
+          Multi(location),
+          inlets,
+          outlets,
+          examples,
+          brief,
+          description
+        )
     }
   }
 
-  def processor[u: P]: P[Processor] = P(source | flow | sink | merge | split | multi)
+  def processor[u: P]: P[Processor] =
+    P(source | flow | sink | merge | split | multi)
 
   def joint[u: P]: P[Joint] = {
     P(
       location ~ Keywords.joint ~/ identifier ~ is ~
-        ((inletRef ~ Readability.from) | (outletRef ~ Readability.to)) ~/ pipeRef ~ briefly ~
-        description
+        ((inletRef ~ Readability.from) | (outletRef ~ Readability.to)) ~/
+        pipeRef ~ briefly ~ description
     ).map { case (loc, id, streamletRef, pipeRef, briefly, desc) =>
       streamletRef match {
         case ir: InletRef  => InletJoint(loc, id, ir, pipeRef, briefly, desc)
@@ -146,20 +192,19 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
-  def plantDefinitions[u:P]: P[Seq[PlantDefinition]] = {
-    P(plantDefinition | plantInclude).rep(0)
+  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
+    P(plantDefinition | plantInclude).rep(1)
   }
 
   def plantDefinition[u: P]: P[PlantDefinition & ContextDefinition] = {
-    P(pipeDefinition | processor | joint | term )
+    P(pipeDefinition | processor | joint | term)
   }
 
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        (undefined(Seq.empty[PlantDefinition]) |
-          ( plantDefinition | plantInclude).rep(1) ) ~
-        close ~ briefly ~ description
+        (undefined(Seq.empty[PlantDefinition]) | plantDefinitions) ~ close ~
+        briefly ~ description
     ).map { case (loc, id, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
@@ -168,7 +213,18 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
       val outJoints = mapTo[OutletJoint](groups.get(classOf[OutletJoint]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
-      Plant(loc, id, pipes, processors, inJoints, outJoints, terms, includes, briefly, description)
+      Plant(
+        loc,
+        id,
+        pipes,
+        processors,
+        inJoints,
+        outJoints,
+        terms,
+        includes,
+        briefly,
+        description
+      )
     }
   }
 }
