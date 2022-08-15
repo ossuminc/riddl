@@ -35,7 +35,9 @@ object RIDDLC {
 
   final def main(args: Array[String]): Unit = {
     val resultCode = runMain(args)
-    if (resultCode != 0) { System.exit(resultCode) }
+    if (resultCode != 0) {
+      System.exit(resultCode)
+    }
   }
 
   val log: Logger = SysLogger()
@@ -53,7 +55,7 @@ object RIDDLC {
       }
     } catch {
       case NonFatal(exception) =>
-        log.error("Exception Thrown:", exception)
+        log.severe("Exception Thrown:", exception)
         3
     }
   }
@@ -69,6 +71,7 @@ object RIDDLC {
       case RiddlOptions.Hugo         => translateHugo(options)
       case RiddlOptions.HugoGitCheck => hugoGitCheck(options)
       case RiddlOptions.D3           => generateD3(options)
+      case RiddlOptions.Info         => info(options)
       case RiddlOptions.Kalix        => translateKalix(options)
       case _ =>
         log.error(s"A command must be specified as an option")
@@ -233,5 +236,19 @@ object RIDDLC {
   ): Boolean = {
     log.info(s"D3 Generation  is not yet supported.")
     false
+  }
+
+  def info(@unused options: RiddlOptions): Boolean = {
+    log.info("About riddlc:")
+    log.info(s"           name: ${BuildInfo.name}")
+    log.info(s"        version: ${BuildInfo.version}")
+    log.info(s"     start year: ${BuildInfo.startYear}")
+    log.info(s"       built at: ${BuildInfo.builtAtString}")
+    log.info(s"       licenses: ${BuildInfo.licenses}")
+    log.info(s"      org. name: ${BuildInfo.organizationName}")
+    log.info(s"      org. page: ${BuildInfo.organizationHomepage}")
+    log.info(s"  scala version: ${BuildInfo.scalaVersion}")
+    log.info(s"    sbt version: ${BuildInfo.sbtVersion}")
+    true
   }
 }

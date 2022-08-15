@@ -30,7 +30,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "handle missing }" in {
-      val input = "domain foo is { author is { ??? }\n"
+      val input = "domain foo is { author nobody is { ??? }\n"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
@@ -211,7 +211,7 @@ class ParserTest extends ParsingTest {
         case Right((content, rpi)) => content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            ArbitraryCondition(
+            ArbitraryExpression(
               LiteralString((1, 22, rpi), "x is greater or equal to 10")
             ),
             None
@@ -275,7 +275,7 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(WhenClause(
                   (9, 7, rpi),
-                  ArbitraryCondition(
+                  ArbitraryExpression(
                     LiteralString((9, 12, rpi), "I go fishing")
                   )
                 )),

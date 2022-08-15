@@ -1,14 +1,14 @@
 ---
 title: "Example"
 type: "page"
-weight: 10
+weight: 70
 draft: "false"
 summary: "RIDDL Example: Reactive BBQ"
 ---
 
 Some people can learn RIDDL faster by looking at examples than by reading 
 the informal definitions in the [language guide](../language) or the 
-formal definitions in the [grammar section](../grammar). To support that 
+formal definitions in the [grammar section](../audience/developers-guide/grammar). To support that 
 mode of learning, this section decomposes the domain of a restaurant, 
 Reactive BBQ. 
 

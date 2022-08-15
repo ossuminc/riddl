@@ -18,12 +18,15 @@ package com.reactific.riddl.utils
 
 import java.io.PrintWriter
 import java.io.StringWriter
+import org.apache.commons.lang3.exception.ExceptionUtils
+
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object Logger {
   sealed trait Lvl {
-    override def toString: String = this.getClass.getSimpleName.dropRight(1)
-      .toLowerCase
+    override def toString: String =
+      this.getClass.getSimpleName.dropRight(1).toLowerCase
   }
 
   case object Severe extends Lvl
@@ -36,14 +39,21 @@ trait Logger {
   import Logger.*
 
   final def severe(s: => String): Unit = { write(Severe, s) }
+  final def severe(s: => String, xcptn: Throwable): Unit = {
+    val message =
+      s"""$s: $xcptn
+         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
+         |""".stripMargin
+    write(Severe, message)
+  }
 
   final def error(s: => String): Unit = { write(Error, s) }
   final def error(s: => String, xcptn: Throwable): Unit = {
-    val sw = new StringWriter
-    val pw = new PrintWriter(sw)
-    pw.println(s"$s: $xcptn\n")
-    xcptn.printStackTrace(pw)
-    write(Error, sw.toString)
+    val message =
+      s"""$s: $xcptn
+         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
+         |""".stripMargin
+    write(Error, message)
   }
 
   final def warn(s: => String): Unit = { write(Warning, s) }
@@ -61,7 +71,7 @@ case class SysLogger() extends Logger {
 }
 
 case class StringLogger(capacity: Int = 512 * 2) extends Logger {
-  private val stringBuilder = new StringBuilder(capacity)
+  private val stringBuilder = new mutable.StringBuilder(capacity)
 
   def write(level: Logger.Lvl, s: String): Unit = stringBuilder.append("[")
     .append(level).append("] ").append(s).append("\n")

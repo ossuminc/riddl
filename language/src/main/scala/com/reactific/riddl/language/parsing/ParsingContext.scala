@@ -44,7 +44,7 @@ case class ParserError(
 
     } else {
       val errorLine = input.annotateErrorLine(loc)
-      s"Error: ${input.origin}$loc: $msg but got:\n$errorLine${if (context.nonEmpty) { " Context: " + context }}"
+      s"Error: $loc: $msg but got:\n$errorLine${if (context.nonEmpty) { " Context: " + context }}"
     }
   }
 }

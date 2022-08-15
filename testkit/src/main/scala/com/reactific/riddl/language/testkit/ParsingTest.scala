@@ -41,6 +41,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.InletJoint]  => joint(_)
       case x if x == classOf[AST.OutletJoint] => joint(_)
       case x if x == classOf[AST.Saga]        => saga(_)
+      case x if x == classOf[AST.Example]     => example(_)
       case _ => throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"
         )

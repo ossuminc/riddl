@@ -22,33 +22,31 @@ import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
 import com.reactific.riddl.utils.Zip
+import com.reactific.riddl.utils.{PathUtils, Tar, Zip}
 
 import java.io.File
 import java.io.IOException
 import java.net.URL
 import java.nio.file._
 import scala.collection.mutable
-import scala.sys.process.Process
 
 case class HugoTranslatingOptions(
   inputFile: Option[Path] = None,
   outputDir: Option[Path] = None,
-  hugoPath: Option[Path] = None,
   eraseOutput: Boolean = false,
   projectName: Option[String] = None,
+  siteTitle: Option[String] = None,
+  siteDescription: Option[String] = None,
+  siteLogoPath: Option[String] = Some("images/logo.png"),
   baseUrl: Option[URL] = Option(new URL("https://example.com/")),
   themes: Seq[(String, Option[URL])] =
     Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url)),
   sourceURL: Option[URL] = Some(new URL("http://localhost:1313/")),
   editPath: Option[String] = None,
-  siteLogo: Option[URL] = None,
-  siteLogoPath: Option[String] = Some("images/logo.png"),
   withGlossary: Boolean = true,
   withTODOList: Boolean = true,
-  withGraphicalTOC: Boolean = false)
-    extends TranslatingOptions {
-  def inputRoot: Path = inputFile.getOrElse(Path.of(".")).toAbsolutePath
-  def staticInput: Path = inputRoot.resolve("static")
+  withGraphicalTOC: Boolean = false
+) extends TranslatingOptions {
   def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
   def contentRoot: Path = outputRoot.resolve("content")
   def staticRoot: Path = outputRoot.resolve("static")
@@ -150,16 +148,12 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
 }
 
 object HugoTranslator extends Translator[HugoTranslatingOptions] {
-  val defaultOptions: HugoTranslatingOptions = HugoTranslatingOptions()
 
-  val geekdoc_dest_dir = "hugo-geekdoc"
-  val geekDoc_version = "v0.27.4"
+  val geekDoc_version = "v0.34.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
   )
-
-  val sitemap_xsd = "https://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
 
   def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
@@ -178,8 +172,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
           Zip.unzip(zip_path, destDir)
           zip_path.toFile.delete()
         case name if name.endsWith(".tar.gz") =>
-          val rc = Process(s"tar zxf $fileName", cwd = destDir.toFile).!
-          if (rc != 0) { throw new IOException(s"Failed to unzip $zip_path") }
+          Tar.untar(zip_path, destDir)
           zip_path.toFile.delete()
         case _ => throw new IllegalArgumentException(
             "Can only load a theme from .tar.gz or .zip file"
@@ -211,81 +204,41 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     }
   }
 
-  def loadSiteLogo(options: HugoTranslatingOptions): Path = {
-    options.siteLogo match {
-      case Some(_) =>
-        val fileName = TextFileWriter
-          .copyURLToDir(options.siteLogo, options.staticRoot)
-        options.staticRoot.resolve(fileName)
-      case None => options.staticRoot.resolve("logo.png")
-    }
-  }
-
-  def copyResource(destination: Path): Unit = {
+  def copyResource(destination: Path):Unit = {
+    import java.nio.file.Files
+    import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
     TextFileWriter.copyResource(name, destination)
   }
 
-  def manuallyMakeNewHugoSite(where: File): Unit = {
-    val path = where.toPath
-    if (Files.isDirectory(path)) {
-      Files.createDirectories(path.resolve("archetypes"))
-      Files.createDirectories(path.resolve("content"))
-      Files.createDirectories(path.resolve("data"))
-      Files.createDirectories(path.resolve("layouts"))
-      Files.createDirectories(path.resolve("public"))
-      Files.createDirectories(path.resolve("static"))
-      Files.createDirectories(path.resolve("themes"))
-      copyResource(path.resolve("config.toml"))
-      copyResource(path.resolve("archetypes").resolve("default.md"))
-    }
+  def manuallyMakeNewHugoSite(path: Path): Unit = {
+    Files.createDirectories(path)
+    Files.createDirectories(path.resolve("archetypes"))
+    Files.createDirectories(path.resolve("content"))
+    Files.createDirectories(path.resolve("data"))
+    Files.createDirectories(path.resolve("layouts"))
+    Files.createDirectories(path.resolve("public"))
+    Files.createDirectories(path.resolve("static"))
+    Files.createDirectories(path.resolve("themes"))
+    copyResource(path.resolve("archetypes").resolve("default.md"))
   }
 
   def makeDirectoryStructure(
     inputPath: Path,
     log: Logger,
     options: HugoTranslatingOptions
-  ): HugoTranslatingOptions = {
+  ): Unit = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) { if (options.eraseOutput) { deleteAll(outDir) } }
-    else { outDir.mkdirs() }
+    if (outDir.exists()) {if (options.eraseOutput) {deleteAll(outDir)}}
+    else {outDir.mkdirs()}
     val parent = outDir.getParentFile
     require(
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    def existsInPath(path: String): Boolean = System.getenv("PATH")
-      .split(java.util.regex.Pattern.quote(File.pathSeparator)).map(Path.of(_))
-      .exists(p => Files.isExecutable(p.resolve(path)))
-
-    val hugoPath = options.hugoPath match {
-      case Some(path) if Files.isExecutable(path)    => Some(path.toString)
-      case Some(path) if existsInPath(path.toString) => Some(path.toString)
-      case Some(path) =>
-        log.error(s"Unable to find hugo at: $path")
-        None
-      case None => Some("hugo")
-    }
-    hugoPath match {
-      case Some(path) =>
-        if (
-          0 !=
-            Process(s"$path new site ${outDir.getAbsolutePath}", cwd = parent).!
-        ) { log.error(s"Hugo could not create a site here: $outDir") }
-        else {
-          loadThemes(options)
-          loadStaticAssets(
-            inputPath,
-            log,
-            options
-          ) // for reference from riddl doc blocks
-        }
-      case None =>
-        log.info("Setting up hugo site manually, no 'hugo' found")
-        manuallyMakeNewHugoSite(outDir)
-    }
-    val logoPath = loadSiteLogo(options).relativize(options.staticRoot).toString
-    options.copy(siteLogoPath = Option(logoPath))
+    manuallyMakeNewHugoSite(outDir.toPath)
+    loadThemes(options)
+    loadStaticAssets(inputPath, log, options)
   }
 
   def writeConfigToml(
@@ -339,13 +292,12 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       options.outputRoot.getFileName.toString.nonEmpty,
       "Output path is empty"
     )
-
-    val newOptions = makeDirectoryStructure(options.inputFile.get, log, options)
-    val maybeAuthor = root.contents.headOption match {
-      case Some(domain) => domain.author
-      case None         => Option.empty[AuthorInfo]
+    makeDirectoryStructure(options.inputFile.get, log, options)
+    val someAuthors = root.contents.headOption match {
+      case Some(domain) => domain.authors
+      case None         => Seq.empty[AuthorInfo]
     }
-    writeConfigToml(newOptions, maybeAuthor)
+    writeConfigToml(options, someAuthors.headOption)
     val state = HugoTranslatorState(options)
     val parentStack = mutable.Stack[ParentDefOf[Definition]]()
 
@@ -412,29 +364,31 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   ): String = {
     val auth: AuthorInfo = author.getOrElse(AuthorInfo(
       1 -> 1,
+      id = Identifier(1->1,"unknown"),
       name = LiteralString(1 -> 1, "Not Provided"),
       email = LiteralString(1 -> 1, "somebody@somewere.tld")
     ))
     val themes: String = {
       options.themes.map(_._1).mkString("[ \"", "\", \"", "\" ]")
     }
+    val baseURL: String = options.baseUrl.fold("https://example.prg/")(_.toString)
     val srcURL: String = options.sourceURL.fold("")(_.toString)
     val editPath: String = options.editPath.getOrElse("")
-    val siteLogoPath: String = options.siteLogoPath.getOrElse("logo.png")
+    val siteLogoPath: String = options.siteLogoPath.getOrElse("images/logo.png")
     val legalPath: String = "/legal"
     val privacyPath: String = "/privacy"
+    val siteTitle = options.siteTitle.getOrElse("Unspecified Site Title")
+    val siteName = options.projectName.getOrElse("Unspecified Project Name")
+    val siteDescription = options.siteDescription.getOrElse("Unspecified Project Description")
 
     s"""######################## Hugo Configuration ####################
        |
        |# Configure GeekDocs
-       |languageCode = 'en-us'
-       |title = '${options.projectName.getOrElse("Unspecified Project Title")}'
-       |name = "${options.projectName.getOrElse("Unspecified Project Name")}"
-       |description = "${options.projectName
-      .getOrElse("Unspecified Project Description")}"
-       |baseUrl = "${options.baseUrl.fold("https://example.prg/")(_.toString)}"
-       |homepage = "https://example.org/"
-       |demosite = "https://example.org/"
+       |baseUrl = "$baseURL"
+       |languageCode = "en-us"
+       |title = "$siteTitle"
+       |name = "$siteName"
+       |description = "$siteDescription"
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = $themes

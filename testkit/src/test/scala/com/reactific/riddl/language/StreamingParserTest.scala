@@ -7,36 +7,43 @@ import com.reactific.riddl.language.testkit.ParsingTest
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {
 
+  val sourceInput =
+    """source GetWeatherForecast is {
+      |  outlet Weather is Forecast
+      |} brief "foo" described by "This is a source for Forecast data"
+      |""".stripMargin
+  def sourceExpected(rpi: RiddlParserInput, col: Int = 0, row: Int = 0) = Processor(
+    (row+1, col+1, rpi),
+    Identifier((row+1, col+8, rpi), "GetWeatherForecast"),
+    Source((row+1, col+1, rpi)),
+    List.empty[Inlet],
+    List(Outlet(
+      (row+2, 3, rpi),
+      Identifier((row+2, 10, rpi), "Weather"),
+      TypeRef((row+2, 21, rpi), PathIdentifier((row+2, 21, rpi), List("Forecast")))
+    )),
+    List.empty[Example],
+    Some(LiteralString((row+3, 9, rpi), "foo")),
+    Option(BlockDescription(
+      (row+3, 28, rpi),
+      List(LiteralString(
+        (row+3, 28, rpi),
+        "This is a source for Forecast " + "data"
+      ))
+    ))
+  )
+
   "StreamingParser" should {
     "recognize a source processor" in {
-      val rpi = RiddlParserInput(
-        """
-          |source GetWeatherForecast is {
-          |  outlet Weather is Forecast
-          |} brief "foo" described by "This is a source for Forecast data"
-          |""".stripMargin
-      )
-      val expected = Processor(
-        (1, 1, rpi),
-        Identifier((2, 8, rpi), "GetWeatherForecast"),
-        Source((1, 1, rpi)),
-        List.empty[Inlet],
-        List(Outlet(
-          (3, 3, rpi),
-          Identifier((3, 10, rpi), "Weather"),
-          TypeRef((3, 21, rpi), PathIdentifier((3, 21, rpi), List("Forecast")))
-        )),
-        List.empty[Example],
-        Some(LiteralString((4, 9, rpi), "foo")),
-        Option(BlockDescription(
-          (4, 28, rpi),
-          List(LiteralString(
-            (4, 28, rpi),
-            "This is a source for Forecast " + "data"
-          ))
-        ))
-      )
-      checkDefinition[Processor, Processor](rpi, expected, identity)
+      val rpi = RiddlParserInput(sourceInput)
+      checkDefinition[Processor, Processor](rpi, sourceExpected(rpi), identity)
+    }
+    "recognize a source processor in a context" in {
+      val input = s"context foo is { $sourceInput }"
+      val rpi = RiddlParserInput(input)
+      val expected = Context((1,1,rpi),Identifier((1,9,rpi),"foo"),
+        processors = Seq(sourceExpected(rpi, 17)))
+      checkDefinition[Context, Context](rpi, expected, identity)
     }
     "recognize a Pipe" in {
       val rpi =

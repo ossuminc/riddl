@@ -22,9 +22,9 @@ function riddle is { requires {s: Subject}  yields { r: Riddle } }
 ```
 ## Applicability
 Functions have applicability across several RIDDL definitions:
-* [Context APIs](../hierarchy/domain/context/api) - APIs are collections of 
+* [Context APIs](../root/domain/context/api) - APIs are collections of 
   functions
-* [Entity Handler](../hierarchy/domain/context/entity/handler) - As 
+* [Entity Handler](../root/domain/context/entity/handler) - As 
   utilities 
   in an entity 
   [handler](Encapsulate repeating logic from a 

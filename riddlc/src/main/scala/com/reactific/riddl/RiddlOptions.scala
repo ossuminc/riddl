@@ -17,6 +17,7 @@
 package com.reactific.riddl
 
 import com.reactific.riddl.RIDDLC.log
+import com.reactific.riddl.RiddlOptions.Info
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.ReformattingOptions
 import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
@@ -81,6 +82,7 @@ object RiddlOptions {
   final case object From extends Command
   final case object Repeat extends Command
   final case object D3 extends Command
+  final case object Info extends Command
 
   def str2Command(str: String): Command = {
     str match {
@@ -93,6 +95,7 @@ object RiddlOptions {
       case "hugo"           => Hugo
       case "kalix"          => Kalix
       case "d3"             => D3
+      case "info" => Info
       case _                => Unspecified
     }
   }
@@ -141,14 +144,15 @@ object RiddlOptions {
   }
 
   implicit val ifReader: ConfigReader[InputFileOptions] = {
-    (cur: ConfigCursor) =>
-      {
-        for {
-          objCur <- cur.asObjectCursor
-          inFileRes <- objCur.atKey("input-file").map(_.asString)
-          inFile <- inFileRes
-        } yield { InputFileOptions(inputFile = Some(Path.of(inFile))) }
+    (cur: ConfigCursor) => {
+      for {
+        objCur <- cur.asObjectCursor
+        inFileRes <- objCur.atKey("input-file").map(_.asString)
+        inFile <- inFileRes
+      } yield {
+        InputFileOptions(inputFile = Some(Path.of(inFile)))
       }
+    }
   }
 
   implicit val reformatReader: ConfigReader[ReformattingOptions] = {
@@ -176,86 +180,86 @@ object RiddlOptions {
   }
 
   implicit val htoReader: ConfigReader[HugoTranslatingOptions] = {
-    (cur: ConfigCursor) =>
-      {
-        for {
-          objCur <- cur.asObjectCursor
-          eraseOutput <- optional(objCur, "erase-output", true) { cc =>
-            cc.asBoolean
-          }
-          projectName <-
-            optional(objCur, "project-name", "No Project Name Specified") {
-              cur => cur.asString
+    (cur: ConfigCursor) => {
+      for {
+        objCur <- cur.asObjectCursor
+        inputPathRes <- objCur.atKey("input-file")
+        inputPath <- inputPathRes.asString
+        outputPathRes <- objCur.atKey("output-dir")
+        outputPath <- outputPathRes.asString
+        eraseOutput <- optional(objCur, "erase-output",
+          true) { cc => cc.asBoolean }
+        projectName <- optional(objCur, "project-name",
+          "No Project Name") { cur => cur.asString }
+        siteTitle <- optional(objCur, "site-title", "No Site Title") {
+          cur => cur.asString
+        }
+        siteDescription <- optional(objCur, "site-description", "No Site Description") {
+          cur => cur.asString
+        }
+        siteLogoPath <- optional(objCur, "site-logo-path",
+          "static/somewhere") { cc => cc.asString }
+        baseURL <- optional(
+          objCur, "base-url", Option.empty[String]) { cc =>
+          cc.asString.map(Option[String])
+        }
+        themesMap <- optional(objCur, "themes",
+          Map.empty[String, ConfigCursor]) { cc => cc.asMap }
+        sourceURL <- optional(objCur, "source-url", Option.empty[String]) {
+          cc => cc.asString.map(Option[String])
+        }
+        editPath <- optional(objCur, "edit-path",
+          "path/to/hugo/content") { cc => cc.asString }
+        withGlossary <- optional(objCur, "with-glossary", true) {
+          cc => cc.asBoolean
+        }
+        withToDoList <- optional(objCur, "with-todo-list", true) {
+          cc => cc.asBoolean
+        }
+        withGraphicalTOC <- optional(objCur, "with-graphical-toc", false) {
+          cc => cc.asBoolean
+        }
+      } yield {
+        def handleURL(url: Option[String]): Option[URL] = {
+          if (url.isEmpty || url.get.isEmpty) {
+            None
+          } else {
+            try {
+              Option(new java.net.URL(url.get))
+            } catch {
+              case NonFatal(x) =>
+                log.warn(s"Malformed URL: ${x.toString}")
+                None
             }
-          inputPathRes <- objCur.atKey("input-file")
-          inputPath <- inputPathRes.asString
-          outputPathRes <- objCur.atKey("output-dir")
-          outputPath <- outputPathRes.asString
-          hugoPathRes <- objCur.atKey("hugo-path")
-          hugoPath <- hugoPathRes.asString
-          baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
-            cc.asString.map(Option[String])
           }
-          themesMap <-
-            optional(objCur, "themes", Map.empty[String, ConfigCursor]) { cc =>
-              cc.asMap
-            }
-          sourceURL <- optional(objCur, "source-url", Option.empty[String]) {
-            cc => cc.asString.map(Option[String])
-          }
-          editPath <- optional(objCur, "edit-path", "path/to/hugo/content") {
-            cc => cc.asString
-          }
-          siteLogoURL <-
-            optional(objCur, "site-logo-url", Option.empty[String]) { cc =>
-              cc.asString.map(Option[String])
-            }
-          siteLogoPath <-
-            optional(objCur, "site-logo-path", "static/somewhere") { cc =>
-              cc.asString
-            }
-        } yield {
-          def handleURL(url: Option[String]): Option[URL] = {
-            if (url.isEmpty || url.get.isEmpty) { None }
-            else {
-              try { Option(new java.net.URL(url.get)) }
-              catch {
-                case NonFatal(x) =>
-                  log.warn(s"Malformed URL: ${x.toString}")
+        }
+
+        val themes = if (themesMap.isEmpty) {
+          Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url))
+        } else {
+          val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
+          themesEither.map { case (name, maybeUrl) =>
+            name -> {
+              maybeUrl match {
+                case Right(s) => handleURL(Option(s))
+                case Left(x) =>
+                  val errs = stringifyConfigReaderErrors(x).mkString("\n")
+                  log.error(errs)
                   None
               }
             }
           }
+        }
+        HugoTranslatingOptions(
+          Option(Path.of(inputPath)),
+          Option(Path.of(outputPath)),
+          eraseOutput, Option(projectName), Option(siteTitle),
+          Option(siteDescription),
+          Option(siteLogoPath),
+          handleURL(baseURL), themes,
+          handleURL(sourceURL), Option(editPath),
 
-          val themes =
-            if (themesMap.isEmpty) {
-              Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url))
-            } else {
-              val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
-              themesEither.map { case (name, maybeUrl) =>
-                name ->
-                  (maybeUrl match {
-                    case Right(s) => handleURL(Option(s))
-                    case Left(x) =>
-                      val errs = stringifyConfigReaderErrors(x).mkString("\n")
-                      log.error(errs)
-                      None
-                  })
-              }
-            }
-          HugoTranslatingOptions(
-            Option(Path.of(inputPath)),
-            Option(Path.of(outputPath)),
-            Option(Path.of(hugoPath)),
-            eraseOutput,
-            Option(projectName),
-            handleURL(baseURL),
-            themes,
-            handleURL(sourceURL),
-            Option(editPath),
-            handleURL(siteLogoURL),
-            Option(siteLogoPath)
-          )
+          withGlossary, withToDoList, withGraphicalTOC)
         }
       }
   }
@@ -432,13 +436,7 @@ object RiddlOptions {
           o.hugoOptions.copy(outputDir = o.fromOptions.outputDir)
         )
       } else { p }
-    val r =
-      if (o.fromOptions.hugoPath.nonEmpty) {
-        q.copy(hugoOptions =
-          o.hugoOptions.copy(hugoPath = o.fromOptions.hugoPath)
-        )
-      } else { q }
-    Option(r)
+    Option(q)
   }
   final private def copyKalixOptions(o: RiddlOptions): Option[RiddlOptions] = {
     val p =
@@ -570,47 +568,47 @@ object RiddlOptions {
   }
 
   private val hugoOptionsParser = Seq(
-    inputFile((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))
-    ),
-    outputDir((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))
-    ),
-    opt[File]('H', "hugo-path").optional().action((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(hugoPath = Option(v.toPath)))
-    ).text("optional path to the hugo web site generator"),
-    opt[String]('p', "project-name").optional().action((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(projectName = Option(v)))
-    ).text("optional project name to associate with the generated output")
+    inputFile((v, c) => c.copy(
+      hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))),
+    outputDir((v, c) => c.copy(
+      hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))),
+    opt[String]('p', "project-name").optional()
+      .action((v, c) => c.copy(
+        hugoOptions = c.hugoOptions.copy(projectName = Option(v)))
+      )
+      .text("optional project name to associate with the generated output")
       .validate(n =>
         if (n.isBlank) {
           Left("optional project-name cannot be blank or empty")
-        } else { Right(()) }
+        } else {
+          Right(())
+        }
       ),
     opt[Boolean]('e', name = "erase-output")
       .text("Erase entire output directory before putting out files"),
-    opt[URL]('b', "base-url").optional().action((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Some(v)))
-    ).text("Optional base URL for root of generated http URLs"),
-    opt[Map[String, String]]('t', name = "themes").action((t, c) =>
-      c.copy(hugoOptions =
-        c.hugoOptions
-          .copy(themes = t.toSeq.map(x => x._1 -> Some(new URL(x._2))))
-      )
-    ),
-    opt[URL]('s', name = "source-url").action((u, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u)))
-    ).text("URL to the input file's Git Repository"),
-    opt[String]('h', name = "edit-path").action((h, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h)))
-    ).text("Path to add to source-url to allow editing"),
-    opt[URL]('l', name = "site-logo-url").action((u, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(siteLogo = Option(u)))
-    ).text("URL to the site's logo image for use by site"),
-    opt[String]('m', "site-logo-path").action((s, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(siteLogoPath = Option(s)))
-    ).text("""Path, in 'static' directory to placement and use
-             |of the site logo.""".stripMargin)
+    opt[URL]('b', "base-url").optional()
+      .action((v, c) => c.copy(hugoOptions = c.hugoOptions.copy(
+        baseUrl = Some(v)
+      )))
+      .text("Optional base URL for root of generated http URLs"),
+    opt[Map[String, String]]('t', name = "themes")
+      .action((t, c) => c.copy(hugoOptions =
+        c.hugoOptions.copy(themes = t.toSeq.map(x =>
+          x._1 -> Some(new URL(x._2))))
+      )),
+    opt[URL]('s', name = "source-url")
+      .action((u, c) => c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u))))
+      .text("URL to the input file's Git Repository"),
+    opt[String]('h', name = "edit-path")
+      .action((h, c) => c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h))))
+      .text("Path to add to source-url to allow editing"),
+    opt[String]('m', "site-logo-path")
+      .action((s, c) => c.copy(hugoOptions =
+        c.hugoOptions.copy(siteLogoPath = Option(s)))
+      ).text(
+      """Path, in 'static' directory to placement and use
+        |of the site logo.""".stripMargin
+    )
   )
 
   private val kalixOptionsParser = Seq(
@@ -728,8 +726,8 @@ object RiddlOptions {
         "\nof documents. RIDDL is a language for system specification based on Domain",
         "\nDrive Design, Reactive Architecture, and Agile principles.\n"
       ),
-      version('V', "version"),
       help('h', "help").text("Print out help/usage information and exit"),
+      version('V', "version"),
       opt[Unit]('t', name = "show-times").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(showTimes = true))
       ).text("Show compilation phase execution times "),
@@ -762,43 +760,64 @@ object RiddlOptions {
         c.copy(commonOptions = c.commonOptions.copy(showStyleWarnings = false))
       ).text("Show warnings about questionable input style. ")
     ) ++ repeatableCommands ++ OParser.sequence(
-      cmd("help").action((_, c) => c.copy(command = Help))
-        .text("Print out how to use this program"),
-      cmd("repeat").action((_, c) => c.copy(command = Repeat)).children(
-        arg[File]("config-file").required().action((f, c) =>
-          c.copy(repeatOptions =
-            c.repeatOptions.copy(configFile = Some(f.toPath))
-          )
-        ).text("The path to the configuration file that should be repeated"),
-        arg[FiniteDuration]("refresh-rate").optional().validate {
-          case r if r.toMillis < 1000 =>
-            Left("<refresh-rate> is too fast, minimum is 1 seconds")
-          case r if r.toDays > 1 =>
-            Left("<refresh-rate> is too slow, maximum is 1 day")
-          case _ => Right(())
-        }.action((r, c) =>
-          c.copy(repeatOptions = c.repeatOptions.copy(refreshRate = r))
-        ).text("""Specifies the rate at which the <git-clone-dir> is checked
-                 |for updates so the process to regenerate the hugo site is
-                 |started""".stripMargin),
-        arg[Int]("max-cycles").optional().validate {
-          case x if x < 1           => Left("<max-cycles> can't be less than 1")
-          case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
-          case _                    => Right(())
-        }.action((m, c) =>
-          c.copy(repeatOptions = c.repeatOptions.copy(maxCycles = m))
-        ).text("""Limit the number of check cycles that will be repeated.""")
-      ).text("""This command supports the edit-build-check cycle. It doesn't end
-               |until <max-cycles> has completed or EOF is reached on standard
-               |input. During that time, the selected subcommands are repeated.
-               |""".stripMargin),
-      opt[Unit]('n', "interactive").optional().action((_, c) =>
-        c.copy(repeatOptions = c.repeatOptions.copy(interactive = true))
-      ).text(
-        """This option causes the repeat command to read from the standard
-          |input and when it reaches EOF (Ctrl-D is entered) then it cancels
-          |the loop to exit.""".stripMargin
-      )
+      cmd("help").action((_,c) => c.copy(command = Help))
+        .text("Print out how to use this program" ),
+      cmd("info").action((_,c) => c.copy(command = Info))
+        .text("Print out build information about this program"),
+      cmd("repeat").action((_,c) => c.copy(command = Repeat))
+        .children(
+          arg[File]("config-file")
+            .required()
+            .action((f, c) => c.copy(repeatOptions = c.repeatOptions.copy(
+              configFile = Some(f.toPath)
+            )))
+            .text("The path to the configuration file that should be repeated"),
+          arg[FiniteDuration]("refresh-rate")
+            .optional()
+            .validate {
+              case r if r.toMillis < 1000 =>
+                Left("<refresh-rate> is too fast, minimum is 1 seconds")
+              case r if r.toDays > 1 =>
+                Left("<refresh-rate> is too slow, maximum is 1 day")
+              case _ => Right(())
+            }
+            .action((r, c) => c.copy(repeatOptions = c.repeatOptions.copy(
+              refreshRate = r
+            )))
+            .text(
+              """Specifies the rate at which the <git-clone-dir> is checked
+                |for updates so the process to regenerate the hugo site is
+                |started""".stripMargin
+            ),
+          arg[Int]("max-cycles")
+            .optional()
+            .validate {
+              case x if x < 1 => Left("<max-cycles> can't be less than 1")
+              case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
+              case _ => Right(())
+            }
+            .action((m, c) => c.copy(repeatOptions = c.repeatOptions.copy(
+              maxCycles = m
+            )))
+            .text(
+              """Limit the number of check cycles that will be repeated."""
+            ),
+        )
+        .text(
+          """This command supports the edit-build-check cycle. It doesn't end
+            |until <max-cycles> has completed or EOF is reached on standard
+            |input. During that time, the selected subcommands are repeated.
+            |""".stripMargin
+        ),
+      opt[Unit]('n',"interactive")
+        .optional().action((_,c) =>
+          c.copy(repeatOptions = c.repeatOptions.copy(interactive = true))
+        )
+        .text(
+          """This option causes the repeat command to read from the standard
+            |input and when it reaches EOF (Ctrl-D is entered) then it cancels
+            |the loop to exit.""".stripMargin
+        )
     )
   }
 }

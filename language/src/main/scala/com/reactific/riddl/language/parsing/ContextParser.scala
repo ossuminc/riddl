@@ -23,10 +23,11 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
 trait ContextParser
-    extends GherkinParser
+    extends HandlerParser
     with AdaptorParser
     with EntityParser
     with SagaParser
+    with StreamingParser
     with TypeParser {
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
@@ -49,9 +50,10 @@ trait ContextParser
   }
 
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
-    P( undefined(Seq.empty[ContextDefinition]) |
-      (typeDef | entity | adaptor  | function | saga | term | contextInclude
-      ).rep(0)
+    P(
+      undefined(Seq.empty[ContextDefinition]) |
+        (typeDef | contextHandler | entity | adaptor | function | saga |
+          plantDefinition | term | contextInclude).rep(0)
     )
   }
 
@@ -63,9 +65,11 @@ trait ContextParser
     ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
+      val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
@@ -77,9 +81,11 @@ trait ContextParser
         entities,
         adaptors,
         sagas,
+        processors,
         functions,
         terms,
         includes,
+        handlers,
         briefly,
         description
       )

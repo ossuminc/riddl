@@ -25,7 +25,11 @@ jobs:
           extended: true
 
       - name: Build
-        run: cd doc/src/hugo ; hugo --minify -D -v --printMemoryUsage
+        run: cd doc/src/hugo ; \
+          hugo --minify -v \
+          --baseURL "https://riddl.tech" \
+          --printMemoryUsage \ 
+          --noBuildLock
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

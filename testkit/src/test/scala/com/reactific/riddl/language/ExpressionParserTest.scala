@@ -155,8 +155,8 @@ class ExpressionParserTest extends ParsingTest {
           Comparison(
             1 -> 4,
             lt,
-            ValueCondition(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
-            ValueCondition(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
+            ValueExpression(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
+            ValueExpression(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
           ),
           LiteralInteger(1 -> 13, BigInt(42)),
           LiteralInteger(1 -> 16, BigInt(21))

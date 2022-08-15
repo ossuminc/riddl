@@ -8,12 +8,12 @@ draft: "false"
 RIDDL uses Gherkin examples in various places to express a functionality or behavior requirement on
 the definition that uses it. Gherkin examples are used in these places:
 
-* [Adaptors](../hierarchy/domain/context/adaptor)
-* [Entity Handlers](../hierarchy/domain/context/entity/handler.md)
+* [Adaptors](../root/domain/context/adaptor)
+* [Entity Handlers](../root/domain/context/entity/handler.md)
 * [Functions](./functions.md)
-* [Processors](../hierarchy/domain/streaming/processor.md)
-* [Saga Actions](../hierarchy/domain/context/saga)
-* [Story](../hierarchy/domain/story)
+* [Processors](../root/domain/streaming/processor.md)
+* [Saga Actions](../root/domain/context/saga)
+* [Story](../root/domain/story)
 
 ## Structure
 

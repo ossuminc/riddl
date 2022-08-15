@@ -18,7 +18,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Terminals
-import com.reactific.riddl.language.Terminals.{Keywords, Readability}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -30,6 +31,12 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   def arbitraryAction[u: P]: P[ArbitraryAction] = {
     P(location ~ literalString ~ description).map { tpl =>
       (ArbitraryAction.apply _).tupled(tpl)
+    }
+  }
+
+  def errorAction[u: P]: P[ErrorAction] = {
+    P(location ~ Keywords.error ~ literalString ~ description).map {
+      tpl => (ErrorAction.apply _).tupled(tpl)
     }
   }
 
@@ -56,6 +63,11 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
     P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
+  }
+
+  def yieldAction[u: P]: P[YieldAction] = {
+    P(Keywords.yield_ ~/ location ~ messageConstructor ~ description)
+      .map(t => (YieldAction.apply _).tupled(t))
   }
 
   def publishAction[u: P]: P[PublishAction] = {
@@ -98,15 +110,15 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def sagaStepAction[u: P]: P[SagaStepAction] = {
     P(
-      arbitraryAction | publishAction | tellAction | askAction | replyAction |
-        functionCallAction
+      arbitraryAction | errorAction | publishAction | tellAction | askAction |
+        replyAction | functionCallAction
     )
   }
 
   def anyAction[u: P]: P[Action] = {
     P(
-      sagaStepAction | replyAction | setAction | morphAction | becomeAction |
-        compoundAction
+      replyAction | setAction | morphAction | becomeAction |
+        yieldAction | sagaStepAction | compoundAction
     )
   }
 

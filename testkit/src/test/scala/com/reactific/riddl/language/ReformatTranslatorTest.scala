@@ -48,7 +48,7 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
             val message = errors.map(_.format).mkString("\n")
             fail(
               s"In '${file.getPath}': on first generation:\n" + message +
-                "\nIn Source:\n" + outputWithLineNos(output) + "\n"
+                "\nIn Source:\n" + output + "\n"
             )
           case Right(root2) =>
             val output2 = ReformatTranslator
@@ -58,7 +58,7 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
                 val message = errors.map(_.format).mkString("\n")
                 fail(
                   s"In '${file.getPath}': on second generation: " + message +
-                    "\nIn Source:\n" + outputWithLineNos(output2) + "\n"
+                    "\nIn Source:\n" + output2 + "\n"
                 )
               case Right(_) => output mustEqual output2
             }
@@ -67,9 +67,9 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
     succeed
   }
 
-  val items = Seq(
+  val items: Seq[(String, Boolean)] = Seq(
     "examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl" -> false,
-    "doc/src/hugo/content/language/hierarchy/domain/streaming/riddl/plant.riddl" ->
+    "doc/src/hugo/content/language/root/domain/streaming/riddl/plant.riddl" ->
       false,
     "testkit/src/test/input/domains" -> true,
     "testkit/src/test/input/enumerations" -> true,

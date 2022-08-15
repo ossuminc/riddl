@@ -31,7 +31,7 @@ case class Location(
   lazy val line: Int = source.lineOf(offset) + 1
   lazy val col: Int = offset - source.offsetOf(line-1) + 1
 
-  @inline override def toString: String = { s"${source.origin}$toShort" }
+  @inline override def toString: String = { source.origin + toShort }
   @inline def toShort: String = { s"($line:$col)"}
 
   override def compare(that: Location): Int = {

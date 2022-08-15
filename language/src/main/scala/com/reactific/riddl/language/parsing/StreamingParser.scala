@@ -32,14 +32,14 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ (Readability.from ~ entityRef).? ~
+      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ toEntity.? ~
         briefly ~ description
     ).map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ (Readability.to ~ entityRef).? ~
+      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ fromEntity.? ~
         briefly ~ description
     ).map { tpl => (Outlet.apply _).tupled(tpl) }
   }
@@ -146,14 +146,19 @@ trait StreamingParser extends ReferenceParser with TypeParser with GherkinParser
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
-  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
-    P(pipeDefinition | processor | joint | term | plantInclude).rep(0)
+  def plantDefinitions[u:P]: P[Seq[PlantDefinition]] = {
+    P(plantDefinition | plantInclude).rep(0)
+  }
+
+  def plantDefinition[u: P]: P[PlantDefinition & ContextDefinition] = {
+    P(pipeDefinition | processor | joint | term )
   }
 
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        (undefined(Seq.empty[PlantDefinition]) | plantDefinitions) ~
+        (undefined(Seq.empty[PlantDefinition]) |
+          ( plantDefinition | plantInclude).rep(1) ) ~
         close ~ briefly ~ description
     ).map { case (loc, id, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)

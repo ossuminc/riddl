@@ -30,6 +30,7 @@ object Terminals {
     final val equals = "="
     final val ellipsis = "..."
     final val ellipsisQuestion = "...?"
+    final val exclamation = "!"
     final val plus = "+"
     final val question = "?"
     final val quote = "\""
@@ -107,6 +108,7 @@ object Terminals {
     final val condition = "condition"
     final val consumer = "consumer"
     final val context = "context"
+    final val create = "create"
     final val described = "described"
     final val details = "details"
     final val do_ = "do"
@@ -115,6 +117,7 @@ object Terminals {
     final val else_ = "else"
     final val email = "email"
     final val entity = "entity"
+    final val error = "error"
     final val event = "event"
     final val events = "events"
     final val example = "example"
@@ -148,6 +151,7 @@ object Terminals {
     final val option = "option"
     final val optional = "optional"
     final val options = "options"
+    final val other = "other"
     final val outlet = "outlet"
     final val output = "output"
     final val pipe = "pipe"
@@ -188,6 +192,7 @@ object Terminals {
     final val value = "value"
     final val when = "when"
     final val yields = "yields"
+    final val yield_ = "yield"
   }
 
   object Predefined {

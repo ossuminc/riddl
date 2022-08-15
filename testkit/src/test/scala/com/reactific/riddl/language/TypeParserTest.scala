@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.AST.{Field, *}
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 
@@ -271,6 +271,21 @@ class TypeParserTest extends ParsingTest {
         Optional(
           (1, 26, rip),
           TypeRef((1, 26, rip), PathIdentifier((1, 26, rip), Seq("agg")))
+        )
+      )
+      checkDefinition[Type, Type](rip, expected, identity)
+    }
+    "allow messages defined with more natural syntax" in {
+      val rip = RiddlParserInput("command foo is { a: Integer }")
+      val expected = Type((1,1,rip), Identifier((1, 9, rip), "foo"),
+        MessageType((1,16,rip),CommandKind,
+          Seq(
+            Field((1,16,rip),Identifier((1,16,rip),"sender"),
+              ReferenceType((1,16,rip),EntityRef((1,16,rip),
+                PathIdentifier((1,16,rip),List())))
+            ),
+            Field((1,18,rip),Identifier((1,18,rip),"a"), Integer((1,21,rip)))
+          )
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
