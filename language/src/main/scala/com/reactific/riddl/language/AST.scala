@@ -2748,7 +2748,7 @@ object AST {
    *   The location of the wrapper option
    */
   case class DomainPackageOption(loc: Location, override val args: Seq[LiteralString])
-    extends DomainOption("wrapper")
+    extends DomainOption("package")
 
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
