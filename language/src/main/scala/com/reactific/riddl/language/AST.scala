@@ -16,7 +16,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.{Keywords, Predefined}
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
@@ -1128,6 +1128,24 @@ object AST {
     override def format: String = msg.format + {
       if (args.nonEmpty) {args.format}
       else {"()"}
+    }
+  }
+
+  /** A helper class for creating expressions that represent the
+   * creation of a new entity identifier for a specific kidn of entity.
+   *
+   * @param loc
+   * The location of the expression in the source
+   * @param entityId
+   * The [[PathIdentifier]] of the entity type for with the Id is created
+   */
+  case class EntityIdExpression(
+    loc: Location,
+    entityId: EntityRef,
+  ) extends Expression {
+    override def format: String = {
+      Keywords.new_ + " " + Predefined.Id + "(" +
+        entityId.format + ")"
     }
   }
 

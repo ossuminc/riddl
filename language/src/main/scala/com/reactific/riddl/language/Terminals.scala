@@ -145,6 +145,7 @@ object Terminals {
     final val morph = "morph"
     final val multi = "multi"
     final val name = "name"
+    final val new_ = "new"
     final val on = "on"
     final val one = "one"
     final val organization = "organization"

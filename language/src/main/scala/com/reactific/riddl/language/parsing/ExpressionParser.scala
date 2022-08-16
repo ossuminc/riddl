@@ -18,7 +18,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Operators, Punctuation}
+import com.reactific.riddl.language.Terminals.{Keywords, Operators, Predefined, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -122,9 +122,16 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
       (AggregateConstructionExpression.apply _).tupled(tpl))
   }
 
+  def entityIdValue[u:P]: P[EntityIdExpression] = {
+    P(location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
+      entityRef ~ Punctuation.roundClose).map(tpl =>
+      (EntityIdExpression.apply _).tupled(tpl))
+  }
+
   def terminalExpression[u: P]: P[Expression] = {
     P(terminalCondition | literalDecimal | literalInteger |
-      aggregateConstruction | conditionExpressions )
+      aggregateConstruction | entityIdValue |
+      conditionExpressions )
   }
 
   def arguments[u: P]: P[ArgList] = {
