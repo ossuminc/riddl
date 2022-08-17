@@ -84,8 +84,8 @@ object Folding {
     value: S,
     top: ParentDefOf[Definition],
     folder: Folder[S],
-    parents: mutable.Stack[ParentDefOf[Definition]] = mutable.Stack
-      .empty[ParentDefOf[Definition]]
+    parents: mutable.Stack[ParentDefOf[Definition]] =
+      mutable.Stack.empty[ParentDefOf[Definition]]
   ): S = {
     // Let them know a container is being opened
     val startState = folder.openContainer(value, top, parents.toSeq)

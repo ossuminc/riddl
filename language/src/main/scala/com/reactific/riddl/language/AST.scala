@@ -2784,7 +2784,7 @@ object AST {
       with WithIncludes
       with WithTerms {
     def contents: Seq[DomainDefinition] = {
-      domains ++ types.iterator ++ contexts ++ plants ++ stories ++ terms ++
+      domains ++ types ++ contexts ++ plants ++ stories ++ terms ++
         includes ++ authors
     }
   }
