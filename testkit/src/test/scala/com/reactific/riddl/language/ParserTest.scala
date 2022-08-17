@@ -307,12 +307,13 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Adaptor(
+        case Right((content, rpi)) =>
+          content mustBe Adaptor(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "fuzz"),
             ContextRef(
               (1, 18, rpi),
-              PathIdentifier((1, 26, rpi), Seq("bar", "foo"))
+              PathIdentifier((1, 26, rpi), Seq("foo", "bar"))
             ),
             Seq.empty[Adaptation]
           )

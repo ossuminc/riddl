@@ -104,8 +104,20 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier.repX(1, Punctuation.dot).map(_.reverse))
-      .map(tpl => (PathIdentifier.apply _).tupled(tpl))
+    P(location ~
+      (anyIdentifier | "^".! | Punctuation.dot.!).repX(1))
+      .map {
+        case (loc, strings) =>
+          // PathIdentifiers have empty strings to mean go up one level,
+          // and do not need a dot to indicate descent into a new definition
+          // because concatenation is sufficient.
+          val mappedStrings = strings.flatMap {
+            case s: String if s == "^" => Seq("")
+            case s: String if s == "." => Seq.empty[String]
+            case s: String => Seq(s)
+          }
+          PathIdentifier(loc, mappedStrings)
+      }
   }
 
   def is[u: P]: P[Unit] = {

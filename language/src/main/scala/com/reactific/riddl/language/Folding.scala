@@ -17,8 +17,10 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.Messages.*
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object Folding {
 
@@ -98,8 +100,7 @@ object Folding {
     }
     // Let them know a container is being closed
     parents.pop()
-    val endState = folder.closeContainer(middleState, top, parents.toSeq)
-    endState
+    folder.closeContainer(middleState, top, parents.toSeq)
   }
 
   trait Folder[STATE] {
@@ -126,4 +127,54 @@ object Folding {
     def step(f: S => S): S
   }
 
+  trait MessagesState[S <: State[?]] extends State[S] {
+
+    def commonOptions: CommonOptions
+
+    private val msgs: ListBuffer[Message] = ListBuffer.empty[Message]
+
+    def messages: Messages.Messages = msgs.toList
+
+    def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
+
+    def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
+
+    def addStyle(loc: Location, msg: String): S = {
+      add(Message(loc, msg, StyleWarning))
+    }
+
+    def addMissing(loc: Location, msg: String): S = {
+      add(Message(loc, msg, MissingWarning))
+    }
+
+    def addWarning(loc: Location, msg: String): S = {
+      add(Message(loc, msg, Warning))
+    }
+
+    def addError(loc: Location, msg: String): S = {
+      add(Message(loc, msg, Error))
+    }
+
+    def addSevere(loc: Location, msg: String): S = {
+      add(Message(loc, msg, SevereError))
+    }
+
+    def add(msg: Message): S = {
+      msg.kind match {
+        case StyleWarning =>
+          if (isReportStyleWarnings) {
+            msgs += msg
+            this.asInstanceOf[S]
+          } else {this.asInstanceOf[S]}
+        case MissingWarning =>
+          if (isReportMissingWarnings) {
+            msgs += msg
+            this.asInstanceOf[S]
+          } else {this.asInstanceOf[S]}
+        case _ =>
+          msgs += msg
+          this.asInstanceOf[S]
+      }
+    }
+  }
 }

@@ -17,7 +17,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
-import com.reactific.riddl.language.Validation.ValidationMessage
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 
 import java.nio.file.{Files, Path}
@@ -96,7 +96,7 @@ object Riddl {
     commonOptions: CommonOptions,
   ): Option[RootContainer] = {
     timer("validation", commonOptions.showTimes) {
-      val messages: Seq[ValidationMessage] =
+      val messages: Seq[Message] =
         Validation.validate(root, commonOptions)
       if (messages.nonEmpty) {
         val (warns, errs) = messages.partition(_.kind.isWarning)

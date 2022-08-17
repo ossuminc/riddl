@@ -1,13 +1,14 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
-import com.reactific.riddl.language.Validation.ValidationMessages
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.TopLevelParser
 import com.reactific.riddl.language.testkit.ValidatingTest
 import org.scalatest.Assertion
 
 import java.io.File
 import java.nio.file.Path
+import scala.collection.mutable
 
 //noinspection ScalaStyle
 
@@ -26,7 +27,7 @@ class CheckMessagesTest extends ValidatingTest {
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, Messages) => Assertion
   ): Assertion = {
     val file = new File(fileName)
     TopLevelParser.parse(file) match {
@@ -51,7 +52,7 @@ class CheckMessagesTest extends ValidatingTest {
             val missingMessages = expectedMessages.diff(msgSet)
             val unexpectedMessages = msgSet.diff(expectedMessages)
 
-            val errMsg = new StringBuilder()
+            val errMsg = new mutable.StringBuilder()
             errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
             errMsg.append("\nBUT\n")
             if (missingMessages.nonEmpty) {

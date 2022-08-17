@@ -99,7 +99,20 @@ object AST {
     */
   case class PathIdentifier(loc: Location, value: Seq[String])
       extends RiddlValue {
-    override def format: String = { value.reverse.mkString(".") }
+    override def format: String = {
+      value.foldLeft(Seq.empty[String]) {
+        case (r: Seq[String], s: String) =>
+        if (s.isEmpty) {
+          r :+ "^"
+        } else if (r.isEmpty) {
+          Seq(s)
+        } else if (r.last != "^") {
+          r ++ Seq(".", s)
+        } else {
+          r :+ s
+        }
+      }.mkString
+    }
 
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
   }

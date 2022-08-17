@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Validation.ValidationMessages
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ValidatingTest
 
@@ -11,7 +11,7 @@ class DomainValidatorTest extends ValidatingTest {
   "DomainValidator" should {
     "identify duplicate domain definitions" in {
       val rpi = RiddlParserInput.empty
-      val theErrors: Validation.ValidationMessages = Validation.validate(
+      val theErrors: Messages = Validation.validate(
         RootContainer(
           Seq(
             Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
@@ -39,7 +39,7 @@ class DomainValidatorTest extends ValidatingTest {
                     |} described as "example"
                     |""".stripMargin
       parseAndValidate[Domain](input) {
-        (domain: Domain, rpi: RiddlParserInput, messages: ValidationMessages) =>
+        (domain: Domain, rpi: RiddlParserInput, messages: Messages) =>
           domain mustNot be(empty)
           domain.contents mustNot be(empty)
           val expectedAuthor = AuthorInfo(

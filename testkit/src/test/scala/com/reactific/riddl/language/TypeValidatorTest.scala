@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Validation.*
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 /** Unit Tests For TypeValidationTest */
@@ -13,7 +13,7 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type bar is String
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgs: Seq[ValidationMessage]) =>
+        case (_: Domain, _, msgs: Seq[Message]) =>
           if (msgs.isEmpty) fail("Type 'bar' should have generated warning")
           else if (
             msgs.map(_.message).exists(_.contains("should start with"))
@@ -33,8 +33,8 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type Order is Id(Bar)
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgsAndWarnings: Seq[ValidationMessage]) =>
-          val errors = msgsAndWarnings.filter(_.kind == Validation.Error)
+        case (_: Domain, _, msgsAndWarnings: Seq[Message]) =>
+          val errors = msgsAndWarnings.filter(_.kind == Error)
           assert(errors.size == 9, "Should have 9 errors")
           assert(
             errors.forall(_.message.contains("not defined")),
@@ -47,7 +47,7 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type Empty is { ??? } explained as "empty"
                                  |} explained as "nothing"
                                  |""".stripMargin) {
-        case (_: Domain, _, msgs: ValidationMessages) => msgs mustBe empty
+        case (_: Domain, _, msgs: Messages) => msgs mustBe empty
       }
     }
     "generate 'sender' field in messages" in {
@@ -60,7 +60,7 @@ class TypeValidatorTest extends ValidatingTest {
                        |} explained as "nothing"
                        |""".stripMargin
         parseAndValidate[Domain](input) {
-          case (d: Domain, _, msgs: ValidationMessages) =>
+          case (d: Domain, _, msgs: Messages) =>
             msgs mustBe empty
             val typ = d.types.head
             typ.typ match {
@@ -85,10 +85,10 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type pat is Pattern("[")
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgs: ValidationMessages) =>
+        case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
-            Validation.Error,
+            Error,
             "Unclosed character class"
           )
       }
@@ -101,10 +101,10 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type Order is Id(TypeTest)
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgs: ValidationMessages) =>
+        case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
-            Validation.Error,
+            Error,
             "'TypeTest' was expected to be an Entity but is a Context instead"
           )
       }

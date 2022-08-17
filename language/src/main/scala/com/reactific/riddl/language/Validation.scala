@@ -18,11 +18,11 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
+import Messages.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.unused
-import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
@@ -34,7 +34,7 @@ object Validation {
   def validate(
     root: ParentDefOf[Definition],
     commonOptions: CommonOptions = CommonOptions()
-  ): ValidationMessages = {
+  ): Messages.Messages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, commonOptions)
     val result = try {
@@ -45,7 +45,7 @@ object Validation {
       case NonFatal(xcptn) =>
         val message =
           ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
-        state.add(ValidationMessage(Location.empty, message, SevereError))
+        state.add(Message(Location.empty, message, SevereError))
     }
     result.messages.sortBy(_.loc)
   }
@@ -72,80 +72,12 @@ object Validation {
     }
   }
 
-  sealed trait ValidationMessageKind {
-    def isSevereError: Boolean = false
-
-    def isError: Boolean = false
-
-    def isWarning: Boolean = false
-
-    def isMissing: Boolean = false
-
-    def isStyle: Boolean = false
-  }
-
-  final case object MissingWarning extends ValidationMessageKind {
-    override def isWarning: Boolean = true
-
-    override def isMissing: Boolean = true
-
-    override def toString: String = "Missing"
-  }
-
-  final case object StyleWarning extends ValidationMessageKind {
-    override def isWarning: Boolean = true
-
-    override def isStyle: Boolean = true
-
-    override def toString: String = "Style"
-  }
-
-  final case object Warning extends ValidationMessageKind {
-    override def isWarning: Boolean = true
-
-    override def toString: String = "Warning"
-  }
-
-  final case object Error extends ValidationMessageKind {
-    override def isError: Boolean = true
-
-    override def toString: String = "Error"
-  }
-
-  final case object SevereError extends ValidationMessageKind {
-    override def isError: Boolean = true
-
-    override def isSevereError: Boolean = true
-
-    override def toString: String = "Severe"
-  }
-
-  case class ValidationMessage(
-    loc: Location,
-    message: String,
-    kind: ValidationMessageKind = Error)
-      extends Ordered[ValidationMessage] {
-
-    def format: String = { s"$kind: $loc: $message" }
-
-    override def compare(that: ValidationMessage): Int = this.loc
-      .compare(that.loc)
-  }
-
-  type ValidationMessages = List[ValidationMessage]
-
-  val NoValidationMessages: List[ValidationMessage] = List
-    .empty[ValidationMessage]
 
   case class ValidationState(
     symbolTable: SymbolTable,
     commonOptions: CommonOptions = CommonOptions())
-      extends Folding.State[ValidationState] {
+      extends Folding.MessagesState[ValidationState] {
 
-    private val msgs: ListBuffer[ValidationMessage] = ListBuffer
-      .empty[ValidationMessage]
-
-    def messages: ValidationMessages = msgs.toList
 
     def step(f: ValidationState => ValidationState): ValidationState = f(this)
 
@@ -155,49 +87,15 @@ object Validation {
       symbolTable.parentOf(definition).getOrElse(RootContainer.empty)
     }
 
-    def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
-
-    def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
-
     def lookup[T <: Definition: ClassTag](
       id: Seq[String]
     ): List[T] = { symbolTable.lookup[T](id) }
 
-    def addIf(predicate: Boolean)(msg: ValidationMessage): ValidationState = {
+    def addIf(predicate: Boolean)(msg: Message): ValidationState = {
       if (predicate) add(msg) else this
     }
 
-    def addStyle(loc: Location, msg: String): ValidationState = {
-      add(ValidationMessage(loc, msg, StyleWarning))
-    }
 
-    def addWarning(loc: Location, msg: String): ValidationState = {
-      add(ValidationMessage(loc, msg, Warning))
-    }
-
-    def addError(loc: Location, msg: String): ValidationState = {
-      add(ValidationMessage(loc, msg, Error))
-    }
-
-    def add(
-      msg: ValidationMessage
-    ): ValidationState = {
-      msg.kind match {
-        case StyleWarning =>
-          if (isReportStyleWarnings) {
-            msgs += msg
-            this
-          } else { this }
-        case MissingWarning =>
-          if (isReportMissingWarnings) {
-            msgs += msg
-            this
-          } else { this }
-        case _ =>
-          msgs += msg
-          this
-      }
-    }
 
     private val vowels: Regex = "[aAeEiIoOuU]".r
     def article(thing: String): String = {
@@ -208,10 +106,10 @@ object Validation {
     def check(
       predicate: Boolean = true,
       message: => String,
-      kind: ValidationMessageKind,
+      kind: KindOfMessage,
       loc: Location
     ): ValidationState = {
-      if (!predicate) { add(ValidationMessage(loc, message, kind)) }
+      if (!predicate) { add(Message(loc, message, kind)) }
       else { this }
     }
 
@@ -220,7 +118,7 @@ object Validation {
       min: Int = 3
     ): ValidationState = {
       if (d.id.value.nonEmpty && d.id.value.length < min) {
-        add(ValidationMessage(
+        add(Message(
           d.id.loc,
           s"${AST.kind(d)} identifier '${d.id.value}' is too short. The minimum length is $min",
           StyleWarning
@@ -235,7 +133,7 @@ object Validation {
         this
       } catch {
         case x: PatternSyntaxException =>
-          add(ValidationMessage(p.loc, x.getMessage))
+          add(Message(p.loc, x.getMessage))
       }
     }
 
@@ -388,14 +286,14 @@ object Validation {
 
     def checkMessageRef(ref: MessageRef, kind: MessageKind): ValidationState = {
       if (ref.isEmpty) {
-        add(ValidationMessage(
+        add(Message(
           ref.id.loc,
           s"${ref.identify} is empty",
           Error
         ))
       } else {
         symbolTable.lookupSymbol[Type](ref.id.value) match {
-          case Nil => add(ValidationMessage(
+          case Nil => add(Message(
               ref.id.loc,
               s"${ref.identify} is not defined but should be ${article(kind.kind)} type",
               Error
@@ -409,14 +307,14 @@ object Validation {
                       Error,
                       ref.id.loc
                     )
-                  case te: TypeExpression => add(ValidationMessage(
+                  case te: TypeExpression => add(Message(
                       ref.id.loc,
                       s"'${ref.identify} should reference ${article(kind.kind)} type but is a ${AST
                         .kind(te)} type instead",
                       Error
                     ))
                 }
-              case _ => add(ValidationMessage(
+              case _ => add(Message(
                   ref.id.loc,
                   s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(AST.kind(d))} instead",
                   Error
@@ -463,7 +361,7 @@ object Validation {
         definitions.map(AST.kind).distinct.sizeIs == definitions.size
       if (allDifferent) { this }
       else if (!definitions.head.isImplicit) {
-        add(ValidationMessage(
+        add(Message(
           id.loc,
           s"""Path reference '${id.format}' is ambiguous. Definitions are:
              |${formatDefinitions(definitions)}""".stripMargin,
@@ -482,7 +380,7 @@ object Validation {
         symbolTable.lookupSymbol[T](id.value) match {
           case Nil =>
             // Symbol is not in the symbol table
-            add(ValidationMessage(
+            add(Message(
               id.loc,
               s"'${id.format}' is not defined but should be ${article(tc.getSimpleName)}",
               Error
@@ -525,7 +423,7 @@ object Validation {
       value: RiddlValue,
       name: String,
       thing: Definition,
-      kind: ValidationMessageKind = Error,
+      kind: KindOfMessage = Error,
       required: Boolean = false
     ): ValidationState = {
       check(
@@ -541,7 +439,7 @@ object Validation {
       list: Seq[?],
       name: String,
       thing: Definition,
-      kind: ValidationMessageKind = Error,
+      kind: KindOfMessage = Error,
       required: Boolean = false
     ): ValidationState = {
       check(
@@ -580,7 +478,7 @@ object Validation {
       if (!definition.id.isEmpty) {
         val matches = result.lookup[Definition](path)
         if (matches.isEmpty) {
-          result = result.add(ValidationMessage(
+          result = result.add(Message(
             definition.id.loc,
             s"'${definition.id.value}' evaded inclusion in symbol table!",
             SevereError
@@ -589,14 +487,14 @@ object Validation {
           val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
           parentGroups.get(Option(parent)) match {
             case Some(head :: tail) if tail.nonEmpty =>
-              result = result.add(ValidationMessage(
+              result = result.add(Message(
                 head.id.loc,
                 s"${definition.identify} has same name as other definitions in ${parent.identifyWithLoc}:  " +
                   tail.map(x => x.identifyWithLoc).mkString(",  "),
                 Warning
               ))
             case Some(head :: tail) if tail.isEmpty =>
-              result = result.add(ValidationMessage(
+              result = result.add(Message(
                 head.id.loc,
                 s"${definition.identify} has same name as other definitions: " +
                   matches.filterNot(_ == definition).map(x => x.identifyWithLoc)
@@ -827,7 +725,7 @@ object Validation {
     ): ValidationState = {
       val id = messageConstructor.msg.id
       checkSymbolLookup(id.value) { () =>
-        add(ValidationMessage(
+        add(Message(
           id.loc,
           s"'${id.format}' is not defined but should be a message type",
           Error
@@ -843,7 +741,7 @@ object Validation {
                 if (unset.nonEmpty) {
                   unset.filterNot(_.isImplicit).foldLeft(this) {
                     (next, field) =>
-                      next.add(ValidationMessage(
+                      next.add(Message(
                         messageConstructor.msg.loc,
                         s"${field.identify} was not set in message constructor"
                       ))
@@ -855,21 +753,21 @@ object Validation {
                   }
                   // mt.fields.zip(names)
                 }
-              case te: TypeExpression => add(ValidationMessage(
+              case te: TypeExpression => add(Message(
                   id.loc,
                   s"'${id.format}' should reference a message type but is a ${AST
                     .kind(te)} type instead.",
                   Error
                 ))
             }
-          case _ => add(ValidationMessage(
+          case _ => add(Message(
               id.loc,
               s"'${id.format}' was expected to be a message type but is ${article(AST.kind(d))} instead",
               Error
             ))
         }
       } { (d: Definition, tail) =>
-        add(ValidationMessage(
+        add(Message(
           id.loc,
           s"ambiguous assignment from ${d.identify} which has ${tail.size} other definitions"
         ))
@@ -1034,14 +932,14 @@ object Validation {
         .checkSequence(entity.states) { (next, state) =>
           next.checkTypeExpression(state.typeEx, state)
         }.addIf(entity.handlers.isEmpty && !entity.isEmpty) {
-          ValidationMessage(
+          Message(
             entity.loc,
             s"${entity.identify} must define a handler"
           )
         }.addIf(
           entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)
         ) {
-          ValidationMessage(
+          Message(
             entity.loc,
             s"${entity.identify} has only empty handlers",
             MissingWarning
@@ -1049,7 +947,7 @@ object Validation {
         }.addIf(
           entity.hasOption[EntityFiniteStateMachine] && entity.states.sizeIs < 2
         ) {
-          ValidationMessage(
+          Message(
             entity.loc,
             s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
             Error
