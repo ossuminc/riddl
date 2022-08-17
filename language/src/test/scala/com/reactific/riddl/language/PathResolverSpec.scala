@@ -7,37 +7,6 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class PathResolverSpec extends AnyWordSpec with Matchers{
 
-  val input =
-    """
-      |domain A {
-      |  type Top = String
-      |  domain B {
-      |    context C {
-      |      type Simple = String(,30)
-      |    }
-      |    type BSimple = A.B.C.Simple // full path
-      |    type CSimple = .C.Simple // partial path
-      |    context D {
-      |      type ATop = ...Top
-      |      type DSimple = .E.ESimple // partial path
-      |      entity E {
-      |        type ESimple = ...C.Simple // partial path
-      |        event blah is { dSimple: ..DSimple }
-      |        state only is {
-      |          a : ....Top
-      |        }
-      |        handler foo is {
-      |          on blah {
-      |            set a to @dSimple
-      |          }
-      |        }
-      |      }
-      |    }
-      |  }
-      |}
-      |
-      |""".stripMargin
-
   def parseResult(
     input: RiddlParserInput
   )(f: (PathResolver.ResolvedPaths, RootContainer) => Unit): Unit = {
@@ -77,5 +46,46 @@ class PathResolverSpec extends AnyWordSpec with Matchers{
     "resolve .." in { pending }
     "resolve ..." in { pending }
     "resolve full path" in { pending }
+    "resolve many" in {
+      val input =
+        """
+          |domain A {
+          |  type Top = String
+          |  domain B {
+          |    context C {
+          |      type Simple = String(,30)
+          |    }
+          |    type BSimple = A.B.C.Simple // full path
+          |    type CSimple = ^^C.Simple // partial path
+          |    context D {
+          |      type ATop = ^^.Top
+          |      type DSimple = .E.ESimple // partial path
+          |      entity E {
+          |        type ESimple = ^^C.Simple // partial path
+          |        event blah is { dSimple: ^DSimple }
+          |        state only is {
+          |          a : ^^^^Top
+          |        }
+          |        handler foo for state ^only is {
+          |          on event ^blah {
+          |            then set a to @dSimple
+          |          }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |
+          |""".stripMargin
+
+      parseResult(RiddlParserInput(input)) { (map, model) =>
+        map.size mustBe 9
+        val (path, defn) = map.head
+        path mustBe List("Top")
+        val extracted = model.contents.head.types.head
+        defn mustBe extracted
+      }
+
+    }
   }
 }

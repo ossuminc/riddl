@@ -52,7 +52,7 @@ class FoldingTest extends ParsingTest {
               val path = stack.map(_.kindId).reverse :+ definition.kindId
               track :+ path
           }
-          val expectedCount = 24
+          val expectedCount = 26
           result.length must be(expectedCount)
           val expectedResult = List(
             List("Root 'Root'"),
@@ -144,6 +144,19 @@ class FoldingTest extends ParsingTest {
               "Root 'Root'",
               "Domain 'one'",
               "Context 'two'",
+              "Function 'foo'",
+              "Field 'a'"),
+            List(
+              "Root 'Root'",
+              "Domain 'one'",
+              "Context 'two'",
+              "Function 'foo'",
+              "Field 'b'"
+            ),
+            List(
+              "Root 'Root'",
+              "Domain 'one'",
+              "Context 'two'",
               "Term 'ForcePush'"
             ),
             List("Root 'Root'", "Domain 'one'", "Plant 'one'"),
@@ -221,7 +234,7 @@ class FoldingTest extends ParsingTest {
           val tracking = new Tracking
           val tracked = Folding.foldAround(Tracker(), root, tracking)
           val expectedContainers = 17
-          val expectedDefinitions = 7
+          val expectedDefinitions = 9
           tracked.contPush mustBe expectedContainers
           tracked.contPush mustBe tracked.contPop
           tracked.defs mustBe expectedDefinitions

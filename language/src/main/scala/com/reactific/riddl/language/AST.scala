@@ -1060,7 +1060,7 @@ object AST {
     *   The path to the value for this expression
     */
   case class ValueExpression(loc: Location, path: PathIdentifier)
-      extends Expression with Condition {
+      extends Condition {
     override def format: String = "@" + path.format
   }
 
@@ -1852,10 +1852,14 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example]
+      extends ParentDefOf[Definition]
       with EntityDefinition
       with ContextDefinition {
-    override lazy val contents: Seq[Example] = examples
+    override lazy val contents: Seq[Definition] = {
+      input.map(_.fields).getOrElse(Seq.empty[Definition]) ++
+      output.map(_.fields).getOrElse(Seq.empty[Definition]) ++
+      examples
+    }
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
       output.isEmpty
@@ -1936,7 +1940,7 @@ object AST {
   case class Handler(
     loc: Location,
     id: Identifier,
-    stateName: Option[Identifier] = None,
+    applicability: Option[PathIdentifier] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -2638,10 +2642,14 @@ object AST {
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[SagaStep]
+      extends ParentDefOf[Definition]
       with OptionsDef[SagaOption]
       with ContextDefinition {
-    lazy val contents: Seq[SagaStep] = sagaSteps
+    lazy val contents: Seq[Definition] = {
+      input.map(_.fields).getOrElse(Seq.empty[Definition]) ++
+      output.map(_.fields).getOrElse(Seq.empty[Definition]) ++
+      sagaSteps
+    }
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty

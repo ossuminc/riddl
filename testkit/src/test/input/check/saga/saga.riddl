@@ -6,7 +6,7 @@ domain ignore1 is {
       requires { a: Integer described by "a"} yields { b: Integer described by "b"}
     } explained as "A simple function for another"
     function UndoAnotherThing {
-      requires { a: Integer described by "a"} yields { b: Integer described by "b"}
+      requires { c: Integer described by "c"} yields { d: Integer described by "d"}
     } explained as "A reversion function for undoing AnotherThing"
 
     entity blah is { ??? }
