@@ -57,8 +57,8 @@ Missing: everything.riddl(35:38): Enumerator 'Peach' should have a description
 Missing: everything.riddl(13:20): Inlet 'Commands' should have a description
 Error: everything.riddl(72:20): Reference[Type] 'Something'(72:12) was expected to be a command type but is an Entity instead
 Style: everything.riddl(13:20): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:24)
-Error: everything.riddl(76:29): 'Inebriated' is not defined but should be a message type
-Error: everything.riddl(75:18): 'misc' is not defined but should be a Function
+Error: everything.riddl(76:29): Path 'Inebriated' was not resolved, in Example 'only', but should refer to an event
+Error: everything.riddl(75:18): Path 'misc' was not resolved, in Example 'only', but should refer to a Function
 Missing: everything.riddl(83:34): Field 'when' should have a description
 Missing: everything.riddl(84:34): Field 'then' should have a description
 Missing: everything.riddl(73:11): Example 'only' should have a description

@@ -17,11 +17,11 @@ class EntityValidatorTest extends ValidatingTest {
       parseAndValidateInContext[Entity](input) {
         case (entity: Entity, rpi, msgs: Messages) =>
           msgs.count(_.kind.isError) mustBe 2
-          entity.options must contain(EntityFiniteStateMachine((3, 10, rpi)))
+          entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
-          entity.options must contain(EntityAggregate((3, 19, rpi)))
+          entity.options must contain(EntityIsAggregate((3, 19, rpi)))
           entity.options must contain(EntityTransient((3, 30, rpi)))
-          entity.options must contain(EntityAvailable((3, 41, rpi)))
+          entity.options must contain(EntityIsAvailable((3, 41, rpi)))
       }
     }
 
@@ -60,7 +60,8 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "'SomeType' is not defined but should be a Type"
+            "Path 'SomeType' was not resolved, in Field 'field', " +
+              "but should refer to a Type"
           )
           assertValidationMessage(
             msgs,
@@ -136,9 +137,11 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidate[Domain](input) {
-        case (_: Domain, rpi, msgs: Messages) => msgs
-            .map(_.format) must contain(
-            s"Error: ${rpi.origin}(10:19): Field 'a' was not set in message constructor"
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            s"Field 'a' was not set in message constructor"
           )
       }
 

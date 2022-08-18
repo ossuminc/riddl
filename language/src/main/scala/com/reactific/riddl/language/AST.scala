@@ -39,8 +39,13 @@ object AST {
     * RiddlNode.
     */
   sealed trait RiddlNode {
+    /** Format the node to a string */
     def format: String = ""
 
+    /** Determine if this node is a container or not */
+    def isContainer: Boolean = false
+
+    /** determine if this node is empty or not. Non-containers are always empty */
     def isEmpty: Boolean = false
 
     @deprecatedOverriding(
@@ -50,11 +55,12 @@ object AST {
   }
 
   /** The root trait of all parsable values. If a parser returns something, its
-    * a RiddlValue
-    */
+   * a RiddlValue. The distinguishing factor is the inclusion of the parsing
+   * location given by the `loc` field.
+   */
   sealed trait RiddlValue extends RiddlNode {
+    /** The location in the parse at which this RiddlValue occurs */
     def loc: Location
-    def isContainer: Boolean = false
   }
 
   /** A RiddlValue that is a parsed identifier, typically the name of a
@@ -154,7 +160,6 @@ object AST {
     def identify: String = {
       s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
     }
-
     override def isEmpty: Boolean = id.isEmpty
   }
 
@@ -290,7 +295,8 @@ object AST {
     def kindId: String = s"$kind '${id.format}'"
     def identify: String = kindId
     def identifyWithLoc: String = s"$kindId at $loc"
-    def isImplicit: Boolean = false
+    def isImplicit: Boolean = id.value.isEmpty
+
   }
 
   /** Base trait of any definition that is in the content of an adaptor
@@ -659,8 +665,10 @@ object AST {
     */
   case class Alternation(
     loc: Location,
-    of: Seq[TypeExpression])
-      extends TypeExpression
+    of: Seq[TypeExpression]
+  ) extends TypeExpression with Container[TypeExpression] {
+    final lazy val contents: Seq[TypeExpression] = of
+  }
 
   /** A definition that is a field of an aggregation type expressions. Fields
     * associate an identifier with a type expression.
@@ -681,17 +689,8 @@ object AST {
     id: Identifier,
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Definition {
-    override def isImplicit: Boolean = {
-      id.value == "sender" &&
-      (typeEx match {
-        case ReferenceType(_, EntityRef(_, PathIdentifier(_, seq))) =>
-          seq.isEmpty
-        case _ => false
-      })
-    }
-  }
+    description: Option[Description] = None
+  ) extends Definition
 
   /** A type expression that contains an aggregation of fields
    *
@@ -756,8 +755,8 @@ object AST {
     */
   case class ReferenceType(
     loc: Location,
-    entity: EntityRef)
-      extends TypeExpression
+    entity: EntityRef
+  ) extends TypeExpression
 
   /** A type expression that defines a string value constrained by a Java
     * Regular Expression
@@ -1020,6 +1019,10 @@ object AST {
       }
     }
   }
+  type Command = Type
+  type Event = Type
+  type Query = Type
+  type Result = Type
 
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
 
@@ -1699,8 +1702,6 @@ object AST {
       extends ProcessorDefinition {
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
       thens.isEmpty && buts.isEmpty
-
-    override def isImplicit: Boolean = id.value.isEmpty
   }
 
   // ////////////////////////////////////////////////////////// Entities
@@ -1751,7 +1752,7 @@ object AST {
     * @param loc
     *   The location of the option
     */
-  case class EntityAggregate(loc: Location) extends EntityOption("aggregate")
+  case class EntityIsAggregate(loc: Location) extends EntityOption("aggregate")
 
   /** An [[EntityOption]] that indicates that this entity favors consistency
     * over availability in the CAP theorem.
@@ -1759,7 +1760,7 @@ object AST {
     * @param loc
     *   The location of the option.
     */
-  case class EntityConsistent(loc: Location) extends EntityOption("consistent")
+  case class EntityIsConsistent(loc: Location) extends EntityOption("consistent")
 
   /** A [[EntityOption]] that indicates that this entity favors availability
     * over consistency in the CAP theorem.
@@ -1767,7 +1768,7 @@ object AST {
     * @param loc
     *   The location of the option.
     */
-  case class EntityAvailable(loc: Location) extends EntityOption("available")
+  case class EntityIsAvailable(loc: Location) extends EntityOption("available")
 
   /** An [[EntityOption]] that indicates that this entity is intended to
     * implement a finite state machine.
@@ -1775,7 +1776,7 @@ object AST {
     * @param loc
     *   The location of the option.
     */
-  case class EntityFiniteStateMachine(loc: Location)
+  case class EntityIsFiniteStateMachine(loc: Location)
       extends EntityOption("finite state machine")
 
   /** An [[EntityOption]] that indicates that this entity should allow receipt
@@ -2172,6 +2173,16 @@ object AST {
       with ContextDefinition
       with WithIncludes {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
+  }
+
+  case class Projection(
+    loc: Location,
+    id: Identifier,
+    fields: Seq[Field],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None
+  ) extends ParentDefOf[Field] with ContextDefinition {
+    lazy val contents: Seq[Field] = fields
   }
 
   /** Base trait for all options a Context can have.
@@ -2690,7 +2701,7 @@ object AST {
     capability: LiteralString,
     benefit: LiteralString,
     shownBy: Seq[java.net.URL],
-    implementedBy: Seq[PathIdentifier],
+    implementedBy: Seq[DomainRef],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)

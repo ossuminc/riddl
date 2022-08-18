@@ -249,7 +249,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
 
     def emitMessageType(mt: AST.MessageType): FileEmitter = {
       this.add(mt.messageKind.kind.toLowerCase).add(" ")
-        .emitFields(mt.fields.tail)
+        .emitFields(mt.fields)
     }
 
     def emitMessageRef(mr: AST.MessageRef): FileEmitter = {
@@ -389,8 +389,6 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       val suffixPath = if (path.isAbsolute) relativeToInPath(path) else path
       outPath.resolve(suffixPath)
     }
-
-    def step(f: ReformatState => ReformatState): ReformatState = f(this)
 
     private var generatedFiles: Seq[FileEmitter] = Seq.empty[FileEmitter]
 

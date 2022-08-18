@@ -66,23 +66,16 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
       )
       parseResult(rpi)
     }
-    "resolve ^^^.Name" in {
+    "resolve ^^^Name" in {
       val input = RiddlParserInput(
         """domain A {
           |  context D {
           |    type DSimple = Number
           |    entity E {
-          |      event blah is {
-          |        dSimple: ^^^.DSimple
-          |      }
           |      state only is {
-          |        a : Number
+          |        a : ^^^DSimple
           |      }
-          |      handler foo for state ^only is {
-          |        on event ^^.blah {
-          |          then set a to @^^^^.dSimple
-          |        }
-          |      }
+          |      handler foo for state ^only is {??? }
           |    }
           |  }
           |}
@@ -107,7 +100,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |      type DSimple = ^E.ESimple // partial path
           |      entity E {
           |        type ESimple = ^^^C.Simple // partial path
-          |        event blah is { dSimple: ^DSimple }
+          |        event blah is { dSimple: ^^^.DSimple }
           |        state only is {
           |          a : ^^^^^Top
           |        }

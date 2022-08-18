@@ -38,8 +38,8 @@ trait DomainParser
         if (x.isEmpty) Seq.empty[java.net.URL] else x.get
       } ~
       (Keywords.implemented ~ Readability.by ~ open ~
-        pathIdentifier.rep(1, Punctuation.comma) ~ close).?
-        .map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
+        domainRef.rep(1, Punctuation.comma) ~ close).?
+        .map(x => if (x.isEmpty) Seq.empty[DomainRef] else x.get) ~
       (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~ close ~
       briefly ~ description
   ).map {

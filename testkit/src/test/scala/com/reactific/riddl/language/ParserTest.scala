@@ -241,7 +241,7 @@ class ParserTest extends ParsingTest {
         case Right((content, rpi)) => content mustBe Entity(
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
-            Seq(EntityTransient((2, 13, rpi)), EntityAggregate((2, 24, rpi))),
+            Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
             Seq(State(
               (3, 3, rpi),
               Identifier((3, 9, rpi), "foo"),

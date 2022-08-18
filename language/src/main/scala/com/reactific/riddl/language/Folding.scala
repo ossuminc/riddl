@@ -124,7 +124,10 @@ object Folding {
   }
 
   trait State[S <: State[?]] {
-    def step(f: S => S): S
+    def step(f: S => S): S = f(this.asInstanceOf[S])
+    def stepIf(predicate:Boolean = true)(f: S => S): S = {
+      if (predicate) f(this.asInstanceOf[S]) else this.asInstanceOf[S]
+    }
   }
 
   trait MessagesState[S <: State[?]] extends State[S] {
