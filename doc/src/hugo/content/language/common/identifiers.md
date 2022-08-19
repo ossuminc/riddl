@@ -67,29 +67,31 @@ indicates the container's container's container, and etc.
 In the example, the definitions of both `DSimple` and `ESimple` use partial
 paths to name the type.  
 
-For `DSimple` the partial path, `.E.ESimple`, is broken
+For `DSimple` the partial path, `^D.E.ESimple`, is broken
 down like this:
-* start with the current container, context `D`
-* `.` - select the current container, context `D`
+* start with the current definition, type `DSimple`
+* `^` - go up to context `B`
+* `D` - go down to context `D`
+* `.` - stay at context `D` 
 * `E` - select the definition named`E`, entity `E`
-* `.` - select the current container, entity `E`
+* `.` - stay at entity `E`
 * `ESimple` - select the type named `ESimple`
 
-For `ESimple`, the partial path, `^^C.Simple` is broken down like this:
+For `ESimple`, the partial path, `^^^C.Simple` is broken down like this:
 * start with the current container, entity `E`
 * `^` - go up to context `D`
 * `^` - go up to domain `B`
 * `C` - select context C
-* `.` - select current container, context `C`
+* `.` - stay at context `C`
 * `Simple` - select definition named "Simple"
 
 #### Complex Partial Path Identifiers
 
-The definition of `Complicated` uses path `.^^C^D.DSimple` in the example
+The definition of `Complicated` uses path `^^^C^D.DSimple` in the example
 above. This helps us to see how DSimple is referenced in a complicated
 path. The complicated part is the `^` between `C` and `D`. This path is
 interpreted like this:
-* `.` - start with the current container, entity`E`
+* start with the current container, entity`E`
 * `^` - go up one container to context `D`
 * `^` - go up one container to domain `B`
 * `C` - in the current container, domain `B`, select context `C`

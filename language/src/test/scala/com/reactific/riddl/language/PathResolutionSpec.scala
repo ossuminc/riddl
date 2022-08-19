@@ -88,15 +88,15 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
         """
           |domain D {
           |  type Bottom = { a: String }
-          |  type Middle = { b: Bottom }
-          |  type Top = { m: Middle }
+          |  type Middle = { b: ^^Bottom }
+          |  type Top = { m: ^^Middle }
           |
           |  context C {
           |    function foo {
           |      requires: { t: ^^^.Top }
           |      returns: { a: String }
           |      example impl {
-          |        then return @^foo.t.m.b.a
+          |        then return @^^foo.t.m.b.a
           |      }
           |    }
           |  }
@@ -138,6 +138,27 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |
           |""".stripMargin
 
+      parseResult(RiddlParserInput(input))
+    }
+    "resolve doc example" in {
+      val input =
+        """domain A {
+          |  domain B {
+          |    context C {
+          |      type Simple = String(,30)
+          |    }
+          |    type BSimple = A.B.C.Simple // full path starts from root
+          |    context D {
+          |      type DSimple = ^E.ESimple // partial path
+          |      entity E {
+          |        type ESimple = ^^^C.Simple // E->D->B->C->Simple
+          |        type Complicated = ^^^C^D.DSimple // E->D->B->C->B->D->DSimple
+          |        handler foo is { ??? }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
       parseResult(RiddlParserInput(input))
     }
   }

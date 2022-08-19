@@ -322,8 +322,15 @@ object Validation {
             handleMultipleResultsCase[T](pid, list)
         }
       } else {
-        if (resolvePath(pid).isEmpty) {
-          notResolved()
+        val resolution = resolvePath(pid)
+        resolution match {
+          case None => notResolved()
+          case Some(x) if x.getClass != tc =>
+            val message = s"Path '${pid.format}' resolved to ${article(
+              x.getClass.getSimpleName)} but ${article(
+              tc.getSimpleName)} was expected"
+            addError(pid.loc, message)
+          case _ => // class matched, we're good!
         }
         this
       }
