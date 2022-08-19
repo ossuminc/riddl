@@ -69,7 +69,7 @@ class StreamingParserTest extends ParsingTest {
         Identifier(1 -> 7, "temp_in"),
         InletRef(
           1 -> 18,
-          PathIdentifier(1 -> 24, Seq("weather", "GetCurrentTemperature"))
+          PathIdentifier(1 -> 24, Seq("GetCurrentTemperature", "weather"))
         ),
         PipeRef(1 -> 59, PathIdentifier(1 -> 64, Seq("WeatherForecast")))
       )
@@ -83,7 +83,7 @@ class StreamingParserTest extends ParsingTest {
         Identifier(1 -> 7, "forecast"),
         OutletRef(
           1 -> 19,
-          PathIdentifier(1 -> 26, Seq("Weather", "GetWeatherForecast"))
+          PathIdentifier(1 -> 26, Seq("GetWeatherForecast", "Weather"))
         ),
         PipeRef(1 -> 56, PathIdentifier(1 -> 61, Seq("WeatherForecast")))
       )
@@ -254,7 +254,7 @@ class StreamingParserTest extends ParsingTest {
               (27, 20, rpi),
               PathIdentifier(
                 (27, 26, rpi),
-                List("weather", "GetCurrentTemperature")
+                List("GetCurrentTemperature", "weather")
               )
             ),
             PipeRef(
@@ -270,7 +270,7 @@ class StreamingParserTest extends ParsingTest {
               (29, 25, rpi),
               PathIdentifier(
                 (29, 31, rpi),
-                List("CurrentTemp", "AttenuateSensor")
+                List("AttenuateSensor", "CurrentTemp")
               )
             ),
             PipeRef(
@@ -288,7 +288,7 @@ class StreamingParserTest extends ParsingTest {
               (26, 21, rpi),
               PathIdentifier(
                 (26, 28, rpi),
-                List("Weather", "GetWeatherForecast")
+                List("GetWeatherForecast", "Weather")
               )
             ),
             PipeRef(
@@ -304,7 +304,7 @@ class StreamingParserTest extends ParsingTest {
               (28, 21, rpi),
               PathIdentifier(
                 (28, 28, rpi),
-                List("CurrentTemp", "GetCurrentTemperature")
+                List("GetCurrentTemperature", "CurrentTemp")
               )
             ),
             PipeRef(

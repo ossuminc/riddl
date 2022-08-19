@@ -116,7 +116,7 @@ class ExpressionParserTest extends ParsingTest {
       parseExpression("Entity.Function(i=42, j=21)") { expr: Expression =>
         expr mustBe FunctionCallExpression(
           Location(1 -> 1),
-          PathIdentifier(Location(1 -> 1), Seq("Function", "Entity")),
+          PathIdentifier(Location(1 -> 1), Seq("Entity", "Function")),
           ArgList(ListMap(
             Identifier(Location(1 -> 17), "i") ->
               LiteralInteger(Location(1 -> 19), magic),

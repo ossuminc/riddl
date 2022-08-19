@@ -172,11 +172,7 @@ trait TypeParser extends ReferenceParser {
     MessageType(
       loc,
       mk,
-      Field(
-        loc,
-        Identifier(loc, "sender"),
-        ReferenceType(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String])))
-      ) +: agg.fields
+      agg.fields
     )
   }
 
@@ -257,5 +253,9 @@ trait TypeParser extends ReferenceParser {
           Type(loc, id, mt, b, d)
       }
     )
+  }
+
+  def types[u: P]: P[Seq[Type]] = {
+    typeDef.rep(0)
   }
 }

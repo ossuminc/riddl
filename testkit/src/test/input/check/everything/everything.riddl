@@ -65,7 +65,7 @@ domain Everything is {
 
       function whenUnderTheInfluence is {
         requires { n: Nothing }
-        yields { b: Boolean }
+        returns { b: Boolean }
       }
 
       handler foo is {

@@ -51,8 +51,10 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(Location(), Nil).format mustBe ""
+      PathIdentifier(Location(), List("", "foo", "baz"))
+        .format mustBe "^foo.baz"
       PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe
-        "baz.bar.foo"
+        "foo.bar.baz"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
     }
   }
@@ -85,10 +87,10 @@ class ASTTest extends AnyWordSpec with must.Matchers {
 
   "EntityAggregate" should {
     "have correct name" in {
-      EntityAggregate(Location()).name mustBe "aggregate"
+      EntityIsAggregate(Location()).name mustBe "aggregate"
       EntityTransient(Location()).name mustBe "transient"
-      EntityConsistent(Location()).name mustBe "consistent"
-      EntityAvailable(Location()).name mustBe "available"
+      EntityIsConsistent(Location()).name mustBe "consistent"
+      EntityIsAvailable(Location()).name mustBe "available"
     }
   }
 
@@ -120,7 +122,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "contents" should {
       "contain all contents" in {
         val options = Seq(
-          EntityAggregate(Location()),
+          EntityIsAggregate(Location()),
           EntityTransient(Location()),
           EntityKind(Location(), Seq(LiteralString(Location(), "concept")))
         )
@@ -148,6 +150,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
               Field(Location(), Identifier(Location(), "a"), Bool(Location()))
             )
           )),
+          Seq.empty[Type], Seq.empty[Function],
           Seq.empty[Example],
           None
         ))

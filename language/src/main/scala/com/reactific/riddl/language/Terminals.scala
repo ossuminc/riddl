@@ -168,6 +168,8 @@ object Terminals {
     final val requires = "requires"
     final val result = "result"
     final val results = "results"
+    final val return_ = "return"
+    final val returns = "returns"
     final val reverted = "reverted"
     final val role = "role"
     final val saga = "saga"

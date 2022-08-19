@@ -78,7 +78,7 @@ class ConditionParserTest extends ParsingTest {
       parseCondition("This.That(x=42)") { cond: Condition =>
         cond mustBe FunctionCallExpression(
           Location(1 -> 1),
-          PathIdentifier(Location(1 -> 1), Seq("That", "This")),
+          PathIdentifier(Location(1 -> 1), Seq("This", "That")),
           ArgList(ListMap(
             Identifier(Location(1 -> 11), "x") ->
               LiteralInteger(Location(1 -> 13), BigInt(42))

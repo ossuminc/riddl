@@ -17,8 +17,10 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.Messages.*
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 object Folding {
 
@@ -82,8 +84,8 @@ object Folding {
     value: S,
     top: ParentDefOf[Definition],
     folder: Folder[S],
-    parents: mutable.Stack[ParentDefOf[Definition]] = mutable.Stack
-      .empty[ParentDefOf[Definition]]
+    parents: mutable.Stack[ParentDefOf[Definition]] =
+      mutable.Stack.empty[ParentDefOf[Definition]]
   ): S = {
     // Let them know a container is being opened
     val startState = folder.openContainer(value, top, parents.toSeq)
@@ -98,8 +100,7 @@ object Folding {
     }
     // Let them know a container is being closed
     parents.pop()
-    val endState = folder.closeContainer(middleState, top, parents.toSeq)
-    endState
+    folder.closeContainer(middleState, top, parents.toSeq)
   }
 
   trait Folder[STATE] {
@@ -123,7 +124,162 @@ object Folding {
   }
 
   trait State[S <: State[?]] {
-    def step(f: S => S): S
+    def step(f: S => S): S = f(this.asInstanceOf[S])
+    def stepIf(predicate:Boolean = true)(f: S => S): S = {
+      if (predicate) f(this.asInstanceOf[S]) else this.asInstanceOf[S]
+    }
   }
 
+  trait MessagesState[S <: State[?]] extends State[S] {
+
+    def commonOptions: CommonOptions
+
+    private val msgs: ListBuffer[Message] = ListBuffer.empty[Message]
+
+    def messages: Messages.Messages = msgs.toList
+
+    def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
+
+    def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
+
+    def addStyle(loc: Location, msg: String): S = {
+      add(Message(loc, msg, StyleWarning))
+    }
+
+    def addMissing(loc: Location, msg: String): S = {
+      add(Message(loc, msg, MissingWarning))
+    }
+
+    def addWarning(loc: Location, msg: String): S = {
+      add(Message(loc, msg, Warning))
+    }
+
+    def addError(loc: Location, msg: String): S = {
+      add(Message(loc, msg, Error))
+    }
+
+    def addSevere(loc: Location, msg: String): S = {
+      add(Message(loc, msg, SevereError))
+    }
+
+    def add(msg: Message): S = {
+      msg.kind match {
+        case StyleWarning =>
+          if (isReportStyleWarnings) {
+            msgs += msg
+            this.asInstanceOf[S]
+          } else {this.asInstanceOf[S]}
+        case MissingWarning =>
+          if (isReportMissingWarnings) {
+            msgs += msg
+            this.asInstanceOf[S]
+          } else {this.asInstanceOf[S]}
+        case _ =>
+          msgs += msg
+          this.asInstanceOf[S]
+      }
+    }
+  }
+
+  trait PathResolutionState[S <: State[?]] extends State[S] {
+    def root: ParentDefOf[Definition]
+    var parents: Seq[Definition] = Seq.empty[Definition]
+    var definition: Definition = root
+
+    def captureHierarchy(cont: Definition, pars: Seq[Definition]): Unit = {
+      definition = cont
+      parents = pars
+    }
+
+    def resolvePath(
+      pid: PathIdentifier,
+      parents: Seq[Definition] = Seq(definition) ++ parents
+    ): Option[Definition] = {
+      resolvePath(pid.value, parents)
+    }
+
+      /** Resolve a PathIdentifier If the path is already resolved or it has no
+     * empty components then we can resolve it from the map or the symbol
+     * table.
+     *
+     * @param pid
+     * The path to consider
+     * @return
+     * Either an error or a definition
+     */
+    def resolvePath(
+      names: Seq[String],
+      parents: Seq[Definition]
+    ): Option[Definition] = {
+      val pstack = mutable.Stack.empty[Definition]
+      pstack.pushAll(parents.reverse)
+      val nstack = mutable.Stack.empty[String]
+      nstack.pushAll(names.reverse)
+      var result = pstack.headOption.asInstanceOf[Option[Definition]]
+      while (result.nonEmpty && nstack.nonEmpty) {
+        val n = nstack.pop()
+        // if we're supposed to pop parent off the stack ...
+        if (n.isEmpty) {
+          // if there is a parent to pop off the stack
+          if (pstack.nonEmpty) {
+            // pop it and the new result is the new head
+            pstack.pop()
+            result = pstack.headOption
+          } else {
+            result = None // no parent stack to pop, exit loop
+          }
+        } else {
+          // First get the list of candidate matches from the current node
+          val candidates: Seq[Definition] = result match {
+            case None =>
+              // empty result means nothing to search
+              result = None
+              Seq.empty[Definition]
+            case Some(f: Function) if f.input.nonEmpty =>
+              // If we're at a Function node, the functions input parameters
+              // are the candidates to search next
+              f.input.get.fields
+            case Some(s: AST.State) =>
+              // If we're at a entity's state, the state's fields are next
+              s.typeEx.fields
+            case Some(Field(_, _, te: Aggregation, _, _)) =>
+              // if we're at a field composed of more fields, those fields are it
+              te.fields
+            case field @ Some(Field(_, _, TypeRef(_,pid), _, _)) =>
+              // if we're at a field that references another type then we
+              // need to push that types path on the name stack
+              nstack.push(n)
+              nstack.pushAll(pid.value.reverse)
+              pstack.push(field.get)
+              Seq.empty[Definition]
+            case Some(p) if p.isContainer =>
+              p.asInstanceOf[Container[Definition]].contents
+            case _ =>
+              // anything else isn't searchable so n can't be found
+              result = None
+              Seq.empty[Definition]
+          }
+
+          // Now find the match, if any, and handle appropriately
+          val found = candidates.find(_.id.value == n)
+          found match {
+            case Some(q : Definition) if q.isContainer =>
+              // found the named item, and it is a Container, so put it on
+              // the stack in case there are more things to resolve
+              pstack.push(q.asInstanceOf[ParentDefOf[Definition]])
+              // make it the next value of "r" in our foldLeft
+              result = Some(q)
+            case r @ Some(_) =>
+              // Found an item but its not a container. So, presumably this is
+              // the result they want. If there are more names, they will
+              // fall through above and produce a None result.
+              result = r
+            case None =>
+              // No search result, there may be more things
+          }
+        }
+      }
+      result
+    }
+  }
 }
