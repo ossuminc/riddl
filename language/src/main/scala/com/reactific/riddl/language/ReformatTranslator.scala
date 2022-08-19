@@ -19,9 +19,10 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Terminals.Keywords
-
+import com.reactific.riddl.utils.Logger
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.mutable
 
@@ -35,23 +36,24 @@ case class ReformattingOptions(
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 object ReformatTranslator extends Translator[ReformattingOptions] {
 
-  def translateImpl(
+  override def translateImpl(
     root: RootContainer,
     @unused
     log: Logger,
     commonOptions: CommonOptions,
     options: ReformattingOptions
   ): Seq[Path] = {
+    super.translateImpl(root, log, commonOptions, options)
     doTranslation(root, log, commonOptions, options).files
   }
 
   def doTranslation(
     root: RootContainer,
-    @unused log: Logger,
+    @unused
+    log: Logger,
     commonOptions: CommonOptions,
-    options:ReformattingOptions
-  ): ReformatState
-  = {
+    options: ReformattingOptions
+  ): ReformatState = {
     val state = ReformatState(commonOptions, options)
     val folder = new ReformatFolder
     Folding.foldAround(state, root, folder)
@@ -64,7 +66,10 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     options: ReformattingOptions
   ): String = {
     val state = doTranslation(
-      root, logger, commonOptions, options.copy(singleFile = true)
+      root,
+      logger,
+      commonOptions,
+      options.copy(singleFile = true)
     )
     state.filesAsString
   }
@@ -130,13 +135,10 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       definition: Definition,
       withBrace: Boolean = true
     ): FileEmitter = {
-      addSpace()
-        .add(s"${AST.keyword(definition)} ${definition.id.format} is ")
+      addSpace().add(s"${AST.keyword(definition)} ${definition.id.format} is ")
       if (withBrace) {
         if (definition.isEmpty) { add("{ ??? }") }
-        else {
-          add("{\n").indent
-        }
+        else { add("{\n").indent }
       }
       this
     }
@@ -145,13 +147,10 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       definition: Definition,
       withBrace: Boolean = true
     ): FileEmitter = {
-      if (withBrace && !definition.isEmpty) {
-        outdent.addIndent("}")
-      }
+      if (withBrace && !definition.isEmpty) { outdent.addIndent("}") }
       emitBrief(definition.brief)
       emitDescription(definition.description).add("\n")
     }
-
 
     def emitBrief(brief: Option[LiteralString]): FileEmitter = {
       brief.foldLeft(this) { (s, ls: LiteralString) =>
@@ -180,8 +179,8 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     def mkEnumeratorDescription(description: Option[Description]): String = {
       description match {
         case Some(desc) => " described as { " + {
-          desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
-        }
+            desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
+          }
         case None => ""
       }
     }
@@ -197,9 +196,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     }
 
     def emitAlternation(alternation: AST.Alternation): FileEmitter = {
-      add(s"one of {\n")
-        .indent
-        .addIndent("")
+      add(s"one of {\n").indent.addIndent("")
         .emitTypeExpression(alternation.of.head)
       val s5 = alternation.of.tail.foldLeft(this) { (s4, te) =>
         s4.add(" or ").emitTypeExpression(te)
@@ -249,7 +246,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
 
     def emitMessageType(mt: AST.MessageType): FileEmitter = {
       this.add(mt.messageKind.kind.toLowerCase).add(" ")
-        .emitFields(mt.fields.tail)
+        .emitFields(mt.fields)
     }
 
     def emitMessageRef(mr: AST.MessageRef): FileEmitter = {
@@ -272,14 +269,14 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case n: Nothing     => this.add(n.kind)
         case TypeRef(_, id) => this.add(id.format)
         case URL(_, scheme) => this
-          .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
+            .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
         case mapping: Mapping         => emitMapping(mapping)
         case RangeType(_, min, max)   => this.add(s"range(${min.n},${max.n}) ")
         case ReferenceType(_, er) => this
-          .add(s"${Keywords.reference} to ${er.format}")
+            .add(s"${Keywords.reference} to ${er.format}")
         case pattern: Pattern     => emitPattern(pattern)
         case mt: MessageType      => emitMessageType(mt)
         case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
@@ -374,8 +371,8 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
 
   case class ReformatState(
     commonOptions: CommonOptions,
-    options: ReformattingOptions
-  ) extends Folding.State[ReformatState] {
+    options: ReformattingOptions)
+      extends Folding.State[ReformatState] {
 
     require(options.inputFile.nonEmpty, "No input file specified")
     require(options.outputDir.nonEmpty, "No output directory specified")
@@ -390,8 +387,6 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       outPath.resolve(suffixPath)
     }
 
-    def step(f: ReformatState => ReformatState): ReformatState = f(this)
-
     private var generatedFiles: Seq[FileEmitter] = Seq.empty[FileEmitter]
 
     def files: Seq[Path] = {
@@ -400,26 +395,19 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         val content = filesAsString
         Files.writeString(firstFile.path, content, StandardCharsets.UTF_8)
         Seq(firstFile.path)
-      } else {
-        for { emitter <- generatedFiles } yield {
-          emitter.emit()
-        }
-      }
+      } else { for { emitter <- generatedFiles } yield { emitter.emit() } }
     }
 
     def filesAsString: String = {
       closeStack()
       generatedFiles
-        .map(fe => s"\n// From '${fe.path.toString}'\n${fe.asString}")
-        .mkString
+        .map(fe => s"\n// From '${fe.path.toString}'\n${fe.asString}").mkString
     }
 
-    private val fileStack: mutable.Stack[FileEmitter] =
-      mutable.Stack.empty[FileEmitter]
+    private val fileStack: mutable.Stack[FileEmitter] = mutable.Stack
+      .empty[FileEmitter]
 
-    private def closeStack(): Unit = {
-      while (fileStack.nonEmpty) popFile()
-    }
+    private def closeStack(): Unit = { while (fileStack.nonEmpty) popFile() }
 
     def current: FileEmitter = fileStack.head
 
@@ -439,9 +427,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       addFile(file)
     }
 
-    def popFile(): ReformatState = {
-      fileStack.pop() ; this
-    }
+    def popFile(): ReformatState = { fileStack.pop(); this }
 
     def withCurrent(f: FileEmitter => Unit): ReformatState = {
       f(current); this
@@ -460,16 +446,14 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case adaptor: Adaptor   => openAdaptor(state, adaptor)
         case typ: Type          => state.current.emitType(typ); state
         case function: Function => openFunction(state, function)
-        case st: State =>
-          state.withCurrent(_
-            .openDef(st, withBrace = false)
-            .emitFields(st.typeEx.fields)
+        case st: State => state.withCurrent(
+            _.openDef(st, withBrace = false).emitFields(st.typeEx.fields)
           )
         case oc: OnClause           => openOnClause(state, oc)
         case step: SagaStep         => openSagaStep(state, step)
         case include: Include       => openInclude(state, include)
         case adaptation: Adaptation => openAdaptation(state, adaptation)
-        case _: RootContainer =>
+        case _: RootContainer       =>
           // ignore
           state
         case container: ParentDefOf[Definition] with OptionsDef[?] =>
@@ -488,8 +472,9 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     ): ReformatState = {
       definition match {
         case example: Example => state.withCurrent(_.emitExample(example))
-        case invariant: Invariant => state.withCurrent(_.openDef(invariant)
-            .closeDef(invariant, withBrace = false))
+        case invariant: Invariant => state.withCurrent(
+            _.openDef(invariant).closeDef(invariant, withBrace = false)
+          )
         case pipe: Pipe     => doPipe(state, pipe)
         case inlet: Inlet   => doInlet(state, inlet)
         case outlet: Outlet => doOutlet(state, outlet)
@@ -510,12 +495,11 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       parents: Seq[ParentDefOf[Definition]]
     ): ReformatState = {
       container match {
-        case _: Type          => state // openContainer did all of it
-        case story: Story     => closeStory(state, story)
-        case st: State        =>
-          state.withCurrent(_.closeDef(st, withBrace = false))
-        case _: OnClause      => closeOnClause(state)
-        case include: Include => closeInclude(state, include)
+        case _: Type      => state // openContainer did all of it
+        case story: Story => closeStory(state, story)
+        case st: State   => state.withCurrent(_.closeDef(st, withBrace = false))
+        case _: OnClause => closeOnClause(state)
+        case include: Include              => closeInclude(state, include)
         case adaptation: AdaptorDefinition => closeAdaptation(state, adaptation)
         case _: RootContainer              =>
           // ignore
@@ -531,26 +515,23 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       state: ReformatState,
       domain: Domain
     ): ReformatState = {
-      state.withCurrent(_.openDef(domain)).step { s1 =>
-        if (domain.author.nonEmpty && domain.author.get.nonEmpty) {
-          val author = domain.author.get
-          s1.withCurrent(_.addIndent(s"author is {\n")
+      state.withCurrent(_.openDef(domain)).step { s1: ReformatState =>
+        domain.authors.foldLeft(s1) { (st, author) =>
+          st.withCurrent(_.addIndent(s"author is {\n")
             .indent
             .addIndent(s"name = ${author.name.format}\n")
             .addIndent(s"email = ${author.email.format}\n")
           ).step { s2 =>
-              author.organization
-                .map(org => s2.withCurrent(
-                  _.addIndent(s"organization =${org.format}\n")))
-                .orElse(Option(s2)).get
-            }.step { s3 =>
-              author.title
-                .map(title => s3.withCurrent(
-                  _.addIndent(s"title = ${title.format}\n")))
-                .orElse(Option(s3)).get
-            }.withCurrent(_.outdent.addIndent("}\n"))
-        } else {
-          s1
+            author.organization
+              .map(org => s2.withCurrent(
+                _.addIndent(s"organization =${org.format}\n")))
+              .orElse(Option(s2)).get
+          }.step { s3 =>
+            author.title
+              .map(title => s3.withCurrent(
+                _.addIndent(s"title = ${title.format}\n")))
+              .orElse(Option(s3)).get
+          }.withCurrent(_.outdent.addIndent("}\n"))
         }
       }
     }
@@ -558,24 +539,23 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     def openStory(state: ReformatState, story: Story): ReformatState = {
       state.withCurrent(
         _.openDef(story).addIndent(Keywords.role).add(" is ")
-        .add(story.role.format).addNL().addIndent(Keywords.capability)
-        .add(" is ").add(story.capability.format).addNL()
-        .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format)
-        .addNL()
+          .add(story.role.format).addNL().addIndent(Keywords.capability)
+          .add(" is ").add(story.capability.format).addNL()
+          .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format)
+          .addNL()
       ).step { state =>
-          if (story.examples.nonEmpty) {
-            state.withCurrent(
-              _.addIndent(Keywords.accepted).add(" by {")
-              .addNL().indent
-            )
-          } else { state }
-        }
+        if (story.examples.nonEmpty) {
+          state.withCurrent(
+            _.addIndent(Keywords.accepted).add(" by {").addNL().indent
+          )
+        } else { state }
+      }
     }
 
     def closeStory(state: ReformatState, story: Story): ReformatState = {
       (if (story.examples.nonEmpty) {
-        state.withCurrent(_.outdent.addNL().addLine("}")) }
-       else { state }).withCurrent(_.closeDef(story))
+         state.withCurrent(_.outdent.addNL().addLine("}"))
+       } else { state }).withCurrent(_.closeDef(story))
     }
 
     def openAdaptor(
@@ -583,13 +563,12 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       adaptor: Adaptor
     ): ReformatState = {
       state.withCurrent(
-        _.addIndent(AST.keyword(adaptor))
-        .add(" ").add(adaptor.id.format)
-        .add(" for ").add(adaptor.ref.format).add(" is {")
+        _.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format)
+          .add(" for ").add(adaptor.ref.format).add(" is {")
       ).step { s2 =>
-          if (adaptor.isEmpty) { s2.withCurrent(_.emitUndefined().add(" }\n")) }
-          else { s2.withCurrent(_.add("\n").indent) }
-        }
+        if (adaptor.isEmpty) { s2.withCurrent(_.emitUndefined().add(" }\n")) }
+        else s2.withCurrent(_.add("\n").indent)
+      }
     }
 
     def openAdaptation(
@@ -599,18 +578,21 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       adaptation match {
         case ec8: EventCommandA8n => state.withCurrent(
             _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
-            .addIndent("from ").emitMessageRef(ec8.messageRef).add(" to ")
-            .emitMessageRef(ec8.command).add(" as {\n").indent)
+              .addIndent("from ").emitMessageRef(ec8.messageRef).add(" to ")
+              .emitMessageRef(ec8.command).add(" as {\n").indent
+          )
 
         case cc8: CommandCommandA8n => state.withCurrent(
-          _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
-            .addIndent("from ").emitMessageRef(cc8.messageRef).add(" to ")
-            .emitMessageRef(cc8.command).add(" as {\n").indent)
+            _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
+              .addIndent("from ").emitMessageRef(cc8.messageRef).add(" to ")
+              .emitMessageRef(cc8.command).add(" as {\n").indent
+          )
 
         case ea8: EventActionA8n => state.withCurrent(
             _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
-            .addIndent("from ").emitMessageRef(ea8.messageRef).add(" to ")
-            .emitActions(ea8.actions).add(" as {\n").indent)
+              .addIndent("from ").emitMessageRef(ea8.messageRef).add(" to ")
+              .emitActions(ea8.actions).add(" as {\n").indent
+          )
       }
     }
 
@@ -620,37 +602,29 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     ): ReformatState = {
       state.withCurrent(
         _.outdent.addIndent("}\n").outdent.addIndent("}\n")
-        .emitBrief(adaptation.brief).emitDescription(adaptation.description)
+          .emitBrief(adaptation.brief).emitDescription(adaptation.description)
       )
     }
 
-    def openOnClause(state: ReformatState, onClause: OnClause): ReformatState = {
+    def openOnClause(
+      state: ReformatState,
+      onClause: OnClause
+    ): ReformatState = {
       state.withCurrent(
-        _.addIndent("on ")
-          .emitMessageRef(onClause.msg)
-          .add(" {\n")
-          .indent
+        _.addIndent("on ").emitMessageRef(onClause.msg).add(" {\n").indent
       )
     }
 
     def closeOnClause(state: ReformatState): ReformatState = {
-      state.withCurrent(
-        _.outdent.addIndent("}\n")
-      )
+      state.withCurrent(_.outdent.addIndent("}\n"))
     }
 
     def doPipe(state: ReformatState, pipe: Pipe): ReformatState = {
-      state.withCurrent(
-        _.openDef(pipe)
-      ).step { state =>
+      state.withCurrent(_.openDef(pipe)).step { state =>
         pipe.transmitType match {
-          case Some(typ) =>
-            state.withCurrent(
-            _.addIndent("transmit ")
-            .emitTypeExpression(typ)
-          )
-          case None =>
-            state.withCurrent( _.addSpace().emitUndefined())
+          case Some(typ) => state
+              .withCurrent(_.addIndent("transmit ").emitTypeExpression(typ))
+          case None => state.withCurrent(_.addSpace().emitUndefined())
         }
       }.withCurrent(_.closeDef(pipe))
     }
@@ -660,14 +634,14 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         _.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
       )
       joint match {
-        case InletJoint(_, _, inletRef, pipeRef, _, _) =>
-          s.withCurrent(
+        case InletJoint(_, _, inletRef, pipeRef, _, _) => s.withCurrent(
             _.addIndent(s"inlet ${inletRef.id.format} from")
-            .add(s" pipe ${pipeRef.id.format}\n"))
-        case OutletJoint(_, _, outletRef, pipeRef, _, _) =>
-          s.withCurrent(
+              .add(s" pipe ${pipeRef.id.format}\n")
+          )
+        case OutletJoint(_, _, outletRef, pipeRef, _, _) => s.withCurrent(
             _.addIndent(s"outlet ${outletRef.id.format} to")
-            .add(s" pipe ${pipeRef.id.format}\n"))
+              .add(s" pipe ${pipeRef.id.format}\n")
+          )
       }
     }
 
@@ -689,14 +663,12 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     ): ReformatState = {
       state.withCurrent(_.openDef(function)).step { s =>
         function.input.fold(s)(te =>
-          s.withCurrent(
-            _.addIndent("requires ").emitTypeExpression(te).addNL()
-          )
+          s.withCurrent(_.addIndent("requires ").emitTypeExpression(te).addNL())
         )
       }.step { s =>
         function.output
           .fold(s)(te => s.withCurrent(
-            _.addIndent("yields ").emitTypeExpression(te).addNL())
+            _.addIndent("returns  ").emitTypeExpression(te).addNL())
           )
       }
     }
@@ -707,7 +679,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     ): ReformatState = {
       state.withCurrent(
         _.openDef(step).emitAction(step.doAction).add("reverted by")
-        .emitAction(step.undoAction)
+          .emitAction(step.undoAction)
       )
     }
 
@@ -727,22 +699,16 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
             state.current.add(s"include \"<missing file path>\"")
             state
         }
-      } else {
-        state
-      }
+      } else { state }
     }
-
 
     def closeInclude(
       state: ReformatState,
       @unused
       include: Include
     ): ReformatState = {
-      if (!state.options.singleFile) {
-        state.popFile()
-      } else {
-        state
-      }
+      if (!state.options.singleFile) { state.popFile() }
+      else { state }
     }
   }
 }

@@ -17,8 +17,12 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Keywords, Punctuation, Readability}
-import com.reactific.riddl.language.{AST, Location}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Options
+import com.reactific.riddl.language.Terminals.Punctuation
+import com.reactific.riddl.language.Terminals.Readability
+import com.reactific.riddl.language.AST
+import com.reactific.riddl.language.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -38,8 +42,8 @@ trait DomainParser
         if (x.isEmpty) Seq.empty[java.net.URL] else x.get
       } ~
       (Keywords.implemented ~ Readability.by ~ open ~
-        pathIdentifier.rep(1, Punctuation.comma) ~ close).?
-        .map(x => if (x.isEmpty) Seq.empty[PathIdentifier] else x.get) ~
+        domainRef.rep(1, Punctuation.comma) ~ close).?
+        .map(x => if (x.isEmpty) Seq.empty[DomainRef] else x.get) ~
       (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~ close ~
       briefly ~ description
   ).map {
@@ -91,30 +95,29 @@ trait DomainParser
       )
   }
 
-  def author[u: P]: P[Option[AuthorInfo]] = {
+  def author[u: P]: P[AuthorInfo] = {
     P(
-      location ~ Keywords.author ~/ is ~ open ~
+      location ~ Keywords.author ~/ identifier ~ is ~ open ~
         (undefined((
           LiteralString(Location(), ""),
           LiteralString(Location(), ""),
           Option.empty[LiteralString],
           Option.empty[LiteralString],
           Option.empty[java.net.URL]
-        )) |
-          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-            (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ description
-    ).?.map {
-      case Some((loc, (name, email, org, title, url), description)) =>
-        if (
-          name.isEmpty && email.isEmpty && org.isEmpty && title.isEmpty &&
-          url.isEmpty
-        ) { Option.empty[AuthorInfo] }
-        else {
-          Option(AuthorInfo(loc, name, email, org, title, url, description))
-        }
-      case None => None
+        )) | (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+          literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+          (Keywords.title ~ is ~ literalString).? ~
+          (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+    ).map {
+      case (loc, id, (name, email, org, title, url), brief, desc) =>
+        AuthorInfo(loc, id, name, email, org, title, url, brief, desc)
+    }
+  }
+
+  def domainOptions[X: P]: P[Seq[DomainOption]] = {
+    options[X, DomainOption](StringIn(Options.package_).!) {
+      case (loc, Options.package_, args) => DomainPackageOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -124,7 +127,7 @@ trait DomainParser
 
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (typeDef | context | plant | story | domain | term | importDef |
+      (author | typeDef | context | plant | story | domain | term | importDef |
         domainInclude).rep(0)
     )
   }
@@ -132,11 +135,12 @@ trait DomainParser
   def domain[u: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
-        (undefined((Option.empty[AuthorInfo], Seq.empty[DomainDefinition])) |
-          author ~ domainContent) ~ close ~/ briefly ~ description
-    ).map { case (loc, id, (author, defs), briefly, description) =>
+        domainOptions ~ (undefined(Seq.empty[DomainDefinition]) | domainContent)
+        ~ close ~/ briefly ~ description
+    ).map { case (loc, id, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
-      val domains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
+      val authors = mapTo[AST.AuthorInfo](groups.get(classOf[AST.AuthorInfo]))
+      val subdomains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
@@ -146,12 +150,13 @@ trait DomainParser
       Domain(
         loc,
         id,
-        author,
+        options,
+        authors,
         types,
         contexts,
         plants,
         stories,
-        domains,
+        subdomains,
         terms,
         includes,
         briefly,

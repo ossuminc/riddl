@@ -1,23 +1,28 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Validation.*
+import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.Validation.ValidationState
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 
 class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationMessage#format" should {
     "produce a correct string" in {
-      ValidationMessage(Location(1, 2, "the_source"), "the_message", Warning)
-        .format mustBe s"Warning: the_source(1:2): the_message"
+      Message(
+        Location(1, 2, RiddlParserInput.empty),
+        "the_message",
+        Warning
+      ).format mustBe s"Warning: empty(1:2): the_message"
     }
     "compare based on locations" in {
       val v1 =
-        ValidationMessage(Location(1, 2, "the_source"), "the_message", Warning)
+        Message(Location(1, 2, "the_source"), "the_message", Warning)
       val v2 =
-        ValidationMessage(Location(2, 3, "the_source"), "the_message", Warning)
-      v1 < v2 mustBe (true)
-      v1 == v1 mustBe (true)
+        Message(Location(2, 3, "the_source"), "the_message", Warning)
+      v1 < v2 mustBe true
+      v1 == v1 mustBe true
     }
   }
 
@@ -46,10 +51,10 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       "checkNonEmpty" in {
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(Nil, "foo", RootContainer.empty).messages mustBe
-          List(ValidationMessage(
-            Location(0, 0, "Root"),
+          List(Message(
+            Location(1, 1, RiddlParserInput.empty),
             "foo in Root should not be empty",
-            Validation.Error
+            Error
           ))
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(List(1, 2, 3), "foo", RootContainer.empty)
@@ -58,15 +63,15 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       "checkOptions" in {
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
           List(
-            EntityAggregate(Location()),
+            EntityIsAggregate(Location()),
             EntityTransient(Location()),
-            EntityAggregate(Location())
+            EntityIsAggregate(Location())
           ),
           Location()
-        ).messages mustBe List(ValidationMessage(
+        ).messages mustBe List(Message(
           Location(),
           "Options should not be repeated",
-          Validation.Error
+          Error
         ))
         case class IntOption(loc: Location, name: String) extends OptionValue
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
@@ -80,34 +85,4 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       }
     }
   }
-
-  "ValidationMessageKind" should {
-    "have correct field values" in {
-      MissingWarning.isWarning mustBe true
-      MissingWarning.isError mustBe false
-      MissingWarning.isSevereError mustBe false
-      MissingWarning.toString mustBe "Missing"
-
-      StyleWarning.isWarning mustBe true
-      StyleWarning.isError mustBe false
-      StyleWarning.isSevereError mustBe false
-      StyleWarning.toString mustBe "Style"
-
-      Warning.isWarning mustBe true
-      Warning.isError mustBe false
-      Warning.isSevereError mustBe false
-      Warning.toString mustBe "Warning"
-
-      Validation.Error.isWarning mustBe false
-      Validation.Error.isError mustBe true
-      Validation.Error.isSevereError mustBe false
-      Validation.Error.toString mustBe "Error"
-
-      SevereError.isWarning mustBe false
-      SevereError.isError mustBe true
-      SevereError.isSevereError mustBe true
-      SevereError.toString mustBe "Severe"
-    }
-  }
-
 }

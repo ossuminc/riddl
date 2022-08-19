@@ -18,37 +18,13 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST._
+import com.reactific.riddl.utils.TextFileWriter
 
 import java.io.PrintWriter
 import java.nio.file.Path
 import scala.collection.mutable
 
-case class MarkdownWriter(filePath: Path) {
-
-  private val sb: StringBuilder = new mutable.StringBuilder()
-
-  override def toString: String = sb.toString
-
-  private def mkDirs(): Unit = {
-    val dirFile = filePath.getParent.toFile
-    if (!dirFile.exists) { dirFile.mkdirs() }
-  }
-
-  def write(writer: PrintWriter): Unit = {
-    try {
-      writer.write(sb.toString())
-      writer.flush()
-    } finally { writer.close() }
-    sb.clear() // release memory because content written to file
-  }
-
-  def write(): Unit = {
-    mkDirs()
-    val writer = new PrintWriter(filePath.toFile)
-    write(writer)
-  }
-
-  def nl: this.type = { sb.append("\n"); this }
+case class MarkdownWriter(filePath: Path) extends TextFileWriter {
 
   def fileHead(
     name: String,
@@ -263,8 +239,7 @@ case class MarkdownWriter(filePath: Path) {
   def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
     fileHead(domain)
     title(domain)
-    if (domain.author.nonEmpty) {
-      val a = domain.author.get
+    for (a <- domain.authors) {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
         a.organization.fold(Seq.empty[(String, String)])(ls =>
           Seq("Organization" -> ls.s)

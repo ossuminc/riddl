@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.AST.{Field, *}
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 
@@ -9,14 +9,16 @@ class TypeParserTest extends ParsingTest {
 
   "TypeParser" should {
     "allow renames of String" in {
-      val input = "type str = String"
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "str"), Strng(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type str = String")
+      val expected =
+        Type((1, 1, rpi), Identifier((1, 6, rpi), "str"), Strng((1, 12, rpi)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow renames of Number" in {
-      val input = "type num = Number"
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "num"), Number(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type num = Number")
+      val expected =
+        Type((1, 1, rpi), Identifier((1, 6, rpi), "num"), Number((1, 12, rpi)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Abstract" in {
       val input = "type abs = Abstract"
@@ -33,16 +35,23 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "ident"),
-        UniqueId(1 -> 14, entityPath = PathIdentifier(1 -> 14, Seq.empty[String]))
+        UniqueId(
+          1 -> 14,
+          entityPath = PathIdentifier(1 -> 14, Seq.empty[String])
+        )
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow renames of 8 literal types" in {
       val cases = Map[String, Type](
-        "type dat = Date" -> Type(1 -> 1, Identifier(1 -> 6, "dat"), Date(1 -> 12)),
-        "type tim = Time" -> Type(1 -> 1, Identifier(1 -> 6, "tim"), Time(1 -> 12)),
-        "type stamp = TimeStamp" -> Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
-        "type url = URL" -> Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
+        "type dat = Date" ->
+          Type(1 -> 1, Identifier(1 -> 6, "dat"), Date(1 -> 12)),
+        "type tim = Time" ->
+          Type(1 -> 1, Identifier(1 -> 6, "tim"), Time(1 -> 12)),
+        "type stamp = TimeStamp" ->
+          Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
+        "type url = URL" ->
+          Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
         "type FirstName = url" -> Type(
           1 -> 1,
           Identifier(1 -> 6, "FirstName"),
@@ -85,59 +94,72 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow alternation of a lone type reference" in {
-      val input = RiddlParserInput("""domain Blah is {
-                                     |type Foo = String
-                                     |type alt = one of { type Foo }
-                                     |}
-                                     |""".stripMargin)
-      val expected =
-        Alternation(3 -> 12, List(TypeRef(3 -> 21, PathIdentifier(3 -> 26, Seq("Foo")))))
-      parseDomainDefinition[Type](input, _.types.last) match {
+      val rpi = RiddlParserInput("""domain Blah is {
+                                   |type Foo = String
+                                   |type alt = one of { type Foo }
+                                   |}
+                                   |""".stripMargin)
+      val expected = Alternation(
+        (3, 12, rpi),
+        List(TypeRef((3, 21, rpi), PathIdentifier((3, 26, rpi), Seq("Foo"))))
+      )
+      parseDomainDefinition[Type](rpi, _.types.last) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(Type(_, _, typeExp, _, _)) => typeExp mustBe expected
+        case Right((Type(_, _, typeExp, _, _), _)) => typeExp mustBe expected
       }
     }
     "allow aggregation" in {
-      val input = """type agg = {
-                    |  key: Number,
-                    |  id: Id(),
-                    |  time: TimeStamp
-                    |}
-                    |""".stripMargin
+      val rip = RiddlParserInput("""type agg = {
+                                   |  key: Number,
+                                   |  id: Id(),
+                                   |  time: TimeStamp
+                                   |}
+                                   |""".stripMargin)
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "agg"),
+        (1, 1, rip),
+        Identifier((1, 6, rip), "agg"),
         Aggregation(
-          1 -> 12,
+          (1, 12, rip),
           Seq(
-            Field(2 -> 3, Identifier(2 -> 3, "key"), Number(2 -> 8)),
             Field(
-              3 -> 3,
-              Identifier(3 -> 3, "id"),
-              UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]))
+              (2, 3, rip),
+              Identifier((2, 3, rip), "key"),
+              Number((2, 8, rip))
             ),
-            Field(4 -> 3, Identifier(4 -> 3, "time"), TimeStamp(4 -> 9))
+            Field(
+              (3, 3, rip),
+              Identifier((3, 3, rip), "id"),
+              UniqueId(
+                (3, 7, rip),
+                PathIdentifier((3, 7, rip), Seq.empty[String])
+              )
+            ),
+            Field(
+              (4, 3, rip),
+              Identifier((4, 3, rip), "time"),
+              TimeStamp((4, 9, rip))
+            )
           )
         )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow command, event, query, and result message aggregations" in {
       for { mk <- Seq("command", "event", "query", "result") } {
         val prefix = s"type mkt = $mk {"
-        val input = prefix + """
-                               |  key: Number,
-                               |  id: Id(),
-                               |  time: TimeStamp
-                               |}
-                               |""".stripMargin
+        val rip = RiddlParserInput(prefix + """
+                                              |  key: Number,
+                                              |  id: Id(),
+                                              |  time: TimeStamp
+                                              |}
+                                              |""".stripMargin)
         val expected = Type(
-          1 -> 1,
-          Identifier(1 -> 6, "mkt"),
+          (1, 1, rip),
+          Identifier((1, 6, rip), "mkt"),
           MessageType(
-            1 -> 12,
+            (1, 12, rip),
             mk match {
               case "command" => CommandKind
               case "event"   => EventKind
@@ -146,124 +168,176 @@ class TypeParserTest extends ParsingTest {
             },
             Seq(
               Field(
-                1 -> 12,
-                Identifier(1 -> 12, "sender"),
-                ReferenceType(
-                  1 -> 12,
-                  EntityRef(1 -> 12, PathIdentifier(1 -> 12, Seq.empty[String]))
+                (2, 3, rip),
+                Identifier((2, 3, rip), "key"),
+                Number((2, 8, rip))
+              ),
+              Field(
+                (3, 3, rip),
+                Identifier((3, 3, rip), "id"),
+                UniqueId(
+                  (3, 7, rip),
+                  PathIdentifier((3, 7, rip), Seq.empty[String])
                 )
               ),
-              Field(2 -> 3, Identifier(2 -> 3, "key"), Number(2 -> 8)),
               Field(
-                3 -> 3,
-                Identifier(3 -> 3, "id"),
-                UniqueId(3 -> 7, PathIdentifier(3 -> 7, Seq.empty[String]))
-              ),
-              Field(4 -> 3, Identifier(4 -> 3, "time"), TimeStamp(4 -> 9))
+                (4, 3, rip),
+                Identifier((4, 3, rip), "time"),
+                TimeStamp((4, 9, rip))
+              )
             )
           )
         )
-        checkDefinition[Type, Type](input, expected, identity)
+        checkDefinition[Type, Type](rip, expected, identity)
       }
     }
     "allow mappings between two types" in {
-      val input = "type m1 = mapping from String to Number"
-      val expected =
-        Type(1 -> 1, Identifier(1 -> 6, "m1"), Mapping(1 -> 11, Strng(1 -> 24), Number(1 -> 34)))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rip = RiddlParserInput("type m1 = mapping from String to Number")
+      val expected = Type(
+        (1, 1, rip),
+        Identifier((1, 6, rip), "m1"),
+        Mapping((1, 11, rip), Strng((1, 24, rip)), Number((1, 34, rip)))
+      )
+      checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow range of values" in {
-      val input = "type r1 = range(21,  42)"
+      val rip = RiddlParserInput("type r1 = range(21,  42)")
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "r1"),
-        RangeType(1 -> 11, LiteralInteger(1 -> 17, BigInt(21)), LiteralInteger(1 -> 22, BigInt(42)))
+        (1, 1, rip),
+        Identifier((1, 6, rip), "r1"),
+        RangeType(
+          (1, 11, rip),
+          LiteralInteger((1, 17, rip), BigInt(21)),
+          LiteralInteger((1, 22, rip), BigInt(42))
+        )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rip, expected, identity)
 
     }
     "allow one or more in word style" in {
-      val input = "type oneOrMoreA = many agg"
+      val rip = RiddlParserInput("type oneOrMoreA = many agg")
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "oneOrMoreA"),
-        OneOrMore(1 -> 24, TypeRef(1 -> 24, PathIdentifier(1 -> 24, Seq("agg"))))
+        (1, 1, rip),
+        Identifier((1, 6, rip), "oneOrMoreA"),
+        OneOrMore(
+          (1, 24, rip),
+          TypeRef((1, 24, rip), PathIdentifier((1, 24, rip), Seq("agg")))
+        )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow one or more in regex style" in {
-      val input = "type oneOrMoreB = agg+"
+      val rip = RiddlParserInput("type oneOrMoreB = agg+")
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "oneOrMoreB"),
-        OneOrMore(1 -> 19, TypeRef(1 -> 19, PathIdentifier(1 -> 19, Seq("agg"))))
+        (1, 1, rip),
+        Identifier((1, 6, rip), "oneOrMoreB"),
+        OneOrMore(
+          (1, 19, rip),
+          TypeRef((1, 19, rip), PathIdentifier((1, 19, rip), Seq("agg")))
+        )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow zero or more" in {
-      val input = "type zeroOrMore = many optional agg"
+      val rip = RiddlParserInput("type zeroOrMore = many optional agg")
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "zeroOrMore"),
-        ZeroOrMore(1 -> 33, TypeRef(1 -> 33, PathIdentifier(1 -> 33, Seq("agg"))))
+        (1, 1, rip),
+        Identifier((1, 6, rip), "zeroOrMore"),
+        ZeroOrMore(
+          (1, 33, rip),
+          TypeRef((1, 33, rip), PathIdentifier((1, 33, rip), Seq("agg")))
+        )
       )
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:33),TypeRef((1:33),Identifier((1:33),agg))),None)
       // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:19),TypeRef((1:33),Identifier((1:33),agg))),None)
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow optionality" in {
-      val input = "type optional = optional agg"
+      val rip = RiddlParserInput("type optional = optional agg")
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "optional"),
-        Optional(1 -> 26, TypeRef(1 -> 26, PathIdentifier(1 -> 26, Seq("agg"))))
+        (1, 1, rip),
+        Identifier((1, 6, rip), "optional"),
+        Optional(
+          (1, 26, rip),
+          TypeRef((1, 26, rip), PathIdentifier((1, 26, rip), Seq("agg")))
+        )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rip, expected, identity)
+    }
+    "allow messages defined with more natural syntax" in {
+      val rip = RiddlParserInput("command foo is { a: Integer }")
+      val expected = Type((1,1,rip), Identifier((1, 9, rip), "foo"),
+        MessageType((1,16,rip),CommandKind,
+          Seq(
+            Field((1,18,rip),Identifier((1,18,rip),"a"), Integer((1,21,rip)))
+          )
+        )
+      )
+      checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow complex nested type definitions" in {
-      val input = """
-                    |domain foo is {
-                    |  type Simple = String
-                    |  type Compound is {
-                    |    s: Simple,
-                    |    ns: many Number
-                    |  }
-                    |  type Choices is one of { Number or Id }
-                    |  type Complex is {
-                    |    a: Simple,
-                    |    b: TimeStamp,
-                    |    c: many optional Compound,
-                    |    d: optional Choices
-                    |  }
-                    |}
-                    |""".stripMargin
-      parseDomainDefinition[Type](RiddlParserInput(input), _.types.last) match {
+      val rip = RiddlParserInput("""
+                                   |domain foo is {
+                                   |  type Simple = String
+                                   |  type Compound is {
+                                   |    s: Simple,
+                                   |    ns: many Number
+                                   |  }
+                                   |  type Choices is one of { Number or Id }
+                                   |  type Complex is {
+                                   |    a: Simple,
+                                   |    b: TimeStamp,
+                                   |    c: many optional Compound,
+                                   |    d: optional Choices
+                                   |  }
+                                   |}
+                                   |""".stripMargin)
+      parseDomainDefinition[Type](rip, _.types.last) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(typeDef) =>
+        case Right((typeDef, rpi)) =>
           info(typeDef.toString)
           typeDef mustEqual Type(
-            9 -> 3,
-            Identifier(9 -> 8, "Complex"),
+            (9, 3, rpi),
+            Identifier((9, 8, rpi), "Complex"),
             Aggregation(
-              9 -> 19,
+              (9, 19, rpi),
               Seq(
                 Field(
-                  10 -> 5,
-                  Identifier(10 -> 5, "a"),
-                  TypeRef(10 -> 8, PathIdentifier(10 -> 8, Seq("Simple")))
-                ),
-                Field(11 -> 5, Identifier(11 -> 5, "b"), TimeStamp(11 -> 8)),
-                Field(
-                  12 -> 5,
-                  Identifier(12 -> 5, "c"),
-                  ZeroOrMore(12 -> 22, TypeRef(12 -> 22, PathIdentifier(12 -> 22, Seq("Compound"))))
+                  (10, 5, rpi),
+                  Identifier((10, 5, rpi), "a"),
+                  TypeRef(
+                    (10, 8, rpi),
+                    PathIdentifier((10, 8, rpi), Seq("Simple"))
+                  )
                 ),
                 Field(
-                  13 -> 5,
-                  Identifier(13 -> 5, "d"),
-                  Optional(13 -> 17, TypeRef(13 -> 17, PathIdentifier(13 -> 17, Seq("Choices"))))
+                  (11, 5, rpi),
+                  Identifier((11, 5, rpi), "b"),
+                  TimeStamp((11, 8, rpi))
+                ),
+                Field(
+                  (12, 5, rpi),
+                  Identifier((12, 5, rpi), "c"),
+                  ZeroOrMore(
+                    (12, 22, rpi),
+                    TypeRef(
+                      (12, 22, rpi),
+                      PathIdentifier((12, 22, rpi), Seq("Compound"))
+                    )
+                  )
+                ),
+                Field(
+                  (13, 5, rpi),
+                  Identifier((13, 5, rpi), "d"),
+                  Optional(
+                    (13, 17, rpi),
+                    TypeRef(
+                      (13, 17, rpi),
+                      PathIdentifier((13, 17, rpi), Seq("Choices"))
+                    )
+                  )
                 )
               )
             ),

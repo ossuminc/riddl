@@ -10,12 +10,19 @@ import scala.collection.immutable.ListMap
 /** Unit Tests For ExpressionParser */
 class ExpressionParserTest extends ParsingTest {
 
-  def parseExpression(input: String)(check: Expression => Assertion): Assertion = {
-    parse[Expression, Expression](input, StringParser("").expression(_), identity) match {
+  def parseExpression(
+    input: String
+  )(check: Expression => Assertion
+  ): Assertion = {
+    parse[Expression, Expression](
+      input,
+      StringParser("").expression(_),
+      identity
+    ) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right(expression) => check(expression)
+      case Right((expression, _)) => check(expression)
     }
   }
 
@@ -29,7 +36,8 @@ class ExpressionParserTest extends ParsingTest {
     }
     "accept literal decimal" in {
       parseExpression("42.21") { expr: Expression =>
-        expr mustBe LiteralDecimal(Location(1 -> 1), BigDecimal(magic.toDouble + 0.21))
+        expr mustBe
+          LiteralDecimal(Location(1 -> 1), BigDecimal(magic.toDouble + 0.21))
       }
     }
     "accept plus binary" in {
@@ -37,7 +45,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           Location(1 -> 1),
           "+",
-          Seq(LiteralInteger(Location(1 -> 3), 1), LiteralInteger(Location(1 -> 5), 1))
+          Seq(
+            LiteralInteger(Location(1 -> 3), 1),
+            LiteralInteger(Location(1 -> 5), 1)
+          )
         )
       }
     }
@@ -46,7 +57,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           Location(1 -> 1),
           "-",
-          Seq(LiteralInteger(Location(1 -> 3), 1), LiteralInteger(Location(1 -> 5), 1))
+          Seq(
+            LiteralInteger(Location(1 -> 3), 1),
+            LiteralInteger(Location(1 -> 5), 1)
+          )
         )
       }
     }
@@ -55,7 +69,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           Location(1 -> 1),
           "*",
-          Seq(LiteralInteger(Location(1 -> 3), 1), LiteralInteger(Location(1 -> 5), 1))
+          Seq(
+            LiteralInteger(Location(1 -> 3), 1),
+            LiteralInteger(Location(1 -> 5), 1)
+          )
         )
       }
     }
@@ -64,7 +81,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           Location(1 -> 1),
           "/",
-          Seq(LiteralInteger(Location(1 -> 3), 1), LiteralInteger(Location(1 -> 5), 1))
+          Seq(
+            LiteralInteger(Location(1 -> 3), 1),
+            LiteralInteger(Location(1 -> 5), 1)
+          )
         )
       }
     }
@@ -73,7 +93,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           Location(1 -> 1),
           "%",
-          Seq(LiteralInteger(Location(1 -> 3), 1), LiteralInteger(Location(1 -> 5), 1))
+          Seq(
+            LiteralInteger(Location(1 -> 3), 1),
+            LiteralInteger(Location(1 -> 5), 1)
+          )
         )
       }
     }
@@ -82,7 +105,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           Location(1 -> 1),
           "pow",
-          Seq(LiteralInteger(Location(1 -> 5), 2), LiteralInteger(Location(1 -> 7), 3))
+          Seq(
+            LiteralInteger(Location(1 -> 5), 2),
+            LiteralInteger(Location(1 -> 7), 3)
+          )
         )
       }
     }
@@ -90,17 +116,20 @@ class ExpressionParserTest extends ParsingTest {
       parseExpression("Entity.Function(i=42, j=21)") { expr: Expression =>
         expr mustBe FunctionCallExpression(
           Location(1 -> 1),
-          PathIdentifier(Location(1 -> 1), Seq("Function", "Entity")),
+          PathIdentifier(Location(1 -> 1), Seq("Entity", "Function")),
           ArgList(ListMap(
-            Identifier(Location(1 -> 17), "i") -> LiteralInteger(Location(1 -> 19), magic),
-            Identifier(Location(1 -> 23), "j") -> LiteralInteger(Location(1 -> 25), magic / 2)
+            Identifier(Location(1 -> 17), "i") ->
+              LiteralInteger(Location(1 -> 19), magic),
+            Identifier(Location(1 -> 23), "j") ->
+              LiteralInteger(Location(1 -> 25), magic / 2)
           ))
         )
       }
     }
     "accept arithmetic expression with 0 number of args" in {
       parseExpression("now()") { expr: Expression =>
-        expr mustBe ArithmeticOperator(Location(1 -> 1), "now", Seq.empty[Expression])
+        expr mustBe
+          ArithmeticOperator(Location(1 -> 1), "now", Seq.empty[Expression])
       }
     }
     "accept arbitrary expression with many  args" in {
@@ -126,8 +155,8 @@ class ExpressionParserTest extends ParsingTest {
           Comparison(
             1 -> 4,
             lt,
-            ValueCondition(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
-            ValueCondition(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
+            ValueExpression(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
+            ValueExpression(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
           ),
           LiteralInteger(1 -> 13, BigInt(42)),
           LiteralInteger(1 -> 16, BigInt(21))

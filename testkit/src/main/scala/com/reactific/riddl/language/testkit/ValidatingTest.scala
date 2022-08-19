@@ -1,9 +1,11 @@
 package com.reactific.riddl.language.testkit
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Validation.{ValidationMessage, ValidationMessageKind, ValidationMessages}
-import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.language.{CommonOptions, Validation}
+import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.TopLevelParser
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Validation
 import org.scalatest.Assertion
 
 import java.io.File
@@ -14,19 +16,21 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidateInContext[D <: ContextDefinition: ClassTag](
     input: String
-  )(validator: (D, ValidationMessages) => Assertion
+  )(validator: (D, RiddlParserInput, Messages) => Assertion
   ): Seq[Assertion] = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
-    parseDefinition[Domain](RiddlParserInput(parseString)) match {
+    val rpi = RiddlParserInput(parseString)
+    parseDefinition[Domain](rpi) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: Domain) =>
+      case Right((model: Domain, _)) =>
         val msgs = Validation.validate(model)
         val clazz = classTag[D].runtimeClass
-        model.contexts.head.contents.filter(_.getClass == clazz).map { d: ContextDefinition =>
-          val reducedMessages = msgs.filterNot(_.loc.line == 1)
-          validator(d.asInstanceOf[D], reducedMessages)
+        model.contexts.head.contents.filter(_.getClass == clazz).map {
+          d: ContextDefinition =>
+            val reducedMessages = msgs.filterNot(_.loc.line == 1)
+            validator(d.asInstanceOf[D], rpi, reducedMessages)
         }
     }
   }
@@ -34,31 +38,32 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidateContext(
     input: String,
     options: CommonOptions = CommonOptions()
-  )(validator: (Context, ValidationMessages) => Assertion
+  )(validator: (Context, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
-    parseDefinition[Domain](RiddlParserInput(parseString)) match {
+    val rpi = RiddlParserInput(parseString)
+    parseDefinition[Domain](rpi) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: Domain) =>
+      case Right((model: Domain, _)) =>
         val msgs = Validation.validate(model, options)
         val reducedMessages = msgs.filterNot(_.loc.line == 1)
-        validator(model.contexts.head, reducedMessages)
+        validator(model.contexts.head, rpi, reducedMessages)
     }
   }
 
   def parseAndValidate[D <: ParentDefOf[Definition]: ClassTag](
-    input: String
-  )(validator: (D, ValidationMessages) => Assertion
+    input: RiddlParserInput
+  )(validator: (D, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    parseDefinition[D](RiddlParserInput(input)) match {
+    parseDefinition[D](input) match {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(model: D @unchecked) =>
+      case Right((model: D @unchecked, rpi)) =>
         val msgs = Validation.validate(model)
-        validator(model, msgs)
+        validator(model, rpi, msgs)
     }
   }
 
@@ -66,7 +71,11 @@ abstract class ValidatingTest extends ParsingTest {
     input: String,
     testCaseName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (
+      RootContainer,
+      RiddlParserInput,
+      Messages
+    ) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, testCaseName) match {
       case Left(errors) =>
@@ -74,7 +83,7 @@ abstract class ValidatingTest extends ParsingTest {
         fail(s"In $testCaseName:\n$msgs")
       case Right(root) =>
         val messages = Validation.validate(root, options)
-        validation(root, messages)
+        validation(root, root.inputs.head, messages)
     }
   }
 
@@ -82,7 +91,7 @@ abstract class ValidatingTest extends ParsingTest {
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, ValidationMessages) => Assertion
+  )(validation: (RootContainer, Messages) => Assertion
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
@@ -108,7 +117,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Right(root) =>
         val messages = Validation.validate(root, options)
         val errors = messages.filter(_.kind.isError)
-        val warnings: Seq[ValidationMessage] = messages.filter(_.kind.isWarning)
+        val warnings: Seq[Message] = messages.filter(_.kind.isWarning)
         info(s"${errors.length} Errors:")
         if (errors.nonEmpty) { info(errors.map(_.format).mkString("\n")) }
         info(s"${warnings.length} Warnings:")
@@ -122,8 +131,8 @@ abstract class ValidatingTest extends ParsingTest {
   }
 
   def assertValidationMessage(
-    msgs: ValidationMessages,
-    expectedKind: ValidationMessageKind,
+    msgs: Messages,
+    expectedKind: KindOfMessage,
     content: String
   ): Assertion = {
     assert(

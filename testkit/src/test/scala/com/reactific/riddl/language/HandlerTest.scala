@@ -1,11 +1,102 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.Entity
+import com.reactific.riddl.language.AST.{Context, Entity}
 import com.reactific.riddl.language.testkit.ParsingTest
 
-/** Unit Tests For HandlerTest */
+/** Unit Tests For Handler */
 class HandlerTest extends ParsingTest {
   "Handlers" should {
+    "allowed in contexts" in {
+      val input =
+        """context Foo is {
+          |  type DoFoo is command { flux: Integer }
+          |  type FooDone is event { flux: Integer }
+          |  handler FooHandler is {
+          |    on command FooMessage {
+          |      then yield event FooDone( flux = 42 )
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseDefinition[Context](input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString("\n")
+          fail(msg)
+        case Right(_) => succeed
+      }
+    }
+    "empty example disallowed" in {
+      val input = "handler foo is { on other { } "
+      parseDefinition[Context](input) match {
+        case Left(errors) =>
+          errors must not(be(empty))
+          succeed
+        case Right(_) =>
+          fail("Did not catch empty on clause examples")
+      }
+
+    }
+    "only one syntax error" in {
+      val input =
+        """domain foo is {
+          |context Members is {
+          |
+          |    type RegisterMember is command {}
+          |    type MemberRegistered is event {}
+          |    type RegisterMemberList is command {}
+          |    type MemberListRegistered is event {}
+          |    type UpdateMemberInfo is command {}
+          |    type MemberInfoUpdated is event {}
+          |    type UpdateMemberStatus is command {}
+          |    type MemberStatusUpdated is event {}
+          |    type GetMemberData is query {}
+          |    type MemberData is result {}
+          |    type GetMembersByMetaInfo is query {}
+          |    type MemberListResult is result {}
+          |
+          |    entity Member is {
+          |        option is aggregate
+          |
+          |        handler MemberHandler is {
+          |            on command RegisterMember {
+          |                then morph entity Member to state Member.Active
+          |                and set Active.memberId to @RegisterMember.memberId
+          |                and set Active.memberInfo to @RegisterMember.memberInfo
+          |            }
+          |
+          |        }
+          |
+          |        state Active is {
+          |            memberId: MemberId,
+          |            memberInfo: Info,
+          |            metaInfo: MetaInfo
+          |        }
+          |        handler ActiveMemberHandler /*for state Active */ is {
+          |            on command UpdateMemberInfo {
+          |                then set Active.memberInfo to @UpdateMemberInfo.memberInfo
+          |            }
+          |            on command UpdateMemberStatus { ???
+          |            }
+          |            on query GetMemberData {  }
+          |        }
+          |
+          |        state Terminated is {
+          |            memberId: MemberId
+          |        }
+          |        handler TerminatedMemberHandler is {
+          |            on other { then error "Terminated members cannot process messages" }
+          |        }
+          |    }
+          |
+          |}""".stripMargin
+      parseTopLevelDomains(input) match {
+        case Left(errors) =>
+          errors must not(be(empty))
+          errors.size must be(1)
+        case Right(_) =>
+          fail("Test case should have failed")
+      }
+    }
     "accept shortcut syntax for single example on clauses " in {
       val input = """entity DistributionItem is {
                     |  state DistributionState is { ??? }
@@ -34,6 +125,7 @@ class HandlerTest extends ParsingTest {
                     |      }
                     |      // anything else needing to be updated?
                     |    } explained as { "Helps update this item's location" }
+                    |    on other { then "do nothing" }
                     |  }
                     |  handler FromDistributionItem  is {
                     |    on command CreateItem { example only {

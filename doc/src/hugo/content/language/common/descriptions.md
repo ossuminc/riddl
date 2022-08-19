@@ -65,7 +65,7 @@ this markdown syntax style.
 
 ## Using Markdown Syntax
 [Markdown syntax](https://www.markdownguide.org/basic-syntax) is encouraged in descriptions because
-the [`riddlc` compiler](../../introduction/compilation) can translate RIDDL specifications into 
+the [`riddlc` compiler](../../tooling/riddlc/compilation.md) can translate RIDDL specifications into 
 the input of the website generator [hugo](https://gohugo.io/about), which expects markdown. 
 In this way, a large RIDDL specification can be translated automatically into a beautiful
 website. 

@@ -18,7 +18,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Operators, Punctuation}
+import com.reactific.riddl.language.Terminals.{Keywords, Operators, Predefined, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -27,35 +27,120 @@ import scala.collection.immutable.ListMap
 /** Parser rules for value expressions */
 trait ExpressionParser extends CommonParser with ReferenceParser {
 
-  def undefinedCondition[u: P]: P[UndefinedCondition] = {
-    P(location ~ Punctuation.undefined).map(UndefinedCondition)
+  ////////////////////////////////////////// Conditions == Boolean Expression
+
+  def condition[u: P]: P[Condition] = {
+    P(terminalCondition | logicalConditions | functionCallExpression)
   }
-
-  def valueCondition[u: P]: P[ValueCondition] = {
-    P(location ~ Punctuation.at ~ pathIdentifier).map(tpl => (ValueCondition.apply _).tupled(tpl))
-  }
-
-  def arbitraryCondition[u: P]: P[ArbitraryCondition] = {
-    P(literalString).map(ls => ArbitraryCondition(ls))
-  }
-
-  def trueCondition[u: P]: P[True] = { P(location ~ IgnoreCase("true")).map(True)./ }
-
-  def falseCondition[u: P]: P[False] = { P(location ~ IgnoreCase("false")).map(False)./ }
 
   def terminalCondition[u: P]: P[Condition] = {
-    P(trueCondition | falseCondition | arbitraryCondition | valueCondition | undefinedCondition)
+    P(trueCondition | falseCondition | conditionExpressions)
+  }
+
+  def trueCondition[u: P]: P[True] = {
+    P(location ~ IgnoreCase("true")).map(True)./
+  }
+
+  def falseCondition[u: P]: P[False] = {
+    P(location ~ IgnoreCase("false")).map(False)./
+  }
+
+  def conditionExpressions[u: P]: P[Condition & Expression] = {
+    undefinedExpression | arbitraryExpression | valueExpression
+  }
+
+  def arbitraryExpression[u: P]: P[ArbitraryExpression] = {
+    P(literalString).map(ls => ArbitraryExpression(ls))
+  }
+
+  def undefinedExpression[u: P]: P[UndefinedExpression] = {
+    P(location ~ Punctuation.undefined).map(UndefinedExpression)
+  }
+
+  def valueExpression[u: P]: P[ValueExpression] = {
+    P(location ~ Punctuation.at ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
+  }
+
+  def logicalConditions[u: P]: P[Condition] = {
+    P(
+      orCondition | xorCondition | andCondition | notCondition |
+        comparisonCondition
+    )
+  }
+
+  def orCondition[u: P]: P[OrCondition] = {
+    P(
+      location ~ Operators.or ~ Punctuation.roundOpen ~/
+        condition.rep(2, Punctuation.comma) ~ Punctuation.roundClose./
+    ).map(t => (OrCondition.apply _).tupled(t))
+  }
+
+  def xorCondition[u: P]: P[XorCondition] = {
+    P(
+      location ~ Operators.xor ~ Punctuation.roundOpen ~/
+        condition.rep(2, Punctuation.comma) ~ Punctuation.roundClose./
+    ).map(tpl => (XorCondition.apply _).tupled(tpl))
+  }
+
+  def andCondition[u: P]: P[AndCondition] = {
+    P(
+      location ~ Operators.and ~ Punctuation.roundOpen ~/
+        condition.rep(2, Punctuation.comma) ~ Punctuation.roundClose./
+    ).map(t => (AndCondition.apply _).tupled(t))
+  }
+
+  def notCondition[u: P]: P[NotCondition] = {
+    P(
+      location ~ Operators.not ~ Punctuation.roundOpen ~/ condition ~
+        Punctuation.roundClose./
+    ).map(t => (NotCondition.apply _).tupled(t))
+  }
+
+  def comparisonCondition[u: P]: P[Comparison] = {
+    P(
+      location ~ comparator ~ Punctuation.roundOpen ~/ expression ~
+        Punctuation.comma ~ expression ~ Punctuation.roundClose./
+    ).map { x => (Comparison.apply _).tupled(x) }
+  }
+
+
+  def comparator[u: P]: P[Comparator] = {
+    P(StringIn("<=", "!=", "==", ">=", "<", ">")).!./.map {
+      case "==" => AST.eq
+      case "!=" => AST.ne
+      case "<" => AST.lt
+      case "<=" => AST.le
+      case ">" => AST.gt
+      case ">=" => AST.ge
+    }
+  }
+
+  ////////////////////////////////////////// Expressions == Any Type
+
+  def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
+    P( location ~ Punctuation.exclamation ~/ typeRef ~ argList).map(tpl =>
+      (AggregateConstructionExpression.apply _).tupled(tpl))
+  }
+
+  def entityIdValue[u:P]: P[EntityIdExpression] = {
+    P(location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
+      entityRef ~ Punctuation.roundClose).map(tpl =>
+      (EntityIdExpression.apply _).tupled(tpl))
   }
 
   def terminalExpression[u: P]: P[Expression] = {
-    P(terminalCondition | literalDecimal | literalInteger)
+    P(terminalCondition | literalDecimal | literalInteger |
+      aggregateConstruction | entityIdValue |
+      conditionExpressions )
   }
 
   def arguments[u: P]: P[ArgList] = {
-    P(identifier ~ Punctuation.equals ~ expression).rep(min = 0, Punctuation.comma).map {
-      s: Seq[(Identifier, Expression)] =>
-        s.foldLeft(ListMap.empty[Identifier, Expression]) { case (b, (id, exp)) => b + (id -> exp) }
-    }.map { lm => ArgList(lm) }
+    P(identifier ~ Punctuation.equals ~ expression)
+      .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
+        s.foldLeft(ListMap.empty[Identifier, Expression]) {
+          case (b, (id, exp)) => b + (id -> exp)
+        }
+      }.map { lm => ArgList(lm) }
   }
 
   def argList[u: P]: P[ArgList] = {
@@ -63,7 +148,8 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def functionCallExpression[u: P]: P[FunctionCallExpression] = {
-    P(location ~ pathIdentifier ~ argList).map(tpl => (FunctionCallExpression.apply _).tupled(tpl))
+    P(location ~ pathIdentifier ~ argList)
+      .map(tpl => (FunctionCallExpression.apply _).tupled(tpl))
   }
 
   def groupExpression[u: P]: P[GroupExpression] = {
@@ -79,79 +165,34 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).!
   }.map { case (x, y) => x + y }
 
+  def knownOperatorName[u:P]: P[String] = {
+    StringIn("SenderOf").!
+  }
+
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
       location ~
-        (Operators.plus.! | Operators.minus.! | Operators.times.! | Operators.div.! |
-          Operators.mod.! | operatorName) ~ Punctuation.roundOpen ~
-        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
+        (Operators.plus.! | Operators.minus.! | Operators.times.! |
+          Operators.div.! | Operators.mod.! | operatorName |
+          knownOperatorName) ~ Punctuation.roundOpen ~
+            expression.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
   def ternaryExpression[u: P]: P[Ternary] = {
     P(
-      location ~ Operators.if_ ~ Punctuation.roundOpen ~ condition ~ Punctuation.comma ~
-        expression ~ Punctuation.comma ~ expression ~ Punctuation.roundClose./
+      location ~ Operators.if_ ~ Punctuation.roundOpen ~ condition ~
+        Punctuation.comma ~ expression ~ Punctuation.comma ~ expression ~
+        Punctuation.roundClose./
     ).map(tpl => (Ternary.apply _).tupled(tpl))
   }
 
   def expression[u: P]: P[Expression] = {
     P(
-      terminalExpression | ternaryExpression | arithmeticOperator | functionCallExpression |
-        groupExpression
+      terminalExpression | ternaryExpression | arithmeticOperator |
+        functionCallExpression | groupExpression
     )
   }
 
-  def comparator[u: P]: P[Comparator] = {
-    P(StringIn("<=", "!=", "==", ">=", "<", ">")).!./.map {
-      case "==" => AST.eq
-      case "!=" => AST.ge
-      case "<"  => AST.lt
-      case "<=" => AST.le
-      case ">"  => AST.gt
-      case ">=" => AST.ge
-    }
-  }
-
-  def comparisonCondition[u: P]: P[Comparison] = {
-    P(
-      location ~ comparator ~ Punctuation.roundOpen ~/ expression ~ Punctuation.comma ~ expression ~
-        Punctuation.roundClose./
-    ).map { x => (Comparison.apply _).tupled(x) }
-  }
-
-  def notCondition[u: P]: P[NotCondition] = {
-    P(location ~ Operators.not ~ Punctuation.roundOpen ~/ condition ~ Punctuation.roundClose./)
-      .map(t => (NotCondition.apply _).tupled(t))
-  }
-
-  def orCondition[u: P]: P[OrCondition] = {
-    P(
-      location ~ Operators.or ~ Punctuation.roundOpen ~/ condition.rep(2, Punctuation.comma) ~
-        Punctuation.roundClose./
-    ).map(t => (OrCondition.apply _).tupled(t))
-  }
-
-  def xorCondition[u: P]: P[XorCondition] = {
-    P(
-      location ~ Operators.xor ~ Punctuation.roundOpen ~/ condition.rep(2, Punctuation.comma) ~
-        Punctuation.roundClose./
-    ).map(tpl => (XorCondition.apply _).tupled(tpl))
-  }
-
-  def andCondition[u: P]: P[AndCondition] = {
-    P(
-      location ~ Operators.and ~ Punctuation.roundOpen ~/ condition.rep(2, Punctuation.comma) ~
-        Punctuation.roundClose./
-    ).map(t => (AndCondition.apply _).tupled(t))
-  }
-
-  def logicalExpressions[u: P]: P[Condition] = {
-    P(
-      orCondition | xorCondition | andCondition | notCondition | comparisonCondition |
-        functionCallExpression
-    )
-  }
-
-  def condition[u: P]: P[Condition] = { P(terminalCondition | logicalExpressions) }
 }

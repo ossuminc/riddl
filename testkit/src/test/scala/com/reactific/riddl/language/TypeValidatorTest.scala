@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Validation.*
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 /** Unit Tests For TypeValidationTest */
@@ -13,9 +13,11 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type bar is String
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, msgs: Seq[ValidationMessage]) =>
+        case (_: Domain, _, msgs: Seq[Message]) =>
           if (msgs.isEmpty) fail("Type 'bar' should have generated warning")
-          else if (msgs.map(_.message).exists(_.contains("should start with"))) { succeed }
+          else if (
+            msgs.map(_.message).exists(_.contains("should start with"))
+          ) { succeed }
           else { fail("No such message") }
       }
     }
@@ -31,43 +33,20 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type Order is Id(Bar)
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, msgsAndWarnings: Seq[ValidationMessage]) =>
-          val errors = msgsAndWarnings.filter(_.kind == Validation.Error)
+        case (_: Domain, _, msgsAndWarnings: Seq[Message]) =>
+          val errors = msgsAndWarnings.filter(_.kind == Error)
           assert(errors.size == 9, "Should have 9 errors")
-          assert(errors.forall(_.message.contains("not defined")), "Wrong message")
+          assert(errors.forall(m => m.message.contains("not resolved")), "not resolved")
+          assert(errors.count(_.message.contains("refer to a Type")) == 8, "refer to a Type")
+          assert(errors.count(_.message.contains("refer to an Entity")) == 1, "refer to a Type")
       }
     }
     "allow ??? in aggregate bodies without warning" in {
       parseAndValidate[Domain]("""domain foo {
                                  |type Empty is { ??? } explained as "empty"
                                  |} explained as "nothing"
-                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
-        msgs mustBe empty
-      }
-    }
-    "generate 'sender' field in messages" in {
-      val cases = Seq("command", "event", "query", "result")
-      for { messageKind <- cases } {
-        val input = s"""domain foo is {
-                       |type Message is $messageKind {
-                       |  two: String explained as "a field"
-                       |} explained as "subject"
-                       |} explained as "nothing"
-                       |""".stripMargin
-        parseAndValidate[Domain](input) { case (d: Domain, msgs: ValidationMessages) =>
-          msgs mustBe empty
-          val typ = d.types.head
-          typ.typ match {
-            case MessageType(_, kind, fields) =>
-              kind.kind mustBe messageKind
-              fields.head.id.value mustBe "sender"
-              fields.head.typeEx match {
-                case ReferenceType(_, EntityRef(_, id)) => id mustBe empty
-                case x: TypeExpression => fail(s"Expected a ReferenceType but got: $x")
-              }
-            case x: TypeExpression => fail(s"Expected an MessageType but got: $x")
-          }
-        }
+                                 |""".stripMargin) {
+        case (_: Domain, _, msgs: Messages) => msgs mustBe empty
       }
     }
 
@@ -76,8 +55,13 @@ class TypeValidatorTest extends ValidatingTest {
                                  |domain foo is {
                                  |type pat is Pattern("[")
                                  |}
-                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
-        assertValidationMessage(msgs, Validation.Error, "Unclosed character class")
+                                 |""".stripMargin) {
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Unclosed character class"
+          )
       }
     }
 
@@ -87,12 +71,13 @@ class TypeValidatorTest extends ValidatingTest {
                                  |context TypeTest is { ??? }
                                  |type Order is Id(TypeTest)
                                  |}
-                                 |""".stripMargin) { case (_: Domain, msgs: ValidationMessages) =>
-        assertValidationMessage(
-          msgs,
-          Validation.Error,
-          "'TypeTest' was expected to be an Entity but is a Context instead"
-        )
+                                 |""".stripMargin) {
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "'TypeTest' was expected to be an Entity but is a Context instead"
+          )
       }
     }
   }

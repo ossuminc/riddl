@@ -23,21 +23,26 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
 trait ContextParser
-    extends GherkinParser
+    extends HandlerParser
     with AdaptorParser
     with EntityParser
+    with ProjectionParser
     with SagaParser
+    with StreamingParser
     with TypeParser {
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](
-      StringIn(Options.wrapper, Options.function, Options.gateway, Options.service).!
+      StringIn(Options.wrapper, Options.function, Options.gateway,
+        Options.service, Options.package_).!
     ) {
       case (loc, Options.wrapper, _)  => WrapperOption(loc)
       case (loc, Options.function, _) => FunctionOption(loc)
       case (loc, Options.gateway, _)  => GatewayOption(loc)
       case (loc, Options.service, _)  => ServiceOption(loc)
-      case (_, _, _)                  => throw new RuntimeException("Impossible case")
+      case (loc, Options.package_, args) => ContextPackageOption(loc, args)
+      case (_, _, _)                  =>
+        throw new RuntimeException("Impossible case")
     }
   }
 
@@ -46,8 +51,10 @@ trait ContextParser
   }
 
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
-    P( undefined(Seq.empty[ContextDefinition]) |
-      (typeDef | entity | adaptor  | function | saga | term | contextInclude
+    P(
+      undefined(Seq.empty[ContextDefinition]) |
+      (typeDef | contextHandler | entity | adaptor | function | saga |
+        plantDefinition | projection | term | contextInclude
       ).rep(0)
     )
   }
@@ -63,9 +70,12 @@ trait ContextParser
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
+      val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val projections = mapTo[Projection](groups.get(classOf[Projection]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       Context(
         loc,
         id,
@@ -74,9 +84,12 @@ trait ContextParser
         entities,
         adaptors,
         sagas,
+        processors,
         functions,
         terms,
         includes,
+        handlers,
+        projections,
         briefly,
         description
       )

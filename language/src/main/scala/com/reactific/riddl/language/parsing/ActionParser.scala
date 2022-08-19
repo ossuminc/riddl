@@ -18,7 +18,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Terminals
-import com.reactific.riddl.language.Terminals.{Keywords, Readability}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -33,12 +34,26 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
     }
   }
 
+  def errorAction[u: P]: P[ErrorAction] = {
+    P(location ~ Keywords.error ~ literalString ~ description).map {
+      tpl => (ErrorAction.apply _).tupled(tpl)
+    }
+  }
+
   def setAction[u: P]: P[SetAction] = {
     P(
       Keywords.set ~/ location ~ pathIdentifier ~ Readability.to ~ expression ~
         description
     ).map { t => (SetAction.apply _).tupled(t) }
   }
+
+  def appendAction[u: P]: P[AppendAction] = {
+    P(
+      location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
+        ~ description
+    ).map { t => (AppendAction.apply _).tupled(t) }
+  }
+
 
   def morphAction[u: P]: P[MorphAction] = {
     P(
@@ -56,6 +71,16 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
     P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
+  }
+
+  def returnAction[u: P]: P[ReturnAction] = {
+    P(Keywords.return_ ~/ location ~ expression ~ description)
+      .map(t => (ReturnAction.apply _).tupled(t))
+  }
+
+  def yieldAction[u: P]: P[YieldAction] = {
+    P(Keywords.yield_ ~/ location ~ messageConstructor ~ description)
+      .map(t => (YieldAction.apply _).tupled(t))
   }
 
   def publishAction[u: P]: P[PublishAction] = {
@@ -98,15 +123,15 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def sagaStepAction[u: P]: P[SagaStepAction] = {
     P(
-      arbitraryAction | publishAction | tellAction | askAction | replyAction |
-        functionCallAction
+      arbitraryAction | errorAction | publishAction | tellAction | askAction |
+        replyAction | functionCallAction
     )
   }
 
   def anyAction[u: P]: P[Action] = {
     P(
-      sagaStepAction | replyAction | setAction | morphAction | becomeAction |
-        compoundAction
+      replyAction | setAction | appendAction | morphAction | becomeAction |
+        yieldAction | returnAction | sagaStepAction | compoundAction
     )
   }
 

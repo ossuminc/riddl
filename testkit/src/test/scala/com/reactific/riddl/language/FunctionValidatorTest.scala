@@ -11,10 +11,10 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |entity user is {
                                           |  function foo is {
                                           |    requires {b: Boolean }
-                                          |    yields {r: Integer }
+                                          |    returns {r: Integer }
                                           |  }
                                           |}
-                                          |""".stripMargin) { (e, msgs) =>
+                                          |""".stripMargin) { (e, _, msgs) =>
         e.functions must matchPattern {
           case Seq(
                 AST.Function(
@@ -22,13 +22,15 @@ class FunctionValidatorTest extends ValidatingTest {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _, _)))),
-                  _,
+                  _, _, _,
                   None,
                   None
                 )
               ) =>
         }
-        assert(msgs.exists(_.message == "Function 'foo' should have a description"))
+        assert(
+          msgs.exists(_.message == "Function 'foo' should have a description")
+        )
       }
     }
   }

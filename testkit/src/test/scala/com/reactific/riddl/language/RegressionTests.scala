@@ -1,6 +1,7 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Domain, Type}
+import com.reactific.riddl.language.AST.Domain
+import com.reactific.riddl.language.AST.Type
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 
@@ -15,7 +16,7 @@ class RegressionTests extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) => domain.description match {
+        case Right((domain, _)) => domain.description match {
             case Some(_) => succeed
             case None    => fail("no description")
           }
@@ -31,7 +32,7 @@ class RegressionTests extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(domain) => domain.description match {
+        case Right((domain, _)) => domain.description match {
             case Some(desc) => desc.lines.nonEmpty mustBe true
             case None       => fail("no description")
           }

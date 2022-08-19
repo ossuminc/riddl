@@ -22,7 +22,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
-trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
+trait EntityParser extends TypeParser with HandlerParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -40,15 +40,14 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
     ) {
       case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
       case (loc, Options.value, _)        => EntityValueOption(loc)
-      case (loc, Options.aggregate, _)    => EntityAggregate(loc)
+      case (loc, Options.aggregate, _)    => EntityIsAggregate(loc)
       case (loc, Options.transient, _)    => EntityTransient(loc)
-      case (loc, Options.consistent, _)   => EntityConsistent(loc)
-      case (loc, Options.available, _)    => EntityAvailable(loc)
-      case (loc, Options.stateMachine, _) => EntityFiniteStateMachine(loc)
+      case (loc, Options.consistent, _)   => EntityIsConsistent(loc)
+      case (loc, Options.available, _)    => EntityIsAvailable(loc)
+      case (loc, Options.stateMachine, _) => EntityIsFiniteStateMachine(loc)
       case (loc, Options.kind, args)      => EntityKind(loc, args)
       case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
-      case _                              =>
-        throw new RuntimeException("Impossible case")
+      case _ => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -66,23 +65,10 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
   }
 
   def state[u: P]: P[State] = {
-    P(location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ briefly ~ description)
-      .map(tpl => (State.apply _).tupled(tpl))
-  }
-
-  def onClause[u: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ open ~
-      ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
-        Seq(Example(l, Identifier(l, ""), g, w, t, b))
-      } | examples | undefined(Seq.empty[Example])) ~ close ~ briefly ~ description
-  }.map(t => (OnClause.apply _).tupled(t))
-
-  def handler[u: P]: P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~ is ~
-        ((open ~ undefined(Seq.empty[OnClause]) ~ close) | optionalNestedContent(onClause)) ~
-        briefly ~ description
-    ).map(t => (Handler.apply _).tupled(t))
+      location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ briefly ~
+        description
+    ).map(tpl => (State.apply _).tupled(tpl))
   }
 
   def entityInclude[X: P]: P[Include] = {
@@ -90,7 +76,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
   }
 
   def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(handler | function | invariant | typeDef | state | entityInclude).rep
+    P(entityHandler | function | invariant | typeDef | state | entityInclude)
+      .rep
   }
 
   type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
@@ -103,8 +90,8 @@ trait EntityParser extends TypeParser with GherkinParser with FunctionParser {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ (noEntityBody | entityBody) ~ close ~
-        briefly ~ description
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
+        (noEntityBody | entityBody) ~ close ~ briefly ~ description
     ).map { case (loc, id, (options, entityDefs), briefly, description) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))

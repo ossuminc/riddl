@@ -58,14 +58,16 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
         // includes don't go in the symbol table
       case (_, definition, stack) =>
         val name = definition.id.value
-        val copy: Parents = stack.toSeq.filter {
-          case _: RootContainer => false
-          case _ => true
+        if (name.nonEmpty) {
+          val copy: Parents = stack.toSeq.filter {
+            case _: RootContainer => false
+            case _ => true
+          }
+          val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
+          val included: Seq[SymTabItem] = existing :+ (definition -> copy)
+          symTab.update(name, included)
+          parentage.update(definition, copy)
         }
-        val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
-        val included: Seq[SymTabItem] = existing :+ (definition -> copy)
-        symTab.update(name, included)
-        parentage.update(definition, copy)
     }
     symTab -> parentage
   }
@@ -140,13 +142,14 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   ): LookupResult[D] = {
     require(id.nonEmpty , "No name elements provided to lookupSymbol")
     val clazz = classTag[D].runtimeClass
-    val leafName = id.head
+    val nameList = id.reverse
+    val leafName = nameList.head
     symbols.get(leafName) match {
       case Some(set) => set.filter {
         case (_: Definition, parents: Seq[ParentDefOf[Definition]]) =>
           // whittle down the list of matches to the ones whose parents names
-          // have the same as the id provided
-          hasSameParentNames(id, parents)
+          // have the same as the nameList provided
+          hasSameParentNames(nameList, parents)
         }.map {
           case (d: Definition, _: Seq[ParentDefOf[Definition]]) =>
             // If a name match is also the same type as desired by the caller
@@ -189,7 +192,9 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   }
 
   def foreachOverloadedSymbol[T](process: Seq[Seq[Definition]] => T): T = {
-    val overloads = symbols.filter(_._2.size > 1).filter(_._1 != "sender")
+    val overloads = symbols
+      .filterNot(_._1.isEmpty)
+      .filter(_._2.size > 1)
     val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
     process(defs)
   }

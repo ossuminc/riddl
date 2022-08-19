@@ -1,5 +1,5 @@
-![Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
-![Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
+![Code Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
+![Documentation Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
 
 # RIDDL
 
@@ -17,6 +17,45 @@ if they were coding directly in a programming language. It aims to relieve
 developers of the burden of maintaining infrastructural code through evolution 
 of the domain abstractions.
 
+## Getting Started Locally
+To use `riddlc` locally and be able to update it with new changes, use this 
+approach:
+* `git clone` the latest content and change directory to that cloned repository
+* Put the `.../riddl/riddlc/target/universal/stage/bin` directory in your PATH 
+  variable
+* Run `sbt stage` to build the program
+* To update, run `git pull` from the `riddl` cloned repository directory and
+  rerun the sbt command above to rebuild. 
+
+This allows you to both make local changes and pull in changes from others to
+keep your local copy of `riddlc` up to date. 
+
+## Using A Release
+Starting with the 0.6.0 a "universal" release bundle is made avalable for 
+Linux and MacOS Systems directly from GitHub. You can find them in the 
+[GitHub Releases](https://github.com/reactific/riddl/releases) section 
+under "Assets"
+
+After downloading the `.zip` asset, you should:
+
+* Move that `.zip` file to somewhere in your home directory
+* Unpack that `.zip` file with  `unzip <path-to-tgz>` 
+* That will give you a directory like `riddl-0.6.0/bin` (the version # might
+  be different)
+* Put that `bin` directory in your path
+* Now you can just run “riddlc” from anywhere
+* Some day we will have a packaged installer.
+
+## Adding `riddlc` to your project workflow
+* See the reactific/riddl-actions project for actions that make riddlc invokable 
+  in your own GitHub workflows
+
+## Using RIDDL From Code
+In your `project/plugins.sbt` file, use:
+```shell
+addSbtPlugin("com.reactific" % "sbt-riddl" % "<version>")
+```
+
 ## Usage
 To get the most recent options, run `riddlc --help`. That command will give you
 the syntax for doing various things with the riddl compiler (`riddlc`)
@@ -25,6 +64,7 @@ the syntax for doing various things with the riddl compiler (`riddlc`)
 This project is currently nascent. It doesn't do anything yet, but eventually
 we hope it will do all the following things:
 
+* Generate Kalix Protobuffers 
 * Generate Swagger (OpenAPI) YAML files containing API documentation for 
  REST APIs
 * Generate Akka Serverless based microservices to implement bounded contexts

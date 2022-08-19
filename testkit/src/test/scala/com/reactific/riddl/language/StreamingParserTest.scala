@@ -1,50 +1,64 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {
 
+  val sourceInput =
+    """source GetWeatherForecast is {
+      |  outlet Weather is Forecast
+      |} brief "foo" described by "This is a source for Forecast data"
+      |""".stripMargin
+  def sourceExpected(rpi: RiddlParserInput, col: Int = 0, row: Int = 0) = Processor(
+    (row+1, col+1, rpi),
+    Identifier((row+1, col+8, rpi), "GetWeatherForecast"),
+    Source((row+1, col+1, rpi)),
+    List.empty[Inlet],
+    List(Outlet(
+      (row+2, 3, rpi),
+      Identifier((row+2, 10, rpi), "Weather"),
+      TypeRef((row+2, 21, rpi), PathIdentifier((row+2, 21, rpi), List("Forecast")))
+    )),
+    List.empty[Example],
+    Some(LiteralString((row+3, 9, rpi), "foo")),
+    Option(BlockDescription(
+      (row+3, 28, rpi),
+      List(LiteralString(
+        (row+3, 28, rpi),
+        "This is a source for Forecast " + "data"
+      ))
+    ))
+  )
+
   "StreamingParser" should {
     "recognize a source processor" in {
-      val input =
-        """
-          |source GetWeatherForecast is {
-          |  outlet Weather is Forecast
-          |} brief "foo" described by "This is a source for Forecast data"
-          |""".stripMargin
-      val expected = Processor(
-        1 -> 1,
-        Identifier(2 -> 8, "GetWeatherForecast"),
-        Source(1 -> 1),
-        List.empty[Inlet],
-        List(Outlet(
-          3 -> 3,
-          Identifier(3 -> 10, "Weather"),
-          TypeRef(3 -> 21, PathIdentifier(3 -> 21, List("Forecast")))
-        )),
-        List.empty[Example],
-        Some(LiteralString(4 -> 9, "foo")),
-        Option(BlockDescription(
-          4 -> 28,
-          List(
-            LiteralString(4 -> 28, "This is a source for Forecast " + "data")
-          )
-        ))
-      )
-      checkDefinition[Processor, Processor](input, expected, identity)
+      val rpi = RiddlParserInput(sourceInput)
+      checkDefinition[Processor, Processor](rpi, sourceExpected(rpi), identity)
+    }
+    "recognize a source processor in a context" in {
+      val input = s"context foo is { $sourceInput }"
+      val rpi = RiddlParserInput(input)
+      val expected = Context((1,1,rpi),Identifier((1,9,rpi),"foo"),
+        processors = Seq(sourceExpected(rpi, 17)))
+      checkDefinition[Context, Context](rpi, expected, identity)
     }
     "recognize a Pipe" in {
-      val input = """
-                    |pipe TemperatureChanges is { transmit temperature }
-                    |""".stripMargin
+      val rpi =
+        RiddlParserInput("""
+                           |pipe TemperatureChanges is { transmit temperature }
+                           |""".stripMargin)
       val expected = Pipe(
-        1 -> 1,
-        Identifier(2 -> 6, "TemperatureChanges"),
-        Option(TypeRef(2 -> 39, PathIdentifier(2 -> 39, List("temperature"))))
+        (1, 1, rpi),
+        Identifier((2, 6, rpi), "TemperatureChanges"),
+        Option(TypeRef(
+          (2, 39, rpi),
+          PathIdentifier((2, 39, rpi), List("temperature"))
+        ))
       )
-      checkDefinition[Pipe, Pipe](input, expected, identity)
+      checkDefinition[Pipe, Pipe](rpi, expected, identity)
     }
 
     "recognize an InJoint" in {
@@ -55,7 +69,7 @@ class StreamingParserTest extends ParsingTest {
         Identifier(1 -> 7, "temp_in"),
         InletRef(
           1 -> 18,
-          PathIdentifier(1 -> 24, Seq("weather", "GetCurrentTemperature"))
+          PathIdentifier(1 -> 24, Seq("GetCurrentTemperature", "weather"))
         ),
         PipeRef(1 -> 59, PathIdentifier(1 -> 64, Seq("WeatherForecast")))
       )
@@ -69,14 +83,14 @@ class StreamingParserTest extends ParsingTest {
         Identifier(1 -> 7, "forecast"),
         OutletRef(
           1 -> 19,
-          PathIdentifier(1 -> 26, Seq("Weather", "GetWeatherForecast"))
+          PathIdentifier(1 -> 26, Seq("GetWeatherForecast", "Weather"))
         ),
         PipeRef(1 -> 56, PathIdentifier(1 -> 61, Seq("WeatherForecast")))
       )
       checkDefinition[OutletJoint, OutletJoint](input, expected, identity)
     }
     "recognize a Plant" in {
-      val input =
+      val rpi = RiddlParserInput(
         """
           |domain AnyDomain is {
           |plant SensorMaintenance is {
@@ -112,36 +126,39 @@ class StreamingParserTest extends ParsingTest {
           |
           |} explained as "Plants can only be specified in a domain definition"
           |""".stripMargin
+      )
       val expected = Plant(
-        3 -> 1,
-        Identifier(3 -> 7, "SensorMaintenance"),
+        (3, 1, rpi),
+        Identifier((3, 7, rpi), "SensorMaintenance"),
         List(
           Pipe(
-            18 -> 3,
-            Identifier(18 -> 8, "WeatherForecast"),
-            Option(
-              TypeRef(19 -> 14, PathIdentifier(19 -> 14, List("Forecast")))
-            ),
+            (18, 3, rpi),
+            Identifier((18, 8, rpi), "WeatherForecast"),
+            Option(TypeRef(
+              (19, 14, rpi),
+              PathIdentifier((19, 14, rpi), List("Forecast"))
+            )),
             None,
             Option(BlockDescription(
-              20 -> 18,
+              (20, 18, rpi),
               List(LiteralString(
-                20 -> 18,
+                (20, 18, rpi),
                 "Carries changes in the current weather forecast"
               ))
             ))
           ),
           Pipe(
-            22 -> 3,
-            Identifier(22 -> 8, "TemperatureChanges"),
-            Option(
-              TypeRef(23 -> 14, PathIdentifier(23 -> 14, List("temperature")))
-            ),
+            (22, 3, rpi),
+            Identifier((22, 8, rpi), "TemperatureChanges"),
+            Option(TypeRef(
+              (23, 14, rpi),
+              PathIdentifier((23, 14, rpi), List("temperature"))
+            )),
             None,
             Option(BlockDescription(
-              24 -> 18,
+              (24, 18, rpi),
               List(LiteralString(
-                24 -> 18,
+                (24, 18, rpi),
                 "Carries changes in the current temperature"
               ))
             ))
@@ -149,66 +166,81 @@ class StreamingParserTest extends ParsingTest {
         ),
         List(
           Processor(
-            5 -> 3,
-            Identifier(5 -> 10, "GetWeatherForecast"),
-            Source(5 -> 3),
+            (5, 3, rpi),
+            Identifier((5, 10, rpi), "GetWeatherForecast"),
+            Source((5, 3, rpi)),
             List(),
             List(Outlet(
-              6 -> 5,
-              Identifier(6 -> 12, "Weather"),
-              TypeRef(6 -> 23, PathIdentifier(6 -> 23, List("Forecast"))),
+              (6, 5, rpi),
+              Identifier((6, 12, rpi), "Weather"),
+              TypeRef(
+                (6, 23, rpi),
+                PathIdentifier((6, 23, rpi), List("Forecast"))
+              ),
               None
             )),
             List.empty[Example],
             None,
             Option(BlockDescription(
-              7 -> 18,
-              List(LiteralString(7 -> 18, "This is a source for Forecast data"))
+              (7, 18, rpi),
+              List(LiteralString(
+                (7, 18, rpi),
+                "This is a source for Forecast data"
+              ))
             ))
           ),
           Processor(
-            9 -> 3,
-            Identifier(9 -> 8, "GetCurrentTemperature"),
-            Flow(9 -> 3),
+            (9, 3, rpi),
+            Identifier((9, 8, rpi), "GetCurrentTemperature"),
+            Flow((9, 3, rpi)),
             List(Inlet(
-              10 -> 5,
-              Identifier(10 -> 11, "Weather"),
-              TypeRef(10 -> 22, PathIdentifier(10 -> 22, List("Forecast"))),
+              (10, 5, rpi),
+              Identifier((10, 11, rpi), "Weather"),
+              TypeRef(
+                (10, 22, rpi),
+                PathIdentifier((10, 22, rpi), List("Forecast"))
+              ),
               None
             )),
             List(Outlet(
-              11 -> 5,
-              Identifier(11 -> 12, "CurrentTemp"),
-              TypeRef(11 -> 27, PathIdentifier(11 -> 27, List("Temperature"))),
+              (11, 5, rpi),
+              Identifier((11, 12, rpi), "CurrentTemp"),
+              TypeRef(
+                (11, 27, rpi),
+                PathIdentifier((11, 27, rpi), List("Temperature"))
+              ),
               None
             )),
             List.empty[Example],
             None,
             Option(BlockDescription(
-              12 -> 18,
+              (12, 18, rpi),
               List(LiteralString(
-                12 -> 18,
+                (12, 18, rpi),
                 "This is a Flow for the current temperature, when it changes"
               ))
             ))
           ),
           Processor(
-            14 -> 3,
-            Identifier(14 -> 8, "AttenuateSensor"),
-            Sink(14 -> 3),
+            (14, 3, rpi),
+            Identifier((14, 8, rpi), "AttenuateSensor"),
+            Sink((14, 3, rpi)),
             List(Inlet(
-              15 -> 5,
-              Identifier(15 -> 11, "CurrentTemp"),
-              TypeRef(15 -> 26, PathIdentifier(15 -> 26, List("Temperature"))),
+              (15, 5, rpi),
+              Identifier((15, 11, rpi), "CurrentTemp"),
+              TypeRef(
+                (15, 26, rpi),
+                PathIdentifier((15, 26, rpi), List("Temperature"))
+              ),
               None
             )),
             List.empty[Outlet],
             List.empty[Example],
             None,
             Option(BlockDescription(
-              16 -> 18,
+              (16, 18, rpi),
               List(LiteralString(
-                16 -> 18,
+                (16, 18, rpi),
                 "This is a Sink for making sensor adjustments based on temperature"
               ))
             ))
@@ -216,59 +248,68 @@ class StreamingParserTest extends ParsingTest {
         ),
         List(
           InletJoint(
-            27 -> 3,
-            Identifier(27 -> 9, "temp_in"),
+            (27, 3, rpi),
+            Identifier((27, 9, rpi), "temp_in"),
             InletRef(
-              27 -> 20,
-              PathIdentifier(27 -> 26, List("weather", "GetCurrentTemperature"))
+              (27, 20, rpi),
+              PathIdentifier(
+                (27, 26, rpi),
+                List("GetCurrentTemperature", "weather")
+              )
             ),
             PipeRef(
-              27 -> 61,
-              PathIdentifier(27 -> 66, List("WeatherForecast"))
+              (27, 61, rpi),
+              PathIdentifier((27, 66, rpi), List("WeatherForecast"))
             ),
             None
           ),
           InletJoint(
-            29 -> 3,
-            Identifier(29 -> 9, "temp_changes"),
+            (29, 3, rpi),
+            Identifier((29, 9, rpi), "temp_changes"),
             InletRef(
-              29 -> 25,
-              PathIdentifier(29 -> 31, List("CurrentTemp", "AttenuateSensor"))
+              (29, 25, rpi),
+              PathIdentifier(
+                (29, 31, rpi),
+                List("AttenuateSensor", "CurrentTemp")
+              )
             ),
             PipeRef(
-              29 -> 64,
-              PathIdentifier(29 -> 69, List("TemperatureChanges"))
+              (29, 64, rpi),
+              PathIdentifier((29, 69, rpi), List("TemperatureChanges"))
             ),
             None
           )
         ),
         List(
           OutletJoint(
-            26 -> 3,
-            Identifier(26 -> 9, "forecast"),
+            (26, 3, rpi),
+            Identifier((26, 9, rpi), "forecast"),
             OutletRef(
-              26 -> 21,
-              PathIdentifier(26 -> 28, List("Weather", "GetWeatherForecast"))
+              (26, 21, rpi),
+              PathIdentifier(
+                (26, 28, rpi),
+                List("GetWeatherForecast", "Weather")
+              )
             ),
             PipeRef(
-              26 -> 58,
-              PathIdentifier(26 -> 63, List("WeatherForecast"))
+              (26, 58, rpi),
+              PathIdentifier((26, 63, rpi), List("WeatherForecast"))
             ),
             None
           ),
           OutletJoint(
-            28 -> 3,
-            Identifier(28 -> 9, "temp_out"),
+            (28, 3, rpi),
+            Identifier((28, 9, rpi), "temp_out"),
             OutletRef(
-              28 -> 21,
+              (28, 21, rpi),
               PathIdentifier(
-                28 -> 28,
-                List("CurrentTemp", "GetCurrentTemperature")
+                (28, 28, rpi),
+                List("GetCurrentTemperature", "CurrentTemp")
               )
             ),
             PipeRef(
-              28 -> 65,
-              PathIdentifier(28 -> 70, List("TemperatureChanges"))
+              (28, 65, rpi),
+              PathIdentifier((28, 70, rpi), List("TemperatureChanges"))
             ),
             None
           )
@@ -277,14 +318,14 @@ class StreamingParserTest extends ParsingTest {
         Seq.empty[Include],
         None,
         Option(BlockDescription(
-          32 -> 1,
+          (32, 1, rpi),
           List(LiteralString(
-            32 -> 1,
+            (32, 1, rpi),
             "A complete plant definition for temperature based sensor attenuation."
           ))
         ))
       )
-      checkDefinition[Domain, Plant](input, expected, _.plants.head)
+      checkDefinition[Domain, Plant](rpi, expected, _.plants.head)
     }
   }
 }

@@ -1,10 +1,14 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
+
 import sbt.Keys.scalaVersion
-import sbtbuildinfo.BuildInfoOption.BuildTime
+import sbtbuildinfo.BuildInfoOption.ToJson
 import sbtbuildinfo.BuildInfoOption.ToMap
+import sbtbuildinfo.BuildInfoOption.BuildTime
 
 ThisBuild / maintainer := "reid@reactific.com"
-ThisBuild / organizationName := "Reactific Software LLC"
+ThisBuild / organization := "com.reactific"
+ThisBuild / organizationHomepage := Some(new URL("https://reactific.com/"))
+ThisBuild / organizationName := "Ossum Inc."
 ThisBuild / startYear := Some(2019)
 ThisBuild / licenses +=
   ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
@@ -19,22 +23,7 @@ ThisBuild / dynverVTagPrefix := false
 // NEVER  SET  THIS: version := "0.1"
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator := "-"
-ThisBuild / organization := "com.reactific"
-ThisBuild / scalaVersion := "2.13.7"
-buildInfoOptions := Seq(ToMap, BuildTime)
-buildInfoKeys := Seq[BuildInfoKey](
-  name,
-  normalizedName,
-  description,
-  homepage,
-  startYear,
-  organization,
-  organizationName,
-  organizationHomepage,
-  version,
-  scalaVersion,
-  sbtVersion
-)
+ThisBuild / scalaVersion := "2.13.8"
 
 lazy val scala2_13_Options = Seq(
   "-target:17",
@@ -61,40 +50,41 @@ lazy val scala2_13_Options = Seq(
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
-lazy val riddl = (project in file("."))
-  .settings(
-    publish := {}, publishLocal := {}, pgpSigner / skip := true,
-    publishTo:= Some(Resolver.defaultLocal)
-  ).aggregate(
-    utils,
-    language,
-    testkit,
-    `hugo-translator`,
-    `hugo-git-check`,
-    examples,
-    doc,
-    riddlc,
-    `sbt-riddl`
-  )
+lazy val riddl = (project in file(".")).settings(
+  publish := {},
+  publishLocal := {},
+  pgpSigner / skip := true,
+  publishTo := Some(Resolver.defaultLocal)
+).aggregate(
+  utils,
+  language,
+  testkit,
+  `hugo-translator`,
+  `hugo-git-check`,
+  kalix,
+  examples,
+  doc,
+  riddlc,
+  `sbt-riddl`
+)
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
   .configure(C.mavenPublish).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
-    scalacOptions := scala2_13_Options
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
-lazy val language = project.in(file("language")).enablePlugins(BuildInfoPlugin)
-  .configure(C.withCoverage()).configure(C.mavenPublish).settings(
+lazy val language = project.in(file("language")).configure(C.withCoverage())
+  .configure(C.mavenPublish).settings(
     name := "riddl-language",
-    buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.reactific.riddl",
-    buildInfoUsePackageAsPath := true,
     coverageExcludedPackages :=
       "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse) ++ Dep.testing
-  )
+    libraryDependencies ++=
+      Seq(Dep.scopt, Dep.fastparse, Dep.lang3, Dep.commons_io) ++ Dep.testing
+  ).dependsOn(utils)
 
 lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
   .settings(
@@ -124,13 +114,19 @@ lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(`hugo-translator` % "compile->compile;test->test")
 
+lazy val kalix = project.in(file("kalix")).configure(C.mavenPublish).settings(
+  name := "riddl-kalix-translator",
+  libraryDependencies ++= Dep.testing
+).dependsOn(language % "compile->compile", testkit % "test->compile")
+
 lazy val examples = project.in(file("examples")).settings(
   name := "riddl-examples",
   Compile / packageBin / publishArtifact := false,
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
-  libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
+  libraryDependencies ++=
+    Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
@@ -141,25 +137,42 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
     publishSite
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
-lazy val doc2 = project.in(file("doc2")).enablePlugins(SitePlugin)
-  .enablePlugins(SiteScaladocPlugin).configure(C.zipResource("hugo")).settings(
-    name := "riddl-doc2",
-    publishTo := Option(Resolver.defaultLocal),
-    // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    publishSite
-  ).dependsOn(`hugo-translator` % "test->test", riddlc)
-
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging,UniversalDeployPlugin).configure(C.mavenPublish).settings(
+  .enablePlugins(JavaAppPackaging, UniversalDeployPlugin, BuildInfoPlugin)
+  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish).dependsOn(
+    language,
+    kalix,
+    `hugo-translator` % "compile->compile;test->test",
+    `hugo-git-check` % "compile->compile;test->test"
+  ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
-    maintainer := "reid@reactific.com"
-  ).dependsOn(
-    language,
-    `hugo-translator` % "compile->compile;test->test",
-    `hugo-git-check` % "compile->compile;test->test"
+    maintainer := "reid@reactific.com",
+    buildInfoObject := "BuildInfo",
+    buildInfoPackage := "com.reactific.riddl",
+    buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
+    buildInfoUsePackageAsPath := true,
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      name,
+      version,
+      description,
+      organization,
+      organizationName,
+      BuildInfoKey.map(organizationHomepage) { case (k, v) =>
+        k -> v.get.toString
+      },
+      BuildInfoKey.map(homepage) { case (k, v) =>
+        "projectHomepage" -> v.map(_.toString).getOrElse("http://riddl.tech")
+      },
+      BuildInfoKey.map(startYear) { case (k, v) => k -> v.get.toString },
+      scalaVersion,
+      sbtVersion,
+      BuildInfoKey.map(licenses) { case (k, v) =>
+        k -> v.map(_._1).mkString(", ")
+      }
+    )
   )
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)

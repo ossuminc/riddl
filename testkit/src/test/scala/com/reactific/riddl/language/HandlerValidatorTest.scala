@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.Validation.*
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 class HandlerValidatorTest extends ValidatingTest {
@@ -23,16 +23,18 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate[Domain](input) {
-        case (_: Domain, msgs: ValidationMessages) =>
+        case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
-            Validation.Error,
-            "Reference[Type] 'EntityCommand'(7:8) is not defined but should be a command type"
+            Error,
+            "Path 'EntityCommand' was not resolved, in On Clause"
+              +" 'On command EntityCommand', but should refer to a command"
           )
           assertValidationMessage(
             msgs,
-            Validation.Error,
-            "Reference[Type] 'EntityEvent'(8:8) is not defined but should be an event type"
+            Error,
+            "Path 'EntityEvent' was not resolved, in On Clause " +
+              "'On event EntityEvent', but should refer to an event"
           )
       }
     }
@@ -51,11 +53,12 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
-          Validation.Error,
-          "Reference[Type] 'Incoming'(7:8) is not defined but should be an event type"
+          Error,
+          "Path 'Incoming' was not resolved, in On Clause " +
+            "'On event Incoming', but should refer to an event"
         )
       }
     }
@@ -74,11 +77,11 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
-          Validation.Error,
-          "Reference[Type] 'Incoming'(7:8) should reference an event type but is a String type instead"
+          Error,
+          "Reference[Type] 'Incoming'(7:8) should reference an event but is a String type instead"
         )
       }
     }
@@ -98,11 +101,12 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
-          Validation.Error,
-          "'nonExistingField' is not defined but should be a Field"
+          Error,
+          "Path 'nonExistingField' was not resolved, in Example " +
+            "'only', but should refer to a Field"
         )
       }
     }
@@ -123,10 +127,10 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, msgs: Messages) =>
         assertValidationMessage(
           msgs,
-          Validation.Error,
+          Error,
           "'bar' is not defined but should be a Field"
         )
       }
@@ -148,7 +152,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, msgs: Messages) =>
         msgs.filter(_.kind == Error) must be(empty)
       }
     }
@@ -169,10 +173,9 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: ValidationMessages) =>
+      parseAndValidate[Domain](input) { case (_, msgs: Messages) =>
         assertValidationMessage(
-          msgs,
-          Validation.Error,
+          msgs, Error,
           "'bar' is not defined but should be a Field"
         )
       }
