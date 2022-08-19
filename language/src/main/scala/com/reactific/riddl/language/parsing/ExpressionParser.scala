@@ -165,13 +165,18 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).!
   }.map { case (x, y) => x + y }
 
+  def knownOperatorName[u:P]: P[String] = {
+    StringIn("SenderOf").!
+  }
+
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
-          Operators.div.! | Operators.mod.! | operatorName) ~
-        Punctuation.roundOpen ~ expression.rep(0, Punctuation.comma) ~
-        Punctuation.roundClose
+          Operators.div.! | Operators.mod.! | operatorName |
+          knownOperatorName) ~ Punctuation.roundOpen ~
+            expression.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 

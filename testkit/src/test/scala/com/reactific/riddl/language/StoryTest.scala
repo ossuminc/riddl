@@ -2,7 +2,6 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.LiteralString
-import com.reactific.riddl.language.Validation.ValidationMessages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ValidatingTest
 
@@ -38,7 +37,7 @@ class StoryTest extends ValidatingTest {
         case (
               domain: Domain,
               rpi: RiddlParserInput,
-              messages: ValidationMessages
+              messages: Messages.Messages
             ) =>
           domain.stories mustNot be(empty)
           messages mustBe empty
@@ -53,7 +52,7 @@ class StoryTest extends ValidatingTest {
           story.shownBy.head.toString mustBe
             "http://example.com:80/path/to/WritingABook"
           story.implementedBy mustNot be(empty)
-          story.implementedBy.head.format mustBe "Path.To.Context"
+          story.implementedBy.head.format mustBe "domain Path.To.Context"
       }
     }
   }

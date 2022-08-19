@@ -24,7 +24,6 @@ import fastparse.ScalaWhitespace.*
 
 import java.net.URL
 import java.nio.file.Path
-import scala.language.postfixOps
 
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
@@ -44,7 +43,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(open ~ parser.rep(0) ~ close)
   }
 
-  def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined /).map(_ => ret) }
+  def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined./).map(_ => ret) }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
@@ -104,8 +103,20 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier.repX(1, Punctuation.dot).map(_.reverse))
-      .map(tpl => (PathIdentifier.apply _).tupled(tpl))
+    P(location ~
+      (anyIdentifier | "^".! | Punctuation.dot.!).repX(1))
+      .map {
+        case (loc, strings) =>
+          // PathIdentifiers have empty strings to mean go up one level,
+          // and do not need a dot to indicate descent into a new definition
+          // because concatenation is sufficient.
+          val mappedStrings = strings.flatMap {
+            case s: String if s == "^" => Seq("")
+            case s: String if s == "." => Seq.empty[String]
+            case s: String => Seq(s)
+          }
+          PathIdentifier(loc, mappedStrings)
+      }
   }
 
   def is[u: P]: P[Unit] = {

@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Validation.ValidationMessages
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 /** Unit Tests For EntityValidatorTest */
@@ -15,13 +15,13 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateInContext[Entity](input) {
-        case (entity: Entity, rpi, msgs: ValidationMessages) =>
+        case (entity: Entity, rpi, msgs: Messages) =>
           msgs.count(_.kind.isError) mustBe 2
-          entity.options must contain(EntityFiniteStateMachine((3, 10, rpi)))
+          entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
-          entity.options must contain(EntityAggregate((3, 19, rpi)))
+          entity.options must contain(EntityIsAggregate((3, 19, rpi)))
           entity.options must contain(EntityTransient((3, 30, rpi)))
-          entity.options must contain(EntityAvailable((3, 41, rpi)))
+          entity.options must contain(EntityIsAvailable((3, 41, rpi)))
       }
     }
 
@@ -33,7 +33,7 @@ class EntityValidatorTest extends ValidatingTest {
                     |  handler fum is { ??? }
                     |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
-        case (entity: Entity, _, msgs: ValidationMessages) =>
+        case (entity: Entity, _, msgs: Messages) =>
           msgs.filter(_.kind.isError) mustBe empty
           entity.states.size mustBe 2
       }
@@ -44,10 +44,10 @@ class EntityValidatorTest extends ValidatingTest {
                     |  state foo is { field: String }
                     |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
-        case (_: Entity, _, msgs: ValidationMessages) =>
+        case (_: Entity, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
-            Validation.Error,
+            Error,
             "Entity 'MultiState' is declared as an fsm, but doesn't have " +
               "at least two states"
           )
@@ -56,20 +56,21 @@ class EntityValidatorTest extends ValidatingTest {
     "catch missing things" in {
       val input = "entity Hamburger is { state foo is {field:  SomeType } }"
       parseAndValidateInContext[Entity](input) {
-        case (_: Entity, _, msgs: ValidationMessages) =>
+        case (_: Entity, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
-            Validation.Error,
-            "'SomeType' is not defined but should be a Type"
+            Error,
+            "Path 'SomeType' was not resolved, in Field 'field', " +
+              "but should refer to a Type"
           )
           assertValidationMessage(
             msgs,
-            Validation.Error,
+            Error,
             "Entity 'Hamburger' must define a handler"
           )
           assertValidationMessage(
             msgs,
-            Validation.MissingWarning,
+            MissingWarning,
             "Entity 'Hamburger' should have a description"
           )
       }
@@ -88,10 +89,10 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidate[Domain](input) {
-        case (_: Domain, _, msgs: ValidationMessages) =>
+        case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
-            Validation.MissingWarning,
+            MissingWarning,
             "Entity 'Hamburger' has only empty handler"
           )
       }
@@ -136,9 +137,11 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidate[Domain](input) {
-        case (_: Domain, rpi, msgs: ValidationMessages) => msgs
-            .map(_.format) must contain(
-            s"Error: ${rpi.origin}(10:19): Field 'a' was not set in message constructor"
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            s"Field 'a' was not set in message constructor"
           )
       }
 

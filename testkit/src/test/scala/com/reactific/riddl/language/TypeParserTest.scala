@@ -168,17 +168,6 @@ class TypeParserTest extends ParsingTest {
             },
             Seq(
               Field(
-                (1, 12, rip),
-                Identifier((1, 12, rip), "sender"),
-                ReferenceType(
-                  (1, 12, rip),
-                  EntityRef(
-                    (1, 12, rip),
-                    PathIdentifier((1, 12, rip), Seq.empty[String])
-                  )
-                )
-              ),
-              Field(
                 (2, 3, rip),
                 Identifier((2, 3, rip), "key"),
                 Number((2, 8, rip))
@@ -280,10 +269,6 @@ class TypeParserTest extends ParsingTest {
       val expected = Type((1,1,rip), Identifier((1, 9, rip), "foo"),
         MessageType((1,16,rip),CommandKind,
           Seq(
-            Field((1,16,rip),Identifier((1,16,rip),"sender"),
-              ReferenceType((1,16,rip),EntityRef((1,16,rip),
-                PathIdentifier((1,16,rip),List())))
-            ),
             Field((1,18,rip),Identifier((1,18,rip),"a"), Integer((1,21,rip)))
           )
         )

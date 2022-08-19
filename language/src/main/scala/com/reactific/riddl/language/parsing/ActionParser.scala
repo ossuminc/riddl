@@ -65,6 +65,11 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
     P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
   }
 
+  def returnAction[u: P]: P[ReturnAction] = {
+    P(Keywords.return_ ~/ location ~ expression ~ description)
+      .map(t => (ReturnAction.apply _).tupled(t))
+  }
+
   def yieldAction[u: P]: P[YieldAction] = {
     P(Keywords.yield_ ~/ location ~ messageConstructor ~ description)
       .map(t => (YieldAction.apply _).tupled(t))
@@ -118,7 +123,7 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   def anyAction[u: P]: P[Action] = {
     P(
       replyAction | setAction | morphAction | becomeAction |
-        yieldAction | sagaStepAction | compoundAction
+        yieldAction | returnAction | sagaStepAction | compoundAction
     )
   }
 

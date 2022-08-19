@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.Validation.{MissingWarning, StyleWarning}
+import com.reactific.riddl.language.Messages.{MissingWarning, StyleWarning}
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 /** Validate files */
