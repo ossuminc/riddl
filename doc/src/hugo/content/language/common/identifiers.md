@@ -28,12 +28,12 @@ domain A {
     context C {
       type Simple = String(,30)
     }
-    type BSimple = A.B.C.Simple // full path  
+    type BSimple = A.B.C.Simple // full path starts from root  
     context D {
-      type DSimple = .E.ESimple // partial path
+      type DSimple = ^E.ESimple // partial path
       entity E {
-        type ESimple = ^^C.Simple // partial path
-        type Complicated = .^^C^D.DSimple
+        type ESimple = ^^^C.Simple // E->D->B->C->Simple
+        type Complicated = ^^^C^D.DSimple // E->D->B->C->B->D->DSimple  
       }
     }
   }
