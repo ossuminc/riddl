@@ -36,22 +36,26 @@ trait HandlerParser extends GherkinParser with FunctionParser {
       onClauseBody ~ briefly ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
+  def onClauses[u: P]: P[Seq[OnClause]] = {
+    ((open ~ undefined(Seq.empty[OnClause]) ~ close) |
+      optionalNestedContent(onClause))
+  }
+
   def contextHandler[u: P]: P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~ is ~
-        ((open ~ undefined(Seq.empty[OnClause]) ~ close) |
-          optionalNestedContent(onClause)) ~ briefly ~ description
-    ).map { case (loc, id, clauses, briefly, description) =>
-      Handler(loc, id, None, clauses, briefly, description)
+      location ~ Keywords.handler ~/ identifier ~
+        (Readability.for_ ~ projectionRef).? ~ is ~ onClauses ~
+         briefly ~ description
+    ).map { case (loc, id, maybeProjection, clauses, briefly, description) =>
+      Handler(loc, id, maybeProjection, clauses, briefly, description)
     }
   }
 
   def entityHandler[u: P]: P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier  ~
-        (Readability.for_ ~ Keywords.state ~ pathIdentifier).? ~ is ~
-        ((open ~ undefined(Seq.empty[OnClause]) ~ close) |
-          optionalNestedContent(onClause)) ~ briefly ~ description
+      Keywords.handler ~/ location ~ identifier ~
+        (Readability.for_ ~ stateRef).? ~ is ~ onClauses ~
+        briefly ~ description
     ).map { case (loc, id, state, clauses, briefly, description) =>
       Handler(loc, id, state, clauses, briefly, description)
     }

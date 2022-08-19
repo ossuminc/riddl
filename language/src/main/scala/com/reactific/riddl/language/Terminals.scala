@@ -158,6 +158,7 @@ object Terminals {
     final val pipe = "pipe"
     final val plant = "plant"
     final val processor = "processor"
+    final val projection = "projection"
     final val publish = "publish"
     final val query = "query"
     final val queries = "queries"

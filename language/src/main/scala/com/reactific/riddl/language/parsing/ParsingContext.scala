@@ -111,7 +111,9 @@ trait ParsingContext {
         try {
           this.expect[Seq[T]](rule) match {
             case Left(theErrors) =>
-              theErrors.foreach(errors.append)
+              theErrors
+                .filterNot(errors.contains)
+                .foreach(errors.append)
               Include(str.loc, Seq.empty[T], Some(path))
             case Right((parseResult, _)) =>
               Include(str.loc, parseResult, Some(path))
@@ -165,8 +167,11 @@ trait ParsingContext {
     val input = current
     fastparse.parse(input, parser(_)) match {
       case Success(content, _) =>
-        if (errors.nonEmpty) { Left(errors.toSeq) }
-        else { Right(content -> input) }
+        if (errors.nonEmpty) {
+          Left(errors.toSeq)
+        } else {
+          Right(content -> input)
+        }
       case failure: Failure =>
         makeParseFailureError(failure)
         Left(errors.toSeq)

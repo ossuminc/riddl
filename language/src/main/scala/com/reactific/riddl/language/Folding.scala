@@ -224,6 +224,10 @@ object Folding {
           if (pstack.nonEmpty) {
             // pop it and the new result is the new head
             pstack.pop()
+            // If the next things is implicit (unnamed), also pop that
+            if (pstack.top.isImplicit) {
+              pstack.pop()
+            }
             result = pstack.headOption
           } else {
             result = None // no parent stack to pop, exit loop
@@ -253,7 +257,11 @@ object Folding {
               pstack.push(field.get)
               Seq.empty[Definition]
             case Some(p) if p.isContainer =>
-              p.asInstanceOf[Container[Definition]].contents
+              val conts = p.asInstanceOf[Container[Definition]].contents
+              conts.flatMap {
+                case Include(_,contents,_) => contents
+                case d: Definition => Seq(d)
+              }
             case _ =>
               // anything else isn't searchable so n can't be found
               result = None

@@ -25,7 +25,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
     }
   }
 
-  "PathResolver" must {
+  "PathResolution" must {
     "resolve full path" in {
       val rpi = RiddlParserInput(
         """domain A {
@@ -75,7 +75,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |      state only is {
           |        a : ^^^DSimple
           |      }
-          |      handler foo for state ^only is {??? }
+          |      handler foo for state ^only is { ??? }
           |    }
           |  }
           |}

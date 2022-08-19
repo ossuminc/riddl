@@ -26,6 +26,7 @@ trait ContextParser
     extends HandlerParser
     with AdaptorParser
     with EntityParser
+    with ProjectionParser
     with SagaParser
     with StreamingParser
     with TypeParser {
@@ -52,8 +53,9 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (typeDef | contextHandler | entity | adaptor | function | saga |
-          plantDefinition | term | contextInclude).rep(0)
+      (typeDef | contextHandler | entity | adaptor | function | saga |
+        plantDefinition | projection | term | contextInclude
+      ).rep(0)
     )
   }
 
@@ -65,14 +67,15 @@ trait ContextParser
     ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val projections = mapTo[Projection](groups.get(classOf[Projection]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       Context(
         loc,
         id,
@@ -86,6 +89,7 @@ trait ContextParser
         terms,
         includes,
         handlers,
+        projections,
         briefly,
         description
       )
