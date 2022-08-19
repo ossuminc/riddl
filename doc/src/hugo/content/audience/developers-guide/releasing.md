@@ -22,26 +22,38 @@ If all tests do not pass, stop and fix the software
    [semantic versioning rules](https://semver.org/)
 2. Formulate a short description string for the release, call it desc 
 ```shell
+% sbt
 > git tag -a ${x.y.z} "${desc}"
+> reload
+> show version
 > git push --tags
 ```
-3. Verify Version
-```shell
-sbt "show version"
-```
-Run the above to ensure you are about to build and release the correct
-
 {{% hint warning "Running From SBT" %}}
-If you run the git commands from the SBT command prompt, you must 
-reload, clean, and retest in order to get the correct build version
-number into the artifacts. Failing to do this will attempt to release
-a snapshot version which won't go well for you.
+When you run the git commands from the SBT command prompt, you must 
+reload in order to get the correct build version number into the artifacts.
+Failing to do this will attempt to release a snapshot version which won't 
+go well for you.
 {{% /hint %}}
+
+## Release To Maven
+1. First, publish the artifacts to oss.sonatype.org
+```shell
+% cd riddl
+% sbt publishSigned
+```
+1. When that is complete, log in to https://oss.sonatype.org/#stagingRepositories
+2. Check the staged artifacts for sanity. All modules should be published with 
+   the same release number
+3. Close the repository and add the release number in the notes
+4. Press the Release button to publish to maven central
 
 ## Build Release Artifacts
 
 ```shell
-sbt "project riddlc; Universal/packageBin ; Universal/packageOsxDmg ; publishSigned"
+% sbt
+> project riddlc
+> Universal/packageBin
+> Universal/packageOsxDmg
 ```
 
 ## Create Release On GitHub
@@ -60,4 +72,13 @@ open https://github.com/reactific/riddl/releases/new
   * riddl/riddlc/target/universal/riddlc-${x.y.z}.dmg
 
 
+## Update riddl-actions
+* Open https://github.com/reactific/riddl-actions/edit/main/riddlc/action.yaml
+* Scroll to the bottom of the page
+* Update the version numbers (3 times) in the last lines of teh file to match
+  the ${x.y.z} version you released above.
+* Create a ${x.y.z} tag on your change and push it. 
 
+## Update riddl-examples
+* Open https://github.com/reactific/riddl-examples/edit/main/.github/workflows/gh-pages.yml
+* On line 22 change the riddl-action version number at the end to ${x.y.z}
