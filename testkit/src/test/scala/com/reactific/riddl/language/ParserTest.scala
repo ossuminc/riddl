@@ -241,7 +241,7 @@ class ParserTest extends ParsingTest {
         case Right((content, rpi)) => content mustBe Entity(
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
-            Seq(EntityTransient((2, 13, rpi)), EntityAggregate((2, 24, rpi))),
+            Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
             Seq(State(
               (3, 3, rpi),
               Identifier((3, 9, rpi), "foo"),
@@ -307,12 +307,13 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Adaptor(
+        case Right((content, rpi)) =>
+          content mustBe Adaptor(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "fuzz"),
             ContextRef(
               (1, 18, rpi),
-              PathIdentifier((1, 26, rpi), Seq("bar", "foo"))
+              PathIdentifier((1, 26, rpi), Seq("foo", "bar"))
             ),
             Seq.empty[Adaptation]
           )
@@ -323,7 +324,7 @@ class ParserTest extends ParsingTest {
       val input = """
                     |function foo is {
                     |  requires {b:Boolean}
-                    |  yields {i:Integer}
+                    |  returns {i:Integer}
                     |}
                     |""".stripMargin
 
@@ -347,7 +348,7 @@ class ParserTest extends ParsingTest {
                       Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
-                  _,
+                  _, _, _,
                   None,
                   None
                 ) =>

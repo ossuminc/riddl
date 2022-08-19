@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.Validation.MissingWarning
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 class InvariantValidator extends ValidatingTest {
@@ -16,17 +16,17 @@ class InvariantValidator extends ValidatingTest {
       ) { (_, _, msgs) =>
         assertValidationMessage(
           msgs,
-          Validation.MissingWarning,
+          MissingWarning,
           "Condition in Invariant 'small' should not be empty"
         )
         assertValidationMessage(
           msgs,
-          Validation.Error,
+          Error,
           "Entity 'user' must define a handler"
         )
         assertValidationMessage(
           msgs,
-          Validation.MissingWarning,
+          MissingWarning,
           "Entity 'user' should have a description"
         )
       }

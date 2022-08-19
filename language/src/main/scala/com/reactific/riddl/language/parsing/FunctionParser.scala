@@ -26,10 +26,18 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
 
   def input[u: P]: P[Aggregation] = { P(Keywords.requires ~ Punctuation.colon.? ~ aggregation) }
 
-  def output[u: P]: P[Aggregation] = { P(Keywords.yields ~ Punctuation.colon.? ~ aggregation) }
+  def output[u: P]: P[Aggregation] = { P(Keywords.returns ~ Punctuation.colon.? ~ aggregation) }
 
   def optionalInputOrOutput[u: P]: P[(Option[Aggregation], Option[Aggregation])] = {
     P(input.? ~ output.?)
+  }
+
+  def functionDefinitions[u:P]: P[Seq[FunctionDefinition]] = {
+    P(typeDef | example | function).rep(0)
+  }
+
+  def functionBody[u:P]: P[(Option[Aggregation],Option[Aggregation],Seq[FunctionDefinition])] = {
+    P(input.? ~ output.? ~ functionDefinitions)
   }
 
   /** Parses function literals, i.e.
@@ -42,12 +50,17 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
     * }}}
     */
   def function[u: P]: P[Function] = {
-    P(
-      location ~ IgnoreCase(Keywords.function) ~/ identifier ~ is ~ open ~
-        (undefined(None).map { n => (n, None) } | optionalInputOrOutput) ~ examples ~ close ~
-        briefly ~ description
-    ).map { case (loc, id, (inp, outp), examples, briefly, description) =>
-      Function(loc, id, inp, outp, examples, briefly, description)
+    P(location ~ Keywords.function ~/ identifier ~ is ~ open ~
+      ( undefined(None).map { _ => (
+          None, None, Seq.empty[FunctionDefinition]
+        )
+      } |  functionBody) ~ close ~ briefly ~ description
+    ).map { case (loc, id, (inp, outp, defns), briefly, description) =>
+      val groups = defns.groupBy(_.getClass)
+      val types = mapTo[Type](groups.get(classOf[Type]))
+      val examples = mapTo[Example](groups.get(classOf[Example]))
+      val functions = mapTo[Function](groups.get(classOf[Function]))
+      Function(loc, id, inp, outp, types, functions, examples, briefly, description)
     }
   }
 }

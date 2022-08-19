@@ -5,7 +5,10 @@ import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.AdjustableClock
 import com.reactific.riddl.language.testkit.ParsingTestBase
-
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.StringLogger
+import com.reactific.riddl.utils.SysLogger
+import com.reactific.riddl.utils.InMemoryLogger
 import java.io.File
 import java.nio.file.Path
 import java.time.Instant

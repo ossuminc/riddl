@@ -51,8 +51,10 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(Location(), Nil).format mustBe ""
+      PathIdentifier(Location(), List("", "foo", "baz"))
+        .format mustBe "^foo.baz"
       PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe
-        "baz.bar.foo"
+        "foo.bar.baz"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
     }
   }
@@ -64,21 +66,43 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "have no description" in { RootContainer(Nil).description mustBe None }
     "have no brief" in { RootContainer(Nil).brief mustBe None }
     "have no id" in { RootContainer(Nil).identify mustBe "Root" }
+    "identify as root container" in {
+      RootContainer(Nil).isRootContainer mustBe true
+    }
+  }
+
+  "Include" should {
+    "identify as root container" in {
+      Include(Location(), Seq.empty[Definition]).isRootContainer mustBe true
+    }
   }
 
   "String" should {
     "have kind 'String'" in { Strng(Location()).kind mustBe "String" }
   }
+
   "Bool" should {
     "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" }
   }
 
   "EntityAggregate" should {
     "have correct name" in {
-      EntityAggregate(Location()).name mustBe "aggregate"
+      EntityIsAggregate(Location()).name mustBe "aggregate"
       EntityTransient(Location()).name mustBe "transient"
-      EntityConsistent(Location()).name mustBe "consistent"
-      EntityAvailable(Location()).name mustBe "available"
+      EntityIsConsistent(Location()).name mustBe "consistent"
+      EntityIsAvailable(Location()).name mustBe "available"
+    }
+  }
+
+  "Context" should {
+    "correctly identify emptiness" in {
+      Context(Location(), Identifier(Location(), "test")).contents mustBe empty
+    }
+    "correctly identify non-emptiness" in {
+      val types =
+        List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
+      Context(Location(), Identifier(Location(), "test"), types = types)
+        .contents mustBe types
     }
   }
 
@@ -98,7 +122,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "contents" should {
       "contain all contents" in {
         val options = Seq(
-          EntityAggregate(Location()),
+          EntityIsAggregate(Location()),
           EntityTransient(Location()),
           EntityKind(Location(), Seq(LiteralString(Location(), "concept")))
         )
@@ -126,6 +150,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
               Field(Location(), Identifier(Location(), "a"), Bool(Location()))
             )
           )),
+          Seq.empty[Type], Seq.empty[Function],
           Seq.empty[Example],
           None
         ))

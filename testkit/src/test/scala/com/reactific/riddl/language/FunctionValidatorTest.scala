@@ -11,7 +11,7 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |entity user is {
                                           |  function foo is {
                                           |    requires {b: Boolean }
-                                          |    yields {r: Integer }
+                                          |    returns {r: Integer }
                                           |  }
                                           |}
                                           |""".stripMargin) { (e, _, msgs) =>
@@ -22,7 +22,7 @@ class FunctionValidatorTest extends ValidatingTest {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _, _)))),
-                  _,
+                  _, _, _,
                   None,
                   None
                 )

@@ -1,8 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.Validation.StyleWarning
-import com.reactific.riddl.language.Validation.ValidationMessage
+import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 class DefinitionValidatorTest extends ValidatingTest {
@@ -13,7 +12,7 @@ class DefinitionValidatorTest extends ValidatingTest {
                                  |type Ba is String
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgs: Seq[ValidationMessage]) =>
+        case (_: Domain, _, msgs: Seq[Message]) =>
           if (msgs.isEmpty) {
             fail(
               "Identifiers with less than 3 characters should generate a warning"

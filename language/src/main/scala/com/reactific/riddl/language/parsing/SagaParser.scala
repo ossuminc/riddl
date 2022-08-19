@@ -47,8 +47,9 @@ trait SagaParser extends ReferenceParser with ActionParser with GherkinParser wi
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaOptions ~ optionalInputOrOutput ~
-        sagaStep.rep(2) ~ close ~ briefly ~ description
+      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaOptions ~
+        optionalInputOrOutput ~ sagaStep.rep(2) ~
+        close ~ briefly ~ description
     ).map { case (location, identifier, options, (input, output), actions, briefly, description) =>
       Saga(location, identifier, options, input, output, actions, briefly, description)
     }

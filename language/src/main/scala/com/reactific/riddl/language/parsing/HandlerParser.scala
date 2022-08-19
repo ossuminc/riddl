@@ -48,8 +48,8 @@ trait HandlerParser extends GherkinParser with FunctionParser {
 
   def entityHandler[u: P]: P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~ is ~
-        (Readability.for_ ~ Keywords.state ~ identifier).? ~
+      Keywords.handler ~/ location ~ identifier  ~
+        (Readability.for_ ~ Keywords.state ~ pathIdentifier).? ~ is ~
         ((open ~ undefined(Seq.empty[OnClause]) ~ close) |
           optionalNestedContent(onClause)) ~ briefly ~ description
     ).map { case (loc, id, state, clauses, briefly, description) =>
