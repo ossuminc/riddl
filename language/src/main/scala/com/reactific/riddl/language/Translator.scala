@@ -70,7 +70,7 @@ trait Translator[OPT <: TranslatingOptions] {
     require(options.inputFile.nonEmpty, "An input path was not provided.")
     require(options.outputDir.nonEmpty, "An output path was not provided.")
     if (commonOptions.verbose)
-      log.info(s"Starting translation of `${root.id.format}``")
+      log.info(s"Starting translation of `${root.id.format}")
     Seq.empty[Path]
   }
 

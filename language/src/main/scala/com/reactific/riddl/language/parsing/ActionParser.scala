@@ -47,6 +47,14 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
     ).map { t => (SetAction.apply _).tupled(t) }
   }
 
+  def appendAction[u: P]: P[AppendAction] = {
+    P(
+      location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
+        ~ description
+    ).map { t => (AppendAction.apply _).tupled(t) }
+  }
+
+
   def morphAction[u: P]: P[MorphAction] = {
     P(
       Keywords.morph ~/ location ~ entityRef ~ Readability.to.? ~ stateRef ~
@@ -122,7 +130,7 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def anyAction[u: P]: P[Action] = {
     P(
-      replyAction | setAction | morphAction | becomeAction |
+      replyAction | setAction | appendAction | morphAction | becomeAction |
         yieldAction | returnAction | sagaStepAction | compoundAction
     )
   }

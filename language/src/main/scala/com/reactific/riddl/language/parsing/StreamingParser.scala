@@ -34,14 +34,14 @@ trait StreamingParser
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ fromEntity.? ~
+      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ toEntity.? ~
         briefly ~ description
     ).map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ toEntity.? ~
+      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ fromEntity.? ~
         briefly ~ description
     ).map { tpl => (Outlet.apply _).tupled(tpl) }
   }

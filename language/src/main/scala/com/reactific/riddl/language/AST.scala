@@ -1486,7 +1486,15 @@ object AST {
     override def format: String = { s"set ${target.format} to ${value.format}" }
   }
 
-  case class AggregateConstructor()
+  case class AppendAction(
+    loc: Location,
+    value: Expression,
+    target: PathIdentifier,
+    description: Option[Description] = None
+  ) extends Action {
+    override def format: String = { s"append ${value.format} to ${target.format}"}
+  }
+
   /** A helper class for publishing messages that represents the construction of
     * the message to be sent.
     *
@@ -2016,7 +2024,7 @@ object AST {
   case class Handler(
     loc: Location,
     id: Identifier,
-    applicability: Option[PathIdentifier] = None,
+    applicability: Option[Reference[?]] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -2260,6 +2268,18 @@ object AST {
     lazy val contents: Seq[Field] = fields
   }
 
+  /** A reference to an context's projection definition
+   *
+   * @param loc
+   * The location of the state reference
+   * @param id
+   * The path identifier of the referenced projection definition
+   */
+  case class ProjectionRef(loc: Location, id: PathIdentifier)
+    extends Reference[Projection] {
+    override def format: String = s"${Keywords.projection} ${id.format}"
+  }
+
   /** Base trait for all options a Context can have.
     */
   sealed abstract class ContextOption(val name: String) extends OptionValue
@@ -2355,6 +2375,7 @@ object AST {
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    projections: Seq[Projection] = Seq.empty[Projection],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends TypeContainer[ContextDefinition]

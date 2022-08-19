@@ -321,7 +321,27 @@ object Validation {
           }
         )
       }
-      if (pid.value.nonEmpty && pid.value.forall(_.nonEmpty)) {
+      if (pid.value.isEmpty) {
+        val message = s"An empty path cannot be resolved to ${
+          article(tc.getSimpleName)} was expected"
+        addError(pid.loc, message)
+      } else if ( pid.value.exists(_.isEmpty)) {
+        val resolution = resolvePath(pid)
+        resolution match {
+          case None => notResolved()
+          case Some(x) if x.getClass != tc =>
+            val message = s"Path '${pid.format}' resolved to ${
+              article(
+                x.getClass.getSimpleName)
+            } but ${
+              article(
+                tc.getSimpleName)
+            } was expected"
+            addError(pid.loc, message)
+          case _ => // class matched, we're good!
+        }
+        this
+      } else {
         symbolTable.lookupSymbol[T](pid.value) match {
           case Nil =>
             notResolved()
@@ -334,18 +354,6 @@ object Validation {
             val list = (d, optT) :: tail
             handleMultipleResultsCase[T](pid, list)
         }
-      } else {
-        val resolution = resolvePath(pid)
-        resolution match {
-          case None => notResolved()
-          case Some(x) if x.getClass != tc =>
-            val message = s"Path '${pid.format}' resolved to ${article(
-              x.getClass.getSimpleName)} but ${article(
-              tc.getSimpleName)} was expected"
-            addError(pid.loc, message)
-          case _ => // class matched, we're good!
-        }
-        this
       }
     }
 
@@ -563,6 +571,10 @@ object Validation {
           this
             .checkPathRef[Field](path)()
             .checkExpression(value)
+        case AppendAction(_, value, path, _) =>
+          this
+            .checkExpression(value)
+            .checkPathRef[Field](path)()
         case ReturnAction(_, expr, _) =>
           this.checkExpression(expr)
         case YieldAction(_, msg, _) =>
@@ -1075,7 +1087,7 @@ object Validation {
         case h: Handler =>
           val s2 = s1.checkDefinition(parent, h)
           h.applicability.fold(s2) { pid =>
-            s1.checkPathRef[Entity & Projection](pid)() }
+            s1.checkPathRef[Entity & Projection](pid.id)() }
             .checkDescription(h)
         case inlet @ Inlet(_,_,typeRef,entityRef,_,_) =>
           val s2 = s1.checkDefinition(parent, inlet)

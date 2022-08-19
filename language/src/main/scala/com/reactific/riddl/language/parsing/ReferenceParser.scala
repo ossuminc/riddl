@@ -26,19 +26,23 @@ trait ReferenceParser extends CommonParser {
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
   def commandRef[u: P]: P[CommandRef] = {
-    P(location ~ Keywords.command ~ pathIdentifier).map(tpl => (CommandRef.apply _).tupled(tpl))
+    P(location ~ Keywords.command ~ pathIdentifier).map(
+      tpl => (CommandRef.apply _).tupled(tpl))
   }
 
   def eventRef[u: P]: P[EventRef] = {
-    P(location ~ Keywords.event ~ pathIdentifier).map(tpl => (EventRef.apply _).tupled(tpl))
+    P(location ~ Keywords.event ~ pathIdentifier).map(
+      tpl => (EventRef.apply _).tupled(tpl))
   }
 
   def queryRef[u: P]: P[QueryRef] = {
-    P(location ~ Keywords.query ~ pathIdentifier).map(tpl => (QueryRef.apply _).tupled(tpl))
+    P(location ~ Keywords.query ~ pathIdentifier).map(
+      tpl => (QueryRef.apply _).tupled(tpl))
   }
 
   def resultRef[u: P]: P[ResultRef] = {
-    P(location ~ Keywords.result ~ pathIdentifier).map(tpl => (ResultRef.apply _).tupled(tpl))
+    P(location ~ Keywords.result ~ pathIdentifier).map(
+      tpl => (ResultRef.apply _).tupled(tpl))
   }
 
   def otherRef[u:P]: P[OtherRef] = {
@@ -55,15 +59,18 @@ trait ReferenceParser extends CommonParser {
   }
 
   def handlerRef[u: P]: P[HandlerRef] = {
-    P(location ~ Keywords.handler ~ pathIdentifier).map(tpl => (HandlerRef.apply _).tupled(tpl))
+    P(location ~ Keywords.handler ~ pathIdentifier).map(
+      tpl => (HandlerRef.apply _).tupled(tpl))
   }
 
   def stateRef[u: P]: P[StateRef] = {
-    P(location ~ Keywords.state ~ pathIdentifier).map(tpl => (StateRef.apply _).tupled(tpl))
+    P(location ~ Keywords.state ~ pathIdentifier).map(
+      tpl => (StateRef.apply _).tupled(tpl))
   }
 
   def typeRef[u: P]: P[TypeRef] = {
-    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier).map(tpl => (TypeRef.apply _).tupled(tpl))
+    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier).map(
+      tpl => (TypeRef.apply _).tupled(tpl))
   }
 
   def actionRef[u: P]: P[FunctionRef] = {
@@ -82,14 +89,23 @@ trait ReferenceParser extends CommonParser {
   }
 
   def pipeRef[u: P]: P[PipeRef] = {
-    P(location ~ maybe(Keywords.pipe) ~ pathIdentifier).map(tpl => (PipeRef.apply _).tupled(tpl))
+    P(location ~ maybe(Keywords.pipe) ~ pathIdentifier).map(
+      tpl => (PipeRef.apply _).tupled(tpl))
   }
 
   def outletRef[u: P]: P[OutletRef] = {
-    P(location ~ Keywords.outlet ~ pathIdentifier).map(tpl => (OutletRef.apply _).tupled(tpl))
+    P(location ~ Keywords.outlet ~ pathIdentifier).map(
+      tpl => (OutletRef.apply _).tupled(tpl))
   }
 
   def inletRef[u: P]: P[InletRef] = {
-    P(location ~ Keywords.inlet ~ pathIdentifier).map(tpl => (InletRef.apply _).tupled(tpl))
+    P(location ~ Keywords.inlet ~ pathIdentifier).map(
+      tpl => (InletRef.apply _).tupled(tpl))
+  }
+
+  def projectionRef[u: P]: P[ProjectionRef] ={
+    P(location ~ Keywords.projection ~ pathIdentifier).map(
+      tpl => (ProjectionRef.apply _).tupled(tpl))
+
   }
 }
