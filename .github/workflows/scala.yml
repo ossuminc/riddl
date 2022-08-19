@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set Up JDK 17    
+    - name: Set Up JDK 17
       uses: actions/setup-java@v2
       with:
         java-version: '17'
@@ -27,7 +27,7 @@ jobs:
       uses: coursier/cache-action@v6
     - name: Build & Run Tests
       run: |
-        sbt -v packageBin +test
+        sbt -v clean packageBin +test
     - name: Cleanup Before Caching
       shell: bash
       run: |

@@ -1,6 +1,9 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
+
 import sbt.Keys.scalaVersion
-import sbtbuildinfo.BuildInfoOption.{ToJson, ToMap, BuildTime}
+import sbtbuildinfo.BuildInfoOption.ToJson
+import sbtbuildinfo.BuildInfoOption.ToMap
+import sbtbuildinfo.BuildInfoOption.BuildTime
 
 ThisBuild / maintainer := "reid@reactific.com"
 ThisBuild / organization := "com.reactific"
@@ -47,39 +50,41 @@ lazy val scala2_13_Options = Seq(
   "-Xlint:deprecation" // Enable linted deprecations.
 )
 
-lazy val riddl = (project in file("."))
-  .settings(
-    publish := {}, publishLocal := {}, pgpSigner / skip := true,
-    publishTo:= Some(Resolver.defaultLocal)
-  ).aggregate(
-    utils,
-    language,
-    testkit,
-    `hugo-translator`,
-    `hugo-git-check`,
-    examples,
-    doc,
-    riddlc,
-    `sbt-riddl`
-  )
+lazy val riddl = (project in file(".")).settings(
+  publish := {},
+  publishLocal := {},
+  pgpSigner / skip := true,
+  publishTo := Some(Resolver.defaultLocal)
+).aggregate(
+  utils,
+  language,
+  testkit,
+  `hugo-translator`,
+  `hugo-git-check`,
+  kalix,
+  examples,
+  doc,
+  riddlc,
+  `sbt-riddl`
+)
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
-  .configure(C.mavenPublish)
-  .settings(
+  .configure(C.mavenPublish).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.compress) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
-lazy val language = project.in(file("language"))
-  .configure(C.withCoverage()).configure(C.mavenPublish).settings(
+lazy val language = project.in(file("language")).configure(C.withCoverage())
+  .configure(C.mavenPublish).settings(
     name := "riddl-language",
     coverageExcludedPackages :=
       "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.scopt, Dep.fastparse, Dep.lang3) ++ Dep.testing
-  )
+    libraryDependencies ++=
+      Seq(Dep.scopt, Dep.fastparse, Dep.lang3, Dep.commons_io) ++ Dep.testing
+  ).dependsOn(utils)
 
 lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
   .settings(
@@ -109,13 +114,19 @@ lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(`hugo-translator` % "compile->compile;test->test")
 
+lazy val kalix = project.in(file("kalix")).configure(C.mavenPublish).settings(
+  name := "riddl-kalix-translator",
+  libraryDependencies ++= Dep.testing
+).dependsOn(language % "compile->compile", testkit % "test->compile")
+
 lazy val examples = project.in(file("examples")).settings(
   name := "riddl-examples",
   Compile / packageBin / publishArtifact := false,
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
-  libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
+  libraryDependencies ++=
+    Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
 ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
@@ -127,15 +138,13 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging,UniversalDeployPlugin,BuildInfoPlugin)
-  .enablePlugins(MiniDependencyTreePlugin)
-  .configure(C.mavenPublish)
-  .dependsOn(
+  .enablePlugins(JavaAppPackaging, UniversalDeployPlugin, BuildInfoPlugin)
+  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish).dependsOn(
     language,
+    kalix,
     `hugo-translator` % "compile->compile;test->test",
     `hugo-git-check` % "compile->compile;test->test"
-  )
-  .settings(
+  ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
@@ -151,19 +160,17 @@ lazy val riddlc: Project = project.in(file("riddlc"))
       description,
       organization,
       organizationName,
-      BuildInfoKey.map(organizationHomepage) {
-        case (k, v) => k -> v.get.toString
+      BuildInfoKey.map(organizationHomepage) { case (k, v) =>
+        k -> v.get.toString
       },
-      BuildInfoKey.map(homepage) {
-        case (k, v) => "projectHomepage" -> v.map(_.toString).getOrElse("http://riddl.tech")
+      BuildInfoKey.map(homepage) { case (k, v) =>
+        "projectHomepage" -> v.map(_.toString).getOrElse("http://riddl.tech")
       },
-      BuildInfoKey.map(startYear) {
-        case (k, v) => k -> v.get.toString
-      },
+      BuildInfoKey.map(startYear) { case (k, v) => k -> v.get.toString },
       scalaVersion,
       sbtVersion,
-      BuildInfoKey.map(licenses) {
-        case (k,v) => k -> v.map(_._1).mkString(", ")
+      BuildInfoKey.map(licenses) { case (k, v) =>
+        k -> v.map(_._1).mkString(", ")
       }
     )
   )

@@ -18,12 +18,16 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language._
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.TextFileWriter
+import com.reactific.riddl.utils.TreeCopyFileVisitor
+import com.reactific.riddl.utils.Zip
 import com.reactific.riddl.utils.{PathUtils, Tar, Zip}
 
-import java.io.{File, IOException}
+import java.io.File
+import java.io.IOException
 import java.net.URL
 import java.nio.file._
-import java.nio.file.attribute.BasicFileAttributes
 import scala.collection.mutable
 
 case class HugoTranslatingOptions(
@@ -50,20 +54,9 @@ case class HugoTranslatingOptions(
   def configFile: Path = outputRoot.resolve("config.toml")
 }
 
-case class HugoTranslatorState(options: HugoTranslatingOptions) {
-  val files: mutable.ListBuffer[MarkdownWriter] = mutable.ListBuffer
-    .empty[MarkdownWriter]
-  val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
-  dirs.push(options.contentRoot)
+case class HugoTranslatorState(options: HugoTranslatingOptions)
+  extends TranslatorState[MarkdownWriter] {
 
-  def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) =>
-    path.resolve(nm)
-  }
-
-  def addDir(name: String): Path = {
-    dirs.push(Path.of(name))
-    parentDirs
-  }
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -71,7 +64,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions) {
     }
     val path = parDir.resolve(fileName)
     val mdw = MarkdownWriter(path)
-    files.append(mdw)
+    addFile(mdw)
     mdw
   }
 
@@ -172,7 +165,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
   def loadATheme(from: Option[URL], destDir: Path): Unit = {
     if (from.isDefined) {
-      val fileName = PathUtils.copyURLToDir(from.get, destDir)
+      val fileName = TextFileWriter.copyURLToDir(from, destDir)
       val zip_path = destDir.resolve(fileName)
       fileName match {
         case name if name.endsWith(".zip") =>
@@ -181,8 +174,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
         case name if name.endsWith(".tar.gz") =>
           Tar.untar(zip_path, destDir)
           zip_path.toFile.delete()
-        case _ =>
-          throw new IllegalArgumentException("Can only load a theme from .tar.gz or .zip file")
+        case _ => throw new IllegalArgumentException(
+            "Can only load a theme from .tar.gz or .zip file"
+          )
       }
     }
   }
@@ -191,40 +185,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     for ((name, url) <- options.themes) {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url, destDir)
-    }
-  }
-
-  case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
-      extends SimpleFileVisitor[Path] {
-
-    @throws[IOException]
-    override def preVisitDirectory(
-      dir: Path,
-      attrs: BasicFileAttributes
-    ): FileVisitResult = {
-      val resolve = target.resolve(source.relativize(dir))
-      if (Files.notExists(resolve)) { Files.createDirectories(resolve) }
-      FileVisitResult.CONTINUE
-    }
-
-    @throws[IOException]
-    override def visitFile(
-      file: Path,
-      attrs: BasicFileAttributes
-    ): FileVisitResult = {
-      val resolve = target.resolve(source.relativize(file))
-      if (!file.getFileName.startsWith(".")) {
-        Files.copy(file, resolve, StandardCopyOption.REPLACE_EXISTING)
-      }
-      FileVisitResult.CONTINUE
-    }
-
-    override def visitFileFailed(
-      file: Path,
-      exc: IOException
-    ): FileVisitResult = {
-      log.error(s"Unable to copy: $file: $exc\n")
-      FileVisitResult.CONTINUE
     }
   }
 
@@ -248,9 +208,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     import java.nio.file.Files
     import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
-    val src = this.getClass.getClassLoader.getResourceAsStream(name)
-    require(src != null, s"Cannot find resource named '$name' ")
-    Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
+    TextFileWriter.copyResource(name, destination)
   }
 
   def manuallyMakeNewHugoSite(path: Path): Unit = {
@@ -328,8 +286,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     commonOptions: CommonOptions,
     options: HugoTranslatingOptions
   ): Seq[Path] = {
-    require(options.inputFile.nonEmpty, "An input path was not provided.")
-    require(options.outputDir.nonEmpty, "An output path was not provided.")
+    super.translateImpl(root, log, commonOptions, options)
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
     require(
       options.outputRoot.getFileName.toString.nonEmpty,

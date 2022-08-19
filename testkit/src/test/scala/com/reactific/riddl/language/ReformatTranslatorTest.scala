@@ -2,15 +2,25 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.RiddlFilesTestBase
+import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Path}
 
 /** Test The ReformatTranslator's ability to generate consistent output */
 class ReformatTranslatorTest extends RiddlFilesTestBase {
 
-  def checkAFile(rootDir: Path, file: File): Assertion = { checkAFile(file) }
+  def checkAFile(rootDir: Path, file: File): Assertion = {
+    checkAFile(file, singleFile = true)
+  }
+
+  def outputWithLineNos(output: String): String = {
+    output.split('\n').zipWithIndex.map {
+      case (str,n) => f"$n%3d $str"
+    }.mkString("\n")
+  }
 
   def checkAFile(
     file: File,
@@ -30,7 +40,10 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
         val log = SysLogger()
         val output = ReformatTranslator
           .translateToString(root, log, common, options)
-        parseTopLevelDomains(output) match {
+        val file1 = Files.createTempFile(file.getName, ".riddl")
+        Files.write(file1, output.getBytes(StandardCharsets.UTF_8))
+        val input2 = RiddlParserInput(file1)
+        parseTopLevelDomains(input2) match {
           case Left(errors) =>
             val message = errors.map(_.format).mkString("\n")
             fail(

@@ -18,8 +18,10 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.utils.{Logger, OutputFile}
 
 import java.nio.file.Path
+import scala.collection.mutable
 
 trait TranslatingOptions {
   def inputFile: Option[Path]
@@ -27,21 +29,50 @@ trait TranslatingOptions {
   def projectName: Option[String]
 }
 
-trait TranslatorState {
-  def generatedFiles: Seq[Path]
+trait TranslatorState[OF <: OutputFile] {
+  def options: TranslatingOptions
 
-  def addFile(file: Path): TranslatorState
+  val files: mutable.ListBuffer[OF] = mutable.ListBuffer.empty[OF]
+
+  def generatedFiles: Seq[Path] = files.map(_.filePath).toSeq
+
+  val dirs: mutable.Stack[Path] = mutable.Stack[Path]()
+
+  def addDir(name: String): Path = {
+    dirs.push(Path.of(name))
+    parentDirs
+  }
+
+  def parentDirs: Path = dirs.foldRight(Path.of("")) { case (nm, path) =>
+    path.resolve(nm)
+  }
+
+  def close: Seq[Path] = {
+    files.foreach(_.write())
+    files.map(_.filePath).toSeq
+  }
+
+  def addFile(file: OF): Unit = {
+    files.append(file)
+  }
 }
 
-/** Unit Tests For Translator */
+/** Base class of all Translators
+ * @tparam OPT The options class used by the translator */
 trait Translator[OPT <: TranslatingOptions] {
 
   protected def translateImpl(
     root: RootContainer,
     log: Logger,
     commonOptions: CommonOptions,
-    options: OPT,
-  ): Seq[Path]
+    options: OPT
+  ): Seq[Path] = {
+    require(options.inputFile.nonEmpty, "An input path was not provided.")
+    require(options.outputDir.nonEmpty, "An output path was not provided.")
+    if (commonOptions.verbose)
+      log.info(s"Starting translation of `${root.id.format}``")
+    Seq.empty[Path]
+  }
 
   final def translate(
     root: RootContainer,
