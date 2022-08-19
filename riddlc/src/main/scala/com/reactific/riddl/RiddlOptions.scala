@@ -695,8 +695,9 @@ object RiddlOptions {
       cmd("kalix").action((_, c) => c.copy(command = Kalix))
         .children(kalixOptionsParser*).text(
           """Parse and validate the input-file and then translate it into the
-            |protobuffers definitions needed to represent the input in Kalix."""
-            .stripMargin
+            |protobuffers definitions needed to represent the input in Kalix.
+            |CURRENTLY EXPERIMENTAL & NOT WORKING WELL
+          """.stripMargin
         ),
       cmd("from").action((_, c) => c.copy(command = From)).children(
         arg[File]("config-file").action { (file, ro) =>
