@@ -27,8 +27,6 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import org.apache.commons.lang3.exception.ExceptionUtils
 
-import scala.collection.mutable
-
 /** Validates an AST */
 object Validation {
 
@@ -77,16 +75,10 @@ object Validation {
   case class ValidationState(
     symbolTable: SymbolTable,
     root: ParentDefOf[Definition] = RootContainer.empty,
-    commonOptions: CommonOptions = CommonOptions())
-      extends Folding.MessagesState[ValidationState] {
-
-    var parents: Seq[ParentDefOf[Definition]] = Seq.empty[ParentDefOf[Definition]]
-    var definition: Definition = root
-
-    def captureHierarchy(cont: Definition, pars: Seq[ParentDefOf[Definition]]): Unit = {
-      definition = cont
-      parents = pars
-    }
+    commonOptions: CommonOptions = CommonOptions()
+  ) extends Folding.MessagesState[ValidationState]
+    with Folding.PathResolutionState[ValidationState]
+  {
 
     def parentOf(
       definition: Definition
@@ -296,58 +288,7 @@ object Validation {
       } else { this }
     }
 
-    /** Resolve a PathIdentifier If the path is already resolved or it has no
-      * empty components then we can resolve it from the map or the symbol
-      * table.
-      *
-      * @param pid
-      *   The path to consider
-      * @return
-      *   Either an error or a definition
-      */
-    def resolvePath(
-      pid: PathIdentifier,
-    ): Option[Definition] = {
-      val result = {
-        val stack = mutable.Stack.empty[ParentDefOf[Definition]]
-        stack.pushAll(parents.reverse)
-        pid.value.foldLeft(stack.headOption.asInstanceOf[Option[Definition]]) { (r, n) =>
-          if (r.isEmpty) {
-            None // propagate error condition
-          } else if (n.isEmpty) {
-            if (stack.nonEmpty) {
-              val valueFound = stack.pop()
-              Some(valueFound)
-            } else {
-              None // no way to pop an item of the stack so signal error
-            }
-          } else {
-            r match {
-              case None =>
-                None // propagate error condition
-              case Some(p) if p.isContainer =>
-                val contents = p.asInstanceOf[Container[Definition]].contents
-                contents.find(_.id.value == n) match {
-                  case Some(q) if q.isContainer =>
-                    // found the named item, put it on the stack and make it
-                    // the latest result (r)
-                    stack.push(q.asInstanceOf[ParentDefOf[Definition]])
-                    Some(q)
-                  case Some(_) =>
-                    // Found an item but its not a container.
-                    // This is an error because we were supposed to resolve
-                    // the name
-                  None
-                  case None =>
-                    None // propagate the error condition
-                }
-              case Some(_) => None // no container to resolve name into
-            }
-          }
-        }
-      }
-      result
-    }
+
     def checkPathRef[T <: Definition: ClassTag](
       pid: PathIdentifier, kind: Option[String] = None
     )(validator: SingleMatchValidationFunction =
@@ -602,6 +543,8 @@ object Validation {
           this
             .checkPathRef[Field](path)()
             .checkExpression(value)
+        case ReturnAction(_, expr, _) =>
+          this.checkExpression(expr)
         case YieldAction(_, msg, _) =>
           this.checkMessageConstructor(msg)
         case PublishAction(_, msg, pipeRef, _) =>
@@ -704,7 +647,7 @@ object Validation {
             optN
           )
           defn match {
-            case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _) =>
+            case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _, _, _) =>
               val paramNames = fields.map(_.id.value)
               val argNames = args.args.keys.map(_.value).toSeq
               val s1 = s.check(
@@ -886,7 +829,8 @@ object Validation {
       state.captureHierarchy(container, parents)
       container match {
         case typ: Type          => openType(state, parents.head, typ)
-        case function: Function => openFunction(state, parents.head, function)
+        case function: Function =>
+          state.checkDefinition(container, function)
         case onClause: OnClause =>
           if (!onClause.msg.isEmpty)
             state.checkMessageRef(onClause.msg, onClause.msg.messageKind)
@@ -1065,19 +1009,6 @@ object Validation {
         }.step { s5 => s5.checkExamples(processor.examples) }
     }
 
-    def openFunction[TCD <: ParentDefOf[Definition]](
-      state: ValidationState,
-      container: TCD,
-      function: Function
-    ): ValidationState = {
-      state
-        .checkDefinition(container, function)
-        .checkTypeExpression(
-          function.input.getOrElse(Nothing(function.loc))
-      ).checkTypeExpression(
-        function.output.getOrElse(Nothing(function.loc)),
-      ).checkExamples(function.examples)
-    }
 
     def doDefinition(
       state: ValidationState,

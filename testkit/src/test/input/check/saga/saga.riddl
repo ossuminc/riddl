@@ -3,17 +3,17 @@ domain ignore1 is {
     type Something = command { ??? }
     type UndoSomething = command { ??? }
     function AnotherThing {
-      requires { a: Integer described by "a"} yields { b: Integer described by "b"}
+      requires { a: Integer described by "a"} returns { b: Integer described by "b"}
     } explained as "A simple function for another"
     function UndoAnotherThing {
-      requires { c: Integer described by "c"} yields { d: Integer described by "d"}
+      requires { c: Integer described by "c"} returns { d: Integer described by "d"}
     } explained as "A reversion function for undoing AnotherThing"
 
     entity blah is { ??? }
     saga name is {
       options(parallel)
       requires: { p1: String, p2: String }
-      yields: {s: String }
+      returns: {s: String }
       step One is {
         tell command Something() to entity blah
         reverted by

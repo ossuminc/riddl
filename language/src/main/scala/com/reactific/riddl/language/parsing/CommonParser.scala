@@ -24,7 +24,6 @@ import fastparse.ScalaWhitespace.*
 
 import java.net.URL
 import java.nio.file.Path
-import scala.language.postfixOps
 
 /** Common Parsing Rules */
 trait CommonParser extends NoWhiteSpaceParsers {
@@ -44,7 +43,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(open ~ parser.rep(0) ~ close)
   }
 
-  def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined /).map(_ => ret) }
+  def undefined[u: P, RT](ret: RT): P[RT] = { P(Punctuation.undefined./).map(_ => ret) }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 

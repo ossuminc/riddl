@@ -324,7 +324,7 @@ class ParserTest extends ParsingTest {
       val input = """
                     |function foo is {
                     |  requires {b:Boolean}
-                    |  yields {i:Integer}
+                    |  returns {i:Integer}
                     |}
                     |""".stripMargin
 
@@ -348,7 +348,7 @@ class ParserTest extends ParsingTest {
                       Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
-                  _,
+                  _, _, _,
                   None,
                   None
                 ) =>

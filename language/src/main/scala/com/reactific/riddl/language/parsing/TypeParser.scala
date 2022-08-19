@@ -225,4 +225,8 @@ trait TypeParser extends ReferenceParser {
       }
     )
   }
+
+  def types[u: P]: P[Seq[Type]] = {
+    typeDef.rep(0)
+  }
 }

@@ -83,6 +83,28 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
       )
       parseResult(input)
     }
+    "resolve nested fields" in {
+      val input =
+        """
+          |domain D {
+          |  type Bottom = { a: String }
+          |  type Middle = { b: Bottom }
+          |  type Top = { m: Middle }
+          |
+          |  context C {
+          |    function foo {
+          |      requires: { t: ^^^.Top }
+          |      returns: { a: String }
+          |      example impl {
+          |        then return @^foo.t.m.b.a
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseResult(RiddlParserInput(input))
+    }
+
     "resolve many" in {
       val input =
         """

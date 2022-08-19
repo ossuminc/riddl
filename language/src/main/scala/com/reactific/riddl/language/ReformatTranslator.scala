@@ -691,7 +691,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       }.step { s =>
         function.output
           .fold(s)(te => s.withCurrent(
-            _.addIndent("yields ").emitTypeExpression(te).addNL())
+            _.addIndent("returns  ").emitTypeExpression(te).addNL())
           )
       }
     }

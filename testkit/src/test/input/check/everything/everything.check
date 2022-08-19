@@ -65,8 +65,8 @@ Missing: everything.riddl(73:11): Example 'only' should have a description
 Missing: everything.riddl(87:11): Example 'only' should have a description
 Style: everything.riddl(87:11): Example 'only' overloads Example 'only' at everything.riddl(73:11)
 Style: everything.riddl(67:20): Field identifier 'n' is too short. The minimum length is 3
-Style: everything.riddl(68:18): Field identifier 'b' is too short. The minimum length is 3
-Missing: everything.riddl(68:18): Field 'b' should have a description
+Style: everything.riddl(68:19): Field identifier 'b' is too short. The minimum length is 3
+Missing: everything.riddl(68:19): Field 'b' should have a description
 Missing: everything.riddl(67:20): Field 'n' should have a description
 Missing: everything.riddl(11:3): Plant 'APlant' should have a description
 Missing: everything.riddl(71:15): Handler 'foo' should have a description

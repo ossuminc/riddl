@@ -128,6 +128,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
               Field(Location(), Identifier(Location(), "a"), Bool(Location()))
             )
           )),
+          Seq.empty[Type], Seq.empty[Function],
           Seq.empty[Example],
           None
         ))

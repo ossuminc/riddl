@@ -713,6 +713,15 @@ object AST {
     fields: Seq[Field] = Seq.empty[Field]
   ) extends AggregateTypeExpression
 
+  object Aggregation {
+    val empty: Aggregation = {
+      Aggregation(Location.empty, Seq.empty[Field])
+    }
+    def empty(loc: Location = Location.empty): Aggregation = {
+      Aggregation(loc, Seq.empty[Field])
+    }
+  }
+
   /** A type expressions that defines a mapping from a key to a value. The value
     * of a mapping is the set of mapped key -> value pairs, based on which keys
     * have been provided values.
@@ -1009,7 +1018,7 @@ object AST {
       extends ParentDefOf[Definition]
       with ContextDefinition
       with EntityDefinition
-      with DomainDefinition {
+      with DomainDefinition with FunctionDefinition {
     override def contents: Seq[Definition] = {
       typ match {
         case Aggregation(_, fields)      => fields
@@ -1435,6 +1444,7 @@ object AST {
     override def format: String = { s"set ${target.format} to ${value.format}" }
   }
 
+  case class AggregateConstructor()
   /** A helper class for publishing messages that represents the construction of
     * the message to be sent.
     *
@@ -1451,6 +1461,25 @@ object AST {
       else { "()" }
     }
   }
+
+
+  /** An action that returns a value from a function
+   *
+   * @param loc
+   * The location in the source of the publish action
+   * @param value
+   * The value to be returned
+   * @param description
+   * An optional description of the yield action
+   */
+  case class ReturnAction(
+    loc: Location,
+    value: Expression,
+    description: Option[Description] = None)
+    extends Action {
+    override def format: String = s"return ${value.format}"
+  }
+
 
   /** An action that places a message on an entity's event channel
     *
@@ -1699,7 +1728,7 @@ object AST {
     buts: Seq[ButClause] = Seq.empty[ButClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
-      extends ProcessorDefinition {
+      extends ProcessorDefinition with FunctionDefinition  {
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
       thens.isEmpty && buts.isEmpty
   }
@@ -1826,6 +1855,8 @@ object AST {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
 
+  trait FunctionDefinition extends Definition
+
   /** A function definition which can be part of a bounded context or an entity.
     *
     * @param loc
@@ -1850,16 +1881,18 @@ object AST {
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
+    types: Seq[Type] = Seq.empty[Type],
+    functions: Seq[Function] = Seq.empty[Function],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ParentDefOf[Definition]
       with EntityDefinition
-      with ContextDefinition {
+      with ContextDefinition with FunctionDefinition {
     override lazy val contents: Seq[Definition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Definition]) ++
-      output.map(_.fields).getOrElse(Seq.empty[Definition]) ++
-      examples
+      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      output.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      types ++ functions ++ examples
     }
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
@@ -2648,8 +2681,8 @@ object AST {
     loc: Location,
     id: Identifier,
     options: Seq[SagaOption] = Seq.empty[SagaOption],
-    input: Option[Aggregation],
-    output: Option[Aggregation],
+    input: Option[Aggregation] = None,
+    output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -2657,9 +2690,9 @@ object AST {
       with OptionsDef[SagaOption]
       with ContextDefinition {
     lazy val contents: Seq[Definition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Definition]) ++
-      output.map(_.fields).getOrElse(Seq.empty[Definition]) ++
-      sagaSteps
+      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        sagaSteps
     }
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
