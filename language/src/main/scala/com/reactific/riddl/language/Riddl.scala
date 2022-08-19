@@ -19,6 +19,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
+import com.reactific.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.{Files, Path}
 import java.time.Clock

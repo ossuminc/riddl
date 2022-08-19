@@ -222,7 +222,7 @@ object Validation {
         case OneOrMore(_, tye )            => checkTypeExpression(tye)
         case ZeroOrMore(_, tye )           => checkTypeExpression(tye)
         case SpecificRange(_, typex: TypeExpression, min, max) =>
-          checkTypeExpression(typex, definition)
+          checkTypeExpression(typex)
           check(min >= 0,
             "Minimum cardinality must be non-negative", Error,
             typ.loc)

@@ -63,6 +63,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
     }
 
     "emit a simple message type" in {
+      pending
       val input = """type bar is command {
                     |  num: Number,
                     |  str: String,
@@ -109,6 +110,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
     }
 
     "emit an event sourced entity for a riddl entity" in {
+      pending
       val input = new FileParserInput(
         Path.of("kalix/src/test/input/entity/event-sourced/ExampleApp.riddl")
       )
