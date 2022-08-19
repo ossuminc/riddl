@@ -183,17 +183,17 @@ object Folding {
 
   trait PathResolutionState[S <: State[?]] extends State[S] {
     def root: ParentDefOf[Definition]
-    var parents: Seq[ParentDefOf[Definition]] = Seq.empty[ParentDefOf[Definition]]
+    var parents: Seq[Definition] = Seq.empty[Definition]
     var definition: Definition = root
 
-    def captureHierarchy(cont: Definition, pars: Seq[ParentDefOf[Definition]]): Unit = {
+    def captureHierarchy(cont: Definition, pars: Seq[Definition]): Unit = {
       definition = cont
       parents = pars
     }
 
     def resolvePath(
       pid: PathIdentifier,
-      parents: Seq[ParentDefOf[Definition]] = parents
+      parents: Seq[Definition] = Seq(definition) ++ parents
     ): Option[Definition] = {
       resolvePath(pid.value, parents)
     }
@@ -209,9 +209,9 @@ object Folding {
      */
     def resolvePath(
       names: Seq[String],
-      parents: Seq[ParentDefOf[Definition]]
+      parents: Seq[Definition]
     ): Option[Definition] = {
-      val pstack = mutable.Stack.empty[ParentDefOf[Definition]]
+      val pstack = mutable.Stack.empty[Definition]
       pstack.pushAll(parents.reverse)
       val nstack = mutable.Stack.empty[String]
       nstack.pushAll(names.reverse)
@@ -233,6 +233,7 @@ object Folding {
           val candidates: Seq[Definition] = result match {
             case None =>
               // empty result means nothing to search
+              result = None
               Seq.empty[Definition]
             case Some(f: Function) if f.input.nonEmpty =>
               // If we're at a Function node, the functions input parameters
@@ -244,14 +245,19 @@ object Folding {
             case Some(Field(_, _, te: Aggregation, _, _)) =>
               // if we're at a field composed of more fields, those fields are it
               te.fields
-            case Some(Field(_, _, TypeRef(_,pid), _, _)) =>
+            case field @ Some(Field(_, _, TypeRef(_,pid), _, _)) =>
               // if we're at a field that references another type then we
               // need to push that types path on the name stack
+              nstack.push(n)
               nstack.pushAll(pid.value.reverse)
+              pstack.push(field.get)
               Seq.empty[Definition]
             case Some(p) if p.isContainer =>
               p.asInstanceOf[Container[Definition]].contents
-            case _ => Seq.empty[Definition] // anything else isn't searchable
+            case _ =>
+              // anything else isn't searchable so n can't be found
+              result = None
+              Seq.empty[Definition]
           }
 
           // Now find the match, if any, and handle appropriately
@@ -262,14 +268,14 @@ object Folding {
               // the stack in case there are more things to resolve
               pstack.push(q.asInstanceOf[ParentDefOf[Definition]])
               // make it the next value of "r" in our foldLeft
-              Some(q)
+              result = Some(q)
             case r @ Some(_) =>
               // Found an item but its not a container. So, presumably this is
               // the result they want. If there are more names, they will
               // fall through above and produce a None result.
               result = r
             case None =>
-              // No search result, keep looping
+              // No search result, there may be more things
           }
         }
       }
