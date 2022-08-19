@@ -26,7 +26,7 @@ import fastparse.ScalaWhitespace.*
 /** Parsing rules for Type definitions */
 trait TypeParser extends ReferenceParser {
 
-  def referToType[u: P]: P[ReferenceType] = {
+  def referToEntity[u: P]: P[ReferenceType] = {
     P(location ~ Keywords.reference ~ Readability.to ~/ entityRef).map { tpl =>
       (ReferenceType.apply _).tupled(tpl)
     }
@@ -35,8 +35,8 @@ trait TypeParser extends ReferenceParser {
   def stringType[u: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~
-        (Punctuation.roundOpen ~ literalInteger.? ~ Punctuation.comma ~ literalInteger.? ~
-          Punctuation.roundClose).?
+        (Punctuation.roundOpen ~ literalInteger.? ~ Punctuation.comma ~
+          literalInteger.? ~ Punctuation.roundClose).?
     ).map {
       case (loc, Some((min, max))) => Strng(loc, min, max)
       case (loc, None)             => Strng(loc, None, None)
@@ -45,7 +45,8 @@ trait TypeParser extends ReferenceParser {
 
   def urlType[u: P]: P[URL] = {
     P(
-      location ~ Predefined.URL ~ (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
+      location ~ Predefined.URL ~
+        (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
@@ -73,15 +74,19 @@ trait TypeParser extends ReferenceParser {
   def patternType[u: P]: P[Pattern] = {
     P(
       location ~ Predefined.Pattern ~/ roundOpen ~/
-        (literalStrings | Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~ roundClose./
+        (literalStrings |
+          Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
+        roundClose./
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
 
   def uniqueIdType[u: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose./).map {
-      case (loc, Some(id)) => UniqueId(loc, id)
-      case (loc, None)     => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
-    }
+    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose./)
+      .map {
+        case (loc, Some(id)) => UniqueId(loc, id)
+        case (loc, None) =>
+          UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
+      }
   }
 
   def enumValue[u: P]: P[Option[LiteralInteger]] = {
@@ -114,21 +119,42 @@ trait TypeParser extends ReferenceParser {
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
+  def fieldTypeExpression[u:P]: P[TypeExpression] = {
+    P(
+      cardinality(
+        simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+        alternation | referToEntity | mapping | range | typeRef
+      )
+    )
+  }
+
   def field[u: P]: P[Field] = {
-    P(location ~ identifier ~ is ~ typeExpression ~ briefly ~ description)
+    P(location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description)
       .map(tpl => (Field.apply _).tupled(tpl))
   }
 
   def fields[u: P]: P[Seq[Field]] = {
-    P(Punctuation.undefined.!.map(_ => Seq.empty[Field]) | field.rep(min = 0, comma))
+    P(
+      Punctuation.undefined.!.map(_ => Seq.empty[Field]) |
+        field.rep(min = 0, comma)
+    )
   }
 
   def aggregation[u: P]: P[Aggregation] = {
-    P(location ~ open ~ fields ~ close).map { case (loc, fields) => Aggregation(loc, fields) }
+    P(location ~ open ~ fields ~ close).map { case (loc, fields) =>
+      Aggregation(loc, fields)
+    }
   }
 
   def messageKind[u: P]: P[MessageKind] = {
-    P(StringIn(Keywords.command, Keywords.event, Keywords.query, Keywords.result).!).map { mk =>
+    P(
+      StringIn(
+        Keywords.command,
+        Keywords.event,
+        Keywords.query,
+        Keywords.result
+      ).!
+    ).map { mk =>
       mk.toLowerCase() match {
         case kind if kind == Keywords.command => CommandKind
         case kind if kind == Keywords.event   => EventKind
@@ -163,8 +189,8 @@ trait TypeParser extends ReferenceParser {
     */
   def mapping[u: P]: P[Mapping] = {
     P(
-      location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~ Readability.to ~
-        typeExpression
+      location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
+        Readability.to ~ typeExpression
     ).map { tpl => (Mapping.apply _).tupled(tpl) }
   }
 
@@ -176,8 +202,10 @@ trait TypeParser extends ReferenceParser {
   def range[u: P]: P[RangeType] = {
     P(
       location ~ Keywords.range ~ roundOpen ~/
-        literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, 0))) ~ comma ~
-        literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, Int.MaxValue))) ~
+        literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, 0))) ~
+        comma ~
+        literalInteger.?
+          .map(_.getOrElse(LiteralInteger(Location.empty, Int.MaxValue))) ~
         roundClose./
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
@@ -205,8 +233,9 @@ trait TypeParser extends ReferenceParser {
 
   def typeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(P(
-      simplePredefinedTypes | patternType | uniqueIdType | enumeration | alternation | referToType |
-        aggregation | messageType | mapping | range | typeRef
+      simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+        alternation | referToEntity | aggregation | messageType | mapping |
+        range | typeRef
     )))
   }
 

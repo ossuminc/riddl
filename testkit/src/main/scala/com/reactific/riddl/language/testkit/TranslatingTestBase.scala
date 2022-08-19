@@ -1,11 +1,13 @@
 package com.reactific.riddl.language.testkit
 
 import com.reactific.riddl.language.*
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.StringLogger
 
 import java.nio.file.Path
 
-abstract class TranslatingTestBase[OPTS <: TranslatingOptions] extends
-  ValidatingTest {
+abstract class TranslatingTestBase[OPTS <: TranslatingOptions]
+    extends ValidatingTest {
 
   val commonOptions: CommonOptions = CommonOptions(
     showTimes = true,
@@ -15,16 +17,19 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions] extends
   )
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
-  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl", "DokN" -> "dokn/dokn.riddl")
+  val roots: Map[String, String] = Map(
+    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
+    "DokN" -> "dokn/dokn.riddl"
+  )
   val logger: Logger = StringLogger()
 
-  def  makeInputFile(partialFilePath: String): Path = {
+  def makeInputFile(partialFilePath: String): Path = {
     Path.of(directory).resolve(partialFilePath)
   }
 
   def makeTranslatorOptions(fileName: String): OPTS
 
-  def getTranslator : Translator[OPTS]
+  def getTranslator: Translator[OPTS]
 
   def runTests(testName: String): Unit = {
     testName should {
@@ -32,11 +37,7 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions] extends
         s"translate $name" in {
           val options = makeTranslatorOptions(fileName)
           val translator = getTranslator
-          translator.parseValidateTranslate(
-            logger,
-            commonOptions,
-            options
-          )
+          translator.parseValidateTranslate(logger, commonOptions, options)
           succeed
         }
       }

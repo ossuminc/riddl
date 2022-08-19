@@ -51,7 +51,7 @@ object AST {
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     )
-    def nonEmpty: Boolean = !isEmpty
+    final def nonEmpty: Boolean = !isEmpty
   }
 
   /** The root trait of all parsable values. If a parser returns something, its
@@ -340,6 +340,18 @@ object AST {
   sealed trait ParentDefOf[+D <: Definition]
       extends Definition with Container[D]
 
+  /** Base trait of any definition that is a container and contains types
+   */
+  sealed trait TypeContainer[+D <: Definition] extends ParentDefOf[D] {
+    def types: Seq[Type]
+    def collectMessages: Seq[Type] = {
+      types.filter(_.isMessageKind)
+    }
+  }
+
+
+  type Parent = ParentDefOf[Definition]
+
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms {
     def terms: Seq[Term]
@@ -376,6 +388,8 @@ object AST {
     def brief: Option[LiteralString] = Option.empty[LiteralString]
 
     def description: Option[Description] = None
+
+    override def isRootContainer: Boolean = true
 
   }
 
@@ -434,6 +448,11 @@ object AST {
     def hasOption[OPT <: T: ClassTag]: Boolean = options
       .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
 
+    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] =
+      options
+        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+        .map(_.args)
+
     override def format: String = {
       options.size match {
         case 0 => ""
@@ -443,7 +462,7 @@ object AST {
       }
     }
 
-    override def isEmpty: Boolean = options.isEmpty
+    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
   }
 
   // ////////////////////////////////////////////////////////// TYPES
@@ -617,6 +636,25 @@ object AST {
   case class OneOrMore(loc: Location, typeExp: TypeExpression)
       extends Cardinality
 
+  /** A cardinality type expression that indicates another type expression as
+   * having a specific range of instances
+   *
+   * @param loc
+   *   The location of the one-or-more cardinality
+   * @param typeExp
+   *   The type expression that is indicated with a cardinality of one or more.
+   * @param min
+   *   The minimum number of items
+   * @param max
+   *   The maximum number of items
+   */
+  case class SpecificRange(
+    loc: Location,
+    typeExp: TypeExpression,
+    min: Long,
+    max: Long
+  ) extends Cardinality
+
   /** Represents one variant among (one or) many variants that comprise an
     * [[Enumeration]]
     *
@@ -755,13 +793,14 @@ object AST {
     max: LiteralInteger)
       extends TypeExpression
 
-  /** A type expression whose value is a reference to an entity.
-    *
-    * @param loc
-    *   The location of the reference type expression
-    * @param entity
-    *   The entity referenced by this type expression.
-    */
+  /** A type expression whose value is a reference to an instance of an
+   * entity.
+   *
+   * @param loc
+   *   The location of the reference type expression
+   * @param entity
+   *   The type of entity referenced by this type expression.
+   */
   case class ReferenceType(
     loc: Location,
     entity: EntityRef
@@ -1026,6 +1065,9 @@ object AST {
         case MessageType(_, _, fields)   => fields
         case _                           => Seq.empty[Definition]
       }
+    }
+    def isMessageKind: Boolean = {
+      typ.isInstanceOf[MessageType]
     }
   }
   type Command = Type
@@ -2070,7 +2112,7 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[EntityDefinition]
+      extends TypeContainer[EntityDefinition]
       with ContextDefinition
       with OptionsDef[EntityOption]
       with WithIncludes {
@@ -2220,7 +2262,11 @@ object AST {
 
   /** Base trait for all options a Context can have.
     */
-  sealed trait ContextOption extends OptionValue
+  sealed abstract class ContextOption(val name: String) extends OptionValue
+
+  case class ContextPackageOption(loc: Location, override val args: Seq[LiteralString])
+    extends ContextOption("package")
+
 
   /** A context's "wrapper" option. This option suggests the bounded context is
     * to be used as a wrapper around an external system and is therefore at the
@@ -2229,9 +2275,7 @@ object AST {
     * @param loc
     *   The location of the wrapper option
     */
-  case class WrapperOption(loc: Location) extends ContextOption {
-    def name: String = "wrapper"
-  }
+  case class WrapperOption(loc: Location) extends ContextOption("wrapper")
 
   /** A context's "service" option. This option suggests the bounded context is
     * intended to be a DDD service, similar to a wrapper but without any
@@ -2240,18 +2284,14 @@ object AST {
     * @param loc
     *   The location at which the option occurs
     */
-  case class ServiceOption(loc: Location) extends ContextOption {
-    def name: String = "service"
-  }
+  case class ServiceOption(loc: Location) extends ContextOption("service")
 
   /** A context's "function" option that suggests
     *
     * @param loc
     *   The location of the function option
     */
-  case class FunctionOption(loc: Location) extends ContextOption {
-    def name: String = "function"
-  }
+  case class FunctionOption(loc: Location) extends ContextOption("function")
 
   /** A context's "gateway" option that suggests the bounded context is intended
     * to be an application gateway to the model. Gateway's provide
@@ -2261,9 +2301,7 @@ object AST {
     * @param loc
     *   The location of the gateway option
     */
-  case class GatewayOption(loc: Location) extends ContextOption {
-    def name: String = "gateway"
-  }
+  case class GatewayOption(loc: Location) extends ContextOption("gateway")
 
   /** A reference to a bounded context
     *
@@ -2319,7 +2357,7 @@ object AST {
     handlers: Seq[Handler] = Seq.empty[Handler],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[ContextDefinition]
+      extends TypeContainer[ContextDefinition]
       with DomainDefinition
       with OptionsDef[ContextOption]
       with WithIncludes
@@ -2632,7 +2670,7 @@ object AST {
 
   /** Base trait for all options applicable to a saga.
     */
-  sealed trait SagaOption extends OptionValue
+  sealed abstract class SagaOption(val name: String) extends OptionValue
 
   /** A [[SagaOption]] that indicates sequential (serial) execution of the saga
     * actions.
@@ -2640,18 +2678,14 @@ object AST {
     * @param loc
     *   The location of the sequential option
     */
-  case class SequentialOption(loc: Location) extends SagaOption {
-    def name: String = "sequential"
-  }
+  case class SequentialOption(loc: Location) extends SagaOption ("sequential")
 
   /** A [[SagaOption]] that indicates parallel execution of the saga actions.
     *
     * @param loc
     *   The location of the parallel option
     */
-  case class ParallelOption(loc: Location) extends SagaOption {
-    def name: String = "parallel"
-  }
+  case class ParallelOption(loc: Location) extends SagaOption ("parallel")
 
   /** The definition of a Saga based on inputs, outputs, and the set of
     * [[SagaStep]]s involved in the saga. Sagas define a computing action based
@@ -2785,6 +2819,20 @@ object AST {
     }
   }
 
+  /** Base trait for all options a Domain can have.
+   */
+  sealed abstract class DomainOption(val name: String) extends OptionValue
+
+  /** A context's "wrapper" option. This option suggests the bounded context is
+   * to be used as a wrapper around an external system and is therefore at the
+   * boundary of the context map
+   *
+   * @param loc
+   *   The location of the wrapper option
+   */
+  case class DomainPackageOption(loc: Location, override val args: Seq[LiteralString])
+    extends DomainOption("package")
+
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
     * Generally, domains follow hierarchical organization structure but other
@@ -2813,6 +2861,7 @@ object AST {
   case class Domain(
     loc: Location,
     id: Identifier,
+    options: Seq[DomainOption] = Seq.empty[DomainOption],
     authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
@@ -2823,7 +2872,8 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[DomainDefinition]
+      extends TypeContainer[DomainDefinition]
+      with OptionsDef[DomainOption]
       with DomainDefinition
       with WithIncludes
       with WithTerms {

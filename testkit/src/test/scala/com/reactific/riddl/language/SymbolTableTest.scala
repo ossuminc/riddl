@@ -3,6 +3,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 
 import scala.reflect.ClassTag
@@ -18,8 +19,10 @@ class SymbolTableTest extends ParsingTest {
 
     val st = captureEverythingSymbols
 
-    def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
-      names: Seq[String],
+    def assertRefWithParent[
+      T <: Definition: ClassTag,
+      P <: Definition: ClassTag
+    ](names: Seq[String],
       parentName: String
     ): Assertion = {
       val lookupResult = st.lookup[T](names)

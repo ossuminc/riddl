@@ -19,6 +19,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
+import com.reactific.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.{Files, Path}
 import java.time.Clock
@@ -36,8 +37,8 @@ case class CommonOptions(
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
-  /** Runs a code block and returns its result, and prints its execution time to stdout. Execution
-    * time is only written if `show` is set to `true`.
+  /** Runs a code block and returns its result, and prints its execution time to
+    * stdout. Execution time is only written if `show` is set to `true`.
     *
     * e.g.
     *
@@ -56,9 +57,12 @@ object Riddl {
     * @return
     *   The result of running `f`
     */
-  def timer[T](stage: String, show: Boolean = true, logger: Logger = SysLogger())(f: => T): T = {
-    RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f)
-  }
+  def timer[T](
+    stage: String,
+    show: Boolean = true,
+    logger: Logger = SysLogger()
+  )(f: => T
+  ): T = { RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f) }
 
   def parse(
     path: Path,
@@ -93,7 +97,7 @@ object Riddl {
   def validate(
     root: RootContainer,
     log: Logger,
-    commonOptions: CommonOptions,
+    commonOptions: CommonOptions
   ): Option[RootContainer] = {
     timer("validation", commonOptions.showTimes) {
       val messages: Seq[Message] =
@@ -105,9 +109,15 @@ object Riddl {
         val style = warns.filter(_.kind.isStyle)
         val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
         log.info(s"""Validation Warnings: ${warns.length}""")
-        if (commonOptions.showWarnings) { warnings.map(_.format).foreach(log.warn(_)) }
-        if (commonOptions.showMissingWarnings) { missing.map(_.format).foreach(log.warn(_)) }
-        if (commonOptions.showStyleWarnings) { style.map(_.format).foreach(log.warn(_)) }
+        if (commonOptions.showWarnings) {
+          warnings.map(_.format).foreach(log.warn(_))
+        }
+        if (commonOptions.showMissingWarnings) {
+          missing.map(_.format).foreach(log.warn(_))
+        }
+        if (commonOptions.showStyleWarnings) {
+          style.map(_.format).foreach(log.warn(_))
+        }
         log.info(s"""Validation Errors: ${errors.length}""")
         errors.map(_.format).foreach(log.error(_))
         log.info(s"""Severe Errors: ${severe.length}""")
@@ -121,7 +131,7 @@ object Riddl {
   def parseAndValidate(
     input: RiddlParserInput,
     logger: Logger,
-    commonOptions: CommonOptions,
+    commonOptions: CommonOptions
   ): Option[RootContainer] = {
     parse(input, logger, commonOptions) match {
       case Some(root) => validate(root, logger, commonOptions)
@@ -132,7 +142,7 @@ object Riddl {
   def parseAndValidate(
     path: Path,
     logger: Logger,
-    commonOptions: CommonOptions,
+    commonOptions: CommonOptions
   ): Option[RootContainer] = {
     parseAndValidate(RiddlParserInput(path), logger, commonOptions)
   }
@@ -141,8 +151,9 @@ object Riddl {
 /** Private implementation details which allow for more testability */
 private[language] object RiddlImpl {
 
-  /** Runs a code block and returns its result, while recording its execution time, according to the
-    * passed clock. Execution time is written to `out`, if `show` is set to `true`.
+  /** Runs a code block and returns its result, while recording its execution
+    * time, according to the passed clock. Execution time is written to `out`,
+    * if `show` is set to `true`.
     *
     * e.g.
     *

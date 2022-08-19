@@ -66,11 +66,21 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "have no description" in { RootContainer(Nil).description mustBe None }
     "have no brief" in { RootContainer(Nil).brief mustBe None }
     "have no id" in { RootContainer(Nil).identify mustBe "Root" }
+    "identify as root container" in {
+      RootContainer(Nil).isRootContainer mustBe true
+    }
+  }
+
+  "Include" should {
+    "identify as root container" in {
+      Include(Location(), Seq.empty[Definition]).isRootContainer mustBe true
+    }
   }
 
   "String" should {
     "have kind 'String'" in { Strng(Location()).kind mustBe "String" }
   }
+
   "Bool" should {
     "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" }
   }
@@ -81,6 +91,18 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       EntityTransient(Location()).name mustBe "transient"
       EntityIsConsistent(Location()).name mustBe "consistent"
       EntityIsAvailable(Location()).name mustBe "available"
+    }
+  }
+
+  "Context" should {
+    "correctly identify emptiness" in {
+      Context(Location(), Identifier(Location(), "test")).contents mustBe empty
+    }
+    "correctly identify non-emptiness" in {
+      val types =
+        List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
+      Context(Location(), Identifier(Location(), "test"), types = types)
+        .contents mustBe types
     }
   }
 

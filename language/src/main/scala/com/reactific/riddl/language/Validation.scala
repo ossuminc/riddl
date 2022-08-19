@@ -221,6 +221,19 @@ object Validation {
         case Optional(_, tye )             => checkTypeExpression(tye)
         case OneOrMore(_, tye )            => checkTypeExpression(tye)
         case ZeroOrMore(_, tye )           => checkTypeExpression(tye)
+        case SpecificRange(_, typex: TypeExpression, min, max) =>
+          checkTypeExpression(typex)
+          check(min >= 0,
+            "Minimum cardinality must be non-negative", Error,
+            typ.loc)
+          check(max >= 0,
+            "Maximum cardinality must be non-negative", Error,
+            typ.loc)
+          check(min < max,
+            "Minimum cardinality must be less than maximum cardinality",
+            Error,
+            typ.loc
+          )
         case UniqueId(_, entityName)       => checkPathRef[Entity](entityName)()
         case ReferenceType(_, entity)      => checkRef[Entity](entity)
         case _: PredefinedType              => this // nothing needed

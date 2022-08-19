@@ -1,0 +1,4 @@
+domain ExampleApp is {
+  options(package("com.example.app"))
+  include "organization"
+} described in file "ExampleApp.md"
