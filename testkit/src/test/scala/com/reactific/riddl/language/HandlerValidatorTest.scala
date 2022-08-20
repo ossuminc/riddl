@@ -127,7 +127,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: Messages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
@@ -152,7 +152,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: Messages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         msgs.filter(_.kind == Error) must be(empty)
       }
     }
@@ -173,7 +173,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, msgs: Messages) =>
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs, Error,
           "'bar' is not defined but should be a Field"

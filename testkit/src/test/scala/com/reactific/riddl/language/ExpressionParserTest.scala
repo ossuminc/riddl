@@ -1,6 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.StringParser
 import com.reactific.riddl.language.testkit.ParsingTest
 import org.scalatest.Assertion

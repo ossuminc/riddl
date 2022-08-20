@@ -19,6 +19,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.util.regex.PatternSyntaxException
@@ -54,7 +55,7 @@ object Validation {
     state: ValidationState
   ): ValidationState = {
     symbolTable.foreachOverloadedSymbol { defs: Seq[Seq[Definition]] =>
-      defs.foldLeft(state) { (s, defs2) =>
+      state.checkSequence(defs) { (s, defs2) =>
         if (defs2.sizeIs == 2) {
           val first = defs2.head
           val last = defs2.last
@@ -76,9 +77,7 @@ object Validation {
     symbolTable: SymbolTable,
     root: ParentDefOf[Definition] = RootContainer.empty,
     commonOptions: CommonOptions = CommonOptions()
-  ) extends Folding.MessagesState[ValidationState]
-    with Folding.PathResolutionState[ValidationState]
-  {
+  ) extends Folding.PathResolutionState[ValidationState] {
 
     def parentOf(
       definition: Definition
@@ -99,35 +98,6 @@ object Validation {
     def article(thing: String): String = {
       val article = if (vowels.matches(thing.substring(0, 1))) "an" else "a"
       s"$article $thing"
-    }
-
-    private def getPathIdType(id: PathIdentifier): Option[TypeExpression] = {
-      if (id.value.nonEmpty) {
-        val results = symbolTable.lookupSymbol[Definition](id.value)
-        results match {
-          case Nil => None
-          case (d, optT) :: Nil | (e, _) :: _ => d match {
-              case f: Field  => Some(f.typeEx)
-              case s: State  => Some(s.typeEx)
-              case p: Pipe   => Some(p.transmitType.getOrElse(Abstract(id.loc)))
-              case in: Inlet => Some(in.type_)
-              case out: Outlet => Some(out.type_)
-              case t: Type     => Some(t.typ)
-              case _           => None
-            }
-        }
-      } else { None }
-    }
-
-    def getFieldType(path: PathIdentifier): Option[TypeExpression] = {
-      val results = symbolTable.lookup[Definition](path.value)
-      if (results.size == 1) {
-        results.head match {
-          case f: Field => Option(f.typeEx)
-          case t: Type  => Option(t.typ)
-          case _        => None
-        }
-      } else { None }
     }
 
     def check(
@@ -167,7 +137,7 @@ object Validation {
     def checkEnumeration(
       enumerators: Seq[Enumerator]
     ): ValidationState = {
-      enumerators.foldLeft(this) { case (state, enumerator) =>
+      checkSequence(enumerators) { case (state, enumerator) =>
         val id = enumerator.id
         state.checkIdentifierLength(enumerator).check(
           id.value.head.isUpper,
@@ -181,7 +151,7 @@ object Validation {
     def checkAlternation(
       alternation: AST.Alternation
     ): ValidationState = {
-      alternation.of.foldLeft(this) { case (state, typex) =>
+      checkSequence(alternation.of) { case (state, typex) =>
         state.checkTypeExpression(typex)
       }
     }
@@ -205,7 +175,7 @@ object Validation {
     def checkAggregation(
       agg: Aggregation,
     ): ValidationState = {
-      agg.fields.foldLeft(this) { case (state, field) =>
+      checkSequence(agg.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
           field.id.value.head.isLower,
           "Field names in aggregates should start with a lower case letter",
@@ -219,7 +189,7 @@ object Validation {
       mt: MessageType
     ): ValidationState = {
       val kind = mt.messageKind.kind
-      mt.fields.foldLeft(this) { case (state, field) =>
+      checkSequence(mt.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
           field.id.value.head.isLower,
           s"Field names in $kind messages should start with a lower case letter",
@@ -274,20 +244,6 @@ object Validation {
       }
     }
 
-    def checkSymbolLookup[DT <: Definition: ClassTag](
-      symbol: Seq[String]
-    )(checkEmpty: () => ValidationState
-    )(checkSingle: DT => ValidationState
-    )(checkMulti: (DT, SymbolTable#LookupResult[DT]) => ValidationState
-    ): ValidationState = {
-      symbolTable.lookupSymbol[DT](symbol) match {
-        case Nil            => checkEmpty()
-        case (d, _) :: Nil  => checkSingle(d.asInstanceOf[DT])
-        case (d, _) :: tail => checkMulti(d.asInstanceOf[DT], tail)
-      }
-    }
-
-
 
     private type SingleMatchValidationFunction = (
       ValidationState,
@@ -333,7 +289,8 @@ object Validation {
 
 
     def checkPathRef[T <: Definition: ClassTag](
-      pid: PathIdentifier, kind: Option[String] = None
+      pid: PathIdentifier, kind: Option[String] = None,
+      parents: Seq[Definition] = parents
     )(validator: SingleMatchValidationFunction =
       defaultSingleMatchValidationFunction
     ): ValidationState = {
@@ -356,7 +313,7 @@ object Validation {
           article(tc.getSimpleName)} was expected"
         addError(pid.loc, message)
       } else if ( pid.value.exists(_.isEmpty)) {
-        val resolution = resolvePath(pid)
+        val (resolution, _) = resolvePath(pid)
         resolution match {
           case None => notResolved()
           case Some(x) if x.getClass != tc =>
@@ -472,8 +429,8 @@ object Validation {
     ): ValidationState = {
       check(
         list.nonEmpty,
-        message =
-          s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
+        s"$name in ${thing.identify} ${
+          if (required) "must" else "should"} not be empty",
         kind,
         thing.loc
       )
@@ -601,6 +558,7 @@ object Validation {
           this
             .checkPathRef[Field](path)()
             .checkExpression(value)
+            .checkAssignmentCompatability(path, value)
         case AppendAction(_, value, path, _) =>
           this
             .checkExpression(value)
@@ -635,13 +593,12 @@ object Validation {
             .checkMessageConstructor(msg)
         case ReplyAction(_, msg, _) => this.checkMessageConstructor(msg)
         case CompoundAction(loc, actions, _) =>
-          val vs = this.check(
+          check(
             actions.nonEmpty,
             "Compound action is empty",
             MissingWarning,
             loc
-          )
-          actions.foldLeft(vs) { (s, action) =>
+          ).checkSequence(actions){ (s, action) =>
             s.checkAction(action)
           }
         case ArbitraryAction(loc, what, _) => this.check(
@@ -656,7 +613,7 @@ object Validation {
     def checkActions(
       actions: Seq[Action],
     ): ValidationState = {
-      actions.foldLeft(this)((s, action) => s.checkAction(action))
+      checkSequence(actions)((s, action) => s.checkAction(action))
     }
 
     def checkExample(
@@ -664,23 +621,19 @@ object Validation {
     ): ValidationState = {
       stepIf(example.nonEmpty) { st =>
         val Example(_, _, givens, whens, thens, buts, _, _) = example
-        givens.foldLeft(st) { (state, givenClause) =>
-            givenClause.scenario.foldLeft(state) { (state, ls) =>
+        st.checkSequence(givens) { (state, givenClause) =>
+          state.checkSequence(givenClause.scenario){ (state, ls) =>
             state
               .checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
           }.checkNonEmpty(
               givenClause.scenario, "Givens", example, MissingWarning
             )
-        }.step { state: ValidationState =>
-          whens.foldLeft(state) { (st, whenClause) =>
-            st.checkExpression(whenClause.condition)
-          }
-        }.checkNonEmpty(thens, "Thens", example, required = true).step {
-          st: ValidationState =>
-            st.checkActions(thens.map(_.action))
-        }.step { st: ValidationState =>
-          st.checkActions(buts.map(_.action))
-        }.checkDescription(example)
+        }
+        .checkSequence(whens){ (st, when) => st.checkExpression(when.condition)}
+        .checkNonEmpty(thens, "Thens", example, required = true)
+        .checkActions(thens.map(_.action))
+        .checkActions(buts.map(_.action))
+        .checkDescription(example)
       }
     }
 
@@ -752,8 +705,10 @@ object Validation {
       expression match {
         case ValueExpression(_, path)  =>
           checkPathRef[Field](path)()
-        case GroupExpression(_, expr) =>
-          checkExpression(expr)
+        case GroupExpression(_, expressions) =>
+          checkSequence(expressions) {
+            (st, expr) => st.checkExpression(expr)
+          }
         case FunctionCallExpression(loc, pathId, arguments) =>
           checkFunctionCall(loc, pathId, arguments)
         case ArithmeticOperator(loc, op, operands) =>
@@ -771,9 +726,6 @@ object Validation {
             .checkArgList(args)
         case EntityIdExpression(_, entityRef) =>
           checkRef[Entity](entityRef)
-        case FunctionCallAction(_, pid, args, _) =>
-          checkPathRef[Function](pid)()
-            .checkArgList(args)
         case Ternary(_, condition, expr1, expr2) =>
           checkExpression(condition)
             .checkExpression(expr1)
@@ -786,24 +738,101 @@ object Validation {
           this // not of interest
     }
 
+
+    private def getPathIdType(
+      id: PathIdentifier,
+      parents: Seq[Definition] = parents
+    ): Option[TypeExpression] = {
+      val (resolved, newParents) = resolvePath(id, parents)
+      val candidate = resolved match {
+        case None => None
+        case Some(f: Function) => f.output
+        case Some(t: Type) => Some(t.typ)
+        case Some(f: Field) => Some(f.typeEx)
+        case Some(s: State) => Some(s.typeEx)
+        case Some(p: Pipe) => Some(p.transmitType.getOrElse(Abstract(id.loc)))
+        case Some(in: Inlet) => Some(in.type_)
+        case Some(out: Outlet) => Some(out.type_)
+        case Some(_) => None
+      }
+      candidate match {
+        case Some(TypeRef(_, pid)) => getPathIdType(pid, newParents)
+        case Some(other: TypeExpression) => Some(other)
+        case None => None
+      }
+    }
+
+    def isAssignmentCompatible(
+      typeEx1: Option[TypeExpression],
+      typeEx2: Option[TypeExpression]
+    ): Boolean = {
+      typeEx1 match {
+        case None => false
+        case Some(_: Abstract) => true
+        case Some(ty1) =>
+          typeEx2 match {
+            case None => false
+            case Some(_: Abstract) => true
+            case Some(ty2) =>
+              ty1 == ty2
+          }
+      }
+    }
+
+    def getExpressionType(expr: Expression): Option[TypeExpression] = {
+      expr match {
+        case ne: NumericExpression =>
+          ne match {
+            case LiteralInteger(loc, _) => Some(Integer(loc))
+            case LiteralDecimal(loc, _) => Some(Decimal(loc))
+            case ArithmeticOperator(loc, _, _) => Some(Number(loc))
+          }
+        case cond: Condition => Some(Bool(cond.loc))
+        case EntityIdExpression(loc, entityId) => Some(UniqueId(loc,entityId.id))
+        case ValueExpression(_, path) => getPathIdType(path)
+        case ae: ArbitraryExpression => Some(Abstract(ae.loc))
+        case FunctionCallExpression(_, name, _) => getPathIdType(name)
+        case GroupExpression(loc, expressions) =>
+          // the type of a group is the last expression but it could be empty
+          expressions.lastOption match {
+            case None => Some(Abstract(loc))
+            case Some(expr) => getExpressionType(expr)
+          }
+        case UndefinedExpression(loc) => Some(Abstract(loc))
+        case AggregateConstructionExpression(_, typRef, _) =>
+          getPathIdType(typRef.id)
+        case Ternary(loc, _, expr1, expr2) =>
+          val expr1Ty = getExpressionType(expr1)
+          val expr2Ty = getExpressionType(expr2)
+          if (isAssignmentCompatible(expr1Ty, expr2Ty)) {
+            expr1Ty
+          } else {
+            addError(loc,
+            s"""Ternary expressions must be assignment compatible but:
+                 |  ${expr1.format} and
+                 |  ${expr2.format}
+                 |are incompatible
+                 |""".stripMargin
+            )
+            None
+          }
+      }
+    }
+
     def checkAssignmentCompatability(
       path: PathIdentifier,
-      value: Expression
+      expr: Expression
     ): ValidationState = {
-      val pathType = getPathRefType(path)
-      val valueType = value match {
-        case AndCondition(loc, _) => Bool(loc)
-        case ArbitraryCondition(_) => Abstract(value.loc)
-        case ArithmeticOperator(loc, _, _) => Number(loc)
-        case Comparison(loc, _, _, _) => Bool(loc)
-        case False(loc) => Bool(loc)
-        case FunctionCallExpression(loc, func, _) =>
-          val funcTy = getPathRefType(path)
-        case OrCondition(loc, _) => Bool(loc)
-        case True(loc) => Bool(loc)
-        case XorCondition(loc, _) => Bool(loc)
-      }
-
+      val pidType = getPathIdType(path, parents)
+      val exprType = getExpressionType(expr)
+      if (!isAssignmentCompatible(pidType, exprType)) {
+        addError(path.loc,
+          s"""Setting a value requires assignment compatibility, but field:
+             |  ${path.format}
+             |  is not assignment compatible with expression:
+             |  ${expr.format}
+             |""".stripMargin)
+      } else { this }
     }
 
     def checkArgList(
@@ -901,7 +930,6 @@ object Validation {
   }
 
   class ValidationFolder extends Folder[ValidationState] {
-
 
     def openContainer(
       state: ValidationState,
@@ -1036,9 +1064,7 @@ object Validation {
         s"${typeDef.identify} should start with a capital letter",
         StyleWarning,
         typeDef.loc
-      ).stepIf(!typeDef.typ.isInstanceOf[AggregateTypeExpression]) { st =>
-        st.checkTypeExpression(typeDef.typ)
-      }
+      )
     }
 
     def openAdaptation(
@@ -1046,20 +1072,7 @@ object Validation {
       container: ParentDefOf[Definition],
       adaptation: AdaptorDefinition
     ): ValidationState = {
-      adaptation match {
-        case eaa: EventActionA8n => state.checkDefinition(container, adaptation)
-            .checkRef[Type](eaa.messageRef).checkActions(eaa.actions)
-        case cca: CommandCommandA8n =>
-          state
-            .checkDefinition(container, adaptation)
-            .checkRef[Type](cca.messageRef).checkRef[Type](cca.command)
-        case eca: EventCommandA8n => state
-            .checkDefinition(container, adaptation)
-            .checkRef[Type](eca.messageRef).checkRef[Type](eca.command)
-        case _ =>
-          require(requirement = false, "Unknown adaptation")
-          state
-      }
+      state.checkDefinition(container, adaptation)
     }
 
     def openSagaStep(
@@ -1080,15 +1093,9 @@ object Validation {
       container: ParentDefOf[Definition],
       processor: Processor
     ): ValidationState = {
-      state.checkDefinition(container, processor).checkProcessorKind(processor)
-        .step { s2 =>
-          val s3 = processor.inlets.foldLeft(s2) { (s, n) =>
-            s.checkMaybeRef[Entity](n.entity)
-          }
-          processor.outlets.foldLeft(s3) { (s, n) =>
-            s.checkMaybeRef[Entity](n.entity)
-          }
-        }.step { s5 => s5.checkExamples(processor.examples) }
+      state
+        .checkDefinition(container, processor)
+        .checkProcessorKind(processor)
     }
 
 
@@ -1103,6 +1110,8 @@ object Validation {
       val s1 = state.checkDefinition(parents.head, definition)
       val parent = parents.head
       definition match {
+        case Type(_,_, typEx,_,_) if !typEx.isContainer =>
+          s1.checkTypeExpression(typEx)
         case example: Example => s1.checkDefinition(parent, example)
             .checkExample(example).checkDescription(example)
         case invariant: Invariant => s1.checkDefinition(parent, invariant)
@@ -1125,7 +1134,7 @@ object Validation {
             .checkActions(eaa.actions)
             .checkExamples(eaa.examples).checkDescription(eaa)
         case field: Field =>
-          s1.checkDefinition(parent, field)
+          s1.captureHierarchy(field, field +: parents)
             .addIf(field.id.value.matches("^[^a-z].*"))(
               Message(field.id.loc,
                 "Field names should begin with a lower case letter",
@@ -1176,7 +1185,8 @@ object Validation {
             st.checkRef[Domain](pid) }
             .checkDescription(s)
         case p: Pipe =>
-          val s2 = s1.checkDefinition(parent, p)
+          s1.checkDefinition(parent, p)
+            .
           p.transmitType.fold(s2) { typeRef =>
             s1.checkPathRef[Type](typeRef.id)() }
             .checkDescription(p)

@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.ast
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 import scala.language.implicitConversions
 
 /** A location of an item in the input */

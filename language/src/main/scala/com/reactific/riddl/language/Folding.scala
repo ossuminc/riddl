@@ -18,6 +18,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.ast.Location
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -181,21 +182,72 @@ object Folding {
     }
   }
 
-  trait PathResolutionState[S <: State[?]] extends State[S] {
+  trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
     def root: ParentDefOf[Definition]
     var parents: Seq[Definition] = Seq.empty[Definition]
     var definition: Definition = root
 
-    def captureHierarchy(cont: Definition, pars: Seq[Definition]): Unit = {
+    def captureHierarchy(cont: Definition, pars: Seq[Definition]): S = {
       definition = cont
       parents = pars
+      this.asInstanceOf[S]
     }
 
-    def resolvePath(
-      pid: PathIdentifier,
-      parents: Seq[Definition] = Seq(definition) ++ parents
-    ): Option[Definition] = {
-      resolvePath(pid.value, parents)
+    private def findCandidates(
+      n: String,
+      pstack: mutable.Stack[Definition],
+      nstack: mutable.Stack[String],
+      result: Option[Definition]
+    ): (Option[Definition],Seq[Definition]) = {
+      // First get the list of candidate matches from the current node
+      result match {
+        case None =>
+          // empty result means nothing to search
+          None -> Seq.empty[Definition]
+        case Some(OnClause(_, msgRef, _, _, _)) =>
+          // if we're at an onClause that references a message then we
+          // need to push that message's path on the name stack
+          nstack.push(n) // undo the pop above
+          nstack.pushAll(msgRef.id.value.reverse)
+          result -> Seq.empty[Definition]
+        case Some(f: Function) if f.input.nonEmpty =>
+          // If we're at a Function node, the functions input parameters
+          // are the candidates to search next
+          result -> f.input.get.fields
+        case Some(s: AST.State) =>
+          // If we're at a entity's state, the state's fields are next
+          result -> s.typeEx.fields
+        case Some(Field(_, _, Aggregation(_, fields), _, _)) =>
+          // if we're at a field composed of more fields, those fields are it
+          result -> fields
+        case Some(Type(_, _, Aggregation(_, fields), _, _)) =>
+          result -> fields
+        case Some(Type(_, _, MessageType(_, _, fields), _, _)) =>
+          result -> fields
+        case Some(field@Field(_, _, TypeRef(_, pid), _, _)) =>
+          // if we're at a field that references another type then we
+          // need to push that types path on the name stack
+          nstack.push(n)
+          nstack.pushAll(pid.value.reverse)
+          pstack.push(field)
+          result -> Seq.empty[Definition]
+        case Some(typ@Type(_, _, TypeRef(_, pid), _, _)) =>
+          // if we're at a type definition that references another type then
+          // we need to push that type's path on the name stack
+          nstack.push(n)
+          nstack.pushAll(pid.value.reverse)
+          pstack.push(typ)
+          result -> Seq.empty[Definition]
+        case Some(p) if p.isContainer =>
+          val conts = p.asInstanceOf[Container[Definition]].contents
+          result -> conts.flatMap {
+            case Include(_, contents, _) => contents
+            case d: Definition => Seq(d)
+          }
+        case _ =>
+          // anything else isn't searchable so n can't be found
+          None -> Seq.empty[Definition]
+      }
     }
 
       /** Resolve a PathIdentifier If the path is already resolved or it has no
@@ -208,13 +260,16 @@ object Folding {
      * Either an error or a definition
      */
     def resolvePath(
-      names: Seq[String],
-      parents: Seq[Definition]
-    ): Option[Definition] = {
+      pid: PathIdentifier,
+      parents: Seq[Definition] = parents
+    ): (Option[Definition], Seq[Definition]) = {
+      val vstack = mutable.Stack.empty[Definition]
       val pstack = mutable.Stack.empty[Definition]
-      pstack.pushAll(parents.reverse)
+      // Implicit definitions don't have names so they don't count in the stack
+      val namedParents = parents.filterNot(_.isImplicit).reverse
+      pstack.pushAll(namedParents)
       val nstack = mutable.Stack.empty[String]
-      nstack.pushAll(names.reverse)
+      nstack.pushAll(pid.value.reverse)
       var result = pstack.headOption.asInstanceOf[Option[Definition]]
       while (result.nonEmpty && nstack.nonEmpty) {
         val n = nstack.pop()
@@ -224,70 +279,45 @@ object Folding {
           if (pstack.nonEmpty) {
             // pop it and the new result is the new head
             pstack.pop()
-            // If the next things is implicit (unnamed), also pop that
-            if (pstack.top.isImplicit) {
-              pstack.pop()
-            }
             result = pstack.headOption
           } else {
             result = None // no parent stack to pop, exit loop
           }
         } else {
-          // First get the list of candidate matches from the current node
-          val candidates: Seq[Definition] = result match {
-            case None =>
-              // empty result means nothing to search
-              result = None
-              Seq.empty[Definition]
-            case Some(f: Function) if f.input.nonEmpty =>
-              // If we're at a Function node, the functions input parameters
-              // are the candidates to search next
-              f.input.get.fields
-            case Some(s: AST.State) =>
-              // If we're at a entity's state, the state's fields are next
-              s.typeEx.fields
-            case Some(Field(_, _, te: Aggregation, _, _)) =>
-              // if we're at a field composed of more fields, those fields are it
-              te.fields
-            case field @ Some(Field(_, _, TypeRef(_,pid), _, _)) =>
-              // if we're at a field that references another type then we
-              // need to push that types path on the name stack
-              nstack.push(n)
-              nstack.pushAll(pid.value.reverse)
-              pstack.push(field.get)
-              Seq.empty[Definition]
-            case Some(p) if p.isContainer =>
-              val conts = p.asInstanceOf[Container[Definition]].contents
-              conts.flatMap {
-                case Include(_,contents,_) => contents
-                case d: Definition => Seq(d)
-              }
-            case _ =>
-              // anything else isn't searchable so n can't be found
-              result = None
-              Seq.empty[Definition]
-          }
+          result match {
+            case None => // do nothing
+            case Some(d) =>
+              if (vstack.contains(d)) {
+                this.addError(pid.loc,
+                  s"Path resolution encountered a loop through ${d.identify}")
+                result = None // exit loop
+              } else {
+                vstack.push(d)
+                val (res, candidates) = findCandidates(n, pstack, nstack, result)
+                result = res
 
-          // Now find the match, if any, and handle appropriately
-          val found = candidates.find(_.id.value == n)
-          found match {
-            case Some(q : Definition) if q.isContainer =>
-              // found the named item, and it is a Container, so put it on
-              // the stack in case there are more things to resolve
-              pstack.push(q.asInstanceOf[ParentDefOf[Definition]])
-              // make it the next value of "r" in our foldLeft
-              result = Some(q)
-            case r @ Some(_) =>
-              // Found an item but its not a container. So, presumably this is
-              // the result they want. If there are more names, they will
-              // fall through above and produce a None result.
-              result = r
-            case None =>
-              // No search result, there may be more things
+                // Now find the match, if any, and handle appropriately
+                val found = candidates.find(_.id.value == n)
+                found match {
+                  case Some(q: Definition) if q.isContainer =>
+                    // found the named item, and it is a Container, so put it on
+                    // the stack in case there are more things to resolve
+                    pstack.push(q.asInstanceOf[ParentDefOf[Definition]])
+                    // make it the next value of "r" in our foldLeft
+                    result = Some(q)
+                  case r@Some(_) =>
+                    // Found an item but its not a container. So, presumably this is
+                    // the result they want. If there are more names, they will
+                    // fall through above and produce a None result.
+                    result = r
+                  case None =>
+                  // No search result, there may be more things
+                }
+              }
           }
         }
       }
-      result
+      result -> (result.map(Seq(_)).getOrElse(Seq.empty[Definition]) ++ pstack)
     }
   }
 }

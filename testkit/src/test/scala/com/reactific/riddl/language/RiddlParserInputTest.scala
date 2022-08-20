@@ -1,5 +1,6 @@
 package com.reactific.riddl.language
 
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.{RiddlParserInput, SourceParserInput}
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec

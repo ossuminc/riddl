@@ -17,6 +17,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.Terminals.{Keywords, Predefined}
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
@@ -1079,7 +1080,21 @@ object AST {
 
   /** Base trait of all expressions
     */
-  sealed trait Expression extends RiddlValue
+  sealed trait Expression extends RiddlValue {
+    def isCondition: Boolean = false
+    def isNumeric: Boolean = false
+  }
+
+  /** Base trait for expressions that yield a boolean value (a condition)
+   */
+  sealed trait Condition extends Expression {
+    override def isCondition: Boolean = false
+  }
+
+  /** Base trait for expressions that yield a numeric value  */
+  sealed trait NumericExpression extends Expression {
+    override def isNumeric: Boolean = true
+  }
 
   /** Represents the use of an arithmetic operator or well-known function call.
     * The operator can be simple like addition or subtraction or complicated
@@ -1100,7 +1115,7 @@ object AST {
     loc: Location,
     operator: String,
     operands: Seq[Expression])
-      extends Expression {
+      extends NumericExpression {
     override def format: String = operator + operands.mkString("(", ",", ")")
   }
 
@@ -1114,8 +1129,21 @@ object AST {
     *   The path to the value for this expression
     */
   case class ValueExpression(loc: Location, path: PathIdentifier)
-      extends Condition {
+      extends Expression {
     override def format: String = "@" + path.format
+  }
+
+  /** Represents a expression that will be specified later and uses
+   * the ??? syntax to represent that condition.
+   *
+   * @param loc
+   * The location of the undefined condition
+   */
+  case class UndefinedExpression(loc: Location)
+    extends Expression {
+    override def format: String = Terminals.Punctuation.undefined
+
+    override def isEmpty: Boolean = true
   }
 
   /** The arguments of a [[FunctionCallExpression]] and
@@ -1189,20 +1217,22 @@ object AST {
     loc: Location,
     name: PathIdentifier,
     arguments: ArgList)
-      extends Expression with Condition {
+      extends Expression {
     override def format: String = name.format + arguments.format
   }
 
-  /** A syntactic convenience for grouping another expression.
+  /** A syntactic convenience for grouping a list of expressions.
    *
    * @param loc
    * The location of the expression group
-   * @param expression
-   * The expression that is grouped
+   * @param expressions
+   * The expressions that are grouped
    */
-  case class GroupExpression(loc: Location, expression: Expression)
+  case class GroupExpression(loc: Location, expressions: Seq[Expression])
     extends Expression {
-    override def format: String = s"(${expression.format})"
+    override def format: String = {
+      s"(${expressions.map(_.format).mkString(", ")})"
+    }
   }
 
 
@@ -1223,7 +1253,7 @@ object AST {
     condition: Condition,
     expr1: Expression,
     expr2: Expression)
-      extends Condition {
+      extends Expression {
     override def format: String =
       s"if(${condition.format},${expr1.format},${expr2.format})"
   }
@@ -1235,7 +1265,8 @@ object AST {
     * @param n
     *   The number to use as the value of the expression
     */
-  case class LiteralInteger(loc: Location, n: BigInt) extends Expression {
+  case class LiteralInteger(loc: Location, n: BigInt)
+    extends NumericExpression {
     override def format: String = n.toString()
   }
 
@@ -1245,15 +1276,12 @@ object AST {
     * @param d
     *   The decimal number to use as the value of the expression
     */
-  case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression {
+  case class LiteralDecimal(loc: Location, d: BigDecimal)
+    extends NumericExpression {
     override def format: String = d.toString
   }
 
   // /////////////////////////////////////////////////////////// Conditional Expressions
-
-  /** Base trait for expressions that yield a boolean value (a condition)
-    */
-  sealed trait Condition extends Expression
 
   /** A condition value for "true"
     * @param loc
@@ -1271,31 +1299,56 @@ object AST {
     override def format: String = "false"
   }
 
-  /** Represents an arbitrary expression that is specified merely with a literal
+  /** Represents an arbitrary condition that is specified merely with a literal
     * string. This can't be easily processed downstream but provides the author
-    * with the ability to include arbitrary ideas/concepts into an expression or
-    * condition For example:
+    * with the ability to include arbitrary ideas/concepts into an condition
+    * expression. For example in a when condition:
     * {{{
     *   example foo { when "the timer has expired" }
     * }}}
     * shows the use of an arbitrary condition for the "when" part of a Gherkin
-    * example. Or
-    * {{{
-    *   +(42,"number of widgets in a wack-a-mole")
-    * }}}
-    * shows the use of an arbitrary expression as the operand to an addition.
-    *
-    * Note that since the expression is arbitrary, it could be a boolean value
-    * and is thus considered to be a conditional expression too, hence the name.
+    * example.
     *
     * @param cond
     *   The arbitrary condition provided as a quoted string
     */
-  case class ArbitraryExpression(cond: LiteralString)
-    extends Expression with Condition {
+  case class ArbitraryCondition(cond: LiteralString)
+    extends Condition {
     override def loc: Location = cond.loc
 
     override def format: String = cond.format
+  }
+
+
+  /** Represents a condition that is merely a reference to some Boolean value,
+   * presumably an entity state value or parameter.
+   *
+   * @param loc
+   * The location of this condition
+   * @param path
+   * The path to the value for this condition
+   */
+  case class ValueCondition(loc: Location, path: PathIdentifier)
+    extends Condition {
+    override def format: String = "@" + path.format
+  }
+
+
+  /** A RIDDL Function call to the function identified by its path identifier
+   * with a matching set of arguments. This function must return a boolean
+   * since it is defined as a Condition.
+   *
+   * @param loc The location of the function call expression
+   * @param name The path identifier of the RIDDL Function being called
+   * @param arguments
+   *   An [[ArgList]] to pass to the function.
+   */
+  case class FunctionCallCondition(
+    loc: Location,
+    name: PathIdentifier,
+    arguments: ArgList)
+    extends  Condition {
+    override def format: String = name.format + arguments.format
   }
 
   sealed trait Comparator extends RiddlNode
@@ -1401,18 +1454,24 @@ object AST {
     override def format: String = "xor" + super.format
   }
 
-  /** Represents a condition expression that will be specified later and uses
-    * the ??? syntax to represent that condition.
-    *
-    * @param loc
-    *   The location of the undefined condition
-    */
-  case class UndefinedExpression(loc: Location)
-    extends Expression with Condition {
-    override def format: String = Terminals.Punctuation.undefined
+  /** An arbitrary expression provided by a LiteralString
+   * Arbitrary expressions conform to the type based on the context in which
+   * they are found. Another way to think of it is that arbitrary expressions
+   * are assignment compatible with any other type
+   * For example, in an arithmetic expression like this
+   * {{{
+   *   +(42,"number of widgets in a wack-a-mole")
+   * }}}
+   * the arbitrary expression given by the string conforms to a numeric type
+   * since the context is the addition of 42 and the arbitrary expression
+   */
+  case class ArbitraryExpression(cond: LiteralString)
+    extends Expression {
+    override def loc: Location = cond.loc
 
-    override def isEmpty: Boolean = true
+    override def format: String = cond.format
   }
+
 
   // /////////////////////////////////////////////////////////// Actions
 
@@ -1573,7 +1632,7 @@ object AST {
     function: PathIdentifier,
     arguments: ArgList,
     description: Option[Description] = None)
-      extends Expression with Condition with SagaStepAction {
+      extends SagaStepAction {
     override def format: String = s"call ${function.format}${arguments.format}"
   }
 

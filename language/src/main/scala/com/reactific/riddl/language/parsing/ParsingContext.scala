@@ -17,7 +17,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Location
+import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
