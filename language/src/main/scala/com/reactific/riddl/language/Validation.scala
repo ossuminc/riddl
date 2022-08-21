@@ -281,27 +281,46 @@ object Validation {
         )
       }
 
-    private def handleMultipleResultsCase[T <: Definition](
-      id: PathIdentifier,
-      list: List[(Definition, Option[T])]
-    ): ValidationState = {
-      // Handle domain, context, entity same name
-      require(list.size > 1) // must be so or caller logic isn't right
-      // val tc = classTag[T].runtimeClass
-      val definitions = list.map { case (definition, _) => definition }
-      val allDifferent = definitions.map(AST.kind).distinct.sizeIs ==
-        definitions.size
-      if (allDifferent) { this }
-      else if (!definitions.head.isImplicit) {
-        add(Message(
-          id.loc,
-          s"""Path reference '${id.format}' is ambiguous. Definitions are:
-             |${formatDefinitions(definitions)}""".stripMargin,
-          Error
-        ))
-      } else { this }
+    private def formatDefinitions[T <: Definition](list: List[T]): String = {
+      list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }
+        .mkString("\n")
     }
 
+    def resolvePathFromSymTab[T <: Definition: ClassTag](
+      pid: PathIdentifier
+    ) : Seq[Definition] = {
+      val symTabCompatibleNameSearch = pid.value.reverse
+      val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
+      list match {
+        case Nil => // nothing found
+          Seq.empty[Definition]
+        case (d, parents) :: Nil => // list.size == 1
+          val expectedClass = classTag[T].runtimeClass
+          val actualClass = d.getClass
+          defaultSingleMatchValidationFunction(this,expectedClass,pid,actualClass,d,None)
+          d +: parents
+        case list => // list.size > 1
+          // Extract all the definitions that were found
+          val definitions = list.map(_._1)
+          val allDifferent =
+            definitions.map(AST.kind).distinct.sizeIs == definitions.size
+          val expectedClass = classTag[T].runtimeClass
+          if (allDifferent || definitions.head.isImplicit) {
+            // pick the one that is the right type or the first one
+            list.find(_._1.getClass == expectedClass) match {
+              case Some((defn,parents)) => defn +: parents
+              case None => list.head._1 +: list.head._2
+            }
+          } else {
+            addError(
+              pid.loc,
+              s"""Path reference '${pid.format}' is ambiguous. Definitions are:
+                 |${formatDefinitions(definitions)}""".stripMargin
+            )
+            Seq.empty[Definition]
+          }
+      }
+    }
 
     def checkPathRef[T <: Definition: ClassTag](
       pid: PathIdentifier, container: Definition, kind: Option[String] = None
@@ -329,7 +348,9 @@ object Validation {
       } else if ( pid.value.exists(_.isEmpty)) {
         val resolution = resolvePath(pid)
         resolution.headOption match {
-          case None => notResolved()
+          case None =>
+            notResolved()
+            this
           /* FIXME: Can't know dynamic type at compile time!
           case Some(x) if x.getClass != tc =>
             val message = s"Path '${pid.format}' resolved to ${
@@ -341,21 +362,16 @@ object Validation {
             } was expected"
             addError(pid.loc, message)
            */
-          case _ => // class matched, we're good!
+          case Some(d) => // class matched, we're good!
+            validator(this, tc,pid,d.getClass,d,None)
         }
-        this
       } else {
-        symbolTable.lookupSymbol[T](pid.value) match {
-          case Nil =>
-            notResolved()
-            this
-          case (d, optT) :: Nil =>
-            // Single match, defer to validation function
-            validator(this, tc, pid, d.getClass, d, optT)
-          case (d, optT) :: tail =>
-            // Too many matches / non-unique / ambiguous
-            val list = (d, optT) :: tail
-            handleMultipleResultsCase[T](pid, list)
+        val result = resolvePathFromSymTab[T](pid)
+        if (result.isEmpty) {
+          notResolved()
+          this
+        } else {
+          validator(this, tc, pid, result.head.getClass, result.head, None)
         }
       }
     }
@@ -398,11 +414,6 @@ object Validation {
           }
         }
       }
-    }
-
-    private def formatDefinitions[T <: Definition](list: List[T]): String = {
-      list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }
-        .mkString("\n")
     }
 
     def checkOption[A <: RiddlValue](
@@ -774,23 +785,32 @@ object Validation {
       id: PathIdentifier,
       parents: Seq[Definition] = parents
     ): Option[TypeExpression] = {
-      val newParents = resolvePath(id, parents)
-      val candidate = newParents.headOption match {
-        case None => None
-        case Some(f: Function) => f.output
-        case Some(t: Type) => Some(t.typ)
-        case Some(f: Field) => Some(f.typeEx)
-        case Some(s: State) => Some(s.typeEx)
-        case Some(p: Pipe) => Some(p.transmitType.getOrElse(Abstract(id.loc)))
-        case Some(in: Inlet) => Some(in.type_)
-        case Some(out: Outlet) => Some(out.type_)
-        case Some(_) => None
-      }
-      candidate match {
-        case Some(TypeRef(_, pid)) =>
-          getPathIdType(pid, newParents)
-        case Some(other: TypeExpression) => Some(other)
-        case None => None
+      if (id.value.isEmpty) {
+        None
+      } else {
+        val newParents: Seq[Definition] =
+          if (id.value.exists(_.isEmpty)) {
+            resolvePath(id, parents)
+          } else {
+            resolvePathFromSymTab[Definition](id)
+          }
+        val candidate = newParents.headOption match {
+          case None => None
+          case Some(f: Function) => f.output
+          case Some(t: Type) => Some(t.typ)
+          case Some(f: Field) => Some(f.typeEx)
+          case Some(s: State) => Some(s.typeEx)
+          case Some(p: Pipe) => Some(p.transmitType.getOrElse(Abstract(id.loc)))
+          case Some(in: Inlet) => Some(in.type_)
+          case Some(out: Outlet) => Some(out.type_)
+          case Some(_) => None
+        }
+        candidate match {
+          case Some(TypeRef(_, pid)) =>
+            getPathIdType(pid, newParents)
+          case Some(other: TypeExpression) => Some(other)
+          case None => None
+        }
       }
     }
 
@@ -821,6 +841,7 @@ object Validation {
         case EntityIdExpression(loc, entityId) => Some(UniqueId(loc,entityId))
         case ValueExpression(_, path) => getPathIdType(path)
         case ae: ArbitraryExpression => Some(Abstract(ae.loc))
+        case ao: ArbitraryOperator => Some(Abstract(ao.loc))
         case FunctionCallExpression(_, name, _) => getPathIdType(name)
         case GroupExpression(loc, expressions) =>
           // the type of a group is the last expression but it could be empty

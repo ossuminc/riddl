@@ -148,7 +148,9 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   def terminalExpression[u: P]: P[Expression] = {
     P(terminalCondition | literalDecimal | literalInteger |
       aggregateConstruction | entityIdValue |
-      arbitraryExpression | valueExpression | undefinedExpression )
+      valueExpression | undefinedExpression |
+      arbitraryExpression | arbitraryOperator
+    )
   }
 
   def functionCallExpression[u: P]: P[FunctionCallExpression] = {
@@ -164,16 +166,25 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).!
   }.map { case (x, y) => x + y }
 
+  def arbitraryOperator[u: P]: P[ArbitraryOperator] = {
+    P(location ~ operatorName ~ Punctuation.roundOpen ~
+      expression.rep(0, Punctuation.comma) ~
+      Punctuation.roundClose
+    ).map { case (loc, name, expressions) =>
+      ArbitraryOperator(loc, LiteralString(loc, name), expressions)
+    }
+  }
+
   def knownOperatorName[u:P]: P[String] = {
-    StringIn("SenderOf").!
+    StringIn("senderOf").!
   }
 
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
-          Operators.div.! | Operators.mod.! | operatorName |
-          knownOperatorName) ~ Punctuation.roundOpen ~
+          Operators.div.! | Operators.mod.! | knownOperatorName
+        ) ~ Punctuation.roundOpen ~
             expression.rep(0, Punctuation.comma) ~
           Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }

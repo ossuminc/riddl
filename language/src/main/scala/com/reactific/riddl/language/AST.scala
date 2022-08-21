@@ -1258,6 +1258,16 @@ object AST {
     override def format: String = name.format + arguments.format
   }
 
+  case class ArbitraryOperator(
+    loc: Location,
+    opName: LiteralString,
+    arguments: Seq[Expression]
+  ) extends Expression {
+    override def format: String = opName.format + "(" +
+      arguments.map(_.format).mkString("(", ", ", ")") + ")"
+  }
+
+
   /** A syntactic convenience for grouping a list of expressions.
    *
    * @param loc
