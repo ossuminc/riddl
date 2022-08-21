@@ -135,9 +135,9 @@ class ExpressionParserTest extends ParsingTest {
     }
     "accept arbitrary expression with many  args" in {
       parseExpression("wow(0,0,0,0,0,0)") { expr: Expression =>
-        expr mustBe ArithmeticOperator(
+        expr mustBe ArbitraryOperator(
           Location(1 -> 1),
-          "wow",
+          LiteralString(1->1,"wow"),
           Seq(
             LiteralInteger(Location(1 -> 5), 0),
             LiteralInteger(Location(1 -> 7), 0),

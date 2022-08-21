@@ -87,11 +87,15 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
+  private def defaultFail(msgs: Messages): Assertion = {
+    fail(msgs.map(_.format).mkString("\n"))
+  }
   def validateFile(
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
   )(validation: (RootContainer, Messages) => Assertion
+    = (_,msgs) => defaultFail(msgs)
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)

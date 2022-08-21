@@ -96,7 +96,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |      requires: { t: ^^^.Top }
           |      returns: { a: String }
           |      example impl {
-          |        then return @^t.m.b.a
+          |        then return @^^foo.t.m.b.a
           |      }
           |    }
           |  }

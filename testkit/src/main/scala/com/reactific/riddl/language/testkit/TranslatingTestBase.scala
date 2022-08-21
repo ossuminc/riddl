@@ -18,8 +18,7 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions]
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
   val roots: Map[String, String] = Map(
-    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
-    "DokN" -> "dokn/dokn.riddl"
+    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl"
   )
   val logger: Logger = StringLogger()
 

@@ -49,8 +49,8 @@ class CheckMessagesTest extends ValidatingTest {
           val msgSet = msgs.map(_.format).filter(_.nonEmpty).map(_.trim).toSet
           if (msgSet == expectedMessages) { succeed }
           else {
-            val missingMessages = expectedMessages.diff(msgSet)
-            val unexpectedMessages = msgSet.diff(expectedMessages)
+            val missingMessages = expectedMessages.diff(msgSet).toSeq.sorted
+            val unexpectedMessages = msgSet.diff(expectedMessages).toSeq.sorted
 
             val errMsg = new mutable.StringBuilder()
             errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))

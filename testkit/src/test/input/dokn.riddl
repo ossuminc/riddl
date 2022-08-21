@@ -129,7 +129,7 @@ domain dokn is {
             type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
-            type LocationAddressReceived is event { newAddress: Address }
+            type LocationAddressReceived is event { newAddress: dokn.Address }
 
             type getLocationDetails is query  {}
             type LocationDetails is result  { ??? }
@@ -160,7 +160,7 @@ domain dokn is {
                     )
                 }
                 on event LocationAddressReceived {
-                    then set ^^LocationBase.address to @^^^^LocationAddressReceived.newAddress
+                    then set LocationBase.address to @^^LocationAddressReceived.newAddress
                 }
                 on query getLocationDetails { then tell result LocationDetails() to Driver }
                 on query getLocationNotes { then tell result LocationNotes(notes=empty()) to Driver }

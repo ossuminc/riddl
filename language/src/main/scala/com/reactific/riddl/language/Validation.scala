@@ -269,6 +269,11 @@ object Validation {
       Option[Definition]
     ) => ValidationState
 
+
+    private val nullSingleMatchingValidationFunction
+    : SingleMatchValidationFunction =
+      (state, _, _, _, _, _) => { state }
+
     private val defaultSingleMatchValidationFunction
       : SingleMatchValidationFunction =
       (state, foundClass, id, defClass, _, _) => {
@@ -381,11 +386,11 @@ object Validation {
     ): ValidationState = {
       checkPathRef[T](reference.id, defn, kind)() }
 
-    def checkMessageRef(ref: MessageRef, defn: Definition, kind: MessageKind): ValidationState = {
+    def checkMessageRef(ref: MessageRef, topDef: Definition, kind: MessageKind): ValidationState = {
       if (ref.isEmpty) {
         addError(ref.id.loc, s"${ref.identify} is empty")
       } else {
-        checkPathRef[Type](ref.id, defn, Some(kind.kind)) { (state, _, _, _, defn, _) =>
+        checkPathRef[Type](ref.id, topDef, Some(kind.kind)) { (state, _, _, _, defn, _) =>
           defn match {
             case Type(_, _, typ, _, _) => typ match {
               case MessageType(_, mk, _) =>
@@ -746,7 +751,8 @@ object Validation {
     ): ValidationState =
       expression match {
         case ValueExpression(_, path)  =>
-          checkPathRef[Field](path,defn)()
+          // FIXME: Can we validate based on type? What if a Type is returned?
+          checkPathRef[Field](path,defn)(nullSingleMatchingValidationFunction)
         case GroupExpression(_, expressions) =>
           checkSequence(expressions) {
             (st, expr) => st.checkExpression(expr, defn)
@@ -996,7 +1002,9 @@ object Validation {
           state.checkDefinition(container, function)
         case onClause: OnClause =>
           state.checkIf(onClause.msg.nonEmpty) { st =>
+            state.captureHierarchy(onClause +: parents)
             st.checkMessageRef(onClause.msg, container, onClause.msg.messageKind)
+            state.captureHierarchy(parents)
           }
         case st: State =>
           state.checkDefinition(parents.head, st)

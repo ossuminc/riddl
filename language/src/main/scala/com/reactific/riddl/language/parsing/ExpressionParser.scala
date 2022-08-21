@@ -147,9 +147,8 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def terminalExpression[u: P]: P[Expression] = {
     P(terminalCondition | literalDecimal | literalInteger |
-      aggregateConstruction | entityIdValue |
-      valueExpression | undefinedExpression |
-      arbitraryExpression | arbitraryOperator
+       entityIdValue | valueExpression | undefinedExpression |
+      arbitraryExpression
     )
   }
 
@@ -176,7 +175,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def knownOperatorName[u:P]: P[String] = {
-    StringIn("senderOf").!
+    StringIn("pow", "now").!
   }
 
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
@@ -207,8 +206,9 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def expression[u: P]: P[Expression] = {
     P(
-      terminalExpression | ternaryExpression | arithmeticOperator |
-        functionCallExpression | groupExpression
+      terminalExpression | aggregateConstruction | ternaryExpression |
+        groupExpression | arithmeticOperator |
+        arbitraryOperator | functionCallExpression
     )
   }
 }
