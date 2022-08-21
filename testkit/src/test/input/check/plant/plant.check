@@ -12,3 +12,7 @@ Error: plant.riddl(5:27): Path 'Forecast' was not resolved, in Outlet 'WeatherSi
 Error: plant.riddl(18:14): Path 'Forecast' was not resolved, in Pipe 'WeatherForecast', but should refer to a Type
 Error: plant.riddl(22:14): Path 'Temperature' was not resolved, in Pipe 'TemperatureChanges', but should refer to a Type
 Error: plant.riddl(14:21): Path 'Temperature' was not resolved, in Inlet 'InTemp', but should refer to a Type
+Missing: plant.riddl(14:5): entity reference in Inlet 'InTemp' should not be empty
+Missing: plant.riddl(10:5): entity reference in Outlet 'OutTemp' should not be empty
+Missing: plant.riddl(5:5): entity reference in Outlet 'WeatherSink' should not be empty
+Missing: plant.riddl(9:5): entity reference in Inlet 'WeatherSource' should not be empty

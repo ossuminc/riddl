@@ -43,7 +43,7 @@ class ConditionParserTest extends ParsingTest {
     "accept literal string" in {
       parseCondition("\"decide\"") { cond: Condition =>
         cond mustBe
-          ArbitraryExpression(LiteralString(Location(1 -> 1), "decide"))
+          ArbitraryCondition(LiteralString(Location(1 -> 1), "decide"))
       }
     }
     "accept and(true,false)" in {
@@ -77,7 +77,7 @@ class ConditionParserTest extends ParsingTest {
     }
     "accept function call" in {
       parseCondition("This.That(x=42)") { cond: Condition =>
-        cond mustBe FunctionCallExpression(
+        cond mustBe FunctionCallCondition(
           Location(1 -> 1),
           PathIdentifier(Location(1 -> 1), Seq("This", "That")),
           ArgList(ListMap(
@@ -127,11 +127,11 @@ class ConditionParserTest extends ParsingTest {
                   Comparison(
                     1 -> 12,
                     AST.eq,
-                    ArbitraryExpression(LiteralString(1 -> 15, "sooth")),
+                    ArbitraryCondition(LiteralString(1 -> 15, "sooth")),
                     False(1 -> 24)
                   )
                 ),
-                FunctionCallExpression(
+                FunctionCallCondition(
                   1 -> 32,
                   PathIdentifier(1 -> 32, Seq("SomeFunc")),
                   ArgList(ListMap(

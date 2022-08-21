@@ -41,12 +41,12 @@ class CheckMessagesTest extends ValidatingTest {
   }
 
   "Check Messages" should {
-    def runForFile(file: File, expectedMessages: Set[String]): Unit = {
+    def runForFile(file: File, readMessages: Set[String]): Unit = {
       val relativeFileName = checkPath.relativize(file.toPath).toString
-
+      val expectedMessages = readMessages.map(_.trim)
       s"check $relativeFileName" in {
         validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
-          val msgSet = msgs.map(_.format).filter(_.nonEmpty).toSet
+          val msgSet = msgs.map(_.format).filter(_.nonEmpty).map(_.trim).toSet
           if (msgSet == expectedMessages) { succeed }
           else {
             val missingMessages = expectedMessages.diff(msgSet)
@@ -100,9 +100,19 @@ class CheckMessagesTest extends ValidatingTest {
         import scala.jdk.CollectionConverters.*
         val checkFileLines = checkFiles.iterator.flatMap { file =>
           java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
-        }.map(_.trim).filter(_.nonEmpty).toSet
+        }
+        val fixedLines = checkFileLines.filterNot{ l: String =>
+          l.isEmpty || l.forall(_.isWhitespace)
+        }.foldLeft(Seq.empty[String]){ (list, next) =>
+          if (next.startsWith(" ")) {
+            val last = list.last + "\n" + next
+            list.dropRight(1) :+ last
+          } else {
+            list :+ next
+          }
+        }.toSet
 
-        runForFile(riddlFile, checkFileLines)
+        runForFile(riddlFile, fixedLines)
       }
     }
   }

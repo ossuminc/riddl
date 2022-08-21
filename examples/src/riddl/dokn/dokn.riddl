@@ -141,7 +141,7 @@ domain dokn is {
                 locationId: LocationId,
                 geohash: LatLong,
                 label: String ,
-                address: Address,
+                address: ^^^^Address,
                 notes: NoteList,
                 ticketCount: Integer,
                 loadingMethod: LoadingMethod
@@ -160,7 +160,7 @@ domain dokn is {
                     )
                 }
                 on event LocationAddressReceived {
-                    then set LocationBase.address to @newAddress
+                    then set ^^LocationBase.address to @^^^^LocationAddressReceived.newAddress
                 }
                 on query getLocationDetails { then tell result LocationDetails() to Driver }
                 on query getLocationNotes { then tell result LocationNotes(notes=empty()) to Driver }

@@ -37,7 +37,7 @@ class TypeParserTest extends ParsingTest {
         Identifier(1 -> 6, "ident"),
         UniqueId(
           1 -> 14,
-          entityPath = PathIdentifier(1 -> 14, Seq.empty[String])
+          entityPath = EntityRef(1->14,PathIdentifier(1 -> 14, Seq.empty[String]))
         )
       )
       checkDefinition[Type, Type](input, expected, identity)
@@ -133,7 +133,7 @@ class TypeParserTest extends ParsingTest {
               Identifier((3, 3, rip), "id"),
               UniqueId(
                 (3, 7, rip),
-                PathIdentifier((3, 7, rip), Seq.empty[String])
+                EntityRef((3,7,rip),PathIdentifier((3, 7, rip), Seq.empty[String]))
               )
             ),
             Field(
@@ -177,7 +177,7 @@ class TypeParserTest extends ParsingTest {
                 Identifier((3, 3, rip), "id"),
                 UniqueId(
                   (3, 7, rip),
-                  PathIdentifier((3, 7, rip), Seq.empty[String])
+                  EntityRef((3,7,rip),PathIdentifier((3, 7, rip), Seq.empty[String]))
                 )
               ),
               Field(

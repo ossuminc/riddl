@@ -58,7 +58,6 @@ Missing: everything.riddl(13:20): Inlet 'Commands' should have a description
 Error: everything.riddl(72:20): Reference[Type] 'Something'(72:12) was expected to be a command type but is an Entity instead
 Style: everything.riddl(13:20): Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(12:24)
 Error: everything.riddl(76:29): Path 'Inebriated' was not resolved, in Example 'only', but should refer to an event
-Error: everything.riddl(75:18): Path 'misc' was not resolved, in Example 'only', but should refer to a Function
 Missing: everything.riddl(83:34): Field 'when' should have a description
 Missing: everything.riddl(84:34): Field 'then' should have a description
 Missing: everything.riddl(73:11): Example 'only' should have a description
@@ -73,3 +72,10 @@ Missing: everything.riddl(71:15): Handler 'foo' should have a description
 Missing: everything.riddl(86:12): On Clause 'On event ItHappened' should have a description
 Missing: everything.riddl(85:15): Handler 'fee' should have a description
 Missing: everything.riddl(72:12): On Clause 'On command Something' should have a description
+Missing: everything.riddl(13:20): entity reference in Inlet 'Commands' should not be empty
+Missing: everything.riddl(12:24): entity reference in Outlet 'Commands' should not be empty
+Error: everything.riddl(88:22): Setting a value requires assignment compatibility, but field:
+  SomeOtherThing.otherThingState.then (<not found>)
+  is not assignment compatible with expression:
+  @ItHappened.when (<not found>)
+

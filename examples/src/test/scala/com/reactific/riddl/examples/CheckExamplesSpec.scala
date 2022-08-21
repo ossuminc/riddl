@@ -8,7 +8,9 @@ import java.nio.file.Files
 class CheckExamplesSpec extends HugoTranslateExamplesBase {
 
   val output = "examples/target/translator/"
-  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl", "DokN" -> "dokn/dokn.riddl")
+  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl"
+    // FIXME: , "DokN" -> "dokn/dokn.riddl"
+  )
 
   "Examples" should {
     for { (name, path) <- roots } {

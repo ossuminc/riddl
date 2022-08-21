@@ -131,22 +131,22 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Error,
-          "'bar' is not defined but should be a Field"
+          "Path 'bar' was not resolved, in Example 'only', but should refer to a Field"
         )
       }
     }
 
-    "allow an on clause too set state from a coorrectly typed message field " in {
+    "allow an on clause too set state from a correctly typed message field " in {
       val input = """
                     |domain entityTest is {
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  type EntityCommand is command { foo: Number }
                     |  state HamburgerState = { field1: Number }
-                    |  handler doit is {
-                    |    on command EntityCommand { example only {
-                    |      then set field1 to @foo
-                    |    } }
+                    |  handler doit for state HamburgerState is {
+                    |    on command EntityCommand {
+                    |      then set ^^HamburgerState.field1 to @^^EntityCommand.foo
+                    |    }
                     |  }
                     |}
                     |}
@@ -176,7 +176,7 @@ class HandlerValidatorTest extends ValidatingTest {
       parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs, Error,
-          "'bar' is not defined but should be a Field"
+          "assignment compatibility, but field:\n  field1"
         )
       }
     }

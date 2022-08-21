@@ -291,7 +291,6 @@ object AST {
     */
   sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
     def id: Identifier
-
     def kind: String = AST.kind(this)
     def kindId: String = s"$kind '${id.format}'"
     def identify: String = kindId
@@ -470,7 +469,13 @@ object AST {
 
   /** Base trait of an expression that defines a type
     */
-  sealed trait TypeExpression extends RiddlValue
+  sealed trait TypeExpression extends RiddlValue {
+    def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      (other == this) || (other.getClass == this.getClass) ||
+        (other.getClass == classOf[Abstract]) ||
+        (this.getClass == classOf[Abstract])
+    }
+  }
 
   /** A utility function for getting the kind of a type expression.
     *
@@ -601,7 +606,9 @@ object AST {
 ////////////////////////////////////////////////////////////////////////// TYPES
 
   /** Base trait of the cardinality type expressions */
-  sealed trait Cardinality extends TypeExpression
+  sealed trait Cardinality extends TypeExpression {
+    def typeExp: TypeExpression
+  }
 
   /** A cardinality type expression that indicates another type expression as
     * being optional; that is with a cardinality of 0 or 1.
@@ -612,7 +619,9 @@ object AST {
     *   The type expression that is indicated as optional
     */
   case class Optional(loc: Location, typeExp: TypeExpression)
-      extends Cardinality
+      extends Cardinality {
+    override def format: String = s"${typeExp.format}?"
+  }
 
   /** A cardinality type expression that indicates another type expression as
     * having zero or more instances.
@@ -624,7 +633,9 @@ object AST {
     *   more.
     */
   case class ZeroOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality
+      extends Cardinality {
+    override def format: String = s"${typeExp.format}*"
+  }
 
   /** A cardinality type expression that indicates another type expression as
     * having one or more instances.
@@ -635,7 +646,9 @@ object AST {
     *   The type expression that is indicated with a cardinality of one or more.
     */
   case class OneOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality
+      extends Cardinality {
+    override def format: String = s"${typeExp.format}+"
+  }
 
   /** A cardinality type expression that indicates another type expression as
    * having a specific range of instances
@@ -654,7 +667,9 @@ object AST {
     typeExp: TypeExpression,
     min: Long,
     max: Long
-  ) extends Cardinality
+  ) extends Cardinality {
+    override def format: String = s"${typeExp.format}{$min,$max}"
+  }
 
   /** Represents one variant among (one or) many variants that comprise an
     * [[Enumeration]]
@@ -675,7 +690,10 @@ object AST {
     enumVal: Option[LiteralInteger] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition
+      extends Definition {
+    override def format: String = id.format
+
+  }
 
   /** A type expression that defines its range of possible values as being one
     * value from a set of enumerated values.
@@ -688,9 +706,10 @@ object AST {
     */
   case class Enumeration(
     loc: Location,
-    enumerators: Seq[Enumerator])
-      extends TypeExpression with Container[Enumerator] {
-    lazy val contents: Seq[Enumerator] = enumerators
+    enumerators: Seq[Enumerator]
+  ) extends TypeExpression {
+    override def format: String = "{ " +  enumerators.mkString(",") + " }"
+
   }
 
   /** A type expression that that defines its range of possible values as being
@@ -705,8 +724,8 @@ object AST {
   case class Alternation(
     loc: Location,
     of: Seq[TypeExpression]
-  ) extends TypeExpression with Container[TypeExpression] {
-    final lazy val contents: Seq[TypeExpression] = of
+  ) extends TypeExpression {
+    override def format: String = s"one of { ${of.mkString(", ")} }"
   }
 
   /** A definition that is a field of an aggregation type expressions. Fields
@@ -729,7 +748,10 @@ object AST {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Definition
+  ) extends Definition {
+    override def format: String = s"${id.format}: ${typeEx.format}"
+
+  }
 
   /** A type expression that contains an aggregation of fields
    *
@@ -738,6 +760,8 @@ object AST {
   trait AggregateTypeExpression extends TypeExpression with Container[Field] {
     def fields: Seq[Field]
     final lazy val contents: Seq[Field] = fields
+    override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
+
   }
 
   /** A type expression that takes a set of named fields as its value.
@@ -776,7 +800,9 @@ object AST {
     loc: Location,
     from: TypeExpression,
     to: TypeExpression)
-      extends TypeExpression
+      extends TypeExpression {
+    override def format: String = s"mapping from ${from.format} to ${to.format}"
+  }
 
   /** A type expression that defines a set of integer values from a minimum
     * value to a maximum value, inclusively.
@@ -792,7 +818,10 @@ object AST {
     loc: Location,
     min: LiteralInteger,
     max: LiteralInteger)
-      extends TypeExpression
+      extends TypeExpression {
+    override def format: String = s"range($min,$max)"
+
+  }
 
   /** A type expression whose value is a reference to an instance of an
    * entity.
@@ -805,7 +834,9 @@ object AST {
   case class ReferenceType(
     loc: Location,
     entity: EntityRef
-  ) extends TypeExpression
+  ) extends TypeExpression {
+    override def format: String = s"reference to ${entity.format}"
+  }
 
   /** A type expression that defines a string value constrained by a Java
     * Regular Expression
@@ -821,7 +852,9 @@ object AST {
   case class Pattern(
     loc: Location,
     pattern: Seq[LiteralString])
-      extends TypeExpression
+      extends TypeExpression {
+    override def format: String = s"pattern(${pattern.map(_.format).mkString(", ")})"
+  }
 
   /** A type expression for values that ensure a unique identifier for a
     * specific entity.
@@ -833,8 +866,10 @@ object AST {
     */
   case class UniqueId(
     loc: Location,
-    entityPath: PathIdentifier)
-      extends TypeExpression
+    entityPath: EntityRef
+  ) extends TypeExpression {
+    override def format: String = s"Id(${entityPath.format})"
+  }
 
   /** A type expression for an aggregation type expression that is marked as
     * being one of the four message kinds.
@@ -858,6 +893,8 @@ object AST {
     def loc: Location
 
     def kind: String
+
+    override def format: String = s"$kind"
   }
 
   object PredefinedType {
@@ -2026,7 +2063,7 @@ object AST {
   case class Invariant(
     loc: Location,
     id: Identifier,
-    expression: Condition,
+    expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends EntityDefinition {

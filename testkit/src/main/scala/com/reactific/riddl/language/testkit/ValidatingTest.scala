@@ -132,6 +132,16 @@ abstract class ValidatingTest extends ParsingTest {
 
   def assertValidationMessage(
     msgs: Messages,
+    searchFor: String
+  )(f: Message => Boolean ): Assertion = {
+    assert(
+      msgs.exists(f),
+      s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"
+    )
+  }
+
+  def assertValidationMessage(
+    msgs: Messages,
     expectedKind: KindOfMessage,
     content: String
   ): Assertion = {

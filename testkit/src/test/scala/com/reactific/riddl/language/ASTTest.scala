@@ -159,7 +159,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         val invariants = Seq(Invariant(
           Location(),
           Identifier(Location(), "my_id"),
-          True(Location()),
+          Some(True(Location())),
           None
         ))
         val types = Seq(

@@ -89,14 +89,14 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |domain D {
           |  type Bottom = { a: String }
           |  type Middle = { b: ^^Bottom }
-          |  type Top = { m: ^^Middle }
+          |  type Top = { m: ^Middle }
           |
           |  context C {
           |    function foo {
           |      requires: { t: ^^^.Top }
           |      returns: { a: String }
           |      example impl {
-          |        then return @^^foo.t.m.b.a
+          |        then return @^t.m.b.a
           |      }
           |    }
           |  }
@@ -135,7 +135,6 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |    }
           |  }
           |}
-          |
           |""".stripMargin
 
       parseResult(RiddlParserInput(input))
