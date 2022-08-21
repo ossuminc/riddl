@@ -51,9 +51,7 @@ class TranslatorTest extends ValidatingTest {
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
   val roots = Map(
-    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
-    "DokN" -> "dokn/dokn.riddl"
-  )
+    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
 
   "Translator" should {
     for { (name, fileName) <- roots } {

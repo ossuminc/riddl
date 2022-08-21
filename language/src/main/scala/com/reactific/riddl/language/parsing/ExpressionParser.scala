@@ -30,11 +30,11 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   ////////////////////////////////////////// Conditions == Boolean Expression
 
   def condition[u: P]: P[Condition] = {
-    P(terminalCondition | logicalConditions | functionCallExpression)
+    P(terminalCondition | logicalConditions | functionCallCondition)
   }
 
   def terminalCondition[u: P]: P[Condition] = {
-    P(trueCondition | falseCondition | conditionExpressions)
+    P(trueCondition | falseCondition  | arbitraryCondition)
   }
 
   def trueCondition[u: P]: P[True] = {
@@ -45,20 +45,26 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     P(location ~ IgnoreCase("false")).map(False)./
   }
 
-  def conditionExpressions[u: P]: P[Condition & Expression] = {
-    undefinedExpression | arbitraryExpression | valueExpression
+  def arbitraryCondition[u: P]: P[ArbitraryCondition] = {
+    P(literalString).map(ls => ArbitraryCondition(ls))
   }
 
-  def arbitraryExpression[u: P]: P[ArbitraryExpression] = {
-    P(literalString).map(ls => ArbitraryExpression(ls))
+  def arguments[u: P]: P[ArgList] = {
+    P(identifier ~ Punctuation.equals ~ expression)
+      .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
+      s.foldLeft(ListMap.empty[Identifier, Expression]) {
+        case (b, (id, exp)) => b + (id -> exp)
+      }
+    }.map { lm => ArgList(lm) }
   }
 
-  def undefinedExpression[u: P]: P[UndefinedExpression] = {
-    P(location ~ Punctuation.undefined).map(UndefinedExpression)
+  def argList[u: P]: P[ArgList] = {
+    P(Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose./)
   }
 
-  def valueExpression[u: P]: P[ValueExpression] = {
-    P(location ~ Punctuation.at ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
+  def functionCallCondition[u: P]: P[FunctionCallCondition] = {
+    P(location ~ pathIdentifier ~ argList)
+      .map(tpl => (FunctionCallCondition.apply _).tupled(tpl))
   }
 
   def logicalConditions[u: P]: P[Condition] = {
@@ -103,7 +109,6 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).map { x => (Comparison.apply _).tupled(x) }
   }
 
-
   def comparator[u: P]: P[Comparator] = {
     P(StringIn("<=", "!=", "==", ">=", "<", ">")).!./.map {
       case "==" => AST.eq
@@ -116,6 +121,18 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   ////////////////////////////////////////// Expressions == Any Type
+
+  def arbitraryExpression[u: P]: P[ArbitraryExpression] = {
+    P(literalString).map(ls => ArbitraryExpression(ls))
+  }
+
+  def undefinedExpression[u: P]: P[UndefinedExpression] = {
+    P(location ~ Punctuation.undefined).map(UndefinedExpression)
+  }
+
+  def valueExpression[u: P]: P[ValueExpression] = {
+    P(location ~ Punctuation.at ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
+  }
 
   def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
     P( location ~ Punctuation.exclamation ~/ typeRef ~ argList).map(tpl =>
@@ -130,31 +147,14 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def terminalExpression[u: P]: P[Expression] = {
     P(terminalCondition | literalDecimal | literalInteger |
-      aggregateConstruction | entityIdValue |
-      conditionExpressions )
-  }
-
-  def arguments[u: P]: P[ArgList] = {
-    P(identifier ~ Punctuation.equals ~ expression)
-      .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
-        s.foldLeft(ListMap.empty[Identifier, Expression]) {
-          case (b, (id, exp)) => b + (id -> exp)
-        }
-      }.map { lm => ArgList(lm) }
-  }
-
-  def argList[u: P]: P[ArgList] = {
-    P(Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose./)
+       entityIdValue | valueExpression | undefinedExpression |
+      arbitraryExpression
+    )
   }
 
   def functionCallExpression[u: P]: P[FunctionCallExpression] = {
     P(location ~ pathIdentifier ~ argList)
       .map(tpl => (FunctionCallExpression.apply _).tupled(tpl))
-  }
-
-  def groupExpression[u: P]: P[GroupExpression] = {
-    P(location ~ Punctuation.roundOpen ~/ expression ~ Punctuation.roundClose./)
-      .map(tpl => (GroupExpression.apply _).tupled(tpl))
   }
 
   def operatorName[u: P]: P[String] = {
@@ -165,16 +165,25 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).!
   }.map { case (x, y) => x + y }
 
+  def arbitraryOperator[u: P]: P[ArbitraryOperator] = {
+    P(location ~ operatorName ~ Punctuation.roundOpen ~
+      expression.rep(0, Punctuation.comma) ~
+      Punctuation.roundClose
+    ).map { case (loc, name, expressions) =>
+      ArbitraryOperator(loc, LiteralString(loc, name), expressions)
+    }
+  }
+
   def knownOperatorName[u:P]: P[String] = {
-    StringIn("SenderOf").!
+    StringIn("pow", "now").!
   }
 
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
-          Operators.div.! | Operators.mod.! | operatorName |
-          knownOperatorName) ~ Punctuation.roundOpen ~
+          Operators.div.! | Operators.mod.! | knownOperatorName
+        ) ~ Punctuation.roundOpen ~
             expression.rep(0, Punctuation.comma) ~
           Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
@@ -188,11 +197,18 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).map(tpl => (Ternary.apply _).tupled(tpl))
   }
 
-  def expression[u: P]: P[Expression] = {
-    P(
-      terminalExpression | ternaryExpression | arithmeticOperator |
-        functionCallExpression | groupExpression
-    )
+  def groupExpression[u: P]: P[GroupExpression] = {
+    P(location ~ Punctuation.roundOpen ~/
+      expression.rep(0, ",") ~
+      Punctuation.roundClose./
+    ).map(tpl => (GroupExpression.apply _).tupled(tpl))
   }
 
+  def expression[u: P]: P[Expression] = {
+    P(
+      terminalExpression | aggregateConstruction | ternaryExpression |
+        groupExpression | arithmeticOperator |
+        arbitraryOperator | functionCallExpression
+    )
+  }
 }

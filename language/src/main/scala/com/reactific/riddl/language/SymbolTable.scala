@@ -49,6 +49,12 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   private def makeSymTab(
     top: ParentDefOf[Definition]
   ): (SymTab,Parentage) = {
+    def rootLessParents(parents: Parents): Parents = {
+      parents.toSeq.filter {
+        case _: RootContainer => false
+        case _ => true
+      }
+    }
     val symTab: SymTab = emptySymTab
     val parentage: Parentage = emptyParentage
     Folding.foldLeftWithStack[Unit](())(top) {
@@ -56,13 +62,10 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
         // RootContainers don't go in the symbol table
       case (_, _: Include, _) =>
         // includes don't go in the symbol table
-      case (_, definition, stack) =>
+      case (_, definition, parents) =>
         val name = definition.id.value
         if (name.nonEmpty) {
-          val copy: Parents = stack.toSeq.filter {
-            case _: RootContainer => false
-            case _ => true
-          }
+          val copy: Parents = rootLessParents(parents)
           val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
           val included: Seq[SymTabItem] = existing :+ (definition -> copy)
           symTab.update(name, included)
@@ -165,6 +168,38 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
         List.empty
     }
   }
+
+
+  /** Look up a symbol in the table
+   *
+   * @param id
+   * The multi-part identifier of the symbol, from leaf to root, that is from
+   * most nested to least nested.
+   * @tparam D The expected type of definition
+   * @return
+   * A list of matching definitions of 2-tuples giving the definition as
+   * a Definition type and optionally as the requested type
+   */
+  def lookupParentage(
+    names: Seq[String]
+  ): List[SymTabItem] = {
+    // require(id.nonEmpty, "No name elements provided to lookupSymbol")
+    // val nameList = id.reverse
+    val leafName = names.head
+    symbols.get(leafName) match {
+      case Some(set) =>
+        set.filter {
+          case (_: Definition, parents: Seq[ParentDefOf[Definition]]) =>
+            // whittle down the list of matches to the ones whose parents names
+            // have the same as the nameList provided
+            hasSameParentNames(names, parents)
+      }.toList
+      case None =>
+        // Symbol wasn't found
+        List.empty[SymTabItem]
+    }
+  }
+
 
   def lookup[D <: Definition: ClassTag](
     ref: Reference[D]

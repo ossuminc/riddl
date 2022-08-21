@@ -17,6 +17,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.Terminals.{Keywords, Predefined}
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
@@ -290,7 +291,6 @@ object AST {
     */
   sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
     def id: Identifier
-
     def kind: String = AST.kind(this)
     def kindId: String = s"$kind '${id.format}'"
     def identify: String = kindId
@@ -469,7 +469,13 @@ object AST {
 
   /** Base trait of an expression that defines a type
     */
-  sealed trait TypeExpression extends RiddlValue
+  sealed trait TypeExpression extends RiddlValue {
+    def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      (other == this) || (other.getClass == this.getClass) ||
+        (other.getClass == classOf[Abstract]) ||
+        (this.getClass == classOf[Abstract])
+    }
+  }
 
   /** A utility function for getting the kind of a type expression.
     *
@@ -600,7 +606,9 @@ object AST {
 ////////////////////////////////////////////////////////////////////////// TYPES
 
   /** Base trait of the cardinality type expressions */
-  sealed trait Cardinality extends TypeExpression
+  sealed trait Cardinality extends TypeExpression {
+    def typeExp: TypeExpression
+  }
 
   /** A cardinality type expression that indicates another type expression as
     * being optional; that is with a cardinality of 0 or 1.
@@ -611,7 +619,9 @@ object AST {
     *   The type expression that is indicated as optional
     */
   case class Optional(loc: Location, typeExp: TypeExpression)
-      extends Cardinality
+      extends Cardinality {
+    override def format: String = s"${typeExp.format}?"
+  }
 
   /** A cardinality type expression that indicates another type expression as
     * having zero or more instances.
@@ -623,7 +633,9 @@ object AST {
     *   more.
     */
   case class ZeroOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality
+      extends Cardinality {
+    override def format: String = s"${typeExp.format}*"
+  }
 
   /** A cardinality type expression that indicates another type expression as
     * having one or more instances.
@@ -634,7 +646,9 @@ object AST {
     *   The type expression that is indicated with a cardinality of one or more.
     */
   case class OneOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality
+      extends Cardinality {
+    override def format: String = s"${typeExp.format}+"
+  }
 
   /** A cardinality type expression that indicates another type expression as
    * having a specific range of instances
@@ -653,7 +667,9 @@ object AST {
     typeExp: TypeExpression,
     min: Long,
     max: Long
-  ) extends Cardinality
+  ) extends Cardinality {
+    override def format: String = s"${typeExp.format}{$min,$max}"
+  }
 
   /** Represents one variant among (one or) many variants that comprise an
     * [[Enumeration]]
@@ -674,7 +690,10 @@ object AST {
     enumVal: Option[LiteralInteger] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition
+      extends Definition {
+    override def format: String = id.format
+
+  }
 
   /** A type expression that defines its range of possible values as being one
     * value from a set of enumerated values.
@@ -687,9 +706,10 @@ object AST {
     */
   case class Enumeration(
     loc: Location,
-    enumerators: Seq[Enumerator])
-      extends TypeExpression with Container[Enumerator] {
-    lazy val contents: Seq[Enumerator] = enumerators
+    enumerators: Seq[Enumerator]
+  ) extends TypeExpression {
+    override def format: String = "{ " +  enumerators.mkString(",") + " }"
+
   }
 
   /** A type expression that that defines its range of possible values as being
@@ -704,8 +724,8 @@ object AST {
   case class Alternation(
     loc: Location,
     of: Seq[TypeExpression]
-  ) extends TypeExpression with Container[TypeExpression] {
-    final lazy val contents: Seq[TypeExpression] = of
+  ) extends TypeExpression {
+    override def format: String = s"one of { ${of.mkString(", ")} }"
   }
 
   /** A definition that is a field of an aggregation type expressions. Fields
@@ -728,7 +748,10 @@ object AST {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Definition
+  ) extends Definition {
+    override def format: String = s"${id.format}: ${typeEx.format}"
+
+  }
 
   /** A type expression that contains an aggregation of fields
    *
@@ -737,6 +760,8 @@ object AST {
   trait AggregateTypeExpression extends TypeExpression with Container[Field] {
     def fields: Seq[Field]
     final lazy val contents: Seq[Field] = fields
+    override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
+
   }
 
   /** A type expression that takes a set of named fields as its value.
@@ -775,7 +800,9 @@ object AST {
     loc: Location,
     from: TypeExpression,
     to: TypeExpression)
-      extends TypeExpression
+      extends TypeExpression {
+    override def format: String = s"mapping from ${from.format} to ${to.format}"
+  }
 
   /** A type expression that defines a set of integer values from a minimum
     * value to a maximum value, inclusively.
@@ -791,7 +818,10 @@ object AST {
     loc: Location,
     min: LiteralInteger,
     max: LiteralInteger)
-      extends TypeExpression
+      extends TypeExpression {
+    override def format: String = s"range($min,$max)"
+
+  }
 
   /** A type expression whose value is a reference to an instance of an
    * entity.
@@ -804,7 +834,9 @@ object AST {
   case class ReferenceType(
     loc: Location,
     entity: EntityRef
-  ) extends TypeExpression
+  ) extends TypeExpression {
+    override def format: String = s"reference to ${entity.format}"
+  }
 
   /** A type expression that defines a string value constrained by a Java
     * Regular Expression
@@ -820,7 +852,9 @@ object AST {
   case class Pattern(
     loc: Location,
     pattern: Seq[LiteralString])
-      extends TypeExpression
+      extends TypeExpression {
+    override def format: String = s"pattern(${pattern.map(_.format).mkString(", ")})"
+  }
 
   /** A type expression for values that ensure a unique identifier for a
     * specific entity.
@@ -832,8 +866,10 @@ object AST {
     */
   case class UniqueId(
     loc: Location,
-    entityPath: PathIdentifier)
-      extends TypeExpression
+    entityPath: EntityRef
+  ) extends TypeExpression {
+    override def format: String = s"Id(${entityPath.format})"
+  }
 
   /** A type expression for an aggregation type expression that is marked as
     * being one of the four message kinds.
@@ -857,6 +893,8 @@ object AST {
     def loc: Location
 
     def kind: String
+
+    override def format: String = s"$kind"
   }
 
   object PredefinedType {
@@ -1079,7 +1117,21 @@ object AST {
 
   /** Base trait of all expressions
     */
-  sealed trait Expression extends RiddlValue
+  sealed trait Expression extends RiddlValue {
+    def isCondition: Boolean = false
+    def isNumeric: Boolean = false
+  }
+
+  /** Base trait for expressions that yield a boolean value (a condition)
+   */
+  sealed trait Condition extends Expression {
+    override def isCondition: Boolean = false
+  }
+
+  /** Base trait for expressions that yield a numeric value  */
+  sealed trait NumericExpression extends Expression {
+    override def isNumeric: Boolean = true
+  }
 
   /** Represents the use of an arithmetic operator or well-known function call.
     * The operator can be simple like addition or subtraction or complicated
@@ -1100,7 +1152,7 @@ object AST {
     loc: Location,
     operator: String,
     operands: Seq[Expression])
-      extends Expression {
+      extends NumericExpression {
     override def format: String = operator + operands.mkString("(", ",", ")")
   }
 
@@ -1114,8 +1166,21 @@ object AST {
     *   The path to the value for this expression
     */
   case class ValueExpression(loc: Location, path: PathIdentifier)
-      extends Condition {
+      extends Expression {
     override def format: String = "@" + path.format
+  }
+
+  /** Represents a expression that will be specified later and uses
+   * the ??? syntax to represent that condition.
+   *
+   * @param loc
+   * The location of the undefined condition
+   */
+  case class UndefinedExpression(loc: Location)
+    extends Expression {
+    override def format: String = Terminals.Punctuation.undefined
+
+    override def isEmpty: Boolean = true
   }
 
   /** The arguments of a [[FunctionCallExpression]] and
@@ -1189,20 +1254,32 @@ object AST {
     loc: Location,
     name: PathIdentifier,
     arguments: ArgList)
-      extends Expression with Condition {
+      extends Expression {
     override def format: String = name.format + arguments.format
   }
 
-  /** A syntactic convenience for grouping another expression.
+  case class ArbitraryOperator(
+    loc: Location,
+    opName: LiteralString,
+    arguments: Seq[Expression]
+  ) extends Expression {
+    override def format: String = opName.format + "(" +
+      arguments.map(_.format).mkString("(", ", ", ")") + ")"
+  }
+
+
+  /** A syntactic convenience for grouping a list of expressions.
    *
    * @param loc
    * The location of the expression group
-   * @param expression
-   * The expression that is grouped
+   * @param expressions
+   * The expressions that are grouped
    */
-  case class GroupExpression(loc: Location, expression: Expression)
+  case class GroupExpression(loc: Location, expressions: Seq[Expression])
     extends Expression {
-    override def format: String = s"(${expression.format})"
+    override def format: String = {
+      s"(${expressions.map(_.format).mkString(", ")})"
+    }
   }
 
 
@@ -1223,7 +1300,7 @@ object AST {
     condition: Condition,
     expr1: Expression,
     expr2: Expression)
-      extends Condition {
+      extends Expression {
     override def format: String =
       s"if(${condition.format},${expr1.format},${expr2.format})"
   }
@@ -1235,7 +1312,8 @@ object AST {
     * @param n
     *   The number to use as the value of the expression
     */
-  case class LiteralInteger(loc: Location, n: BigInt) extends Expression {
+  case class LiteralInteger(loc: Location, n: BigInt)
+    extends NumericExpression {
     override def format: String = n.toString()
   }
 
@@ -1245,15 +1323,12 @@ object AST {
     * @param d
     *   The decimal number to use as the value of the expression
     */
-  case class LiteralDecimal(loc: Location, d: BigDecimal) extends Expression {
+  case class LiteralDecimal(loc: Location, d: BigDecimal)
+    extends NumericExpression {
     override def format: String = d.toString
   }
 
   // /////////////////////////////////////////////////////////// Conditional Expressions
-
-  /** Base trait for expressions that yield a boolean value (a condition)
-    */
-  sealed trait Condition extends Expression
 
   /** A condition value for "true"
     * @param loc
@@ -1271,31 +1346,56 @@ object AST {
     override def format: String = "false"
   }
 
-  /** Represents an arbitrary expression that is specified merely with a literal
+  /** Represents an arbitrary condition that is specified merely with a literal
     * string. This can't be easily processed downstream but provides the author
-    * with the ability to include arbitrary ideas/concepts into an expression or
-    * condition For example:
+    * with the ability to include arbitrary ideas/concepts into an condition
+    * expression. For example in a when condition:
     * {{{
     *   example foo { when "the timer has expired" }
     * }}}
     * shows the use of an arbitrary condition for the "when" part of a Gherkin
-    * example. Or
-    * {{{
-    *   +(42,"number of widgets in a wack-a-mole")
-    * }}}
-    * shows the use of an arbitrary expression as the operand to an addition.
-    *
-    * Note that since the expression is arbitrary, it could be a boolean value
-    * and is thus considered to be a conditional expression too, hence the name.
+    * example.
     *
     * @param cond
     *   The arbitrary condition provided as a quoted string
     */
-  case class ArbitraryExpression(cond: LiteralString)
-    extends Expression with Condition {
+  case class ArbitraryCondition(cond: LiteralString)
+    extends Condition {
     override def loc: Location = cond.loc
 
     override def format: String = cond.format
+  }
+
+
+  /** Represents a condition that is merely a reference to some Boolean value,
+   * presumably an entity state value or parameter.
+   *
+   * @param loc
+   * The location of this condition
+   * @param path
+   * The path to the value for this condition
+   */
+  case class ValueCondition(loc: Location, path: PathIdentifier)
+    extends Condition {
+    override def format: String = "@" + path.format
+  }
+
+
+  /** A RIDDL Function call to the function identified by its path identifier
+   * with a matching set of arguments. This function must return a boolean
+   * since it is defined as a Condition.
+   *
+   * @param loc The location of the function call expression
+   * @param name The path identifier of the RIDDL Function being called
+   * @param arguments
+   *   An [[ArgList]] to pass to the function.
+   */
+  case class FunctionCallCondition(
+    loc: Location,
+    name: PathIdentifier,
+    arguments: ArgList)
+    extends  Condition {
+    override def format: String = name.format + arguments.format
   }
 
   sealed trait Comparator extends RiddlNode
@@ -1401,18 +1501,24 @@ object AST {
     override def format: String = "xor" + super.format
   }
 
-  /** Represents a condition expression that will be specified later and uses
-    * the ??? syntax to represent that condition.
-    *
-    * @param loc
-    *   The location of the undefined condition
-    */
-  case class UndefinedExpression(loc: Location)
-    extends Expression with Condition {
-    override def format: String = Terminals.Punctuation.undefined
+  /** An arbitrary expression provided by a LiteralString
+   * Arbitrary expressions conform to the type based on the context in which
+   * they are found. Another way to think of it is that arbitrary expressions
+   * are assignment compatible with any other type
+   * For example, in an arithmetic expression like this
+   * {{{
+   *   +(42,"number of widgets in a wack-a-mole")
+   * }}}
+   * the arbitrary expression given by the string conforms to a numeric type
+   * since the context is the addition of 42 and the arbitrary expression
+   */
+  case class ArbitraryExpression(cond: LiteralString)
+    extends Expression {
+    override def loc: Location = cond.loc
 
-    override def isEmpty: Boolean = true
+    override def format: String = cond.format
   }
+
 
   // /////////////////////////////////////////////////////////// Actions
 
@@ -1573,7 +1679,7 @@ object AST {
     function: PathIdentifier,
     arguments: ArgList,
     description: Option[Description] = None)
-      extends Expression with Condition with SagaStepAction {
+      extends SagaStepAction {
     override def format: String = s"call ${function.format}${arguments.format}"
   }
 
@@ -1967,7 +2073,7 @@ object AST {
   case class Invariant(
     loc: Location,
     id: Identifier,
-    expression: Condition,
+    expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends EntityDefinition {

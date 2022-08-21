@@ -19,7 +19,8 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Terminals.*
 import com.reactific.riddl.language.Terminals.Punctuation.*
-import com.reactific.riddl.language.{AST, Location}
+import com.reactific.riddl.language.AST
+import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -81,11 +82,11 @@ trait TypeParser extends ReferenceParser {
   }
 
   def uniqueIdType[u: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ roundOpen ~/ pathIdentifier.? ~ roundClose./)
+    (location ~ Predefined.Id ~ roundOpen ~/ entityRef.? ~ roundClose./)
       .map {
-        case (loc, Some(id)) => UniqueId(loc, id)
+        case (loc, Some(entityRef)) => UniqueId(loc, entityRef)
         case (loc, None) =>
-          UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
+          UniqueId(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String])))
       }
   }
 

@@ -16,7 +16,7 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.Location
+import com.reactific.riddl.language.ast.Location
 import fastparse.ParserInput
 import fastparse.internal.Util
 

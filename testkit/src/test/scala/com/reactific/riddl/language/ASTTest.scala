@@ -1,6 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.Location
 import org.scalatest.matchers.*
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -158,7 +159,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         val invariants = Seq(Invariant(
           Location(),
           Identifier(Location(), "my_id"),
-          True(Location()),
+          Some(True(Location())),
           None
         ))
         val types = Seq(

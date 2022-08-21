@@ -3,8 +3,7 @@ package com.reactific.riddl.translator.hugo
 class HugoTranslatorTest extends HugoTranslateExamplesBase {
 
   val output: String = "hugo-translator/target/translator/"
-  val roots = Map("Reactive BBQ" -> s"ReactiveBBQ/ReactiveBBQ.riddl",
-    "DokN" -> s"dokn/dokn.riddl")
+  val roots = Map("Reactive BBQ" -> s"ReactiveBBQ/ReactiveBBQ.riddl")
 
   "HugoTranslator" should {
     for { (name, fileName) <- roots } {

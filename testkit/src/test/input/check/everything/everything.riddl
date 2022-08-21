@@ -61,6 +61,8 @@ domain Everything is {
 
       type somethingDate is Date
 
+      command ACommand is {}
+
       state someState is { someField:  SomeType }
 
       function whenUnderTheInfluence is {
@@ -69,7 +71,7 @@ domain Everything is {
       }
 
       handler foo is {
-        on command Something {
+        on command ACommand {
           example only {
             given "Something arrives"
             when misc()

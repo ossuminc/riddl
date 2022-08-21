@@ -112,11 +112,73 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause sets state from a message field that does not exist" in {
-      pending // TODO: write this test case
+      val input = """
+                    |domain entityTest is {
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  type EntityCommand is command { foo: Number }
+                    |  state HamburgerState = { field1: Number }
+                    |  handler foo is {
+                    |    on command EntityCommand { example only {
+                    |      then set field1 to @bar
+                    |    } }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Path 'bar' was not resolved, in Example 'only', but should refer to a Field"
+        )
+      }
+    }
+
+    "allow an on clause too set state from a correctly typed message field " in {
+      val input = """
+                    |domain entityTest is {
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  type EntityCommand is command { foo: Number }
+                    |  state HamburgerState = { field1: Number }
+                    |  handler doit for state HamburgerState is {
+                    |    on command EntityCommand {
+                    |      then set ^^HamburgerState.field1 to @^^EntityCommand.foo
+                    |    }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+        msgs.filter(_.kind == Error) must be(empty)
+      }
     }
 
     "produce an error when on clause sets state from incompatible type of message field" in {
-      pending // TODO: write this test case
+      val input = """
+                    |domain entityTest is {
+                    |context EntityContext is {
+                    |entity Hamburger is {
+                    |  type EntityCommand is command { foo: String }
+                    |  state HamburgerState = { field1: Number }
+                    |  handler doit is {
+                    |    on command EntityCommand { example only {
+                    |      then set field1 to @foo
+                    |    } }
+                    |  }
+                    |}
+                    |}
+                    |}
+                    |""".stripMargin
+      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs, Error,
+          "assignment compatibility, but field:\n  field1"
+        )
+      }
     }
   }
 }

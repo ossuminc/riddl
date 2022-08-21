@@ -354,7 +354,8 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
-        sb.append("* ").append(invariant.expression.format).append("\n")
+        val expr = invariant.expression.map(_.format).getOrElse("<not specified>")
+        sb.append("* ").append(expr).append("\n")
         emitDetails(invariant.description, 4)
       }
     }

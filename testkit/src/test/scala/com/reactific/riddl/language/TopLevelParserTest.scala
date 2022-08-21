@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{AuthorInfo, Domain, DomainOption,
-  Identifier, RootContainer}
+import com.reactific.riddl.language.AST.{AuthorInfo, Domain, DomainOption, Identifier, RootContainer}
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.language.testkit.ParsingTestBase
 

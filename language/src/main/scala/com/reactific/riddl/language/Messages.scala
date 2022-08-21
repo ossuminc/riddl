@@ -1,5 +1,7 @@
 package com.reactific.riddl.language
 
+import com.reactific.riddl.language.ast.Location
+
 object Messages {
 
   sealed trait KindOfMessage {

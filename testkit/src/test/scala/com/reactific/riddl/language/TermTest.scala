@@ -4,6 +4,7 @@ import com.reactific.riddl.language.AST.BlockDescription
 import com.reactific.riddl.language.AST.Identifier
 import com.reactific.riddl.language.AST.LiteralString
 import com.reactific.riddl.language.AST.Term
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.testkit.ParsingTest
 class TermTest extends ParsingTest {
 

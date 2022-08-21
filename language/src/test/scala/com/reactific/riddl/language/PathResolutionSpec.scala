@@ -89,7 +89,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |domain D {
           |  type Bottom = { a: String }
           |  type Middle = { b: ^^Bottom }
-          |  type Top = { m: ^^Middle }
+          |  type Top = { m: ^Middle }
           |
           |  context C {
           |    function foo {
@@ -105,14 +105,14 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
       parseResult(RiddlParserInput(input))
     }
 
-    "resolve many" in {
+    "resolve complicated paths" in {
       val input =
         """
           |domain A {
           |  type Top = String
           |  domain B {
           |    context C {
-          |      type Simple = String(,30)
+          |      type Simple = String
           |    }
           |    type Simple = .C.Simple // relative to context
           |    type BSimple = A.B.C.Simple // full path
@@ -128,14 +128,13 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |        }
           |        handler foo for state ^only is {
           |          on event ^^blah {
-          |            then set a to @dSimple
+          |            then set ^^only.a to @dSimple
           |          }
           |        }
           |      }
           |    }
           |  }
           |}
-          |
           |""".stripMargin
 
       parseResult(RiddlParserInput(input))

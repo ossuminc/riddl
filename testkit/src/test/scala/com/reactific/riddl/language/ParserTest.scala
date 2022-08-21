@@ -211,9 +211,9 @@ class ParserTest extends ParsingTest {
         case Right((content, rpi)) => content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            ArbitraryExpression(
+            Some(ArbitraryCondition(
               LiteralString((1, 22, rpi), "x is greater or equal to 10")
-            ),
+            )),
             None
           )
       }
@@ -275,7 +275,7 @@ class ParserTest extends ParsingTest {
                 ),
                 Seq(WhenClause(
                   (9, 7, rpi),
-                  ArbitraryExpression(
+                  ArbitraryCondition(
                     LiteralString((9, 12, rpi), "I go fishing")
                   )
                 )),

@@ -87,11 +87,15 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
+  private def defaultFail(msgs: Messages): Assertion = {
+    fail(msgs.map(_.format).mkString("\n"))
+  }
   def validateFile(
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
   )(validation: (RootContainer, Messages) => Assertion
+    = (_,msgs) => defaultFail(msgs)
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
@@ -128,6 +132,16 @@ abstract class ValidatingTest extends ParsingTest {
         errors mustBe empty
         warnings mustBe empty
     }
+  }
+
+  def assertValidationMessage(
+    msgs: Messages,
+    searchFor: String
+  )(f: Message => Boolean ): Assertion = {
+    assert(
+      msgs.exists(f),
+      s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"
+    )
   }
 
   def assertValidationMessage(

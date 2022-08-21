@@ -17,7 +17,7 @@ class InvariantValidator extends ValidatingTest {
         assertValidationMessage(
           msgs,
           MissingWarning,
-          "Condition in Invariant 'small' should not be empty"
+          "condition in Invariant 'small' should not be empty"
         )
         assertValidationMessage(
           msgs,
@@ -50,7 +50,7 @@ class InvariantValidator extends ValidatingTest {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
-          | invariant large is { and(@Field.name1,@Field.name2) }
+          | invariant large is { true }
           |}
           |""".stripMargin
       ) { (_, _, msgs) =>

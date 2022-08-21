@@ -3,6 +3,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.Validation.ValidationState
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
