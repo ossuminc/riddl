@@ -1,0 +1,11 @@
+Missing: ambiguity.riddl(3:5): Entity 'Product' in Context 'ProductInventory' should have content.
+Missing: ambiguity.riddl(2:3): Context 'ProductInventory' should have a description
+Style: ambiguity.riddl(6:5): Entity 'Product' overloads Entity 'Product' at ambiguity.riddl(3:5)
+Missing: ambiguity.riddl(1:1): Domain 'Inventory' should have a description
+Missing: ambiguity.riddl(5:3): Context 'Vendor' should have a description
+Missing: ambiguity.riddl(6:5): Entity 'Product' in Context 'Vendor' should have content.
+Error: ambiguity.riddl(9:19): Path 'Product' was not resolved, in Type 'Alias', but should refer to an Entity
+Error: ambiguity.riddl(9:19): Path reference 'Product' is ambiguous. Definitions are:
+  Product (ambiguity.riddl(3:5))
+  Product (ambiguity.riddl(6:5))
+Missing: ambiguity.riddl(9:3): Type 'Alias' should have a description
