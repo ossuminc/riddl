@@ -12,4 +12,5 @@ In this section we will explore what RIDDL is, by answering these questions:
 * [What can RIDDL do?](what-can-riddl-do)
 * [Why is RIDDL needed?](why-is-riddl-needed)
 
-Click on the above links to explore. 
+Click on the above links to explore. Or, go to the next recommended section: 
+[Conceptual Overview](../concepts).
