@@ -19,6 +19,11 @@ provides a high level introduction to RIDDL, defines what RIDDL is,
 what it can do, and what it is based upon.  Definitely start 
 with the [Introduction](introduction) if you're new to RIDDL.
 
+There is a [Conceptual Overview](concepts) section which describes the various
+concepts used by RIDDL, their relationships, and their utility. This section
+will give you a complete understanding of the concepts without worrying about
+the syntax of the language that is used to express those concepts. 
+
 There is an [Audiences](audience) section which provides learning 
 paths for different kinds of readers, to wit:
 * [Domain Expert's Guide](audience/domain-experts-guide): for knowledge 
