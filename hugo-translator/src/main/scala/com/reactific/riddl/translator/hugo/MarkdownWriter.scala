@@ -48,7 +48,7 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
 
   def containerWeight: Int = 2 * 5
 
-  def fileHead(cont: ParentDefOf[Definition]): this.type = {
+  def fileHead(cont: Definition): this.type = {
     fileHead(
       cont.id.format,
       containerWeight,

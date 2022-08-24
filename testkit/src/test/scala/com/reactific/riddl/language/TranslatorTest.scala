@@ -1,7 +1,6 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Definition
-import com.reactific.riddl.language.AST.ParentDefOf
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.testkit.ValidatingTest
 import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
@@ -39,7 +38,7 @@ class TranslatorTest extends ValidatingTest {
       val state = TestTranslatorState(options)
 
       val parents = scala.collection.mutable.Stack
-        .empty[ParentDefOf[Definition]]
+        .empty[Definition]
       Folding.foldLeftWithStack(state, parents)(root) {
         case (state, definition, stack) =>
           log.info(stack.reverse.mkString(".") + "." + definition.id.format)

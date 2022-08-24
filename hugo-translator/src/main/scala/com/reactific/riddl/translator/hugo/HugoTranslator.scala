@@ -252,7 +252,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
   }
 
-  def parents(stack: Seq[ParentDefOf[Definition]]): Seq[String] = {
+  def parents(stack: Seq[Definition]): Seq[String] = {
     // The stack goes from most nested to highest. We don't want to change the
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
@@ -262,9 +262,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   def setUpContainer(
-    c: ParentDefOf[Definition],
+    c: Definition,
     state: HugoTranslatorState,
-    stack: Seq[ParentDefOf[Definition]]
+    stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
     state.addDir(c.id.format)
     val pars = parents(stack)
@@ -274,7 +274,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   def setUpDefinition(
     d: Definition,
     state: HugoTranslatorState,
-    stack: Seq[ParentDefOf[Definition]]
+    stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
     val pars = parents(stack)
     state.addFile(pars, d.id.format + ".md") -> pars
@@ -299,7 +299,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     }
     writeConfigToml(options, someAuthors.headOption)
     val state = HugoTranslatorState(options)
-    val parentStack = mutable.Stack[ParentDefOf[Definition]]()
+    val parentStack = mutable.Stack[Definition]()
 
     val newState = Folding.foldLeftWithStack(state, parentStack)(root) {
       case (st, e: AST.Entity, stack) =>

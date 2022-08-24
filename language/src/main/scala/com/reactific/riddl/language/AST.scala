@@ -34,121 +34,7 @@ import scala.reflect.{ClassTag, classTag}
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST {
-
-  /** The root trait of all things RIDDL AST. Every node in the tree is a
-    * RiddlNode.
-    */
-  sealed trait RiddlNode {
-    /** Format the node to a string */
-    def format: String = ""
-
-    /** Determine if this node is a container or not */
-    def isContainer: Boolean = false
-
-    /** determine if this node is empty or not. Non-containers are always empty */
-    def isEmpty: Boolean = false
-
-    @deprecatedOverriding(
-      "nonEmpty is defined as !isEmpty; override isEmpty instead"
-    )
-    final def nonEmpty: Boolean = !isEmpty
-  }
-
-  /** The root trait of all parsable values. If a parser returns something, its
-   * a RiddlValue. The distinguishing factor is the inclusion of the parsing
-   * location given by the `loc` field.
-   */
-  sealed trait RiddlValue extends RiddlNode {
-    /** The location in the parse at which this RiddlValue occurs */
-    def loc: Location
-  }
-
-  /** A RiddlValue that is a parsed identifier, typically the name of a
-    * definition.
-    *
-    * @param loc
-    *   The location in the input where the identifier starts
-    * @param value
-    *   The parsed value of the identifier
-    */
-  case class Identifier(loc: Location, value: String) extends RiddlValue {
-    override def format: String = value
-
-    override def isEmpty: Boolean = value.isEmpty
-  }
-  object Identifier {
-    val empty: Identifier = Identifier(Location.empty, "")
-  }
-
-  /** Represents a literal string parsed between quote characters in the input
-    *
-    * @param loc
-    *   The location in the input of the opening quote character
-    * @param s
-    *   The parsed value of the string content
-    */
-  case class LiteralString(loc: Location, s: String) extends Condition {
-    override def format = s"\"$s\""
-
-    override def isEmpty: Boolean = s.isEmpty
-  }
-
-  /** Represents a segmented identifier to a definition in the model. Path
-    * Identifiers are parsed from a dot-separated list of identifiers in the
-    * input. Path identifiers are used to reference other definitions in the
-    * model.
-    *
-    * @param loc
-    *   Location in the input of the first letter of the path identifier
-    * @param value
-    *   The list of strings that make up the path identifier
-    */
-  case class PathIdentifier(loc: Location, value: Seq[String])
-      extends RiddlValue {
-    override def format: String = {
-      value.foldLeft(Seq.empty[String]) {
-        case (r: Seq[String], s: String) =>
-        if (s.isEmpty) {
-          r :+ "^"
-        } else if (r.isEmpty) {
-          Seq(s)
-        } else if (r.last != "^") {
-          r ++ Seq(".", s)
-        } else {
-          r :+ s
-        }
-      }.mkString
-    }
-
-    override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
-  }
-
-  /** The description of a definition. All definitions have a name and an
-   * optional description. This class provides the description part.
-   *
-   */
-  trait Description extends RiddlValue {
-    def loc: Location
-    def lines: Seq[LiteralString]
-    override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
-  }
-
-  case class BlockDescription(
-    loc: Location = Location.empty,
-    lines: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends Description {
-  }
-
-  case class FileDescription(
-    loc: Location,
-    file: Path
-  ) extends Description {
-    lazy val lines: Seq[LiteralString] = {
-      val src = scala.io.Source.fromFile(file.toFile)
-      src.getLines().toSeq.map(LiteralString(loc, _))
-    }
-  }
+object AST extends ast.Abstract {
 
   /** A reference to a definition of a specific type.
     *
@@ -162,16 +48,6 @@ object AST {
       s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
     }
     override def isEmpty: Boolean = id.isEmpty
-  }
-
-  sealed trait BrieflyDescribedValue extends RiddlValue {
-    def brief: Option[LiteralString]
-  }
-
-  /** Base trait of all values that have an optional Description
-    */
-  sealed trait DescribedValue extends RiddlValue {
-    def description: Option[Description]
   }
 
   /** A function to translate between a definition and the keyword that
@@ -285,20 +161,6 @@ object AST {
     }
   }
 
-  /** Base trait for all definitions requiring an identifier for the definition
-    * and providing the identify method to yield a string that provides the kind
-    * and name
-    */
-  sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
-    def id: Identifier
-    def kind: String = AST.kind(this)
-    def kindId: String = s"$kind '${id.format}'"
-    def identify: String = kindId
-    def identifyWithLoc: String = s"$kindId at $loc"
-    def isImplicit: Boolean = id.value.isEmpty
-
-  }
-
   /** Base trait of any definition that is in the content of an adaptor
     */
   sealed trait AdaptorDefinition extends Definition
@@ -319,38 +181,16 @@ object AST {
     */
   sealed trait PlantDefinition extends Definition
 
-  /** Base trait of any definition that is also a ContainerValue
-    *
-    * @tparam D
-    *   The kind of definition that is contained by the container
-    */
-  sealed trait Container[+D <: RiddlValue] extends RiddlValue {
-    def contents: Seq[D]
-    override def isEmpty: Boolean = contents.isEmpty
-    override def isContainer: Boolean = true
-    def isRootContainer: Boolean = false
-  }
-
-  /** The parent of a definition as a definition and a container. This type is
-    * widely used to reference any definition that contains other definitions
-    * and is therefore the basis for traversal of the tree.
-    * @tparam D
-    *   The kind of definition that is contained by the container
-    */
-  sealed trait ParentDefOf[+D <: Definition]
-      extends Definition with Container[D]
 
   /** Base trait of any definition that is a container and contains types
    */
-  sealed trait TypeContainer[+D <: Definition] extends ParentDefOf[D] {
+  trait TypeContainer  {
     def types: Seq[Type]
     def collectMessages: Seq[Type] = {
       types.filter(_.isMessageKind)
     }
   }
 
-
-  type Parent = ParentDefOf[Definition]
 
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms {
@@ -365,6 +205,8 @@ object AST {
     description: Option[Description] = None)
       extends DomainDefinition with ContextDefinition with PlantDefinition {
     override def isEmpty: Boolean = description.isEmpty
+    final val kind: String = "Term"
+    final val contents: Seq[Definition] = Seq.empty[Definition]
   }
 
   /** Added to definitions that support includes */
@@ -374,9 +216,9 @@ object AST {
 
   case class Include(
     loc: Location = Location(RiddlParserInput.empty),
-    contents: Seq[Definition] = Seq.empty[ParentDefOf[Definition]],
+    contents: Seq[Definition] = Seq.empty[Definition],
     path: Option[Path] = None)
-      extends ParentDefOf[Definition]
+      extends Definition
       with AdaptorDefinition
       with ContextDefinition
       with DomainDefinition
@@ -390,6 +232,7 @@ object AST {
     def description: Option[Description] = None
 
     override def isRootContainer: Boolean = true
+    final val kind: String = "Include"
 
   }
 
@@ -402,8 +245,7 @@ object AST {
   case class RootContainer(
     contents: Seq[Domain] = Nil,
     inputs: Seq[RiddlParserInput] = Nil
-  )
-      extends ParentDefOf[Domain] {
+  ) extends Definition {
 
     override def isRootContainer: Boolean = true
 
@@ -418,6 +260,8 @@ object AST {
     override def description: Option[Description] = None
 
     override def brief: Option[LiteralString] = None
+    final val kind: String = "Root"
+
   }
 
   object RootContainer {
@@ -425,45 +269,6 @@ object AST {
       RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
   }
 
-  /** Base trait for option values for any option of a definition.
-    */
-  trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name + args.map(_.format)
-      .mkString("(", ", ", ")")
-  }
-
-  /** Base trait that can be used in any definition that takes options and
-    * ensures the options are defined, can be queried, and formatted.
-    *
-    * @tparam T
-    *   The sealed base trait of the permitted options for this definition
-    */
-  trait OptionsDef[T <: OptionValue] extends RiddlValue {
-    def options: Seq[T]
-
-    def hasOption[OPT <: T: ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-
-    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] =
-      options
-        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-        .map(_.args)
-
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 =>
-          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
-
-    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
-  }
 
   // ////////////////////////////////////////////////////////// TYPES
 
@@ -692,7 +497,8 @@ object AST {
     description: Option[Description] = None)
       extends Definition {
     override def format: String = id.format
-
+    final val kind: String = "Enumerator"
+    final def contents: Seq[Definition] = Seq.empty[Definition]
   }
 
   /** A type expression that defines its range of possible values as being one
@@ -750,6 +556,8 @@ object AST {
     description: Option[Description] = None
   ) extends Definition {
     override def format: String = s"${id.format}: ${typeEx.format}"
+    final val kind: String = "Field"
+    final def contents: Seq[Definition] = Seq.empty[Definition]
 
   }
 
@@ -976,7 +784,7 @@ object AST {
   /** A predefined type expression for a real number value.
     *
     * @param loc
-    *   The locaiton of the real number type expression
+    *   The location of the real number type expression
     */
   case class Real(loc: Location) extends PredefinedType {
     def kind: String = "Real"
@@ -1092,7 +900,7 @@ object AST {
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Definition]
+      extends Definition
       with ContextDefinition
       with EntityDefinition
       with DomainDefinition with FunctionDefinition {
@@ -1107,6 +915,7 @@ object AST {
     def isMessageKind: Boolean = {
       typ.isInstanceOf[MessageType]
     }
+    final val kind: String = "Type"
   }
   type Command = Type
   type Event = Type
@@ -1222,7 +1031,7 @@ object AST {
   }
 
   /** A helper class for creating expressions that represent the
-   * creation of a new entity identifier for a specific kidn of entity.
+   * creation of a new entity identifier for a specific kind of entity.
    *
    * @param loc
    * The location of the expression in the source
@@ -1884,9 +1693,9 @@ object AST {
     buts: Seq[ButClause] = Seq.empty[ButClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
-      extends ProcessorDefinition with FunctionDefinition  {
-    override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
-      thens.isEmpty && buts.isEmpty
+      extends LeafDefinition
+        with ProcessorDefinition with FunctionDefinition  {
+    final val kind: String = "Example"
   }
 
   // ////////////////////////////////////////////////////////// Entities
@@ -2042,8 +1851,7 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Definition]
-      with EntityDefinition
+      extends EntityDefinition
       with ContextDefinition with FunctionDefinition {
     override lazy val contents: Seq[Definition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
@@ -2053,6 +1861,9 @@ object AST {
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
       output.isEmpty
+
+    final val kind: String = "Function"
+
   }
 
   /** An invariant expression that can be used in the definition of an entity.
@@ -2076,8 +1887,8 @@ object AST {
     expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends EntityDefinition {
-    override def isEmpty: Boolean = expression.isEmpty
+      extends LeafDefinition with EntityDefinition {
+    final val kind: String = "Invariant"
   }
 
   sealed trait HandlerDefinition extends Definition
@@ -2103,10 +1914,12 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] with HandlerDefinition {
+      extends HandlerDefinition {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
     override def isEmpty: Boolean = examples.isEmpty
     override def contents: Seq[Example] = examples
+    final val kind: String = "On Clause"
+
   }
 
   /** A named handler of messages (commands, events, queries) that bundles
@@ -2134,11 +1947,11 @@ object AST {
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[OnClause]
-      with ContextDefinition
-      with EntityDefinition {
+      extends ContextDefinition with EntityDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[OnClause] = clauses
+    final val kind: String = "Handler"
+
   }
 
   /** A reference to a Handler
@@ -2174,9 +1987,10 @@ object AST {
     typeEx: Aggregation,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Field] with EntityDefinition {
+      extends EntityDefinition {
 
     override def contents: Seq[Field] = typeEx.fields
+    final val kind: String = "State"
   }
 
   /** A reference to an entity's state definition
@@ -2226,8 +2040,8 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends TypeContainer[EntityDefinition]
-      with ContextDefinition
+      extends ContextDefinition
+      with TypeContainer
       with OptionsDef[EntityOption]
       with WithIncludes {
 
@@ -2235,10 +2049,12 @@ object AST {
       states ++ types ++ handlers ++ functions ++ invariants ++ includes
     }
 
+    final val kind: String = "Entity"
+
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
 
-  sealed trait Adaptation extends AdaptorDefinition with ParentDefOf[Example] {
+  sealed trait Adaptation extends AdaptorDefinition {
     def messageRef: MessageRef
     def examples: Seq[Example]
   }
@@ -2270,6 +2086,8 @@ object AST {
     description: Option[Description] = None)
       extends Adaptation {
     override def contents: Seq[Example] = examples
+    final val kind: String = "Event Command Adaptation"
+
   }
 
   /** The specification of a single adaptation based on message
@@ -2300,6 +2118,7 @@ object AST {
     description: Option[Description] = None)
     extends Adaptation {
     override def contents: Seq[Example] = examples
+    final val kind: String = "Command Command Adaptation"
   }
 
   /** An adaptation that takes an action on event receipt
@@ -2328,6 +2147,7 @@ object AST {
       extends Adaptation {
     def contents: Seq[Example] = examples
     override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
+    final val kind: String = "Event Action Adaptation"
   }
 
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
@@ -2358,10 +2178,10 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[AdaptorDefinition]
-      with ContextDefinition
+      extends ContextDefinition
       with WithIncludes {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
+    final val kind: String = "Adaptor"
   }
 
   case class Projection(
@@ -2370,8 +2190,9 @@ object AST {
     fields: Seq[Field],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends ParentDefOf[Field] with ContextDefinition {
+  ) extends ContextDefinition {
     lazy val contents: Seq[Field] = fields
+    final val kind: String = "Projection"
   }
 
   /** A reference to an context's projection definition
@@ -2484,13 +2305,14 @@ object AST {
     projections: Seq[Projection] = Seq.empty[Projection],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends TypeContainer[ContextDefinition]
-      with DomainDefinition
+      extends DomainDefinition
+      with TypeContainer
       with OptionsDef[ContextOption]
       with WithIncludes
       with WithTerms {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
       sagas ++ functions ++ terms ++ includes
+    final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
@@ -2515,7 +2337,9 @@ object AST {
     transmitType: Option[TypeRef],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends PlantDefinition with ContextDefinition
+      extends LeafDefinition with PlantDefinition with ContextDefinition {
+    final val kind: String = "Pipe"
+  }
 
   /** Base trait of definitions defined in a processor
     */
@@ -2523,7 +2347,7 @@ object AST {
 
   /** Base trait of an Inlet or Outlet definition
     */
-  trait Streamlet extends ProcessorDefinition
+  trait Streamlet extends LeafDefinition with ProcessorDefinition
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -2545,7 +2369,9 @@ object AST {
     entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet
+      extends Streamlet {
+    final val kind: String = "Inlet"
+  }
 
   /** A streamlet that supports output of data of a particular type.
     *
@@ -2567,7 +2393,9 @@ object AST {
     entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet
+      extends Streamlet {
+    final val kind: String = "Outlet"
+  }
 
   sealed trait ProcessorShape extends RiddlValue {
     def keyword: String
@@ -2626,10 +2454,10 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[ProcessorDefinition] with PlantDefinition
-      with ContextDefinition {
+      extends PlantDefinition with ContextDefinition {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
       examples
+    final val kind: String = shape.getClass.getSimpleName
   }
 
   /** A reference to a pipe
@@ -2701,7 +2529,10 @@ object AST {
     pipe: PipeRef,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Joint
+      extends Joint {
+    final val kind: String = "Example"
+    def contents: Seq[Definition] = Seq.empty[Definition]
+  }
 
   /** A joint that connects a [[Processor]]'s [[Outlet]] to a [[Pipe]].
     *
@@ -2725,7 +2556,10 @@ object AST {
     pipe: PipeRef,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Joint
+      extends Joint {
+    final val kind: String = "Example"
+    def contents: Seq[Definition] = Seq.empty[Definition]
+  }
 
   /** The definition of a plant which brings pipes, processors and joints
     * together into a closed system of data processing.
@@ -2758,12 +2592,12 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[PlantDefinition]
-      with DomainDefinition
+      extends DomainDefinition
       with WithIncludes
       with WithTerms {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
       outJoints ++ terms ++ includes
+    final val kind: String = "Plant"
   }
 
   /** The definition of one step in a saga with its undo step and example.
@@ -2791,8 +2625,9 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] {
+      extends Definition {
     def contents: Seq[Example] = examples
+    final val kind: String = "SagaStep"
   }
 
   /** Base trait for all options applicable to a saga.
@@ -2847,14 +2682,13 @@ object AST {
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Definition]
-      with OptionsDef[SagaOption]
-      with ContextDefinition {
+      extends ContextDefinition with OptionsDef[SagaOption] {
     lazy val contents: Seq[Definition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++
         sagaSteps
     }
+    final val kind: String = "Saga"
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
@@ -2899,8 +2733,9 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] with DomainDefinition {
+      extends DomainDefinition {
     override def contents: Seq[Example] = examples
+    final val kind: String = "Story"
   }
 
   /** A reference to a domain definition
@@ -2944,6 +2779,8 @@ object AST {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
+    final val kind: String = "Author Info"
+    def contents: Seq[Definition] = Seq.empty[Definition]
   }
 
   /** Base trait for all options a Domain can have.
@@ -2999,7 +2836,7 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends TypeContainer[DomainDefinition]
+      extends TypeContainer
       with OptionsDef[DomainOption]
       with DomainDefinition
       with WithIncludes
@@ -3008,5 +2845,6 @@ object AST {
       domains ++ types ++ contexts ++ plants ++ stories ++ terms ++
         includes ++ authors
     }
+    final val kind: String = "Domain"
   }
 }

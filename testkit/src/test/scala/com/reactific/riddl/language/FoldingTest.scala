@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Definition, ParentDefOf}
+import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.testkit.ParsingTest
 
 class FoldingTest extends ParsingTest {
@@ -197,8 +197,8 @@ class FoldingTest extends ParsingTest {
           class Tracking extends Folding.Folder[Tracker] {
             def openContainer(
               t: Tracker,
-              container: ParentDefOf[Definition],
-              stack: Seq[ParentDefOf[Definition]]
+              container: Definition,
+              stack: Seq[Definition]
             ): Tracker = {
               println(
                 "> " + container.identify + "(" + stack.map(_.identify)
@@ -210,7 +210,7 @@ class FoldingTest extends ParsingTest {
             def doDefinition(
               t: Tracker,
               definition: Definition,
-              stack: Seq[ParentDefOf[Definition]]
+              stack: Seq[Definition]
             ): Tracker = {
               println(
                 "==" + definition.identify + "(" + stack.map(_.identify)
@@ -221,8 +221,8 @@ class FoldingTest extends ParsingTest {
 
             def closeContainer(
               t: Tracker,
-              container: ParentDefOf[Definition],
-              stack: Seq[ParentDefOf[Definition]]
+              container: Definition,
+              stack: Seq[Definition]
             ): Tracker = {
               println(
                 "< " + container.identify + "(" + stack.map(_.identify)
@@ -234,11 +234,11 @@ class FoldingTest extends ParsingTest {
           }
           val tracking = new Tracking
           val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 17
-          val expectedDefinitions = 9
+          val expectedContainers = 21
+          val expectedLeaves = 5
           tracked.contPush mustBe expectedContainers
           tracked.contPush mustBe tracked.contPop
-          tracked.defs mustBe expectedDefinitions
+          tracked.defs mustBe expectedLeaves
       }
     }
   }

@@ -437,8 +437,8 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
   class ReformatFolder extends Folder[ReformatState] {
     override def openContainer(
       state: ReformatState,
-      container: ParentDefOf[Definition],
-      parents: Seq[ParentDefOf[Definition]]
+      container: Definition,
+      parents: Seq[Definition]
     ): ReformatState = {
       container match {
         case s: Story           => openStory(state, s)
@@ -456,10 +456,10 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case _: RootContainer       =>
           // ignore
           state
-        case container: ParentDefOf[Definition] with OptionsDef[?] =>
+        case container: Definition with OptionsDef[?] =>
           // Applies To: Context, Entity, Interaction
           state.withCurrent(_.openDef(container).emitOptions(container))
-        case container: ParentDefOf[Definition] =>
+        case container: Definition =>
           // Applies To: Saga, Plant, Handler, Processor
           state.withCurrent(_.openDef(container))
       }
@@ -468,7 +468,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     override def doDefinition(
       state: ReformatState,
       definition: Definition,
-      parents: Seq[ParentDefOf[Definition]]
+      parents: Seq[Definition]
     ): ReformatState = {
       definition match {
         case example: Example => state.withCurrent(_.emitExample(example))
@@ -480,19 +480,21 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case outlet: Outlet => doOutlet(state, outlet)
         case joint: Joint   => doJoint(state, joint)
         case _: Field => state // was handled by Type case in openContainer
-        case _ =>
+        /* case _ =>
           require(
             !definition.isInstanceOf[ParentDefOf[Definition]],
             s"doDefinition should not be called for ${definition.getClass.getName}"
           )
           state
+
+         */
       }
     }
 
     override def closeContainer(
       state: ReformatState,
-      container: ParentDefOf[Definition],
-      parents: Seq[ParentDefOf[Definition]]
+      container: Definition,
+      parents: Seq[Definition]
     ): ReformatState = {
       container match {
         case _: Type      => state // openContainer did all of it
@@ -504,7 +506,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case _: RootContainer              =>
           // ignore
           state
-        case container: ParentDefOf[Definition] =>
+        case container: Definition =>
           // Applies To: Domain, Context, Entity, Adaptor, Interaction, Saga,
           // Plant, Processor, Function, SagaStep
           state.withCurrent(_.closeDef(container))
@@ -657,7 +659,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       )
     }
 
-    def openFunction[TCD <: ParentDefOf[Definition]](
+    def openFunction[TCD <: Definition](
       state: ReformatState,
       function: Function
     ): ReformatState = {

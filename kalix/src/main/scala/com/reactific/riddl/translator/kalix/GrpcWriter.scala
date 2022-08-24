@@ -10,7 +10,7 @@ import java.nio.file.Path
 case class GrpcWriter(
   filePath: Path,
   packages: Seq[String],
-  parents: Seq[Parent],
+  parents: Seq[Definition],
   symTab: SymbolTable
 )
     extends TextFileWriter {
