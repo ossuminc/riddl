@@ -1,11 +1,3 @@
-Missing: plant.riddl(25:3): Joint 'forecast' should have a description
-Missing: plant.riddl(26:3): Joint 'temp_in' should have a description
-Missing: plant.riddl(27:3): Joint 'temp_out' should have a description
-Missing: plant.riddl(28:3): Joint 'temp_changes' should have a description
-Missing: plant.riddl(9:5): Inlet 'WeatherSource' should have a description
-Missing: plant.riddl(10:5): Outlet 'OutTemp' should have a description
-Missing: plant.riddl(14:5): Inlet 'InTemp' should have a description
-Missing: plant.riddl(5:5): Outlet 'WeatherSink' should have a description
 Error: plant.riddl(10:23): Path 'Temperature' was not resolved, in Outlet 'OutTemp', but should refer to a Type
 Error: plant.riddl(9:28): Path 'Forecast' was not resolved, in Inlet 'WeatherSource', but should refer to a Type
 Error: plant.riddl(5:27): Path 'Forecast' was not resolved, in Outlet 'WeatherSink', but should refer to a Type

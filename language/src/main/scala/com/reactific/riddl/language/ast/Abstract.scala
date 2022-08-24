@@ -215,8 +215,12 @@ trait Abstract {
   }
 
   trait LeafDefinition extends Definition {
-    final override def isEmpty: Boolean = true
+    override def isEmpty: Boolean = true
     final def contents: Seq[Definition] = Seq.empty[Definition]
+  }
+
+  trait AlwaysEmpty extends Definition {
+    final def isEMpty: Boolean = true
   }
 
 }

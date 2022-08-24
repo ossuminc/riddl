@@ -480,14 +480,12 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case outlet: Outlet => doOutlet(state, outlet)
         case joint: Joint   => doJoint(state, joint)
         case _: Field => state // was handled by Type case in openContainer
-        /* case _ =>
-          require(
-            !definition.isInstanceOf[ParentDefOf[Definition]],
+        case _ =>
+          /* require(
+            !definition.isInstanceOf[Definition],
             s"doDefinition should not be called for ${definition.getClass.getName}"
-          )
+          )*/
           state
-
-         */
       }
     }
 

@@ -197,21 +197,21 @@ object AST extends ast.Abstract {
     def terms: Seq[Term]
   }
 
+  /** Added to definitions that support includes */
+  sealed trait WithIncludes {
+    def includes: Seq[Include]
+  }
+
+
   /** A term definition for the glossary */
   case class Term(
     loc: Location,
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends DomainDefinition with ContextDefinition with PlantDefinition {
+      extends LeafDefinition with DomainDefinition with ContextDefinition with PlantDefinition {
     override def isEmpty: Boolean = description.isEmpty
     final val kind: String = "Term"
-    final val contents: Seq[Definition] = Seq.empty[Definition]
-  }
-
-  /** Added to definitions that support includes */
-  sealed trait WithIncludes {
-    def includes: Seq[Include]
   }
 
   case class Include(
@@ -495,10 +495,10 @@ object AST extends ast.Abstract {
     enumVal: Option[LiteralInteger] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition {
+      extends LeafDefinition {
     override def format: String = id.format
     final val kind: String = "Enumerator"
-    final def contents: Seq[Definition] = Seq.empty[Definition]
+    override def isEmpty: Boolean = true
   }
 
   /** A type expression that defines its range of possible values as being one
@@ -554,11 +554,9 @@ object AST extends ast.Abstract {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Definition {
+  ) extends LeafDefinition with AlwaysEmpty with SagaDefinition {
     override def format: String = s"${id.format}: ${typeEx.format}"
     final val kind: String = "Field"
-    final def contents: Seq[Definition] = Seq.empty[Definition]
-
   }
 
   /** A type expression that contains an aggregation of fields
@@ -1696,7 +1694,8 @@ object AST extends ast.Abstract {
       extends LeafDefinition
         with ProcessorDefinition with FunctionDefinition  {
     final val kind: String = "Example"
-  }
+    override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
+      thens.isEmpty && buts.isEmpty  }
 
   // ////////////////////////////////////////////////////////// Entities
 
@@ -1888,6 +1887,7 @@ object AST extends ast.Abstract {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends LeafDefinition with EntityDefinition {
+    override def isEmpty: Boolean = expression.isEmpty
     final val kind: String = "Invariant"
   }
 
@@ -2338,6 +2338,7 @@ object AST extends ast.Abstract {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with PlantDefinition with ContextDefinition {
+    override def isEmpty: Boolean = transmitType.isEmpty
     final val kind: String = "Pipe"
   }
 
@@ -2369,7 +2370,7 @@ object AST extends ast.Abstract {
     entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet {
+      extends Streamlet with AlwaysEmpty {
     final val kind: String = "Inlet"
   }
 
@@ -2393,7 +2394,7 @@ object AST extends ast.Abstract {
     entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet {
+      extends Streamlet with AlwaysEmpty {
     final val kind: String = "Outlet"
   }
 
@@ -2505,7 +2506,8 @@ object AST extends ast.Abstract {
 
   /** Sealed base trait for both kinds of Joint definitions
     */
-  sealed trait Joint extends PlantDefinition with ContextDefinition
+  sealed trait Joint extends LeafDefinition with AlwaysEmpty
+    with PlantDefinition with ContextDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *
@@ -2530,8 +2532,7 @@ object AST extends ast.Abstract {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Joint {
-    final val kind: String = "Example"
-    def contents: Seq[Definition] = Seq.empty[Definition]
+    final val kind: String = "Inlet Joint"
   }
 
   /** A joint that connects a [[Processor]]'s [[Outlet]] to a [[Pipe]].
@@ -2557,8 +2558,7 @@ object AST extends ast.Abstract {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Joint {
-    final val kind: String = "Example"
-    def contents: Seq[Definition] = Seq.empty[Definition]
+    final val kind: String = "Outlet Joint"
   }
 
   /** The definition of a plant which brings pipes, processors and joints
@@ -2600,6 +2600,8 @@ object AST extends ast.Abstract {
     final val kind: String = "Plant"
   }
 
+  sealed trait SagaDefinition extends Definition
+
   /** The definition of one step in a saga with its undo step and example.
     *
     * @param loc
@@ -2625,7 +2627,7 @@ object AST extends ast.Abstract {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition {
+      extends SagaDefinition {
     def contents: Seq[Example] = examples
     final val kind: String = "SagaStep"
   }
@@ -2683,7 +2685,7 @@ object AST extends ast.Abstract {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ContextDefinition with OptionsDef[SagaOption] {
-    lazy val contents: Seq[Definition] = {
+    lazy val contents: Seq[SagaDefinition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++
         sagaSteps
@@ -2775,12 +2777,11 @@ object AST extends ast.Abstract {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends DomainDefinition {
+      extends LeafDefinition with DomainDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
     final val kind: String = "Author Info"
-    def contents: Seq[Definition] = Seq.empty[Definition]
   }
 
   /** Base trait for all options a Domain can have.

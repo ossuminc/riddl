@@ -17,7 +17,6 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
@@ -29,6 +28,7 @@ import scala.util.matching.Regex
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 /** Validates an AST */
 object Validation {
@@ -39,10 +39,11 @@ object Validation {
   ): Messages.Messages = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, root, commonOptions)
+    val parents = mutable.Stack.empty[Definition]
     val result = try {
-      val folder = new ValidationFolder
-      val s1 = Folding.foldAround(state, root, folder)
-      checkOverloads(symTab, s1)
+      state
+        .validateDefinitions(root, parents)
+        .checkOverloads(symTab)
     } catch {
       case NonFatal(xcptn) =>
         val message =
@@ -52,35 +53,413 @@ object Validation {
     result.messages.sortBy(_.loc)
   }
 
-  def checkOverloads(
-    symbolTable: SymbolTable,
-    state: ValidationState
-  ): ValidationState = {
-    symbolTable.foreachOverloadedSymbol { defs: Seq[Seq[Definition]] =>
-      state.checkSequence(defs) { (s, defs2) =>
-        if (defs2.sizeIs == 2) {
-          val first = defs2.head
-          val last = defs2.last
-          s.addStyle(
-            last.loc,
-            s"${last.identify} overloads ${first.identifyWithLoc}"
-          )
-        } else if (defs2.sizeIs > 2) {
-          val first = defs2.head
-          val tail = defs2.tail.map(d => d.identifyWithLoc).mkString(s",\n    ")
-          s.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
-        } else { s }
-      }
-    }
-  }
-
-
   case class ValidationState(
     symbolTable: SymbolTable,
     root: Definition = RootContainer.empty,
     commonOptions: CommonOptions = CommonOptions()
   ) extends Folding.PathResolutionState[ValidationState] {
 
+    def validateDefinitions(
+      definition: Definition,
+      parents: mutable.Stack[Definition]
+    ): ValidationState = {
+      // Capture current parse state including now the definition as the
+      // top element of the parent stack
+      definition match {
+        case defn: LeafDefinition =>
+          validateADefinition(defn, parents.toSeq)
+        case cont: Definition =>
+          validateADefinition(cont, parents.toSeq)
+          parents.push(cont)
+          val st = cont.contents.foldLeft(this) { (st, defn) =>
+            st.validateDefinitions(defn,parents)
+          }
+          parents.pop()
+          st
+      }
+    }
+
+    def validateADefinition(
+      definition: Definition,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      captureHierarchy(definition +: parents)
+      definition match {
+        case leaf: LeafDefinition => leaf match {
+            case f: Field        => validateField(f, parents)
+            case e: Example      => validateExample(e, parents)
+            case e: Enumerator   => validateEnumerator(e, parents)
+            case i: Invariant    => validateInvariant(i, parents)
+            case t: Term         => validateTerm(t, parents)
+            case p: Pipe         => validatePipe(p, parents)
+            case i: Inlet        => validateInlet(i, parents)
+            case o: Outlet       => validateOutlet(o, parents)
+            case ij: InletJoint  => validateInletJoint(ij, parents)
+            case oj: OutletJoint => validateOutletJoint(oj, parents)
+            case ai: AuthorInfo  => validateAuthorInfo(ai, parents)
+        }
+        case ed: EntityDefinition => ed match {
+            case t: Type      => validateType(t, parents)
+            case s: State     => validateState(s, parents)
+            case h: Handler   => validateHandler(h, parents)
+            case f: Function  => validateFunction(f, parents)
+            case i: Invariant => validateInvariant(i, parents)
+            case i: Include   => validateInclude(i)
+          }
+        case cd: ContextDefinition => cd match {
+            case t: Type      => validateType(t, parents)
+            case h: Handler    => validateHandler(h, parents)
+            case f: Function  => validateFunction(f, parents)
+            case e: Entity     => validateEntity(e, parents)
+            case a: Adaptor    => validateAdaptor(a, parents)
+            case p: Processor  => validateProcessor(p, parents)
+            case p: Projection => validateProjection(p, parents)
+            case t: Term         => validateTerm(t, parents)
+            case p: Pipe         => validatePipe(p, parents)
+            case ij: InletJoint  => validateInletJoint(ij, parents)
+            case oj: OutletJoint => validateOutletJoint(oj, parents)
+            case s: Saga       => validateSaga(s, parents)
+            case i: Include   => validateInclude(i)
+          }
+        case dd: DomainDefinition => dd match {
+            case t: Type        => validateType(t, parents)
+            case c: Context     => validateContext(c, parents)
+            case d: Domain      => validateDomain(d, parents)
+            case s: Story       => validateStory(s, parents)
+            case p: Plant       => validatePlant(p, parents)
+            case t: Term        => validateTerm(t, parents)
+            case ai: AuthorInfo => validateAuthorInfo(ai, parents)
+            case i: Include     => validateInclude(i)
+          }
+        case hd: HandlerDefinition => hd match {
+          case oc: OnClause => validateOnClause(oc, parents)
+        }
+        case ad: AdaptorDefinition => ad match {
+          case i: Include   => validateInclude(i)
+          case a: Adaptation => validateAdaptation(a, parents)
+        }
+        case ss: SagaStep => validateSagaStep(ss, parents)
+        case _: RootContainer => this // ignore
+      }
+    }
+
+
+    def validateTerm(t: Term, parents: Seq[Definition]): ValidationState = {
+      this
+        .checkDefinition(parents.head, t)
+        .checkDescription(t)
+    }
+
+    def validateEnumerator(e: Enumerator, parents: Seq[Definition])
+      : ValidationState = {
+        this
+          .checkDefinition(parents.head, e)
+          .checkDescription(e)
+    }
+
+    def validateField(f: Field, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, f)
+        .addIf(f.id.value.matches("^[^a-z].*"))(
+          Message(f.id.loc,
+          "Field names should begin with a lower case letter",
+          StyleWarning
+        ))
+        .checkTypeExpression(f.typeEx, f)
+        .checkDescription(f)
+    }
+
+    def validateExample(e: Example, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, e)
+        .checkExample(e)
+        .checkDescription(e)
+    }
+
+    def validateInvariant(i: Invariant, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, i)
+        .checkOption(i.expression, "condition", i) {
+          (st, expr) => st.checkExpression(expr, i)
+        }.checkDescription(i)
+    }
+
+    def validatePipe(p: Pipe, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, p)
+        .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
+          st.checkPathRef[Type](typeRef.id, p)()
+        }.checkDescription(p)
+    }
+
+    def validateInlet(i: Inlet, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, i).checkRef[Type](i.type_, i)
+        .checkOption(i.entity, "entity reference", i) { (st, er) =>
+          st.checkRef[Entity](er, i)
+        }.checkDescription(i)
+    }
+
+    def validateOutlet(o: Outlet, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, o).checkRef[Type](o.type_, o)
+        .checkOption(o.entity, "entity reference", o) { (st, er) =>
+          st.checkRef[Entity](er, o)
+        }.checkDescription(o)
+    }
+
+    def validateInletJoint(ij: InletJoint, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, ij)
+        .checkPathRef[Pipe](ij.pipe.id, ij)()
+        .checkPathRef[Inlet](ij.inletRef.id, ij)()
+        .checkDescription(ij)
+    }
+
+    def validateOutletJoint(oj: OutletJoint, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, oj)
+        .checkPathRef[Pipe](oj.pipe.id, oj)()
+        .checkPathRef[Outlet](oj.outletRef.id, oj)()
+        .checkDescription(oj)
+    }
+
+    def validateAuthorInfo(
+      ai: AuthorInfo,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      checkDefinition(parents.head, ai)
+        .checkNonEmptyValue(ai.name, "name", ai, Error, required = true)
+        .checkNonEmptyValue(ai.email, "email", ai, Error, required = true)
+        .checkDescription(ai)
+    }
+
+    def validateType(t: Type, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, t)
+        .check(t.id.value.head.isUpper,
+          s"${t.identify} should start with a capital letter",
+          StyleWarning,
+          t.loc
+        ).checkIf(!t.typ.isInstanceOf[AggregateTypeExpression]) { vs =>
+          vs.captureHierarchy(t +: parents)
+          vs.checkTypeExpression(t.typ, t)
+          vs.captureHierarchy(parents)
+        }
+        .checkDescription(t)
+    }
+
+    def validateState(s: State, parents: Seq[Definition]): ValidationState = {
+      checkDefinition(parents.head, s)
+        .checkContainer(parents.head, s)
+        .checkDescription(s)
+    }
+
+    def validateFunction(
+      f: Function, parents: Seq[Definition]
+    ): ValidationState = { checkContainer(parents.head, f).checkDescription(f)
+    }
+
+    def validateHandler(h: Handler, parents: Seq[Definition]): ValidationState = {
+      checkContainer(parents.head, h)
+        .checkIf(h.applicability.nonEmpty) { st =>
+          st.checkOption(h.applicability, "applicability", h) { (st, ref) =>
+            ref match {
+              case StateRef(_, pid) => st.checkPathRef[State](pid, h)()
+              case ProjectionRef(_, pid) =>
+                st.checkPathRef[Projection](pid, h)()
+              case r: Reference[?] =>
+                st.addError(r.loc,
+                s"Invalid reference kind ${r.format} for a handler"
+              )
+            }
+          }
+        }.checkDescription(h).checkDescription(h)
+    }
+
+    def validateOnClause(oc: OnClause, parents: Seq[Definition]): ValidationState = {
+      checkIf(oc.msg.nonEmpty) { st =>
+        st.captureHierarchy(oc +: parents)
+        .checkMessageRef(oc.msg, oc, oc.msg.messageKind)
+        .captureHierarchy(parents)
+      }
+        .checkDescription(oc)
+    }
+
+    def validateInclude(i: Include): ValidationState = {
+      check(
+        i.nonEmpty, "Include has no included content", Error, i.loc
+      ).check(
+        i.path.nonEmpty, "Include has no path provided", Error, i.loc
+      ).step { s =>
+        if (i.path.nonEmpty) {
+          s.check(
+            i.path.get.toString.nonEmpty,
+            "Include path provided is empty",
+            Error,
+            i.loc
+          )
+        } else { s }
+      }
+    }
+
+    def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {
+      checkContainer(parents.head, e)
+        .checkOptions[EntityOption](e.options, e.loc)
+        .addIf(e.handlers.isEmpty && !e.isEmpty) {
+          Message(e.loc, s"${e.identify} must define a handler")
+        }.addIf(
+          e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty)
+        ) {
+          Message(e.loc, s"${e.identify} has only empty handlers", MissingWarning)
+        }.addIf(e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2){
+          Message(
+            e.loc,
+            s"${e.identify} is declared as an fsm, but doesn't have at least two states",
+            Error
+          )
+        }
+        .checkDescription(e)
+    }
+
+    def validateProjection(p: Projection, parents: Seq[Definition]): ValidationState = { checkContainer(parents.head, p)
+        .checkDescription(p)
+    }
+
+    def validateAdaptor(a: Adaptor, parents: Seq[Definition]): ValidationState = {
+      checkContainer(parents.head, a)
+        .checkDescription(a) }
+
+    def validateAdaptation(
+      a: Adaptation,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      val parent = parents.head
+      checkContainer(parent, a)
+        .step { st =>
+          a match {
+            case cca: CommandCommandA8n =>
+              st.checkPathRef[Command](cca.messageRef.id, a)()
+              .checkPathRef[Command](cca.command.id, a)()
+            case eca: EventCommandA8n => st.checkDefinition(parent, eca)
+              .checkPathRef[Event](eca.messageRef.id, a)()
+              .checkPathRef[Command](eca.command.id, a)()
+            case eaa: EventActionA8n => st.checkDefinition(parent, eaa)
+              .checkPathRef[Event](eaa.messageRef.id, a)()
+              .checkActions(eaa.actions, a)
+          }
+        }.checkDescription(a)
+    }
+
+    def validateProcessor(
+      p: Processor,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      checkContainer(parents.head, p)
+        .checkProcessorKind(p)
+        .checkDescription(p)
+    }
+
+    def validateDomain(d: Domain, parents: Seq[Definition]): ValidationState = {
+      val parent = parents.headOption
+        .getOrElse(RootContainer(Seq(d), Seq.empty[RiddlParserInput]))
+      checkContainer(parent, d)
+        .checkDescription(d)
+    }
+
+    def validateSaga(s: Saga, parents: Seq[Definition]): ValidationState = {
+      checkContainer(parents.head, s)
+        .checkDescription(s)
+    }
+
+    def validateSagaStep(s: SagaStep, parents: Seq[Definition]): ValidationState = {
+      checkContainer(parents.head, s)
+        .check(
+          s.doAction.getClass == s.undoAction.getClass,
+        "The primary action and revert action must be the same shape",
+          Error, s.doAction.loc
+        )
+        .checkDescription(s)
+    }
+
+    def validateContext(c: Context, parents: Seq[Definition]): ValidationState = {
+      checkContainer(parents.head, c)
+        .checkOptions[ContextOption](c.options, c.loc).checkDescription(c)
+    }
+
+    def validateStory(
+      s: Story,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      checkContainer(parents.head, s)
+        .checkNonEmptyValue(s.role, "role", s, MissingWarning)
+        .checkNonEmptyValue(
+          s.capability, "capability", s, MissingWarning
+        ).checkNonEmptyValue(s.benefit, "benefit", s, MissingWarning)
+        .checkExamples(s.examples).checkDescription(s)
+    }
+
+    def validatePlant(
+      p: Plant,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      checkContainer(parents.head, p).checkDescription(p)
+    }
+
+
+    def checkOverloads(
+      symbolTable: SymbolTable,
+    ): ValidationState = {
+      symbolTable.foreachOverloadedSymbol { defs: Seq[Seq[Definition]] =>
+        this.checkSequence(defs) { (s, defs2) =>
+          if (defs2.sizeIs == 2) {
+            val first = defs2.head
+            val last = defs2.last
+            s.addStyle(
+              last.loc,
+              s"${last.identify} overloads ${first.identifyWithLoc}"
+            )
+          } else if (defs2.sizeIs > 2) {
+            val first = defs2.head
+            val tail = defs2.tail.map(d => d.identifyWithLoc)
+              .mkString(s",\n    ")
+            s.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
+          } else { s }
+        }
+      }
+    }
+
+  /*
+
+
+      def doDefinition(
+        state: ValidationState,
+        definition: Definition,
+        parents: Seq[Definition]
+      ): ValidationState = {
+        definition match {
+          case s: Story => s1
+          case _: Enumerator   => s1 // handled in checkEnumeration
+          case _: Container[?] => s1 // handled elsewhere
+          case x =>
+            require(requirement = false, s"Failed to match definition $x")
+            s1
+        }
+      }
+
+      def closeContainer(
+        state: ValidationState,
+        container: Definition,
+        parents: Seq[Definition]
+      ): ValidationState = {
+        state.captureHierarchy(parents)
+        container match {
+          case _: Include       => state // nothing to validate
+          case _: RootContainer =>
+            // we don't validate root containers
+            state
+          case parent: Definition =>
+            // RootContainer, Domain, Context, Entity, Story, Adaptor, Plant,
+            // State, Saga, Processor, Function, Handler, OnClause, Type,
+            // Adaptation
+            state.checkDescription(parent)
+        }
+      }
+
+    }
+
+   */
     def parentOf(
       definition: Definition
     ): Container[Definition] = {
@@ -537,7 +916,10 @@ object Validation {
       value: TD,
     ): ValidationState = {
       val description: Option[Description] = value.description
-      val shouldCheck: Boolean = value.isInstanceOf[Definition]
+      val shouldCheck: Boolean ={
+        value.isInstanceOf[Type] |
+        (value.isInstanceOf[Definition] && value.nonEmpty)
+}
       if (description.isEmpty && shouldCheck) {
         this.check(
           predicate = false,
@@ -560,11 +942,8 @@ object Validation {
       definition: TD
     ): ValidationState = { checkDescription(definition.identify, definition) }
 
-    def checkParentDefOf[
-      P <: Definition,
-      T <: Definition
-    ](parent: P,
-      container: T
+    def checkContainer(
+      parent: Definition, container: Definition
     ): ValidationState = {
       this.checkDefinition(parent, container).check(
         container.nonEmpty || container.isInstanceOf[Field],
@@ -968,309 +1347,5 @@ object Validation {
           } else { this }
       }
     }
-
-  }
-
-  class ValidationFolder extends Folder[ValidationState] {
-
-    def openContainer(
-      state: ValidationState,
-      container: Definition,
-      parents: Seq[Definition]
-    ): ValidationState = {
-      require(!container.isInstanceOf[LeafDefinition])
-      state.captureHierarchy(parents)
-      container match {
-        case typ: Type          => openType(state, parents, typ)
-        case function: Function =>
-          state.checkDefinition(container, function)
-        case onClause: OnClause =>
-          state.checkIf(onClause.msg.nonEmpty) { st =>
-            state.captureHierarchy(onClause +: parents)
-            st.checkMessageRef(onClause.msg, container, onClause.msg.messageKind)
-            state.captureHierarchy(parents)
-          }
-        case st: State =>
-          state.checkDefinition(parents.head, st)
-        case processor: Processor =>
-          openProcessor(state, parents.head, processor)
-        case story: Story       => openStory(state, parents.head, story)
-        case sagaStep: SagaStep => openSagaStep(state, parents.head, sagaStep)
-        case entity: Entity     => openEntity(state, parents.head, entity)
-        case context: Context   => openContext(state, parents.head, context)
-        case include: Include   => openInclude(state, include)
-        case adaptation: AdaptorDefinition =>
-          openAdaptation(state, parents.head, adaptation)
-        case domain: Domain =>
-          val parent = parents.headOption.getOrElse(
-            RootContainer(Seq(domain),Seq.empty[RiddlParserInput]))
-          state.checkParentDefOf(parent, container)
-        case _: RootContainer =>
-          // we don't validate root containers
-          state
-        case container: Definition =>
-          // Adaptor, Plant, State, Saga, Handler
-          state.checkParentDefOf(parents.head, container)
-      }
-    }
-
-
-    def openContext(
-      state: Validation.ValidationState,
-      container: Definition,
-      context: AST.Context
-    ): ValidationState = {
-      state.checkParentDefOf(container, context)
-        .checkOptions[ContextOption](context.options, context.loc)
-    }
-
-    def openStory(
-      state: ValidationState,
-      container: Definition,
-      story: Story
-    ): ValidationState = {
-      state.checkParentDefOf(container, story)
-        .checkNonEmptyValue(story.role, "role", story, MissingWarning)
-        .checkNonEmptyValue(
-          story.capability,
-          "capability",
-          story,
-          MissingWarning
-        ).checkNonEmptyValue(story.benefit, "benefit", story, MissingWarning)
-        .checkExamples(story.examples)
-    }
-
-    def openEntity(
-      state: Validation.ValidationState,
-      container: Definition,
-      entity: AST.Entity
-    ): ValidationState = {
-      state.checkParentDefOf(container, entity)
-        .checkOptions[EntityOption](entity.options, entity.loc)
-        .addIf(entity.handlers.isEmpty && !entity.isEmpty) {
-          Message(
-            entity.loc,
-            s"${entity.identify} must define a handler"
-          )
-        }.addIf(
-          entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty)
-        ) {
-          Message(
-            entity.loc,
-            s"${entity.identify} has only empty handlers",
-            MissingWarning
-          )
-        }.addIf(
-          entity.hasOption[EntityIsFiniteStateMachine] && entity.states.sizeIs < 2
-        ) {
-          Message(
-            entity.loc,
-            s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
-            Error
-          )
-        }
-    }
-
-    def openInclude(
-      state: ValidationState,
-      include: Include
-    ): ValidationState = {
-      state.check(
-        include.nonEmpty,
-        "Include has no included content",
-        Error,
-        include.loc
-      ).check(
-        include.path.nonEmpty,
-        "Include has no path provided",
-        Error,
-        include.loc
-      ).step { s =>
-        if (include.path.nonEmpty) {
-          s.check(
-            include.path.get.toString.nonEmpty,
-            "Include path provided is empty",
-            Error,
-            include.loc
-          )
-        } else { s }
-      }
-    }
-
-    def openType(
-      state: ValidationState,
-      parents: Seq[Definition],
-      typeDef: Type
-    ): ValidationState = {
-      state.checkDefinition(parents.head, typeDef)
-        .check(
-        typeDef.id.value.head.isUpper,
-        s"${typeDef.identify} should start with a capital letter",
-        StyleWarning,
-        typeDef.loc
-      ).step { vs =>
-        vs.captureHierarchy(typeDef +: parents)
-        vs.checkTypeExpression(typeDef.typ, typeDef)
-        vs.captureHierarchy(parents)
-      }
-    }
-
-    def openAdaptation(
-      state: ValidationState,
-      container: Definition,
-      adaptation: AdaptorDefinition
-    ): ValidationState = {
-      state.checkDefinition(container, adaptation)
-    }
-
-    def openSagaStep(
-      state: ValidationState,
-      saga: Definition,
-      step: SagaStep
-    ): ValidationState = {
-      state.checkDefinition(saga, step).checkDescription(step).check(
-        step.doAction.getClass == step.undoAction.getClass,
-        "The primary action and revert action must be the same shape",
-        Error,
-        step.doAction.loc
-      )
-    }
-
-    def openProcessor(
-      state: ValidationState,
-      container: Definition,
-      processor: Processor
-    ): ValidationState = {
-      state
-        .checkDefinition(container, processor)
-        .checkProcessorKind(processor)
-    }
-
-
-    def doDefinition(
-      state: ValidationState,
-      definition: Definition,
-      parents: Seq[Definition]
-    ): ValidationState = {
-      //
-      val parent = parents.head
-      // basic validation applicable to all definitions
-      val s1 = state.checkDefinition(parent, definition)
-      // Capture current parse state including now the definition as the
-      // top element of the parent stack
-      state.captureHierarchy(definition +: parents)
-      definition match {
-        case example: Example => s1.checkDefinition(parent, example)
-            .checkExample(example).checkDescription(example)
-        case invariant: Invariant => s1.checkDefinition(parent, invariant)
-            .checkOption(
-              invariant.expression,
-              "condition",
-              invariant
-            ) { (st, expr) =>st.checkExpression(expr, definition) }
-            .checkDescription(invariant)
-        case cca: CommandCommandA8n => s1.checkDefinition(parents.head, cca)
-            .checkPathRef[Command](cca.messageRef.id, definition)()
-            .checkPathRef[Command](cca.command.id, definition)()
-            .checkDescription(cca)
-        case eca: EventCommandA8n => s1.checkDefinition(parent, eca)
-            .checkPathRef[Event](eca.messageRef.id, definition)()
-            .checkPathRef[Command](eca.command.id, definition)()
-        case eaa: EventActionA8n => s1.checkDefinition(parent, eaa)
-            .checkPathRef[Event](eaa.messageRef.id, definition)()
-            .checkActions(eaa.actions, definition)
-        case field: Field =>
-          s1.addIf(field.id.value.matches("^[^a-z].*"))(
-              Message(field.id.loc,
-                "Field names should begin with a lower case letter",
-                StyleWarning
-              )
-            )
-            .checkTypeExpression(field.typeEx, definition)
-            .checkDescription(field)
-        case h: Handler =>
-          s1.checkOption(h.applicability, "applicability", h) { (st, ref) =>
-            ref match {
-              case StateRef(_, pid) =>
-                st.checkPathRef[State](pid, definition)()
-              case ProjectionRef(_, pid) =>
-                st.checkPathRef[Projection](pid, definition)()
-              case r: Reference[_]  =>
-                st.addError(r.loc,
-                  s"Invalid reference kind ${r.format} for a handler")
-            }
-          }.checkDescription(h)
-        case inlet @ Inlet(_,_,typeRef,entityRef,_,_) =>
-          s1.checkRef[Type](typeRef, definition)
-            .checkOption(
-              entityRef, "entity reference", inlet
-            ) { (st,er) => st.checkRef[Entity](er, definition) }
-            .checkDescription(inlet)
-        case ij: InletJoint =>
-          s1.checkPathRef[Pipe](ij.pipe.id, definition)()
-            .checkPathRef[Inlet](ij.inletRef.id, definition)()
-            .checkDescription(ij)
-        case outlet @ Outlet(_,_,typeRef,entityRef, _,_) =>
-          s1.checkRef[Type](typeRef, definition)
-            .checkOption(
-              entityRef, "entity reference", outlet
-            ) { (st,er) => st.checkRef[Entity](er, definition) }
-            .checkDescription(outlet)
-        case oj: OutletJoint =>
-          s1.checkPathRef[Pipe](oj.pipe.id, definition)()
-            .checkPathRef[Outlet](oj.outletRef.id, definition)()
-            .checkDescription(oj)
-        case s: Story =>
-          s1.checkNonEmptyValue(s.role, "role", s, Error, required = true)
-            .checkNonEmptyValue(s.benefit, "benefit", s, Error, required = true)
-            .checkNonEmptyValue(
-              s.capability,
-              "capability",
-              s,
-              Error,
-              required = true
-            ).checkNonEmpty(s.shownBy, "shownBy", s, StyleWarning)
-            .checkSequence(s.implementedBy) { (st, pid) =>
-              st.checkRef[Domain](pid, definition)
-            }.checkDescription(s)
-        case p: Pipe =>
-          s1.checkDefinition(parent, p)
-            .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
-              st.checkPathRef[Type](typeRef.id, p)()
-            }.checkDescription(p)
-        case ai: AuthorInfo =>
-          s1.checkNonEmptyValue(ai.name,"name", ai, Error, required=true)
-            .checkNonEmptyValue(ai.email, "email", ai, Error, required=true)
-            .checkDescription(ai)
-        case t: Term =>
-          s1.checkDefinition(parent, t)
-            .checkDescription(t)
-        case _: Enumerator   => s1 // handled in checkEnumeration
-        case _: Container[?] => s1 // handled elsewhere
-        case x  =>
-          require(requirement=false, s"Failed to match definition $x")
-          s1
-      }
-    }
-
-    def closeContainer(
-      state: ValidationState,
-      container: Definition,
-      parents: Seq[Definition]
-    ): ValidationState = {
-      state.captureHierarchy(parents)
-      container match {
-        case _: Include       => state // nothing to validate
-        case _: RootContainer =>
-          // we don't validate root containers
-          state
-        case parent: Definition =>
-          // RootContainer, Domain, Context, Entity, Story, Adaptor, Plant,
-          // State, Saga, Processor, Function, Handler, OnClause, Type,
-          // Adaptation
-          state.checkDescription(parent)
-      }
-    }
-
   }
 }

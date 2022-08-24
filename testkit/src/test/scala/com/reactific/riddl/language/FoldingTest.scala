@@ -5,7 +5,7 @@ import com.reactific.riddl.language.testkit.ParsingTest
 
 class FoldingTest extends ParsingTest {
 
-  val input = """domain one is {
+  val input: String = """domain one is {
                 |  plant one is {
                 |    pipe a is { ??? }
                 |    term whomprat is described by "a 2m long rat on Tatooine"
@@ -187,58 +187,60 @@ class FoldingTest extends ParsingTest {
           result mustBe expectedResult
       }
     }
+
+    case class Tracker(contPush: Int = 0, defs: Int = 0, contPop: Int = 0)
+      class Tracking extends Folding.Folder[Tracker] {
+      def openContainer(
+        t: Tracker,
+        container: Definition,
+        stack: Seq[Definition]
+      ): Tracker = {
+        println(
+          "> " + container.identify + "(" + stack.map(_.identify)
+            .mkString(", ") + ")"
+        )
+        t.copy(contPush = t.contPush + 1)
+      }
+
+      def doDefinition(
+        t: Tracker,
+        definition: Definition,
+        stack: Seq[Definition]
+      ): Tracker = {
+        println(
+          "==" + definition.identify + "(" + stack.map(_.identify)
+            .mkString(", ") + ")"
+        )
+        t.copy(defs = t.defs + 1)
+      }
+
+      def closeContainer(
+        t: Tracker,
+        container: Definition,
+        stack: Seq[Definition]
+      ): Tracker = {
+        println(
+          "< " + container.identify + "(" + stack.map(_.identify)
+            .mkString(", ") + ")"
+        )
+
+        t.copy(contPop = t.contPop + 1)
+      }
+    }
+
     "can 'fold around' 3 functions" in {
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(root) =>
-          case class Tracker(contPush: Int = 0, defs: Int = 0, contPop: Int = 0)
-          class Tracking extends Folding.Folder[Tracker] {
-            def openContainer(
-              t: Tracker,
-              container: Definition,
-              stack: Seq[Definition]
-            ): Tracker = {
-              println(
-                "> " + container.identify + "(" + stack.map(_.identify)
-                  .mkString(", ") + ")"
-              )
-              t.copy(contPush = t.contPush + 1)
-            }
-
-            def doDefinition(
-              t: Tracker,
-              definition: Definition,
-              stack: Seq[Definition]
-            ): Tracker = {
-              println(
-                "==" + definition.identify + "(" + stack.map(_.identify)
-                  .mkString(", ") + ")"
-              )
-              t.copy(defs = t.defs + 1)
-            }
-
-            def closeContainer(
-              t: Tracker,
-              container: Definition,
-              stack: Seq[Definition]
-            ): Tracker = {
-              println(
-                "< " + container.identify + "(" + stack.map(_.identify)
-                  .mkString(", ") + ")"
-              )
-
-              t.copy(contPop = t.contPop + 1)
-            }
-          }
           val tracking = new Tracking
           val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 21
-          val expectedLeaves = 5
+          val expectedContainers = 17
+          val expectedLeaves = 9
+          tracked.defs mustBe expectedLeaves
           tracked.contPush mustBe expectedContainers
           tracked.contPush mustBe tracked.contPop
-          tracked.defs mustBe expectedLeaves
       }
     }
   }

@@ -57,10 +57,11 @@ object Folding {
       top.contents.foldLeft(initial) { (next, definition) =>
         definition match {
           case i: Include => i.contents.foldLeft(next) {
-              case (n, cd: Definition) if cd.nonEmpty =>
-                foldLeftWithStack(n, parents)(cd)(f)
-              case (n, d: Definition) => f(n, d, parents.toSeq)
-            }
+            case (n, d: LeafDefinition) =>
+              f(n, d, parents.toSeq)
+            case (n, cd: Definition) =>
+              foldLeftWithStack(n, parents)(cd)(f)
+          }
           case d: LeafDefinition =>
             f(next, d, parents.toSeq)
           case c: Definition =>
@@ -90,22 +91,16 @@ object Folding {
     parents: mutable.Stack[Definition] =
       mutable.Stack.empty[Definition]
   ): S = {
+    // Let them know a container is being opened
+    val startState = folder.openContainer(value, top, parents.toSeq)
     parents.push(top)
-    top match {
-      case definition: LeafDefinition =>
-        // Leaf node so visit it
-        folder.doDefinition(value, definition, parents.toSeq)
-      case definition: Definition if definition.contents.isEmpty =>
-        // Empty container node so visit it
-        folder.doDefinition(value, definition, parents.toSeq)
-      case definition: Definition =>
-        folder.doDefinition(value, definition, parents.toSeq)
-
-    }
-      val middleState = top.contents.foldLeft(startState) {
+    val middleState = top.contents.foldLeft(startState) {
       case (next, definition: LeafDefinition) =>
         // Leaf node so mention it
-        folder.doDefinition(next, definition, parents.toSeq)
+        parents.push(definition)
+        val st = folder.doDefinition(next, definition, parents.toSeq)
+        parents.pop()
+        st
       case (next, container: Definition) =>
         // Container node so recurse
         foldAround(next, container, folder, parents)
