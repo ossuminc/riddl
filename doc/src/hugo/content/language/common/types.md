@@ -16,7 +16,7 @@ RIDDL supports several predefined types that just "exist" because they are
 fundamental and well understood in any targeted computing environment. These 
 predefined type names can be used anywhere that a type definition is needed,
 for example in a field of an entity's state definition 
-[see here](domain/context/entity/state)
+[see here](../root/domain/context/entity/state)
 
 The predefined  types are: 
 * **String** - a sequence of characters of any length 
@@ -89,7 +89,7 @@ The predefined types allow the use of unbounded integers but when you want
 to constrict the range of values, you need a `Range` type expression.  The 
 expression `Range(<min>,<max>)` will define an integer value whose range is 
 restricted to the `<min>` and `<max>` values provided.  As with [bounded 
-strings](./types#Bounded_Strings), the `<min>` and `<max>` values are 
+strings](#Bounded Strings), the `<min>` and `<max>` values are 
 optional and default to 0 and infinity respectively. For example:
 ```riddl
 type Percent = range(,100) // only value 0 to 100 inclusive
@@ -113,66 +113,3 @@ example:
 type ModelXRef = Id(Autos.Tesla.ModelX)
 ```
 
-### Enumeration
-An enumeration defines a type that may take the value of one identifier from a
-closed set of constant identifiers using the `any` keyword and the set of
-identifiers enclosed in square brackets, like this:
-```
-type Color = any of [Red, Orange, Yellow, Green, Blue, Indigo, Violet]
-```
-
-### Alternation
-A type can be defined as any one type chosen from a set of other type names 
-using the `select` keyword followed by type names separated by `|`, like this:
- 
-```
-type References = select String | URL
-```
-
-There must be at least two types in an alternation. 
-
-### Aggregation
-A type can be defined as an aggregate of a group of values of types. DDD calls
-this a "value object".  Aggregations can be nested, even recursively. Each 
-value in the aggregation has an identifier (name) and a type separated by a 
-colon. For example, here is the type definition for a rectangle located on a 
-Cartesian coordinate system at point (x,y) with a given height and width:
-```
-type Rectangle = { x: Number, y: Number, height: Number, width: Number }
-```
-
-### Key/Value Mapping
-A type can be defined as a mapping from one type (the key) to another type 
-(the value). For example, here is a dictionary definition that maps a word 
-(lower case letters) to a type named DictionaryEntry that presumably 
-contains all the things one would find in a dictionary entry. 
-```riddl
-type dictionary = mapping from Pattern("[a-z]+") to DictionaryEntry
-```
-
-### Messages
-An aggregate type (_value object_ in DDD) can be declared to be one of four
-kinds of message types using the `command`, `event`, `query`, and `result` 
-keywords. These type definitions are useful for sending messages to 
-[entities](../root/domain/context/entity) or across
-[pipelines](../root/domain/pipeline).  
-
-For example, here is a command definition:
-```riddl
-type JustDoIt = command { id: Id(AnEntity), encouragement: String, swoosh: URL }
-```
-
-## Cardinality
-A type expression can be adorned with a symbol (adopted from regular
-expressions) that specifies the cardinality of the type, as follows:
-* `?` - optional, 0 or 1 instances
-* `*` - zero or more instances
-* `+` - one or more instances
-
-Without the adornment, the cardinality is "required" (exactly one).
-For example, in this:
-```
-type MyType = { ids: Id+, name: String? }
-```
-the `MyType` type is an aggregate that contains one or more Id values 
-in the `ids` field and an optional string value in `name`

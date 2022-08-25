@@ -5,15 +5,15 @@ weight: 50
 draft: "false"
 ---
 
-Entities consume commands and queries and produce events and results,
-correspondingly. To specify that, we use a _handler_ in an `entity` defiinition
-specifies how an entity handles the messages sent to that `entity.   
+## Concept
+See [the handler concept page](../../../../../concepts/handlers.md) for 
+general information about handlers. 
 
 {{% hint info %}}
 Note that a
-[context](../handler.md) can define a handler too, but they are different than
-the handlers defined in an `entity`. See [Context Handler](../handler.md) for
-more details.
+[context](../_index.md) can define a [handler](../handler.md) too, but they are 
+different compared to the handlers defined in an `entity`. 
+See [Context Handler](../handler.md) for details on *context handlers*.
 {{% /hint %}}
 
 Handlers are specified with the `handler` keyword and enclose a set of `on` 
@@ -88,7 +88,7 @@ on query JustGetIt {
 
 ## Defining Multiple Handlers
 
-An entity can make use of multiple handlers so that the behavior of and entity 
+An entity can make use of multiple handlers so that the behavior of an entity 
 can be changed. There can be only one handler active at any moment, but an 
 entity can change which handler is active for future messages in response to 
 any message. This ability permits a set of handlers to model a finite state 
