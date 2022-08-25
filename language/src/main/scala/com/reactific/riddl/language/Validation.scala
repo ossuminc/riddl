@@ -550,12 +550,12 @@ object Validation {
       rt: RangeType
     ): ValidationState = {
       this.check(
-        rt.min.n >= BigInt.long2bigInt(Long.MinValue),
+        rt.min >= BigInt.long2bigInt(Long.MinValue),
         "Minimum value might be too small to store in a Long",
         Warning,
         rt.loc
       ).check(
-        rt.max.n <= BigInt.long2bigInt(Long.MaxValue),
+        rt.max <= BigInt.long2bigInt(Long.MaxValue),
         "Maximum value might be too large to store in a Long",
         Warning,
         rt.loc
@@ -604,9 +604,9 @@ object Validation {
       defn: Definition
     ): ValidationState = {
       typ match {
+        case AliasedTypeExpression(_, id: PathIdentifier) => checkPathRef[Type](id,defn)()
         case agg: Aggregation              => checkAggregation(agg,defn)
         case mt: MessageType               => checkMessageType(mt,defn)
-        case TypeRef(_, id: PathIdentifier) => checkPathRef[Type](id,defn)()
         case alt: Alternation              => checkAlternation(alt, defn)
         case mapping: Mapping              => checkMapping(mapping, defn)
         case rt: RangeType                 => checkRangeType(rt)
@@ -628,8 +628,9 @@ object Validation {
             Error,
             typ.loc
           )
-        case UniqueId(_, entityRef)        => checkRef[Entity](entityRef, defn)
-        case ReferenceType(_, entity)      => checkRef[Entity](entity, defn)
+        case UniqueId(_, pid)        => checkPathRef[Entity](pid, defn)()
+        case EntityReferenceTypeExpression(_, pid) =>
+          checkPathRef[Entity](pid, defn)()
         case _: PredefinedType              => this // nothing needed
         case _: TypeRef                    => this // handled elsewhere
         case x =>
@@ -1162,19 +1163,23 @@ object Validation {
           } else {
             resolvePathFromSymTab[Definition](id)
           }
-        val candidate = newParents.headOption match {
+        val candidate: Option[TypeExpression] = newParents.headOption match {
           case None => None
           case Some(f: Function) => f.output
           case Some(t: Type) => Some(t.typ)
           case Some(f: Field) => Some(f.typeEx)
           case Some(s: State) => Some(s.typeEx)
-          case Some(p: Pipe) => Some(p.transmitType.getOrElse(Abstract(id.loc)))
-          case Some(in: Inlet) => Some(in.type_)
-          case Some(out: Outlet) => Some(out.type_)
-          case Some(_) => None
+          case Some(Pipe(_,_,tt,_,_)) =>
+            val te = tt.map(x => AliasedTypeExpression(x.loc,x.id))
+            Some(te.getOrElse(Abstract(id.loc)))
+          case Some(Inlet(_, _, typ,_,_,_)) =>
+            Some(AliasedTypeExpression(typ.loc,typ.id))
+          case Some(Outlet(_, _, typ, _,_,_)) =>
+            Some(AliasedTypeExpression(typ.loc,typ.id))
+          case Some(_) => Option.empty[TypeExpression]
         }
         candidate match {
-          case Some(TypeRef(_, pid)) =>
+          case Some(AliasedTypeExpression(_, pid)) =>
             getPathIdType(pid, newParents)
           case Some(other: TypeExpression) => Some(other)
           case None => None
@@ -1206,8 +1211,7 @@ object Validation {
             case ArithmeticOperator(loc, _, _) => Some(Number(loc))
           }
         case cond: Condition => Some(Bool(cond.loc))
-        case EntityIdExpression(loc, pid) =>
-          Some(UniqueId(loc,EntityRef(loc, pid)))
+        case EntityIdExpression(loc, pid) => Some(UniqueId(loc,pid))
         case ValueExpression(_, path) => getPathIdType(path)
         case ae: ArbitraryExpression => Some(Abstract(ae.loc))
         case ao: ArbitraryOperator => Some(Abstract(ao.loc))

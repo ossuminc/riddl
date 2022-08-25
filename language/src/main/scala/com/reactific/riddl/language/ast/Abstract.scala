@@ -3,7 +3,7 @@ package com.reactific.riddl.language.ast
 
 
 import java.nio.file.Path
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 
 trait Abstract {
 
@@ -220,7 +220,71 @@ trait Abstract {
   }
 
   trait AlwaysEmpty extends Definition {
-    final def isEMpty: Boolean = true
+    final override def isEmpty: Boolean = true
   }
+
+  /** A reference to a definition of a specific type.
+    *
+    * @tparam T
+    *   The type of definition to which the references refers.
+    */
+  abstract class Reference[+T <: Definition: ClassTag]
+      extends RiddlValue {
+    def id: PathIdentifier
+    def identify: String = {
+      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
+    }
+    override def isEmpty: Boolean = id.isEmpty
+  }
+
+  /** Base class for all actions. Actions are used in the "then" and "but"
+    * clauses of a Gherkin example such as in the body of a handler's
+    * `on` clause or in the definition of a [[Function]]. The subclasses define
+    * different kinds of actions that can be used.
+    */
+  trait Action extends DescribedValue
+
+  /** An action that can also be used in a SagaStep
+    */
+  trait SagaStepAction extends Action
+
+  /** Base class of any Gherkin value
+    */
+  trait GherkinValue extends RiddlValue
+
+  /** Base class of one of the four Gherkin clauses (Given, When, Then, But)
+    */
+  trait GherkinClause extends GherkinValue
+
+  /** Base trait of definitions that are part of a Handler Definition */
+  trait HandlerDefinition extends Definition
+
+  /** Base trait of definitions that are part of a Saga Definition */
+  trait SagaDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an adaptor
+    */
+  trait AdaptorDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a context
+    */
+  trait ContextDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a domain
+    */
+  trait DomainDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an entity.
+    */
+  trait EntityDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a function.
+    */
+  trait FunctionDefinition extends Definition
+
+  /** Base trait of any definition that occurs in the body of a plant
+    */
+  trait PlantDefinition extends Definition
+
 
 }

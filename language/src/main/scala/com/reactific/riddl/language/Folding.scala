@@ -223,13 +223,13 @@ object Folding {
           nstack.push(n) // undo the pop above
           nstack.pushAll(msgRef.id.value.reverse)
           Seq.empty[Definition]
-        case Some(Field(_, _, TypeRef(_, pid), _, _)) =>
+        case Some(Field(_, _, AliasedTypeExpression(_, pid), _, _)) =>
           // if we're at a field that references another type then we
           // need to push that types path on the name stack
           nstack.push(n)
           nstack.pushAll(pid.value.reverse)
           Seq.empty[Definition]
-        case Some(Type(_, _, TypeRef(_, pid), _, _)) =>
+        case Some(Type(_, _, AliasedTypeExpression(_, pid), _, _)) =>
           // if we're at a type definition that references another type then
           // we need to push that type's path on the name stack
           nstack.push(n)
