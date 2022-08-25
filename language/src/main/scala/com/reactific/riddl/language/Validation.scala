@@ -1131,11 +1131,11 @@ object Validation {
         case Comparison(_, _, arg1, arg2) =>
           checkExpression(arg1, defn)
             .checkExpression(arg2, defn)
-        case AggregateConstructionExpression(_, typeRef, args) =>
-          checkRef[Type](typeRef, defn)
+        case AggregateConstructionExpression(_, pid, args) =>
+          checkPathRef[Type](pid,defn)()
             .checkArgList(args, defn)
         case EntityIdExpression(_, entityRef) =>
-          checkRef[Entity](entityRef, defn)
+          checkPathRef[Entity](entityRef, defn)()
         case Ternary(_, condition, expr1, expr2) =>
           checkExpression(condition, defn)
             .checkExpression(expr1, defn)
@@ -1206,7 +1206,8 @@ object Validation {
             case ArithmeticOperator(loc, _, _) => Some(Number(loc))
           }
         case cond: Condition => Some(Bool(cond.loc))
-        case EntityIdExpression(loc, entityId) => Some(UniqueId(loc,entityId))
+        case EntityIdExpression(loc, pid) =>
+          Some(UniqueId(loc,EntityRef(loc, pid)))
         case ValueExpression(_, path) => getPathIdType(path)
         case ae: ArbitraryExpression => Some(Abstract(ae.loc))
         case ao: ArbitraryOperator => Some(Abstract(ao.loc))
@@ -1218,8 +1219,8 @@ object Validation {
             case Some(expr) => getExpressionType(expr)
           }
         case UndefinedExpression(loc) => Some(Abstract(loc))
-        case AggregateConstructionExpression(_, typRef, _) =>
-          getPathIdType(typRef.id)
+        case AggregateConstructionExpression(_, pid, _) =>
+          getPathIdType(pid)
         case Ternary(loc, _, expr1, expr2) =>
           val expr1Ty = getExpressionType(expr1)
           val expr2Ty = getExpressionType(expr2)
