@@ -10,7 +10,7 @@ import java.nio.file.Path
 case class GrpcWriter(
   filePath: Path,
   packages: Seq[String],
-  parents: Seq[Parent],
+  parents: Seq[Definition],
   symTab: SymbolTable
 )
     extends TextFileWriter {
@@ -56,15 +56,15 @@ case class GrpcWriter(
           s"[(validate.rules).repeated = {min_items: $min, max_items: $max}];"
         )
       case RangeType(_, min, max) =>
-        if (max.n < Int.MaxValue) {
-          sb.append(s"[(validate.rules).sint32 = {gte:${min.n}, lt: ${max.n}];")
-        } else if (max.n < Long.MaxValue) {
-          sb.append(s"[(validate.rules).sint64 = {gte:${min.n}, lt: ${max.n}];")
+        if (max < Int.MaxValue) {
+          sb.append(s"[(validate.rules).sint32 = {gte:$min, lt: $max];")
+        } else if (max < Long.MaxValue) {
+          sb.append(s"[(validate.rules).sint64 = {gte:$min, lt: $max];")
         }
       // TODO: consider BigInt case validation? Possible?
       case Strng(_, min, max) =>
-        val mn = min.map(_.n.toLong).getOrElse(0)
-        val mx = max.map(_.n.toLong).getOrElse(Long.MaxValue)
+        val mn = min.getOrElse(0)
+        val mx = max.getOrElse(Long.MaxValue)
         sb.append(s"[(validate.rules).string = {min_len: $mn, max_len: $mx}];")
       case Pattern(_, regex) => sb
           .append(s"[(validate.rules).string.pattern =\"$regex\"];")
@@ -88,7 +88,7 @@ case class GrpcWriter(
       case SpecificRange(_, tye2, _, _) =>
         sb.append("repeated ")
         emitTypeExpression(tye2)
-      case rt: ReferenceType =>
+      case rt: EntityReferenceTypeExpression =>
         sb.append(s"string ")
       case mt: TypeRef =>
         sb.append(s"  ${sanitizePathId(mt.id)}")
@@ -96,8 +96,8 @@ case class GrpcWriter(
           .append("// message type not implemented\n")
       // TODO: implement message type
       case RangeType(_, _, max) =>
-        if (max.n <= Int.MaxValue) { sb.append("sint32") }
-        else if (max.n <= Long.MaxValue) { sb.append("sint64") }
+        if (max <= Int.MaxValue) { sb.append("sint32") }
+        else if (max <= Long.MaxValue) { sb.append("sint64") }
         else { sb.append("BigInt") }
       case _: Strng     => sb.append("string")
       case _: Number    => sb.append("sint64")
@@ -128,7 +128,7 @@ case class GrpcWriter(
       (field, n) <- ty.fields.drop(1).zipWithIndex
     } yield {
       field.typeEx match {
-        // alternation | referToEntity | mapping | range | typeRef
+        // alternation | entityReferenceType | mappingType | rangeType | typeRef
         case alt: Alternation =>
           sb.append(s"  oneof ${sanitizeId(field.id)} {")
           for { (typ, n) <- alt.of.zipWithIndex } yield {

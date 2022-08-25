@@ -36,6 +36,47 @@ case class ReformattingOptions(
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 object ReformatTranslator extends Translator[ReformattingOptions] {
 
+  /** A function to translate between a definition and the keyword that
+    * introduces them.
+    *
+    * @param definition
+    *   The definition to look up
+    * @return
+    *   A string providing the definition keyword, if any. Enumerators and
+    *   fields don't have their own keywords
+    */
+  def keyword(definition: Definition): String = {
+    definition match {
+      case _: Adaptor           => Keywords.adaptor
+      case _: EventActionA8n    => Keywords.adapt
+      case _: EventCommandA8n   => Keywords.adapt
+      case _: CommandCommandA8n => Keywords.adapt
+      case _: Context           => Keywords.context
+      case _: Domain            => Keywords.domain
+      case _: Entity            => Keywords.entity
+      case _: Enumerator        => ""
+      case _: Example           => Keywords.example
+      case _: Field             => ""
+      case _: Function          => Keywords.function
+      case _: Handler           => Keywords.handler
+      case _: Inlet             => Keywords.inlet
+      case _: Invariant         => Keywords.invariant
+      case _: Joint             => Keywords.joint
+      case _: Outlet            => Keywords.outlet
+      case _: Pipe              => Keywords.pipe
+      case _: Plant             => Keywords.plant
+      case p: Processor         => p.shape.keyword
+      case _: RootContainer     => "root"
+      case _: Saga              => Keywords.saga
+      case _: SagaStep          => Keywords.step
+      case _: State             => Keywords.state
+      case _: Story             => Keywords.story
+      case _: Term              => Keywords.term
+      case _: Type              => Keywords.`type`
+      case _                    => "unknown"
+    }
+  }
+
   override def translateImpl(
     root: RootContainer,
     @unused
@@ -135,7 +176,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       definition: Definition,
       withBrace: Boolean = true
     ): FileEmitter = {
-      addSpace().add(s"${AST.keyword(definition)} ${definition.id.format} is ")
+      addSpace().add(s"${keyword(definition)} ${definition.id.format} is ")
       if (withBrace) {
         if (definition.isEmpty) { add("{ ??? }") }
         else { add("{\n").indent }
@@ -189,7 +230,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       val head = this.add(s"any of {\n").indent
       val enumerators: String = enumeration.enumerators.map { enumerator =>
         enumerator.id.value +
-          enumerator.enumVal.fold("")("(" + _.format + ")") +
+          enumerator.enumVal.fold("")(x => s"($x)") +
           mkEnumeratorDescription(enumerator.description)
       }.mkString(s"$spc", s",\n$spc", s"\n")
       head.add(enumerators).outdent.addLine("}")
@@ -250,7 +291,11 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     }
 
     def emitMessageRef(mr: AST.MessageRef): FileEmitter = {
-      this.add(mr.messageKind.kind).add(" ").add(mr.id.format)
+      this.add(mr.format)
+    }
+
+    def emitTypeRef(tr: AST.TypeRef): FileEmitter = {
+      this.add(tr.format)
     }
 
     def emitTypeExpression(typEx: AST.TypeExpression): FileEmitter = {
@@ -267,15 +312,15 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case ts: TimeStamp  => this.add(ts.kind)
         case ll: LatLong    => this.add(ll.kind)
         case n: Nothing     => this.add(n.kind)
-        case TypeRef(_, id) => this.add(id.format)
+        case AliasedTypeExpression(_, id) => this.add(id.format)
         case URL(_, scheme) => this
             .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
         case enumeration: Enumeration => emitEnumeration(enumeration)
         case alternation: Alternation => emitAlternation(alternation)
         case aggregation: Aggregation => emitAggregation(aggregation)
         case mapping: Mapping         => emitMapping(mapping)
-        case RangeType(_, min, max)   => this.add(s"range(${min.n},${max.n}) ")
-        case ReferenceType(_, er) => this
+        case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
+        case EntityReferenceTypeExpression(_, er) => this
             .add(s"${Keywords.reference} to ${er.format}")
         case pattern: Pattern     => emitPattern(pattern)
         case mt: MessageType      => emitMessageType(mt)
@@ -437,8 +482,8 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
   class ReformatFolder extends Folder[ReformatState] {
     override def openContainer(
       state: ReformatState,
-      container: ParentDefOf[Definition],
-      parents: Seq[ParentDefOf[Definition]]
+      container: Definition,
+      parents: Seq[Definition]
     ): ReformatState = {
       container match {
         case s: Story           => openStory(state, s)
@@ -456,10 +501,10 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case _: RootContainer       =>
           // ignore
           state
-        case container: ParentDefOf[Definition] with OptionsDef[?] =>
+        case container: Definition with OptionsDef[?] =>
           // Applies To: Context, Entity, Interaction
           state.withCurrent(_.openDef(container).emitOptions(container))
-        case container: ParentDefOf[Definition] =>
+        case container: Definition =>
           // Applies To: Saga, Plant, Handler, Processor
           state.withCurrent(_.openDef(container))
       }
@@ -468,7 +513,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     override def doDefinition(
       state: ReformatState,
       definition: Definition,
-      parents: Seq[ParentDefOf[Definition]]
+      parents: Seq[Definition]
     ): ReformatState = {
       definition match {
         case example: Example => state.withCurrent(_.emitExample(example))
@@ -481,18 +526,18 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case joint: Joint   => doJoint(state, joint)
         case _: Field => state // was handled by Type case in openContainer
         case _ =>
-          require(
-            !definition.isInstanceOf[ParentDefOf[Definition]],
+          /* require(
+            !definition.isInstanceOf[Definition],
             s"doDefinition should not be called for ${definition.getClass.getName}"
-          )
+          )*/
           state
       }
     }
 
     override def closeContainer(
       state: ReformatState,
-      container: ParentDefOf[Definition],
-      parents: Seq[ParentDefOf[Definition]]
+      container: Definition,
+      parents: Seq[Definition]
     ): ReformatState = {
       container match {
         case _: Type      => state // openContainer did all of it
@@ -504,7 +549,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case _: RootContainer              =>
           // ignore
           state
-        case container: ParentDefOf[Definition] =>
+        case container: Definition =>
           // Applies To: Domain, Context, Entity, Adaptor, Interaction, Saga,
           // Plant, Processor, Function, SagaStep
           state.withCurrent(_.closeDef(container))
@@ -563,7 +608,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       adaptor: Adaptor
     ): ReformatState = {
       state.withCurrent(
-        _.addIndent(AST.keyword(adaptor)).add(" ").add(adaptor.id.format)
+        _.addIndent(keyword(adaptor)).add(" ").add(adaptor.id.format)
           .add(" for ").add(adaptor.ref.format).add(" is {")
       ).step { s2 =>
         if (adaptor.isEmpty) { s2.withCurrent(_.emitUndefined().add(" }\n")) }
@@ -623,7 +668,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       state.withCurrent(_.openDef(pipe)).step { state =>
         pipe.transmitType match {
           case Some(typ) => state
-              .withCurrent(_.addIndent("transmit ").emitTypeExpression(typ))
+              .withCurrent(_.addIndent("transmit ").emitTypeRef(typ))
           case None => state.withCurrent(_.addSpace().emitUndefined())
         }
       }.withCurrent(_.closeDef(pipe))
@@ -631,7 +676,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
 
     def doJoint(state: ReformatState, joint: Joint): ReformatState = {
       val s = state.withCurrent(
-        _.addIndent(s"${AST.keyword(joint)} ${joint.id.format} is ")
+        _.addIndent(s"${keyword(joint)} ${joint.id.format} is ")
       )
       joint match {
         case InletJoint(_, _, inletRef, pipeRef, _, _) => s.withCurrent(
@@ -657,7 +702,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
       )
     }
 
-    def openFunction[TCD <: ParentDefOf[Definition]](
+    def openFunction[TCD <: Definition](
       state: ReformatState,
       function: Function
     ): ReformatState = {

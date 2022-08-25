@@ -58,6 +58,8 @@ trait CommonParser extends NoWhiteSpaceParsers {
 
   def as[u: P]: P[Unit] = { P(StringIn(Readability.as, Readability.by).?) }
 
+  def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
+
   def docBlock[u: P]: P[Seq[LiteralString]] = {
     P(
       (open ~
@@ -84,11 +86,13 @@ trait CommonParser extends NoWhiteSpaceParsers {
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))
   ).?
 
+  def integer[u:P]: P[Long] = {
+    StringIn(Operators.plus, Operators.minus).? ~
+      CharIn("0-9").rep(1).!.map(_.toLong)
+  }
+
   def literalInteger[u: P]: P[LiteralInteger] = {
-    P(
-      location ~ StringIn(Operators.plus, Operators.minus).? ~ CharIn("0-9")
-        .rep(1).!.map(_.toInt)
-    ).map(s => LiteralInteger(s._1, BigInt(s._2)))
+    P(location ~ integer).map(s => LiteralInteger(s._1, BigInt(s._2)))
   }
 
   def literalDecimal[u: P]: P[LiteralDecimal] = {

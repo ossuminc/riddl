@@ -29,7 +29,7 @@ class AdaptorTest extends ValidatingTest {
           |adaptor PaymentAdapter for context Foo is {
           |  adapt sendAMessage is {
           |    from event ItHappened to command LetsDoIt as {
-          |      example one is { ??? }
+          |      example one is { then error "foo" } described as "eno"
           |    }
           |  } explained as "?"
           |} explained as "?"
@@ -49,7 +49,7 @@ class AdaptorTest extends ValidatingTest {
           |adaptor PaymentAdapter for context Foo is {
           |  adapt sendAMessage is {
           |    from command ItWillHappen to command LetsDoIt as {
-          |      example one is { ??? }
+          |      example one is { then error "foo" } described as "eno"
           |    }
           |  } explained as "?"
           |} explained as "?"

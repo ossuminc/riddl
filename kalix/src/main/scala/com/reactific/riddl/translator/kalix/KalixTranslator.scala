@@ -29,14 +29,14 @@ object KalixTranslator extends Translator[KalixOptions] {
 
   /** Extract actual parents from stack
    * @param stack - The stack of AST elements
-   * @return A ParentDefOf stack that has includes and RootContainers removed
+   * @return A Definition stack that has includes and RootContainers removed
    *
    * The stack goes from most nested to highest. We don't want to change the
    * stack (its mutable) so we reverse it, making a copy, then
    * drop all the root containers (file includes) to finally end up at a domain
    * and then map to just the name of that domain.
    */
-  def parents(stack: Seq[Parent]): Seq[Parent] = {
+  def parents(stack: Seq[Definition]): Seq[Definition] = {
     val result = stack.reverse.dropWhile(_.isRootContainer)
     result
   }
@@ -47,7 +47,7 @@ object KalixTranslator extends Translator[KalixOptions] {
    *
    * It is presumed the stack has already had "parents" run on it
    * */
-  def packages(stack: Seq[Parent]): Seq[String] = {
+  def packages(stack: Seq[Definition]): Seq[String] = {
     stack.flatMap {
       case d: Domain =>
         d.getOptionValue[DomainPackageOption] match {
@@ -70,14 +70,14 @@ object KalixTranslator extends Translator[KalixOptions] {
   }
 
   def setUp(
-    c: Parent,
+    c: Definition,
     options: KalixOptions,
     state: KalixState,
-    stack: Seq[Parent],
+    stack: Seq[Definition],
     isApi: Boolean = false
   ): GrpcWriter = {
     state.addDir(c.id.format)
-    val pars: Seq[Parent] = parents(stack)
+    val pars: Seq[Definition] = parents(stack)
     val pkgs = packages(pars) :+ (if (isApi) "api" else "domain")
     val prefix = Seq("main", "proto") ++ pkgs
     val name = prefix  :+ c.id.value
@@ -98,7 +98,7 @@ object KalixTranslator extends Translator[KalixOptions] {
     require(options.projectName.nonEmpty, "A project name must be provided")
 
     val state = KalixState(options, SymbolTable(root))
-    val parentStack = mutable.Stack[ParentDefOf[Definition]]()
+    val parentStack = mutable.Stack[Definition]()
 
     val newState = Folding.foldLeftWithStack(state, parentStack)(root) {
       case (st, d: AST.Domain, stack) =>

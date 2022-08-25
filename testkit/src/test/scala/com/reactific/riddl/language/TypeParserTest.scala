@@ -37,7 +37,7 @@ class TypeParserTest extends ParsingTest {
         Identifier(1 -> 6, "ident"),
         UniqueId(
           1 -> 14,
-          entityPath = EntityRef(1->14,PathIdentifier(1 -> 14, Seq.empty[String]))
+          entityPath = PathIdentifier(1 -> 14, Seq.empty[String])
         )
       )
       checkDefinition[Type, Type](input, expected, identity)
@@ -52,10 +52,9 @@ class TypeParserTest extends ParsingTest {
           Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
         "type url = URL" ->
           Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
-        "type FirstName = url" -> Type(
+        "type FirstName = URL" -> Type(
           1 -> 1,
-          Identifier(1 -> 6, "FirstName"),
-          TypeRef(1 -> 18, PathIdentifier(1 -> 18, Seq("url")))
+          Identifier(1 -> 6, "FirstName"), URL(1->18,None)
         )
       )
       checkDefinitions[Type, Type](cases, identity)
@@ -85,9 +84,9 @@ class TypeParserTest extends ParsingTest {
         Alternation(
           1 -> 12,
           List(
-            TypeRef(1 -> 21, PathIdentifier(1 -> 21, Seq("enum"))),
-            TypeRef(1 -> 29, PathIdentifier(1 -> 29, Seq("stamp"))),
-            TypeRef(1 -> 38, PathIdentifier(1 -> 38, Seq("url")))
+            AliasedTypeExpression(1 -> 21, PathIdentifier(1 -> 21, Seq("enum"))),
+            AliasedTypeExpression(1 -> 29, PathIdentifier(1 -> 29, Seq("stamp"))),
+            AliasedTypeExpression(1 -> 38, PathIdentifier(1 -> 38, Seq("url")))
           )
         )
       )
@@ -101,7 +100,7 @@ class TypeParserTest extends ParsingTest {
                                    |""".stripMargin)
       val expected = Alternation(
         (3, 12, rpi),
-        List(TypeRef((3, 21, rpi), PathIdentifier((3, 26, rpi), Seq("Foo"))))
+        List(AliasedTypeExpression((3, 21, rpi), PathIdentifier((3, 26, rpi), Seq("Foo"))))
       )
       parseDomainDefinition[Type](rpi, _.types.last) match {
         case Left(errors) =>
@@ -133,7 +132,7 @@ class TypeParserTest extends ParsingTest {
               Identifier((3, 3, rip), "id"),
               UniqueId(
                 (3, 7, rip),
-                EntityRef((3,7,rip),PathIdentifier((3, 7, rip), Seq.empty[String]))
+                PathIdentifier((3, 7, rip), Seq.empty[String])
               )
             ),
             Field(
@@ -177,7 +176,7 @@ class TypeParserTest extends ParsingTest {
                 Identifier((3, 3, rip), "id"),
                 UniqueId(
                   (3, 7, rip),
-                  EntityRef((3,7,rip),PathIdentifier((3, 7, rip), Seq.empty[String]))
+                  PathIdentifier((3, 7, rip), Seq.empty[String])
                 )
               ),
               Field(
@@ -206,9 +205,7 @@ class TypeParserTest extends ParsingTest {
         (1, 1, rip),
         Identifier((1, 6, rip), "r1"),
         RangeType(
-          (1, 11, rip),
-          LiteralInteger((1, 17, rip), BigInt(21)),
-          LiteralInteger((1, 22, rip), BigInt(42))
+          (1, 11, rip), 21, 42
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -221,7 +218,7 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "oneOrMoreA"),
         OneOrMore(
           (1, 24, rip),
-          TypeRef((1, 24, rip), PathIdentifier((1, 24, rip), Seq("agg")))
+          AliasedTypeExpression((1, 24, rip), PathIdentifier((1, 24, rip), Seq("agg")))
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -233,7 +230,7 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "oneOrMoreB"),
         OneOrMore(
           (1, 19, rip),
-          TypeRef((1, 19, rip), PathIdentifier((1, 19, rip), Seq("agg")))
+          AliasedTypeExpression((1, 19, rip), PathIdentifier((1, 19, rip), Seq("agg")))
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -245,11 +242,9 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "zeroOrMore"),
         ZeroOrMore(
           (1, 33, rip),
-          TypeRef((1, 33, rip), PathIdentifier((1, 33, rip), Seq("agg")))
+          AliasedTypeExpression((1, 33, rip), PathIdentifier((1, 33, rip), Seq("agg")))
         )
       )
-      // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:33),TypeRef((1:33),Identifier((1:33),agg))),None)
-      // TypeDef((1:1),Identifier((1:6),zeroOrMore),ZeroOrMore((1:19),TypeRef((1:33),Identifier((1:33),agg))),None)
       checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow optionality" in {
@@ -259,7 +254,7 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "optional"),
         Optional(
           (1, 26, rip),
-          TypeRef((1, 26, rip), PathIdentifier((1, 26, rip), Seq("agg")))
+          AliasedTypeExpression((1, 26, rip), PathIdentifier((1, 26, rip), Seq("agg")))
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -307,7 +302,7 @@ class TypeParserTest extends ParsingTest {
                 Field(
                   (10, 5, rpi),
                   Identifier((10, 5, rpi), "a"),
-                  TypeRef(
+                  AliasedTypeExpression(
                     (10, 8, rpi),
                     PathIdentifier((10, 8, rpi), Seq("Simple"))
                   )
@@ -322,7 +317,7 @@ class TypeParserTest extends ParsingTest {
                   Identifier((12, 5, rpi), "c"),
                   ZeroOrMore(
                     (12, 22, rpi),
-                    TypeRef(
+                    AliasedTypeExpression(
                       (12, 22, rpi),
                       PathIdentifier((12, 22, rpi), Seq("Compound"))
                     )
@@ -333,7 +328,7 @@ class TypeParserTest extends ParsingTest {
                   Identifier((13, 5, rpi), "d"),
                   Optional(
                     (13, 17, rpi),
-                    TypeRef(
+                    AliasedTypeExpression(
                       (13, 17, rpi),
                       PathIdentifier((13, 17, rpi), Seq("Choices"))
                     )

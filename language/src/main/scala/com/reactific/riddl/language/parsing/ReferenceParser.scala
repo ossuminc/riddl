@@ -23,8 +23,6 @@ import fastparse.ScalaWhitespace.*
 
 trait ReferenceParser extends CommonParser {
 
-  def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
-
   def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ pathIdentifier).map(
       tpl => (CommandRef.apply _).tupled(tpl))

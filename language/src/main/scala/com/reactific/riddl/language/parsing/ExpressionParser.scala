@@ -135,13 +135,13 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
-    P( location ~ Punctuation.exclamation ~/ typeRef ~ argList).map(tpl =>
+    P( location ~ Punctuation.exclamation ~/ pathIdentifier ~ argList).map(tpl =>
       (AggregateConstructionExpression.apply _).tupled(tpl))
   }
 
   def entityIdValue[u:P]: P[EntityIdExpression] = {
     P(location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
-      entityRef ~ Punctuation.roundClose).map(tpl =>
+      pathIdentifier ~ Punctuation.roundClose).map(tpl =>
       (EntityIdExpression.apply _).tupled(tpl))
   }
 
