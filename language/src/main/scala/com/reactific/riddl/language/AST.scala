@@ -16,13 +16,11 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.Terminals.{Keywords, Predefined}
+import com.reactific.riddl.language.Terminals.Keywords
 import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
-import scala.collection.immutable.ListMap
-import scala.reflect.{ClassTag, classTag}
 
 // scalastyle:off number.of.methods
 
@@ -34,186 +32,8 @@ import scala.reflect.{ClassTag, classTag}
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST {
+object AST extends ast.Expressions with ast.TypeExpression {
 
-  /** The root trait of all things RIDDL AST. Every node in the tree is a
-    * RiddlNode.
-    */
-  sealed trait RiddlNode {
-    /** Format the node to a string */
-    def format: String = ""
-
-    /** Determine if this node is a container or not */
-    def isContainer: Boolean = false
-
-    /** determine if this node is empty or not. Non-containers are always empty */
-    def isEmpty: Boolean = false
-
-    @deprecatedOverriding(
-      "nonEmpty is defined as !isEmpty; override isEmpty instead"
-    )
-    final def nonEmpty: Boolean = !isEmpty
-  }
-
-  /** The root trait of all parsable values. If a parser returns something, its
-   * a RiddlValue. The distinguishing factor is the inclusion of the parsing
-   * location given by the `loc` field.
-   */
-  sealed trait RiddlValue extends RiddlNode {
-    /** The location in the parse at which this RiddlValue occurs */
-    def loc: Location
-  }
-
-  /** A RiddlValue that is a parsed identifier, typically the name of a
-    * definition.
-    *
-    * @param loc
-    *   The location in the input where the identifier starts
-    * @param value
-    *   The parsed value of the identifier
-    */
-  case class Identifier(loc: Location, value: String) extends RiddlValue {
-    override def format: String = value
-
-    override def isEmpty: Boolean = value.isEmpty
-  }
-  object Identifier {
-    val empty: Identifier = Identifier(Location.empty, "")
-  }
-
-  /** Represents a literal string parsed between quote characters in the input
-    *
-    * @param loc
-    *   The location in the input of the opening quote character
-    * @param s
-    *   The parsed value of the string content
-    */
-  case class LiteralString(loc: Location, s: String) extends Condition {
-    override def format = s"\"$s\""
-
-    override def isEmpty: Boolean = s.isEmpty
-  }
-
-  /** Represents a segmented identifier to a definition in the model. Path
-    * Identifiers are parsed from a dot-separated list of identifiers in the
-    * input. Path identifiers are used to reference other definitions in the
-    * model.
-    *
-    * @param loc
-    *   Location in the input of the first letter of the path identifier
-    * @param value
-    *   The list of strings that make up the path identifier
-    */
-  case class PathIdentifier(loc: Location, value: Seq[String])
-      extends RiddlValue {
-    override def format: String = {
-      value.foldLeft(Seq.empty[String]) {
-        case (r: Seq[String], s: String) =>
-        if (s.isEmpty) {
-          r :+ "^"
-        } else if (r.isEmpty) {
-          Seq(s)
-        } else if (r.last != "^") {
-          r ++ Seq(".", s)
-        } else {
-          r :+ s
-        }
-      }.mkString
-    }
-
-    override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
-  }
-
-  /** The description of a definition. All definitions have a name and an
-   * optional description. This class provides the description part.
-   *
-   */
-  trait Description extends RiddlValue {
-    def loc: Location
-    def lines: Seq[LiteralString]
-    override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
-  }
-
-  case class BlockDescription(
-    loc: Location = Location.empty,
-    lines: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends Description {
-  }
-
-  case class FileDescription(
-    loc: Location,
-    file: Path
-  ) extends Description {
-    lazy val lines: Seq[LiteralString] = {
-      val src = scala.io.Source.fromFile(file.toFile)
-      src.getLines().toSeq.map(LiteralString(loc, _))
-    }
-  }
-
-  /** A reference to a definition of a specific type.
-    *
-    * @tparam T
-    *   The type of definition to which the references refers.
-    */
-  sealed abstract class Reference[+T <: Definition: ClassTag]
-      extends RiddlValue {
-    def id: PathIdentifier
-    def identify: String = {
-      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
-    }
-    override def isEmpty: Boolean = id.isEmpty
-  }
-
-  sealed trait BrieflyDescribedValue extends RiddlValue {
-    def brief: Option[LiteralString]
-  }
-
-  /** Base trait of all values that have an optional Description
-    */
-  sealed trait DescribedValue extends RiddlValue {
-    def description: Option[Description]
-  }
-
-  /** A function to translate between a definition and the keyword that
-    * introduces them.
-    *
-    * @param definition
-    *   The definition to look up
-    * @return
-    *   A string providing the definition keyword, if any. Enumerators and
-    *   fields don't have their own keywords
-    */
-  def keyword(definition: Definition): String = {
-    definition match {
-      case _: Adaptor           => Keywords.adaptor
-      case _: EventActionA8n    => Keywords.adapt
-      case _: EventCommandA8n   => Keywords.adapt
-      case _: CommandCommandA8n => Keywords.adapt
-      case _: Context           => Keywords.context
-      case _: Domain            => Keywords.domain
-      case _: Entity            => Keywords.entity
-      case _: Enumerator        => ""
-      case _: Example           => Keywords.example
-      case _: Field             => ""
-      case _: Function          => Keywords.function
-      case _: Handler           => Keywords.handler
-      case _: Inlet             => Keywords.inlet
-      case _: Invariant         => Keywords.invariant
-      case _: Joint             => Keywords.joint
-      case _: Outlet            => Keywords.outlet
-      case _: Pipe              => Keywords.pipe
-      case _: Plant             => Keywords.plant
-      case p: Processor         => p.shape.keyword
-      case _: RootContainer     => ""
-      case _: Saga              => Keywords.saga
-      case _: SagaStep          => Keywords.step
-      case _: State             => Keywords.state
-      case _: Story             => Keywords.story
-      case _: Term              => Keywords.term
-      case _: Type              => Keywords.`type`
-      case _                    => "unknown"
-    }
-  }
 
   /** A function to provide the kind of thing that a DescribedValue is
     *
@@ -285,64 +105,10 @@ object AST {
     }
   }
 
-  /** Base trait for all definitions requiring an identifier for the definition
-    * and providing the identify method to yield a string that provides the kind
-    * and name
-    */
-  sealed trait Definition extends DescribedValue with BrieflyDescribedValue {
-    def id: Identifier
-    def kind: String = AST.kind(this)
-    def kindId: String = s"$kind '${id.format}'"
-    def identify: String = kindId
-    def identifyWithLoc: String = s"$kindId at $loc"
-    def isImplicit: Boolean = id.value.isEmpty
-
-  }
-
-  /** Base trait of any definition that is in the content of an adaptor
-    */
-  sealed trait AdaptorDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a context
-    */
-  sealed trait ContextDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a domain
-    */
-  sealed trait DomainDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an entity.
-    */
-  sealed trait EntityDefinition extends Definition
-
-  /** Base trait of any definition that occurs in the body of a plant
-    */
-  sealed trait PlantDefinition extends Definition
-
-  /** Base trait of any definition that is also a ContainerValue
-    *
-    * @tparam D
-    *   The kind of definition that is contained by the container
-    */
-  sealed trait Container[+D <: RiddlValue] extends RiddlValue {
-    def contents: Seq[D]
-    override def isEmpty: Boolean = contents.isEmpty
-    override def isContainer: Boolean = true
-    def isRootContainer: Boolean = false
-  }
-
-  /** The parent of a definition as a definition and a container. This type is
-    * widely used to reference any definition that contains other definitions
-    * and is therefore the basis for traversal of the tree.
-    * @tparam D
-    *   The kind of definition that is contained by the container
-    */
-  sealed trait ParentDefOf[+D <: Definition]
-      extends Definition with Container[D]
 
   /** Base trait of any definition that is a container and contains types
    */
-  sealed trait TypeContainer[+D <: Definition] extends ParentDefOf[D] {
+  trait TypeContainer  {
     def types: Seq[Type]
     def collectMessages: Seq[Type] = {
       types.filter(_.isMessageKind)
@@ -350,21 +116,9 @@ object AST {
   }
 
 
-  type Parent = ParentDefOf[Definition]
-
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms {
     def terms: Seq[Term]
-  }
-
-  /** A term definition for the glossary */
-  case class Term(
-    loc: Location,
-    id: Identifier,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None)
-      extends DomainDefinition with ContextDefinition with PlantDefinition {
-    override def isEmpty: Boolean = description.isEmpty
   }
 
   /** Added to definitions that support includes */
@@ -372,11 +126,23 @@ object AST {
     def includes: Seq[Include]
   }
 
+
+  /** A term definition for the glossary */
+  case class Term(
+    loc: Location,
+    id: Identifier,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with DomainDefinition with ContextDefinition with PlantDefinition {
+    override def isEmpty: Boolean = description.isEmpty
+    final val kind: String = "Term"
+  }
+
   case class Include(
     loc: Location = Location(RiddlParserInput.empty),
-    contents: Seq[Definition] = Seq.empty[ParentDefOf[Definition]],
+    contents: Seq[Definition] = Seq.empty[Definition],
     path: Option[Path] = None)
-      extends ParentDefOf[Definition]
+      extends Definition
       with AdaptorDefinition
       with ContextDefinition
       with DomainDefinition
@@ -390,6 +156,7 @@ object AST {
     def description: Option[Description] = None
 
     override def isRootContainer: Boolean = true
+    final val kind: String = "Include"
 
   }
 
@@ -402,8 +169,7 @@ object AST {
   case class RootContainer(
     contents: Seq[Domain] = Nil,
     inputs: Seq[RiddlParserInput] = Nil
-  )
-      extends ParentDefOf[Domain] {
+  ) extends Definition {
 
     override def isRootContainer: Boolean = true
 
@@ -418,6 +184,8 @@ object AST {
     override def description: Option[Description] = None
 
     override def brief: Option[LiteralString] = None
+    final val kind: String = "Root"
+
   }
 
   object RootContainer {
@@ -425,126 +193,8 @@ object AST {
       RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
   }
 
-  /** Base trait for option values for any option of a definition.
-    */
-  trait OptionValue extends RiddlValue {
-    def name: String
 
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
 
-    override def format: String = name + args.map(_.format)
-      .mkString("(", ", ", ")")
-  }
-
-  /** Base trait that can be used in any definition that takes options and
-    * ensures the options are defined, can be queried, and formatted.
-    *
-    * @tparam T
-    *   The sealed base trait of the permitted options for this definition
-    */
-  trait OptionsDef[T <: OptionValue] extends RiddlValue {
-    def options: Seq[T]
-
-    def hasOption[OPT <: T: ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-
-    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] =
-      options
-        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-        .map(_.args)
-
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 =>
-          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
-
-    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
-  }
-
-  // ////////////////////////////////////////////////////////// TYPES
-
-  /** Base trait of an expression that defines a type
-    */
-  sealed trait TypeExpression extends RiddlValue {
-    def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      (other == this) || (other.getClass == this.getClass) ||
-        (other.getClass == classOf[Abstract]) ||
-        (this.getClass == classOf[Abstract])
-    }
-  }
-
-  /** A utility function for getting the kind of a type expression.
-    *
-    * @param te
-    *   The type expression to examine
-    * @return
-    *   A string indicating the kind corresponding to te
-    */
-  def kind(te: TypeExpression): String = {
-    te match {
-      case TypeRef(_, id)         => s"Reference To ${id.format}"
-      case Optional(_, typeExp)   => kind(typeExp) + "?"
-      case ZeroOrMore(_, typeExp) => kind(typeExp) + "*"
-      case OneOrMore(_, typeExp)  => kind(typeExp) + "+"
-      case _: Enumeration         => "Enumeration"
-      case _: Alternation         => "Alternation"
-      case _: Aggregation         => "Aggregation"
-      case Mapping(_, from, to)   => s"Map From ${kind(from)} To ${kind(to)}"
-      case RangeType(_, min, max) => s"Range($min,$max)"
-      case ReferenceType(_, entity) =>
-        s"Reference To Entity ${entity.id.format}"
-      case _: Pattern                     => s"Pattern"
-      case UniqueId(_, entityPath)        => s"Id(${entityPath.format})"
-      case MessageType(_, messageKind, _) => messageKind.kind
-      case predefinedType: PredefinedType => predefinedType.kind
-      case _                              => "<unknown type expression>"
-    }
-  }
-
-  /** A reference to a type definition
-    *
-    * @param loc
-    *   The location in the source where the reference to the type is made
-    * @param id
-    *   The path identifier of the reference type
-    */
-  case class TypeRef(loc: Location, id: PathIdentifier)
-      extends Reference[Type] with TypeExpression {
-    override def format: String = s"type ${id.format}"
-  }
-
-  /** Base of an enumeration for the four kinds of message types */
-  sealed trait MessageKind {
-    def kind: String
-  }
-
-  /** An enumerator value for command types */
-  final case object CommandKind extends MessageKind {
-    def kind: String = "command"
-  }
-
-  /** An enumerator value for event types */
-  final case object EventKind extends MessageKind {
-    def kind: String = "event"
-  }
-
-  /** An enumerator value for query types */
-  final case object QueryKind extends MessageKind {
-    def kind: String = "query"
-  }
-
-  /** An enumerator value for result types */
-  final case object ResultKind extends MessageKind {
-    def kind: String = "result"
-  }
-
-  final case object OtherKind extends MessageKind {
-    def kind: String = "other"
-  }
 
   /** Base trait for the four kinds of message references */
   sealed trait MessageRef extends Reference[Type] {
@@ -603,475 +253,6 @@ object AST {
 
   }
 
-////////////////////////////////////////////////////////////////////////// TYPES
-
-  /** Base trait of the cardinality type expressions */
-  sealed trait Cardinality extends TypeExpression {
-    def typeExp: TypeExpression
-  }
-
-  /** A cardinality type expression that indicates another type expression as
-    * being optional; that is with a cardinality of 0 or 1.
-    *
-    * @param loc
-    *   The location of the optional cardinality
-    * @param typeExp
-    *   The type expression that is indicated as optional
-    */
-  case class Optional(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
-    override def format: String = s"${typeExp.format}?"
-  }
-
-  /** A cardinality type expression that indicates another type expression as
-    * having zero or more instances.
-    *
-    * @param loc
-    *   The location of the zero-or-more cardinality
-    * @param typeExp
-    *   The type expression that is indicated with a cardinality of zero or
-    *   more.
-    */
-  case class ZeroOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
-    override def format: String = s"${typeExp.format}*"
-  }
-
-  /** A cardinality type expression that indicates another type expression as
-    * having one or more instances.
-    *
-    * @param loc
-    *   The location of the one-or-more cardinality
-    * @param typeExp
-    *   The type expression that is indicated with a cardinality of one or more.
-    */
-  case class OneOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
-    override def format: String = s"${typeExp.format}+"
-  }
-
-  /** A cardinality type expression that indicates another type expression as
-   * having a specific range of instances
-   *
-   * @param loc
-   *   The location of the one-or-more cardinality
-   * @param typeExp
-   *   The type expression that is indicated with a cardinality of one or more.
-   * @param min
-   *   The minimum number of items
-   * @param max
-   *   The maximum number of items
-   */
-  case class SpecificRange(
-    loc: Location,
-    typeExp: TypeExpression,
-    min: Long,
-    max: Long
-  ) extends Cardinality {
-    override def format: String = s"${typeExp.format}{$min,$max}"
-  }
-
-  /** Represents one variant among (one or) many variants that comprise an
-    * [[Enumeration]]
-    *
-    * @param id
-    *   the identifier (name) of the Enumerator
-    * @param enumVal
-    *   the optional int value
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   the description of the enumerator. Each Enumerator in an enumeration may
-    *   define independent descriptions
-    */
-  case class Enumerator(
-    loc: Location,
-    id: Identifier,
-    enumVal: Option[LiteralInteger] = None,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Definition {
-    override def format: String = id.format
-
-  }
-
-  /** A type expression that defines its range of possible values as being one
-    * value from a set of enumerated values.
-    *
-    * @param loc
-    *   The location of the enumeration type expression
-    * @param enumerators
-    *   The set of enumerators from which the value of this enumeration may be
-    *   chosen.
-    */
-  case class Enumeration(
-    loc: Location,
-    enumerators: Seq[Enumerator]
-  ) extends TypeExpression {
-    override def format: String = "{ " +  enumerators.mkString(",") + " }"
-
-  }
-
-  /** A type expression that that defines its range of possible values as being
-    * any one of the possible values from a set of other type expressions.
-    *
-    * @param loc
-    *   The location of the alternation type expression
-    * @param of
-    *   The set of type expressions from which the value for this alternation
-    *   may be chosen
-    */
-  case class Alternation(
-    loc: Location,
-    of: Seq[TypeExpression]
-  ) extends TypeExpression {
-    override def format: String = s"one of { ${of.mkString(", ")} }"
-  }
-
-  /** A definition that is a field of an aggregation type expressions. Fields
-    * associate an identifier with a type expression.
-    *
-    * @param loc
-    *   The location of the field definition
-    * @param id
-    *   The name of the field
-    * @param typeEx
-    *   The type of the field
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the field.
-    */
-  case class Field(
-    loc: Location,
-    id: Identifier,
-    typeEx: TypeExpression,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends Definition {
-    override def format: String = s"${id.format}: ${typeEx.format}"
-
-  }
-
-  /** A type expression that contains an aggregation of fields
-   *
-   * This is used as the base trait of Aggregations and Messages
-   */
-  trait AggregateTypeExpression extends TypeExpression with Container[Field] {
-    def fields: Seq[Field]
-    final lazy val contents: Seq[Field] = fields
-    override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
-
-  }
-
-  /** A type expression that takes a set of named fields as its value.
-    *
-    * @param loc
-    *   The location of the aggregation definition
-    * @param fields
-    *   The fields of the aggregation
-    */
-  case class Aggregation(
-    loc: Location,
-    fields: Seq[Field] = Seq.empty[Field]
-  ) extends AggregateTypeExpression
-
-  object Aggregation {
-    val empty: Aggregation = {
-      Aggregation(Location.empty, Seq.empty[Field])
-    }
-    def empty(loc: Location = Location.empty): Aggregation = {
-      Aggregation(loc, Seq.empty[Field])
-    }
-  }
-
-  /** A type expressions that defines a mapping from a key to a value. The value
-    * of a mapping is the set of mapped key -> value pairs, based on which keys
-    * have been provided values.
-    *
-    * @param loc
-    *   The location of the mapping type expression
-    * @param from
-    *   The type expression for the keys of the mapping
-    * @param to
-    *   The type expression for the values of the mapping
-    */
-  case class Mapping(
-    loc: Location,
-    from: TypeExpression,
-    to: TypeExpression)
-      extends TypeExpression {
-    override def format: String = s"mapping from ${from.format} to ${to.format}"
-  }
-
-  /** A type expression that defines a set of integer values from a minimum
-    * value to a maximum value, inclusively.
-    *
-    * @param loc
-    *   The location of the range type expression
-    * @param min
-    *   The minimum value of the range
-    * @param max
-    *   The maximum value of the range
-    */
-  case class RangeType(
-    loc: Location,
-    min: LiteralInteger,
-    max: LiteralInteger)
-      extends TypeExpression {
-    override def format: String = s"range($min,$max)"
-
-  }
-
-  /** A type expression whose value is a reference to an instance of an
-   * entity.
-   *
-   * @param loc
-   *   The location of the reference type expression
-   * @param entity
-   *   The type of entity referenced by this type expression.
-   */
-  case class ReferenceType(
-    loc: Location,
-    entity: EntityRef
-  ) extends TypeExpression {
-    override def format: String = s"reference to ${entity.format}"
-  }
-
-  /** A type expression that defines a string value constrained by a Java
-    * Regular Expression
-    *
-    * @param loc
-    *   The location of the pattern type expression
-    * @param pattern
-    *   The Java Regular Expression to which values of this type expression must
-    *   obey.
-    * @see
-    *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
-    */
-  case class Pattern(
-    loc: Location,
-    pattern: Seq[LiteralString])
-      extends TypeExpression {
-    override def format: String = s"pattern(${pattern.map(_.format).mkString(", ")})"
-  }
-
-  /** A type expression for values that ensure a unique identifier for a
-    * specific entity.
-    *
-    * @param loc
-    *   The location of the unique identifier type expression
-    * @param entityPath
-    *   The path identifier of the entity type
-    */
-  case class UniqueId(
-    loc: Location,
-    entityPath: EntityRef
-  ) extends TypeExpression {
-    override def format: String = s"Id(${entityPath.format})"
-  }
-
-  /** A type expression for an aggregation type expression that is marked as
-    * being one of the four message kinds.
-    *
-    * @param loc
-    *   The location of the message type expression
-    * @param messageKind
-    *   The kind of message defined
-    * @param fields
-    *   The fields of the message's aggregation
-    */
-  case class MessageType(
-    loc: Location,
-    messageKind: MessageKind,
-    fields: Seq[Field] = Seq.empty[Field]
-  ) extends AggregateTypeExpression with EntityValue
-
-  /** Base class of all pre-defined type expressions
-    */
-  abstract class PredefinedType extends TypeExpression {
-    def loc: Location
-
-    def kind: String
-
-    override def format: String = s"$kind"
-  }
-
-  object PredefinedType {
-    final def unapply(preType: PredefinedType): Option[String] =
-      Option(preType.kind)
-  }
-
-  /** A type expression for values of arbitrary string type, possibly bounded by
-    * length.
-    *
-    * @param loc
-    *   The location of the Strng type expression
-    * @param min
-    *   The minimum length of the string (default: 0)
-    * @param max
-    *   The maximum length of the string (default: MaxInt)
-    */
-  case class Strng(
-    loc: Location,
-    min: Option[LiteralInteger] = None,
-    max: Option[LiteralInteger] = None)
-      extends PredefinedType {
-    override lazy val kind: String = "String"
-  }
-
-  /** The simplest type expression: Abstract
-   *  An abstract type expression is one that is not defined explicitly. It is
-   *  treated as a concrete type but without any structural or type information.
-   *  This is useful for types that are defined only at implementation time or
-   *  for types whose variations are so complicated they need to remain abstract
-   *  at the specification level.
-   * @param loc
-   *   The location of the Bool type expression
-   *
-   */
-  case class Abstract(
-    loc: Location
-  ) extends PredefinedType {
-    def kind: String = "Abstract"
-  }
-
-  /** A predefined type expression for boolean values (true / false)
-    *
-    * @param loc
-    *   The location of the Bool type expression
-    */
-  case class Bool(loc: Location) extends PredefinedType {
-    def kind: String = "Boolean"
-  }
-
-  /** A predefined type expression for an arbitrary number value
-    *
-    * @param loc
-    *   The location of the number type expression
-    */
-  case class Number(loc: Location) extends PredefinedType {
-    def kind: String = "Number"
-  }
-
-  /** A predefined type expression for an integer value
-    *
-    * @param loc
-    *   The location of the integer type expression
-    */
-  case class Integer(loc: Location) extends PredefinedType {
-    def kind: String = "Integer"
-  }
-
-  /** A predefined type expression for a decimal value including IEEE floating
-    * point syntax.
-    *
-    * @param loc
-    *   The location of the decimal integer type expression
-    */
-  case class Decimal(loc: Location) extends PredefinedType {
-    def kind: String = "Decimal"
-  }
-
-  /** A predefined type expression for a real number value.
-    *
-    * @param loc
-    *   The locaiton of the real number type expression
-    */
-  case class Real(loc: Location) extends PredefinedType {
-    def kind: String = "Real"
-  }
-
-  /** A predefined type expression for a calendar date.
-    *
-    * @param loc
-    *   The location of the date type expression.
-    */
-  case class Date(loc: Location) extends PredefinedType {
-    def kind: String = "Date"
-  }
-
-  /** A predefined type expression for a clock time with hours, minutes,
-    * seconds.
-    *
-    * @param loc
-    *   The location of the time type expression.
-    */
-  case class Time(loc: Location) extends PredefinedType {
-    def kind: String = "Time"
-  }
-
-  /** A predefined type expression for a calendar date and clock time
-    * combination.
-    *
-    * @param loc
-    *   The location of the datetime type expression.
-    */
-  case class DateTime(loc: Location) extends PredefinedType {
-    def kind: String = "DateTime"
-  }
-
-  /** A predefined type expression for a timestamp that records the number of
-    * milliseconds from the epoch.
-    *
-    * @param loc
-    *   The location of the timestamp
-    */
-  case class TimeStamp(loc: Location) extends PredefinedType {
-    def kind: String = "TimeStamp"
-  }
-
-  /** A predefined type expression for a time duration that records the number
-    * of milliseconds between two fixed points in time
-    *
-    * @param loc
-    *   The location of the duration type expression
-    */
-  case class Duration(loc: Location) extends PredefinedType {
-    def kind: String = "Duration"
-  }
-
-  /** A predefined type expression for a universally unique identifier as
-    * defined by the Java Virtual Machine.
-    *
-    * @param loc
-    *   The location of the UUID type expression
-    */
-  case class UUID(loc: Location) extends PredefinedType {
-    def kind: String = "UUID"
-  }
-
-  /** A predefined type expression for a Uniform Resource Locator of a specific
-    * schema.
-    *
-    * @param loc
-    *   The location of the URL type expression
-    * @param scheme
-    *   The scheme to which the URL is constrained.
-    */
-  case class URL(loc: Location, scheme: Option[LiteralString] = None)
-      extends PredefinedType {
-    def kind: String = "URL"
-  }
-
-  /** A predefined type expression for a location on earth given in latitude and
-    * longitude.
-    *
-    * @param loc
-    *   The location of the LatLong type expression.
-    */
-  case class LatLong(loc: Location) extends PredefinedType {
-    def kind: String = "LatLong"
-  }
-
-  /** A predefined type expression for a type that can have no values
-    *
-    * @param loc
-    *   The location of the nothing type expression.
-    */
-  case class Nothing(loc: Location) extends PredefinedType {
-    def kind: String = "Nothing"
-  }
 
   /** A type definition which associates an identifier with a type expression.
     *
@@ -1092,10 +273,9 @@ object AST {
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Definition]
-      with ContextDefinition
-      with EntityDefinition
-      with DomainDefinition with FunctionDefinition {
+      extends Definition with ContextDefinition
+      with EntityDefinition with FunctionDefinition
+      with DomainDefinition  {
     override def contents: Seq[Definition] = {
       typ match {
         case Aggregation(_, fields)      => fields
@@ -1107,431 +287,28 @@ object AST {
     def isMessageKind: Boolean = {
       typ.isInstanceOf[MessageType]
     }
+    final val kind: String = "Type"
   }
   type Command = Type
   type Event = Type
   type Query = Type
   type Result = Type
 
-  // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
-
-  /** Base trait of all expressions
-    */
-  sealed trait Expression extends RiddlValue {
-    def isCondition: Boolean = false
-    def isNumeric: Boolean = false
-  }
-
-  /** Base trait for expressions that yield a boolean value (a condition)
-   */
-  sealed trait Condition extends Expression {
-    override def isCondition: Boolean = false
-  }
-
-  /** Base trait for expressions that yield a numeric value  */
-  sealed trait NumericExpression extends Expression {
-    override def isNumeric: Boolean = true
-  }
-
-  /** Represents the use of an arithmetic operator or well-known function call.
-    * The operator can be simple like addition or subtraction or complicated
-    * like pow, sqrt, etc. There is no limit on the number of operands but
-    * defining them shouldn't be necessary as they are pre-determined by use of
-    * the name of the operator (e.g. pow takes two floating point numbers, sqrt
-    * takes one.
-    * @param loc
-    *   The location of the operator
-    * @param operator
-    *   The name of the operator (+, -, sqrt, ...)
-    * @param operands
-    *   A list of expressions that correspond to the required operands for the
-    *   operator
-    */
-
-  case class ArithmeticOperator(
-    loc: Location,
-    operator: String,
-    operands: Seq[Expression])
-      extends NumericExpression {
-    override def format: String = operator + operands.mkString("(", ",", ")")
-  }
-
-  /** Represents an expression that is merely a reference to some value,
-    * presumably an entity state value. Since it can be a boolean value, it is
-    * also a condition
+  /** A reference to a type definition
     *
     * @param loc
-    *   The location of this expression
-    * @param path
-    *   The path to the value for this expression
+    *   The location in the source where the reference to the type is made
+    * @param id
+    *   The path identifier of the reference type
     */
-  case class ValueExpression(loc: Location, path: PathIdentifier)
-      extends Expression {
-    override def format: String = "@" + path.format
+  case class TypeRef(loc: Location, id: PathIdentifier)
+      extends Reference[Type] {
+    override def format: String = s"type ${id.format}"
   }
 
-  /** Represents a expression that will be specified later and uses
-   * the ??? syntax to represent that condition.
-   *
-   * @param loc
-   * The location of the undefined condition
-   */
-  case class UndefinedExpression(loc: Location)
-    extends Expression {
-    override def format: String = Terminals.Punctuation.undefined
-
-    override def isEmpty: Boolean = true
-  }
-
-  /** The arguments of a [[FunctionCallExpression]] and
-   * [[AggregateConstructionExpression]] is a mapping between
-   * an argument name and the expression that provides the value for that
-   * argument.
-   *
-   * @param args
-   * A mapping of Identifier to Expression to provide the arguments for the
-   * function call.
-   */
-  case class ArgList(
-    args: ListMap[Identifier, Expression] = ListMap
-      .empty[Identifier, Expression])
-    extends RiddlNode {
-    override def format: String = args.map { case (id, exp) =>
-      id.format + "=" + exp.format
-    }.mkString("(", ", ", ")")
-  }
-
-  /** A helper class for creating aggregates and messages that represents
-   * the construction of the message or aggregate value from parameters
-   *
-   * @param msg
-   * A message reference that specifies the specific type of message to
-   * construct
-   * @param args
-   * An argument list that should correspond to teh fields of the message
-   */
-  case class AggregateConstructionExpression(
-    loc: Location,
-    msg: TypeRef,
-    args: ArgList = ArgList()
-  ) extends Expression {
-    override def format: String = msg.format + {
-      if (args.nonEmpty) {args.format}
-      else {"()"}
-    }
-  }
-
-  /** A helper class for creating expressions that represent the
-   * creation of a new entity identifier for a specific kidn of entity.
-   *
-   * @param loc
-   * The location of the expression in the source
-   * @param entityId
-   * The [[PathIdentifier]] of the entity type for with the Id is created
-   */
-  case class EntityIdExpression(
-    loc: Location,
-    entityId: EntityRef,
-  ) extends Expression {
-    override def format: String = {
-      Keywords.new_ + " " + Predefined.Id + "(" +
-        entityId.format + ")"
-    }
-  }
-
-
-  /** A RIDDL Function call. The only callable thing here is a function
-    * identified by its path identifier with a matching set of arguments
-    *
-    * @param loc
-    *   The location of the function call expression
-    * @param name
-    *   The path identifier of the RIDDL Function being called
-    * @param arguments
-    *   An [[ArgList]] to pass to the function.
-    */
-  case class FunctionCallExpression(
-    loc: Location,
-    name: PathIdentifier,
-    arguments: ArgList)
-      extends Expression {
-    override def format: String = name.format + arguments.format
-  }
-
-  case class ArbitraryOperator(
-    loc: Location,
-    opName: LiteralString,
-    arguments: Seq[Expression]
-  ) extends Expression {
-    override def format: String = opName.format + "(" +
-      arguments.map(_.format).mkString("(", ", ", ")") + ")"
-  }
-
-
-  /** A syntactic convenience for grouping a list of expressions.
-   *
-   * @param loc
-   * The location of the expression group
-   * @param expressions
-   * The expressions that are grouped
-   */
-  case class GroupExpression(loc: Location, expressions: Seq[Expression])
-    extends Expression {
-    override def format: String = {
-      s"(${expressions.map(_.format).mkString(", ")})"
-    }
-  }
-
-
-  /** Ternary operator to accept a conditional and two expressions and choose
-    * one of the expressions as the resulting value based on the conditional.
-    *
-    * @param loc
-    *   The location of the ternary operator
-    * @param condition
-    *   The conditional expression that determines the result
-    * @param expr1
-    *   An expression for the result if the condition is true
-    * @param expr2
-    *   An expression for the result if the condition is false
-    */
-  case class Ternary(
-    loc: Location,
-    condition: Condition,
-    expr1: Expression,
-    expr2: Expression)
-      extends Expression {
-    override def format: String =
-      s"if(${condition.format},${expr1.format},${expr2.format})"
-  }
-
-  /** An expression that is a literal constant integer value
-    *
-    * @param loc
-    *   The location of the integer value
-    * @param n
-    *   The number to use as the value of the expression
-    */
-  case class LiteralInteger(loc: Location, n: BigInt)
-    extends NumericExpression {
-    override def format: String = n.toString()
-  }
-
-  /** An expression that is a liberal constant decimal value
-    * @param loc
-    *   The location of the decimal value
-    * @param d
-    *   The decimal number to use as the value of the expression
-    */
-  case class LiteralDecimal(loc: Location, d: BigDecimal)
-    extends NumericExpression {
-    override def format: String = d.toString
-  }
-
-  // /////////////////////////////////////////////////////////// Conditional Expressions
-
-  /** A condition value for "true"
-    * @param loc
-    *   The location of this expression value
-    */
-  case class True(loc: Location) extends Condition {
-    override def format: String = "true"
-  }
-
-  /** A condition value for "false"
-    * @param loc
-    *   The location of this expression value
-    */
-  case class False(loc: Location) extends Condition {
-    override def format: String = "false"
-  }
-
-  /** Represents an arbitrary condition that is specified merely with a literal
-    * string. This can't be easily processed downstream but provides the author
-    * with the ability to include arbitrary ideas/concepts into an condition
-    * expression. For example in a when condition:
-    * {{{
-    *   example foo { when "the timer has expired" }
-    * }}}
-    * shows the use of an arbitrary condition for the "when" part of a Gherkin
-    * example.
-    *
-    * @param cond
-    *   The arbitrary condition provided as a quoted string
-    */
-  case class ArbitraryCondition(cond: LiteralString)
-    extends Condition {
-    override def loc: Location = cond.loc
-
-    override def format: String = cond.format
-  }
-
-
-  /** Represents a condition that is merely a reference to some Boolean value,
-   * presumably an entity state value or parameter.
-   *
-   * @param loc
-   * The location of this condition
-   * @param path
-   * The path to the value for this condition
-   */
-  case class ValueCondition(loc: Location, path: PathIdentifier)
-    extends Condition {
-    override def format: String = "@" + path.format
-  }
-
-
-  /** A RIDDL Function call to the function identified by its path identifier
-   * with a matching set of arguments. This function must return a boolean
-   * since it is defined as a Condition.
-   *
-   * @param loc The location of the function call expression
-   * @param name The path identifier of the RIDDL Function being called
-   * @param arguments
-   *   An [[ArgList]] to pass to the function.
-   */
-  case class FunctionCallCondition(
-    loc: Location,
-    name: PathIdentifier,
-    arguments: ArgList)
-    extends  Condition {
-    override def format: String = name.format + arguments.format
-  }
-
-  sealed trait Comparator extends RiddlNode
-
-  final case object lt extends Comparator {
-    override def format: String = "<"
-  }
-
-  final case object gt extends Comparator {
-    override def format: String = ">"
-  }
-
-  final case object le extends Comparator {
-    override def format: String = "<="
-  }
-
-  final case object ge extends Comparator {
-    override def format: String = ">="
-  }
-
-  final case object eq extends Comparator {
-    override def format: String = "=="
-  }
-
-  final case object ne extends Comparator {
-    override def format: String = "!="
-  }
-
-  /** Represents one of the six comparison operators
-    *
-    * @param loc
-    *   Location of the comparison
-    * @param op
-    *   The comparison operator
-    * @param expr1
-    *   The first operand in the comparison
-    * @param expr2
-    *   The second operand in the comparison
-    */
-  case class Comparison(
-    loc: Location,
-    op: Comparator,
-    expr1: Expression,
-    expr2: Expression)
-      extends Condition {
-    override def format: String = op.format + Seq(expr1.format, expr2.format)
-      .mkString("(", ",", ")")
-  }
-
-  /** Not condition
-    *
-    * @param loc
-    *   Location of the not condition
-    * @param cond1
-    *   The condition being negated
-    */
-  case class NotCondition(loc: Location, cond1: Condition) extends Condition {
-    override def format: String = "not(" + cond1 + ")"
-  }
-
-  /** Base class for conditions with two operands
-    */
-  abstract class MultiCondition extends Condition {
-    def conditions: Seq[Condition]
-
-    override def format: String = conditions.mkString("(", ",", ")")
-  }
-
-  /** And condition
-    *
-    * @param loc
-    *   Location of the and condition
-    * @param conditions
-    *   The conditions (minimum 2) that must all be true for "and" to be true
-    */
-  case class AndCondition(loc: Location, conditions: Seq[Condition])
-      extends MultiCondition {
-    override def format: String = "and" + super.format
-  }
-
-  /** Or condition
-    *
-    * @param loc
-    *   Location of the `or` condition
-    * @param conditions
-    *   The conditions (minimum 2), any one of which must be true for "Or" to be
-    *   true
-    */
-  case class OrCondition(loc: Location, conditions: Seq[Condition])
-      extends MultiCondition {
-    override def format: String = "or" + super.format
-  }
-
-  /** Xor condition
-    * @param loc
-    *   Location of the `xor` condition
-    * @param conditions
-    *   The conditions (minimum 2), only one of which may be true for "xor" to
-    *   be true.
-    */
-  case class XorCondition(loc: Location, conditions: Seq[Condition])
-      extends MultiCondition {
-    override def format: String = "xor" + super.format
-  }
-
-  /** An arbitrary expression provided by a LiteralString
-   * Arbitrary expressions conform to the type based on the context in which
-   * they are found. Another way to think of it is that arbitrary expressions
-   * are assignment compatible with any other type
-   * For example, in an arithmetic expression like this
-   * {{{
-   *   +(42,"number of widgets in a wack-a-mole")
-   * }}}
-   * the arbitrary expression given by the string conforms to a numeric type
-   * since the context is the addition of 42 and the arbitrary expression
-   */
-  case class ArbitraryExpression(cond: LiteralString)
-    extends Expression {
-    override def loc: Location = cond.loc
-
-    override def format: String = cond.format
-  }
 
 
   // /////////////////////////////////////////////////////////// Actions
-
-  /** Base class for all actions. Actions are used in the "then" and "but"
-    * clauses of a Gherkin example such as in the body of a [[Handler]]'s
-    * [[OnClause]] or in the definition of a [[Function]]. The subclasses define
-    * different kinds of actions that can be used.
-    */
-  sealed trait Action extends DescribedValue
-
-  /** An action that can also be used in a SagaStep
-    */
-  sealed trait SagaStepAction extends Action
 
   /** An action whose behavior is specified as a text string allowing extension
     * to arbitrary actions not otherwise handled by RIDDL's syntax.
@@ -1804,14 +581,6 @@ object AST {
 
   // ////////////////////////////////////////////////////////// Gherkin
 
-  /** Base class of any Gherkin value
-    */
-  sealed trait GherkinValue extends RiddlValue
-
-  /** Base class of one of the four Gherkin clauses (Given, When, Then, But)
-    */
-  sealed trait GherkinClause extends GherkinValue
-
   /** A GherkinClause for the Given part of a Gherkin [[Example]]
     *
     * @param loc
@@ -1884,10 +653,11 @@ object AST {
     buts: Seq[ButClause] = Seq.empty[ButClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
-      extends ProcessorDefinition with FunctionDefinition  {
+      extends LeafDefinition
+        with ProcessorDefinition with FunctionDefinition  {
+    final val kind: String = "Example"
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
-      thens.isEmpty && buts.isEmpty
-  }
+      thens.isEmpty && buts.isEmpty  }
 
   // ////////////////////////////////////////////////////////// Entities
 
@@ -2011,8 +781,6 @@ object AST {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
 
-  trait FunctionDefinition extends Definition
-
   /** A function definition which can be part of a bounded context or an entity.
     *
     * @param loc
@@ -2042,10 +810,9 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Definition]
-      with EntityDefinition
+      extends EntityDefinition
       with ContextDefinition with FunctionDefinition {
-    override lazy val contents: Seq[Definition] = {
+    override lazy val contents: Seq[FunctionDefinition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
       output.map(_.fields).getOrElse(Seq.empty[Field]) ++
       types ++ functions ++ examples
@@ -2053,6 +820,9 @@ object AST {
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
       output.isEmpty
+
+    final val kind: String = "Function"
+
   }
 
   /** An invariant expression that can be used in the definition of an entity.
@@ -2076,11 +846,11 @@ object AST {
     expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends EntityDefinition {
+      extends LeafDefinition with EntityDefinition {
     override def isEmpty: Boolean = expression.isEmpty
+    final val kind: String = "Invariant"
   }
 
-  sealed trait HandlerDefinition extends Definition
 
   /** Defines the actions to be taken when a particular message is received by
     * an entity. [[OnClause]]s are used in the definition of a [[Handler]] with
@@ -2103,10 +873,12 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] with HandlerDefinition {
+      extends HandlerDefinition {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
     override def isEmpty: Boolean = examples.isEmpty
     override def contents: Seq[Example] = examples
+    final val kind: String = "On Clause"
+
   }
 
   /** A named handler of messages (commands, events, queries) that bundles
@@ -2134,11 +906,11 @@ object AST {
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[OnClause]
-      with ContextDefinition
-      with EntityDefinition {
+      extends ContextDefinition with EntityDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[OnClause] = clauses
+    final val kind: String = "Handler"
+
   }
 
   /** A reference to a Handler
@@ -2174,9 +946,10 @@ object AST {
     typeEx: Aggregation,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Field] with EntityDefinition {
+      extends EntityDefinition {
 
     override def contents: Seq[Field] = typeEx.fields
+    final val kind: String = "State"
   }
 
   /** A reference to an entity's state definition
@@ -2226,8 +999,8 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends TypeContainer[EntityDefinition]
-      with ContextDefinition
+      extends ContextDefinition
+      with TypeContainer
       with OptionsDef[EntityOption]
       with WithIncludes {
 
@@ -2235,10 +1008,12 @@ object AST {
       states ++ types ++ handlers ++ functions ++ invariants ++ includes
     }
 
+    final val kind: String = "Entity"
+
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
 
-  sealed trait Adaptation extends AdaptorDefinition with ParentDefOf[Example] {
+  sealed trait Adaptation extends AdaptorDefinition {
     def messageRef: MessageRef
     def examples: Seq[Example]
   }
@@ -2270,6 +1045,8 @@ object AST {
     description: Option[Description] = None)
       extends Adaptation {
     override def contents: Seq[Example] = examples
+    final val kind: String = "Event Command Adaptation"
+
   }
 
   /** The specification of a single adaptation based on message
@@ -2300,6 +1077,7 @@ object AST {
     description: Option[Description] = None)
     extends Adaptation {
     override def contents: Seq[Example] = examples
+    final val kind: String = "Command Command Adaptation"
   }
 
   /** An adaptation that takes an action on event receipt
@@ -2328,6 +1106,7 @@ object AST {
       extends Adaptation {
     def contents: Seq[Example] = examples
     override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
+    final val kind: String = "Event Action Adaptation"
   }
 
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
@@ -2358,10 +1137,10 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[AdaptorDefinition]
-      with ContextDefinition
+      extends ContextDefinition
       with WithIncludes {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
+    final val kind: String = "Adaptor"
   }
 
   case class Projection(
@@ -2370,8 +1149,9 @@ object AST {
     fields: Seq[Field],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends ParentDefOf[Field] with ContextDefinition {
+  ) extends ContextDefinition {
     lazy val contents: Seq[Field] = fields
+    final val kind: String = "Projection"
   }
 
   /** A reference to an context's projection definition
@@ -2484,13 +1264,14 @@ object AST {
     projections: Seq[Projection] = Seq.empty[Projection],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends TypeContainer[ContextDefinition]
-      with DomainDefinition
+      extends DomainDefinition
+      with TypeContainer
       with OptionsDef[ContextOption]
       with WithIncludes
       with WithTerms {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
       sagas ++ functions ++ terms ++ includes
+    final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
   }
@@ -2515,7 +1296,10 @@ object AST {
     transmitType: Option[TypeRef],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends PlantDefinition with ContextDefinition
+      extends LeafDefinition with PlantDefinition with ContextDefinition {
+    override def isEmpty: Boolean = transmitType.isEmpty
+    final val kind: String = "Pipe"
+  }
 
   /** Base trait of definitions defined in a processor
     */
@@ -2523,7 +1307,7 @@ object AST {
 
   /** Base trait of an Inlet or Outlet definition
     */
-  trait Streamlet extends ProcessorDefinition
+  trait Streamlet extends LeafDefinition with ProcessorDefinition
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -2545,7 +1329,9 @@ object AST {
     entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet
+      extends Streamlet with AlwaysEmpty {
+    final val kind: String = "Inlet"
+  }
 
   /** A streamlet that supports output of data of a particular type.
     *
@@ -2567,7 +1353,9 @@ object AST {
     entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet
+      extends Streamlet with AlwaysEmpty {
+    final val kind: String = "Outlet"
+  }
 
   sealed trait ProcessorShape extends RiddlValue {
     def keyword: String
@@ -2626,10 +1414,10 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[ProcessorDefinition] with PlantDefinition
-      with ContextDefinition {
+      extends PlantDefinition with ContextDefinition {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
       examples
+    final val kind: String = shape.getClass.getSimpleName
   }
 
   /** A reference to a pipe
@@ -2677,7 +1465,8 @@ object AST {
 
   /** Sealed base trait for both kinds of Joint definitions
     */
-  sealed trait Joint extends PlantDefinition with ContextDefinition
+  sealed trait Joint extends LeafDefinition with AlwaysEmpty
+    with PlantDefinition with ContextDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *
@@ -2701,7 +1490,9 @@ object AST {
     pipe: PipeRef,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Joint
+      extends Joint {
+    final val kind: String = "Inlet Joint"
+  }
 
   /** A joint that connects a [[Processor]]'s [[Outlet]] to a [[Pipe]].
     *
@@ -2725,7 +1516,9 @@ object AST {
     pipe: PipeRef,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Joint
+      extends Joint {
+    final val kind: String = "Outlet Joint"
+  }
 
   /** The definition of a plant which brings pipes, processors and joints
     * together into a closed system of data processing.
@@ -2758,12 +1551,12 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[PlantDefinition]
-      with DomainDefinition
+      extends DomainDefinition
       with WithIncludes
       with WithTerms {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
       outJoints ++ terms ++ includes
+    final val kind: String = "Plant"
   }
 
   /** The definition of one step in a saga with its undo step and example.
@@ -2791,8 +1584,9 @@ object AST {
     examples: Seq[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] {
+      extends SagaDefinition {
     def contents: Seq[Example] = examples
+    final val kind: String = "SagaStep"
   }
 
   /** Base trait for all options applicable to a saga.
@@ -2847,15 +1641,12 @@ object AST {
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Definition]
-      with OptionsDef[SagaOption]
-      with ContextDefinition {
-    lazy val contents: Seq[Definition] = {
+      extends ContextDefinition with OptionsDef[SagaOption] {
+    lazy val contents: Seq[SagaDefinition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
-        output.map(_.fields).getOrElse(Seq.empty[Field]) ++
-        sagaSteps
+      output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps
     }
-
+    final val kind: String = "Saga"
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
   }
@@ -2899,8 +1690,9 @@ object AST {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ParentDefOf[Example] with DomainDefinition {
+      extends DomainDefinition {
     override def contents: Seq[Example] = examples
+    final val kind: String = "Story"
   }
 
   /** A reference to a domain definition
@@ -2940,10 +1732,11 @@ object AST {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends DomainDefinition {
+      extends LeafDefinition with DomainDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
+    final val kind: String = "Author Info"
   }
 
   /** Base trait for all options a Domain can have.
@@ -2999,7 +1792,7 @@ object AST {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends TypeContainer[DomainDefinition]
+      extends TypeContainer
       with OptionsDef[DomainOption]
       with DomainDefinition
       with WithIncludes
@@ -3008,5 +1801,6 @@ object AST {
       domains ++ types ++ contexts ++ plants ++ stories ++ terms ++
         includes ++ authors
     }
+    final val kind: String = "Domain"
   }
 }

@@ -54,12 +54,14 @@ class RiddlTest extends ParsingTestBase {
   "parse" should {
     "parse a file" in {
       val log = InMemoryLogger()
-      val result = Riddl.parse(
+      Riddl.parse(
         path = Path.of("testkit/src/test/input/rbbq.riddl"),
         log,
         options = CommonOptions(showTimes = true)
-      )
-      result mustNot be(empty)
+      ) match {
+        case None => fail(log.lines().mkString("\n"))
+        case Some(_) => succeed
+      }
     }
 
     "return none when file does not exist" in {

@@ -25,19 +25,20 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Type definitions */
-trait TypeParser extends ReferenceParser {
+trait TypeParser extends CommonParser {
 
-  def referToEntity[u: P]: P[ReferenceType] = {
-    P(location ~ Keywords.reference ~ Readability.to ~/ entityRef).map { tpl =>
-      (ReferenceType.apply _).tupled(tpl)
+  def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
+    P(location ~ Keywords.reference ~ Readability.to ~/
+      maybe(Keywords.entity) ~ pathIdentifier).map { tpl =>
+      (EntityReferenceTypeExpression.apply _).tupled(tpl)
     }
   }
 
   def stringType[u: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~
-        (Punctuation.roundOpen ~ literalInteger.? ~ Punctuation.comma ~
-          literalInteger.? ~ Punctuation.roundClose).?
+        (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~
+          integer.? ~ Punctuation.roundClose).?
     ).map {
       case (loc, Some((min, max))) => Strng(loc, min, max)
       case (loc, None)             => Strng(loc, None, None)
@@ -82,16 +83,17 @@ trait TypeParser extends ReferenceParser {
   }
 
   def uniqueIdType[u: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ roundOpen ~/ entityRef.? ~ roundClose./)
-      .map {
-        case (loc, Some(entityRef)) => UniqueId(loc, entityRef)
+    ( location ~ Predefined.Id ~ roundOpen ~/ maybe(Keywords.entity) ~
+      pathIdentifier.? ~ roundClose./
+    ).map {
+        case (loc, Some(pid)) => UniqueId(loc, pid)
         case (loc, None) =>
-          UniqueId(loc, EntityRef(loc, PathIdentifier(loc, Seq.empty[String])))
+          UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
       }
   }
 
-  def enumValue[u: P]: P[Option[LiteralInteger]] = {
-    P(Punctuation.roundOpen ~ literalInteger ~ Punctuation.roundClose).?
+  def enumValue[u: P]: P[Option[Long]] = {
+    P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose).?
   }
 
   def enumerator[u: P]: P[Enumerator] = {
@@ -99,10 +101,6 @@ trait TypeParser extends ReferenceParser {
       (Enumerator.apply _).tupled(tpl)
     }
   }
-
-  /** Type reference parser that requires the 'type' keyword qualifier
-    */
-  def isTypeRef[u: P]: P[TypeRef] = { P(is ~/ Keywords.`type` ~/ typeRef) }
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
@@ -120,11 +118,17 @@ trait TypeParser extends ReferenceParser {
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
+  def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
+    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)
+      .map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
+  }
+
   def fieldTypeExpression[u:P]: P[TypeExpression] = {
     P(
       cardinality(
         simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-        alternation | referToEntity | mapping | range | typeRef
+        alternation | entityReferenceType | mappingType | rangeType |
+          aliasedTypeExpression
       )
     )
   }
@@ -185,10 +189,10 @@ trait TypeParser extends ReferenceParser {
 
   /** Parses mappings, i.e.
     * {{{
-    * mapping { from Integer to String }
+    *   mapping from Integer to String
     * }}}
     */
-  def mapping[u: P]: P[Mapping] = {
+  def mappingType[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
@@ -197,16 +201,14 @@ trait TypeParser extends ReferenceParser {
 
   /** Parses ranges, i.e.
     * {{{
-    *   range { from 1 to 2 }
+    *   range(1,2)
     * }}}
     */
-  def range[u: P]: P[RangeType] = {
+  def rangeType[u: P]: P[RangeType] = {
     P(
       location ~ Keywords.range ~ roundOpen ~/
-        literalInteger.?.map(_.getOrElse(LiteralInteger(Location.empty, 0))) ~
-        comma ~
-        literalInteger.?
-          .map(_.getOrElse(LiteralInteger(Location.empty, Int.MaxValue))) ~
+        integer.?.map(_.getOrElse(0L)) ~ comma ~
+        integer.?.map(_.getOrElse(Long.MaxValue)) ~
         roundClose./
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
@@ -233,11 +235,11 @@ trait TypeParser extends ReferenceParser {
   }
 
   def typeExpression[u: P]: P[TypeExpression] = {
-    P(cardinality(P(
+    P(cardinality(
       simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-        alternation | referToEntity | aggregation | messageType | mapping |
-        range | typeRef
-    )))
+        alternation | entityReferenceType | aggregation | messageType |
+        mappingType | rangeType | aliasedTypeExpression
+    ))
   }
 
   def typeDef[u: P]: P[Type] = {

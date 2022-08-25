@@ -124,11 +124,11 @@ trait ParsingContext {
           str.loc,
           s"File '$name' exits but can't be read, so it can't be included."
         )
-        Include(str.loc, Seq.empty[ParentDefOf[Definition]], Some(path))
+        Include(str.loc, Seq.empty[Definition], Some(path))
       }
     } else {
       error(str.loc, s"File '$name' does not exist, so it can't be included.")
-      Include(str.loc, Seq.empty[ParentDefOf[Definition]], Some(path))
+      Include(str.loc, Seq.empty[Definition], Some(path))
     }
   }
 

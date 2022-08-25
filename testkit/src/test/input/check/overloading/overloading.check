@@ -1,8 +1,4 @@
 Missing: overloading.riddl(2:1): Type 'Locale' should have a description
-Missing: overloading.riddl(4:25): Enumerator 'Keyboard' should have a description
-Missing: overloading.riddl(4:35): Enumerator 'Mouse' should have a description
-Missing: overloading.riddl(3:19): Field 'locale' should have a description
-Missing: overloading.riddl(4:42): Enumerator 'Monitor' should have a description
 Missing: overloading.riddl(3:1): Type 'Keyboard' should have a description
 Missing: overloading.riddl(4:1): Type 'Device' should have a description
 Style: overloading.riddl(4:25): Enumerator 'Keyboard' overloads Type 'Keyboard' at overloading.riddl(3:1)

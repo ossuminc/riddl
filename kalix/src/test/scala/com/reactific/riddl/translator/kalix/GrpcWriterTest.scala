@@ -33,7 +33,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
           .get("src", Seq("main", "proto") ++ pkgs :+ "foo.proto": _*)
         val file = testDir.resolve(path)
         val symTab = SymbolTable(root)
-        GrpcWriter(file, pkgs, Seq.empty[Parent], symTab) -> root.contents.head
+        GrpcWriter(file, pkgs, Seq.empty[Definition], symTab) -> root.contents.head
     }
   }
 
@@ -124,7 +124,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
             .resolve("Organization.proto")
           val file = testDir.resolve(path)
           val symtab = SymbolTable(root)
-          val gw = GrpcWriter(file, packages, Seq.empty[Parent], symtab)
+          val gw = GrpcWriter(file, packages, Seq.empty[Definition], symtab)
           val context: Context = root.contents.head.includes.head.contents.head
             .asInstanceOf[Context]
           val entity = context.entities.head

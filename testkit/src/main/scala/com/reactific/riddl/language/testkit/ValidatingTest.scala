@@ -53,7 +53,7 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def parseAndValidate[D <: ParentDefOf[Definition]: ClassTag](
+  def parseAndValidate[D <: Definition: ClassTag](
     input: RiddlParserInput
   )(validator: (D, RiddlParserInput, Messages) => Assertion
   ): Assertion = {

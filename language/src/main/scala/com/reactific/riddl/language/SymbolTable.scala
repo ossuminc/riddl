@@ -34,9 +34,9 @@ import scala.reflect.*
  * @param container
  * The node from which to build the symbol table
  */
-case class SymbolTable(container: ParentDefOf[Definition]) {
+case class SymbolTable(container: Definition) {
 
-  type Parents = Seq[ParentDefOf[Definition]]
+  type Parents = Seq[Definition]
   type Parentage = mutable.HashMap[Definition, Parents]
   type SymTabItem = (Definition, Parents)
   type SymTab = mutable.HashMap[String, Seq[SymTabItem]]
@@ -46,9 +46,7 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
   private def emptyParentage: Parentage =
     mutable.HashMap.empty[Definition, Parents]
 
-  private def makeSymTab(
-    top: ParentDefOf[Definition]
-  ): (SymTab,Parentage) = {
+  private def makeSymTab(top: Definition): (SymTab,Parentage) = {
     def rootLessParents(parents: Parents): Parents = {
       parents.toSeq.filter {
         case _: RootContainer => false
@@ -84,7 +82,7 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
    * The definition whose parent is to be sought.
    * @return optionally, the parent definition of the given definition
    */
-  def parentOf(definition: Definition): Option[ParentDefOf[Definition]] =
+  def parentOf(definition: Definition): Option[Definition] =
     parentage.get(definition) match {
       case Some(container) => container.headOption
       case None => None
@@ -96,10 +94,10 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
    * The defintiion whose parents are to be sought.
    * @return the sequence of ParentDefOf parents or empty if none.
    */
-  def parentsOf(definition: Definition): Seq[ParentDefOf[Definition]] = {
+  def parentsOf(definition: Definition): Seq[Definition] = {
     parentage.get(definition) match {
       case Some(list) => list
-      case None => Seq.empty[ParentDefOf[Definition]]
+      case None => Seq.empty[Definition]
     }
   }
 
@@ -149,12 +147,12 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
     val leafName = nameList.head
     symbols.get(leafName) match {
       case Some(set) => set.filter {
-        case (_: Definition, parents: Seq[ParentDefOf[Definition]]) =>
+        case (_: Definition, parents: Seq[Definition]) =>
           // whittle down the list of matches to the ones whose parents names
           // have the same as the nameList provided
           hasSameParentNames(nameList, parents)
         }.map {
-          case (d: Definition, _: Seq[ParentDefOf[Definition]]) =>
+          case (d: Definition, _: Seq[Definition]) =>
             // If a name match is also the same type as desired by the caller
             // then give them the definition in the requested type, optionally
             if (clazz.isInstance(d)) {
@@ -189,7 +187,7 @@ case class SymbolTable(container: ParentDefOf[Definition]) {
     symbols.get(leafName) match {
       case Some(set) =>
         set.filter {
-          case (_: Definition, parents: Seq[ParentDefOf[Definition]]) =>
+          case (_: Definition, parents: Seq[Definition]) =>
             // whittle down the list of matches to the ones whose parents names
             // have the same as the nameList provided
             hasSameParentNames(names, parents)

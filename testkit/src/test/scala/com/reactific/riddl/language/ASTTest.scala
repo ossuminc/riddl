@@ -15,8 +15,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       Domain((0, 0), Identifier((1, 1), "foo"))
     }
     "support all type constructs" in {
-      TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe
-        TypeRef(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo")))
+      AliasedTypeExpression(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe
+        AliasedTypeExpression(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo")))
 
       Strng mustBe Strng
       Bool mustBe Bool
@@ -33,19 +33,19 @@ class ASTTest extends AnyWordSpec with must.Matchers {
         Aggregation((0, 0), Seq.empty[Field])
       Optional(
         (0, 0),
-        TypeRef((0, 0), PathIdentifier((0, 0), Seq("String")))
+        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String")))
       ) mustBe
-        Optional((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("String"))))
+        Optional((0, 0), AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String"))))
       ZeroOrMore(
         (0, 0),
-        TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time")))
+        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time")))
       ) mustBe
-        ZeroOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("Time"))))
+        ZeroOrMore((0, 0), AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time"))))
       OneOrMore(
         (0, 0),
-        TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL")))
+        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL")))
       ) mustBe
-        OneOrMore((0, 0), TypeRef((0, 0), PathIdentifier((0, 0), Seq("URL"))))
+        OneOrMore((0, 0), AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL"))))
     }
   }
 

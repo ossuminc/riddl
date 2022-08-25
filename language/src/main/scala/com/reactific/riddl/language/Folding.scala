@@ -28,27 +28,28 @@ object Folding {
   type SimpleDispatch[S] = (Container[Definition], Definition, S) => S
 
   def foldEachDefinition[S](
-    parent: Container[Definition],
+    parent: Definition,
     child: Definition,
     state: S
   )(f: SimpleDispatch[S]
   ): S = {
     child match {
-      case subcontainer: ParentDefOf[Definition] =>
+      case defn: LeafDefinition =>
+        f(parent, defn, state)
+      case defn: Definition =>
         val result = f(parent, child, state)
-        subcontainer.contents.foldLeft(result) { case (next, child) =>
-          foldEachDefinition[S](subcontainer, child, next)(f)
+        defn.contents.foldLeft(result) { case (next, child) =>
+          foldEachDefinition[S](defn, child, next)(f)
         }
-      case ch: Definition => f(parent, ch, state)
     }
   }
 
   final def foldLeftWithStack[S](
     value: S,
-    parents: mutable.Stack[ParentDefOf[Definition]] = mutable.Stack
-      .empty[ParentDefOf[Definition]]
-  )(top: ParentDefOf[Definition]
-  )(f: (S, Definition, Seq[ParentDefOf[Definition]]) => S
+    parents: mutable.Stack[Definition] = mutable.Stack
+      .empty[Definition]
+  )(top: Definition
+  )(f: (S, Definition, Seq[Definition]) => S
   ): S = {
     val initial = f(value, top, parents.toSeq)
     parents.push(top)
@@ -56,13 +57,15 @@ object Folding {
       top.contents.foldLeft(initial) { (next, definition) =>
         definition match {
           case i: Include => i.contents.foldLeft(next) {
-              case (n, cd: ParentDefOf[Definition]) =>
-                foldLeftWithStack(n, parents)(cd)(f)
-              case (n, d: Definition) => f(n, d, parents.toSeq)
-            }
-          case c: ParentDefOf[Definition] =>
+            case (n, d: LeafDefinition) =>
+              f(n, d, parents.toSeq)
+            case (n, cd: Definition) =>
+              foldLeftWithStack(n, parents)(cd)(f)
+          }
+          case d: LeafDefinition =>
+            f(next, d, parents.toSeq)
+          case c: Definition =>
             foldLeftWithStack(next, parents)(c)(f)
-          case d: Definition => f(next, d, parents.toSeq)
         }
       }
     } finally { parents.pop() }
@@ -83,21 +86,24 @@ object Folding {
 
   final def foldAround[S](
     value: S,
-    top: ParentDefOf[Definition],
+    top: Definition,
     folder: Folder[S],
-    parents: mutable.Stack[ParentDefOf[Definition]] =
-      mutable.Stack.empty[ParentDefOf[Definition]]
+    parents: mutable.Stack[Definition] =
+      mutable.Stack.empty[Definition]
   ): S = {
     // Let them know a container is being opened
     val startState = folder.openContainer(value, top, parents.toSeq)
     parents.push(top)
     val middleState = top.contents.foldLeft(startState) {
-      case (next, container: ParentDefOf[Definition]) =>
+      case (next, definition: LeafDefinition) =>
+        // Leaf node so mention it
+        parents.push(definition)
+        val st = folder.doDefinition(next, definition, parents.toSeq)
+        parents.pop()
+        st
+      case (next, container: Definition) =>
         // Container node so recurse
         foldAround(next, container, folder, parents)
-      case (next, definition: Definition) =>
-        // Leaf node so mention it
-        folder.doDefinition(next, definition, parents.toSeq)
     }
     // Let them know a container is being closed
     parents.pop()
@@ -107,20 +113,20 @@ object Folding {
   trait Folder[STATE] {
     def openContainer(
       state: STATE,
-      container: ParentDefOf[Definition],
-      parents: Seq[ParentDefOf[Definition]]
+      container: Definition,
+      parents: Seq[Definition]
     ): STATE
 
     def doDefinition(
       state: STATE,
       definition: Definition,
-      parents: Seq[ParentDefOf[Definition]]
+      parents: Seq[Definition]
     ): STATE
 
     def closeContainer(
       state: STATE,
-      container: ParentDefOf[Definition],
-      parents: Seq[ParentDefOf[Definition]]
+      container: Definition,
+      parents: Seq[Definition]
     ): STATE
   }
 
@@ -183,7 +189,7 @@ object Folding {
   }
 
   trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
-    def root: ParentDefOf[Definition]
+    def root: Definition
     var parents: Seq[Definition] = Seq.empty[Definition]
 
     def captureHierarchy(pars: Seq[Definition]): S = {
@@ -217,13 +223,13 @@ object Folding {
           nstack.push(n) // undo the pop above
           nstack.pushAll(msgRef.id.value.reverse)
           Seq.empty[Definition]
-        case Some(Field(_, _, TypeRef(_, pid), _, _)) =>
+        case Some(Field(_, _, AliasedTypeExpression(_, pid), _, _)) =>
           // if we're at a field that references another type then we
           // need to push that types path on the name stack
           nstack.push(n)
           nstack.pushAll(pid.value.reverse)
           Seq.empty[Definition]
-        case Some(Type(_, _, TypeRef(_, pid), _, _)) =>
+        case Some(Type(_, _, AliasedTypeExpression(_, pid), _, _)) =>
           // if we're at a type definition that references another type then
           // we need to push that type's path on the name stack
           nstack.push(n)
