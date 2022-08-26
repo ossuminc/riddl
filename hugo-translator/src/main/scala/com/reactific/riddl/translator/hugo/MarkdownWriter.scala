@@ -435,6 +435,9 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
     list("Implemented By", story.implementedBy.map(_.format))
   }
 
+  def emitProcessor(p: Processor, parents: Seq[String]): this.type = {
+    fileHead(p)
+  }
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
     fileHead(plant)
     title(plant)

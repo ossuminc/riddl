@@ -16,8 +16,9 @@
 
 package com.reactific.riddl.translator.hugo
 
-import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.AST.{Include, _}
 import com.reactific.riddl.language._
+import com.reactific.riddl.translator.hugo.HugoTranslator.parents
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
@@ -105,6 +106,16 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
     }
   }
 
+  def linkToItem(defn: Definition, parents: Seq[Definition]): String = {
+    val pars = ("/" + parents.map(_.id.value).mkString("/")).toLowerCase
+    defn match {
+      case _: LeafDefinition | _: Type | _: SagaStep | _: OnClause =>
+        pars + "#" + defn.id.value
+      case _ =>
+        pars + "/" + defn.id.value.toLowerCase
+    }
+  }
+
   def findAuthor(defn: Definition, parents: Seq[Definition]): Seq[AuthorInfo] = {
     val result = AST.authorsOf(defn) match {
       case s if s.isEmpty =>
@@ -133,12 +144,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
         }
         parents = pars.dropRight(1).reverse
         path = parents.map(_.id.value).mkString(".")
-        link = {
-          val pars = ("/" + parents.map(_.id.value).mkString("/")).toLowerCase
-          if (!defn.isInstanceOf[LeafDefinition]) {
-            pars + "/" + defn.id.value.toLowerCase
-          } else { pars }
-        }
+        link = linkToItem(defn, pars)
       } yield {
         (item,author,path,link)
       }
@@ -174,7 +180,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
 
 object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
-  val geekDoc_version = "v0.34.1"
+  val geekDoc_version = "v0.34.2"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -294,7 +300,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     state.addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
-  def setUpDefinition(
+  def setUpLeaf(
     d: Definition,
     state: HugoTranslatorState,
     stack: Seq[Definition]
@@ -324,61 +330,60 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     val state = HugoTranslatorState(options)
     val parentStack = mutable.Stack[Definition]()
 
-    val newState = Folding.foldLeftWithStack(state, parentStack)(root) {
-      case (st, e: AST.Entity, stack) =>
-        val (mkd, parents) = setUpContainer(e, st, stack)
-        mkd.emitEntity(e, parents)
-        st.addToGlossary(e, parents)
-        st
-      case (st, f: AST.Function, stack) =>
-        val (mkd, parents) = setUpContainer(f, st, stack)
-        mkd.emitFunction(f, parents)
-        st.addToGlossary(f, parents)
-      case (st, c: AST.Context, stack) =>
-        val (mkd, parents) = setUpContainer(c, st, stack)
-        mkd.emitContext(c, parents)
-        st.addToGlossary(c, parents)
-      case (st, a: AST.Adaptor, stack) =>
-        val (mkd, parents) = setUpContainer(a, st, stack)
-        mkd.emitAdaptor(a, parents)
-        st.addToGlossary(a, parents)
-      case (st, s: AST.Saga, stack) =>
-        val (mkd, parents) = setUpContainer(s, st, stack)
-        mkd.emitSaga(s, parents)
-        st.addToGlossary(s, parents)
-      case (st, s: AST.Story, stack) =>
-        val (mkd, parents) = setUpContainer(s, st, stack)
-        mkd.emitStory(s, parents)
-        st.addToGlossary(s, parents)
-      case (st, p: AST.Plant, stack) =>
-        val (mkd, parents) = setUpContainer(p, st, stack)
-        mkd.emitPlant(p, parents)
-        st.addToGlossary(p, parents)
-      case (st, p: AST.Processor, stack) =>
-        val (mkd, parents) = setUpContainer(p, st, stack)
-        mkd.emitProcessor(p, parents)
-        st.addToGlossary(p, parents)
-      case (st, d: AST.Domain, stack) =>
-        val (mkd, parents) = setUpContainer(d, st, stack)
-        mkd.emitDomain(d, parents)
-        st.addToGlossary(d, parents)
-      case (st, a: AST.Adaptation, stack) =>
-        val (mkd, parents) = setUpDefinition(a, st, stack)
-        mkd.emitAdaptation(a, parents)
-        st
-      case (st, p: AST.Pipe, stack) =>
-        val (mkd, parents) = setUpDefinition(p, st, stack)
-        mkd.emitPipe(p, parents)
-        st.addToGlossary(p, parents)
-      case (st, t: AST.Term, stack)  => st.addToGlossary(t, parents(stack))
-      case (st, _: RootContainer, _) =>
-        // skip, not needed
-        st
-      case (st, _, _) => // skip, handled by the MarkdownWriter
-        st
-    }
-    newState.close(root)
+    Folding
+      .foldLeftWithStack(state, parentStack)(root)(processingFolder)
+      .close(root)
   }
+
+  def processingFolder(
+    st: HugoTranslatorState,
+    defn: Definition,
+    stack: Seq[Definition]
+  ): HugoTranslatorState  = {
+    defn match {
+      case leaf: LeafDefinition =>
+        val (mkd, parents) = setUpLeaf(leaf, st, stack)
+        leaf match {
+          case f: Field        => mkd.emitField(f, parents)
+          case e: Example      => mkd.emitExample(e, parents)
+          case e: Enumerator   => mkd.emitEnumerator(e, parents)
+          case i: Invariant    => mkd.emitInvariant(i, parents)
+          case t: Term         => st.addToGlossary(t, parents)
+          case p: Pipe         => mkd.emitPipe(p, parents)
+          case i: Inlet        => mkd.emitInlet(i, parents)
+          case o: Outlet       => mkd.emitOutlet(o, parents)
+          case ij: InletJoint  => mkd.emitInletJoint(ij, parents)
+          case oj: OutletJoint => mkd.emitOutletJoint(oj, parents)
+          case ai: AuthorInfo  => mkd.emitAuthorInfo(ai, parents)
+        }
+        st.addToGlossary(leaf, parents)
+      case container: Definition =>
+        val (mkd, parents) = setUpContainer(container, st, stack)
+        st.addToGlossary(container, parents)
+        container match {
+          case t: Type          => mkd.emitType(t, parents)
+          case s: State         => mkd.emitState(s, parents)
+          case h: Handler       => mkd.emitHandler(h, parents)
+          case f: Function      => mkd.emitFunction(f, parents)
+          case e: Entity        => mkd.emitEntity(e, parents)
+          case c: Context       => mkd.emitContext(c, parents)
+          case d: Domain        => mkd.emitDomain(d, parents)
+          case a: Adaptor       => mkd.emitAdaptor(a, parents)
+          case p: Processor     => mkd.emitProcessor(p, parents)
+          case p: Projection    => mkd.emitProjection(p, parents)
+          case s: Saga          => mkd.emitSaga(s, parents)
+          case s: Story         => mkd.emitStory(s, parents)
+          case p: Plant         => mkd.emitPlant(p, parents)
+          case a: Adaptation    => mkd.emitAdaptation(a, parents)
+          case oc: OnClause     => // handled by emitHandler
+          case ss: SagaStep     => // handled by emitSaga
+          case i: Include       => // ignore
+          case _: RootContainer => // ignore
+        }
+      }
+      st
+    }
+
 
   // scalastyle:off method.length
   def configTemplate(
