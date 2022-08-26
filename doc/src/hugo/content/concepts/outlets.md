@@ -1,0 +1,12 @@
+---
+title: "Outlets"
+draft: false
+---
+
+TBD
+
+## Occurs In
+* [Processors](onclauses)
+
+## Contains 
+Nothing

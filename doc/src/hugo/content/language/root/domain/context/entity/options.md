@@ -1,7 +1,7 @@
 ---
 title: "Options"
 type: "page"
-weight: 15
+weight: 10
 draft: "false"
 ---
 
@@ -24,3 +24,7 @@ message input:
   even across data centers using CRDTs (conflict-free replicated data types).
 * _grpc_ - indicates that the entity should be accessible via gRPC api invocations
 * _mq_ - indicates that commands and queries may be sent by a message queue such as Kafka, Pulsar, or Google Pub Sub
+
+Entities use
+event sourcing to keep track of the entire history of changes to the entity's
+state.

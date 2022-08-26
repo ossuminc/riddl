@@ -4,11 +4,14 @@ type: "page"
 weight: 20 
 draft: "false"
 ---
+
 Adaptors are translators between contexts and (sub-)domains.
-DDD calls these "anti-corruption layers"; but we find that term to be awkward, hence we
-renamed them as _adaptors_.  However, the name DDD chose is apt.  Adaptors aim to 
-solve a language problem that often exists in large domain modelling exercises: 
-conflation and overloading of terms.
+DDD calls these "anti-corruption layers"; but we find that term to be awkward
+and its abbreviation to be conflated with Access Control List and with a
+ligament of the knee (*anterior cruciate ligament*). Consequently, we prefer
+to use the term _adaptor_ for this concept. However, the name DDD chose is apt.
+Adaptors aim to solve a language problem that often exists in large domain 
+modelling exercises: conflation and overloading of terms.
 
 For example, consider the word "order" in various contexts:
 * _military_ - a directive or command from a superior to a subordinate
