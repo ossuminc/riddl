@@ -167,6 +167,7 @@ object Terminals {
     final val remove = "remove"
     final val reply = "reply"
     final val requires = "requires"
+    final val required = "required"
     final val result = "result"
     final val results = "results"
     final val return_ = "return"

@@ -20,28 +20,41 @@ what it can do, and what it is based upon.  Definitely start
 with the [Introduction](introduction) if you're new to RIDDL.
 
 There is an [Audiences](audience) section which provides learning 
-paths for different kinds of readers, to wit:
-* [Domain Expert's Guide](audience/domain-experts-guide): for knowledge 
-  domain experts who would provide concepts, structure, and event flows
-  to a RIDDL author. Domain experts are generally not required to deal
-  with the RIDDL language itself but do need to be familiar with its
-  concepts and facilities. 
-* [Author's Guide](audience/authors-guide): for those who will write 
-  RIDDL specifications and must know the language intricacies for full
-  and accurate specifications. 
-* [Implementor's Guide](audience/implementors-guide): for those who will 
-  implement software systems based on RIDDL specifications and the output of 
-  RIDDL based tools
-* [Developer's Guide](audience/developers-guide): for those who will work on 
-  the RIDDL software itself and tools such as `riddlc` 
+paths for different kinds of readers:
+<div style="background-color: #8f9ea8; padding-left: 3px">
+{{< columns >}}
+{{< button size="large" relref="audience/domain-experts-guide" >}}Expert's Guide {{< /button >}}
+For knowledge domain experts who would provide concepts, structure, and event 
+flows to a RIDDL author. 
+<--->
+{{< button size="large" relref="audience/authors-guide" >}}Author's Guide {{< /button >}}
+For those who will write RIDDL specifications and must know the language 
+intricacies for full and accurate specifications.
+<--->
+{{< button size="large" relref="audience/implementors-guide" >}}Implementor's Guide{{< /button >}}
+For those who will implement software systems based on RIDDL specifications and
+the output of RIDDL based tools.
+<--->
+{{< button size="large" relref="audience/developers-guide" >}}Developer's Guide {{< /button >}}
+For those who will work on  the RIDDL software itself and tools such as `riddlc` 
+{{< /columns >}}
+</div>
 
-For those that like to learn incrementally, there is a [Tutorial](tutorial) 
-section which walks the reader through the construction of a RIDDL model for
-a restaurant chain, and the resulting software system to operate it.
+If you're just interested in the concepts, there is the [Concepts](concepts) 
+section which describes the various concepts used by RIDDL, their relationships,
+and utility. This section will give you a complete understanding of the ideas
+used in RIDDL, without worrying about the syntax of the language that is used
+to express those ideas.
+
+For those that like to learn incrementally, there is a 
+[Tutorial](tutorial) that walks the reader through the 
+construction 
+of a RIDDL model for a restaurant chain, and the resulting software system 
+to operate it.
 
 For those that like to learn by example, the model produced in the 
-[Tutorial](tutorial) is presented, step-by-step, with new concepts added 
-as they occur, in the [Example](examples) section
+[Tutorial](tutorial section) is presented, step-by-step, with new concepts 
+added as they occur, in the [Example](examples) section.
 
 If you want to dive into the technical specification for the RIDDL language,
 you can go to the [Language](language) section and learn the language from 
