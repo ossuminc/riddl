@@ -22,10 +22,9 @@ import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
 import com.reactific.riddl.utils.Zip
-import com.reactific.riddl.utils.{PathUtils, Tar, Zip}
+import com.reactific.riddl.utils.Tar
 
 import java.io.File
-import java.io.IOException
 import java.net.URL
 import java.nio.file._
 import scala.collection.mutable
@@ -78,7 +77,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
       val entry = GlossaryEntry(
         d.id.value,
         d.kind,
-        d.brief.map(_.s).getOrElse("--"),
+        d.brief.map(_.s).getOrElse("-- undefined --"),
         parents :+ d.id.value
       )
       terms = terms :+ entry
@@ -117,16 +116,45 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
     }
   }
 
+  def findAuthor(defn: Definition, parents: Seq[Definition]): Seq[AuthorInfo] = {
+    AST.authorsOf(defn) match {
+      case s if s.isEmpty =>
+        parents.find(x => AST.authorsOf(x).nonEmpty) match {
+          case None => Seq.empty[AuthorInfo]
+          case Some(defn) => AST.authorsOf(defn)
+        }
+      case s => s
+    }
+  }
+
   def makeToDoList(root: RootContainer): Unit = {
     if (options.withTODOList) {
       val finder = Finder(root)
       val items = for {
-        list <- finder.findEmpty
-        item = list._1.identify
-        parents = list._2.dropRight(1).reverse
+        (defn, pars) <- finder.findEmpty
+        item = defn.identify
+        authors = findAuthor(defn, pars)
+        parents = pars.dropRight(1).reverse
         path = parents.map(_.id.value).mkString(".")
-        link = parents.map(_.id.value).mkString("/") + list._1.id.value
-      } yield { s"[$item At $path]($link)" }
+        link = parents.map(_.id.value).mkString("/") + defn.id.value
+      } yield {
+        val auths = if (authors.isEmpty) {
+          Seq("Unspecified Author")
+        } else {
+          authors.map(x => s"${x.name.s} <${x.email.s}>")
+        }
+        (item,auths,path,link)
+      }
+      val each = for {
+        (items, auths, path, link) <- items
+        auth <- auths
+      } yield {
+        (items, auth, path, link)
+      }
+
+      val map = each.groupBy(_._2).view.mapValues(_.map {
+        case (item, _, path, link ) => s"[$item At $path]($link)"
+      }).toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
       mdw.fileHead(
         "To Do List",
@@ -134,7 +162,12 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
         Option("A list of definitions needing more work")
       )
       mdw.h2("Definitions With Missing Content")
-      mdw.list(items)
+      for {
+        (key, items) <- map
+      } {
+        mdw.h3(key)
+        mdw.list(items)
+      }
     }
   }
 
@@ -205,8 +238,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   def copyResource(destination: Path):Unit = {
-    import java.nio.file.Files
-    import java.nio.file.StandardCopyOption
     val name = destination.getFileName.toString
     TextFileWriter.copyResource(name, destination)
   }

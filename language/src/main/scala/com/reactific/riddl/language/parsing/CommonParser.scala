@@ -210,4 +210,23 @@ trait CommonParser extends NoWhiteSpaceParsers {
     P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
       .map(tpl => (Term.apply _).tupled(tpl))
   }
+
+  def author[u: P]: P[AuthorInfo] = {
+    P(
+      location ~ Keywords.author ~/ identifier ~ is ~ open ~
+        (undefined((
+          LiteralString(Location(), ""),
+          LiteralString(Location(), ""),
+          Option.empty[LiteralString],
+          Option.empty[LiteralString],
+          Option.empty[java.net.URL]
+        )) | (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+          literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+          (Keywords.title ~ is ~ literalString).? ~
+          (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+    ).map {
+      case (loc, id, (name, email, org, title, url), brief, desc) =>
+        AuthorInfo(loc, id, name, email, org, title, url, brief, desc)
+    }
+  }
 }

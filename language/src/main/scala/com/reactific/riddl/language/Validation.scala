@@ -1038,7 +1038,9 @@ object Validation {
       .checkSequence(whens){ (st, when) =>
         st.checkExpression(when.condition, example)
       }
-      .checkNonEmpty(thens, "Thens", example, required = true)
+      .checkIf(example.id.nonEmpty) { st =>
+        st.checkNonEmpty(thens, "Thens", example, required = true)
+      }
       .checkActions(thens.map(_.action),example)
       .checkActions(buts.map(_.action),example)
       .checkDescription(example)
