@@ -1747,11 +1747,24 @@ object AST extends ast.Expressions with ast.TypeExpression {
     defn match {
       case d: DomainDefinition =>
         d match {
-          case dmn: Domain => dmn.authors
-          case ctxt: Context => ctxt.authors
-          case ntty: Entity => ntty.authors
+          case dmn: Domain =>
+            dmn.authors ++ dmn
+              .includes
+              .flatMap(_.contents.filter(_.isInstanceOf[AuthorInfo]))
+              .asInstanceOf[Seq[AuthorInfo]]
+          case ctxt: Context => ctxt.authors ++ctxt
+            .includes
+            .flatMap(_.contents.filter(_.isInstanceOf[AuthorInfo]))
+            .asInstanceOf[Seq[AuthorInfo]]
+          case ntty: Entity => ntty.authors ++ ntty
+            .includes
+            .flatMap(_.contents.filter(_.isInstanceOf[AuthorInfo]))
+            .asInstanceOf[Seq[AuthorInfo]]
           case stry: Story => stry.authors
-          case plnt: Plant => plnt.authors
+          case plnt: Plant => plnt.authors ++ plnt
+            .includes
+            .flatMap(_.contents.filter(_.isInstanceOf[AuthorInfo]))
+            .asInstanceOf[Seq[AuthorInfo]]
           case _ => Seq.empty[AuthorInfo]
         }
       case _ => Seq.empty[AuthorInfo]

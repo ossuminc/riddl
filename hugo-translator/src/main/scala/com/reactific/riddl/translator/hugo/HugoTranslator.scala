@@ -89,19 +89,8 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
 
   def makeIndex(root: RootContainer): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
-    mdw.fileHead("Top Index", 10, Option("The main index to the content"))
-    mdw.h2("Domains")
-    val domains = root.contents.sortBy(_.id.value)
-      .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
-    mdw.list(domains)
-    mdw.h2("Indices")
-    val glossary =
-      if (options.withGlossary) { Seq("[Glossary](glossary)") }
-      else { Seq.empty[String] }
-    val todoList =
-      if (options.withTODOList) { Seq("[To Do List](todolist)") }
-      else { Seq.empty[String] }
-    mdw.list(glossary ++ todoList)
+    mdw.fileHead("Index", 10, Option("The main index to the content"))
+    mdw.p("{{< toc-tree >}}")
   }
 
   def makeGlossary(): Unit = {
@@ -117,43 +106,46 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
   }
 
   def findAuthor(defn: Definition, parents: Seq[Definition]): Seq[AuthorInfo] = {
-    AST.authorsOf(defn) match {
+    val result = AST.authorsOf(defn) match {
       case s if s.isEmpty =>
         parents.find(x => AST.authorsOf(x).nonEmpty) match {
-          case None => Seq.empty[AuthorInfo]
-          case Some(defn) => AST.authorsOf(defn)
+          case None =>
+            Seq.empty[AuthorInfo]
+          case Some(d) =>
+            AST.authorsOf(d)
         }
       case s => s
     }
+    result
   }
 
   def makeToDoList(root: RootContainer): Unit = {
     if (options.withTODOList) {
       val finder = Finder(root)
-      val items = for {
+      val items: Seq[(String,String,String,String)] = for {
         (defn, pars) <- finder.findEmpty
         item = defn.identify
         authors = findAuthor(defn, pars)
+        author = if (authors.isEmpty) {
+          "Unspecified Author"
+        } else {
+          authors.map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
+        }
         parents = pars.dropRight(1).reverse
         path = parents.map(_.id.value).mkString(".")
-        link = parents.map(_.id.value).mkString("/") + defn.id.value
-      } yield {
-        val auths = if (authors.isEmpty) {
-          Seq("Unspecified Author")
-        } else {
-          authors.map(x => s"${x.name.s} <${x.email.s}>")
+        link = {
+          val pars = ("/" + parents.map(_.id.value).mkString("/")).toLowerCase
+          if (!defn.isInstanceOf[LeafDefinition]) {
+            pars + "/" + defn.id.value.toLowerCase
+          } else { pars }
         }
-        (item,auths,path,link)
-      }
-      val each = for {
-        (items, auths, path, link) <- items
-        auth <- auths
       } yield {
-        (items, auth, path, link)
+        (item,author,path,link)
       }
 
-      val map = each.groupBy(_._2).view.mapValues(_.map {
-        case (item, _, path, link ) => s"[$item At $path]($link)"
+      val map = items.groupBy(_._2).view.mapValues(_.map {
+        case (item, _, path, link ) =>
+          s"[$item At $path]($link)"
       }).toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
       mdw.fileHead(
