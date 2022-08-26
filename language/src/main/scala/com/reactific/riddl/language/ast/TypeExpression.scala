@@ -248,7 +248,9 @@ trait TypeExpression extends Abstract {
   case class Aggregation(
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field])
-      extends AggregateTypeExpression
+      extends AggregateTypeExpression {
+
+  }
 
   object Aggregation {
     val empty: Aggregation = { Aggregation(Location.empty, Seq.empty[Field]) }

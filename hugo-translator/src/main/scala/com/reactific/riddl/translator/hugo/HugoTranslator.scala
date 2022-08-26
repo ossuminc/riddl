@@ -18,7 +18,6 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST.{Include, _}
 import com.reactific.riddl.language._
-import com.reactific.riddl.translator.hugo.HugoTranslator.parents
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
@@ -88,7 +87,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
 
   val lastFileWeight = 999
 
-  def makeIndex(root: RootContainer): Unit = {
+  def makeIndex(): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
     mdw.fileHead("Index", 10, Option("The main index to the content"))
     mdw.p("{{< toc-tree >}}")
@@ -170,7 +169,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
   }
 
   def close(root: RootContainer): Seq[Path] = {
-    makeIndex(root)
+    makeIndex()
     makeGlossary()
     makeToDoList(root)
     files.foreach(_.write())
@@ -229,14 +228,18 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
 
     val targetDir = options.staticRoot
     if (Files.exists(sourceDir) && Files.isDirectory(sourceDir)) {
+      val img = sourceDir
+      .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
+      Files.createDirectories(img.getParent)
+      if (!Files.exists(img)) { copyResource(img, "RIDDL-Logo.ico") }
       // copy source to target using Files Class
       val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
       Files.walkFileTree(sourceDir, visitor)
     }
   }
 
-  def copyResource(destination: Path):Unit = {
-    val name = destination.getFileName.toString
+  def copyResource(destination: Path, src: String = ""):Unit = {
+    val name = if (src.isEmpty) destination.getFileName.toString else src
     TextFileWriter.copyResource(name, destination)
   }
 
@@ -341,27 +344,28 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     stack: Seq[Definition]
   ): HugoTranslatorState  = {
     defn match {
+      case _: Field | _: Example | _: Enumerator | _: Invariant | _: Inlet |
+           _:Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo | _: Type |
+           _: OnClause | _: SagaStep | _: Include  | _: RootContainer =>
+        // All these cases do not generate a file as their content contributes
+        // to the content of their parent container
+        st
       case leaf: LeafDefinition =>
-        val (mkd, parents) = setUpLeaf(leaf, st, stack)
+        // These are leaf nodes, they get their own file or other special
+        // handling.
         leaf match {
-          case f: Field        => mkd.emitField(f, parents)
-          case e: Example      => mkd.emitExample(e, parents)
-          case e: Enumerator   => mkd.emitEnumerator(e, parents)
-          case i: Invariant    => mkd.emitInvariant(i, parents)
-          case t: Term         => st.addToGlossary(t, parents)
-          case p: Pipe         => mkd.emitPipe(p, parents)
-          case i: Inlet        => mkd.emitInlet(i, parents)
-          case o: Outlet       => mkd.emitOutlet(o, parents)
-          case ij: InletJoint  => mkd.emitInletJoint(ij, parents)
-          case oj: OutletJoint => mkd.emitOutletJoint(oj, parents)
-          case ai: AuthorInfo  => mkd.emitAuthorInfo(ai, parents)
+          case t: Term         =>
+            st.addToGlossary(t, parents(stack))
+          case p: Pipe         =>
+            val (mkd, parents) = setUpLeaf(leaf, st, stack)
+            mkd.emitPipe(p, parents)
+            st.addToGlossary(p, parents)
         }
-        st.addToGlossary(leaf, parents)
       case container: Definition =>
+        // Everything else is a container and definitely needs its own page
+        // and glossary entry.
         val (mkd, parents) = setUpContainer(container, st, stack)
-        st.addToGlossary(container, parents)
         container match {
-          case t: Type          => mkd.emitType(t, parents)
           case s: State         => mkd.emitState(s, parents)
           case h: Handler       => mkd.emitHandler(h, parents)
           case f: Function      => mkd.emitFunction(f, parents)
@@ -375,15 +379,10 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
           case s: Story         => mkd.emitStory(s, parents)
           case p: Plant         => mkd.emitPlant(p, parents)
           case a: Adaptation    => mkd.emitAdaptation(a, parents)
-          case oc: OnClause     => // handled by emitHandler
-          case ss: SagaStep     => // handled by emitSaga
-          case i: Include       => // ignore
-          case _: RootContainer => // ignore
         }
+        st.addToGlossary(container, parents)
       }
-      st
     }
-
 
   // scalastyle:off method.length
   def configTemplate(
