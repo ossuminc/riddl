@@ -53,7 +53,7 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-      (typeDef | contextHandler | entity | adaptor | function | saga |
+      (author | typeDef | contextHandler | entity | adaptor | function | saga |
         plantDefinition | projection | term | contextInclude
       ).rep(0)
     )
@@ -66,6 +66,7 @@ trait ContextParser
           (contextOptions ~ contextDefinitions)) ~ close ~ briefly ~ description
     ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
+      val authors = mapTo[AuthorInfo](groups.get(classOf[AuthorInfo]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
@@ -90,6 +91,7 @@ trait ContextParser
         includes,
         handlers,
         projections,
+        authors,
         briefly,
         description
       )

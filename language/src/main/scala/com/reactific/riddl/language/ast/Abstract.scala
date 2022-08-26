@@ -47,6 +47,9 @@ trait Abstract {
 
     override def isEmpty: Boolean = s.isEmpty
   }
+  object LiteralString {
+    val empty = LiteralString(Location.empty, "")
+  }
 
   /** A RiddlValue that is a parsed identifier, typically the name of a
    * definition.
@@ -211,7 +214,6 @@ trait Abstract {
     def identifyWithLoc: String = s"$kindId at $loc"
 
     def isImplicit: Boolean = id.value.isEmpty
-
   }
 
   trait LeafDefinition extends Definition {
@@ -239,7 +241,7 @@ trait Abstract {
 
   /** Base class for all actions. Actions are used in the "then" and "but"
     * clauses of a Gherkin example such as in the body of a handler's
-    * `on` clause or in the definition of a [[Function]]. The subclasses define
+    * `on` clause or in the definition of a Function. The subclasses define
     * different kinds of actions that can be used.
     */
   trait Action extends DescribedValue
@@ -286,5 +288,5 @@ trait Abstract {
     */
   trait PlantDefinition extends Definition
 
-
+  trait StoryDefinition extends Definition
 }

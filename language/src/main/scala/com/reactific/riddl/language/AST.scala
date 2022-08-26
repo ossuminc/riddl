@@ -34,75 +34,39 @@ import java.nio.file.Path
   */
 object AST extends ast.Expressions with ast.TypeExpression {
 
-
-  /** A function to provide the kind of thing that a DescribedValue is
-    *
-    * @param definition
-    *   The DescribedValue for which the kind is returned
-    * @return
-    *   A string for the kind of DescribedValue
-    */
-  def kind(definition: DescribedValue): String = {
-    definition match {
-      case _: EventActionA8n    => "Event -> Action Adaptation"
-      case _: EventCommandA8n   => "Event -> Command Adaptation"
-      case _: CommandCommandA8n => "Command -> Command Adaptation"
-      case _: Adaptor           => "Adaptor"
-      case _: Context           => "Context"
-      case _: Domain            => "Domain"
-      case _: Entity            => "Entity"
-      case _: Enumerator        => "Enumerator"
-      case _: Example           => "Example"
-      case _: Field             => "Field"
-      case _: Function          => "Function"
-      case _: Handler           => "Handler"
-      case _: Inlet             => "Inlet"
-      case _: Invariant         => "Invariant"
-      case _: Joint             => "Joint"
-      case _: Outlet            => "Outlet"
-      case _: Pipe              => "Pipe"
-      case _: Plant             => "Plant"
-      case p: Processor         => p.shape.getClass.getSimpleName
-      case _: RootContainer     => "Root"
-      case _: Saga              => "Saga"
-      case _: SagaStep          => "SagaStep"
-      case _: State             => "State"
-      case _: Term              => "Term"
-      case _: Type              => "Type"
-      case _: AskAction         => "Ask Action"
-      case _: BecomeAction      => "Become Action"
-      case _: MorphAction       => "Morph Action"
-      case _: SetAction         => "Set Action"
-      case _: PublishAction     => "Publish Action"
-      case _: TellAction        => "Tell Action"
-      case _: ArbitraryAction   => "Arbitrary Action"
-      case _: OnClause          => "On Clause"
-      case _                    => "Definition"
+  /** A [[RiddlValue]] that holds the author's information
+   *
+   * @param loc
+   * The location of the author information
+   * @param name
+   * The full name of the author
+   * @param email
+   * The author's email address
+   * @param organization
+   * The name of the organization the author is associated with
+   * @param title
+   * The author's title within the organization
+   * @param url
+   * A URL associated with the author
+   */
+  case class AuthorInfo(
+    loc: Location,
+    id: Identifier,
+    name: LiteralString,
+    email: LiteralString,
+    organization: Option[LiteralString] = None,
+    title: Option[LiteralString] = None,
+    url: Option[java.net.URL] = None,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+    extends LeafDefinition with DomainDefinition
+      with ContextDefinition with EntityDefinition with StoryDefinition
+      with PlantDefinition {
+    override def isEmpty: Boolean = {
+      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
-  }
 
-  def kind(c: Container[Definition]): String = {
-    c match {
-      case _: Type              => "Type"
-      case _: Enumeration       => "Enumeration"
-      case _: Aggregation       => "Aggregation"
-      case _: State             => "State"
-      case _: Entity            => "Entity"
-      case _: Context           => "Context"
-      case _: Function          => "Function"
-      case _: EventCommandA8n   => "Event -> Command Adaptation"
-      case _: CommandCommandA8n => "Command -> Command Adaptation"
-      case _: Adaptor           => "Adaptor"
-      case _: Processor         => "Processor"
-      case _: Plant             => "Plant"
-      case _: SagaStep          => "SagaStep"
-      case _: Saga              => "Saga"
-      case _: Story             => "Story"
-      case _: Domain            => "Domain"
-      case _: Include           => "Include"
-      case _: RootContainer     => "Root"
-      case _ => throw new IllegalStateException("No other kinds of Containers")
-    }
+    final val kind: String = "Author Info"
   }
 
 
@@ -133,7 +97,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with DomainDefinition with ContextDefinition with PlantDefinition {
+      extends LeafDefinition with DomainDefinition
+        with ContextDefinition with PlantDefinition {
     override def isEmpty: Boolean = description.isEmpty
     final val kind: String = "Term"
   }
@@ -654,7 +619,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
       extends LeafDefinition
-        with ProcessorDefinition with FunctionDefinition  {
+        with ProcessorDefinition with FunctionDefinition with StoryDefinition  {
     final val kind: String = "Example"
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
       thens.isEmpty && buts.isEmpty  }
@@ -997,6 +962,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include] = Seq.empty[Include],
+    authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ContextDefinition
@@ -1006,6 +972,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
     lazy val contents: Seq[EntityDefinition] = {
       states ++ types ++ handlers ++ functions ++ invariants ++ includes
+      ++ authors
     }
 
     final val kind: String = "Entity"
@@ -1262,6 +1229,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     includes: Seq[Include] = Seq.empty[Include],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
+    authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
@@ -1270,7 +1238,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
       with WithIncludes
       with WithTerms {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
-      sagas ++ functions ++ terms ++ includes
+      sagas ++ functions ++ terms ++ includes ++ authors
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1549,6 +1517,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
+    authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
@@ -1682,16 +1651,17 @@ object AST extends ast.Expressions with ast.TypeExpression {
   case class Story(
     loc: Location,
     id: Identifier,
-    role: LiteralString,
-    capability: LiteralString,
-    benefit: LiteralString,
-    shownBy: Seq[java.net.URL],
-    implementedBy: Seq[DomainRef],
+    role: LiteralString = LiteralString.empty,
+    capability: LiteralString = LiteralString.empty,
+    benefit: LiteralString = LiteralString.empty,
+    shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
+    implementedBy: Seq[DomainRef] = Seq.empty[DomainRef],
     examples: Seq[Example] = Seq.empty[Example],
+    authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition {
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[StoryDefinition] = examples ++ authors
     final val kind: String = "Story"
   }
 
@@ -1706,39 +1676,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       extends Reference[Domain] {
     override def format: String = s"domain ${id.format}"
   }
-
-  /** A [[RiddlValue]] that holds the author's information
-    *
-    * @param loc
-    *   The location of the author information
-    * @param name
-    *   The full name of the author
-    * @param email
-    *   The author's email address
-    * @param organization
-    *   The name of the organization the author is associated with
-    * @param title
-    *   The author's title within the organization
-    * @param url
-    *   A URL associated with the author
-    */
-  case class AuthorInfo(
-    loc: Location,
-    id: Identifier,
-    name: LiteralString,
-    email: LiteralString,
-    organization: Option[LiteralString] = None,
-    title: Option[LiteralString] = None,
-    url: Option[java.net.URL] = None,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None)
-      extends LeafDefinition with DomainDefinition {
-    override def isEmpty: Boolean = {
-      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
-    }
-    final val kind: String = "Author Info"
-  }
-
   /** Base trait for all options a Domain can have.
    */
   sealed abstract class DomainOption(val name: String) extends OptionValue
@@ -1802,5 +1739,93 @@ object AST extends ast.Expressions with ast.TypeExpression {
         includes ++ authors
     }
     final val kind: String = "Domain"
+  }
+
+  //////////////////////////////////////////////////// UTILITY FUNCTIONS
+
+  def authorsOf(defn: Definition): Seq[AuthorInfo] = {
+    defn match {
+      case d: DomainDefinition =>
+        d match {
+          case dmn: Domain => dmn.authors
+          case ctxt: Context => ctxt.authors
+          case ntty: Entity => ntty.authors
+          case stry: Story => stry.authors
+          case plnt: Plant => plnt.authors
+          case _ => Seq.empty[AuthorInfo]
+        }
+      case _ => Seq.empty[AuthorInfo]
+    }
+  }
+
+
+  /** A function to provide the kind of thing that a DescribedValue is
+   *
+   * @param definition
+   * The DescribedValue for which the kind is returned
+   * @return
+   * A string for the kind of DescribedValue
+   */
+  def kind(definition: DescribedValue): String = {
+    definition match {
+      case _: EventActionA8n => "Event -> Action Adaptation"
+      case _: EventCommandA8n => "Event -> Command Adaptation"
+      case _: CommandCommandA8n => "Command -> Command Adaptation"
+      case _: Adaptor => "Adaptor"
+      case _: Context => "Context"
+      case _: Domain => "Domain"
+      case _: Entity => "Entity"
+      case _: Enumerator => "Enumerator"
+      case _: Example => "Example"
+      case _: Field => "Field"
+      case _: Function => "Function"
+      case _: Handler => "Handler"
+      case _: Inlet => "Inlet"
+      case _: Invariant => "Invariant"
+      case _: Joint => "Joint"
+      case _: Outlet => "Outlet"
+      case _: Pipe => "Pipe"
+      case _: Plant => "Plant"
+      case p: Processor => p.shape.getClass.getSimpleName
+      case _: RootContainer => "Root"
+      case _: Saga => "Saga"
+      case _: SagaStep => "SagaStep"
+      case _: State => "State"
+      case _: Term => "Term"
+      case _: Type => "Type"
+      case _: AskAction => "Ask Action"
+      case _: BecomeAction => "Become Action"
+      case _: MorphAction => "Morph Action"
+      case _: SetAction => "Set Action"
+      case _: PublishAction => "Publish Action"
+      case _: TellAction => "Tell Action"
+      case _: ArbitraryAction => "Arbitrary Action"
+      case _: OnClause => "On Clause"
+      case _ => "Definition"
+    }
+  }
+
+  def kind(c: Container[Definition]): String = {
+    c match {
+      case _: Type => "Type"
+      case _: Enumeration => "Enumeration"
+      case _: Aggregation => "Aggregation"
+      case _: State => "State"
+      case _: Entity => "Entity"
+      case _: Context => "Context"
+      case _: Function => "Function"
+      case _: EventCommandA8n => "Event -> Command Adaptation"
+      case _: CommandCommandA8n => "Command -> Command Adaptation"
+      case _: Adaptor => "Adaptor"
+      case _: Processor => "Processor"
+      case _: Plant => "Plant"
+      case _: SagaStep => "SagaStep"
+      case _: Saga => "Saga"
+      case _: Story => "Story"
+      case _: Domain => "Domain"
+      case _: Include => "Include"
+      case _: RootContainer => "Root"
+      case _ => throw new IllegalStateException("No other kinds of Containers")
+    }
   }
 }

@@ -22,7 +22,6 @@ import com.reactific.riddl.language.Terminals.Options
 import com.reactific.riddl.language.Terminals.Punctuation
 import com.reactific.riddl.language.Terminals.Readability
 import com.reactific.riddl.language.AST
-import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -34,7 +33,9 @@ trait DomainParser
     with TypeParser {
 
   def story[u: P]: P[Story] = P(
-    location ~ Keywords.story ~ identifier ~ is ~ open ~ Keywords.role ~ is ~
+    location ~ Keywords.story ~ identifier ~ is ~ open ~
+      author.rep(0) ~
+      Keywords.role ~ is ~
       literalString ~ Keywords.capability ~ is ~ literalString ~
       Keywords.benefit ~ is ~ literalString ~
       (Keywords.shown ~ Readability.by ~ open ~
@@ -50,6 +51,7 @@ trait DomainParser
     case (
           loc,
           id,
+          authors,
           role,
           capa,
           bene,
@@ -67,12 +69,14 @@ trait DomainParser
         shown,
         implemented,
         examples,
+        authors,
         briefly,
         description
       )
     case (
           loc,
           id,
+          authors,
           role,
           capa,
           bene,
@@ -90,28 +94,10 @@ trait DomainParser
         shown,
         implemented,
         Seq.empty[Example],
+        authors,
         briefly,
         description
       )
-  }
-
-  def author[u: P]: P[AuthorInfo] = {
-    P(
-      location ~ Keywords.author ~/ identifier ~ is ~ open ~
-        (undefined((
-          LiteralString(Location(), ""),
-          LiteralString(Location(), ""),
-          Option.empty[LiteralString],
-          Option.empty[LiteralString],
-          Option.empty[java.net.URL]
-        )) | (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-          literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-          (Keywords.title ~ is ~ literalString).? ~
-          (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map {
-      case (loc, id, (name, email, org, title, url), brief, desc) =>
-        AuthorInfo(loc, id, name, email, org, title, url, brief, desc)
-    }
   }
 
   def domainOptions[X: P]: P[Seq[DomainOption]] = {
