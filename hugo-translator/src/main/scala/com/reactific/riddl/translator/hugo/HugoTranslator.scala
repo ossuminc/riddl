@@ -17,7 +17,9 @@
 package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST.{Include, _}
-import com.reactific.riddl.language._
+import com.reactific.riddl.language.Folding.PathResolutionState
+import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput}
+import com.reactific.riddl.language.{AST, _}
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
@@ -37,11 +39,13 @@ case class HugoTranslatingOptions(
   siteTitle: Option[String] = None,
   siteDescription: Option[String] = None,
   siteLogoPath: Option[String] = Some("images/logo.png"),
+  siteLogoURL: Option[URL] = None,
   baseUrl: Option[URL] = Option(new URL("https://example.com/")),
   themes: Seq[(String, Option[URL])] =
     Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url)),
-  sourceURL: Option[URL] = Some(new URL("http://localhost:1313/")),
-  editPath: Option[String] = None,
+  sourceURL: Option[URL] = None,
+  editPath: Option[String] = Some("edit/main/src/main/riddl"),
+  viewPath: Option[String] = Some("blob/main/src/main/riddl"),
   withGlossary: Boolean = true,
   withTODOList: Boolean = true,
   withGraphicalTOC: Boolean = false
@@ -53,16 +57,19 @@ case class HugoTranslatingOptions(
   def configFile: Path = outputRoot.resolve("config.toml")
 }
 
-case class HugoTranslatorState(options: HugoTranslatingOptions)
-  extends TranslatorState[MarkdownWriter] {
-
+case class HugoTranslatorState(
+  root: AST.Definition,
+  options: HugoTranslatingOptions = HugoTranslatingOptions(),
+  commonOptions: CommonOptions = CommonOptions()
+) extends TranslatorState[MarkdownWriter]
+    with PathResolutionState[HugoTranslatorState]{
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
       next.resolve(par)
     }
     val path = parDir.resolve(fileName)
-    val mdw = MarkdownWriter(path)
+    val mdw = MarkdownWriter(path, this)
     addFile(mdw)
     mdw
   }
@@ -85,13 +92,79 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
     this
   }
 
-  val lastFileWeight = 999
+  def makeParents(stack: Seq[Definition]): Seq[String] = {
+    // The stack goes from most nested to highest. We don't want to change the
+    // stack (its mutable) so we copy it to a Seq first, then reverse it, then
+    // drop all the root containers (file includes) to finally end up at a domin
+    // and then map to just the name of that domain.
+    stack.reverse.dropWhile(_.isRootContainer).map(_.id.format)
+  }
+
+  def pathRelativeToRepo(path: Path): Option[String] = {
+    options.inputFile match {
+      case Some(inFile) =>
+        val pathAsString = path.toAbsolutePath.toString
+        val inDirAsString = inFile.getParent.toAbsolutePath.toString
+        if (pathAsString.startsWith(inDirAsString)) {
+          val result = pathAsString.drop(inDirAsString.length+1)
+          Some(result)
+        } else {
+          Option.empty[String]
+        }
+      case None =>
+        Option.empty[String]
+    }
+  }
+
+  /** Generate a source link for a definition
+   * @param definition The definition for which we want the link
+   * @return a string that gives the source link for the definition
+   */
+  def makeSourceLink(
+    definition: Definition
+  ): String = {
+    options.sourceURL match {
+      case Some(url) =>
+        options.viewPath match {
+          case Some(viewPath) =>
+            definition.loc.source match {
+              case FileParserInput(file) =>
+                pathRelativeToRepo(
+                  file.getAbsoluteFile.toPath
+                ) match {
+                  case Some(relPath) =>
+                    val prefix = url + viewPath
+                    prefix + "/" + relPath + s"#L${definition.id.loc.line}"
+                  case None =>
+                    ""
+                }
+              case _ => ""
+            }
+          case None => ""
+        }
+      case None => ""
+    }
+  }
+
+  def makeDocLink(definition: Definition, parents: Seq[Definition]): String = {
+    val pars = ("/" + parents.map(_.id.value).mkString("/")).toLowerCase
+    definition match {
+      case _: Field | _: Example | _: Enumerator | _: Invariant | _: Inlet |
+           _: Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo |
+           _: OnClause | _: SagaStep | _: Include | _: RootContainer | _: Term =>
+        pars + "#" + definition.id.value
+      case _ =>
+        pars + "/" + definition.id.value.toLowerCase
+    }
+  }
 
   def makeIndex(): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
     mdw.fileHead("Index", 10, Option("The main index to the content"))
     mdw.p("{{< toc-tree >}}")
   }
+
+  val lastFileWeight = 999
 
   def makeGlossary(): Unit = {
     if (options.withGlossary) {
@@ -102,16 +175,6 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
         Option("A list of definitions needing more work")
       )
       mdw.emitGlossary(lastFileWeight, terms)
-    }
-  }
-
-  def linkToItem(defn: Definition, parents: Seq[Definition]): String = {
-    val pars = ("/" + parents.map(_.id.value).mkString("/")).toLowerCase
-    defn match {
-      case _: LeafDefinition | _: Type | _: SagaStep | _: OnClause =>
-        pars + "#" + defn.id.value
-      case _ =>
-        pars + "/" + defn.id.value.toLowerCase
     }
   }
 
@@ -143,7 +206,7 @@ case class HugoTranslatorState(options: HugoTranslatingOptions)
         }
         parents = pars.dropRight(1).reverse
         path = parents.map(_.id.value).mkString(".")
-        link = linkToItem(defn, pars)
+        link = makeDocLink(defn, pars)
       } yield {
         (item,author,path,link)
       }
@@ -284,22 +347,13 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
   }
 
-  def parents(stack: Seq[Definition]): Seq[String] = {
-    // The stack goes from most nested to highest. We don't want to change the
-    // stack (its mutable) so we copy it to a Seq first, then reverse it, then
-    // drop all the root containers (file includes) to finally end up at a domin
-    // and then map to just the name of that domain.
-    val result = stack.reverse.dropWhile(_.isRootContainer).map(_.id.format)
-    result
-  }
-
   def setUpContainer(
     c: Definition,
     state: HugoTranslatorState,
     stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
     state.addDir(c.id.format)
-    val pars = parents(stack)
+    val pars = state.makeParents(stack)
     state.addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
@@ -308,7 +362,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     state: HugoTranslatorState,
     stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
-    val pars = parents(stack)
+    val pars = state.makeParents(stack)
     state.addFile(pars, d.id.format + ".md") -> pars
   }
 
@@ -330,7 +384,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
       case None         => Seq.empty[AuthorInfo]
     }
     writeConfigToml(options, someAuthors.headOption)
-    val state = HugoTranslatorState(options)
+    val state = HugoTranslatorState(root, options, commonOptions)
     val parentStack = mutable.Stack[Definition]()
 
     Folding
@@ -339,48 +393,49 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   }
 
   def processingFolder(
-    st: HugoTranslatorState,
+    state: HugoTranslatorState,
     defn: Definition,
     stack: Seq[Definition]
   ): HugoTranslatorState  = {
     defn match {
       case _: Field | _: Example | _: Enumerator | _: Invariant | _: Inlet |
-           _:Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo | _: Type |
+           _:Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo |
            _: OnClause | _: SagaStep | _: Include  | _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
-        st
+        state
       case leaf: LeafDefinition =>
         // These are leaf nodes, they get their own file or other special
         // handling.
         leaf match {
           case t: Term         =>
-            st.addToGlossary(t, parents(stack))
+            state.addToGlossary(t, state.makeParents(stack))
           case p: Pipe         =>
-            val (mkd, parents) = setUpLeaf(leaf, st, stack)
+            val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
-            st.addToGlossary(p, parents)
+            state.addToGlossary(p, parents)
         }
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.
-        val (mkd, parents) = setUpContainer(container, st, stack)
+        val (mkd, parents) = setUpContainer(container, state, stack)
         container match {
-          case s: State         => mkd.emitState(s, parents)
-          case h: Handler       => mkd.emitHandler(h, parents)
-          case f: Function      => mkd.emitFunction(f, parents)
-          case e: Entity        => mkd.emitEntity(e, parents)
-          case c: Context       => mkd.emitContext(c, parents)
-          case d: Domain        => mkd.emitDomain(d, parents)
-          case a: Adaptor       => mkd.emitAdaptor(a, parents)
-          case p: Processor     => mkd.emitProcessor(p, parents)
-          case p: Projection    => mkd.emitProjection(p, parents)
-          case s: Saga          => mkd.emitSaga(s, parents)
-          case s: Story         => mkd.emitStory(s, parents)
-          case p: Plant         => mkd.emitPlant(p, parents)
-          case a: Adaptation    => mkd.emitAdaptation(a, parents)
+          case t: Type       => mkd.emitType(t, stack)
+          case s: State      => mkd.emitState(s, parents)
+          case h: Handler    => mkd.emitHandler(h, parents)
+          case f: Function   => mkd.emitFunction(f, parents)
+          case e: Entity     => mkd.emitEntity(e, parents)
+          case c: Context    => mkd.emitContext(c, parents)
+          case d: Domain     => mkd.emitDomain(d, parents)
+          case a: Adaptor    => mkd.emitAdaptor(a, parents)
+          case p: Processor  => mkd.emitProcessor(p, parents)
+          case p: Projection => mkd.emitProjection(p, parents)
+          case s: Saga       => mkd.emitSaga(s, parents)
+          case s: Story      => mkd.emitStory(s, parents)
+          case p: Plant      => mkd.emitPlant(p, parents)
+          case a: Adaptation => mkd.emitAdaptation(a, parents)
         }
-        st.addToGlossary(container, parents)
+        state.addToGlossary(container, parents)
       }
     }
 

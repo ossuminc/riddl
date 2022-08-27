@@ -113,8 +113,8 @@ trait TypeParser extends CommonParser {
   def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (Punctuation.undefined.!.map(_ => Seq.empty[TypeExpression]) |
-          typeExpression.rep(0, P("or" | "|" | ","))) ~ close
+        (Punctuation.undefined.!.map(_ => Seq.empty[AliasedTypeExpression]) |
+          aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 

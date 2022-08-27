@@ -203,6 +203,10 @@ object RiddlOptions {
             optional(objCur, "site-logo-path", "static/somewhere") { cc =>
               cc.asString
             }
+          siteLogoURL <-
+            optional(objCur, "site-logo-url", Option.empty[String]) { cc =>
+              cc.asString.map(Option[String])
+            }
           baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
             cc.asString.map(Option[String])
           }
@@ -213,7 +217,10 @@ object RiddlOptions {
           sourceURL <- optional(objCur, "source-url", Option.empty[String]) {
             cc => cc.asString.map(Option[String])
           }
-          editPath <- optional(objCur, "edit-path", "path/to/hugo/content") {
+          viewPath <- optional(objCur, "view-path", "blob/main/src/main/riddl") {
+            cc => cc.asString
+          }
+          editPath <- optional(objCur, "edit-path", "edit/main/src/main/riddl") {
             cc => cc.asString
           }
           withGlossary <- optional(objCur, "with-glossary", true) { cc =>
@@ -262,10 +269,12 @@ object RiddlOptions {
             Option(siteTitle),
             Option(siteDescription),
             Option(siteLogoPath),
+            handleURL(siteLogoURL),
             handleURL(baseURL),
             themes,
             handleURL(sourceURL),
             Option(editPath),
+            Option(viewPath),
             withGlossary,
             withToDoList,
             withGraphicalTOC
@@ -612,7 +621,10 @@ object RiddlOptions {
     opt[String]('m', "site-logo-path").action((s, c) =>
       c.copy(hugoOptions = c.hugoOptions.copy(siteLogoPath = Option(s)))
     ).text("""Path, in 'static' directory to placement and use
-             |of the site logo.""".stripMargin)
+             |of the site logo.""".stripMargin),
+    opt[String] ('n', "site-logo-url").action((s, c) =>
+      c.copy(hugoOptions = c.hugoOptions.copy(siteLogoURL = Option(new URL(s))))
+    ).text("URL from which to copy the site logo.")
   )
 
   private val kalixOptionsParser = Seq(

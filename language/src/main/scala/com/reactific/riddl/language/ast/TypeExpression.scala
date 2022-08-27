@@ -197,7 +197,7 @@ trait TypeExpression extends Abstract {
     */
   case class Alternation(
     loc: Location,
-    of: Seq[TypeExpression])
+    of: Seq[AliasedTypeExpression])
       extends TypeExpression {
     override def format: String = s"one of { ${of.mkString(", ")} }"
   }
@@ -359,7 +359,11 @@ trait TypeExpression extends Abstract {
     loc: Location,
     messageKind: MessageKind,
     fields: Seq[Field] = Seq.empty[Field])
-      extends AggregateTypeExpression
+      extends AggregateTypeExpression {
+    override def format: String = {
+      messageKind.kind + " " + super.format
+    }
+  }
 
   /** Base class of all pre-defined type expressions
     */

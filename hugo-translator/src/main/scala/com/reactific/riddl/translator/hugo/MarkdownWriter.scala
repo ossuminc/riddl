@@ -21,7 +21,10 @@ import com.reactific.riddl.language.AST._
 import com.reactific.riddl.utils.TextFileWriter
 import java.nio.file.Path
 
-case class MarkdownWriter(filePath: Path) extends TextFileWriter {
+case class MarkdownWriter(
+  filePath: Path,
+  state: HugoTranslatorState
+) extends TextFileWriter {
 
   def fileHead(
     name: String,
@@ -148,7 +151,7 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
         case (
           prefix: String,
           description: String,
-          sublist: Seq[String],
+          sublist: Seq[String] @unchecked,
           desc: Option[Description] @unchecked) =>
           emitPair(prefix, description)
           sublist.foreach(s => sb.append(s"    * $s\n"))
@@ -169,6 +172,7 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
         case body: String => sb.append(s"* $body\n")
+        case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
         case x: Any       => sb.append(s"* ${x.toString}\n")
       }
     }
@@ -200,6 +204,56 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
     result
   }
 
+  /** Generate a string that contains the name of a definition that is
+   * markdown linked to the definition in its source.
+   * For example, given sourceURL option of https://github.com/a/b
+   * and for an editPath option of src/main/riddl and for a
+   * Location that has Org/org.riddl at line 30, we would generate this
+   * URL:
+   * `https://github.com/a/b/blob/main/src/main/riddl/Org/org.riddl#L30`
+   * Note that that this works through recursive path identifiers to find
+   * the first type that is not a reference
+   * Note: this only works for github sources
+   * */
+  def makeTypeExpressionSourceLink(
+    typeEx: TypeExpression,
+    parents: Seq[Definition]
+  ): String = {
+    state.options.sourceURL match {
+      case Some(url) => {
+        state.options.editPath match {
+          case Some(strPath) =>
+            val prefix = url + "/blob/" + strPath
+            typeEx match {
+              case EntityReferenceTypeExpression(_, pathId) =>
+                val resolved = state.resolvePath(pathId, parents)
+                if (resolved.nonEmpty) {
+                  val loc = resolved.head.loc
+                  val suffix = resolved.reverse.map(_.id.value).mkString("/")
+                  val line = s"#${loc.line}"
+                  s"[${resolved.head.identify}]($prefix/$suffix$line)"
+                } else {
+                  typeEx.format
+                }
+              case AliasedTypeExpression(_, pathId) =>
+                val resolved = state.resolvePath(pathId, parents)
+                if (resolved.nonEmpty) {
+                  val loc = resolved.head.loc
+                  val suffix = resolved.reverse.map(_.id.value).mkString("/")
+                  val line = s"#${loc.line}"
+                  s"[${resolved.head.identify}]($prefix/$suffix$line)"
+                } else {
+                  typeEx.format
+                }
+              case _ => typeEx.format
+            }
+          case _ => typeEx.format
+        }
+      }
+      case _ => typeEx.format
+    }
+  }
+
   def emitFields(fields: Seq[Field]): this.type = {
     list(fields.map { field =>
       (field.id.format, AST.kind(field.typeEx), field.description)
@@ -215,8 +269,9 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
       heading("Briefly", level)
       p(d.brief.fold("Brief description missing.\n")(_.s))
       val path = (parents :+ d.id.format).mkString(".")
-      italic("Path").p(s": $path")
-      italic("Defined At").p(s": ${d.loc}")
+      italic("Definition Path").p(s": $path")
+      val link = state.makeSourceLink(d)
+      italic("Source Location").p(s": [${d.loc}]($link)")
     }
     this
   }
@@ -235,33 +290,98 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitTypes(types: Seq[Type]): this.type = {
-    val byKind = types.map( t =>
-      t.typ match {
-        case _: Aggregation => "Aggregates" -> t
-        case _: MessageType => "Messages" -> t
-        case _: Enumeration => "Enumerations" -> t
-        case _ => "Types" -> t
-      }
-    ).sortBy(_._1)
-    for {
-      (kind, values) <- byKind.groupBy(_._1)
-    } {
-      val vals = values.map(_._2)
-      val data = vals.head.typ match {
-        case agg: Aggregation =>
-          vals.map(t => (t.id.format, "aggregate of:", agg.fields.map(f =>
-            f.id.format + ": " + AST.kind(f.typeEx) + ":" +
-              f.brief.map(_.format).getOrElse("undescribed")), t.description))
-        case mk: MessageType =>
-          vals.map(t => (t.id.format, "message with:", mk.fields.map(f =>
-            f.id.format + ": " + AST.kind(f.typeEx)), t.description ))
-        case enum: Enumeration =>
-          vals.map(t => (t.id.format, "enumeration of", enum.enumerators.map(_.format), t.description))
-        case _ =>
-          vals.map(t => (t.id.format, t.typ.format, t.description))
-      }
-      list(kind, data)
+  def makePathIdRef(
+    pid: PathIdentifier,
+    parents: Seq[Definition]
+  ): String = {
+    val resolved = state.resolvePath(pid, parents)
+    if (resolved.isEmpty) {
+      s"unresolved path: ${pid.format}"
+    } else {
+      val slink = state.makeSourceLink(resolved.head)
+      val link = state.makeDocLink(resolved.head, resolved.tail)
+      s"[${resolved.head.identify}]($link) at [source]($slink)"
+    }
+  }
+
+  def resolveTypeExpression(
+    typeEx: TypeExpression,
+    parents: Seq[Definition]
+  ): String = {
+    typeEx match {
+      case a: AliasedTypeExpression =>
+        s"Alias of ${makePathIdRef(a.pid, parents)}"
+      case er: EntityReferenceTypeExpression =>
+        s"Entity reference to ${makePathIdRef(er.entity, parents)}"
+      case uid: UniqueId =>
+        s"Unique identifier for entity ${makePathIdRef(uid.entityPath, parents)}"
+      case alt: Alternation =>
+        val data = alt.of.map { te: AliasedTypeExpression =>
+          makePathIdRef(te.pid, parents)
+        }
+        s"Alternation of: " + data.mkString(", ")
+      case agg: Aggregation =>
+        val data = agg.fields.map { f: Field =>
+          (f.id.format, resolveTypeExpression(f.typeEx, parents))
+        }
+        "Aggregation of:" + data.mkString(", ")
+      case mt: MessageType =>
+        val data = mt.fields.map { f: Field =>
+          (f.id.format, resolveTypeExpression(f.typeEx, parents))
+        }
+        s"${mt.messageKind.kind} message of: " + data.mkString(", ")
+      case _ =>
+        typeEx.format
+    }
+  }
+
+  def emitTypeExpression(
+    typeEx: TypeExpression,
+    parents: Seq[Definition],
+    headLevel: Int = 2
+  ): this.type = {
+    typeEx match {
+      case a: AliasedTypeExpression =>
+        heading("Alias Of", headLevel)
+        p(makePathIdRef(a.pid, parents))
+      case er: EntityReferenceTypeExpression =>
+        heading("Entity Reference To", headLevel)
+        p(makePathIdRef(er.entity, parents))
+      case uid: UniqueId =>
+        heading("Unique Identifier For Entity", headLevel)
+        p(makePathIdRef(uid.entityPath, parents))
+      case alt: Alternation =>
+        heading("Alternation of:" )
+        val data = alt.of.map { te: AliasedTypeExpression =>
+          makePathIdRef(te.pid, parents)
+        }
+        list(data)
+      case agg: Aggregation =>
+        heading("Aggregation of:")
+        val data = agg.fields.map { f: Field =>
+          (f.id.format, resolveTypeExpression(f.typeEx,parents))
+        }
+        list("Fields", data, 3)
+      case mt: MessageType =>
+        h2(s"${mt.messageKind.kind} Message Of")
+        val data = mt.fields.map { f: Field =>
+          (f.id.format, resolveTypeExpression(f.typeEx, parents))
+        }
+        list("Fields", data, 3)
+      case _ =>
+        p(resolveTypeExpression(typeEx,parents))
+    }
+  }
+
+  def emitType(typ: Type, parents: Seq[Definition]): this.type = {
+    containerHead(typ, "Type")
+    emitBriefly(typ, state.makeParents(parents))
+    emitDetails(typ.description)
+    emitTypeExpression(typ.typ, parents)
+    val link = state.makeSourceLink(typ)
+    if (link.nonEmpty) {
+      h3("Source Link")
+      p(s"[${typ.identify}]($link)")
     }
     this
   }
@@ -277,12 +397,13 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
     }
     this
   }
+
   def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
     containerHead(domain,"Domain")
     emitAuthorInfo(domain.authors)
     emitBriefly(domain, parents)
     emitDetails(domain.description)
-    emitTypes(domain.types)
+    toc("Types", mkTocSeq(domain.types))
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Stories", mkTocSeq(domain.stories))
     toc("Plants", mkTocSeq(domain.plants))
@@ -343,17 +464,17 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitContext(cont: Context, parents: Seq[String]): this.type = {
-    containerHead(cont,"Context")
-    emitAuthorInfo(cont.authors)
-    emitBriefly(cont, parents)
-    emitDetails(cont.description)
-    emitOptions(cont.options)
-    emitTypes(cont.types)
-    toc("Functions", mkTocSeq(cont.functions))
-    toc("Adaptors", mkTocSeq(cont.adaptors))
-    toc("Entities", mkTocSeq(cont.entities))
-    toc("Sagas", mkTocSeq(cont.sagas))
+  def emitContext(context: Context, parents: Seq[String]): this.type = {
+    containerHead(context,"Context")
+    emitAuthorInfo(context.authors)
+    emitBriefly(context, parents)
+    emitDetails(context.description)
+    emitOptions(context.options)
+    toc("Types", mkTocSeq(context.types))
+    toc("Functions", mkTocSeq(context.functions))
+    toc("Adaptors", mkTocSeq(context.adaptors))
+    toc("Entities", mkTocSeq(context.entities))
+    toc("Sagas", mkTocSeq(context.sagas))
     this
   }
 
@@ -400,8 +521,8 @@ case class MarkdownWriter(filePath: Path) extends TextFileWriter {
     emitBriefly(entity, parents)
     emitDetails(entity.description)
     emitOptions(entity.options)
-    emitTypes(entity.types)
     emitInvariants(entity.invariants)
+    toc("Types", mkTocSeq(entity.types))
     toc("States", mkTocSeq(entity.states))
     toc("Functions", mkTocSeq(entity.functions))
     toc("Handlers", mkTocSeq(entity.handlers))

@@ -1,5 +1,6 @@
 package com.reactific.riddl.translator.hugo
 
+import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.testkit.ParsingTest
 
 import java.io.PrintWriter
@@ -13,7 +14,6 @@ class MarkdownWriterTest extends ParsingTest {
       val paths =
         Seq[String]("hugo-translator", "target", "test-output", "container.md")
       val output = Path.of(paths.head, paths.tail: _*)
-      val mkd = MarkdownWriter(output)
       val input =
         """domain TestDomain {
           |  author is { name="Reid Spencer" email="reid@reactific.com" }
@@ -29,17 +29,18 @@ class MarkdownWriterTest extends ParsingTest {
         case Right(root) =>
           root.contents mustNot be(empty)
           val domain = root.contents.head
+          val state = HugoTranslatorState(root)
+          val mkd = MarkdownWriter(output, state)
           mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
           val expected =
             """---
-              |title: "TestDomain"
+              |title: "TestDomain: Domain"
               |weight: 10
               |description: "Just For Testing"
               |geekdocAnchor: true
               |geekdocCollapseSection: true
               |---
-              |# Domain 'TestDomain'
               |
               |## Author
               |* _Name_: Reid Spencer
@@ -47,25 +48,26 @@ class MarkdownWriterTest extends ParsingTest {
               |
               |## Briefly
               |Just For Testing
-              |_Path_: hugo-translator.target.test-output.TestDomain
-              |_Defined At_: empty(1:1)
+              |_Definition Path_: hugo-translator.target.test-output.TestDomain
+              |_Source Location_: [empty(1:1)]()
               |
               |## Details
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
               |
               |## Types
-              |* _MyString_: String
-              |  Just a renamed string
+              |* [MyString](mystring)
               |""".stripMargin
           emitted mustBe expected
       }
     }
     "emit a glossary" in {
-      val mdw = MarkdownWriter(Path.of("foo.md"))
       val term1 = GlossaryEntry("one", "Term", "The first term", Seq("A", "B"))
-      val term2 =
+      val term2 = {
         GlossaryEntry("two", "Term", "The second term", Seq("A", "B", "C"))
+      }
+      val state = HugoTranslatorState(RootContainer.empty)
+      val mdw = MarkdownWriter(Path.of("foo.md"), state)
       mdw.emitGlossary(10, Seq(term1, term2))
       val strw = new StringWriter()
       val pw = new PrintWriter(strw)
