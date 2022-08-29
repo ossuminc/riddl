@@ -314,7 +314,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     message: LiteralString,
     description: Option[Description])
     extends SagaStepAction {
-    override def format: String = "error \"${message.format}\""
+    override def format: String = s"error \"${message.format}\""
   }
 
 
@@ -447,7 +447,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     state: StateRef,
     description: Option[Description] = None)
       extends Action {
-    override def format: String = s"morph ${}"
+    override def format: String = s"morph ${entity.format} to ${state.format}"
   }
 
   /** An action that changes the behavior of an entity by making it use a new
@@ -469,7 +469,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     handler: HandlerRef,
     description: Option[Description] = None)
       extends Action {
-    override def format: String = s"become ${}"
+    override def format: String = s"become ${entity.format} to ${handler.format}"
   }
 
   /** An action that tells a message to an entity. This is very analogous to the

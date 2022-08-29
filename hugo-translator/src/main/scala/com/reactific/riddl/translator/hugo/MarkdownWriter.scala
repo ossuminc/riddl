@@ -226,7 +226,7 @@ case class MarkdownWriter(
     parents: Seq[Definition]
   ): String = {
     state.options.sourceURL match {
-      case Some(url) => {
+      case Some(url) =>
         state.options.editPath match {
           case Some(strPath) =>
             val prefix = url + "/blob/" + strPath
@@ -255,7 +255,6 @@ case class MarkdownWriter(
             }
           case _ => typeEx.format
         }
-      }
       case _ => typeEx.format
     }
   }
@@ -267,6 +266,13 @@ case class MarkdownWriter(
       h2(s"$kind Index")
       p("{{< toc-tree >}}")
     }
+  }
+
+  def emitTerms(terms: Seq[Term]): this.type = {
+    list("Terms", terms.map(t =>
+      (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description)
+    ))
+    this
   }
 
   def emitFields(fields: Seq[Field]): this.type = {
@@ -406,8 +412,8 @@ case class MarkdownWriter(
         heading("Mapping Of", headLevel)
         val from = resolveTypeExpression(map.from, parents)
         val to = resolveTypeExpression(map.to, parents)
-        p(s"From:\n: ${from}").nl
-        p(s"To:\n: ${to}")
+        p(s"From:\n: $from").nl
+        p(s"To:\n: $to")
       case enum: Enumeration =>
         heading("Enumeration Of", headLevel)
         val data = enum.enumerators.map { e: Enumerator =>
@@ -426,7 +432,11 @@ case class MarkdownWriter(
   }
 
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
-    containerHead(typ, "Type")
+    val suffix = typ.typ match {
+      case mt: MessageType => mt.messageKind.kind.capitalize
+      case _ => "Type"
+    }
+    containerHead(typ, suffix)
     emitDefDoc(typ, state.makeParents(stack))
     emitTypeExpression(typ.typ, typ+: stack)
     val link = state.makeSourceLink(typ)
@@ -458,7 +468,7 @@ case class MarkdownWriter(
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Stories", mkTocSeq(domain.stories))
     toc("Plants", mkTocSeq(domain.plants))
-    toc("Subdomains", mkTocSeq(domain.domains))
+    emitTerms(domain.terms)
     emitIndex("Domain")
     this
   }
@@ -530,6 +540,7 @@ case class MarkdownWriter(
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Entities", mkTocSeq(context.entities))
     toc("Sagas", mkTocSeq(context.sagas))
+    emitTerms(context.terms)
     emitIndex("Context")
     this
   }
@@ -625,6 +636,7 @@ case class MarkdownWriter(
     list("Pipes", mkTocSeq(plant.pipes))
     list("Input Joints", mkTocSeq(plant.inJoints))
     list("Output Joints", mkTocSeq(plant.outJoints))
+    emitTerms(plant.terms)
     emitIndex("Plant")
   }
 

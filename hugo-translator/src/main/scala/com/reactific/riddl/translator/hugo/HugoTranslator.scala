@@ -156,18 +156,19 @@ case class HugoTranslatorState(
 
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
-    definition match {
-      case _: Field | _: Example | _: Enumerator | _: Invariant | _: Inlet |
+    val result = definition match {
+      case _: OnClause =>
+        pars + "#" + definition.id.value.toLowerCase
+      case _: Field | _: Enumerator | _: Invariant | _: Inlet |
            _: Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo |
-           _: OnClause | _: SagaStep | _: Include | _: RootContainer | _: Term =>
-        if (definition.id.nonEmpty) {
-          pars + "#" + definition.id.value
-        } else {
-          pars
-        }
+            _: SagaStep | _: Include | _: RootContainer | _: Term =>
+        pars
       case _ =>
         pars + "/" + definition.id.value.toLowerCase
     }
+    // deal with Geekdoc's url processor
+    result
+      .replace(" ", "-")
   }
 
   def makeIndex(root: RootContainer): Unit = {
@@ -430,6 +431,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
         leaf match {
           case t: Term         =>
             state.addToGlossary(t, stack)
+            // handled by definition that contains the term
           case p: Pipe         =>
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
