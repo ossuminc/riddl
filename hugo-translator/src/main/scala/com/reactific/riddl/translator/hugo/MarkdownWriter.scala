@@ -210,53 +210,60 @@ case class MarkdownWriter(
     result
   }
 
-  /** Generate a string that contains the name of a definition that is
-   * markdown linked to the definition in its source.
-   * For example, given sourceURL option of https://github.com/a/b
-   * and for an editPath option of src/main/riddl and for a
-   * Location that has Org/org.riddl at line 30, we would generate this
-   * URL:
-   * `https://github.com/a/b/blob/main/src/main/riddl/Org/org.riddl#L30`
-   * Note that that this works through recursive path identifiers to find
-   * the first type that is not a reference
-   * Note: this only works for github sources
-   * */
-  def makeTypeExpressionSourceLink(
-    typeEx: TypeExpression,
-    parents: Seq[Definition]
-  ): String = {
-    state.options.sourceURL match {
-      case Some(url) =>
-        state.options.editPath match {
-          case Some(strPath) =>
-            val prefix = url + "/blob/" + strPath
-            typeEx match {
-              case EntityReferenceTypeExpression(_, pathId) =>
-                val resolved = state.resolvePath(pathId, parents)
-                if (resolved.nonEmpty) {
-                  val loc = resolved.head.loc
-                  val suffix = resolved.reverse.map(_.id.value).mkString("/")
-                  val line = s"#${loc.line}"
-                  s"[${resolved.head.identify}]($prefix/$suffix$line)"
-                } else {
-                  typeEx.format
-                }
-              case AliasedTypeExpression(_, pathId) =>
-                val resolved = state.resolvePath(pathId, parents)
-                if (resolved.nonEmpty) {
-                  val loc = resolved.head.loc
-                  val suffix = resolved.reverse.map(_.id.value).mkString("/")
-                  val line = s"#${loc.line}"
-                  s"[${resolved.head.identify}]($prefix/$suffix$line)"
-                } else {
-                  typeEx.format
-                }
-              case _ => typeEx.format
-            }
-          case _ => typeEx.format
-        }
-      case _ => typeEx.format
+  def emitMermaidDiagram(lines: Seq[String]): this.type = {
+    p("{{< mermaid class=\"text-center\">}}")
+    lines.foreach(p)
+    p("{{< /mermaid >}}")
+    if (state.commonOptions.debug) {
+      p("```mermaid")
+      lines.foreach(p)
+      p("```")
+    } else { this }
+  }
+
+  def makeERDRelationship(from: String, to: Field): String = {
+    def getPidName(pid: PathIdentifier): String = {
+      val stack = state.resolvePath(pid)
+      if (stack.isEmpty) { "Unknown" }
+      else { stack.head.id.format }
     }
+    val typeName = to.typeEx match {
+      case AliasedTypeExpression(_, pid)         => getPidName(pid)
+      case EntityReferenceTypeExpression(_, pid) => getPidName(pid)
+      case UniqueId(_, pid)                      => getPidName(pid)
+      case _                                     => ""
+    }
+    if (typeName.nonEmpty) {
+      to.typeEx match {
+        case _: OneOrMore =>
+          if (typeName.isEmpty) typeName else {
+            from + " ||--|{" + typeName + " : references" }
+        case _: ZeroOrMore =>
+          if (typeName.isEmpty) typeName else {
+            from + " ||--o{" + typeName + " : references" }
+        case _: Optional =>
+          if (typeName.isEmpty) typeName else {
+            from + " ||--o|" + typeName + " : references" }
+        case _: AliasedTypeExpression | _: EntityReferenceTypeExpression |
+            _: UniqueId =>
+          if (typeName.isEmpty) typeName else {
+            from + " ||--||" + typeName + " : references" }
+        case _ => ""
+      }
+    } else { typeName }
+  }
+
+  def emitERD(state: State): this.type = {
+    h2("Entity Relationships")
+    val typ: Seq[String] = s"${state.id.format} {" +:
+      state.typeEx.fields.map { f =>
+        f.typeEx.format + " " + f.id.format
+      } :+ "}"
+    val relationships: Seq[String] = state.typeEx.fields
+      .map(makeERDRelationship(state.id.format,_))
+      .filter(_.nonEmpty)
+    val lines = Seq("erDiagram") ++ typ ++ relationships
+    emitMermaidDiagram(lines)
   }
 
   def emitIndex(kind: String): this.type = {
@@ -546,9 +553,9 @@ case class MarkdownWriter(
   def emitState(state: State, parents: Seq[String]): this.type = {
     containerHead(state,"State")
     emitDefDoc(state, parents)
+    emitERD(state)
     h2("Fields")
     emitFields(state.typeEx.fields)
-    emitDetails(state.description)
   }
 
   def emitInvariants(invariants: Seq[Invariant]): this.type = {

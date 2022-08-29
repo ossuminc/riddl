@@ -356,8 +356,12 @@ object RiddlOptions {
           dryRun <- optional(objCur, "dry-run", noBool)(cc =>
             cc.asBoolean.map(Option(_))
           )
-          quiet <-
-            optional(objCur, "quiet", noBool)(cc => cc.asBoolean.map(Option(_)))
+          quiet <- optional(objCur, "quiet", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
+          debug <- optional(objCur, "debug", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
           suppressWarnings <- optional(objCur, "suppress-warnings", noBool) {
             cc => cc.asBoolean.map(Option(_))
           }
@@ -413,7 +417,8 @@ object RiddlOptions {
               showMissingWarnings = suppressMissingWarnings.map(!_)
                 .getOrElse(common.showMissingWarnings),
               showStyleWarnings = suppressStyleWarnings.map(!_)
-                .getOrElse(common.showStyleWarnings)
+                .getOrElse(common.showStyleWarnings),
+              debug.getOrElse(common.debug)
             ),
             parse,
             validate,
@@ -756,6 +761,9 @@ object RiddlOptions {
       ).text(
         "Provide detailed, step-by-step, output detailing riddlc's actions"
       ),
+      opt[Boolean]('D', "debug").optional().action((_,c) =>
+        c.copy(commonOptions = c.commonOptions.copy(debug = true))
+      ).text("Enable debug output. Only useful for riddlc developers"),
       opt[Unit]('q', "quiet").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(quiet = true))
       ).text("Do not print out any output, just do the requested command"),

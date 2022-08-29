@@ -120,6 +120,8 @@ case class HugoTranslatorState(
     }
   }
 
+  /** Generate a string that is the file path portion of a url including
+   * the line number. */
   def makeFilePath(definition: Definition): Option[String] = {
     definition.loc.source match {
       case FileParserInput(file) =>
@@ -130,7 +132,14 @@ case class HugoTranslatorState(
     }
   }
 
-  /** Generate a source link for a definition
+  /** Generate a string that contains the name of a definition that is markdown
+    * linked to the definition in its source. For example, given sourceURL
+    * option of https://github.com/a/b and for an editPath option of
+    * src/main/riddl and for a Location that has Org/org.riddl at line 30, we
+    * would generate this URL:
+    * `https://github.com/a/b/blob/main/src/main/riddl/Org/org.riddl#L30` Note
+    * that that this works through recursive path identifiers to find the first
+    * type that is not a reference Note: this only works for github sources
    * @param definition The definition for which we want the link
    * @return a string that gives the source link for the definition
    */
@@ -201,7 +210,7 @@ case class HugoTranslatorState(
   def findAuthor(defn: Definition, parents: Seq[Definition]): Seq[AuthorInfo] = {
     val result = AST.authorsOf(defn) match {
       case s if s.isEmpty =>
-        parents.find(x => AST.authorsOf(x).nonEmpty) match {
+        parents.find(x => x.hasAuthors) match {
           case None =>
             Seq.empty[AuthorInfo]
           case Some(d) =>
@@ -444,6 +453,9 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
+          case _ =>
+            require(requirement=false, "Failed to handle LeafDefinition")
+            state
         }
       case container: Definition =>
         // Everything else is a container and definitely needs its own page

@@ -71,7 +71,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
   trait WithAuthors extends Definition {
     def authors: Seq[AuthorInfo]
-    override def hasAuthors: Boolean = true
+    override def hasAuthors: Boolean = authors.nonEmpty
   }
 
 
@@ -1243,7 +1243,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
       with WithOptions[ContextOption]
       with WithIncludes with WithTerms with WithAuthors {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
-      sagas ++ functions ++ terms ++ includes ++ authors
+      sagas ++ functions ++ terms ++ includes ++ authors ++ projections ++
+      handlers
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1748,12 +1749,13 @@ object AST extends ast.Expressions with ast.TypeExpression {
   //////////////////////////////////////////////////// UTILITY FUNCTIONS
 
   private def authorsOfInclude(includes: Seq[Include]): Seq[AuthorInfo] = {
-    (for {
+    for {
       include <- includes
-      defn <- include.contents if defn.hasAuthors
+      ai <- include.contents if ai.isInstanceOf[AuthorInfo]
+      authInfo = ai.asInstanceOf[AuthorInfo]
     } yield {
-      defn.asInstanceOf[WithAuthors].authors
-    }).flatten
+      authInfo
+    }
   }
 
   def authorsOf(defn: Definition): Seq[AuthorInfo] = {
@@ -1761,8 +1763,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
       case wa: WithAuthors =>
         wa.authors ++ (
         wa match {
-          case wi: WithIncludes => authorsOfInclude(wi.includes)
-          case _ => Seq.empty[AuthorInfo]
+          case wi: WithIncludes =>
+            authorsOfInclude(wi.includes)
+          case _ =>
+            Seq.empty[AuthorInfo]
         })
       case _ => Seq.empty[AuthorInfo]
     }

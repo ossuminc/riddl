@@ -183,7 +183,8 @@ trait TypeExpression extends Abstract {
     loc: Location,
     enumerators: Seq[Enumerator])
       extends TypeExpression {
-    override def format: String = "{ " + enumerators.mkString(",") + " }"
+    override def format: String =
+      "{ " + enumerators.map(_.id.format).mkString(",") + " }"
 
   }
 
