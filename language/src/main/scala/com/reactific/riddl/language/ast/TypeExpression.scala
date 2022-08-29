@@ -41,7 +41,7 @@ trait TypeExpression extends Abstract {
         s"Reference To Entity ${entity.format}"
       case _: Pattern                     => s"Pattern"
       case UniqueId(_, entityPath)        => s"Id(${entityPath.format})"
-      case MessageType(_, messageKind, _) => messageKind.kind
+      case MessageType(_, messageKind, _) => messageKind.format
       case predefinedType: PredefinedType => predefinedType.kind
       case _                              => "<unknown type expression>"
     }
@@ -52,6 +52,7 @@ trait TypeExpression extends Abstract {
   /** Base of an enumeration for the four kinds of message types */
   sealed trait MessageKind {
     def kind: String
+    def format: String = kind.head.toUpper +: kind.tail
   }
 
   /** An enumerator value for command types */

@@ -190,6 +190,9 @@ object Folding {
 
   trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
     def root: Definition
+
+    def symbolTable: SymbolTable
+
     var parents: Seq[Definition] = Seq.empty[Definition]
 
     def captureHierarchy(pars: Seq[Definition]): S = {
@@ -251,7 +254,7 @@ object Folding {
       }
     }
 
-      /** Resolve a PathIdentifier If the path is already resolved or it has no
+    /** Resolve a PathIdentifier If the path is already resolved or it has no
      * empty components then we can resolve it from the map or the symbol
      * table.
      *
@@ -260,7 +263,7 @@ object Folding {
      * @return
      * Either an error or a definition
      */
-    def resolvePath(
+    def resolveRelativePath(
       pid: PathIdentifier,
       parents: Seq[Definition] = parents
     ): Seq[Definition] = {
@@ -289,7 +292,8 @@ object Folding {
                   s"""Path resolution encountered a loop at ${d.identify}
                      |  for name '$n' when resolving ${pid.format}
                      |  in definition context: ${
-                        parents.map(_.identify).mkString("\n    ","\n    ","\n")}
+                    parents.map(_.identify).mkString("\n    ", "\n    ", "\n")
+                  }
                      |""".stripMargin)
                 pstack.clear()
               } else {
@@ -313,7 +317,38 @@ object Folding {
           }
         }
       }
+      if (pstack.size == 1) {
+        if (pstack.head.isInstanceOf[RootContainer])
+          pstack.pop()
+      }
       pstack.toSeq
+    }
+
+    def resolvePathFromSymbolTable(
+      pid: PathIdentifier
+    ): Seq[Definition] = {
+      val symTabCompatibleNameSearch = pid.value.reverse
+      val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
+      list match {
+        case Nil => // nothing found
+          Seq.empty[Definition]
+        case (d, parents) :: Nil => // list.size == 1
+          d +: parents
+        case _ => // list.size > 1
+            Seq.empty[Definition]
+      }
+    }
+
+    def resolvePath(
+      pid: PathIdentifier, parents: Seq[Definition] = parents
+    ): Seq[Definition] = {
+      if (pid.value.isEmpty) {
+        Seq.empty[Definition]
+      } else if (pid.value.exists(_.isEmpty)) {
+        resolveRelativePath(pid, parents)
+      } else {
+        resolvePathFromSymbolTable(pid)
+      }
     }
   }
 }

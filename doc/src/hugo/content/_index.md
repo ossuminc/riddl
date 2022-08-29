@@ -66,4 +66,6 @@ to the [Tooling](tooling) section and learn how to install and use them.
 If you're interested in knowing how we plan to extend RIDDl in the future, 
 please review our [Future Work](future-work) section. 
 
+## Full Index
+
 {{< toc-tree >}}

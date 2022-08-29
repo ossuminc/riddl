@@ -403,7 +403,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
 
     def emitUndefined(): FileEmitter = { add(" ???") }
 
-    def emitOptions(optionDef: OptionsDef[?]): FileEmitter = {
+    def emitOptions(optionDef: WithOptions[?]): FileEmitter = {
       if (optionDef.options.nonEmpty) this.addLine(optionDef.format) else this
     }
 
@@ -501,7 +501,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case _: RootContainer       =>
           // ignore
           state
-        case container: Definition with OptionsDef[?] =>
+        case container: Definition with WithOptions[?] =>
           // Applies To: Context, Entity, Interaction
           state.withCurrent(_.openDef(container).emitOptions(container))
         case container: Definition =>

@@ -628,7 +628,8 @@ object Validation {
             Error,
             typ.loc
           )
-        case UniqueId(_, pid)        => checkPathRef[Entity](pid, defn)()
+        case UniqueId(_, pid)        =>
+          checkPathRef[Entity](pid, defn)()
         case EntityReferenceTypeExpression(_, pid) =>
           checkPathRef[Entity](pid, defn)()
         case _: PredefinedType              => this // nothing needed

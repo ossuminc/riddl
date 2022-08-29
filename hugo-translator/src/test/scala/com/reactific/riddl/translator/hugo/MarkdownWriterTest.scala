@@ -1,6 +1,7 @@
 package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.SymbolTable
 import com.reactific.riddl.language.testkit.ParsingTest
 
 import java.io.PrintWriter
@@ -29,7 +30,8 @@ class MarkdownWriterTest extends ParsingTest {
         case Right(root) =>
           root.contents mustNot be(empty)
           val domain = root.contents.head
-          val state = HugoTranslatorState(root)
+          val symtab = SymbolTable(root)
+          val state = HugoTranslatorState(root, symtab)
           val mkd = MarkdownWriter(output, state)
           mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
@@ -66,7 +68,9 @@ class MarkdownWriterTest extends ParsingTest {
       val term2 = {
         GlossaryEntry("two", "Term", "The second term", Seq("A", "B", "C"))
       }
-      val state = HugoTranslatorState(RootContainer.empty)
+      val root = RootContainer.empty
+      val symtab = SymbolTable(root)
+      val state = HugoTranslatorState(root, symtab)
       val mdw = MarkdownWriter(Path.of("foo.md"), state)
       mdw.emitGlossary(10, Seq(term1, term2))
       val strw = new StringWriter()

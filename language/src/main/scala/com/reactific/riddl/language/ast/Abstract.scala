@@ -48,7 +48,7 @@ trait Abstract {
     override def isEmpty: Boolean = s.isEmpty
   }
   object LiteralString {
-    val empty = LiteralString(Location.empty, "")
+    val empty: LiteralString = LiteralString(Location.empty, "")
   }
 
   /** A RiddlValue that is a parsed identifier, typically the name of a
@@ -174,7 +174,7 @@ trait Abstract {
    * @tparam T
    * The sealed base trait of the permitted options for this definition
    */
-  trait OptionsDef[T <: OptionValue] extends RiddlValue {
+  trait WithOptions[T <: OptionValue] extends Definition {
     def options: Seq[T]
 
     def hasOption[OPT <: T : ClassTag]: Boolean = options
@@ -195,6 +195,7 @@ trait Abstract {
     }
 
     override def isEmpty: Boolean = options.isEmpty && super.isEmpty
+    override def hasOptions: Boolean = true
   }
 
   /** Base trait for all definitions requiring an identifier for the definition
@@ -207,13 +208,21 @@ trait Abstract {
 
     def kind: String
 
-    def kindId: String = s"$kind '${id.format}'"
+    def kindId: String = {
+      val name = if (id.isEmpty) { "Anonymous" } else { id.format }
+      s"$kind '$name'"
+    }
+
 
     def identify: String = kindId
 
     def identifyWithLoc: String = s"$kindId at $loc"
 
     def isImplicit: Boolean = id.value.isEmpty
+
+    def hasOptions: Boolean = false
+
+    def hasAuthors: Boolean = false
   }
 
   trait LeafDefinition extends Definition {
