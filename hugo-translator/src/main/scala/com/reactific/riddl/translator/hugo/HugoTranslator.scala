@@ -312,7 +312,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     val targetDir = options.staticRoot
     if (Files.exists(sourceDir) && Files.isDirectory(sourceDir)) {
       val img = sourceDir
-      .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
+        .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
+        .toAbsolutePath
       Files.createDirectories(img.getParent)
       if (!Files.exists(img)) { copyResource(img, "RIDDL-Logo.ico") }
       // copy source to target using Files Class
@@ -419,9 +420,18 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     stack: Seq[Definition]
   ): HugoTranslatorState  = {
     defn match {
-      case _: Field | _: Example | _: Enumerator | _: Invariant | _: Inlet |
-           _:Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo |
-           _: OnClause | _: SagaStep | _: Include  | _: RootContainer =>
+      case f: Field =>
+        state.addToGlossary(f, stack)
+      case i: Invariant =>
+        state.addToGlossary(i, stack)
+      case e: Enumerator =>
+        state.addToGlossary(e, stack)
+      case ss: SagaStep =>
+        state.addToGlossary(ss, stack)
+      case t: Term       =>
+        state.addToGlossary(t, stack)
+      case _: Example | _: Inlet | _:Outlet | _: InletJoint | _: OutletJoint |
+           _: AuthorInfo | _: OnClause | _: Include  | _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
@@ -429,8 +439,6 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
         // These are leaf nodes, they get their own file or other special
         // handling.
         leaf match {
-          case t: Term         =>
-            state.addToGlossary(t, stack)
             // handled by definition that contains the term
           case p: Pipe         =>
             val (mkd, parents) = setUpLeaf(leaf, state, stack)

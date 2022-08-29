@@ -302,7 +302,6 @@ case class MarkdownWriter(
       heading("Details", level)
       val description = d.get.lines.map(_.s)
       description.foreach(p)
-      nl
     }
     this
   }
@@ -462,7 +461,6 @@ case class MarkdownWriter(
   def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
     containerHead(domain,"Domain")
     emitDefDoc(domain, parents)
-    emitAuthorInfo(domain.authors)
     toc("Subdomains", mkTocSeq(domain.domains))
     toc("Types", mkTocSeq(domain.types))
     toc("Contexts", mkTocSeq(domain.contexts))

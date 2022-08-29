@@ -39,14 +39,13 @@ class MarkdownWriterTest extends ParsingTest {
             """---
               |title: "TestDomain: Domain"
               |weight: 10
+              |draft: "false"
               |description: "Just For Testing"
               |geekdocAnchor: true
+              |geekdocToC: 4
               |geekdocCollapseSection: true
+              |geekdocFilePath: no-such-file
               |---
-              |
-              |## Author
-              |* _Name_: Reid Spencer
-              |* _Email_: reid@reactific.com
               |
               |## Briefly
               |Just For Testing
@@ -57,16 +56,28 @@ class MarkdownWriterTest extends ParsingTest {
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
               |
+              |## Author
+              |* _Name_: Reid Spencer
+              |* _Email_: reid@reactific.com
+              |
               |## Types
               |* [MyString](mystring)
+              |
+              |## Domain Index
+              |{{< toc-tree >}}
               |""".stripMargin
           emitted mustBe expected
       }
     }
     "emit a glossary" in {
-      val term1 = GlossaryEntry("one", "Term", "The first term", Seq("A", "B"))
+      val term1 = GlossaryEntry("one", "Term", "The first term", Seq("A", "B"),
+        "A/B/one", "https://example.com/blob/main/src/main/riddl/one"
+      )
       val term2 = {
-        GlossaryEntry("two", "Term", "The second term", Seq("A", "B", "C"))
+        GlossaryEntry("two", "Term", "The second term", Seq("A", "B", "C"),
+          "A/B/C/two",
+          "https://example.com/blob/main/src/main/riddl/two"
+        )
       }
       val root = RootContainer.empty
       val symtab = SymbolTable(root)
@@ -80,14 +91,16 @@ class MarkdownWriterTest extends ParsingTest {
       val expected = """---
                        |title: "Glossary Of Terms"
                        |weight: 10
+                       |draft: "false"
                        |description: "A generated glossary of terms"
                        |geekdocAnchor: true
+                       |geekdocToC: 4
                        |
                        |---
-                       || Term | Type | Brief | Path |
-                       || ---- | ---- | ----- | ---- |
-                       || [one](A/B/one) | Term | The first term | A.B |
-                       || [two](A/B/C/two) | Term | The second term | A.B.C |
+                       || Term | Type | Brief Description |
+                       || :---: | :---: | :---              |
+                       || [one](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The first term |
+                       || [two](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The second term |
                        |""".stripMargin
       output mustBe expected
     }
