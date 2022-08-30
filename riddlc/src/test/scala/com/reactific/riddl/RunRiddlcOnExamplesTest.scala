@@ -22,11 +22,15 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
       RIDDLC.runMain(args) mustBe 0
     }
     "handle validate" in {
-      val args = Array("validate", "-i", inputFile)
+      val args = Array("validate", "-i", inputFile,
+        "--suppress-missing-warnings", "--suppress-style-warnings")
       RIDDLC.runMain(args) mustBe 0
     }
     "handle hugo" in {
-      val args = Array("hugo", "-i", inputFile.toString, "-o", outputDir )
+      val args = Array(
+        "hugo", "-i", inputFile, "-o", outputDir,
+        "--suppress-missing-warnings", "--suppress-style-warnings"
+      )
       RIDDLC.runMain(args) mustBe 0
     }
     "handle hugo from config" in {

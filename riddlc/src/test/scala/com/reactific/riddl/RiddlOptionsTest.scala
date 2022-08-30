@@ -57,8 +57,8 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           opts.commonOptions.quiet mustBe false
           opts.commonOptions.dryRun mustBe false
           opts.commonOptions.showWarnings mustBe true
-          opts.commonOptions.showStyleWarnings mustBe true
-          opts.commonOptions.showMissingWarnings mustBe true
+          opts.commonOptions.showStyleWarnings mustBe false
+          opts.commonOptions.showMissingWarnings mustBe false
           val ho = opts.hugoOptions
           ho.inputFile mustBe Option(Path.of(
             "examples/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl"
@@ -72,8 +72,8 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
             new java.net.URL("https://riddl.tech"))
           ho.sourceURL mustBe Option(
             new java.net.URL("https://github.com/reactific/riddl"))
-          ho.editPath mustBe Option("/-/blob/main/examples/src/riddl/ReactiveBBQ")
-          ho.siteLogoPath mustBe Option("/images/RBBQ.png")
+          ho.editPath mustBe Option("blob/main/examples/src/riddl/ReactiveBBQ")
+          ho.siteLogoPath mustBe Option("images/RBBQ.png")
       }
     }
     "common opts override properly" in {
@@ -106,7 +106,7 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
       val opts = Array("from", "input.riddl", "--hugo-path", "/path/to/hugo")
       RiddlOptions.parse(opts) match {
         case Some(opts) =>
-          opts.fromOptions.hugoPath mustBe(Some(Path.of("/path/to/hugo")))
+          opts.fromOptions.hugoPath mustBe Some(Path.of("/path/to/hugo"))
         case None =>
           fail("failed to parse options")
       }

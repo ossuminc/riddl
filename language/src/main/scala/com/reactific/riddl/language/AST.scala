@@ -69,6 +69,15 @@ object AST extends ast.Expressions with ast.TypeExpression {
     final val kind: String = "Author Info"
   }
 
+  trait WithAuthors extends Definition {
+    def authors: Seq[AuthorInfo]
+    override def hasAuthors: Boolean = authors.nonEmpty
+  }
+
+  trait WithTypes extends Definition {
+    def types: Seq[Type]
+    override def hasTypes: Boolean = types.nonEmpty
+  }
 
   /** Base trait of any definition that is a container and contains types
    */
@@ -86,8 +95,16 @@ object AST extends ast.Expressions with ast.TypeExpression {
   }
 
   /** Added to definitions that support includes */
-  sealed trait WithIncludes {
+  sealed trait WithIncludes extends Container[Definition] {
     def includes: Seq[Include]
+    def containedDefinitions: Seq[Definition] = {
+      contents.flatMap {
+        case i: Include =>
+          i.contents
+        case d: Definition =>
+          Seq(d)
+      }
+    }
   }
 
 
@@ -157,9 +174,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
     val empty: RootContainer =
       RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
   }
-
-
-
 
   /** Base trait for the four kinds of message references */
   sealed trait MessageRef extends Reference[Type] {
@@ -309,7 +323,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     message: LiteralString,
     description: Option[Description])
     extends SagaStepAction {
-    override def format: String = message.format
+    override def format: String = s"error \"${message.format}\""
   }
 
 
@@ -442,7 +456,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     state: StateRef,
     description: Option[Description] = None)
       extends Action {
-    override def format: String = s"morph ${}"
+    override def format: String = s"morph ${entity.format} to ${state.format}"
   }
 
   /** An action that changes the behavior of an entity by making it use a new
@@ -464,7 +478,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     handler: HandlerRef,
     description: Option[Description] = None)
       extends Action {
-    override def format: String = s"become ${}"
+    override def format: String = s"become ${entity.format} to ${handler.format}"
   }
 
   /** An action that tells a message to an entity. This is very analogous to the
@@ -622,7 +636,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
         with ProcessorDefinition with FunctionDefinition with StoryDefinition  {
     final val kind: String = "Example"
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
-      thens.isEmpty && buts.isEmpty  }
+      thens.isEmpty && buts.isEmpty
+  }
 
   // ////////////////////////////////////////////////////////// Entities
 
@@ -775,7 +790,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends EntityDefinition
+      extends EntityDefinition with WithTypes
       with ContextDefinition with FunctionDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
@@ -966,9 +981,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ContextDefinition
-      with TypeContainer
-      with OptionsDef[EntityOption]
-      with WithIncludes {
+      with TypeContainer with WithTypes
+      with WithOptions[EntityOption]
+      with WithIncludes with WithAuthors {
 
     lazy val contents: Seq[EntityDefinition] = {
       states ++ types ++ handlers ++ functions ++ invariants ++ includes
@@ -1233,12 +1248,12 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
-      with TypeContainer
-      with OptionsDef[ContextOption]
-      with WithIncludes
-      with WithTerms {
+      with TypeContainer with WithTypes
+      with WithOptions[ContextOption]
+      with WithIncludes with WithTerms with WithAuthors {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
-      sagas ++ functions ++ terms ++ includes ++ authors
+      sagas ++ functions ++ terms ++ includes ++ authors ++ projections ++
+      handlers
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1521,8 +1536,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
-      with WithIncludes
-      with WithTerms {
+      with WithIncludes with WithTerms with WithAuthors {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
       outJoints ++ terms ++ includes
     final val kind: String = "Plant"
@@ -1610,7 +1624,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ContextDefinition with OptionsDef[SagaOption] {
+      extends ContextDefinition with WithOptions[SagaOption] {
     lazy val contents: Seq[SagaDefinition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
       output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps
@@ -1660,7 +1674,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     authors: Seq[AuthorInfo] = Seq.empty[AuthorInfo],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends DomainDefinition {
+      extends DomainDefinition with WithAuthors {
     override def contents: Seq[StoryDefinition] = examples ++ authors
     final val kind: String = "Story"
   }
@@ -1730,10 +1744,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends TypeContainer
-      with OptionsDef[DomainOption]
+      with WithOptions[DomainOption]
       with DomainDefinition
-      with WithIncludes
-      with WithTerms {
+      with WithIncludes with WithTypes
+      with WithTerms with WithAuthors {
     def contents: Seq[DomainDefinition] = {
       domains ++ types ++ contexts ++ plants ++ stories ++ terms ++
         includes ++ authors
@@ -1743,17 +1757,26 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
   //////////////////////////////////////////////////// UTILITY FUNCTIONS
 
+  private def authorsOfInclude(includes: Seq[Include]): Seq[AuthorInfo] = {
+    for {
+      include <- includes
+      ai <- include.contents if ai.isInstanceOf[AuthorInfo]
+      authInfo = ai.asInstanceOf[AuthorInfo]
+    } yield {
+      authInfo
+    }
+  }
+
   def authorsOf(defn: Definition): Seq[AuthorInfo] = {
     defn match {
-      case d: DomainDefinition =>
-        d match {
-          case dmn: Domain => dmn.authors
-          case ctxt: Context => ctxt.authors
-          case ntty: Entity => ntty.authors
-          case stry: Story => stry.authors
-          case plnt: Plant => plnt.authors
-          case _ => Seq.empty[AuthorInfo]
-        }
+      case wa: WithAuthors =>
+        wa.authors ++ (
+        wa match {
+          case wi: WithIncludes =>
+            authorsOfInclude(wi.includes)
+          case _ =>
+            Seq.empty[AuthorInfo]
+        })
       case _ => Seq.empty[AuthorInfo]
     }
   }

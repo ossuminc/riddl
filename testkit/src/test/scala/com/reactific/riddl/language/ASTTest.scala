@@ -27,8 +27,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       URL mustBe URL
       Enumeration((0, 0), Seq.empty[Enumerator]) mustBe
         Enumeration((0, 0), Seq.empty[Enumerator])
-      Alternation((0, 0), Seq.empty[TypeExpression]) mustBe
-        Alternation((0, 0), Seq.empty[TypeExpression])
+      Alternation((0, 0), Seq.empty[AliasedTypeExpression]) mustBe
+        Alternation((0, 0), Seq.empty[AliasedTypeExpression])
       Aggregation((0, 0), Seq.empty[Field]) mustBe
         Aggregation((0, 0), Seq.empty[Field])
       Optional(

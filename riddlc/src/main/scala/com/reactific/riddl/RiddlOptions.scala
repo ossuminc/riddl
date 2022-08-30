@@ -119,6 +119,7 @@ object RiddlOptions {
         verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
         quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
         dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
+        debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
         showWarnings <- optional(objCur, "show-warnings", true) { cc =>
           cc.asBoolean
         }
@@ -136,7 +137,8 @@ object RiddlOptions {
           quiet,
           showWarnings,
           showMissingWarnings,
-          showStyleWarnings
+          showStyleWarnings,
+          debug
         )
       }
     }
@@ -203,6 +205,10 @@ object RiddlOptions {
             optional(objCur, "site-logo-path", "static/somewhere") { cc =>
               cc.asString
             }
+          siteLogoURL <-
+            optional(objCur, "site-logo-url", Option.empty[String]) { cc =>
+              cc.asString.map(Option[String])
+            }
           baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
             cc.asString.map(Option[String])
           }
@@ -213,7 +219,10 @@ object RiddlOptions {
           sourceURL <- optional(objCur, "source-url", Option.empty[String]) {
             cc => cc.asString.map(Option[String])
           }
-          editPath <- optional(objCur, "edit-path", "path/to/hugo/content") {
+          viewPath <- optional(objCur, "view-path", "blob/main/src/main/riddl") {
+            cc => cc.asString
+          }
+          editPath <- optional(objCur, "edit-path", "edit/main/src/main/riddl") {
             cc => cc.asString
           }
           withGlossary <- optional(objCur, "with-glossary", true) { cc =>
@@ -262,10 +271,12 @@ object RiddlOptions {
             Option(siteTitle),
             Option(siteDescription),
             Option(siteLogoPath),
+            handleURL(siteLogoURL),
             handleURL(baseURL),
             themes,
             handleURL(sourceURL),
             Option(editPath),
+            Option(viewPath),
             withGlossary,
             withToDoList,
             withGraphicalTOC
@@ -347,8 +358,12 @@ object RiddlOptions {
           dryRun <- optional(objCur, "dry-run", noBool)(cc =>
             cc.asBoolean.map(Option(_))
           )
-          quiet <-
-            optional(objCur, "quiet", noBool)(cc => cc.asBoolean.map(Option(_)))
+          quiet <- optional(objCur, "quiet", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
+          debug <- optional(objCur, "debug", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
           suppressWarnings <- optional(objCur, "suppress-warnings", noBool) {
             cc => cc.asBoolean.map(Option(_))
           }
@@ -404,13 +419,14 @@ object RiddlOptions {
               showMissingWarnings = suppressMissingWarnings.map(!_)
                 .getOrElse(common.showMissingWarnings),
               showStyleWarnings = suppressStyleWarnings.map(!_)
-                .getOrElse(common.showStyleWarnings)
+                .getOrElse(common.showStyleWarnings),
+              debug.getOrElse(common.debug)
             ),
             parse,
             validate,
             reformat,
             hugo,
-            hugoGitCheckOptions = hugoGitCheck,
+            hugoGitCheck,
             kalix
           )
         }
@@ -612,7 +628,10 @@ object RiddlOptions {
     opt[String]('m', "site-logo-path").action((s, c) =>
       c.copy(hugoOptions = c.hugoOptions.copy(siteLogoPath = Option(s)))
     ).text("""Path, in 'static' directory to placement and use
-             |of the site logo.""".stripMargin)
+             |of the site logo.""".stripMargin),
+    opt[String] ('n', "site-logo-url").action((s, c) =>
+      c.copy(hugoOptions = c.hugoOptions.copy(siteLogoURL = Option(new URL(s))))
+    ).text("URL from which to copy the site logo.")
   )
 
   private val kalixOptionsParser = Seq(
@@ -744,6 +763,9 @@ object RiddlOptions {
       ).text(
         "Provide detailed, step-by-step, output detailing riddlc's actions"
       ),
+      opt[Boolean]('D', "debug").optional().action((_,c) =>
+        c.copy(commonOptions = c.commonOptions.copy(debug = true))
+      ).text("Enable debug output. Only useful for riddlc developers"),
       opt[Unit]('q', "quiet").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(quiet = true))
       ).text("Do not print out any output, just do the requested command"),

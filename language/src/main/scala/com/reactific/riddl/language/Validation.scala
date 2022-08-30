@@ -48,7 +48,7 @@ object Validation {
       case NonFatal(xcptn) =>
         val message =
           ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
-        state.add(Message(Location.empty, message, SevereError))
+        state.addSevere(Location.empty, message)
     }
     result.messages.sortBy(_.loc)
   }
@@ -504,11 +504,10 @@ object Validation {
       min: Int = 3
     ): ValidationState = {
       if (d.id.value.nonEmpty && d.id.value.length < min) {
-        add(Message(
+        addStyle(
           d.id.loc,
-          s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min",
-          StyleWarning
-        ))
+          s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min"
+        )
       } else { this }
     }
 
@@ -628,7 +627,8 @@ object Validation {
             Error,
             typ.loc
           )
-        case UniqueId(_, pid)        => checkPathRef[Entity](pid, defn)()
+        case UniqueId(_, pid)        =>
+          checkPathRef[Entity](pid, defn)()
         case EntityReferenceTypeExpression(_, pid) =>
           checkPathRef[Entity](pid, defn)()
         case _: PredefinedType              => this // nothing needed
@@ -881,29 +881,24 @@ object Validation {
       if (!definition.id.isEmpty) {
         val matches = result.lookup[Definition](path)
         if (matches.isEmpty) {
-          result = result.add(Message(
+          result = result.addSevere(
             definition.id.loc,
-            s"'${definition.id.value}' evaded inclusion in symbol table!",
-            SevereError
-          ))
+            s"'${definition.id.value}' evaded inclusion in symbol table!"
+          )
         } else if (matches.sizeIs >= 2) {
           val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
           parentGroups.get(Option(parent)) match {
             case Some(head :: tail) if tail.nonEmpty =>
-              result = result.add(Message(
+              result = result.addWarning(
                 head.id.loc,
                 s"${definition.identify} has same name as other definitions in ${parent.identifyWithLoc}:  " +
-                  tail.map(x => x.identifyWithLoc).mkString(",  "),
-                Warning
-              ))
+                  tail.map(x => x.identifyWithLoc).mkString(",  "))
             case Some(head :: tail) if tail.isEmpty =>
-              result = result.add(Message(
+              result = result.addStyle(
                 head.id.loc,
                 s"${definition.identify} has same name as other definitions: " +
                   matches.filterNot(_ == definition).map(x => x.identifyWithLoc)
-                    .mkString(",  "),
-                StyleWarning
-              ))
+                    .mkString(",  "))
             case _ =>
             // ignore
           }

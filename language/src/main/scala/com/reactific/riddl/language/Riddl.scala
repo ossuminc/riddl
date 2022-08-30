@@ -31,7 +31,8 @@ case class CommonOptions(
   quiet: Boolean = false,
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
-  showStyleWarnings: Boolean = true
+  showStyleWarnings: Boolean = true,
+  debug: Boolean = false
 )
 
 /** Primary Interface to Riddl Language parsing and validating */
