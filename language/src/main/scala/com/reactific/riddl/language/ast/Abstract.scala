@@ -223,6 +223,8 @@ trait Abstract {
     def hasOptions: Boolean = false
 
     def hasAuthors: Boolean = false
+
+    def hasTypes: Boolean = false
   }
 
   trait LeafDefinition extends Definition {

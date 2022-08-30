@@ -74,6 +74,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def hasAuthors: Boolean = authors.nonEmpty
   }
 
+  trait WithTypes extends Definition {
+    def types: Seq[Type]
+    override def hasTypes: Boolean = types.nonEmpty
+  }
 
   /** Base trait of any definition that is a container and contains types
    */
@@ -162,9 +166,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
     val empty: RootContainer =
       RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
   }
-
-
-
 
   /** Base trait for the four kinds of message references */
   sealed trait MessageRef extends Reference[Type] {
@@ -781,7 +782,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends EntityDefinition
+      extends EntityDefinition with WithTypes
       with ContextDefinition with FunctionDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
       input.map(_.fields).getOrElse(Seq.empty[Field]) ++
@@ -972,7 +973,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ContextDefinition
-      with TypeContainer
+      with TypeContainer with WithTypes
       with WithOptions[EntityOption]
       with WithIncludes with WithAuthors {
 
@@ -1239,7 +1240,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
-      with TypeContainer
+      with TypeContainer with WithTypes
       with WithOptions[ContextOption]
       with WithIncludes with WithTerms with WithAuthors {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
@@ -1737,7 +1738,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
       extends TypeContainer
       with WithOptions[DomainOption]
       with DomainDefinition
-      with WithIncludes
+      with WithIncludes with WithTypes
       with WithTerms with WithAuthors {
     def contents: Seq[DomainDefinition] = {
       domains ++ types ++ contexts ++ plants ++ stories ++ terms ++

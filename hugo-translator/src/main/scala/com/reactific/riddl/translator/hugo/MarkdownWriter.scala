@@ -193,12 +193,12 @@ case class MarkdownWriter(
     this
   }
 
-  def toc(kindOfThing: String, contents: Seq[String]): this.type = {
+  def toc(kindOfThing: String, contents: Seq[String], level: Int = 2): this.type = {
     if (contents.nonEmpty) {
       val items = contents.map { name =>
         s"[$name]" -> s"(${name.toLowerCase})"
       }
-      list[(String, String)](kindOfThing, items)
+      list[(String, String)](kindOfThing, items, level)
     }
     this
   }
@@ -286,15 +286,12 @@ case class MarkdownWriter(
     parents: Seq[String],
     level: Int = 2
   ): this.type = {
-    if (d.brief.nonEmpty) {
-      heading("Briefly", level)
-      p(d.brief.fold("Brief description missing.\n")(_.s))
-      val path = (parents :+ d.id.format).mkString(".")
-      italic("Definition Path").p(s": $path")
-      val link = state.makeSourceLink(d)
-      italic("Source Location").p(s": [${d.loc}]($link)")
-    }
-    this
+    emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
+    emitTableRow("_Briefly_", d.brief.fold("Brief description missing.\n")(_.s))
+    val path = (parents :+ d.id.format).mkString(".")
+    emitTableRow("_Definition Path_", path)
+    val link = state.makeSourceLink(d)
+    emitTableRow("_View Source Link_", s"[${d.loc}]($link)")
   }
 
   def emitDetails(d: Option[Description], level: Int = 2): this.type = {
@@ -459,10 +456,25 @@ case class MarkdownWriter(
     containerHead(typ, suffix)
     emitDefDoc(typ, state.makeParents(stack))
     emitTypeExpression(typ.typ, typ+: stack)
-    val link = state.makeSourceLink(typ)
-    if (link.nonEmpty) {
-      h3("Source Link")
-      p(s"[${typ.identify}]($link)")
+  }
+
+  def emitTypesToc(definition: WithTypes): this.type = {
+    val groups = definition.types.groupBy { typ =>
+      typ.typ match {
+        case mt: MessageType =>
+          mt.messageKind match {
+            case CommandKind => "Commands"
+            case EventKind => "Events"
+            case QueryKind => "Queries"
+            case ResultKind => "Results"
+            case OtherKind => "Others"
+          }
+        case _ => "Others"
+      }
+    }.toSeq.sortBy(_._1)
+    h2("Types")
+    for { (label, list) <- groups } {
+      toc( label, mkTocSeq(list), 3)
     }
     this
   }
@@ -483,7 +495,7 @@ case class MarkdownWriter(
     containerHead(domain,"Domain")
     emitDefDoc(domain, parents)
     toc("Subdomains", mkTocSeq(domain.domains))
-    toc("Types", mkTocSeq(domain.types))
+    emitTypesToc(domain)
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Stories", mkTocSeq(domain.stories))
     toc("Plants", mkTocSeq(domain.plants))
@@ -537,6 +549,7 @@ case class MarkdownWriter(
     containerHead(function,"Function")
     h2(function.id.format)
     emitDefDoc(function, parents)
+    emitTypesToc(function)
     emitInputOutput(function.input, function.output)
     h2("Examples")
     val functionExampleLevel = 3
@@ -554,7 +567,7 @@ case class MarkdownWriter(
     emitDefDoc(context, parents)
     emitContextMap(stack.last, context)
     emitOptions(context.options)
-    toc("Types", mkTocSeq(context.types))
+    emitTypesToc(context)
     toc("Functions", mkTocSeq(context.functions))
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Entities", mkTocSeq(context.entities))
@@ -604,7 +617,7 @@ case class MarkdownWriter(
     emitDefDoc(entity, parents)
     emitOptions(entity.options)
     emitInvariants(entity.invariants)
-    toc("Types", mkTocSeq(entity.types))
+    emitTypesToc(entity)
     toc("States", mkTocSeq(entity.states))
     toc("Functions", mkTocSeq(entity.functions))
     toc("Handlers", mkTocSeq(entity.handlers))
