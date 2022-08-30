@@ -463,7 +463,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
         val (mkd, parents) = setUpContainer(container, state, stack)
         container match {
           case t: Type       => mkd.emitType(t, stack)
-          case s: State      => mkd.emitState(s, parents)
+          case s: State      => mkd.emitState(s, stack)
           case h: Handler    => mkd.emitHandler(h, parents)
           case f: Function   => mkd.emitFunction(f, parents)
           case e: Entity     => mkd.emitEntity(e, parents)

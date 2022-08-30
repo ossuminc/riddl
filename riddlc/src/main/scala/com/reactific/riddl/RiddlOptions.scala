@@ -119,6 +119,7 @@ object RiddlOptions {
         verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
         quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
         dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
+        debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
         showWarnings <- optional(objCur, "show-warnings", true) { cc =>
           cc.asBoolean
         }
@@ -136,7 +137,8 @@ object RiddlOptions {
           quiet,
           showWarnings,
           showMissingWarnings,
-          showStyleWarnings
+          showStyleWarnings,
+          debug
         )
       }
     }
@@ -424,7 +426,7 @@ object RiddlOptions {
             validate,
             reformat,
             hugo,
-            hugoGitCheckOptions = hugoGitCheck,
+            hugoGitCheck,
             kalix
           )
         }

@@ -221,46 +221,39 @@ case class MarkdownWriter(
     } else { this }
   }
 
-  def makeERDRelationship(from: String, to: Field): String = {
-    def getPidName(pid: PathIdentifier): String = {
-      val stack = state.resolvePath(pid)
-      if (stack.isEmpty) { "Unknown" }
-      else { stack.head.id.format }
-    }
-    val typeName = to.typeEx match {
-      case AliasedTypeExpression(_, pid)         => getPidName(pid)
-      case EntityReferenceTypeExpression(_, pid) => getPidName(pid)
-      case UniqueId(_, pid)                      => getPidName(pid)
-      case _                                     => ""
-    }
+  def makeERDRelationship(from: String, to: Field, parents: Seq[Definition]): String = {
+    val typeName = makeTypeName(to.typeEx, parents)
     if (typeName.nonEmpty) {
       to.typeEx match {
         case _: OneOrMore =>
           if (typeName.isEmpty) typeName else {
-            from + " ||--|{" + typeName + " : references" }
+            from + " ||--|{ " + typeName + " : references" }
         case _: ZeroOrMore =>
           if (typeName.isEmpty) typeName else {
-            from + " ||--o{" + typeName + " : references" }
+            from + " ||--o{ " + typeName + " : references" }
         case _: Optional =>
           if (typeName.isEmpty) typeName else {
-            from + " ||--o|" + typeName + " : references" }
+            from + " ||--o| " + typeName + " : references" }
         case _: AliasedTypeExpression | _: EntityReferenceTypeExpression |
             _: UniqueId =>
           if (typeName.isEmpty) typeName else {
-            from + " ||--||" + typeName + " : references" }
+            from + " ||--|| " + typeName + " : references" }
         case _ => ""
       }
     } else { typeName }
   }
 
-  def emitERD(state: State): this.type = {
+  def emitERD(state: State, parents: Seq[Definition]): this.type = {
     h2("Entity Relationships")
     val typ: Seq[String] = s"${state.id.format} {" +:
       state.typeEx.fields.map { f =>
-        f.typeEx.format + " " + f.id.format
+        val typeName = makeTypeName(f.typeEx, parents)
+        val fieldName = f.id.format.replace(" ", "-")
+        val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
+        s"  $typeName $fieldName $comment"
       } :+ "}"
     val relationships: Seq[String] = state.typeEx.fields
-      .map(makeERDRelationship(state.id.format,_))
+      .map(makeERDRelationship(state.id.format,_,parents))
       .filter(_.nonEmpty)
     val lines = Seq("erDiagram") ++ typ ++ relationships
     emitMermaidDiagram(lines)
@@ -334,10 +327,7 @@ case class MarkdownWriter(
     this
   }
 
-  def makePathIdRef(
-    pid: PathIdentifier,
-    parents: Seq[Definition]
-  ): String = {
+  def makePathIdRef(pid: PathIdentifier, parents: Seq[Definition]): String = {
     val resolved = state.resolvePath(pid, parents)
     if (resolved.isEmpty) {
       s"unresolved path: ${pid.format}"
@@ -346,6 +336,30 @@ case class MarkdownWriter(
       val link = state.makeDocLink(resolved.head, state.makeParents(resolved.tail))
       s"[${resolved.head.identify}]($link) at [source]($slink)"
     }
+  }
+
+  def makeTypeName(pid: PathIdentifier, parents: Seq[Definition]): String = {
+    val resolved = state.resolvePath(pid, parents)
+    if (resolved.isEmpty) {
+      s"unresolved"
+    } else {
+      resolved.head.id.format
+    }
+  }
+
+  def makeTypeName(typeEx: TypeExpression, parents: Seq[Definition]): String = {
+    val name = typeEx match {
+      case AliasedTypeExpression(_, pid) => makeTypeName(pid, parents)
+      case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
+      case UniqueId(_, pid) => makeTypeName(pid, parents)
+      case Alternation(_, of) =>
+        of.map(ate => makeTypeName(ate.pid, parents)).mkString("-")
+      case _: Mapping => "Mapping"
+      case _: Aggregation => "Aggregation"
+      case _: MessageType => "Message"
+      case _ => typeEx.format
+    }
+    name.replace(" ", "-")
   }
 
   def resolveTypeExpression(
@@ -550,10 +564,10 @@ case class MarkdownWriter(
     this
   }
 
-  def emitState(state: State, parents: Seq[String]): this.type = {
+  def emitState(state: State, parents: Seq[Definition]): this.type = {
     containerHead(state,"State")
-    emitDefDoc(state, parents)
-    emitERD(state)
+    emitDefDoc(state, this.state.makeParents(parents))
+    emitERD(state,parents)
     h2("Fields")
     emitFields(state.typeEx.fields)
   }

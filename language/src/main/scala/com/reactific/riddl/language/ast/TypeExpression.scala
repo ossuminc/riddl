@@ -17,7 +17,9 @@ trait TypeExpression extends Abstract {
 
   /** A TypeExpression that references another type by PathIdentifier  */
   case class AliasedTypeExpression(loc: Location, pid: PathIdentifier)
-  extends TypeExpression
+  extends TypeExpression {
+    override def format: String = s"Reference To ${pid.format}"
+  }
 
   /** A utility function for getting the kind of a type expression.
     *
@@ -52,7 +54,7 @@ trait TypeExpression extends Abstract {
   /** Base of an enumeration for the four kinds of message types */
   sealed trait MessageKind {
     def kind: String
-    def format: String = kind.head.toUpper +: kind.tail
+    def format: String = kind.capitalize
   }
 
   /** An enumerator value for command types */
@@ -184,7 +186,7 @@ trait TypeExpression extends Abstract {
     enumerators: Seq[Enumerator])
       extends TypeExpression {
     override def format: String =
-      "{ " + enumerators.map(_.id.format).mkString(",") + " }"
+      "{ " + enumerators.map(_.format).mkString(",") + " }"
 
   }
 
@@ -201,7 +203,8 @@ trait TypeExpression extends Abstract {
     loc: Location,
     of: Seq[AliasedTypeExpression])
       extends TypeExpression {
-    override def format: String = s"one of { ${of.mkString(", ")} }"
+    override def format: String =
+      s"one of { ${of.map(_.format).mkString(", ")} }"
   }
 
   /** A definition that is a field of an aggregation type expressions. Fields
