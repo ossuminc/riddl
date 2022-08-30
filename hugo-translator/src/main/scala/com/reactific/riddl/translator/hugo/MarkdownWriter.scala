@@ -268,6 +268,40 @@ case class MarkdownWriter(
     }
   }
 
+  def emitC4ContainerDiagram(context: Context, parents: Seq[Definition]): this.type = {
+    val name = context.id.format
+    val brief: Definition => String = { defn: Definition =>
+      defn.brief.fold("not described")(_.s)
+    }
+
+    val heading =
+      s"""C4Context
+         |  title C4 Container Diagram for Bounded Context [$name]
+         |""".stripMargin.split('\n').toSeq
+
+    val containingDomains = parents.filter(_.isInstanceOf[Domain]).reverse
+    val systemBoundaries = containingDomains.zipWithIndex
+    val openedBoundaries = systemBoundaries .map {
+      case (dom, n) =>
+        val nm = dom.id.format
+        val keyword = if (n == 0) "Enterprise_Boundary" else "System_Boundary"
+        " ".repeat((n+1)*2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
+    }
+    val closedBoundaries = systemBoundaries.reverse.map {
+      case (_, n) => " ".repeat((n+1)*2) + "}"
+    }
+    val prefix = " ".repeat(parents.size*2)
+    val context_head = prefix + s"Boundary($name, $name, \"${brief(context)}\") {"
+    val context_foot = prefix + "}"
+
+    val body = context.entities.map( e =>
+      prefix + s"  System(${e.id.format}, ${e.id.format}, \"${brief(e)}\")"
+    )
+    val lines: Seq[String] = heading ++ openedBoundaries ++
+      Seq(context_head) ++ body ++ Seq(context_foot) ++ closedBoundaries
+    emitMermaidDiagram(lines)
+  }
+
   def emitTerms(terms: Seq[Term]): this.type = {
     list("Terms", terms.map(t =>
       (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description)
@@ -557,15 +591,16 @@ case class MarkdownWriter(
     this
   }
 
-  def emitContextMap(root: Definition, focus: Context): this.type = {
+  def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
     h2("Context Map")
+    emitC4ContainerDiagram(focus, parents)
   }
 
   def emitContext(context: Context, stack: Seq[Definition]): this.type = {
     containerHead(context,"Context")
     val parents = state.makeParents(stack)
     emitDefDoc(context, parents)
-    emitContextMap(stack.last, context)
+    emitContextMap(context, stack)
     emitOptions(context.options)
     emitTypesToc(context)
     toc("Functions", mkTocSeq(context.functions))

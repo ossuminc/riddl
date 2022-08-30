@@ -95,8 +95,16 @@ object AST extends ast.Expressions with ast.TypeExpression {
   }
 
   /** Added to definitions that support includes */
-  sealed trait WithIncludes {
+  sealed trait WithIncludes extends Container[Definition] {
     def includes: Seq[Include]
+    def containedDefinitions: Seq[Definition] = {
+      contents.flatMap {
+        case i: Include =>
+          i.contents
+        case d: Definition =>
+          Seq(d)
+      }
+    }
   }
 
 

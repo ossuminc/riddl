@@ -46,11 +46,11 @@ class MarkdownWriterTest extends ParsingTest {
               |geekdocCollapseSection: true
               |geekdocFilePath: no-such-file
               |---
-              |
-              |## Briefly
-              |Just For Testing
-              |_Definition Path_: hugo-translator.target.test-output.TestDomain
-              |_Source Location_: [empty(1:1)]()
+              || Item | Value |
+              || :---: | :---  |
+              || _Briefly_ | Just For Testing |
+              || _Definition Path_ | hugo-translator.target.test-output.TestDomain |
+              || _View Source Link_ | [empty(1:1)]() |
               |
               |## Details
               |A test domain for ensuring that documentation for domains is
@@ -61,6 +61,8 @@ class MarkdownWriterTest extends ParsingTest {
               |* _Email_: reid@reactific.com
               |
               |## Types
+              |
+              |### Others
               |* [MyString](mystring)
               |
               |## Domain Index
