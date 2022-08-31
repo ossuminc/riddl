@@ -23,6 +23,7 @@ import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
 import com.reactific.riddl.translator.kalix.KalixTranslator
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.SysLogger
+import com.reactific.riddl.utils.RiddlBuildInfo
 
 import scala.annotation.unused
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -241,15 +242,15 @@ object RIDDLC {
     options: RiddlOptions
   ): Boolean = {
     log.info("About riddlc:")
-    log.info(s"           name: ${BuildInfo.name}")
-    log.info(s"        version: ${BuildInfo.version}")
-    log.info(s"     start year: ${BuildInfo.startYear}")
-    log.info(s"       built at: ${BuildInfo.builtAtString}")
-    log.info(s"       licenses: ${BuildInfo.licenses}")
-    log.info(s"      org. name: ${BuildInfo.organizationName}")
-    log.info(s"      org. page: ${BuildInfo.organizationHomepage}")
-    log.info(s"  scala version: ${BuildInfo.scalaVersion}")
-    log.info(s"    sbt version: ${BuildInfo.sbtVersion}")
+    log.info(s"           name: ${RiddlBuildInfo.name}")
+    log.info(s"        version: ${RiddlBuildInfo.version}")
+    log.info(s"     start year: ${RiddlBuildInfo.startYear}")
+    log.info(s"       built at: ${RiddlBuildInfo.builtAtString}")
+    log.info(s"       licenses: ${RiddlBuildInfo.licenses}")
+    log.info(s"      org. name: ${RiddlBuildInfo.organizationName}")
+    log.info(s"      org. page: ${RiddlBuildInfo.organizationHomepage}")
+    log.info(s"  scala version: ${RiddlBuildInfo.scalaVersion}")
+    log.info(s"    sbt version: ${RiddlBuildInfo.sbtVersion}")
     true
   }
 }
