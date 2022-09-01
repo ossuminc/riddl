@@ -16,8 +16,7 @@ class PluginCommandTest extends PluginSpecBase(
 
   "RIDDLC" should {
     "run a command via a plugin" in {
-      val args = Array("run", "--plugins-dir", tmpDir.toString, "test",
-        "fee=fie,foo=fum")
+      val args = Array("run", "--plugins-dir", tmpDir.toString, "test","foo")
       RIDDLC.runMain(args) mustBe 0
     }
   }
