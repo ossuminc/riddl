@@ -16,10 +16,12 @@
 
 package com.reactific.riddl.translator.hugo
 
-import com.reactific.riddl.language.AST.{Include, _}
+import com.reactific.riddl.language.AST.Include
+import com.reactific.riddl.language.AST._
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
-import com.reactific.riddl.language.{AST, _}
+import com.reactific.riddl.language.AST
+import com.reactific.riddl.language._
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
@@ -48,8 +50,8 @@ case class HugoTranslatingOptions(
   viewPath: Option[String] = Some("blob/main/src/main/riddl"),
   withGlossary: Boolean = true,
   withTODOList: Boolean = true,
-  withGraphicalTOC: Boolean = false
-) extends TranslatingOptions {
+  withGraphicalTOC: Boolean = false)
+    extends TranslatingOptions {
   def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
   def contentRoot: Path = outputRoot.resolve("content")
   def staticRoot: Path = outputRoot.resolve("static")
@@ -61,9 +63,9 @@ case class HugoTranslatorState(
   root: AST.Definition,
   symbolTable: SymbolTable,
   options: HugoTranslatingOptions = HugoTranslatingOptions(),
-  commonOptions: CommonOptions = CommonOptions()
-) extends TranslatorState[MarkdownWriter]
-    with PathResolutionState[HugoTranslatorState]{
+  commonOptions: CommonOptions = CommonOptions())
+    extends TranslatorState[MarkdownWriter]
+    with PathResolutionState[HugoTranslatorState] {
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -110,24 +112,20 @@ case class HugoTranslatorState(
         val pathAsString = path.toAbsolutePath.toString
         val inDirAsString = inFile.getParent.toAbsolutePath.toString
         if (pathAsString.startsWith(inDirAsString)) {
-          val result = pathAsString.drop(inDirAsString.length+1)
+          val result = pathAsString.drop(inDirAsString.length + 1)
           Some(result)
-        } else {
-          Option.empty[String]
-        }
-      case None =>
-        Option.empty[String]
+        } else { Option.empty[String] }
+      case None => Option.empty[String]
     }
   }
 
-  /** Generate a string that is the file path portion of a url including
-   * the line number. */
+  /** Generate a string that is the file path portion of a url including the
+    * line number.
+    */
   def makeFilePath(definition: Definition): Option[String] = {
     definition.loc.source match {
       case FileParserInput(file) =>
-        pathRelativeToRepo(
-          file.getAbsoluteFile.toPath
-        )
+        pathRelativeToRepo(file.getAbsoluteFile.toPath)
       case _ => Option.empty[String]
     }
   }
@@ -140,20 +138,18 @@ case class HugoTranslatorState(
     * `https://github.com/a/b/blob/main/src/main/riddl/Org/org.riddl#L30` Note
     * that that this works through recursive path identifiers to find the first
     * type that is not a reference Note: this only works for github sources
-   * @param definition The definition for which we want the link
-   * @return a string that gives the source link for the definition
-   */
+    * @param definition
+    *   The definition for which we want the link
+    * @return
+    *   a string that gives the source link for the definition
+    */
   def makeSourceLink(
     definition: Definition
   ): String = {
     options.sourceURL match {
-      case Some(url) =>
-        options.viewPath match {
-          case Some(viewPath) =>
-            makeFilePath(definition) match {
-              case Some(filePath) =>
-                Path
-                  .of(url.toString, viewPath, filePath)
+      case Some(url) => options.viewPath match {
+          case Some(viewPath) => makeFilePath(definition) match {
+              case Some(filePath) => Path.of(url.toString, viewPath, filePath)
                   .toString
               case _ => ""
             }
@@ -166,18 +162,14 @@ case class HugoTranslatorState(
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
-      case _: OnClause =>
-        pars + "#" + definition.id.value.toLowerCase
-      case _: Field | _: Enumerator | _: Invariant | _: Inlet |
-           _: Outlet | _: InletJoint | _: OutletJoint | _: AuthorInfo |
-            _: SagaStep | _: Include | _: RootContainer | _: Term =>
-        pars
-      case _ =>
-        pars + "/" + definition.id.value.toLowerCase
+      case _: OnClause => pars + "#" + definition.id.value.toLowerCase
+      case _: Field | _: Enumerator | _: Invariant | _: Inlet | _: Outlet |
+          _: InletJoint | _: OutletJoint | _: AuthorInfo | _: SagaStep |
+          _: Include | _: RootContainer | _: Term => pars
+      case _ => pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor
-    result
-      .replace(" ", "-")
+    result.replace(" ", "-")
   }
 
   def makeIndex(root: RootContainer): Unit = {
@@ -207,14 +199,15 @@ case class HugoTranslatorState(
     }
   }
 
-  def findAuthor(defn: Definition, parents: Seq[Definition]): Seq[AuthorInfo] = {
+  def findAuthor(
+    defn: Definition,
+    parents: Seq[Definition]
+  ): Seq[AuthorInfo] = {
     val result = AST.authorsOf(defn) match {
       case s if s.isEmpty =>
         parents.find(x => x.hasAuthors) match {
-          case None =>
-            Seq.empty[AuthorInfo]
-          case Some(d) =>
-            AST.authorsOf(d)
+          case None    => Seq.empty[AuthorInfo]
+          case Some(d) => AST.authorsOf(d)
         }
       case s => s
     }
@@ -224,26 +217,24 @@ case class HugoTranslatorState(
   def makeToDoList(root: RootContainer): Unit = {
     if (options.withTODOList) {
       val finder = Finder(root)
-      val items: Seq[(String,String,String,String)] = for {
+      val items: Seq[(String, String, String, String)] = for {
         (defn, pars) <- finder.findEmpty
         item = defn.identify
         authors = findAuthor(defn, pars)
-        author = if (authors.isEmpty) {
-          "Unspecified Author"
-        } else {
-          authors.map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
-        }
+        author =
+          if (authors.isEmpty) { "Unspecified Author" }
+          else {
+            authors.map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
+          }
         parents = makeParents(pars)
         path = parents.mkString(".")
         link = makeDocLink(defn, parents)
-      } yield {
-        (item,author,path,link)
-      }
+      } yield { (item, author, path, link) }
 
-      val map = items.groupBy(_._2).view.mapValues(_.map {
-        case (item, _, path, link ) =>
+      val map = items.groupBy(_._2).view
+        .mapValues(_.map { case (item, _, path, link) =>
           s"[$item In $path]($link)"
-      }).toMap
+        }).toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
       mdw.fileHead(
         "To Do List",
@@ -251,9 +242,7 @@ case class HugoTranslatorState(
         Option("A list of definitions needing more work")
       )
       mdw.h2("Definitions With Missing Content")
-      for {
-        (key, items) <- map
-      } {
+      for { (key, items) <- map } {
         mdw.h3(key)
         mdw.list(items)
       }
@@ -331,7 +320,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     }
   }
 
-  def copyResource(destination: Path, src: String = ""):Unit = {
+  def copyResource(destination: Path, src: String = ""): Unit = {
     val name = if (src.isEmpty) destination.getFileName.toString else src
     TextFileWriter.copyResource(name, destination)
   }
@@ -354,8 +343,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     options: HugoTranslatingOptions
   ): Unit = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) {if (options.eraseOutput) {deleteAll(outDir)}}
-    else {outDir.mkdirs()}
+    if (outDir.exists()) { if (options.eraseOutput) { deleteAll(outDir) } }
+    else { outDir.mkdirs() }
     val parent = outDir.getParentFile
     require(
       parent.isDirectory,
@@ -418,8 +407,7 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     val state = HugoTranslatorState(root, symtab, options, commonOptions)
     val parentStack = mutable.Stack[Definition]()
 
-    Folding
-      .foldLeftWithStack(state, parentStack)(root)(processingFolder)
+    Folding.foldLeftWithStack(state, parentStack)(root)(processingFolder)
       .close(root)
   }
 
@@ -427,20 +415,15 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     state: HugoTranslatorState,
     defn: Definition,
     stack: Seq[Definition]
-  ): HugoTranslatorState  = {
+  ): HugoTranslatorState = {
     defn match {
-      case f: Field =>
-        state.addToGlossary(f, stack)
-      case i: Invariant =>
-        state.addToGlossary(i, stack)
-      case e: Enumerator =>
-        state.addToGlossary(e, stack)
-      case ss: SagaStep =>
-        state.addToGlossary(ss, stack)
-      case t: Term       =>
-        state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _:Outlet | _: InletJoint | _: OutletJoint |
-           _: AuthorInfo | _: OnClause | _: Include  | _: RootContainer =>
+      case f: Field      => state.addToGlossary(f, stack)
+      case i: Invariant  => state.addToGlossary(i, stack)
+      case e: Enumerator => state.addToGlossary(e, stack)
+      case ss: SagaStep  => state.addToGlossary(ss, stack)
+      case t: Term       => state.addToGlossary(t, stack)
+      case _: Example | _: Inlet | _: Outlet | _: InletJoint | _: OutletJoint |
+          _: AuthorInfo | _: OnClause | _: Include | _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
@@ -448,13 +431,13 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
         // These are leaf nodes, they get their own file or other special
         // handling.
         leaf match {
-            // handled by definition that contains the term
-          case p: Pipe         =>
+          // handled by definition that contains the term
+          case p: Pipe =>
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
           case _ =>
-            require(requirement=false, "Failed to handle LeafDefinition")
+            require(requirement = false, "Failed to handle LeafDefinition")
             state
         }
       case container: Definition =>
@@ -478,8 +461,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
           case a: Adaptation => mkd.emitAdaptation(a, parents)
         }
         state.addToGlossary(container, stack)
-      }
     }
+  }
 
   // scalastyle:off method.length
   def configTemplate(
@@ -488,14 +471,15 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
   ): String = {
     val auth: AuthorInfo = author.getOrElse(AuthorInfo(
       1 -> 1,
-      id = Identifier(1->1,"unknown"),
+      id = Identifier(1 -> 1, "unknown"),
       name = LiteralString(1 -> 1, "Not Provided"),
       email = LiteralString(1 -> 1, "somebody@somewere.tld")
     ))
     val themes: String = {
       options.themes.map(_._1).mkString("[ \"", "\", \"", "\" ]")
     }
-    val baseURL: String = options.baseUrl.fold("https://example.prg/")(_.toString)
+    val baseURL: String = options.baseUrl
+      .fold("https://example.prg/")(_.toString)
     val srcURL: String = options.sourceURL.fold("")(_.toString)
     val editPath: String = options.editPath.getOrElse("")
     val siteLogoPath: String = options.siteLogoPath.getOrElse("images/logo.png")
@@ -503,7 +487,8 @@ object HugoTranslator extends Translator[HugoTranslatingOptions] {
     val privacyPath: String = "/privacy"
     val siteTitle = options.siteTitle.getOrElse("Unspecified Site Title")
     val siteName = options.projectName.getOrElse("Unspecified Project Name")
-    val siteDescription = options.siteDescription.getOrElse("Unspecified Project Description")
+    val siteDescription = options.siteDescription
+      .getOrElse("Unspecified Project Description")
 
     s"""######################## Hugo Configuration ####################
        |

@@ -3,7 +3,9 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.testkit.ValidatingTest
-import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.OutputFile
+import com.reactific.riddl.utils.StringLogger
 
 import java.nio.file.Path
 
@@ -37,8 +39,7 @@ class TranslatorTest extends ValidatingTest {
     ): Seq[Path] = {
       val state = TestTranslatorState(options)
 
-      val parents = scala.collection.mutable.Stack
-        .empty[Definition]
+      val parents = scala.collection.mutable.Stack.empty[Definition]
       Folding.foldLeftWithStack(state, parents)(root) {
         case (state, definition, stack) =>
           log.info(stack.reverse.mkString(".") + "." + definition.id.format)
@@ -49,8 +50,7 @@ class TranslatorTest extends ValidatingTest {
 
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
-  val roots = Map(
-    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
+  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
 
   "Translator" should {
     for { (name, fileName) <- roots } {

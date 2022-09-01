@@ -21,8 +21,14 @@ class ExamplesTest extends ValidatingTest {
     "all compile" in {
       for ((label, fileName) <- files) yield {
         parseAndValidateFile(
-          label, Path.of(dir, fileName).toFile,
-          CommonOptions(showTimes=true,showWarnings=false, showMissingWarnings=false, showStyleWarnings=false)
+          label,
+          Path.of(dir, fileName).toFile,
+          CommonOptions(
+            showTimes = true,
+            showWarnings = false,
+            showMissingWarnings = false,
+            showStyleWarnings = false
+          )
         )
       }
       succeed

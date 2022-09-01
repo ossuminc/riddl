@@ -28,17 +28,17 @@ import fastparse.ScalaWhitespace.*
 trait TypeParser extends CommonParser {
 
   def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
-    P(location ~ Keywords.reference ~ Readability.to ~/
-      maybe(Keywords.entity) ~ pathIdentifier).map { tpl =>
-      (EntityReferenceTypeExpression.apply _).tupled(tpl)
-    }
+    P(
+      location ~ Keywords.reference ~ Readability.to ~/ maybe(Keywords.entity) ~
+        pathIdentifier
+    ).map { tpl => (EntityReferenceTypeExpression.apply _).tupled(tpl) }
   }
 
   def stringType[u: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~
-        (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~
-          integer.? ~ Punctuation.roundClose).?
+        (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~
+          Punctuation.roundClose).?
     ).map {
       case (loc, Some((min, max))) => Strng(loc, min, max)
       case (loc, None)             => Strng(loc, None, None)
@@ -83,13 +83,11 @@ trait TypeParser extends CommonParser {
   }
 
   def uniqueIdType[u: P]: P[UniqueId] = {
-    ( location ~ Predefined.Id ~ roundOpen ~/ maybe(Keywords.entity) ~
-      pathIdentifier.? ~ roundClose./
-    ).map {
-        case (loc, Some(pid)) => UniqueId(loc, pid)
-        case (loc, None) =>
-          UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
-      }
+    (location ~ Predefined.Id ~ roundOpen ~/ maybe(Keywords.entity) ~
+      pathIdentifier.? ~ roundClose./).map {
+      case (loc, Some(pid)) => UniqueId(loc, pid)
+      case (loc, None) => UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
+    }
   }
 
   def enumValue[u: P]: P[Option[Long]] = {
@@ -123,14 +121,12 @@ trait TypeParser extends CommonParser {
       .map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
   }
 
-  def fieldTypeExpression[u:P]: P[TypeExpression] = {
-    P(
-      cardinality(
-        simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+  def fieldTypeExpression[u: P]: P[TypeExpression] = {
+    P(cardinality(
+      simplePredefinedTypes | patternType | uniqueIdType | enumeration |
         alternation | entityReferenceType | mappingType | rangeType |
-          aliasedTypeExpression
-      )
-    )
+        aliasedTypeExpression
+    ))
   }
 
   def field[u: P]: P[Field] = {
@@ -173,13 +169,7 @@ trait TypeParser extends CommonParser {
     loc: Location,
     mk: MessageKind,
     agg: Aggregation
-  ): MessageType = {
-    MessageType(
-      loc,
-      mk,
-      agg.fields
-    )
-  }
+  ): MessageType = { MessageType(loc, mk, agg.fields) }
 
   def messageType[u: P]: P[MessageType] = {
     P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
@@ -206,10 +196,8 @@ trait TypeParser extends CommonParser {
     */
   def rangeType[u: P]: P[RangeType] = {
     P(
-      location ~ Keywords.range ~ roundOpen ~/
-        integer.?.map(_.getOrElse(0L)) ~ comma ~
-        integer.?.map(_.getOrElse(Long.MaxValue)) ~
-        roundClose./
+      location ~ Keywords.range ~ roundOpen ~/ integer.?.map(_.getOrElse(0L)) ~
+        comma ~ integer.?.map(_.getOrElse(Long.MaxValue)) ~ roundClose./
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 
@@ -244,21 +232,15 @@ trait TypeParser extends CommonParser {
 
   def typeDef[u: P]: P[Type] = {
     P(
-      ( location ~ Keywords.`type` ~/ identifier ~ is ~
-        typeExpression ~ briefly ~ description).map {
-          tpl => (Type.apply _).tupled(tpl)
-        }
-      | (
-        location ~ messageKind ~/ identifier ~ is ~ location ~ aggregation  ~
-        briefly ~ description
-      ).map { case (loc, mk, id, loc2, agg, b, d) =>
+      (location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~
+        briefly ~ description).map { tpl => (Type.apply _).tupled(tpl) } |
+        (location ~ messageKind ~/ identifier ~ is ~ location ~ aggregation ~
+          briefly ~ description).map { case (loc, mk, id, loc2, agg, b, d) =>
           val mt = makeMessageType(loc2, mk, agg)
           Type(loc, id, mt, b, d)
-      }
+        }
     )
   }
 
-  def types[u: P]: P[Seq[Type]] = {
-    typeDef.rep(0)
-  }
+  def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
 }

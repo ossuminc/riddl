@@ -17,7 +17,8 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Keywords, Options}
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Options
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -60,8 +61,7 @@ trait EntityParser extends TypeParser with HandlerParser {
   def invariant[u: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
-        ( undefined(None) | condition.?) ~ close ~ briefly ~
-        description
+        (undefined(None) | condition.?) ~ close ~ briefly ~ description
     ).map(tpl => (Invariant.apply _).tupled(tpl))
   }
 
@@ -77,8 +77,10 @@ trait EntityParser extends TypeParser with HandlerParser {
   }
 
   def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(author | entityHandler | function | invariant | typeDef | state | entityInclude)
-      .rep
+    P(
+      author | entityHandler | function | invariant | typeDef | state |
+        entityInclude
+    ).rep
   }
 
   type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])

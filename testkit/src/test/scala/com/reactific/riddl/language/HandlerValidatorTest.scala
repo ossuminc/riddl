@@ -22,20 +22,19 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) {
-        case (_: Domain, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Path 'EntityCommand' was not resolved, in On Clause"
-              +" 'On command EntityCommand', but should refer to a command"
-          )
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Path 'EntityEvent' was not resolved, in On Clause " +
-              "'On event EntityEvent', but should refer to an event"
-          )
+      parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Path 'EntityCommand' was not resolved, in On Clause" +
+            " 'On command EntityCommand', but should refer to a command"
+        )
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Path 'EntityEvent' was not resolved, in On Clause " +
+            "'On event EntityEvent', but should refer to an event"
+        )
       }
     }
 
@@ -137,21 +136,22 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "allow an on clause too set state from a correctly typed message field " in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  type EntityCommand is command { foo: Number }
-                    |  state HamburgerState = { field1: Number }
-                    |  handler doit for state HamburgerState is {
-                    |    on command EntityCommand {
-                    |      then set ^^HamburgerState.field1 to @^^EntityCommand.foo
-                    |    }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type EntityCommand is command { foo: Number }
+          |  state HamburgerState = { field1: Number }
+          |  handler doit for state HamburgerState is {
+          |    on command EntityCommand {
+          |      then set ^^HamburgerState.field1 to @^^EntityCommand.foo
+          |    }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         msgs.filter(_.kind == Error) must be(empty)
       }
@@ -175,7 +175,8 @@ class HandlerValidatorTest extends ValidatingTest {
                     |""".stripMargin
       parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
-          msgs, Error,
+          msgs,
+          Error,
           "assignment compatibility, but field:\n  field1"
         )
       }

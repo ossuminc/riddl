@@ -15,9 +15,9 @@ trait TypeExpression extends Abstract {
     }
   }
 
-  /** A TypeExpression that references another type by PathIdentifier  */
+  /** A TypeExpression that references another type by PathIdentifier */
   case class AliasedTypeExpression(loc: Location, pid: PathIdentifier)
-  extends TypeExpression {
+      extends TypeExpression {
     override def format: String = s"Reference To ${pid.format}"
   }
 
@@ -31,12 +31,12 @@ trait TypeExpression extends Abstract {
   def kind(te: TypeExpression): String = {
     te match {
       case AliasedTypeExpression(_, pid) => s"Reference To ${pid.format}"
-      case Optional(_, typeExp)   => kind(typeExp) + "?"
-      case ZeroOrMore(_, typeExp) => kind(typeExp) + "*"
-      case OneOrMore(_, typeExp)  => kind(typeExp) + "+"
-      case _: Enumeration         => "Enumeration"
-      case _: Alternation         => "Alternation"
-      case _: Aggregation         => "Aggregation"
+      case Optional(_, typeExp)          => kind(typeExp) + "?"
+      case ZeroOrMore(_, typeExp)        => kind(typeExp) + "*"
+      case OneOrMore(_, typeExp)         => kind(typeExp) + "+"
+      case _: Enumeration                => "Enumeration"
+      case _: Alternation                => "Alternation"
+      case _: Aggregation                => "Aggregation"
       case Mapping(_, from, to)   => s"Map From ${kind(from)} To ${kind(to)}"
       case RangeType(_, min, max) => s"Range($min,$max)"
       case EntityReferenceTypeExpression(_, entity) =>
@@ -185,8 +185,8 @@ trait TypeExpression extends Abstract {
     loc: Location,
     enumerators: Seq[Enumerator])
       extends TypeExpression {
-    override def format: String =
-      "{ " + enumerators.map(_.format).mkString(",") + " }"
+    override def format: String = "{ " + enumerators.map(_.format)
+      .mkString(",") + " }"
 
   }
 
@@ -227,7 +227,10 @@ trait TypeExpression extends Abstract {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends LeafDefinition with AlwaysEmpty with SagaDefinition with FunctionDefinition {
+      extends LeafDefinition
+      with AlwaysEmpty
+      with SagaDefinition
+      with FunctionDefinition {
     override def format: String = s"${id.format}: ${typeEx.format}"
     final val kind: String = "Field"
   }
@@ -253,9 +256,7 @@ trait TypeExpression extends Abstract {
   case class Aggregation(
     loc: Location,
     fields: Seq[Field] = Seq.empty[Field])
-      extends AggregateTypeExpression {
-
-  }
+      extends AggregateTypeExpression {}
 
   object Aggregation {
     val empty: Aggregation = { Aggregation(Location.empty, Seq.empty[Field]) }
@@ -365,9 +366,7 @@ trait TypeExpression extends Abstract {
     messageKind: MessageKind,
     fields: Seq[Field] = Seq.empty[Field])
       extends AggregateTypeExpression {
-    override def format: String = {
-      messageKind.kind + " " + super.format
-    }
+    override def format: String = { messageKind.kind + " " + super.format }
   }
 
   /** Base class of all pre-defined type expressions

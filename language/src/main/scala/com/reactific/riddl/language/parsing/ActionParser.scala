@@ -35,8 +35,8 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def errorAction[u: P]: P[ErrorAction] = {
-    P(location ~ Keywords.error ~ literalString ~ description).map {
-      tpl => (ErrorAction.apply _).tupled(tpl)
+    P(location ~ Keywords.error ~ literalString ~ description).map { tpl =>
+      (ErrorAction.apply _).tupled(tpl)
     }
   }
 
@@ -49,11 +49,10 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def appendAction[u: P]: P[AppendAction] = {
     P(
-      location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
-        ~ description
+      location ~ Keywords.append ~/ expression ~ Readability.to ~
+        pathIdentifier ~ description
     ).map { t => (AppendAction.apply _).tupled(t) }
   }
-
 
   def morphAction[u: P]: P[MorphAction] = {
     P(

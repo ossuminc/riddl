@@ -72,11 +72,20 @@ class MarkdownWriterTest extends ParsingTest {
       }
     }
     "emit a glossary" in {
-      val term1 = GlossaryEntry("one", "Term", "The first term", Seq("A", "B"),
-        "A/B/one", "https://example.com/blob/main/src/main/riddl/one"
+      val term1 = GlossaryEntry(
+        "one",
+        "Term",
+        "The first term",
+        Seq("A", "B"),
+        "A/B/one",
+        "https://example.com/blob/main/src/main/riddl/one"
       )
       val term2 = {
-        GlossaryEntry("two", "Term", "The second term", Seq("A", "B", "C"),
+        GlossaryEntry(
+          "two",
+          "Term",
+          "The second term",
+          Seq("A", "B", "C"),
           "A/B/C/two",
           "https://example.com/blob/main/src/main/riddl/two"
         )
@@ -90,20 +99,21 @@ class MarkdownWriterTest extends ParsingTest {
       val pw = new PrintWriter(strw)
       mdw.write(pw)
       val output = strw.toString
-      val expected = """---
-                       |title: "Glossary Of Terms"
-                       |weight: 10
-                       |draft: "false"
-                       |description: "A generated glossary of terms"
-                       |geekdocAnchor: true
-                       |geekdocToC: 4
-                       |
-                       |---
-                       || Term | Type | Brief Description |
-                       || :---: | :---: | :---              |
-                       || [one](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The first term |
-                       || [two](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The second term |
-                       |""".stripMargin
+      val expected =
+        """---
+          |title: "Glossary Of Terms"
+          |weight: 10
+          |draft: "false"
+          |description: "A generated glossary of terms"
+          |geekdocAnchor: true
+          |geekdocToC: 4
+          |
+          |---
+          || Term | Type | Brief Description |
+          || :---: | :---: | :---              |
+          || [one](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The first term |
+          || [two](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The second term |
+          |""".stripMargin
       output mustBe expected
     }
   }

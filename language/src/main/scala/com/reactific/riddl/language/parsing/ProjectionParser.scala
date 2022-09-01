@@ -22,7 +22,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For FunctionParser */
-trait ProjectionParser extends TypeParser  {
+trait ProjectionParser extends TypeParser {
 
   /** Parses projection definitions, e.g.
     *
@@ -34,10 +34,10 @@ trait ProjectionParser extends TypeParser  {
     * }}}
     */
   def projection[u: P]: P[Projection] = {
-    P(location ~ Keywords.projection ~/ identifier ~ is ~ open ~
-      (
-        undefined(None).map { _ => Seq.empty[Field] } |  fields
-      ) ~ close ~ briefly ~ description
+    P(
+      location ~ Keywords.projection ~/ identifier ~ is ~ open ~
+        (undefined(None).map { _ => Seq.empty[Field] } | fields) ~ close ~
+        briefly ~ description
     ).map { case (loc, id, fields, briefly, description) =>
       Projection(loc, id, fields, briefly, description)
     }

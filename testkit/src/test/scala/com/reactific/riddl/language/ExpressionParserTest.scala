@@ -137,7 +137,7 @@ class ExpressionParserTest extends ParsingTest {
       parseExpression("wow(0,0,0,0,0,0)") { expr: Expression =>
         expr mustBe ArbitraryOperator(
           Location(1 -> 1),
-          LiteralString(1->1,"wow"),
+          LiteralString(1 -> 1, "wow"),
           Seq(
             LiteralInteger(Location(1 -> 5), 0),
             LiteralInteger(Location(1 -> 7), 0),

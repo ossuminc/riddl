@@ -33,11 +33,9 @@ trait DomainParser
     with TypeParser {
 
   def story[u: P]: P[Story] = P(
-    location ~ Keywords.story ~ identifier ~ is ~ open ~
-      author.rep(0) ~
-      Keywords.role ~ is ~
-      literalString ~ Keywords.capability ~ is ~ literalString ~
-      Keywords.benefit ~ is ~ literalString ~
+    location ~ Keywords.story ~ identifier ~ is ~ open ~ author.rep(0) ~
+      Keywords.role ~ is ~ literalString ~ Keywords.capability ~ is ~
+      literalString ~ Keywords.benefit ~ is ~ literalString ~
       (Keywords.shown ~ Readability.by ~ open ~
         httpUrl.rep(1, Punctuation.comma) ~ close).?.map { x =>
         if (x.isEmpty) Seq.empty[java.net.URL] else x.get
@@ -120,9 +118,9 @@ trait DomainParser
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
-        domainOptions ~ (undefined(Seq.empty[DomainDefinition]) | domainContent)
-        ~ close ~/ briefly ~ description
+      location ~ Keywords.domain ~/ identifier ~ is ~ open ~/ domainOptions ~
+        (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/
+        briefly ~ description
     ).map { case (loc, id, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val authors = mapTo[AST.AuthorInfo](groups.get(classOf[AST.AuthorInfo]))
