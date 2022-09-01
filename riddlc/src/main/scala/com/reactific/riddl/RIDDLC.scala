@@ -21,9 +21,7 @@ import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
 import com.reactific.riddl.translator.kalix.KalixTranslator
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.SysLogger
-import com.reactific.riddl.utils.RiddlBuildInfo
+import com.reactific.riddl.utils.{Logger, Plugin, RiddlBuildInfo, SysLogger}
 
 import scala.annotation.unused
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -72,8 +70,33 @@ object RIDDLC {
       case RiddlOptions.D3           => generateD3(options)
       case RiddlOptions.Info         => info(options)
       case RiddlOptions.Kalix        => translateKalix(options)
+      case RiddlOptions.Other(name) =>
+        if (options.pluginsDir.nonEmpty){
+          val pluginsDir = options.pluginsDir.get
+          val loaded = Plugin.loadPluginsFrom(pluginsDir)
+          if (loaded.isEmpty) {
+            log.error(s"No command plugins loaded from: $pluginsDir")
+            false
+          } else {
+            loaded.find(_.pluginName == name) match {
+              case Some(pl) if pl.isInstanceOf[RiddlcCommandPlugin] =>
+                val plugin = pl.asInstanceOf[RiddlcCommandPlugin]
+                plugin.run(options)
+              case Some(plugin) =>
+                log.error(s"Plugin for command $name is the wrong type ${
+                  plugin.getClass.getSimpleName}")
+                false
+              case None =>
+                log.error(s"No plugin command matches '$name'")
+                false
+            }
+          }
+        } else {
+          log.error(s"Command not found. Use the --plugins-dir option")
+          false
+        }
       case _ =>
-        log.error(s"A command must be specified as an option")
+        log.error(s"A command must be specified as the first parameter")
         log.info(RiddlOptions.usage)
         false
     }

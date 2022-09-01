@@ -1,7 +1,7 @@
 package com.reactific.riddl.utils
 
 /** A very simple plugin for testing */
-case class TestPlugin(
-  pluginName: String = "TestPlugin",
-  pluginVersion: String = "0.0.0")
-    extends Plugin.Interface
+class TestPlugin extends PluginInterface {
+  val pluginName: String = "TestPlugin"
+  val pluginVersion: String = "0.0.0"
+}

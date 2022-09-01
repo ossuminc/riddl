@@ -23,6 +23,7 @@ import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
 import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckOptions
 import com.reactific.riddl.translator.kalix.KalixOptions
+import com.reactific.riddl.utils.RiddlBuildInfo
 import pureconfig.*
 import pureconfig.error.ConfigReaderFailures
 import scopt.*
@@ -64,7 +65,10 @@ case class RiddlOptions(
   reformatOptions: ReformattingOptions = ReformattingOptions(),
   hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
   hugoGitCheckOptions: HugoGitCheckOptions = HugoGitCheckOptions(),
-  kalixOptions: KalixOptions = KalixOptions())
+  kalixOptions: KalixOptions = KalixOptions(),
+  pluginsDir: Option[Path] = Some(Path.of("plugins")),
+  commandArgs: Array[String] = Array.empty[String]
+)
 
 object RiddlOptions {
 
@@ -82,6 +86,7 @@ object RiddlOptions {
   final case object Repeat extends Command
   final case object D3 extends Command
   final case object Info extends Command
+  final case class Other(name: String) extends Command
 
   def str2Command(str: String): Command = {
     str match {
@@ -375,6 +380,9 @@ object RiddlOptions {
             optional(objCur, "suppress-missing-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
             }
+          pluginsDir <- optional[Option[Path]](objCur, "plugins-dir", None) {
+            cc => cc.asString.map(f => Option(Path.of(f)))
+          }
           common <- optional[CommonOptions](objCur, "common", CommonOptions()) {
             cur => coReader.from(cur)
           }
@@ -427,7 +435,8 @@ object RiddlOptions {
             reformat,
             hugo,
             hugoGitCheck,
-            kalix
+            kalix,
+            pluginsDir
           )
         }
       }
@@ -745,7 +754,7 @@ object RiddlOptions {
       head(
         "RIDDL Compiler (c) 2022 Reactive Software LLC. All rights reserved.",
         "\nVersion: ",
-        BuildInfo.version,
+        RiddlBuildInfo.version,
         "\n\nThis program parses, validates and translates RIDDL sources to other kinds",
         "\nof documents. RIDDL is a language for system specification based on Domain",
         "\nDrive Design, Reactive Architecture, and Agile principles.\n"
@@ -785,12 +794,22 @@ object RiddlOptions {
       ).text("Show warnings about things that are missing"),
       opt[Unit]('s', name = "suppress-style-warnings").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(showStyleWarnings = false))
-      ).text("Show warnings about questionable input style. ")
+      ).text("Show warnings about questionable input style. "),
+      opt[File]('P', name="plugins-dir").action((file,c) =>
+        c.copy(pluginsDir = Some(file.toPath))
+      ).text("Load riddlc command extension plugins from this directory.")
     ) ++ repeatableCommands ++ OParser.sequence(
       cmd("help").action((_, c) => c.copy(command = Help))
         .text("Print out how to use this program"),
       cmd("info").action((_, c) => c.copy(command = Info))
         .text("Print out build information about this program"),
+      cmd("run").children(
+        arg[String]("command").required().action((n,c) =>
+          c.copy(command = Other(n))),
+        arg[Seq[String]]("args").unbounded().action( (l,c) =>
+          c.copy(commandArgs = l.toArray)
+        )
+      ).text("Run an arbitrary command from a plugin module"),
       cmd("repeat").action((_, c) => c.copy(command = Repeat)).children(
         arg[File]("config-file").required().action((f, c) =>
           c.copy(repeatOptions =
@@ -825,7 +844,7 @@ object RiddlOptions {
         """This option causes the repeat command to read from the standard
           |input and when it reaches EOF (Ctrl-D is entered) then it cancels
           |the loop to exit.""".stripMargin
-      )
+      ),
     )
   }
 }

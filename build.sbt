@@ -168,6 +168,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(MiniDependencyTreePlugin)
   .configure(C.mavenPublish)
   .dependsOn(
+    utils % "compile->compile;test->test",
     language,
     kalix,
     `hugo-translator` % "compile->compile;test->test",
