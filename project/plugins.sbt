@@ -12,7 +12,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-site" % "1.4.1")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("com.github.sbt" % "sbt-git" % "2.0.0")
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.9.2")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.0.2")
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.9")
 addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.1.2")
