@@ -21,7 +21,7 @@ object V {
   val pureconfig = "0.17.1"
   val scalacheck = "1.15.4"
   val scalatest = "3.2.9"
-  val scopt = "4.0.1"
+  val scopt = "4.1.0"
   val ujson = "1.5.0"
 }
 
@@ -32,7 +32,7 @@ object Dep {
   val config = "com.typesafe" % "config" % V.config
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
-  val lang3 =  "org.apache.commons" % "commons-lang3" % V.lang3
+  val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
   val pureconfig = "com.github.pureconfig" %% "pureconfig" % V.pureconfig
   val scalactic = "org.scalactic" %% "scalactic" % V.scalatest
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
