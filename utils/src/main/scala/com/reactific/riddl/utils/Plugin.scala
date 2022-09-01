@@ -6,13 +6,14 @@ import java.util.ServiceLoader
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.jdk.StreamConverters.*
 import scala.jdk.CollectionConverters.*
+import scala.reflect.{ClassTag, classTag}
 
 object Plugin {
 
   final private [utils] val interfaceVersion: Int = 1
   final private val loading = new AtomicBoolean
 
-  def loadPluginsFrom(pluginsDir: Path): List[PluginInterface] = {
+  def loadPluginsFrom[T <: PluginInterface : ClassTag](pluginsDir: Path): List[PluginInterface] = {
     require(Files.isDirectory(pluginsDir) && Files.isReadable(pluginsDir),
       s"Plugin directory $pluginsDir is not a readable directory"
     )
@@ -37,7 +38,8 @@ object Plugin {
     val savedClassLoader = Thread.currentThread.getContextClassLoader
     try {
       Thread.currentThread.setContextClassLoader(pluginClassLoader)
-      val loader = ServiceLoader.load(classOf[PluginInterface], pluginClassLoader)
+      val svcType = classTag[T].runtimeClass.asInstanceOf[Class[T]]
+      val loader = ServiceLoader.load(svcType, pluginClassLoader)
       val list = loader.iterator().asScala.toList
       val result = for {
         plugin <- list

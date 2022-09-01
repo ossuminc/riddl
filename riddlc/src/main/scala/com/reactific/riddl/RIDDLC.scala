@@ -73,7 +73,7 @@ object RIDDLC {
       case RiddlOptions.Other(name) =>
         if (options.pluginsDir.nonEmpty){
           val pluginsDir = options.pluginsDir.get
-          val loaded = Plugin.loadPluginsFrom(pluginsDir)
+          val loaded = Plugin.loadPluginsFrom[RiddlcCommandPlugin](pluginsDir)
           if (loaded.isEmpty) {
             log.error(s"No command plugins loaded from: $pluginsDir")
             false
