@@ -3,7 +3,7 @@ ThisBuild / resolvers ++= Seq(
   // , "jetbrains-sbt" at "https://dl.bintray.com/jetbrains/sbt-plugins"
 )
 
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.0")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.3")
 addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "1.0.0")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.4")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.6.5")
