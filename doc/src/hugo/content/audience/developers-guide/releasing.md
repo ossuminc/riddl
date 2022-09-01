@@ -23,7 +23,7 @@ If all tests do not pass, stop and fix the software
 2. Formulate a short description string for the release, call it desc 
 ```shell
 % sbt
-> git tag -a ${x.y.z} "${desc}"
+> git tag -a ${x.y.z} -m "${release description}"
 > reload
 > show version
 > git push --tags

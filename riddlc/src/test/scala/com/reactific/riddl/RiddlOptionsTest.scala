@@ -111,5 +111,16 @@ class RiddlOptionsTest extends AnyWordSpec with Matchers {
           fail("failed to parse options")
       }
     }
+
+    "run a plugin command" in {
+      val options = Array("run", "test", "Hello World")
+      RiddlOptions.parse(options) match {
+        case None =>
+          fail("failed to parse options")
+        case Some(opts) =>
+          opts.command mustBe RiddlOptions.Other("test")
+          opts.commandArgs mustBe Seq("Hello World")
+      }
+    }
   }
 }

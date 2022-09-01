@@ -69,11 +69,37 @@ lazy val riddl = (project in file(".")).settings(
 )
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
-  .configure(C.mavenPublish).settings(
+  .configure(C.mavenPublish)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+    maintainer := "reid@ossuminc.com",
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
+    buildInfoObject := "RiddlBuildInfo",
+    buildInfoPackage := "com.reactific.riddl.utils",
+    buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
+    buildInfoUsePackageAsPath := true,
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      name,
+      version,
+      description,
+      organization,
+      organizationName,
+      BuildInfoKey.map(organizationHomepage) { case (k, v) =>
+        k -> v.get.toString
+      },
+      BuildInfoKey.map(homepage) { case (k, v) =>
+        "projectHomepage" -> v.map(_.toString).getOrElse("https://riddl.tech")
+      },
+      BuildInfoKey.map(startYear) { case (k, v) => k -> v.get.toString },
+      scalaVersion,
+      sbtVersion,
+      BuildInfoKey.map(licenses) { case (k, v) =>
+        k -> v.map(_._1).mkString(", ")
+      }
+    )
   )
 
 lazy val language = project.in(file("language")).configure(C.withCoverage())
@@ -138,8 +164,11 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
   ).dependsOn(`hugo-translator` % "test->test", riddlc)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
-  .enablePlugins(JavaAppPackaging, UniversalDeployPlugin, BuildInfoPlugin)
-  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish).dependsOn(
+  .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
+  .enablePlugins(MiniDependencyTreePlugin)
+  .configure(C.mavenPublish)
+  .dependsOn(
+    utils % "compile->compile;test->test",
     language,
     kalix,
     `hugo-translator` % "compile->compile;test->test",
@@ -148,31 +177,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     scalacOptions := scala2_13_Options,
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
-    maintainer := "reid@reactific.com",
-    buildInfoObject := "BuildInfo",
-    buildInfoPackage := "com.reactific.riddl",
-    buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
-    buildInfoUsePackageAsPath := true,
-    buildInfoKeys ++= Seq[BuildInfoKey](
-      name,
-      version,
-      description,
-      organization,
-      organizationName,
-      BuildInfoKey.map(organizationHomepage) { case (k, v) =>
-        k -> v.get.toString
-      },
-      BuildInfoKey.map(homepage) { case (k, v) =>
-        "projectHomepage" -> v.map(_.toString).getOrElse("http://riddl.tech")
-      },
-      BuildInfoKey.map(startYear) { case (k, v) => k -> v.get.toString },
-      scalaVersion,
-      sbtVersion,
-      BuildInfoKey.map(licenses) { case (k, v) =>
-        k -> v.map(_._1).mkString(", ")
-      }
-    )
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
