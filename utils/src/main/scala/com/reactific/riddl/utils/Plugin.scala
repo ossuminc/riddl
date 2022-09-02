@@ -14,11 +14,12 @@ object Plugin {
   final private val loading = new AtomicBoolean
 
   def loadPluginsFrom[T <: PluginInterface : ClassTag](pluginsDir: Path): List[PluginInterface] = {
+    require(
+      loading.compareAndSet(false, true),
+      "Plugins are already loading!"
+    )
     require(Files.isDirectory(pluginsDir) && Files.isReadable(pluginsDir),
       s"Plugin directory $pluginsDir is not a readable directory"
-    )
-    require(loading.compareAndSet(false, true),
-      "Plugins are already loading!"
     )
     val stream = Files.list(pluginsDir)
 
@@ -65,6 +66,10 @@ object Plugin {
       result
     } finally {
       Thread.currentThread.setContextClassLoader(savedClassLoader)
+      require(
+        loading.compareAndSet(true, false),
+        "Plugins loading was not locked!"
+      )
     }
   }
 }
