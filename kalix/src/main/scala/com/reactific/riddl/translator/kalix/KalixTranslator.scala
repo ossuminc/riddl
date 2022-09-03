@@ -12,8 +12,8 @@ case class KalixOptions(
   outputDir: Option[Path] = None,
   kalixPath: Option[Path] = None,
   projectName: Option[String] = None,
-  withValidations: Boolean = false
-) extends TranslatingOptions
+  withValidations: Boolean = false)
+    extends TranslatingOptions
 
 object KalixOptions {
   val default: KalixOptions = KalixOptions()
@@ -21,47 +21,44 @@ object KalixOptions {
 
 case class KalixState(
   options: KalixOptions,
-  symTab: SymbolTable
-)
-  extends TranslatorState[GrpcWriter] {}
+  symTab: SymbolTable)
+    extends TranslatorState[GrpcWriter] {}
 
 object KalixTranslator extends Translator[KalixOptions] {
 
   /** Extract actual parents from stack
-   * @param stack - The stack of AST elements
-   * @return A Definition stack that has includes and RootContainers removed
-   *
-   * The stack goes from most nested to highest. We don't want to change the
-   * stack (its mutable) so we reverse it, making a copy, then
-   * drop all the root containers (file includes) to finally end up at a domain
-   * and then map to just the name of that domain.
-   */
+    * @param stack
+    *   - The stack of AST elements
+    * @return
+    *   A Definition stack that has includes and RootContainers removed
+    *
+    * The stack goes from most nested to highest. We don't want to change the
+    * stack (its mutable) so we reverse it, making a copy, then drop all the
+    * root containers (file includes) to finally end up at a domain and then map
+    * to just the name of that domain.
+    */
   def parents(stack: Seq[Definition]): Seq[Definition] = {
     val result = stack.reverse.dropWhile(_.isRootContainer)
     result
   }
 
   /** Extract the code level package names
-   * @param stack - The stack of AST elements
-   * @return A Seq[String] from most abstract package to least abstract package
-   *
-   * It is presumed the stack has already had "parents" run on it
-   * */
+    * @param stack
+    *   - The stack of AST elements
+    * @return
+    *   A Seq[String] from most abstract package to least abstract package
+    *
+    * It is presumed the stack has already had "parents" run on it
+    */
   def packages(stack: Seq[Definition]): Seq[String] = {
     stack.flatMap {
-      case d: Domain =>
-        d.getOptionValue[DomainPackageOption] match {
-          case Some(pkg) =>
-            pkg.map(_.s.toLowerCase)
-          case None =>
-            Seq(d.id.value.toLowerCase())
+      case d: Domain => d.getOptionValue[DomainPackageOption] match {
+          case Some(pkg) => pkg.map(_.s.toLowerCase)
+          case None      => Seq(d.id.value.toLowerCase())
         }
-      case c: Context =>
-        c.getOptionValue[ContextPackageOption] match {
-          case Some(pkg) =>
-            pkg.map(_.s.toLowerCase)
-          case None =>
-            Seq(c.id.value.toLowerCase())
+      case c: Context => c.getOptionValue[ContextPackageOption] match {
+          case Some(pkg) => pkg.map(_.s.toLowerCase)
+          case None      => Seq(c.id.value.toLowerCase())
         }
       case _ =>
         // Others don't have package specifications
@@ -80,8 +77,8 @@ object KalixTranslator extends Translator[KalixOptions] {
     val pars: Seq[Definition] = parents(stack)
     val pkgs = packages(pars) :+ (if (isApi) "api" else "domain")
     val prefix = Seq("main", "proto") ++ pkgs
-    val name = prefix  :+ c.id.value
-    val path = Path.of("src", name:_*)
+    val name = prefix :+ c.id.value
+    val path = Path.of("src", name: _*)
     val fullPath: Path = options.outputDir.get.resolve(path)
     val writer = GrpcWriter(fullPath, pkgs, pars, state.symTab)
     state.addFile(writer)
@@ -114,15 +111,15 @@ object KalixTranslator extends Translator[KalixOptions] {
         // writer.emitEntityApi(e)
         // writer.emitEntityImpl(e)
         st
-      case (st, f: AST.Function, stack) => st
-      case (st, a: AST.Adaptor, stack) => st
-      case (st, s: AST.Saga, stack) => st
-      case (st, s: AST.Story, stack) => st
-      case (st, p: AST.Plant, stack) => st
-      case (st, p: AST.Processor, stack) => st
+      case (st, f: AST.Function, stack)   => st
+      case (st, a: AST.Adaptor, stack)    => st
+      case (st, s: AST.Saga, stack)       => st
+      case (st, s: AST.Story, stack)      => st
+      case (st, p: AST.Plant, stack)      => st
+      case (st, p: AST.Processor, stack)  => st
       case (st, a: AST.Adaptation, stack) => st
-      case (st, p: AST.Pipe, stack) => st
-      case (st, t: AST.Term, stack)  => st
+      case (st, p: AST.Pipe, stack)       => st
+      case (st, t: AST.Term, stack)       => st
 
       case (st, _: RootContainer, _) => // skip, not needed
         st

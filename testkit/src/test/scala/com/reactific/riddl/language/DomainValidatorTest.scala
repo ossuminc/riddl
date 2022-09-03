@@ -43,13 +43,18 @@ class DomainValidatorTest extends ValidatingTest {
           domain mustNot be(empty)
           domain.contents mustNot be(empty)
           val expectedAuthor = AuthorInfo(
-            (2, 3, rpi), Identifier((2,10,rpi), "Reid"),
+            (2, 3, rpi),
+            Identifier((2, 10, rpi), "Reid"),
             LiteralString((3, 11, rpi), "Reid Spencer"),
             LiteralString((4, 12, rpi), "reid@reactific.com"),
             Some(LiteralString((5, 19, rpi), "Reactific Software Inc.")),
             Some(LiteralString((6, 12, rpi), "President")),
-            None,None,Some(BlockDescription((7,18,rpi),
-              Seq(LiteralString((7,18,rpi),"identifying"))))
+            None,
+            None,
+            Some(BlockDescription(
+              (7, 18, rpi),
+              Seq(LiteralString((7, 18, rpi), "identifying"))
+            ))
           )
           domain.authors mustNot be(empty)
           domain.authors.head must be(expectedAuthor)

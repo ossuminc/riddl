@@ -225,8 +225,7 @@ class ParsingTest extends ParsingTestBase {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(rc) =>
-        rc
+      case Right(rc) => rc
     }
   }
 }

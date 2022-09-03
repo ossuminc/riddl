@@ -47,18 +47,17 @@ class InvariantValidator extends ValidatingTest {
       }
     }
     "allow conditional expressions" in {
-      parseAndValidateInContext[AST.Entity](
-        """
-          |entity user is {
-          | invariant large is { true }
-          |}
-          |""".stripMargin
-      ) { (_, _, msgs) =>
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "Invariant 'large' should have a description"
-        )
+      parseAndValidateInContext[AST.Entity]("""
+                                              |entity user is {
+                                              | invariant large is { true }
+                                              |}
+                                              |""".stripMargin) {
+        (_, _, msgs) =>
+          assertValidationMessage(
+            msgs,
+            MissingWarning,
+            "Invariant 'large' should have a description"
+          )
       }
 
     }

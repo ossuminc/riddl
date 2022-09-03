@@ -24,7 +24,7 @@ import fastparse.ScalaWhitespace.*
 
 trait HandlerParser extends GherkinParser with FunctionParser {
 
-  def onClauseBody[u:P]: P[Seq[Example]] = {
+  def onClauseBody[u: P]: P[Seq[Example]] = {
     open ~
       ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
         Seq(Example(l, Identifier(l, ""), g, w, t, b))
@@ -32,8 +32,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
   }
 
   def onClause[u: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~
-      onClauseBody ~ briefly ~ description
+    Keywords.on ~/ location ~ messageRef ~ onClauseBody ~ briefly ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def onClauses[u: P]: P[Seq[OnClause]] = {
@@ -44,8 +43,8 @@ trait HandlerParser extends GherkinParser with FunctionParser {
   def contextHandler[u: P]: P[Handler] = {
     P(
       location ~ Keywords.handler ~/ identifier ~
-        (Readability.for_ ~ projectionRef).? ~ is ~ onClauses ~
-         briefly ~ description
+        (Readability.for_ ~ projectionRef).? ~ is ~ onClauses ~ briefly ~
+        description
     ).map { case (loc, id, maybeProjection, clauses, briefly, description) =>
       Handler(loc, id, maybeProjection, clauses, briefly, description)
     }
@@ -53,9 +52,8 @@ trait HandlerParser extends GherkinParser with FunctionParser {
 
   def entityHandler[u: P]: P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~
-        (Readability.for_ ~ stateRef).? ~ is ~ onClauses ~
-        briefly ~ description
+      Keywords.handler ~/ location ~ identifier ~ (Readability.for_ ~ stateRef)
+        .? ~ is ~ onClauses ~ briefly ~ description
     ).map { case (loc, id, state, clauses, briefly, description) =>
       Handler(loc, id, state, clauses, briefly, description)
     }

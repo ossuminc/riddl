@@ -21,7 +21,10 @@ import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
 import com.reactific.riddl.translator.kalix.KalixTranslator
-import com.reactific.riddl.utils.{Logger, Plugin, RiddlBuildInfo, SysLogger}
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.Plugin
+import com.reactific.riddl.utils.RiddlBuildInfo
+import com.reactific.riddl.utils.SysLogger
 
 import scala.annotation.unused
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -71,7 +74,7 @@ object RIDDLC {
       case RiddlOptions.Info         => info(options)
       case RiddlOptions.Kalix        => translateKalix(options)
       case RiddlOptions.Other(name) =>
-        if (options.pluginsDir.nonEmpty){
+        if (options.pluginsDir.nonEmpty) {
           val pluginsDir = options.pluginsDir.get
           val loaded = Plugin.loadPluginsFrom[RiddlcCommandPlugin](pluginsDir)
           if (loaded.isEmpty) {
@@ -82,15 +85,15 @@ object RIDDLC {
               case Some(pl) if pl.isInstanceOf[RiddlcCommandPlugin] =>
                 val plugin = pl.asInstanceOf[RiddlcCommandPlugin]
                 val errors = plugin.validate(options.commandArgs)
-                if (errors.isEmpty) {
-                  plugin.run(options)
-                } else {
+                if (errors.isEmpty) { plugin.run(options) }
+                else {
                   errors.foreach(log.error(_))
                   false
                 }
               case Some(plugin) =>
-                log.error(s"Plugin for command $name is the wrong type ${
-                  plugin.getClass.getSimpleName}")
+                log.error(
+                  s"Plugin for command $name is the wrong type ${plugin.getClass.getSimpleName}"
+                )
                 false
               case None =>
                 log.error(s"No plugin command matches '$name'")

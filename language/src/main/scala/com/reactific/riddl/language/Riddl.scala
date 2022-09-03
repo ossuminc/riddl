@@ -18,10 +18,14 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.utils.{Logger, SysLogger}
+import com.reactific.riddl.language.parsing.FileParserInput
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.TopLevelParser
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.SysLogger
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Clock
 
 case class CommonOptions(
@@ -32,8 +36,7 @@ case class CommonOptions(
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
-  debug: Boolean = false
-)
+  debug: Boolean = false)
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
@@ -101,8 +104,7 @@ object Riddl {
     commonOptions: CommonOptions
   ): Option[RootContainer] = {
     timer("validation", commonOptions.showTimes) {
-      val messages: Seq[Message] =
-        Validation.validate(root, commonOptions)
+      val messages: Seq[Message] = Validation.validate(root, commonOptions)
       if (messages.nonEmpty) {
         val (warns, errs) = messages.partition(_.kind.isWarning)
         val (severe, errors) = errs.partition(_.kind.isSevereError)

@@ -229,8 +229,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     def emitEnumeration(enumeration: AST.Enumeration): FileEmitter = {
       val head = this.add(s"any of {\n").indent
       val enumerators: String = enumeration.enumerators.map { enumerator =>
-        enumerator.id.value +
-          enumerator.enumVal.fold("")(x => s"($x)") +
+        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
           mkEnumeratorDescription(enumerator.description)
       }.mkString(s"$spc", s",\n$spc", s"\n")
       head.add(enumerators).outdent.addLine("}")
@@ -286,32 +285,29 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     }
 
     def emitMessageType(mt: AST.MessageType): FileEmitter = {
-      this.add(mt.messageKind.kind.toLowerCase).add(" ")
-        .emitFields(mt.fields)
+      this.add(mt.messageKind.kind.toLowerCase).add(" ").emitFields(mt.fields)
     }
 
     def emitMessageRef(mr: AST.MessageRef): FileEmitter = {
       this.add(mr.format)
     }
 
-    def emitTypeRef(tr: AST.TypeRef): FileEmitter = {
-      this.add(tr.format)
-    }
+    def emitTypeRef(tr: AST.TypeRef): FileEmitter = { this.add(tr.format) }
 
     def emitTypeExpression(typEx: AST.TypeExpression): FileEmitter = {
       typEx match {
-        case string: Strng  => emitString(string)
-        case b: Bool        => this.add(b.kind)
-        case n: Number      => this.add(n.kind)
-        case i: Integer     => this.add(i.kind)
-        case d: Decimal     => this.add(d.kind)
-        case r: Real        => this.add(r.kind)
-        case d: Date        => this.add(d.kind)
-        case t: Time        => this.add(t.kind)
-        case dt: DateTime   => this.add(dt.kind)
-        case ts: TimeStamp  => this.add(ts.kind)
-        case ll: LatLong    => this.add(ll.kind)
-        case n: Nothing     => this.add(n.kind)
+        case string: Strng                => emitString(string)
+        case b: Bool                      => this.add(b.kind)
+        case n: Number                    => this.add(n.kind)
+        case i: Integer                   => this.add(i.kind)
+        case d: Decimal                   => this.add(d.kind)
+        case r: Real                      => this.add(r.kind)
+        case d: Date                      => this.add(d.kind)
+        case t: Time                      => this.add(t.kind)
+        case dt: DateTime                 => this.add(dt.kind)
+        case ts: TimeStamp                => this.add(ts.kind)
+        case ll: LatLong                  => this.add(ll.kind)
+        case n: Nothing                   => this.add(n.kind)
         case AliasedTypeExpression(_, id) => this.add(id.format)
         case URL(_, scheme) => this
             .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
@@ -525,7 +521,7 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
         case outlet: Outlet => doOutlet(state, outlet)
         case joint: Joint   => doJoint(state, joint)
         case _: Field => state // was handled by Type case in openContainer
-        case _ =>
+        case _        =>
           /* require(
             !definition.isInstanceOf[Definition],
             s"doDefinition should not be called for ${definition.getClass.getName}"
@@ -562,20 +558,18 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     ): ReformatState = {
       state.withCurrent(_.openDef(domain)).step { s1: ReformatState =>
         domain.authors.foldLeft(s1) { (st, author) =>
-          st.withCurrent(_.addIndent(s"author is {\n")
-            .indent
-            .addIndent(s"name = ${author.name.format}\n")
-            .addIndent(s"email = ${author.email.format}\n")
+          st.withCurrent(
+            _.addIndent(s"author is {\n").indent
+              .addIndent(s"name = ${author.name.format}\n")
+              .addIndent(s"email = ${author.email.format}\n")
           ).step { s2 =>
-            author.organization
-              .map(org => s2.withCurrent(
-                _.addIndent(s"organization =${org.format}\n")))
-              .orElse(Option(s2)).get
+            author.organization.map(org =>
+              s2.withCurrent(_.addIndent(s"organization =${org.format}\n"))
+            ).orElse(Option(s2)).get
           }.step { s3 =>
-            author.title
-              .map(title => s3.withCurrent(
-                _.addIndent(s"title = ${title.format}\n")))
-              .orElse(Option(s3)).get
+            author.title.map(title =>
+              s3.withCurrent(_.addIndent(s"title = ${title.format}\n"))
+            ).orElse(Option(s3)).get
           }.withCurrent(_.outdent.addIndent("}\n"))
         }
       }
@@ -675,9 +669,8 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
     }
 
     def doJoint(state: ReformatState, joint: Joint): ReformatState = {
-      val s = state.withCurrent(
-        _.addIndent(s"${keyword(joint)} ${joint.id.format} is ")
-      )
+      val s = state
+        .withCurrent(_.addIndent(s"${keyword(joint)} ${joint.id.format} is "))
       joint match {
         case InletJoint(_, _, inletRef, pipeRef, _, _) => s.withCurrent(
             _.addIndent(s"inlet ${inletRef.id.format} from")
@@ -711,10 +704,9 @@ object ReformatTranslator extends Translator[ReformattingOptions] {
           s.withCurrent(_.addIndent("requires ").emitTypeExpression(te).addNL())
         )
       }.step { s =>
-        function.output
-          .fold(s)(te => s.withCurrent(
-            _.addIndent("returns  ").emitTypeExpression(te).addNL())
-          )
+        function.output.fold(s)(te =>
+          s.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).addNL())
+        )
       }
     }
 

@@ -3,7 +3,8 @@ package com.reactific.riddl.utils
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 
 class TarSpec extends AnyWordSpec with Matchers {
 
@@ -13,10 +14,8 @@ class TarSpec extends AnyWordSpec with Matchers {
 
       val destDir = Files.createTempDirectory("TarSpec")
       Tar.untar(test_tar_file, destDir) match {
-        case Right(filesCopied) =>
-          filesCopied must be(184)
-        case Left(message) =>
-          fail(message)
+        case Right(filesCopied) => filesCopied must be(184)
+        case Left(message)      => fail(message)
       }
     }
   }

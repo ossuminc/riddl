@@ -36,9 +36,18 @@ class TypeValidatorTest extends ValidatingTest {
         case (_: Domain, _, msgsAndWarnings: Seq[Message]) =>
           val errors = msgsAndWarnings.filter(_.kind == Error)
           assert(errors.size == 9, "Should have 9 errors")
-          assert(errors.forall(m => m.message.contains("not resolved")), "not resolved")
-          assert(errors.count(_.message.contains("refer to a Type")) == 8, "refer to a Type")
-          assert(errors.count(_.message.contains("refer to an Entity")) == 1, "refer to a Type")
+          assert(
+            errors.forall(m => m.message.contains("not resolved")),
+            "not resolved"
+          )
+          assert(
+            errors.count(_.message.contains("refer to a Type")) == 8,
+            "refer to a Type"
+          )
+          assert(
+            errors.count(_.message.contains("refer to an Entity")) == 1,
+            "refer to a Type"
+          )
       }
     }
     "allow ??? in aggregate bodies without warning" in {
@@ -57,11 +66,7 @@ class TypeValidatorTest extends ValidatingTest {
                                  |}
                                  |""".stripMargin) {
         case (_: Domain, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Unclosed character class"
-          )
+          assertValidationMessage(msgs, Error, "Unclosed character class")
       }
     }
 
@@ -72,8 +77,7 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type Order is Id(TypeTest)
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgs: Messages) =>
-          assertValidationMessage(
+        case (_: Domain, _, msgs: Messages) => assertValidationMessage(
             msgs,
             Error,
             "'TypeTest' was expected to be an Entity but is a Context instead"
