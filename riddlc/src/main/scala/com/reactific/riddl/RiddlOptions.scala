@@ -67,7 +67,7 @@ case class RiddlOptions(
   hugoGitCheckOptions: HugoGitCheckOptions = HugoGitCheckOptions(),
   kalixOptions: KalixOptions = KalixOptions(),
   pluginsDir: Option[Path] = Some(Path.of("plugins")),
-  commandArgs: Array[String] = Array.empty[String]
+  commandArgs: Map[String,String] = Map.empty[String,String]
 )
 
 object RiddlOptions {
@@ -806,8 +806,8 @@ object RiddlOptions {
       cmd("run").children(
         arg[String]("command").required().action((n,c) =>
           c.copy(command = Other(n))),
-        arg[Seq[String]]("args").unbounded().action( (l,c) =>
-          c.copy(commandArgs = l.toArray)
+        arg[Map[String,String]]("args").unbounded().action( (m,c) =>
+          c.copy(commandArgs = m)
         )
       ).text("Run an arbitrary command from a plugin module"),
       cmd("repeat").action((_, c) => c.copy(command = Repeat)).children(

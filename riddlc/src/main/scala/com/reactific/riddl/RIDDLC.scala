@@ -81,7 +81,13 @@ object RIDDLC {
             loaded.find(_.pluginName == name) match {
               case Some(pl) if pl.isInstanceOf[RiddlcCommandPlugin] =>
                 val plugin = pl.asInstanceOf[RiddlcCommandPlugin]
-                plugin.run(options)
+                val errors = plugin.validate(options.commandArgs)
+                if (errors.isEmpty) {
+                  plugin.run(options)
+                } else {
+                  errors.foreach(log.error(_))
+                  false
+                }
               case Some(plugin) =>
                 log.error(s"Plugin for command $name is the wrong type ${
                   plugin.getClass.getSimpleName}")
