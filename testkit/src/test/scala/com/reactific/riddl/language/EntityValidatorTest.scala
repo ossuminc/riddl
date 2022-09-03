@@ -44,7 +44,8 @@ class EntityValidatorTest extends ValidatingTest {
                     |  state foo is { field: String }
                     |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
-        case (_: Entity, _, msgs: Messages) => assertValidationMessage(
+        case (_: Entity, _, msgs: Messages) =>
+          assertValidationMessage(
             msgs,
             Error,
             "Entity 'MultiState' is declared as an fsm, but doesn't have " +
@@ -87,12 +88,13 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "Entity 'Hamburger' has only empty handler"
-        )
+      parseAndValidate[Domain](input) {
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            MissingWarning,
+            "Entity 'Hamburger' has only empty handler"
+          )
       }
     }
     "validate function examples" in {
@@ -134,12 +136,13 @@ class EntityValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          s"Field 'a' was not set in message constructor"
-        )
+      parseAndValidate[Domain](input) {
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            s"Field 'a' was not set in message constructor"
+          )
       }
 
     }

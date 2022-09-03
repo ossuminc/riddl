@@ -69,7 +69,9 @@ lazy val riddl = (project in file(".")).settings(
 )
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
-  .configure(C.mavenPublish).enablePlugins(BuildInfoPlugin).settings(
+  .configure(C.mavenPublish)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
     scalacOptions := scala2_13_Options,
@@ -163,7 +165,9 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
-  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish).dependsOn(
+  .enablePlugins(MiniDependencyTreePlugin)
+  .configure(C.mavenPublish)
+  .dependsOn(
     utils % "compile->compile;test->test",
     language,
     kalix,

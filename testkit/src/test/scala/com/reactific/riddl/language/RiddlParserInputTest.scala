@@ -1,8 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.ast.Location
-import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.parsing.SourceParserInput
+import com.reactific.riddl.language.parsing.{RiddlParserInput, SourceParserInput}
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -46,8 +45,8 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
                                        |1234
                                        |56
                                        |""".stripMargin)
-        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach {
-          case (loc, offset) => input.rangeOf(Location(loc)) mustBe offset
+        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach { case (loc, offset) =>
+          input.rangeOf(Location(loc)) mustBe offset
         }
 
       }

@@ -7,8 +7,7 @@ import org.scalatest.Assertion
 
 import java.io.File
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 
 /** Test The ReformatTranslator's ability to generate consistent output */
 class ReformatTranslatorTest extends RiddlFilesTestBase {
@@ -18,8 +17,9 @@ class ReformatTranslatorTest extends RiddlFilesTestBase {
   }
 
   def outputWithLineNos(output: String): String = {
-    output.split('\n').zipWithIndex.map { case (str, n) => f"$n%3d $str" }
-      .mkString("\n")
+    output.split('\n').zipWithIndex.map {
+      case (str,n) => f"$n%3d $str"
+    }.mkString("\n")
   }
 
   def checkAFile(

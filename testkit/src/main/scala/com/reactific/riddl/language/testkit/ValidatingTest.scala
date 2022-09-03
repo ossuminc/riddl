@@ -71,7 +71,11 @@ abstract class ValidatingTest extends ParsingTest {
     input: String,
     testCaseName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, RiddlParserInput, Messages) => Assertion
+  )(validation: (
+      RootContainer,
+      RiddlParserInput,
+      Messages
+    ) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, testCaseName) match {
       case Left(errors) =>
@@ -90,8 +94,8 @@ abstract class ValidatingTest extends ParsingTest {
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, Messages) => Assertion =
-      (_, msgs) => defaultFail(msgs)
+  )(validation: (RootContainer, Messages) => Assertion
+    = (_,msgs) => defaultFail(msgs)
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
@@ -133,8 +137,7 @@ abstract class ValidatingTest extends ParsingTest {
   def assertValidationMessage(
     msgs: Messages,
     searchFor: String
-  )(f: Message => Boolean
-  ): Assertion = {
+  )(f: Message => Boolean ): Assertion = {
     assert(
       msgs.exists(f),
       s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"

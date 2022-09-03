@@ -18,8 +18,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.OutputFile
+import com.reactific.riddl.utils.{Logger, OutputFile}
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -53,13 +52,13 @@ trait TranslatorState[OF <: OutputFile] {
     files.map(_.filePath).toSeq
   }
 
-  def addFile(file: OF): Unit = { files.append(file) }
+  def addFile(file: OF): Unit = {
+    files.append(file)
+  }
 }
 
 /** Base class of all Translators
-  * @tparam OPT
-  *   The options class used by the translator
-  */
+ * @tparam OPT The options class used by the translator */
 trait Translator[OPT <: TranslatingOptions] {
 
   protected def translateImpl(
@@ -70,8 +69,8 @@ trait Translator[OPT <: TranslatingOptions] {
   ): Seq[Path] = {
     require(options.inputFile.nonEmpty, "An input path was not provided.")
     require(options.outputDir.nonEmpty, "An output path was not provided.")
-    if (commonOptions.verbose) log
-      .info(s"Starting translation of `${root.id.format}")
+    if (commonOptions.verbose)
+      log.info(s"Starting translation of `${root.id.format}")
     Seq.empty[Path]
   }
 

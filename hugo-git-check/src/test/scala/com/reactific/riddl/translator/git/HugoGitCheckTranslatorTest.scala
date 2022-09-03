@@ -3,13 +3,11 @@ package com.reactific.riddl.translator.git
 import com.reactific.riddl.language.Translator
 import com.reactific.riddl.language.testkit.TranslatingTestBase
 import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
-import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckOptions
-import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
+import com.reactific.riddl.translator.hugo_git_check.{HugoGitCheckOptions, HugoGitCheckTranslator}
 
 import java.nio.file.Path
 
-class HugoGitCheckTranslatorTest
-    extends TranslatingTestBase[HugoGitCheckOptions] {
+class HugoGitCheckTranslatorTest extends TranslatingTestBase[HugoGitCheckOptions] {
 
   override val output: String = "hugo-git-check/target/test"
 
@@ -20,11 +18,14 @@ class HugoGitCheckTranslatorTest
     )
     val gitCloneDir = Path.of(".").toAbsolutePath.getParent
     val relativeDir = Path.of(directory).resolve(fileName).getParent
-    HugoGitCheckOptions(hugoOptions, Some(gitCloneDir), Some(relativeDir))
+    HugoGitCheckOptions(
+      hugoOptions, Some(gitCloneDir), Some(relativeDir)
+    )
   }
 
-  override def getTranslator: Translator[HugoGitCheckOptions] =
-    HugoGitCheckTranslator
+  override def getTranslator: Translator[HugoGitCheckOptions] = HugoGitCheckTranslator
 
-  "HugoGitCheckTranslator" should { runTests("HugoGitCheckTranslatorTest") }
+  "HugoGitCheckTranslator" should {
+    runTests("HugoGitCheckTranslatorTest")
+  }
 }

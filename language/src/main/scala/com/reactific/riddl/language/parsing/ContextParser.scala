@@ -17,8 +17,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.Keywords
-import com.reactific.riddl.language.Terminals.Options
+import com.reactific.riddl.language.Terminals.{Keywords, Options}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -34,20 +33,16 @@ trait ContextParser
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](
-      StringIn(
-        Options.wrapper,
-        Options.function,
-        Options.gateway,
-        Options.service,
-        Options.package_
-      ).!
+      StringIn(Options.wrapper, Options.function, Options.gateway,
+        Options.service, Options.package_).!
     ) {
-      case (loc, Options.wrapper, _)     => WrapperOption(loc)
-      case (loc, Options.function, _)    => FunctionOption(loc)
-      case (loc, Options.gateway, _)     => GatewayOption(loc)
-      case (loc, Options.service, _)     => ServiceOption(loc)
+      case (loc, Options.wrapper, _)  => WrapperOption(loc)
+      case (loc, Options.function, _) => FunctionOption(loc)
+      case (loc, Options.gateway, _)  => GatewayOption(loc)
+      case (loc, Options.service, _)  => ServiceOption(loc)
       case (loc, Options.package_, args) => ContextPackageOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+      case (_, _, _)                  =>
+        throw new RuntimeException("Impossible case")
     }
   }
 
@@ -58,8 +53,9 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (author | typeDef | contextHandler | entity | adaptor | function |
-          saga | plantDefinition | projection | term | contextInclude).rep(0)
+      (author | typeDef | contextHandler | entity | adaptor | function | saga |
+        plantDefinition | projection | term | contextInclude
+      ).rep(0)
     )
   }
 

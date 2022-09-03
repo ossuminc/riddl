@@ -41,12 +41,17 @@ abstract class RiddlParserInput extends ParserInput {
 
   def checkTraceable(): Unit = ()
 
-  private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
+  private lazy val lineNumberLookup: Array[Int] =
+    Util.lineNumberLookup(data)
 
   private[language] def offsetOf(line: Int): Int = {
-    if (line < 0) { lineNumberLookup(line) }
-    else if (line < lineNumberLookup.length) { lineNumberLookup(line) }
-    else { lineNumberLookup(lineNumberLookup.length - 1) }
+    if (line < 0) {
+      lineNumberLookup(line)
+    } else if (line < lineNumberLookup.length) {
+      lineNumberLookup(line)
+    } else {
+      lineNumberLookup(lineNumberLookup.length-1)
+    }
   }
 
   private[language] def lineOf(index: Int): Int = {
@@ -78,8 +83,7 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  @inline
-  final def location(index: Int): Location = { Location(this, index) }
+  @inline final def location(index: Int): Location = { Location(this,index) }
 
   def prettyIndex(index: Int): String = { location(index).toString }
 
@@ -122,8 +126,7 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   def this(path: Path) = this(path.toFile)
 }
 
-case class SourceParserInput(source: Source, origin: String)
-    extends RiddlParserInput {
+case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
 
   val data: String =
     try { source.mkString }
@@ -139,12 +142,8 @@ object RiddlParserInput {
     data: String
   ): RiddlParserInput = { StringParserInput(data) }
 
-  implicit def apply(source: Source): RiddlParserInput = {
-    SourceParserInput(source, source.descr)
-  }
+  implicit def apply(source: Source): RiddlParserInput = { SourceParserInput(source, source.descr) }
   implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
 
-  implicit def apply(path: Path): RiddlParserInput = {
-    FileParserInput(path.toFile)
-  }
+  implicit def apply(path: Path): RiddlParserInput = { FileParserInput(path.toFile) }
 }

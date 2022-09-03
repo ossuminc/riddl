@@ -307,7 +307,8 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Adaptor(
+        case Right((content, rpi)) =>
+          content mustBe Adaptor(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "fuzz"),
             ContextRef(
@@ -347,9 +348,7 @@ class ParserTest extends ParsingTest {
                       Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
-                  _,
-                  _,
-                  _,
+                  _, _, _,
                   None,
                   None
                 ) =>

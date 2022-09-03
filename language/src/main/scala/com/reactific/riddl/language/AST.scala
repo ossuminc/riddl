@@ -35,20 +35,20 @@ import java.nio.file.Path
 object AST extends ast.Expressions with ast.TypeExpression {
 
   /** A [[RiddlValue]] that holds the author's information
-    *
-    * @param loc
-    *   The location of the author information
-    * @param name
-    *   The full name of the author
-    * @param email
-    *   The author's email address
-    * @param organization
-    *   The name of the organization the author is associated with
-    * @param title
-    *   The author's title within the organization
-    * @param url
-    *   A URL associated with the author
-    */
+   *
+   * @param loc
+   * The location of the author information
+   * @param name
+   * The full name of the author
+   * @param email
+   * The author's email address
+   * @param organization
+   * The name of the organization the author is associated with
+   * @param title
+   * The author's title within the organization
+   * @param url
+   * A URL associated with the author
+   */
   case class AuthorInfo(
     loc: Location,
     id: Identifier,
@@ -59,11 +59,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition
-      with DomainDefinition
-      with ContextDefinition
-      with EntityDefinition
-      with StoryDefinition
+    extends LeafDefinition with DomainDefinition
+      with ContextDefinition with EntityDefinition with StoryDefinition
       with PlantDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
@@ -83,11 +80,14 @@ object AST extends ast.Expressions with ast.TypeExpression {
   }
 
   /** Base trait of any definition that is a container and contains types
-    */
-  trait TypeContainer {
+   */
+  trait TypeContainer  {
     def types: Seq[Type]
-    def collectMessages: Seq[Type] = { types.filter(_.isMessageKind) }
+    def collectMessages: Seq[Type] = {
+      types.filter(_.isMessageKind)
+    }
   }
+
 
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms {
@@ -99,11 +99,14 @@ object AST extends ast.Expressions with ast.TypeExpression {
     def includes: Seq[Include]
     def containedDefinitions: Seq[Definition] = {
       contents.flatMap {
-        case i: Include    => i.contents
-        case d: Definition => Seq(d)
+        case i: Include =>
+          i.contents
+        case d: Definition =>
+          Seq(d)
       }
     }
   }
+
 
   /** A term definition for the glossary */
   case class Term(
@@ -111,10 +114,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition
-      with DomainDefinition
-      with ContextDefinition
-      with PlantDefinition {
+      extends LeafDefinition with DomainDefinition
+        with ContextDefinition with PlantDefinition {
     override def isEmpty: Boolean = description.isEmpty
     final val kind: String = "Term"
   }
@@ -149,8 +150,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
     */
   case class RootContainer(
     contents: Seq[Domain] = Nil,
-    inputs: Seq[RiddlParserInput] = Nil)
-      extends Definition {
+    inputs: Seq[RiddlParserInput] = Nil
+  ) extends Definition {
 
     override def isRootContainer: Boolean = true
 
@@ -231,6 +232,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
   }
 
+
   /** A type definition which associates an identifier with a type expression.
     *
     * @param loc
@@ -250,11 +252,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition
-      with ContextDefinition
-      with EntityDefinition
-      with FunctionDefinition
-      with DomainDefinition {
+      extends Definition with ContextDefinition
+      with EntityDefinition with FunctionDefinition
+      with DomainDefinition  {
     override def contents: Seq[Definition] = {
       typ match {
         case Aggregation(_, fields)      => fields
@@ -263,7 +263,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
         case _                           => Seq.empty[Definition]
       }
     }
-    def isMessageKind: Boolean = { typ.isInstanceOf[MessageType] }
+    def isMessageKind: Boolean = {
+      typ.isInstanceOf[MessageType]
+    }
     final val kind: String = "Type"
   }
   type Command = Type
@@ -282,6 +284,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
       extends Reference[Type] {
     override def format: String = s"type ${id.format}"
   }
+
+
 
   // /////////////////////////////////////////////////////////// Actions
 
@@ -303,23 +307,25 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def format: String = what.format
   }
 
-  /** An action that is intended to generate a runtime error in the generated
-    * application or otherwise indicate an error condition
-    *
-    * @param loc
-    *   The location where the action occurs in the source
-    * @param message
-    *   The error message to report
-    * @param description
-    *   An optional description of the action
-    */
+
+  /** An action that is intended to generate a runtime error in the
+   * generated application or otherwise indicate an error condition
+   *
+   * @param loc
+   * The location where the action occurs in the source
+   * @param message
+   * The error message to report
+   * @param description
+   * An optional description of the action
+   */
   case class ErrorAction(
     loc: Location,
     message: LiteralString,
     description: Option[Description])
-      extends SagaStepAction {
+    extends SagaStepAction {
     override def format: String = s"error \"${message.format}\""
   }
+
 
   /** An action whose behavior is to set the value of a state field to some
     * expression
@@ -346,11 +352,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     loc: Location,
     value: Expression,
     target: PathIdentifier,
-    description: Option[Description] = None)
-      extends Action {
-    override def format: String = {
-      s"append ${value.format} to ${target.format}"
-    }
+    description: Option[Description] = None
+  ) extends Action {
+    override def format: String = { s"append ${value.format} to ${target.format}"}
   }
 
   /** A helper class for publishing messages that represents the construction of
@@ -370,22 +374,24 @@ object AST extends ast.Expressions with ast.TypeExpression {
     }
   }
 
+
   /** An action that returns a value from a function
-    *
-    * @param loc
-    *   The location in the source of the publish action
-    * @param value
-    *   The value to be returned
-    * @param description
-    *   An optional description of the yield action
-    */
+   *
+   * @param loc
+   * The location in the source of the publish action
+   * @param value
+   * The value to be returned
+   * @param description
+   * An optional description of the yield action
+   */
   case class ReturnAction(
     loc: Location,
     value: Expression,
     description: Option[Description] = None)
-      extends Action {
+    extends Action {
     override def format: String = s"return ${value.format}"
   }
+
 
   /** An action that places a message on an entity's event channel
     *
@@ -472,8 +478,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     handler: HandlerRef,
     description: Option[Description] = None)
       extends Action {
-    override def format: String =
-      s"become ${entity.format} to ${handler.format}"
+    override def format: String = s"become ${entity.format} to ${handler.format}"
   }
 
   /** An action that tells a message to an entity. This is very analogous to the
@@ -628,9 +633,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
       extends LeafDefinition
-      with ProcessorDefinition
-      with FunctionDefinition
-      with StoryDefinition {
+        with ProcessorDefinition with FunctionDefinition with StoryDefinition  {
     final val kind: String = "Example"
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
       thens.isEmpty && buts.isEmpty
@@ -692,8 +695,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     * @param loc
     *   The location of the option.
     */
-  case class EntityIsConsistent(loc: Location)
-      extends EntityOption("consistent")
+  case class EntityIsConsistent(loc: Location) extends EntityOption("consistent")
 
   /** A [[EntityOption]] that indicates that this entity favors availability
     * over consistency in the CAP theorem.
@@ -788,13 +790,12 @@ object AST extends ast.Expressions with ast.TypeExpression {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends EntityDefinition
-      with WithTypes
-      with ContextDefinition
-      with FunctionDefinition {
+      extends EntityDefinition with WithTypes
+      with ContextDefinition with FunctionDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++ output.map(_.fields)
-        .getOrElse(Seq.empty[Field]) ++ types ++ functions ++ examples
+      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      output.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      types ++ functions ++ examples
     }
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
@@ -829,6 +830,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def isEmpty: Boolean = expression.isEmpty
     final val kind: String = "Invariant"
   }
+
 
   /** Defines the actions to be taken when a particular message is received by
     * an entity. [[OnClause]]s are used in the definition of a [[Handler]] with
@@ -979,11 +981,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends ContextDefinition
-      with TypeContainer
-      with WithTypes
+      with TypeContainer with WithTypes
       with WithOptions[EntityOption]
-      with WithIncludes
-      with WithAuthors {
+      with WithIncludes with WithAuthors {
 
     lazy val contents: Seq[EntityDefinition] = {
       states ++ types ++ handlers ++ functions ++ invariants ++ includes
@@ -1032,23 +1032,23 @@ object AST extends ast.Expressions with ast.TypeExpression {
   }
 
   /** The specification of a single adaptation based on message
-    *
-    * @param loc
-    *   The location of the adaptation definition
-    * @param id
-    *   The name of the adaptation
-    * @param messageRef
-    *   The command that triggers the adaptation, inherited from [[Adaptation]]
-    * @param command
-    *   The command resulting from the adaptation of the [[messageRef]] to the
-    *   bounded context
-    * @param examples
-    *   Optional set of Gherkin [[Example]]s to define the adaptation
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   Optional description of the adaptation.
-    */
+   *
+   * @param loc
+   *   The location of the adaptation definition
+   * @param id
+   *   The name of the adaptation
+   * @param messageRef
+   *   The command that triggers the adaptation, inherited from [[Adaptation]]
+   * @param command
+   *   The command resulting from the adaptation of the [[messageRef]] to the
+   *   bounded context
+   * @param examples
+   *   Optional set of Gherkin [[Example]]s to define the adaptation
+   * @param brief
+   *   A brief description (one sentence) for use in documentation
+   * @param description
+   *   Optional description of the adaptation.
+   */
   case class CommandCommandA8n(
     loc: Location,
     id: Identifier,
@@ -1057,7 +1057,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Adaptation {
+    extends Adaptation {
     override def contents: Seq[Example] = examples
     final val kind: String = "Command Command Adaptation"
   }
@@ -1119,7 +1119,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
     includes: Seq[Include] = Seq.empty[Include],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends ContextDefinition with WithIncludes {
+      extends ContextDefinition
+      with WithIncludes {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
     final val kind: String = "Adaptor"
   }
@@ -1129,21 +1130,21 @@ object AST extends ast.Expressions with ast.TypeExpression {
     id: Identifier,
     fields: Seq[Field],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends ContextDefinition {
+    description: Option[Description] = None
+  ) extends ContextDefinition {
     lazy val contents: Seq[Field] = fields
     final val kind: String = "Projection"
   }
 
   /** A reference to an context's projection definition
-    *
-    * @param loc
-    *   The location of the state reference
-    * @param id
-    *   The path identifier of the referenced projection definition
-    */
+   *
+   * @param loc
+   * The location of the state reference
+   * @param id
+   * The path identifier of the referenced projection definition
+   */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-      extends Reference[Projection] {
+    extends Reference[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1151,10 +1152,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     */
   sealed abstract class ContextOption(val name: String) extends OptionValue
 
-  case class ContextPackageOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends ContextOption("package")
+  case class ContextPackageOption(loc: Location, override val args: Seq[LiteralString])
+    extends ContextOption("package")
+
 
   /** A context's "wrapper" option. This option suggests the bounded context is
     * to be used as a wrapper around an external system and is therefore at the
@@ -1248,12 +1248,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
-      with TypeContainer
-      with WithTypes
+      with TypeContainer with WithTypes
       with WithOptions[ContextOption]
-      with WithIncludes
-      with WithTerms
-      with WithAuthors {
+      with WithIncludes with WithTerms with WithAuthors {
     lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
       sagas ++ functions ++ terms ++ includes ++ authors ++ projections ++
       handlers
@@ -1451,11 +1448,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
   /** Sealed base trait for both kinds of Joint definitions
     */
-  sealed trait Joint
-      extends LeafDefinition
-      with AlwaysEmpty
-      with PlantDefinition
-      with ContextDefinition
+  sealed trait Joint extends LeafDefinition with AlwaysEmpty
+    with PlantDefinition with ContextDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *
@@ -1542,9 +1536,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends DomainDefinition
-      with WithIncludes
-      with WithTerms
-      with WithAuthors {
+      with WithIncludes with WithTerms with WithAuthors {
     lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
       outJoints ++ terms ++ includes
     final val kind: String = "Plant"
@@ -1590,14 +1582,14 @@ object AST extends ast.Expressions with ast.TypeExpression {
     * @param loc
     *   The location of the sequential option
     */
-  case class SequentialOption(loc: Location) extends SagaOption("sequential")
+  case class SequentialOption(loc: Location) extends SagaOption ("sequential")
 
   /** A [[SagaOption]] that indicates parallel execution of the saga actions.
     *
     * @param loc
     *   The location of the parallel option
     */
-  case class ParallelOption(loc: Location) extends SagaOption("parallel")
+  case class ParallelOption(loc: Location) extends SagaOption ("parallel")
 
   /** The definition of a Saga based on inputs, outputs, and the set of
     * [[SagaStep]]s involved in the saga. Sagas define a computing action based
@@ -1634,8 +1626,8 @@ object AST extends ast.Expressions with ast.TypeExpression {
     description: Option[Description] = None)
       extends ContextDefinition with WithOptions[SagaOption] {
     lazy val contents: Seq[SagaDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++ output.map(_.fields)
-        .getOrElse(Seq.empty[Field]) ++ sagaSteps
+      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps
     }
     final val kind: String = "Saga"
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
@@ -1698,22 +1690,19 @@ object AST extends ast.Expressions with ast.TypeExpression {
       extends Reference[Domain] {
     override def format: String = s"domain ${id.format}"
   }
-
   /** Base trait for all options a Domain can have.
-    */
+   */
   sealed abstract class DomainOption(val name: String) extends OptionValue
 
   /** A context's "wrapper" option. This option suggests the bounded context is
-    * to be used as a wrapper around an external system and is therefore at the
-    * boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class DomainPackageOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends DomainOption("package")
+   * to be used as a wrapper around an external system and is therefore at the
+   * boundary of the context map
+   *
+   * @param loc
+   *   The location of the wrapper option
+   */
+  case class DomainPackageOption(loc: Location, override val args: Seq[LiteralString])
+    extends DomainOption("package")
 
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
@@ -1757,104 +1746,108 @@ object AST extends ast.Expressions with ast.TypeExpression {
       extends TypeContainer
       with WithOptions[DomainOption]
       with DomainDefinition
-      with WithIncludes
-      with WithTypes
-      with WithTerms
-      with WithAuthors {
+      with WithIncludes with WithTypes
+      with WithTerms with WithAuthors {
     def contents: Seq[DomainDefinition] = {
-      domains ++ types ++ contexts ++ plants ++ stories ++ terms ++ includes ++
-        authors
+      domains ++ types ++ contexts ++ plants ++ stories ++ terms ++
+        includes ++ authors
     }
     final val kind: String = "Domain"
   }
 
-  // ////////////////////////////////////////////////// UTILITY FUNCTIONS
+  //////////////////////////////////////////////////// UTILITY FUNCTIONS
 
   private def authorsOfInclude(includes: Seq[Include]): Seq[AuthorInfo] = {
     for {
       include <- includes
       ai <- include.contents if ai.isInstanceOf[AuthorInfo]
       authInfo = ai.asInstanceOf[AuthorInfo]
-    } yield { authInfo }
+    } yield {
+      authInfo
+    }
   }
 
   def authorsOf(defn: Definition): Seq[AuthorInfo] = {
     defn match {
-      case wa: WithAuthors => wa.authors ++
-          (wa match {
-            case wi: WithIncludes => authorsOfInclude(wi.includes)
-            case _                => Seq.empty[AuthorInfo]
-          })
+      case wa: WithAuthors =>
+        wa.authors ++ (
+        wa match {
+          case wi: WithIncludes =>
+            authorsOfInclude(wi.includes)
+          case _ =>
+            Seq.empty[AuthorInfo]
+        })
       case _ => Seq.empty[AuthorInfo]
     }
   }
 
+
   /** A function to provide the kind of thing that a DescribedValue is
-    *
-    * @param definition
-    *   The DescribedValue for which the kind is returned
-    * @return
-    *   A string for the kind of DescribedValue
-    */
+   *
+   * @param definition
+   * The DescribedValue for which the kind is returned
+   * @return
+   * A string for the kind of DescribedValue
+   */
   def kind(definition: DescribedValue): String = {
     definition match {
-      case _: EventActionA8n    => "Event -> Action Adaptation"
-      case _: EventCommandA8n   => "Event -> Command Adaptation"
+      case _: EventActionA8n => "Event -> Action Adaptation"
+      case _: EventCommandA8n => "Event -> Command Adaptation"
       case _: CommandCommandA8n => "Command -> Command Adaptation"
-      case _: Adaptor           => "Adaptor"
-      case _: Context           => "Context"
-      case _: Domain            => "Domain"
-      case _: Entity            => "Entity"
-      case _: Enumerator        => "Enumerator"
-      case _: Example           => "Example"
-      case _: Field             => "Field"
-      case _: Function          => "Function"
-      case _: Handler           => "Handler"
-      case _: Inlet             => "Inlet"
-      case _: Invariant         => "Invariant"
-      case _: Joint             => "Joint"
-      case _: Outlet            => "Outlet"
-      case _: Pipe              => "Pipe"
-      case _: Plant             => "Plant"
-      case p: Processor         => p.shape.getClass.getSimpleName
-      case _: RootContainer     => "Root"
-      case _: Saga              => "Saga"
-      case _: SagaStep          => "SagaStep"
-      case _: State             => "State"
-      case _: Term              => "Term"
-      case _: Type              => "Type"
-      case _: AskAction         => "Ask Action"
-      case _: BecomeAction      => "Become Action"
-      case _: MorphAction       => "Morph Action"
-      case _: SetAction         => "Set Action"
-      case _: PublishAction     => "Publish Action"
-      case _: TellAction        => "Tell Action"
-      case _: ArbitraryAction   => "Arbitrary Action"
-      case _: OnClause          => "On Clause"
-      case _                    => "Definition"
+      case _: Adaptor => "Adaptor"
+      case _: Context => "Context"
+      case _: Domain => "Domain"
+      case _: Entity => "Entity"
+      case _: Enumerator => "Enumerator"
+      case _: Example => "Example"
+      case _: Field => "Field"
+      case _: Function => "Function"
+      case _: Handler => "Handler"
+      case _: Inlet => "Inlet"
+      case _: Invariant => "Invariant"
+      case _: Joint => "Joint"
+      case _: Outlet => "Outlet"
+      case _: Pipe => "Pipe"
+      case _: Plant => "Plant"
+      case p: Processor => p.shape.getClass.getSimpleName
+      case _: RootContainer => "Root"
+      case _: Saga => "Saga"
+      case _: SagaStep => "SagaStep"
+      case _: State => "State"
+      case _: Term => "Term"
+      case _: Type => "Type"
+      case _: AskAction => "Ask Action"
+      case _: BecomeAction => "Become Action"
+      case _: MorphAction => "Morph Action"
+      case _: SetAction => "Set Action"
+      case _: PublishAction => "Publish Action"
+      case _: TellAction => "Tell Action"
+      case _: ArbitraryAction => "Arbitrary Action"
+      case _: OnClause => "On Clause"
+      case _ => "Definition"
     }
   }
 
   def kind(c: Container[Definition]): String = {
     c match {
-      case _: Type              => "Type"
-      case _: Enumeration       => "Enumeration"
-      case _: Aggregation       => "Aggregation"
-      case _: State             => "State"
-      case _: Entity            => "Entity"
-      case _: Context           => "Context"
-      case _: Function          => "Function"
-      case _: EventCommandA8n   => "Event -> Command Adaptation"
+      case _: Type => "Type"
+      case _: Enumeration => "Enumeration"
+      case _: Aggregation => "Aggregation"
+      case _: State => "State"
+      case _: Entity => "Entity"
+      case _: Context => "Context"
+      case _: Function => "Function"
+      case _: EventCommandA8n => "Event -> Command Adaptation"
       case _: CommandCommandA8n => "Command -> Command Adaptation"
-      case _: Adaptor           => "Adaptor"
-      case _: Processor         => "Processor"
-      case _: Plant             => "Plant"
-      case _: SagaStep          => "SagaStep"
-      case _: Saga              => "Saga"
-      case _: Story             => "Story"
-      case _: Domain            => "Domain"
-      case _: Include           => "Include"
-      case _: RootContainer     => "Root"
+      case _: Adaptor => "Adaptor"
+      case _: Processor => "Processor"
+      case _: Plant => "Plant"
+      case _: SagaStep => "SagaStep"
+      case _: Saga => "Saga"
+      case _: Story => "Story"
+      case _: Domain => "Domain"
+      case _: Include => "Include"
+      case _: RootContainer => "Root"
       case _ => throw new IllegalStateException("No other kinds of Containers")
     }
   }

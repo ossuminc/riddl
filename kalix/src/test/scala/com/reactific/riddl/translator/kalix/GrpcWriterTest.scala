@@ -33,8 +33,7 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
           .get("src", Seq("main", "proto") ++ pkgs :+ "foo.proto": _*)
         val file = testDir.resolve(path)
         val symTab = SymbolTable(root)
-        GrpcWriter(file, pkgs, Seq.empty[Definition], symTab) ->
-          root.contents.head
+        GrpcWriter(file, pkgs, Seq.empty[Definition], symTab) -> root.contents.head
     }
   }
 
@@ -119,8 +118,9 @@ class GrpcWriterTest extends ParsingTest with BeforeAndAfterAll {
         case Left(errors) => fail(errors.map(_.format).mkString("\n"))
         case Right(root) =>
           val packages = Seq("com", "example", "app", "organization", "api")
-          val path = Paths.get("src", "main", "proto")
-            .resolve(Paths.get(packages.head, packages.tail: _*))
+          val path = Paths
+            .get("src", "main", "proto")
+            .resolve(Paths.get(packages.head, packages.tail:_*))
             .resolve("Organization.proto")
           val file = testDir.resolve(path)
           val symtab = SymbolTable(root)

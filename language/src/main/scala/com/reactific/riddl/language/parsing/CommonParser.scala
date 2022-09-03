@@ -86,7 +86,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))
   ).?
 
-  def integer[u: P]: P[Long] = {
+  def integer[u:P]: P[Long] = {
     StringIn(Operators.plus, Operators.minus).? ~
       CharIn("0-9").rep(1).!.map(_.toLong)
   }
@@ -122,18 +122,20 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~ (anyIdentifier | "^".! | Punctuation.dot.!).repX(1)).map {
-      case (loc, strings) =>
-        // PathIdentifiers have empty strings to mean go up one level,
-        // and do not need a dot to indicate descent into a new definition
-        // because concatenation is sufficient.
-        val mappedStrings = strings.flatMap {
-          case s: String if s == "^" => Seq("")
-          case s: String if s == "." => Seq.empty[String]
-          case s: String             => Seq(s)
-        }
-        PathIdentifier(loc, mappedStrings)
-    }
+    P(location ~
+      (anyIdentifier | "^".! | Punctuation.dot.!).repX(1))
+      .map {
+        case (loc, strings) =>
+          // PathIdentifiers have empty strings to mean go up one level,
+          // and do not need a dot to indicate descent into a new definition
+          // because concatenation is sufficient.
+          val mappedStrings = strings.flatMap {
+            case s: String if s == "^" => Seq("")
+            case s: String if s == "." => Seq.empty[String]
+            case s: String => Seq(s)
+          }
+          PathIdentifier(loc, mappedStrings)
+      }
   }
 
   def is[u: P]: P[Unit] = {
@@ -218,13 +220,13 @@ trait CommonParser extends NoWhiteSpaceParsers {
           Option.empty[LiteralString],
           Option.empty[LiteralString],
           Option.empty[java.net.URL]
-        )) |
-          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-            (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
-      AuthorInfo(loc, id, name, email, org, title, url, brief, desc)
+        )) | (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+          literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+          (Keywords.title ~ is ~ literalString).? ~
+          (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+    ).map {
+      case (loc, id, (name, email, org, title, url), brief, desc) =>
+        AuthorInfo(loc, id, name, email, org, title, url, brief, desc)
     }
   }
 }

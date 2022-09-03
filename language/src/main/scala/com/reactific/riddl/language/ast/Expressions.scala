@@ -1,7 +1,6 @@
 package com.reactific.riddl.language.ast
 import com.reactific.riddl.language.Terminals
-import com.reactific.riddl.language.Terminals.Keywords
-import com.reactific.riddl.language.Terminals.Predefined
+import com.reactific.riddl.language.Terminals.{Keywords, Predefined}
 
 import scala.collection.immutable.ListMap
 

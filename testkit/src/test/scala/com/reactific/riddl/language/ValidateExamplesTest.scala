@@ -1,7 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.Messages.MissingWarning
-import com.reactific.riddl.language.Messages.StyleWarning
+import com.reactific.riddl.language.Messages.{MissingWarning, StyleWarning}
 import com.reactific.riddl.language.testkit.ValidatingTest
 
 /** Validate files */
@@ -15,8 +14,7 @@ class ValidateExamplesTest extends ValidatingTest {
         validateFile(label, fileName) { case (_, messages) =>
           val errors = messages.filter(_.kind.isError)
           val warnings = messages.iterator.filter(_.kind.isWarning)
-            .filterNot(_.kind == MissingWarning)
-            .filterNot(_.kind == StyleWarning).toList
+            .filterNot(_.kind == MissingWarning).filterNot(_.kind == StyleWarning).toList
           info(errors.iterator.map(_.format).mkString("\n"))
           info(warnings.iterator.map(_.format).mkString("\n"))
           errors mustBe empty
@@ -28,9 +26,8 @@ class ValidateExamplesTest extends ValidatingTest {
 
   "Enumerations" should {
     "enforce Enumerators to start with lower case" in {
-      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") {
-        case (_, messages) =>
-          assertValidationMessage(messages, "style warnings")(_.kind.isStyle)
+      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") { case (_, messages) =>
+        assertValidationMessage(messages,"style warnings")(_.kind.isStyle)
       }
     }
     "allow enumerators with values" in {

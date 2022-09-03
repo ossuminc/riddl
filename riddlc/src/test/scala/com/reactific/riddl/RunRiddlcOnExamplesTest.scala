@@ -4,8 +4,7 @@ package com.reactific.riddl
 
 import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
 
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 
 class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
 
@@ -23,24 +22,14 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
       RIDDLC.runMain(args) mustBe 0
     }
     "handle validate" in {
-      val args = Array(
-        "validate",
-        "-i",
-        inputFile,
-        "--suppress-missing-warnings",
-        "--suppress-style-warnings"
-      )
+      val args = Array("validate", "-i", inputFile,
+        "--suppress-missing-warnings", "--suppress-style-warnings")
       RIDDLC.runMain(args) mustBe 0
     }
     "handle hugo" in {
       val args = Array(
-        "hugo",
-        "-i",
-        inputFile,
-        "-o",
-        outputDir,
-        "--suppress-missing-warnings",
-        "--suppress-style-warnings"
+        "hugo", "-i", inputFile, "-o", outputDir,
+        "--suppress-missing-warnings", "--suppress-style-warnings"
       )
       RIDDLC.runMain(args) mustBe 0
     }

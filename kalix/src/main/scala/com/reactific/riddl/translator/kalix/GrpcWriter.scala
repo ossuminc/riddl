@@ -11,7 +11,8 @@ case class GrpcWriter(
   filePath: Path,
   packages: Seq[String],
   parents: Seq[Definition],
-  symTab: SymbolTable)
+  symTab: SymbolTable
+)
     extends TextFileWriter {
 
   def emitKalixFileHeader: GrpcWriter = {
@@ -87,8 +88,10 @@ case class GrpcWriter(
       case SpecificRange(_, tye2, _, _) =>
         sb.append("repeated ")
         emitTypeExpression(tye2)
-      case rt: EntityReferenceTypeExpression => sb.append(s"string ")
-      case mt: TypeRef => sb.append(s"  ${sanitizePathId(mt.id)}")
+      case rt: EntityReferenceTypeExpression =>
+        sb.append(s"string ")
+      case mt: TypeRef =>
+        sb.append(s"  ${sanitizePathId(mt.id)}")
       case MessageType(_, kind, fields) => sb
           .append("// message type not implemented\n")
       // TODO: implement message type
@@ -121,7 +124,9 @@ case class GrpcWriter(
     val id: Identifier = typ.id
     val ty: MessageType = typ.typ.asInstanceOf[MessageType]
     sb.append(s"message ${sanitizeId(id)} { // ${id.format}\n")
-    for { (field, n) <- ty.fields.drop(1).zipWithIndex } yield {
+    for {
+      (field, n) <- ty.fields.drop(1).zipWithIndex
+    } yield {
       field.typeEx match {
         // alternation | entityReferenceType | mappingType | rangeType | typeRef
         case alt: Alternation =>
@@ -140,14 +145,17 @@ case class GrpcWriter(
     this
   }
 
-  def emitTypes(types: Seq[Type]): GrpcWriter = { this }
+  def emitTypes(types: Seq[Type]): GrpcWriter = {
+    this
+  }
 
   def emitEntityTypes(entity: Entity): GrpcWriter = {
-    extractMessagePairsFromEntity(entity).flatMap { case (ref, maybe_ref) =>
-      val indep = referenceToType(ref).map(Seq(_)).getOrElse(Seq.empty)
-      val dep = maybe_ref.flatMap(referenceToType(_)).map(Seq(_))
-        .getOrElse(Seq.empty)
-      indep ++ dep
+    extractMessagePairsFromEntity(entity).flatMap {
+      case (ref, maybe_ref) =>
+        val indep = referenceToType(ref).map(Seq(_)).getOrElse(Seq.empty)
+        val dep = maybe_ref.flatMap(referenceToType(_))
+          .map(Seq(_)).getOrElse(Seq.empty)
+        indep ++ dep
     }.map { typ => emitMessageType(typ) }
     this
   }
@@ -165,13 +173,13 @@ case class GrpcWriter(
   private def referenceToType(ref: Reference[Type]): Option[Type] = {
     symTab.lookup(ref) match {
       case t :: Nil => Some(t)
-      case _        => None
+      case _ => None
     }
   }
 
   private def extractMessagePairsFromEntity(
     entity: Entity
-  ): Seq[(MessageRef, Option[MessageRef])] = {
+  ): Seq[(MessageRef,Option[MessageRef])] = {
     for {
       handler <- entity.handlers
       clause <- handler.clauses
@@ -181,10 +189,12 @@ case class GrpcWriter(
       action = then_.action
       dependentMessage = action match {
         case PublishAction(_, msg, _, _) => Some(msg.msg)
-        case ReplyAction(_, msg, _)      => Some(msg.msg)
-        case _                           => None
+        case ReplyAction(_, msg, _) => Some(msg.msg)
+        case _ => None
       }
-    } yield { independentMessage -> dependentMessage }
+    } yield {
+      independentMessage -> dependentMessage
+    }
   }
 
   private def emitEventSourcedEntityApi(
@@ -196,22 +206,23 @@ case class GrpcWriter(
     val fullName = pkgs ++ "." ++ name
     val stateName = fullName + "State"
     val pairs = extractMessagePairsFromEntity(entity)
-    val events = pairs.map(_._2).filterNot(_.isEmpty)
-      .map(mr => "\"" ++ pkgs ++ "." ++ sanitizePathId(mr.get.id) ++ "\"")
-      .mkString(",\n")
-    sb.append(s"""service ${name}Service {
-                 |  option (kalix.codegen) = {
-                 |    event_sourced_entity: {
-                 |      name: "$fullName"
-                 |      entity_type: "$name"
-                 |      state: "$stateName"
-                 |      events: [
-                 |        $events
-                 |      ]
-                 |    }
-                 |  };
-                 |
-                 |""".stripMargin)
+    val events = pairs.map(_._2).filterNot(_.isEmpty).map(mr =>
+      "\"" ++ pkgs ++ "." ++ sanitizePathId(mr.get.id) ++ "\"").mkString(",\n")
+    sb.append(
+      s"""service ${name}Service {
+         |  option (kalix.codegen) = {
+         |    event_sourced_entity: {
+         |      name: "$fullName"
+         |      entity_type: "$name"
+         |      state: "$stateName"
+         |      events: [
+         |        $events
+         |      ]
+         |    }
+         |  };
+         |
+         |""".stripMargin
+    )
 
     for {
       pair <- pairs
@@ -219,36 +230,36 @@ case class GrpcWriter(
       (inputName, outputName) = indep.messageKind match {
         case CommandKind =>
           val maybeCommandName = referenceToType(indep)
-          val maybeEventName =
-            if (dep.nonEmpty) { referenceToType(dep.get) }
-            else None
-          val commandName =
-            if (maybeCommandName.nonEmpty) {
-              sanitizeId(maybeCommandName.get.id)
-            } else { "Empty" }
-          val eventName =
-            if (maybeEventName.nonEmpty) { sanitizeId(maybeEventName.get.id) }
-            else { "Empty" }
+          val maybeEventName = if (dep.nonEmpty) {
+            referenceToType(dep.get)
+          } else None
+          val commandName = if (maybeCommandName.nonEmpty) {
+            sanitizeId(maybeCommandName.get.id)
+          } else { "Empty" }
+          val eventName = if (maybeEventName.nonEmpty) {
+            sanitizeId(maybeEventName.get.id)
+          } else { "Empty" }
           commandName -> eventName
         case QueryKind =>
           val maybeQueryName = referenceToType(indep)
-          val maybeResultName =
-            if (dep.nonEmpty) { referenceToType(dep.get) }
-            else None
-          val queryName =
-            if (maybeQueryName.nonEmpty) { sanitizeId(maybeQueryName.get.id) }
-            else { "Empty" }
-          val resultName =
-            if (maybeResultName.nonEmpty) { sanitizeId(maybeResultName.get.id) }
-            else { "Empty" }
+          val maybeResultName = if (dep.nonEmpty) {
+            referenceToType(dep.get)
+          } else None
+          val queryName = if (maybeQueryName.nonEmpty) {
+            sanitizeId(maybeQueryName.get.id)
+          } else { "Empty" }
+          val resultName = if (maybeResultName.nonEmpty) {
+            sanitizeId(maybeResultName.get.id)
+          } else { "Empty" }
           queryName -> resultName
         case EventKind =>
           val maybeEventName = referenceToType(indep)
-          val eventName =
-            if (maybeEventName.nonEmpty) sanitizeId(maybeEventName.get.id)
-            else "Empty"
+          val eventName = if (maybeEventName.nonEmpty)
+            sanitizeId(maybeEventName.get.id)
+          else "Empty"
           eventName -> "Empty"
-        case _ => require(requirement = false, "Should not be here")
+        case _ =>
+          require(requirement = false, "Should not be here")
       }
     } yield {
       sb.append(

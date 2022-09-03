@@ -38,8 +38,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     case object ShowTimes extends RIDDLCOption
 
     lazy val riddlcPath = settingKey[File]("Path to `riddlc` compiler")
-    lazy val riddlcOptions =
-      settingKey[Seq[RIDDLCOption]]("Options for the riddlc compiler")
+    lazy val riddlcOptions = settingKey[Seq[RIDDLCOption]]("Options for the riddlc compiler")
     lazy val fileToTranslate =
       settingKey[String]("Name of top level file to translate to documentation")
     lazy val outDir = settingKey[File]("Path to riddlc output directory")
@@ -61,13 +60,11 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   lazy val compileTask = taskKey[Seq[File]]("A task to invoke riddlc compiler")
 
-  override lazy val projectSettings: Seq[Setting[?]] = Seq(
-    (Compile / compile) := ((Compile / compile) dependsOn compileTask).value
-  )
+  override lazy val projectSettings: Seq[Setting[?]] =
+    Seq((Compile / compile) := ((Compile / compile) dependsOn compileTask).value)
 
   compileTask := {
-    val srcFile = (Compile / sourceDirectory).value / "riddl" /
-      (fileToTranslate.value + ".riddl")
+    val srcFile = (Compile / sourceDirectory).value / "riddl" / (fileToTranslate.value + ".riddl")
     val execPath = riddlcPath.value
     val options = riddlcOptions.value
     val output = outDir.value
@@ -93,8 +90,8 @@ object RiddlSbtPlugin extends AutoPlugin {
       case SuppressStyleWarnings   => "--suppress-style-warnings"
       case ShowTimes               => "--show-times"
     }.mkString(" ")
-    val command = riddlc.toString + " " + flags + " translate" + " -i " +
-      src.toString + " -c " + config.toString + " -o " + outDir.toString
+    val command = riddlc.toString + " " + flags + " translate" + " -i " + src.toString + " -c " +
+      config.toString + " -o " + outDir.toString
     log.info(s"Executing command: $command")
     val result: String = command !!
 

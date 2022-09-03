@@ -67,7 +67,8 @@ case class RiddlOptions(
   hugoGitCheckOptions: HugoGitCheckOptions = HugoGitCheckOptions(),
   kalixOptions: KalixOptions = KalixOptions(),
   pluginsDir: Option[Path] = Some(Path.of("plugins")),
-  commandArgs: Array[String] = Array.empty[String])
+  commandArgs: Array[String] = Array.empty[String]
+)
 
 object RiddlOptions {
 
@@ -223,14 +224,12 @@ object RiddlOptions {
           sourceURL <- optional(objCur, "source-url", Option.empty[String]) {
             cc => cc.asString.map(Option[String])
           }
-          viewPath <-
-            optional(objCur, "view-path", "blob/main/src/main/riddl") { cc =>
-              cc.asString
-            }
-          editPath <-
-            optional(objCur, "edit-path", "edit/main/src/main/riddl") { cc =>
-              cc.asString
-            }
+          viewPath <- optional(objCur, "view-path", "blob/main/src/main/riddl") {
+            cc => cc.asString
+          }
+          editPath <- optional(objCur, "edit-path", "edit/main/src/main/riddl") {
+            cc => cc.asString
+          }
           withGlossary <- optional(objCur, "with-glossary", true) { cc =>
             cc.asBoolean
           }
@@ -364,10 +363,12 @@ object RiddlOptions {
           dryRun <- optional(objCur, "dry-run", noBool)(cc =>
             cc.asBoolean.map(Option(_))
           )
-          quiet <-
-            optional(objCur, "quiet", noBool)(cc => cc.asBoolean.map(Option(_)))
-          debug <-
-            optional(objCur, "debug", noBool)(cc => cc.asBoolean.map(Option(_)))
+          quiet <- optional(objCur, "quiet", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
+          debug <- optional(objCur, "debug", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
           suppressWarnings <- optional(objCur, "suppress-warnings", noBool) {
             cc => cc.asBoolean.map(Option(_))
           }
@@ -637,7 +638,7 @@ object RiddlOptions {
       c.copy(hugoOptions = c.hugoOptions.copy(siteLogoPath = Option(s)))
     ).text("""Path, in 'static' directory to placement and use
              |of the site logo.""".stripMargin),
-    opt[String]('n', "site-logo-url").action((s, c) =>
+    opt[String] ('n', "site-logo-url").action((s, c) =>
       c.copy(hugoOptions = c.hugoOptions.copy(siteLogoURL = Option(new URL(s))))
     ).text("URL from which to copy the site logo.")
   )
@@ -719,12 +720,13 @@ object RiddlOptions {
             |address:  |http://localhost:1313/
             |""".stripMargin
         ),
-      cmd("kalix").action((_, c) => c.copy(command = Kalix)).children(
-        kalixOptionsParser*
-      ).text("""Parse and validate the input-file and then translate it into the
-               |protobuffers definitions needed to represent the input in Kalix.
-               |CURRENTLY EXPERIMENTAL & NOT WORKING WELL
-          """.stripMargin),
+      cmd("kalix").action((_, c) => c.copy(command = Kalix))
+        .children(kalixOptionsParser*).text(
+          """Parse and validate the input-file and then translate it into the
+            |protobuffers definitions needed to represent the input in Kalix.
+            |CURRENTLY EXPERIMENTAL & NOT WORKING WELL
+          """.stripMargin
+        ),
       cmd("from").action((_, c) => c.copy(command = From)).children(
         arg[File]("config-file").action { (file, ro) =>
           ro.copy(fromOptions =
@@ -770,7 +772,7 @@ object RiddlOptions {
       ).text(
         "Provide detailed, step-by-step, output detailing riddlc's actions"
       ),
-      opt[Boolean]('D', "debug").optional().action((_, c) =>
+      opt[Boolean]('D', "debug").optional().action((_,c) =>
         c.copy(commonOptions = c.commonOptions.copy(debug = true))
       ).text("Enable debug output. Only useful for riddlc developers"),
       opt[Unit]('q', "quiet").action((_, c) =>
@@ -793,19 +795,20 @@ object RiddlOptions {
       opt[Unit]('s', name = "suppress-style-warnings").action((_, c) =>
         c.copy(commonOptions = c.commonOptions.copy(showStyleWarnings = false))
       ).text("Show warnings about questionable input style. "),
-      opt[File]('P', name = "plugins-dir")
-        .action((file, c) => c.copy(pluginsDir = Some(file.toPath)))
-        .text("Load riddlc command extension plugins from this directory.")
+      opt[File]('P', name="plugins-dir").action((file,c) =>
+        c.copy(pluginsDir = Some(file.toPath))
+      ).text("Load riddlc command extension plugins from this directory.")
     ) ++ repeatableCommands ++ OParser.sequence(
       cmd("help").action((_, c) => c.copy(command = Help))
         .text("Print out how to use this program"),
       cmd("info").action((_, c) => c.copy(command = Info))
         .text("Print out build information about this program"),
       cmd("run").children(
-        arg[String]("command").required()
-          .action((n, c) => c.copy(command = Other(n))),
-        arg[Seq[String]]("args").unbounded()
-          .action((l, c) => c.copy(commandArgs = l.toArray))
+        arg[String]("command").required().action((n,c) =>
+          c.copy(command = Other(n))),
+        arg[Seq[String]]("args").unbounded().action( (l,c) =>
+          c.copy(commandArgs = l.toArray)
+        )
       ).text("Run an arbitrary command from a plugin module"),
       cmd("repeat").action((_, c) => c.copy(command = Repeat)).children(
         arg[File]("config-file").required().action((f, c) =>
@@ -841,7 +844,7 @@ object RiddlOptions {
         """This option causes the repeat command to read from the standard
           |input and when it reaches EOF (Ctrl-D is entered) then it cancels
           |the loop to exit.""".stripMargin
-      )
+      ),
     )
   }
 }

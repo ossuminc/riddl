@@ -13,10 +13,7 @@ abstract class RiddlFilesTestBase extends ValidatingTest {
     val dirKids = dirFile.listFiles().toSeq
     val (files, dir) = dirKids.partition(_.isFile())
     if (!recurse) { files.filter(_.toString.endsWith(".riddl")) }
-    else {
-      files.filter(_.toString.endsWith(".riddl")) ++
-        dir.flatMap(f => findRiddlFiles(f))
-    }
+    else { files.filter(_.toString.endsWith(".riddl")) ++ dir.flatMap(f => findRiddlFiles(f)) }
   }
 
   def doOneFile(rootDir: Path, file: File): Unit = {

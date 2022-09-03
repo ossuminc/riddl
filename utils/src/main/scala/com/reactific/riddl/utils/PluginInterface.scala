@@ -8,3 +8,4 @@ trait PluginInterface {
   def pluginName: String
   def pluginVersion: String
 }
+

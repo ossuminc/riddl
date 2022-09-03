@@ -12,10 +12,10 @@ import scala.collection.mutable
 
 //noinspection ScalaStyle
 
-/** CheckMessage This test suite runs through the files in input/check directory
-  * and validates them each as their own test case. Each .riddl file can have a
-  * .check file that lists the expected messages. If there is no .check file the
-  * .riddl file is expected to validate completely with no messages.
+/** CheckMessage This test suite runs through the files in input/check directory and validates them
+  * each as their own test case. Each .riddl file can have a .check file that lists the expected
+  * messages. If there is no .check file the .riddl file is expected to validate completely with no
+  * messages.
   */
 class CheckMessagesTest extends ValidatingTest {
 
@@ -53,8 +53,7 @@ class CheckMessagesTest extends ValidatingTest {
             val unexpectedMessages = msgSet.diff(expectedMessages).toSeq.sorted
 
             val errMsg = new mutable.StringBuilder()
-            errMsg
-              .append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
+            errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
             errMsg.append("\nBUT\n")
             if (missingMessages.nonEmpty) {
               errMsg.append(missingMessages.mkString(
@@ -87,14 +86,11 @@ class CheckMessagesTest extends ValidatingTest {
     files.foreach(file => runForFile(file, Set.empty))
     dirs.foreach { dir =>
       val dirContents = dir.listFiles()
-      val checkFiles = dirContents
-        .filter(dc => dc.isFile && dc.getName.endsWith(".check"))
-      val riddlFiles = dirContents
-        .filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
+      val checkFiles = dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".check"))
+      val riddlFiles = dirContents.filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
 
-      if (riddlFiles.isEmpty) {
-        fail(s"No riddl files in directory ${dir.getName}.")
-      } else if (riddlFiles.length > 1) {
+      if (riddlFiles.isEmpty) { fail(s"No riddl files in directory ${dir.getName}.") }
+      else if (riddlFiles.length > 1) {
         fail(
           s"Multiple root-level riddl files in directory ${dir.getName}. Unsure which to validate"
         )
@@ -105,13 +101,15 @@ class CheckMessagesTest extends ValidatingTest {
         val checkFileLines = checkFiles.iterator.flatMap { file =>
           java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
         }
-        val fixedLines = checkFileLines.filterNot { l: String =>
+        val fixedLines = checkFileLines.filterNot{ l: String =>
           l.isEmpty || l.forall(_.isWhitespace)
-        }.foldLeft(Seq.empty[String]) { (list, next) =>
+        }.foldLeft(Seq.empty[String]){ (list, next) =>
           if (next.startsWith(" ")) {
             val last = list.last + "\n" + next
             list.dropRight(1) :+ last
-          } else { list :+ next }
+          } else {
+            list :+ next
+          }
         }.toSet
 
         runForFile(riddlFile, fixedLines)

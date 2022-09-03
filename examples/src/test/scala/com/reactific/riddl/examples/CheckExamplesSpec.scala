@@ -20,7 +20,8 @@ class CheckExamplesSpec extends HugoTranslateExamplesBase {
             Files.isDirectory(root)
             val img = root.resolve("static/images/RBBQ.png")
             Files.exists(img) mustBe true
-          case _ => succeed
+          case _ =>
+            succeed
         }
       }
     }

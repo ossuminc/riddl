@@ -17,8 +17,9 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions]
   )
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
-  val roots: Map[String, String] =
-    Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
+  val roots: Map[String, String] = Map(
+    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl"
+  )
   val logger: Logger = StringLogger()
 
   def makeInputFile(partialFilePath: String): Path = {

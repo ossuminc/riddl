@@ -1,7 +1,6 @@
 package com.reactific.riddl.language
 
-import java.io.OutputStream
-import java.io.PrintStream
+import java.io.{OutputStream, PrintStream}
 
 /** A PrintStream that captures any output into a String */
 final class StringBuildingPrintStream private (

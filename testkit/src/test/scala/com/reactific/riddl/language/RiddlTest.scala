@@ -59,7 +59,7 @@ class RiddlTest extends ParsingTestBase {
         log,
         options = CommonOptions(showTimes = true)
       ) match {
-        case None    => fail(log.lines().mkString("\n"))
+        case None => fail(log.lines().mkString("\n"))
         case Some(_) => succeed
       }
     }

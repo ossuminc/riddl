@@ -5,8 +5,7 @@ package com.reactific.riddl
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 // import java.util.concurrent.TimeUnit
 
 class RunRiddlcOnArbitraryTest extends AnyWordSpec with Matchers {
@@ -27,8 +26,12 @@ class RunRiddlcOnArbitraryTest extends AnyWordSpec with Matchers {
             process.exitValue() mustBe 0 */
             val args = Array("from", config)
             RIDDLC.runMain(args) == 0
-          } else { fail(s"No configuration file at $config") }
-        } else { fail(s"No directory to change to: $cwd") }
+          } else {
+            fail(s"No configuration file at $config")
+          }
+        } else {
+          fail(s"No directory to change to: $cwd")
+        }
       }
     }
   }

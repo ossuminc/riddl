@@ -1,8 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.Identifier
-import com.reactific.riddl.language.AST.Strng
-import com.reactific.riddl.language.AST.Type
+import com.reactific.riddl.language.AST.{Identifier, Strng, Type}
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
 
@@ -12,9 +10,7 @@ class IncludeAndImportTest extends ParsingTest {
   "Include" should {
     "handle missing files" in {
       parseDomainDefinition(
-        RiddlParserInput(
-          "domain foo is { include \"unexisting\" } explained as \"foo\""
-        ),
+        RiddlParserInput("domain foo is { include \"unexisting\" } explained as \"foo\""),
         identity
       ) match {
         case Right(_) => fail("Should have gotten 'does not exist' error")
@@ -58,8 +54,7 @@ class IncludeAndImportTest extends ParsingTest {
       root.contents.head.domains.head.id.value must be("NotImplemented")
     }
     "handle missing files" in {
-      val input =
-        "domain foo is { import domain foo from \"nonexisting\" } described as \"foo\""
+      val input = "domain foo is { import domain foo from \"nonexisting\" } described as \"foo\""
       parseDomainDefinition(RiddlParserInput(input), identity) match {
         case Right(_) => fail("Should have gotten 'does not exist' error")
         case Left(errors) =>

@@ -22,9 +22,7 @@ class FunctionValidatorTest extends ValidatingTest {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _, _)))),
-                  _,
-                  _,
-                  _,
+                  _, _, _,
                   None,
                   None
                 )
