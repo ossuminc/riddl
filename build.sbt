@@ -102,6 +102,14 @@ lazy val utils = project.in(file("utils")).configure(C.withCoverage())
     )
   )
 
+lazy val commands = project.in(file("commands")).configure(C.mavenPublish)
+  .settings(
+    name := "riddl-commands",
+    scalacOptions := scala2_13_Options,
+    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
+  )
+  .dependsOn(utils % "compile->compile;test->test", language)
+
 lazy val language = project.in(file("language")).configure(C.withCoverage())
   .configure(C.mavenPublish).settings(
     name := "riddl-language",
@@ -109,12 +117,12 @@ lazy val language = project.in(file("language")).configure(C.withCoverage())
       "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
     scalacOptions := scala2_13_Options,
     libraryDependencies ++=
-      Seq(Dep.scopt, Dep.fastparse, Dep.lang3, Dep.commons_io) ++ Dep.testing
+      Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++ Dep.testing
   ).dependsOn(utils)
 
 lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
   .settings(
-    name := "riddl-language-testkit",
+    name := "riddl-testkit",
     scalacOptions := scala2_13_Options,
     libraryDependencies ++= Dep.testKitDeps
   ).dependsOn(language)
@@ -169,6 +177,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   .configure(C.mavenPublish)
   .dependsOn(
     utils % "compile->compile;test->test",
+    commands,
     language,
     kalix,
     `hugo-translator` % "compile->compile;test->test",

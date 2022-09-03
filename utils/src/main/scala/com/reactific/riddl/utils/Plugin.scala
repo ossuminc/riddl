@@ -13,7 +13,17 @@ object Plugin {
   final private [utils] val interfaceVersion: Int = 1
   final private val loading = new AtomicBoolean
 
-  def loadPluginsFrom[T <: PluginInterface : ClassTag](pluginsDir: Path): List[PluginInterface] = {
+  def loadPluginsFrom[T <: PluginInterface : ClassTag](
+    pluginsDir: Path
+  ): List[T] = {
+    val clazz = classTag[T].runtimeClass.asInstanceOf[Class[T]]
+    loadSpecificPluginsFrom[T](clazz, pluginsDir)
+  }
+
+  def loadSpecificPluginsFrom[T <: PluginInterface](
+    svcType: Class[T],
+    pluginsDir: Path
+  ): List[T] = {
     require(
       loading.compareAndSet(false, true),
       "Plugins are already loading!"
@@ -39,7 +49,6 @@ object Plugin {
     val savedClassLoader = Thread.currentThread.getContextClassLoader
     try {
       Thread.currentThread.setContextClassLoader(pluginClassLoader)
-      val svcType = classTag[T].runtimeClass.asInstanceOf[Class[T]]
       val loader = ServiceLoader.load(svcType, pluginClassLoader)
       val list = loader.iterator().asScala.toList
       val result = for {
