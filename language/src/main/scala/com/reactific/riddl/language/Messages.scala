@@ -5,7 +5,7 @@ import com.reactific.riddl.utils.Logger
 
 object Messages {
 
-  sealed trait KindOfMessage {
+  sealed trait KindOfMessage extends Ordered[KindOfMessage] {
     def isSevereError: Boolean = false
 
     def isError: Boolean = false
@@ -15,14 +15,20 @@ object Messages {
     def isMissing: Boolean = false
 
     def isStyle: Boolean = false
+
+    def isInfo: Boolean = false
+
+    def severity: Int
+
+    def compare(that: KindOfMessage): Int = {
+      this.severity - that.severity
+    }
   }
 
-  final case object MissingWarning extends KindOfMessage {
-    override def isWarning: Boolean = true
-
-    override def isMissing: Boolean = true
-
-    override def toString: String = "Missing"
+  final case object Info extends KindOfMessage {
+    override def isInfo: Boolean = true
+    override def toString: String = "Info"
+    def severity = 0
   }
 
   final case object StyleWarning extends KindOfMessage {
@@ -31,18 +37,31 @@ object Messages {
     override def isStyle: Boolean = true
 
     override def toString: String = "Style"
+    def severity = 1
+  }
+
+  final case object MissingWarning extends KindOfMessage {
+    override def isWarning: Boolean = true
+
+    override def isMissing: Boolean = true
+
+    override def toString: String = "Missing"
+
+    def severity = 2
   }
 
   final case object Warning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def toString: String = "Warning"
+    def severity = 3
   }
 
   final case object Error extends KindOfMessage {
     override def isError: Boolean = true
 
     override def toString: String = "Error"
+    def severity = 4
   }
 
   final case object SevereError extends KindOfMessage {
@@ -51,6 +70,7 @@ object Messages {
     override def isSevereError: Boolean = true
 
     override def toString: String = "Severe"
+    def severity = 5
   }
 
   case class Message(
@@ -59,7 +79,13 @@ object Messages {
     kind: KindOfMessage = Error,
     context: String = ""
   ) extends Ordered[Message] {
-    override def compare(that: Message): Int = this.loc.compare(that.loc)
+    override def compare(that: Message): Int = {
+      val comparison = this.loc.compare(that.loc)
+      if (comparison == 0) {
+        this.kind.compare(that.kind)
+      } else comparison
+    }
+
     def format: String = {
       val nl = System.lineSeparator()
       val ctxt = if (context.nonEmpty) { s"${nl}Context: $context" } else ""
@@ -109,6 +135,22 @@ object Messages {
 
   val empty: Messages = List.empty[Message]
 
+  def logMessages(messages: Messages, log: Logger): Int = {
+    messages.sorted.foreach { msg =>
+      msg.kind match {
+        case Info => log.info(msg.format)
+        case StyleWarning => log.warn(msg.format)
+        case MissingWarning => log.warn(msg.format)
+        case Warning => log.warn(msg.format)
+        case Error => log.error(msg.format)
+        case SevereError => log.severe(msg.format)
+      }
+    }
+    messages.foldLeft(0){
+      case (n, m) =>
+        Math.max(m.kind.severity, n)
+    }
+  }
   def logMessages(
     messages: Messages,
     commonOptions: CommonOptions,
@@ -120,7 +162,7 @@ object Messages {
       val missing = warns.filter(_.kind.isMissing)
       val style = warns.filter(_.kind.isStyle)
       val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
-      log.info(s"""Validation Warnings: ${warns.length}""")
+      log.info(s"""Warnings: ${warns.length}""")
       if (commonOptions.showWarnings) {
         warnings.map(_.format).foreach(log.warn(_))
       }
@@ -130,7 +172,7 @@ object Messages {
       if (commonOptions.showStyleWarnings) {
         style.map(_.format).foreach(log.warn(_))
       }
-      log.info(s"""Validation Errors: ${errors.length}""")
+      log.info(s"""Errors: ${errors.length}""")
       errors.map(_.format).foreach(log.error(_))
       log.info(s"""Severe Errors: ${severe.length}""")
       severe.map(_.format).foreach(log.severe(_))

@@ -16,7 +16,8 @@
 
 package com.reactific.riddl.prettify
 
-import com.reactific.riddl.commands.{Command, CommandOptions, PluginCommand, TranslationCommand}
+import com.reactific.riddl.commands.CommandOptions.optional
+import com.reactific.riddl.commands.{CommandOptions, TranslationCommand}
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
@@ -35,7 +36,7 @@ object PrettifyCommand {
     singleFile: Boolean = true,
     commonOptions: CommonOptions = CommonOptions()
   ) extends CommandOptions with TranslationCommand.Options {
-    def command: Command = PluginCommand("prettify")
+    def command: String = "prettify"
 
   }
 }

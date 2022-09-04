@@ -34,7 +34,8 @@ case class CommonOptions(
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
-  debug: Boolean = false
+  debug: Boolean = false,
+  pluginsDir: Option[Path] = None
 )
 
 /** Primary Interface to Riddl Language parsing and validating */

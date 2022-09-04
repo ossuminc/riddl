@@ -1,7 +1,7 @@
 package com.reactific.riddl.commands
-import com.reactific.riddl.commands.CommandPlugin.loadCommandNamed
-import com.reactific.riddl.language.{CommonOptions, Messages}
-import com.reactific.riddl.language.Messages.{Messages, errors}
+import com.reactific.riddl.commands.CommandOptions.optional
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.utils.Logger
 import pureconfig.{ConfigCursor, ConfigReader}
 import scopt.OParser
@@ -12,7 +12,7 @@ import java.nio.file.Path
 /** Unit Tests For FromCommand */
 object FromCommand {
   case class Options(
-    command: Command = PluginCommand("from"),
+    command: String = "from",
     inputFile: Option[Path] = None,
     targetCommand: Option[String] = None,
   ) extends CommandOptions
@@ -23,7 +23,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
   override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
     import builder._
     cmd("from")
-      .action((_, c) => c.copy(command = PluginCommand(pluginName)))
+      .action((_, c) => c.copy(command = pluginName))
       .children(
         arg[File]("config-file")
           .action { (file, opt) => opt.copy(inputFile = Some(file.toPath))}
@@ -62,31 +62,8 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    options.withInputFile { path =>
-      CommandPlugin.loadCandidateCommands(path).map { names =>
-        options.targetCommand match {
-          case None =>
-            val messages = names.foldLeft(Messages.empty) { (m, name) =>
-              loadCommandNamed(name).map { cmd =>
-                cmd.runFrom(path, commonOptions, log)
-              } match {
-                case Right(_) => m ++ Messages.empty
-                case Left(msgs) => m ++ msgs
-              }
-            }
-            if (messages.isEmpty) {
-              Right(())
-            } else {
-              Left(messages)
-            }
-          case Some(cmd) =>
-            if (names.contains(cmd)) {
-              CommandPlugin.runCommandNamed(cmd, path, log, commonOptions)
-            } else {
-              Left(errors(s"Command '$cmd' is not defined in $path"))
-            }
-        }
-      }
-    }
+    CommandPlugin.runFromConfig(
+      options.inputFile, options.targetCommand, commonOptions, log, pluginName
+    )
   }
 }

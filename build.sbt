@@ -56,7 +56,7 @@ lazy val riddl = (project in file(".")).settings(
   pgpSigner / skip := true,
   publishTo := Some(Resolver.defaultLocal)
 ).aggregate(
-  utils, language, testkit, hugo, `hugo-git-check`, prettify, examples,
+  utils, language, testkit, hugo, `git-check`, prettify, examples,
   doc, riddlc, `sbt-riddl`
 )
 
@@ -139,9 +139,9 @@ lazy val `hugo`: Project = project.in(file("hugo"))
   ).dependsOn(language % "compile->compile", commands, testkit % "test->compile")
   .dependsOn(utils)
 
-lazy val `hugo-git-check`: Project = project.in(file("hugo-git-check"))
+lazy val `git-check`: Project = project.in(file("git-check"))
   .configure(C.mavenPublish).settings(
-    name := "riddl-hugo-git-check-translator",
+    name := "riddl-git-check",
     Compile / unmanagedResourceDirectories += {
       baseDirectory.value / "resources"
     },
@@ -176,7 +176,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     commands,
     language,
     hugo % "compile->compile;test->test",
-    `hugo-git-check` % "compile->compile;test->test"
+    `git-check` % "compile->compile;test->test"
   ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),

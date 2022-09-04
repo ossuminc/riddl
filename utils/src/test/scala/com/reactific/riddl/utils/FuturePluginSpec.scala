@@ -10,6 +10,7 @@ class FuturePluginSpec extends PluginSpecBase (
 )  {
   "FuturePlugin" should {
     "not load" in {
+
       val exception = intercept[IllegalArgumentException] {
         Plugin.loadPluginsFrom[FutureTestPlugin](tmpDir)
       }

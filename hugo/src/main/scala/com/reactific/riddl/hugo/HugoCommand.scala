@@ -16,9 +16,8 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.commands.{
-  Command, CommandOptions, PluginCommand, TranslationCommand
-}
+import com.reactific.riddl.commands.CommandOptions.optional
+import com.reactific.riddl.commands.{CommandOptions, TranslationCommand}
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
@@ -33,7 +32,6 @@ import scala.util.control.NonFatal
 /** Unit Tests For HugoCommand */
 object HugoCommand {
   case class Options(
-    command: Command = PluginCommand("hugo"),
     inputFile: Option[Path] = None,
     outputDir: Option[Path] = None,
     projectName: Option[String] = None,
@@ -52,6 +50,7 @@ object HugoCommand {
     withTODOList: Boolean = true,
     withGraphicalTOC: Boolean = false
   ) extends CommandOptions with TranslationCommand.Options {
+    def command: String = "hugo"
     def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
     def contentRoot: Path = outputRoot.resolve("content")
     def staticRoot: Path = outputRoot.resolve("static")
@@ -70,7 +69,6 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
           |needed for hugo to translate it to a functioning web site."""
           .stripMargin
       )
-      .action((_, c) => c.copy(command = PluginCommand(pluginName)))
       .children(
         inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
         outputDir((v, c) => c.copy(outputDir = Option(v.toPath))),
@@ -175,7 +173,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
                 maybeUrl match {
                   case Right(s) => handleURL(Option(s))
                   case Left(x) =>
-                    val errs = stringifyConfigReaderErrors(x).mkString("\n")
+                    val errs = x.prettyPrint(1)
                     log.error(errs)
                     None
                 }
@@ -183,7 +181,6 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
             }
           }
         HugoCommand.Options(
-          PluginCommand(pluginName),
           Option(Path.of(inputPath)),
           Option(Path.of(outputPath)),
           Option(projectName),

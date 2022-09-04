@@ -36,9 +36,11 @@ case class Location(
   @inline def toShort: String = { s"($line:$col)"}
 
   override def compare(that: Location): Int = {
-    if (that.offset == offset) {
+    if (this.source.origin == that.source.origin) {
+      this.offset - that.offset
+    } else {
       this.source.origin.compare(that.source.origin)
-    } else { this.offset - that.offset }
+    }
   }
 
   override def equals(obj: Any): Boolean = {

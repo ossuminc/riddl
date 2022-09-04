@@ -8,7 +8,7 @@ import java.nio.file.Path
 
 object InputFileCommandPlugin {
   case class Options(
-    command: Command = Unspecified,
+    command: String = "unspecified",
     inputFile: Option[Path] = None
   ) extends CommandOptions
 }
@@ -21,7 +21,7 @@ abstract class InputFileCommandPlugin(
   def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(name).children(
-      arg[File]("input-file").action((f, opt) =>
+      opt[File]('i', "input-file").action((f, opt) =>
       opt.copy(inputFile = Some(f.toPath))
     )) -> InputFileCommandPlugin.Options()
   }
