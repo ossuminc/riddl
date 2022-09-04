@@ -57,6 +57,9 @@ case class Location(
 
 object Location {
   val empty: Location = Location(RiddlParserInput.empty)
+  def empty(input: RiddlParserInput): Location = {
+    Location(input)
+  }
   final val defaultSourceName = RiddlParserInput.empty.origin
 
   implicit def apply(): Location = {

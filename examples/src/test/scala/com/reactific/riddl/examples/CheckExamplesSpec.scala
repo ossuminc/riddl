@@ -1,7 +1,5 @@
 package com.reactific.riddl.examples
 
-import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
-
 import java.nio.file.Files
 
 /** Unit Tests To Check Documentation Examples */

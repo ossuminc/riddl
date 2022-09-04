@@ -1,7 +1,5 @@
 package docs
 
-import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
-
 /** Unit Tests To Check Documentation Examples */
 class CheckDocsTest extends HugoTranslateExamplesBase {
 

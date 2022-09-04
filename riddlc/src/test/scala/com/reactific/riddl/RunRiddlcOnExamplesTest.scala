@@ -2,8 +2,6 @@ package com.reactific.riddl
 
 /** Unit Tests To Run Riddlc On Examples */
 
-import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
-
 import java.nio.file.{Files, Path}
 
 class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {

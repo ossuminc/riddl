@@ -16,11 +16,9 @@
 
 package com.reactific.riddl
 
-import com.reactific.riddl.language.ReformatTranslator
+import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
 import com.reactific.riddl.language.Riddl
-import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckTranslator
-import com.reactific.riddl.translator.kalix.KalixTranslator
 import com.reactific.riddl.utils.{Logger, Plugin, RiddlBuildInfo, SysLogger}
 
 import scala.annotation.unused
@@ -40,7 +38,7 @@ object RIDDLC {
   val log: Logger = SysLogger()
 
   def runMain(args: Array[String]): Int = {
-    try {
+    try{
       RiddlOptions.parse(args) match {
         case Some(options) =>
           if (run(options)) { 0 }
@@ -57,7 +55,7 @@ object RIDDLC {
     }
   }
 
-  def run(options: RiddlOptions): Boolean = {
+  def run(options: CommandOptions): Boolean = {
     options.command match {
       case RiddlOptions.From         => from(options)
       case RiddlOptions.Repeat       => repeat(options)
@@ -73,14 +71,14 @@ object RIDDLC {
       case RiddlOptions.Other(name) =>
         if (options.pluginsDir.nonEmpty){
           val pluginsDir = options.pluginsDir.get
-          val loaded = Plugin.loadPluginsFrom[RiddlcCommandPlugin](pluginsDir)
+          val loaded = Plugin.loadPluginsFrom[CommandPlugin](pluginsDir)
           if (loaded.isEmpty) {
             log.error(s"No command plugins loaded from: $pluginsDir")
             false
           } else {
             loaded.find(_.pluginName == name) match {
-              case Some(pl) if pl.isInstanceOf[RiddlcCommandPlugin] =>
-                val plugin = pl.asInstanceOf[RiddlcCommandPlugin]
+              case Some(pl) if pl.isInstanceOf[CommandPlugin] =>
+                val plugin = pl.asInstanceOf[CommandPlugin]
                 val errors = plugin.validate(options.commandArgs)
                 if (errors.isEmpty) {
                   plugin.run(options)
@@ -216,17 +214,6 @@ object RIDDLC {
   }
 
   def translateHugo(options: RiddlOptions): Boolean = {
-    options.hugoOptions.inputFile match {
-      case Some(inputFile) => HugoTranslator.parseValidateTranslate(
-          inputFile,
-          log,
-          options.commonOptions,
-          options.hugoOptions
-        ).nonEmpty
-      case None =>
-        log.error("No input file specified for hugo translation")
-        false
-    }
   }
 
   def hugoGitCheck(options: RiddlOptions): Boolean = {

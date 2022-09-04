@@ -1,8 +1,7 @@
 package com.reactific.riddl.translator.hugo_git_check
 
+import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language._
-import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
-import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.utils.Logger
 import org.eclipse.jgit.api._
 import org.eclipse.jgit.api.errors.GitAPIException
@@ -19,36 +18,23 @@ import java.time.Instant
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 
-object HugoGitCheckOptions {
-  val defaultMaxLoops = 1000
-}
 
-case class HugoGitCheckOptions(
-  hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
-  gitCloneDir: Option[Path] = None,
-  relativeDir: Option[Path] = None,
-  userName: String = "",
-  accessToken: String = "")
-    extends TranslatingOptions {
-  def inputFile: Option[Path] = hugoOptions.inputFile
-  def outputDir: Option[Path] = hugoOptions.outputDir
-  def projectName: Option[String] = hugoOptions.projectName
-}
+object HugoGitCheck  {
 
-object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
-
-  private def creds(options: HugoGitCheckOptions) =
+  private def creds(options: HugoGitCheckCommand.Options) =
     new UsernamePasswordCredentialsProvider(
       options.userName,
       options.accessToken
     )
 
-  override protected def translateImpl(
+  def runWhenGitChanges(
     root: AST.RootContainer,
     log: Logger,
     commonOptions: CommonOptions,
-    options: HugoGitCheckOptions
-  ): Seq[Path] = {
+    options: HugoGitCheckCommand.Options
+  )(doit: (
+    AST.RootContainer, Logger, CommonOptions, HugoGitCheckCommand.Options
+  ) => Either[Messages,Unit]): Either[Messages,Unit] = {
     require(
       options.gitCloneDir.nonEmpty,
       s"Option 'gitCloneDir' must have a value."
@@ -65,10 +51,9 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
     val opts = prepareOptions(options)
 
     if (gitHasChanges(log, commonOptions, opts, git, when)) {
-      pullCommits(log, commonOptions, options, git)
-      val ht = HugoTranslator
-      ht.translate(root, log, commonOptions, options.hugoOptions)
-    } else { Seq.empty[Path] }
+      pullCommits(log, commonOptions, opts, git)
+      doit(root, log, commonOptions, opts)
+    } else { Right(()) }
   }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
@@ -87,7 +72,7 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
   def gitHasChanges(
     log: Logger,
     commonOptions: CommonOptions,
-    options: HugoGitCheckOptions,
+    options: HugoGitCheckCommand.Options,
     git: Git,
     minTime: FileTime
   ): Boolean = {
@@ -119,7 +104,7 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
   def pullCommits(
     log: Logger,
     commonOptions: CommonOptions,
-    options: HugoGitCheckOptions,
+    options: HugoGitCheckCommand.Options ,
     git: Git
   ): Boolean = {
     try {
@@ -133,28 +118,16 @@ object HugoGitCheckTranslator extends Translator[HugoGitCheckOptions] {
       pullCommand.call.isSuccessful
     } catch {
       case e: GitAPIException =>
-        log.error("Error when pulling latest changes:", e)
+        log.severe("Error when pulling latest changes:", e)
         false
     }
   }
 
-  def prepareOptions(options: HugoGitCheckOptions): HugoGitCheckOptions = {
-    require(options.inputFile.nonEmpty, "Empty inputFile")
-    require(options.outputDir.nonEmpty, "Empty outputDir")
-    val inFile = options.inputFile.get
-    val outDir = options.outputDir.get
-    require(Files.isRegularFile(inFile), "input is not a file")
-    require(Files.isReadable(inFile), "input is not readable")
-    if (!Files.isDirectory(outDir)) { outDir.toFile.mkdirs() }
-    require(Files.isDirectory(outDir), "output is not a directory")
-    require(Files.isWritable(outDir), "output is not writable")
-    val htc = options.hugoOptions.copy(
-      inputFile = Some(inFile),
-      outputDir = Some(outDir),
-      projectName = options.projectName,
-      eraseOutput = true
-    )
-    options.copy(hugoOptions = htc)
+  def prepareOptions(
+    options: HugoGitCheckCommand.Options
+  ): HugoGitCheckCommand.Options = {
+    require(options.inputFile.isEmpty, "inputFile not used by this command")
+    options
   }
 
   def runHugo(source: Path, log: Logger): Boolean = {

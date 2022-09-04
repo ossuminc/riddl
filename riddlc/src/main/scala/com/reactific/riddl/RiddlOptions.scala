@@ -17,10 +17,10 @@
 package com.reactific.riddl
 
 import com.reactific.riddl.RIDDLC.log
+import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.hugo.HugoTranslator
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.ReformattingOptions
-import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
-import com.reactific.riddl.translator.hugo.HugoTranslator
 import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckOptions
 import com.reactific.riddl.translator.kalix.KalixOptions
 import com.reactific.riddl.utils.RiddlBuildInfo
@@ -38,116 +38,45 @@ import scala.util.control.NonFatal
 
 /** Command Line Options for Riddl compiler program */
 
-case class FromOptions(
-  configFile: Option[Path] = None,
-  inputFile: Option[Path] = None,
-  outputDir: Option[Path] = None,
-  hugoPath: Option[Path] = None,
-  kalixPath: Option[Path] = None)
 case class InputFileOptions(inputFile: Option[Path] = None)
 
 object RepeatOptions {
   val defaultMaxLoops: Int = 1024
 }
+
 case class RepeatOptions(
   configFile: Option[Path] = None,
   refreshRate: FiniteDuration = 10.seconds,
   maxCycles: Int = RepeatOptions.defaultMaxLoops,
-  interactive: Boolean = false)
+  interactive: Boolean = false
+)
 
-case class RiddlOptions(
-  command: RiddlOptions.Command = RiddlOptions.Unspecified,
-  fromOptions: FromOptions = FromOptions(),
-  repeatOptions: RepeatOptions = RepeatOptions(),
+
+
+
+class RiddlOptions(
+  command: String,
+  val repeatOptions: RepeatOptions = RepeatOptions(),
   commonOptions: CommonOptions = CommonOptions(),
-  parseOptions: InputFileOptions = InputFileOptions(),
-  validateOptions: InputFileOptions = InputFileOptions(),
-  reformatOptions: ReformattingOptions = ReformattingOptions(),
-  hugoOptions: HugoTranslatingOptions = HugoTranslatingOptions(),
   hugoGitCheckOptions: HugoGitCheckOptions = HugoGitCheckOptions(),
-  kalixOptions: KalixOptions = KalixOptions(),
   pluginsDir: Option[Path] = Some(Path.of("plugins")),
   commandArgs: Map[String,String] = Map.empty[String,String]
 )
 
 object RiddlOptions {
 
-  sealed trait Command
-
-  final case object Unspecified extends Command
-  final case object Parse extends Command
-  final case object Validate extends Command
-  final case object Prettify extends Command
-  final case object Hugo extends Command
-  final case object HugoGitCheck extends Command
-  final case object Kalix extends Command
-  final case object Help extends Command
-  final case object From extends Command
-  final case object Repeat extends Command
-  final case object D3 extends Command
-  final case object Info extends Command
-  final case class Other(name: String) extends Command
 
   def str2Command(str: String): Command = {
     str match {
-      case "from"           => From
       case "repeat"         => Repeat
-      case "parse"          => Parse
-      case "validate"       => Validate
-      case "prettify"       => Prettify
       case "hugo-git-check" => HugoGitCheck
-      case "hugo"           => Hugo
-      case "kalix"          => Kalix
       case "d3"             => D3
       case "info"           => Info
       case _                => Unspecified
     }
   }
 
-  private def optional[T](
-    objCur: ConfigObjectCursor,
-    key: String,
-    default: T
-  )(mapIt: ConfigCursor => ConfigReader.Result[T]
-  ): ConfigReader.Result[T] = {
-    objCur.atKeyOrUndefined(key) match {
-      case stCur if stCur.isUndefined => Right[ConfigReaderFailures, T](default)
-      case stCur                      => mapIt(stCur)
-    }
-  }
 
-  implicit val coReader: ConfigReader[CommonOptions] = { (cur: ConfigCursor) =>
-    {
-      for {
-        objCur <- cur.asObjectCursor
-        showTimes <- optional(objCur, "show-times", false)(cc => cc.asBoolean)
-        verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
-        quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
-        dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
-        debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
-        showWarnings <- optional(objCur, "show-warnings", true) { cc =>
-          cc.asBoolean
-        }
-        showStyleWarnings <-
-          optional(objCur, "show-style-warnings", false) { cc => cc.asBoolean }
-        showMissingWarnings <-
-          optional(objCur, "show-missing-warnings", false) { cc =>
-            cc.asBoolean
-          }
-      } yield {
-        CommonOptions(
-          showTimes,
-          verbose,
-          dryRun,
-          quiet,
-          showWarnings,
-          showMissingWarnings,
-          showStyleWarnings,
-          debug
-        )
-      }
-    }
-  }
 
   implicit val ifReader: ConfigReader[InputFileOptions] = {
     (cur: ConfigCursor) =>
@@ -160,164 +89,6 @@ object RiddlOptions {
       }
   }
 
-  implicit val reformatReader: ConfigReader[ReformattingOptions] = {
-    (cur: ConfigCursor) =>
-      {
-        for {
-          objCur <- cur.asObjectCursor
-          inputPathRes <- objCur.atKey("input-file")
-          inputPath <- inputPathRes.asString
-          outputPathRes <- objCur.atKey("output-dir")
-          outputPath <- outputPathRes.asString
-          projectName <-
-            optional(objCur, "project-name", "No Project Name Specified") {
-              cur => cur.asString
-            }
-          singleFileRes <- objCur.atKey("single-file")
-          singleFile <- singleFileRes.asBoolean
-        } yield ReformattingOptions(
-          Option(Path.of(inputPath)),
-          Option(Path.of(outputPath)),
-          Option(projectName),
-          singleFile
-        )
-      }
-  }
-
-  implicit val htoReader: ConfigReader[HugoTranslatingOptions] = {
-    (cur: ConfigCursor) =>
-      {
-        for {
-          objCur <- cur.asObjectCursor
-          inputPathRes <- objCur.atKey("input-file")
-          inputPath <- inputPathRes.asString
-          outputPathRes <- objCur.atKey("output-dir")
-          outputPath <- outputPathRes.asString
-          eraseOutput <- optional(objCur, "erase-output", true) { cc =>
-            cc.asBoolean
-          }
-          projectName <- optional(objCur, "project-name", "No Project Name") {
-            cur => cur.asString
-          }
-          siteTitle <- optional(objCur, "site-title", "No Site Title") { cur =>
-            cur.asString
-          }
-          siteDescription <-
-            optional(objCur, "site-description", "No Site Description") { cur =>
-              cur.asString
-            }
-          siteLogoPath <-
-            optional(objCur, "site-logo-path", "static/somewhere") { cc =>
-              cc.asString
-            }
-          siteLogoURL <-
-            optional(objCur, "site-logo-url", Option.empty[String]) { cc =>
-              cc.asString.map(Option[String])
-            }
-          baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
-            cc.asString.map(Option[String])
-          }
-          themesMap <-
-            optional(objCur, "themes", Map.empty[String, ConfigCursor]) { cc =>
-              cc.asMap
-            }
-          sourceURL <- optional(objCur, "source-url", Option.empty[String]) {
-            cc => cc.asString.map(Option[String])
-          }
-          viewPath <- optional(objCur, "view-path", "blob/main/src/main/riddl") {
-            cc => cc.asString
-          }
-          editPath <- optional(objCur, "edit-path", "edit/main/src/main/riddl") {
-            cc => cc.asString
-          }
-          withGlossary <- optional(objCur, "with-glossary", true) { cc =>
-            cc.asBoolean
-          }
-          withToDoList <- optional(objCur, "with-todo-list", true) { cc =>
-            cc.asBoolean
-          }
-          withGraphicalTOC <-
-            optional(objCur, "with-graphical-toc", false) { cc => cc.asBoolean }
-        } yield {
-          def handleURL(url: Option[String]): Option[URL] = {
-            if (url.isEmpty || url.get.isEmpty) { None }
-            else {
-              try { Option(new java.net.URL(url.get)) }
-              catch {
-                case NonFatal(x) =>
-                  log.warn(s"Malformed URL: ${x.toString}")
-                  None
-              }
-            }
-          }
-
-          val themes =
-            if (themesMap.isEmpty) {
-              Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url))
-            } else {
-              val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
-              themesEither.map { case (name, maybeUrl) =>
-                name -> {
-                  maybeUrl match {
-                    case Right(s) => handleURL(Option(s))
-                    case Left(x) =>
-                      val errs = stringifyConfigReaderErrors(x).mkString("\n")
-                      log.error(errs)
-                      None
-                  }
-                }
-              }
-            }
-          HugoTranslatingOptions(
-            Option(Path.of(inputPath)),
-            Option(Path.of(outputPath)),
-            eraseOutput,
-            Option(projectName),
-            Option(siteTitle),
-            Option(siteDescription),
-            Option(siteLogoPath),
-            handleURL(siteLogoURL),
-            handleURL(baseURL),
-            themes,
-            handleURL(sourceURL),
-            Option(editPath),
-            Option(viewPath),
-            withGlossary,
-            withToDoList,
-            withGraphicalTOC
-          )
-        }
-      }
-  }
-
-  implicit val hugoGitCheckReader: ConfigReader[HugoGitCheckOptions] = {
-    (cur: ConfigCursor) =>
-      {
-        for {
-          objCur <- cur.asObjectCursor
-          hugo <- optional[HugoTranslatingOptions](
-            objCur,
-            "hugo",
-            HugoTranslatingOptions()
-          ) { cur => htoReader.from(cur) }
-          gitCloneDir <-
-            optional[File](objCur, "git-clone-dir", new File(".")) { cc =>
-              cc.asString.map(s => new File(s))
-            }
-          userNameRes <- objCur.atKey("user-name")
-          userNameStr <- userNameRes.asString
-          accessTokenRes <- objCur.atKey("access-token")
-          accessTokenStr <- accessTokenRes.asString
-        } yield {
-          HugoGitCheckOptions(
-            hugoOptions = hugo,
-            gitCloneDir = Some(gitCloneDir.toPath),
-            userName = userNameStr,
-            accessToken = accessTokenStr
-          )
-        }
-      }
-  }
 
   implicit val kalixReader: ConfigReader[KalixOptions] = {
     (cur: ConfigCursor) =>
@@ -413,7 +184,7 @@ object RiddlOptions {
             cur => kalixReader.from(cur)
           }
         } yield {
-          RiddlOptions(
+          new RiddlOptions(
             str2Command(commandStr),
             FromOptions(),
             RepeatOptions(),
@@ -551,19 +322,10 @@ object RiddlOptions {
     }
   }
 
-  def stringifyConfigReaderErrors(errors: ConfigReaderFailures): Seq[String] = {
-    errors.toList.map { crf =>
-      val location = crf.origin match {
-        case Some(origin) => origin.description
-        case None         => "unknown location"
-      }
-      s"At $location: ${crf.description}"
-    }
-  }
 
   def usage: String = { OParser.usage(parser, OneColumn) }
 
-  def parse(args: Array[String]): Option[RiddlOptions] = {
+  def parse(args: Array[String]): Option[CommandOptions] = {
     val setup: OParserSetup = new DefaultOParserSetup {
       override def showUsageOnError: Option[Boolean] = Option(false)
       override def renderingMode: RenderingMode.TwoColumns.type =
@@ -580,68 +342,31 @@ object RiddlOptions {
       override def terminate(exitState: Either[String, Unit]): Unit = ()
     }
 
-    val saneOptions = args.map(_.trim).filterNot(_.isEmpty)
+    val saneOptions = args.map(_.trim).filter(_.nonEmpty)
+    val pluginOptions = getPluginOptions
+    val combined = OParser.sequence(
+      RiddlOptions.parser, pluginOptions
+    )
     val (result, effects) = OParser
-      .runParser(RiddlOptions.parser, saneOptions, RiddlOptions(), setup)
+      .runParser[CommandOptions](combined, saneOptions, CommandOptions.empty, setup)
     OParser.runEffects(effects, dontTerminate)
     result
   }
 
-  val builder: OParserBuilder[RiddlOptions] = OParser.builder[RiddlOptions]
-  type OptionPlacer[V] = (V, RiddlOptions) => RiddlOptions
-
-  import builder.*
-
-  def inputFile(f: OptionPlacer[File]): OParser[File, RiddlOptions] = {
-    opt[File]('i', "input-file").optional().action((v, c) => f(v, c))
-      .text("required riddl input file to read")
+  def getPluginOptions: OParser[Unit, CommandOptions] = {
+    val dir = Path.of("plugins")
+    val plugins = utils.Plugin
+      .loadPluginsFrom[CommandPlugin[CommandOptions]](dir)
+    val list = for {
+      plugin <- plugins
+    } yield {
+      plugin.getOptions(log)
+    }
+    OParser.sequence(list.head._1, list.tail.map(_._1)*)
   }
 
-  def outputDir(f: OptionPlacer[File]): OParser[File, RiddlOptions] = {
-    opt[File]('o', "output-dir").optional().action((v, c) => f(v, c))
-      .text("required output directory for the generated output")
-  }
 
-  private val hugoOptionsParser = Seq(
-    inputFile((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(inputFile = Option(v.toPath)))
-    ),
-    outputDir((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(outputDir = Option(v.toPath)))
-    ),
-    opt[String]('p', "project-name").optional().action((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(projectName = Option(v)))
-    ).text("optional project name to associate with the generated output")
-      .validate(n =>
-        if (n.isBlank) {
-          Left("optional project-name cannot be blank or empty")
-        } else { Right(()) }
-      ),
-    opt[Boolean]('e', name = "erase-output")
-      .text("Erase entire output directory before putting out files"),
-    opt[URL]('b', "base-url").optional().action((v, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Some(v)))
-    ).text("Optional base URL for root of generated http URLs"),
-    opt[Map[String, String]]('t', name = "themes").action((t, c) =>
-      c.copy(hugoOptions =
-        c.hugoOptions
-          .copy(themes = t.toSeq.map(x => x._1 -> Some(new URL(x._2))))
-      )
-    ),
-    opt[URL]('s', name = "source-url").action((u, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(baseUrl = Option(u)))
-    ).text("URL to the input file's Git Repository"),
-    opt[String]('h', name = "edit-path").action((h, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(editPath = Option(h)))
-    ).text("Path to add to source-url to allow editing"),
-    opt[String]('m', "site-logo-path").action((s, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(siteLogoPath = Option(s)))
-    ).text("""Path, in 'static' directory to placement and use
-             |of the site logo.""".stripMargin),
-    opt[String] ('n', "site-logo-url").action((s, c) =>
-      c.copy(hugoOptions = c.hugoOptions.copy(siteLogoURL = Option(new URL(s))))
-    ).text("URL from which to copy the site logo.")
-  )
+
 
   private val kalixOptionsParser = Seq(
     inputFile((v, c) =>
@@ -682,27 +407,6 @@ object RiddlOptions {
         ))
         .text("""Parse the input and if successful validate the resulting model.
                 |No translation is done on the input.""".stripMargin),
-      cmd("reformat").action((_, c) => c.copy(command = Prettify)).children(
-        inputFile((v, c) =>
-          c.copy(reformatOptions = c.reformatOptions.copy(Option(v.toPath)))
-        ),
-        outputDir((v, c) =>
-          c.copy(reformatOptions =
-            c.reformatOptions.copy(outputDir = Option(v.toPath))
-          )
-        ),
-        opt[Boolean]('s', name = "single-file").action((v, c) =>
-          c.copy(reformatOptions = c.reformatOptions.copy(singleFile = v))
-        ).text("""Resolve all includes and imports and write a single file with the same
-                 |file name as the input placed in the out-dir""".stripMargin)
-      ).text("""Parse and validate the input-file and then reformat it to a
-               |standard layout written to the output-dir.  """.stripMargin),
-      cmd("hugo").action((_, c) => c.copy(command = Hugo))
-        .children(hugoOptionsParser*).text(
-          """Parse and validate the input-file and then translate it into the input
-            |needed for hugo to translate it to a functioning web site."""
-            .stripMargin
-        ),
       cmd("hugo-git-check").action((_, c) => c.copy(command = HugoGitCheck))
         .children(
           arg[File]("git-clone-dir").action((f, c) =>
@@ -720,35 +424,9 @@ object RiddlOptions {
             |address:  |http://localhost:1313/
             |""".stripMargin
         ),
-      cmd("kalix").action((_, c) => c.copy(command = Kalix))
-        .children(kalixOptionsParser*).text(
-          """Parse and validate the input-file and then translate it into the
-            |protobuffers definitions needed to represent the input in Kalix.
-            |CURRENTLY EXPERIMENTAL & NOT WORKING WELL
-          """.stripMargin
-        ),
-      cmd("from").action((_, c) => c.copy(command = From)).children(
-        arg[File]("config-file").action { (file, ro) =>
-          ro.copy(fromOptions =
-            ro.fromOptions.copy(configFile = Some(file.toPath))
-          )
-        }.text("A HOCON configuration file with riddlc options"),
-        inputFile((v, c) =>
-          c.copy(fromOptions = c.fromOptions.copy(inputFile = Option(v.toPath)))
-        ),
-        outputDir((v, c) =>
-          c.copy(fromOptions = c.fromOptions.copy(outputDir = Option(v.toPath)))
-        ),
-        opt[File]('H', "hugo-path").optional().action((v, c) =>
-          c.copy(fromOptions = c.fromOptions.copy(hugoPath = Option(v.toPath)))
-        ).text("optional path to the hugo web site generator"),
-        opt[File]('K', "kalix-path").optional().action((v, c) =>
-          c.copy(fromOptions = c.fromOptions.copy(kalixPath = Option(v.toPath)))
-        ).text("optional path to the kalix program")
-      ).text("Load riddlc options from a config file")
     )
 
-  private val parser: OParser[Unit, RiddlOptions] = {
+  private val parser: OParser[Unit, CommandOptions] = {
     OParser.sequence(
       programName("riddlc"),
       head(
@@ -805,7 +483,7 @@ object RiddlOptions {
         .text("Print out build information about this program"),
       cmd("run").children(
         arg[String]("command").required().action((n,c) =>
-          c.copy(command = Other(n))),
+          c.copy(command = Plugin(n))),
         arg[Map[String,String]]("args").unbounded().action( (m,c) =>
           c.copy(commandArgs = m)
         )

@@ -1,31 +1,39 @@
 package com.reactific.riddl.translator.git
 
-import com.reactific.riddl.language.Translator
-import com.reactific.riddl.language.testkit.TranslatingTestBase
-import com.reactific.riddl.translator.hugo.HugoTranslatingOptions
-import com.reactific.riddl.translator.hugo_git_check.{HugoGitCheckOptions, HugoGitCheckTranslator}
+import com.reactific.riddl.language.testkit.RunCommandOnExamplesTest
+import com.reactific.riddl.translator.hugo_git_check.HugoGitCheckCommand
+import org.scalatest.Assertion
 
 import java.nio.file.Path
 
-class HugoGitCheckTranslatorTest extends TranslatingTestBase[HugoGitCheckOptions] {
+class HugoGitCheckTranslatorTest
+  extends RunCommandOnExamplesTest[
+    HugoGitCheckCommand.Options, HugoGitCheckCommand
+  ]("git-check", Path.of(".")) {
 
-  override val output: String = "hugo-git-check/target/test"
+  val output: String = "hugo-git-check/target/test"
 
-  override def makeTranslatorOptions(fileName: String): HugoGitCheckOptions = {
-    val hugoOptions = HugoTranslatingOptions(
-      inputFile = Some(makeInputFile(fileName)),
-      outputDir = Some(Path.of(output))
-    )
+  def makeTranslatorOptions(fileName: String): HugoGitCheckCommand.Options = {
     val gitCloneDir = Path.of(".").toAbsolutePath.getParent
-    val relativeDir = Path.of(directory).resolve(fileName).getParent
-    HugoGitCheckOptions(
-      hugoOptions, Some(gitCloneDir), Some(relativeDir)
+    val relativeDir = Path.of(".").resolve(fileName).getParent
+    HugoGitCheckCommand.Options(
+      Some(gitCloneDir), Some(relativeDir)
     )
   }
 
-  override def getTranslator: Translator[HugoGitCheckOptions] = HugoGitCheckTranslator
+  override def onSuccess(
+    commandName: String,
+    caseName: String,
+    configFile: Path,
+    outDir: Path
+  ): Assertion = {
+    succeed
+  }
 
-  "HugoGitCheckTranslator" should {
-    runTests("HugoGitCheckTranslatorTest")
+
+  "HugoGitCheck" should {
+    "run stuff when git changes" in {
+      runTests()
+    }
   }
 }

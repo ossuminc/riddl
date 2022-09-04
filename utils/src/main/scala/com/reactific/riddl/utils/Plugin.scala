@@ -13,8 +13,12 @@ object Plugin {
   final private [utils] val interfaceVersion: Int = 1
   final private val loading = new AtomicBoolean
 
+  final private val pluginDirEnvVarName = "RIDDL_PLUGINS_DIR"
+  final val pluginsDir: Path =
+    Path.of(Option(System.getenv(pluginDirEnvVarName)).getOrElse("plugins"))
+
   def loadPluginsFrom[T <: PluginInterface : ClassTag](
-    pluginsDir: Path
+    pluginsDir: Path = pluginsDir
   ): List[T] = {
     val clazz = classTag[T].runtimeClass.asInstanceOf[Class[T]]
     loadSpecificPluginsFrom[T](clazz, pluginsDir)
@@ -22,7 +26,7 @@ object Plugin {
 
   def loadSpecificPluginsFrom[T <: PluginInterface](
     svcType: Class[T],
-    pluginsDir: Path
+    pluginsDir: Path = pluginsDir
   ): List[T] = {
     require(
       loading.compareAndSet(false, true),
