@@ -36,7 +36,7 @@ object PrettifyCommand {
     singleFile: Boolean = true,
     commonOptions: CommonOptions = CommonOptions()
   ) extends CommandOptions with TranslationCommand.Options {
-    def command: String = "prettify"
+    def command: String = "t"
 
   }
 }
@@ -57,10 +57,10 @@ class PrettifyCommand extends
       .map(_ => ())
   }
 
-  override def getOptions(): (OParser[Unit, Options], Options) =  {
+  override def getOptions: (OParser[Unit, Options], Options) =  {
     val builder = OParser.builder[Options]
     import builder._
-    cmd("reformat").children(
+    cmd(pluginName).children(
       inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
       outputDir((v, c) => c.copy(outputDir = Option(v.toPath))),
       opt[Boolean]('s', name = "single-file")
@@ -75,11 +75,11 @@ class PrettifyCommand extends
         |standard layout written to the output-dir.  """.stripMargin
     ) -> PrettifyCommand.Options()
   }
-  override def getConfigReader():
+  override def getConfigReader:
   ConfigReader[Options] = { (cur: ConfigCursor) =>
     for {
       objCur <- cur.asObjectCursor
-      cmdCur <- objCur.atKey("prettify")
+      cmdCur <- objCur.atKey(pluginName)
       content <- cmdCur.asObjectCursor
       inputPathRes <- content.atKey("input-file")
       inputPath <- inputPathRes.asString

@@ -39,15 +39,26 @@ object RIDDLC {
       common match {
         case Some(commonOptions) =>
           if (remaining.isEmpty) {
-            log.error("No command argument was provided")
+            if (!commonOptions.quiet) {
+              log.error("No command argument was provided")
+            }
             1
           } else {
             val name = remaining.head
+            if (commonOptions.dryRun) {
+              if (!commonOptions.quiet) {
+                println(s"Would have executed: ${remaining.mkString(" ")}")
+              }
+            }
             CommandPlugin.
               runCommandWithArgs(name, remaining, log, commonOptions) match {
               case Right(_) => 0
               case Left(messages) =>
-                Messages.logMessages(messages, log) + 1
+                if (commonOptions.quiet) {
+                  highestSeverity(messages) + 1
+                } else {
+                  Messages.logMessages(messages, log) + 1
+                }
             }
           }
         case None =>

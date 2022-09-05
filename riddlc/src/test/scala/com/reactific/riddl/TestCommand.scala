@@ -8,17 +8,20 @@ import scopt.OParser
 
 import java.nio.file.Path
 
-case class TestOptions(
-  command: String = "test",
-  args: Map[String,String] = Map.empty[String,String],
-  commonOptions: CommonOptions = CommonOptions(),
-) extends CommandOptions {
-  override def inputFile: Option[Path] = None
+object TestCommand {
+  case class Options(
+    command: String = "test",
+    args: Map[String,String] = Map.empty[String,String],
+    commonOptions: CommonOptions = CommonOptions(),
+  ) extends CommandOptions {
+    override def inputFile: Option[Path] = None
+  }
 }
 
 /** A pluggable command for testing plugin commands! */
-class TestCommand extends CommandPlugin[TestOptions]("test") {
-  override def getOptions(): (OParser[Unit, TestOptions], TestOptions) = {
+class TestCommand extends CommandPlugin[TestCommand.Options]("test") {
+  import TestCommand.Options
+  override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName)
       .action( (_,to) => to.copy(command = pluginName))
@@ -29,11 +32,11 @@ class TestCommand extends CommandPlugin[TestOptions]("test") {
             if (map.keys.forall(_.nonEmpty)) { Right(()) }
             else { Left("All argument keys must be nonempty") }
           }
-      ) -> TestOptions()
+      ) -> Options()
   }
 
   override def run(
-    options: TestOptions,
+    options: Options,
     common: CommonOptions,
     log: Logger
   ): Either[Messages,Unit] = {
@@ -44,5 +47,5 @@ class TestCommand extends CommandPlugin[TestOptions]("test") {
     Right(())
   }
 
-  override def getConfigReader(): ConfigReader[TestOptions] = ???
+  override def getConfigReader: ConfigReader[Options] = ???
 }

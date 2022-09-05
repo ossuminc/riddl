@@ -37,7 +37,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
    * @param log A logger to use for output (discouraged)
    * @return A pair: the OParser and the default values for OPT
    */
-  override def getOptions(): (OParser[Unit, Options], Options) = {
+  override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("repeat")
       .text(
@@ -51,7 +51,8 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
           .required()
           .action((f, c) => c.copy(inputFile = Some(f.toPath)))
           .text("The path to the configuration file that should be repeated"),
-        opt[Option[String]]("target-command")
+        arg[Option[String]]("target-command")
+          .required()
           .action { (cmd, opt) => opt.copy(targetCommand = cmd) }
           .text("The name of the command to select from the configuration file"),
         arg[FiniteDuration]("refresh-rate")
@@ -89,7 +90,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
   }
 
 
-  override def getConfigReader(): ConfigReader[Options] = ???
+  override def getConfigReader: ConfigReader[Options] = ???
 
   def allowCancel(options: Options): (Future[Boolean], () => Boolean) = {
     if (!options.interactive) {Future.successful(false) -> (() => false)}
@@ -102,7 +103,6 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
       }
     }
   }
-
 
   /**
    * Execute the command given the options. Error should be returned as

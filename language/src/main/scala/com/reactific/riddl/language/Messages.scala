@@ -135,6 +135,13 @@ object Messages {
 
   val empty: Messages = List.empty[Message]
 
+  def highestSeverity(messages: Messages): Int = {
+    messages.foldLeft(0) {
+      case (n, m) =>
+        Math.max(m.kind.severity, n)
+    }
+  }
+
   def logMessages(messages: Messages, log: Logger): Int = {
     messages.sorted.foreach { msg =>
       msg.kind match {
@@ -146,10 +153,7 @@ object Messages {
         case SevereError => log.severe(msg.format)
       }
     }
-    messages.foldLeft(0){
-      case (n, m) =>
-        Math.max(m.kind.severity, n)
-    }
+    highestSeverity(messages)
   }
   def logMessages(
     messages: Messages,

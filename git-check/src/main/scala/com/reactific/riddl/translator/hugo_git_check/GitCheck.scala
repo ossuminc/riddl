@@ -1,9 +1,9 @@
 package com.reactific.riddl.translator.hugo_git_check
 
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language._
+import com.reactific.riddl.language.*
 import com.reactific.riddl.utils.Logger
-import org.eclipse.jgit.api._
+import org.eclipse.jgit.api.*
 import org.eclipse.jgit.api.errors.GitAPIException
 import org.eclipse.jgit.lib.ProgressMonitor
 import org.eclipse.jgit.merge.MergeStrategy
@@ -16,7 +16,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 
 object GitCheck  {

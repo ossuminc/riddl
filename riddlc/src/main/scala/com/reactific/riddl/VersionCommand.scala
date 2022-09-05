@@ -21,15 +21,15 @@ object VersionCommand {
 class VersionCommand
   extends CommandPlugin[VersionCommand.Options]("version") {
   import VersionCommand.Options
-  override def getOptions(): (OParser[Unit, Options], Options) = {
+  override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd("version")
+    cmd(pluginName)
       .action((_, c) => c.copy(command = pluginName))
       .text("Print the version of riddlc and exits")
       -> VersionCommand.Options()
   }
 
-  override def getConfigReader():
+  override def getConfigReader:
   ConfigReader[VersionCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor

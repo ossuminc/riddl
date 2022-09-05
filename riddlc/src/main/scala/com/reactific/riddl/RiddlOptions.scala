@@ -31,6 +31,11 @@ import java.util.Calendar
 
 object RiddlOptions {
 
+  def about: String = {
+    blurb ++ System.lineSeparator() ++
+      "Extensive Documentation here: https://riddl.tech"
+  }
+
   def usage: String = {
     val common = OParser.usage(commonOptionsParser, OneColumn)
     val commands = OParser.usage(commandsParser, OneColumn)
@@ -106,11 +111,23 @@ object RiddlOptions {
     val list = for {
       plugin <- plugins
     } yield {
-      plugin.pluginName -> plugin.getOptions()
+      plugin.pluginName -> plugin.getOptions
     }
     val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
     OParser.sequence(parsers.head, parsers.tail*)
   }
+
+  val year: Int = Calendar.getInstance().get(Calendar.YEAR)
+  val start: String = RiddlBuildInfo.startYear
+  val blurb: String =
+  s"""RIDDL Compiler © $start-$year Ossum Inc. All rights reserved."
+    |Version: ${RiddlBuildInfo.version}
+    |
+    |This program parses, validates and translates RIDDL sources to other kinds
+    |of documents. RIDDL is a language for system specification based on Domain
+    |Drive Design, Reactive Architecture, and distributed system principles.
+    |
+    |""".stripMargin
 
   private val commonOptionsParser: OParser[Unit, CommonOptions] = {
     val builder: OParserBuilder[CommonOptions] = OParser.builder[CommonOptions]
@@ -119,26 +136,17 @@ object RiddlOptions {
 
     OParser.sequence(
       programName("riddlc"),
-      head(
-        s"RIDDL Compiler © ${RiddlBuildInfo.startYear}-${
-          Calendar.getInstance().get(Calendar.YEAR)
-        } Ossum Inc. All rights reserved.",
-        "\nVersion: ",
-        RiddlBuildInfo.version,
-        "\n\nThis program parses, validates and translates RIDDL sources to other kinds",
-        "\nof documents. RIDDL is a language for system specification based on Domain",
-        "\nDrive Design, Reactive Architecture, and Agile principles.\n"
-      ),
+      head(blurb),
       opt[Unit]('t', name = "show-times").optional()
         .action((_, c) => c.copy(showTimes = true))
         .text("Show compilation phase execution times "),
-      opt[Boolean]('d', "dry-run").optional()
+      opt[Unit]('d', "dry-run").optional()
         .action((_, c) => c.copy(dryRun = true))
         .text("go through the motions but don't write any changes"),
       opt[Unit]('v', "verbose").optional()
         .action((_, c) => c.copy(verbose = true))
        .text("Provide verbose output detailing riddlc's actions"),
-      opt[Boolean]('D', "debug").optional()
+      opt[Unit]('D', "debug").optional()
         .action((_,c) => c.copy(debug = true))
        .text("Enable debug output. Only useful for riddlc developers"),
       opt[Unit]('q', "quiet").optional()

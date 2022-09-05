@@ -27,10 +27,10 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
 ) {
   import GitCheckCommand.Options
 
-  override def getOptions()
+  override def getOptions
   : (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
-    import builder._
+    import builder.*
     OParser.sequence(cmd("git-check")
       .children(
         opt[File]("git-clone-dir")
@@ -80,7 +80,7 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
       }
   }
 
-  override def getConfigReader(): ConfigReader[Options] = hugoGitCheckReader
+  override def getConfigReader: ConfigReader[Options] = hugoGitCheckReader
 
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug

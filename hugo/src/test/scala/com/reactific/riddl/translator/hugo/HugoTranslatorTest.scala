@@ -54,7 +54,8 @@ class HugoTranslatorTest extends
     val logger = ProcessLogger(fout, ferr)
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
-    val proc = Process("hugo", cwd = Option(cwdFile))
+    val command = "hugo"
+    val proc = Process(command, cwd = Option(cwdFile))
     proc.!(logger) match {
       case 0 =>
         if (hadErrorOutput) {
@@ -63,7 +64,10 @@ class HugoTranslatorTest extends
           fail("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
         } else { succeed }
       case rc: Int =>
-        fail(s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  "))
+        fail(s"hugo run failed with rc=$rc:\n  " ++
+          lineBuffer.mkString("\n ", "\n  ", "\n") ++
+          s"cwd=$cwdFile, command=$command\n"
+        )
     }
   }
 }
