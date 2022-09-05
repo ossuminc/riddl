@@ -53,20 +53,19 @@ class CheckMessagesTest extends ValidatingTest {
             val unexpectedMessages = msgSet.diff(expectedMessages).toSeq.sorted
 
             val errMsg = new mutable.StringBuilder()
-            errMsg.append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
+            errMsg.append(msgSet.mkString("Got these messages:\n\t",
+              "\n\t", ""))
             errMsg.append("\nBUT\n")
             if (missingMessages.nonEmpty) {
               errMsg.append(missingMessages.mkString(
                 "Expected to find the following messages and did not:\n\t",
-                "\n\t",
-                "\n"
+                "\n\t", "\n"
               ))
             }
             if (unexpectedMessages.nonEmpty) {
               errMsg.append(unexpectedMessages.mkString(
                 "Found the following messages which were not expected: \n\t",
-                "\n\t",
-                "\n"
+                "\n\t", "\n"
               ))
             }
             fail(errMsg.toString())
@@ -101,16 +100,17 @@ class CheckMessagesTest extends ValidatingTest {
         val checkFileLines = checkFiles.iterator.flatMap { file =>
           java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
         }
-        val fixedLines = checkFileLines.filterNot{ l: String =>
-          l.isEmpty || l.forall(_.isWhitespace)
-        }.foldLeft(Seq.empty[String]){ (list, next) =>
-          if (next.startsWith(" ")) {
-            val last = list.last + "\n" + next
-            list.dropRight(1) :+ last
-          } else {
-            list :+ next
+        val fixedLines = checkFileLines
+          .filterNot{ l: String =>l.isEmpty}
+          .foldLeft(Seq.empty[String]){ (list, next) =>
+            if (next.startsWith(" ")) {
+              val last = list.last + "\n" + next.drop(1)
+              list.dropRight(1) :+ last
+            } else {
+              list :+ next
+            }
           }
-        }.toSet
+          .toSet
 
         runForFile(riddlFile, fixedLines)
       }
