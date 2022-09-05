@@ -11,11 +11,12 @@ This is a "how to" guide on releasing the software.
 Make sure everything tests correctly from a clean start. 
 ```shell
 > cd riddl # top level directory of repository 
-> sbt "clean ; test"
+> sbt "clean ; test ; test ; test"
 ...
 [info] All tests passed.
 ```
-If all tests do not pass, stop and fix the software
+If all tests do not pass, stop and fix the software. Note that the tests are run
+three times quickly. This tends to expose parallelism issues. 
 
 ## Stage
 ```shell
@@ -27,8 +28,47 @@ If all tests do not pass, stop and fix the software
 If this task does not successfully complete, stop and fix the documentation which
 is likely to be references to Scala classes in the docs between `[[` and `]]`
 
+## Test On A Major Project
+Now that riddlc is staged, run the `hugo` command on a large multi-file 
+specification such as
+[the Improving App](https://github.com/improving-ottawa/improving-app-riddl). 
+This will expose any language change issues. If this doesn't pass, go back
+and fix the software again and start from scratch. 
+
+## Commit Changes
+You've probably made changes as a result of the above. Commit those to a branch
+and push to github (origin)
+
+## Make a Pull Request
+Use the branch you just created on GitHub to make a pull request and wait for
+the workflow(s) to complete. If it does not pass all workflows, resolve those
+issues and start this releasing process from the beginning. If it does pass the
+workflows, merge it to `main` branch
+
+## Check Out Main branch
+```shell
+git check main
+```
+Make sure there are no changes in your working tree.  One way to do this is to
+```shell
+get status
+```
+If that says:
+```shell
+On branch main
+Your branch is up to date with 'origin/main'
+
+nothing to commit, working tree clean
+```
+then you're okay to proceed; otherwise, fix the issues and restart this 
+releasing process.
+
 ## Set Version
-Now that you've got things working, pick a version number and tag it:
+Now that:
+* you've got things working,
+* all your code changes are committed and pushed
+* you've got a clean working tree on the `main` branch
+it is time to pick a version number and tag it:
 1. Pick a version number, x.y.z, based on current tagged version and 
    [semantic versioning rules](https://semver.org/)
 2. Formulate a short description string for the release
