@@ -2,6 +2,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.testkit.ValidatingTest
 import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
 
@@ -29,14 +30,13 @@ class TranslatorTest extends ValidatingTest {
   class TestTranslator extends Translator[TestTranslatingOptions] {
     val defaultOptions: TestTranslatingOptions = TestTranslatingOptions()
 
-    override def translateImpl(
+    override def translate(
       root: RootContainer,
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions
-    ): Seq[Path] = {
+    ): Either[Messages,Unit] = {
       val state = TestTranslatorState(options)
-
       val parents = scala.collection.mutable.Stack
         .empty[Definition]
       Folding.foldLeftWithStack(state, parents)(root) {
@@ -44,13 +44,13 @@ class TranslatorTest extends ValidatingTest {
           log.info(stack.reverse.mkString(".") + "." + definition.id.format)
           state
       }.generatedFiles
+      Right(())
     }
   }
 
   val directory = "examples/src/riddl/"
   val output = "examples/target/translator/"
-  val roots = Map(
-    "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
+  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
 
   "Translator" should {
     for { (name, fileName) <- roots } {
@@ -61,9 +61,15 @@ class TranslatorTest extends ValidatingTest {
         val options = TestTranslatingOptions(outputDir =
           Some(Path.of(s"testkit/target/translator-test").resolve(fileName))
         )
-        val files = tt
-          .parseValidateTranslate(inputPath, logger, CommonOptions(), options)
-        files mustBe empty
+        tt.parseValidateTranslate(
+          inputPath, logger,
+          CommonOptions(showStyleWarnings = false, showMissingWarnings=false),
+          options
+        ) match {
+          case Right(_) => succeed
+          case Left(messages) =>
+            fail(messages.mkString(System.lineSeparator()))
+        }
       }
     }
   }

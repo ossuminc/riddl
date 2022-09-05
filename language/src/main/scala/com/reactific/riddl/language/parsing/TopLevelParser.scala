@@ -17,6 +17,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.Messages.Messages
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -42,18 +43,18 @@ object TopLevelParser {
 
   def parse(
     input: RiddlParserInput
-  ): Either[Seq[ParserError], RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     val tlp = new TopLevelParser(input)
     tlp.expect(tlp.fileRoot(_)).map(_._1)
   }
 
-  def parse(file: File): Either[Seq[ParserError], RootContainer] = {
+  def parse(file: File): Either[Messages, RootContainer] = {
     val fpi = FileParserInput(file)
     val tlp = new TopLevelParser(fpi)
     tlp.expect(tlp.fileRoot(_)).map(_._1)
   }
 
-  def parse(path: Path): Either[Seq[ParserError], RootContainer] = {
+  def parse(path: Path): Either[Messages, RootContainer] = {
     val fpi = new FileParserInput(path)
     val tlp = new TopLevelParser(fpi)
     tlp.expect(tlp.fileRoot(_)).map(_._1)
@@ -62,7 +63,7 @@ object TopLevelParser {
   def parse(
     input: String,
     origin: String = "string"
-  ): Either[Seq[ParserError], RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     val sp = StringParserInput(input, origin)
     val tlp = new TopLevelParser(sp)
     tlp.expect(tlp.fileRoot(_)).map(_._1)
