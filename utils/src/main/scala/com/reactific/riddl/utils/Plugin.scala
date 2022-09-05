@@ -10,7 +10,6 @@ import scala.reflect.{ClassTag, classTag}
 object Plugin {
 
   final private [utils] val interfaceVersion: Int = 1
-  // final private val loading = new AtomicBoolean
 
   final private val pluginDirEnvVarName = "RIDDL_PLUGINS_DIR"
   final val pluginsDir: Path =
@@ -49,36 +48,39 @@ object Plugin {
     svcType: Class[T],
     pluginsDir: Path = pluginsDir
   ): List[T] = {
-    val pluginClassLoader = getClassLoader(pluginsDir)
-    val savedClassLoader = Thread.currentThread.getContextClassLoader
-    try {
-      Thread.currentThread.setContextClassLoader(pluginClassLoader)
-      val loader = ServiceLoader.load(svcType, pluginClassLoader)
-      val list = loader.iterator().asScala.toList
-      val result = for {
-        plugin <- list
-      } yield {
-        require(plugin.interfaceVersion <= interfaceVersion,
-          s"Plugin ${plugin.getClass.getSimpleName} of interface version ${
-            plugin.interfaceVersion} cannot be supported by Plugin system at "
-          ++ s"interface version $interfaceVersion.")
-        val pParts = plugin.riddlVersion.split('.')
-        require(pParts.length >= 2,
-          s"Invalid RIDDL version number; ${plugin.riddlVersion}")
-        val pMajor = pParts(0).toInt
-        val pMinor = pParts(1).toInt
-        require(pMajor >= 0 && pMinor >= 0,
-          s"Invalid RIDDL version number; ${plugin.riddlVersion}")
-        val rParts = RiddlBuildInfo.version.split('.')
-        val rMajor = rParts(0).toInt
-        val rMinor = rParts(1).toInt
-        require(pMajor <= rMajor && pMinor <= rMinor,
-          s"Plugin compiled with future RIDDL version ${plugin.riddlVersion}")
-        plugin
+    synchronized { // mostly to support parallel test runs
+      val pluginClassLoader = getClassLoader(pluginsDir)
+      val savedClassLoader = Thread.currentThread.getContextClassLoader
+      try {
+        Thread.currentThread.setContextClassLoader(pluginClassLoader)
+        val loader = ServiceLoader.load(svcType, pluginClassLoader)
+        val list = loader.iterator().asScala.toList
+        val result = for {
+          plugin <- list
+        } yield {
+          require(plugin.interfaceVersion <= interfaceVersion,
+            s"Plugin ${plugin.getClass.getSimpleName} of interface version ${
+              plugin.interfaceVersion
+            } cannot be supported by Plugin system at "
+              ++ s"interface version $interfaceVersion.")
+          val pParts = plugin.riddlVersion.split('.')
+          require(pParts.length >= 2,
+            s"Invalid RIDDL version number; ${plugin.riddlVersion}")
+          val pMajor = pParts(0).toInt
+          val pMinor = pParts(1).toInt
+          require(pMajor >= 0 && pMinor >= 0,
+            s"Invalid RIDDL version number; ${plugin.riddlVersion}")
+          val rParts = RiddlBuildInfo.version.split('.')
+          val rMajor = rParts(0).toInt
+          val rMinor = rParts(1).toInt
+          require(pMajor <= rMajor && pMinor <= rMinor,
+            s"Plugin compiled with future RIDDL version ${plugin.riddlVersion}")
+          plugin
+        }
+        result
+      } finally {
+        Thread.currentThread.setContextClassLoader(savedClassLoader)
       }
-      result
-    } finally {
-      Thread.currentThread.setContextClassLoader(savedClassLoader)
     }
   }
 }
