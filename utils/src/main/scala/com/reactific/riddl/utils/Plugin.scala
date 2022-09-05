@@ -3,7 +3,6 @@ package com.reactific.riddl.utils
 import java.nio.file.{Files, Path}
 import java.net.URL
 import java.util.ServiceLoader
-import java.util.concurrent.atomic.AtomicBoolean
 import scala.jdk.StreamConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.reflect.{ClassTag, classTag}
@@ -11,34 +10,49 @@ import scala.reflect.{ClassTag, classTag}
 object Plugin {
 
   final private [utils] val interfaceVersion: Int = 1
-  final private val loading = new AtomicBoolean
+  // final private val loading = new AtomicBoolean
 
-  def loadPluginsFrom[T <: PluginInterface : ClassTag](pluginsDir: Path): List[PluginInterface] = {
-    require(Files.isDirectory(pluginsDir) && Files.isReadable(pluginsDir),
-      s"Plugin directory $pluginsDir is not a readable directory"
-    )
-    require(loading.compareAndSet(false, true),
-      "Plugins are already loading!"
-    )
-    val stream = Files.list(pluginsDir)
+  final private val pluginDirEnvVarName = "RIDDL_PLUGINS_DIR"
+  final val pluginsDir: Path =
+    Path.of(Option(System.getenv(pluginDirEnvVarName)).getOrElse("plugins"))
 
-    val jars = stream.filter(_.getFileName.toString.endsWith(".jar"))
-      .toScala(List)
-      .sortBy(_.toString)
-    stream.close()
+  def loadPluginsFrom[T <: PluginInterface : ClassTag](
+    pluginsDir: Path = pluginsDir
+  ): List[T] = {
+    val clazz = classTag[T].runtimeClass.asInstanceOf[Class[T]]
+    loadSpecificPluginsFrom[T](clazz, pluginsDir)
+  }
 
-    val urls = for { path <- jars } yield {
-      require(Files.isRegularFile(path),
-        s"Candidate plugin $path is not a regular file")
-      require(Files.isReadable(path),
-        s"Candidate plugin $path is not a regular file")
-      new URL("jar", "", -1, path.toAbsolutePath.toString)
+  def getClassLoader(pluginsDir: Path = pluginsDir): ClassLoader = {
+    if (Files.isDirectory(pluginsDir)) {
+      val stream = Files.list(pluginsDir)
+
+      val jars = stream.filter(_.getFileName.toString.endsWith(".jar"))
+        .toScala(List)
+        .sortBy(_.toString)
+      stream.close()
+
+      val urls = for {path <- jars} yield {
+        require(Files.isRegularFile(path),
+          s"Candidate plugin $path is not a regular file")
+        require(Files.isReadable(path),
+          s"Candidate plugin $path is not a regular file")
+        new URL("jar", "", -1, path.toAbsolutePath.toString)
+      }
+      PluginClassLoader(urls, getClass.getClassLoader)
+    } else {
+      getClass.getClassLoader
     }
-    val pluginClassLoader = PluginClassLoader(urls, getClass.getClassLoader)
+  }
+
+  def loadSpecificPluginsFrom[T <: PluginInterface](
+    svcType: Class[T],
+    pluginsDir: Path = pluginsDir
+  ): List[T] = {
+    val pluginClassLoader = getClassLoader(pluginsDir)
     val savedClassLoader = Thread.currentThread.getContextClassLoader
     try {
       Thread.currentThread.setContextClassLoader(pluginClassLoader)
-      val svcType = classTag[T].runtimeClass.asInstanceOf[Class[T]]
       val loader = ServiceLoader.load(svcType, pluginClassLoader)
       val list = loader.iterator().asScala.toList
       val result = for {
