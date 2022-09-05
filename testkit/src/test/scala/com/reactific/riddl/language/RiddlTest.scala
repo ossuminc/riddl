@@ -2,13 +2,13 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.AdjustableClock
 import com.reactific.riddl.language.testkit.ParsingTestBase
-import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.StringLogger
 import com.reactific.riddl.utils.SysLogger
-import com.reactific.riddl.utils.InMemoryLogger
+
 import java.io.File
 import java.nio.file.Path
 import java.time.Instant
@@ -53,35 +53,39 @@ class RiddlTest extends ParsingTestBase {
 
   "parse" should {
     "parse a file" in {
-      val log = InMemoryLogger()
       Riddl.parse(
         path = Path.of("testkit/src/test/input/rbbq.riddl"),
-        log,
         options = CommonOptions(showTimes = true)
       ) match {
-        case None => fail(log.lines().mkString("\n"))
-        case Some(_) => succeed
+        case Left(errors) => fail(errors.mkString(System.lineSeparator()))
+        case Right(_) => succeed
       }
     }
 
-    "return none when file does not exist" in {
-      val log = InMemoryLogger()
+    "return an error when file does not exist" in {
       val options = CommonOptions(showTimes = true)
-      val result = Riddl
-        .parse(path = new File(UUID.randomUUID().toString).toPath, log, options)
-      result mustBe None
+      val path = new File(UUID.randomUUID().toString).toPath
+      Riddl.parse(path, options) match {
+        case Right(root) =>
+          fail(s"File doesn't exist, can't be \n$root")
+        case Left(errors) =>
+          require(errors.size == 1)
+          errors.head.message must include(s"$path does not exist")
+      }
     }
     "record errors" in {
       val riddlParserInput: RiddlParserInput =
         RiddlParserInput(UUID.randomUUID().toString)
-      val logger = InMemoryLogger()
       val options = CommonOptions(showTimes = true)
-      val result = Riddl.parse(input = riddlParserInput, logger, options)
-      result mustBe None
-      assert(
-        logger.lines().exists(_.level == Logger.Error),
-        "When failing to parse, an error should be logged."
-      )
+      Riddl.parse(input = riddlParserInput, options) match {
+        case Right(_) => succeed
+        case Left(errors) if errors.nonEmpty =>
+          require(errors.exists(_.kind == Messages.Error),
+            "When failing to parse, an Error message should be logged."
+          )
+        case Left(errors) =>
+          fail(errors.mkString(System.lineSeparator()))
+      }
     }
   }
 
@@ -164,29 +168,31 @@ class RiddlTest extends ParsingTestBase {
   }
 
   "parseAndValidate" should {
-    def runOne(pathname: String): (Option[RootContainer], InMemoryLogger) = {
-      val logger = InMemoryLogger()
+    def runOne(pathname: String): Either[Messages,RootContainer] = {
       val common = CommonOptions(showTimes = true)
-      Riddl.parseAndValidate(new File(pathname).toPath, logger, common) ->
-        logger
+      Riddl.parseAndValidate(
+        new File(pathname).toPath, common
+      )
     }
 
     "parse and validate a simple domain from path" in {
-      val (result, logger: InMemoryLogger) = {
-        runOne("testkit/src/test/input/domains/simpleDomain.riddl")
-      }
-      val errors = logger.lines().filter(line =>
-        line.level == Logger.Severe || line.level == Logger.Error
-      ).toSeq
-      errors mustBe empty
-      result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) =>
+      runOne("testkit/src/test/input/domains/simpleDomain.riddl") match {
+        case Right(result) =>
+          result must matchPattern {
+            case Some(RootContainer(Seq(_: Domain), _)) =>
+          }
+        case Left(errors) =>
+          assert(errors.forall(_.kind != Messages.Error))
       }
     }
 
     "parse and validate nonsense file as invalid" in {
-      val (result, logger) = runOne("testkit/src/test/input/invalid.riddl")
-      result mustBe None
-      assert(logger.lines().exists(_.level == Logger.Error))
+      runOne("testkit/src/test/input/invalid.riddl") match {
+        case Right(root) =>
+          fail(s"Should not have parsed, but got:\n$root")
+        case Left(errors) =>
+          assert(errors.exists(_.kind == Messages.Error))
+      }
     }
 
     "parse and validate a simple domain from input" in {
@@ -197,24 +203,26 @@ class RiddlTest extends ParsingTestBase {
         try source.mkString
         finally source.close()
       }
-      val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val result = Riddl
-        .parseAndValidate(RiddlParserInput(content), logger, common)
-      result must matchPattern { case Some(RootContainer(Seq(_: Domain), _)) =>
+      val input = RiddlParserInput(content)
+      Riddl.parseAndValidate(input, common) match {
+        case Right(root) =>
+          root must matchPattern {
+            case Some(RootContainer(Seq(_: Domain), _)) =>
+        }
+        case Left(messages) =>
+          assert(messages.forall(_.kind != Messages.Error))
       }
     }
 
     "parse and validate nonsense input as invalid" in {
-      val logger = InMemoryLogger()
       val common = CommonOptions(showTimes = true)
-      val result = Riddl.parseAndValidate(
-        RiddlParserInput("I am not valid riddl (hopefully)."),
-        logger,
-        common
-      )
-      result mustBe None
-      assert(logger.lines().exists(_.level == Logger.Error))
+      val input = RiddlParserInput("I am not valid riddl (hopefully).")
+      Riddl.parseAndValidate(input, common) match {
+        case Right(_) => succeed
+        case Left(messages) =>
+          assert(messages.exists(_.kind == Messages.Error))
+      }
     }
   }
 }
