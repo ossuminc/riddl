@@ -61,9 +61,7 @@ lazy val riddl = (project in file(".")).settings(
 )
 
 lazy val utils = project.in(file("utils")).configure(C.withCoverage())
-  .configure(C.mavenPublish)
-  .enablePlugins(BuildInfoPlugin)
-  .settings(
+  .configure(C.mavenPublish).enablePlugins(BuildInfoPlugin).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
     scalacOptions := scala2_13_Options,
@@ -156,7 +154,7 @@ lazy val examples = project.in(file("examples")).settings(
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
   libraryDependencies ++=
-    Seq("org.scalatest" %% "scalatest" % "3.2.12" % "test")
+    Seq("org.scalatest" %% "scalatest" % "3.2.13" % "test")
 ).dependsOn(hugo % "test->test", riddlc)
 
 lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
@@ -169,9 +167,7 @@ lazy val doc = project.in(file("doc")).enablePlugins(SitePlugin)
 
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
-  .enablePlugins(MiniDependencyTreePlugin)
-  .configure(C.mavenPublish)
-  .dependsOn(
+  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish).dependsOn(
     utils % "compile->compile;test->test",
     commands,
     language,
