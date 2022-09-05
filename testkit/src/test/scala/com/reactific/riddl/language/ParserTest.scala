@@ -25,7 +25,7 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.msg mustBe "Expected one of (end-of-input | \"domain\")"
+          errors.head.message mustBe "Expected one of (end-of-input | \"domain\")"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
@@ -34,7 +34,7 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.msg.contains("Expected one of (") must be(true)
+          errors.head.message.contains("Expected one of (") must be(true)
         case Right(_) => fail("Missing closing brace should make an error")
       }
     }

@@ -413,7 +413,7 @@ object Validation {
           } else if (defs2.sizeIs > 2) {
             val first = defs2.head
             val tail = defs2.tail.map(d => d.identifyWithLoc)
-              .mkString(s",\n    ")
+              .mkString(s",\n  ")
             s.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
           } else { s }
         }
@@ -470,7 +470,7 @@ object Validation {
       id: Seq[String]
     ): List[T] = { symbolTable.lookup[T](id) }
 
-    def addIf(predicate: Boolean)(msg: Message): ValidationState = {
+    def addIf(predicate: Boolean)(msg: => Message): ValidationState = {
       if (predicate) add(msg) else this
     }
 
@@ -943,7 +943,7 @@ object Validation {
     ): ValidationState = {
       this.checkDefinition(parent, container).check(
         container.nonEmpty || container.isInstanceOf[Field],
-        s"${container.identify} in ${parent.identify} should have content.",
+        s"${container.identify} in ${parent.identify} should have content",
         MissingWarning,
         container.loc
       )
