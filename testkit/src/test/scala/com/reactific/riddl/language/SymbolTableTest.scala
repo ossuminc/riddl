@@ -3,7 +3,6 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.testkit.ParsingTest
-import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 
 import scala.reflect.ClassTag
@@ -79,12 +78,18 @@ class SymbolTableTest extends ParsingTest {
                   |  }
                   |}""".stripMargin
       val input = RiddlParserInput(src)
-      Riddl.parseAndValidate(input, SysLogger(), CommonOptions()) match {
-        case None => fail("failed to parse & validate")
-        case Some(model) =>
+      Riddl.parseAndValidate(input,
+        CommonOptions(showMissingWarnings = false, showStyleWarnings=false)
+      ) match {
+        case Right(model) =>
           model.isRootContainer must be(true)
           model.contents.headOption must not(be(empty))
           model.contents.head.contexts.size must be(1)
+        case Left(errors) =>
+          fail(
+            s"""Failed to parse & validate: " +
+               |${errors.format}""".stripMargin
+            )
       }
     }
   }

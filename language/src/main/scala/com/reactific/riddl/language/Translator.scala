@@ -17,6 +17,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.utils.{Logger, OutputFile}
 
@@ -61,40 +62,21 @@ trait TranslatorState[OF <: OutputFile] {
  * @tparam OPT The options class used by the translator */
 trait Translator[OPT <: TranslatingOptions] {
 
-  protected def translateImpl(
+  def translate(
     root: RootContainer,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Seq[Path] = {
-    require(options.inputFile.nonEmpty, "An input path was not provided.")
-    require(options.outputDir.nonEmpty, "An output path was not provided.")
-    if (commonOptions.verbose)
-      log.info(s"Starting translation of `${root.id.format}")
-    Seq.empty[Path]
-  }
-
-  final def translate(
-    root: RootContainer,
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: OPT
-  ): Seq[Path] = {
-    val showTimes = commonOptions.showTimes
-    Riddl.timer(stage = "translate", showTimes) {
-      translateImpl(root, log, commonOptions, options)
-    }
-  }
+  ): Either[Messages,Unit]
 
   final def parseValidateTranslate(
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Seq[Path] = {
+  ): Either[Messages,Unit] = {
     require(options.inputFile.nonEmpty, "Input path option must not be empty")
-    Riddl.parseAndValidate(options.inputFile.get, log, commonOptions) match {
-      case Some(root) => translate(root, log, commonOptions, options)
-      case None       => Seq.empty[Path]
+    Riddl.parseAndValidate(options.inputFile.get, commonOptions).flatMap { root =>
+      translate(root, log, commonOptions, options)
     }
   }
 
@@ -103,10 +85,9 @@ trait Translator[OPT <: TranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Seq[Path] = {
-    Riddl.parseAndValidate(input, log, commonOptions) match {
-      case Some(root) => translate(root, log, commonOptions, options)
-      case None       => Seq.empty[Path]
+  ): Either[Messages,Unit] = {
+    Riddl.parseAndValidate(input, commonOptions).flatMap { root =>
+      translate(root, log, commonOptions, options)
     }
   }
 }
