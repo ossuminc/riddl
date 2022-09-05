@@ -184,7 +184,7 @@ lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
   .configure(C.mavenPublish).settings(
     name := "sbt-riddl",
     sbtPlugin := true,
-    scalaVersion := "2.12.15",
+    scalaVersion := "2.12.16",
     scriptedLaunchOpts := {
       scriptedLaunchOpts.value ++
         Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
