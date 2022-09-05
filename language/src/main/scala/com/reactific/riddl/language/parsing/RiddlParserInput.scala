@@ -32,6 +32,8 @@ abstract class RiddlParserInput extends ParserInput {
   def data: String
   def root: File
 
+  def isEmpty: Boolean = { data.isEmpty }
+  final def nonEmpty: Boolean = !isEmpty
   override def apply(index: Int): Char = data.charAt(index)
   override def dropBuffer(index: Int): Unit = {}
   override def slice(from: Int, until: Int): String = data.slice(from, until)
@@ -90,9 +92,15 @@ abstract class RiddlParserInput extends ParserInput {
   val nl: String = System.getProperty("line.separator")
 
   def annotateErrorLine(index: Location): String = {
-    val (start, end) = rangeOf(index)
-    val col = index.col - 1
-    slice(start, end).stripTrailing() + nl + " ".repeat(col) + "^" + nl
+    if (index.source.nonEmpty) {
+      val (start, end) = rangeOf(index)
+      val quoted = slice(start, end).stripTrailing()
+      if (quoted.isEmpty) ""
+      else {
+        val col = index.col - 1
+        quoted + nl + " ".repeat(col) + "^" + nl
+      }
+    } else ""
   }
 }
 
@@ -112,6 +120,7 @@ case class StringParserInput(
   origin: String = Location.defaultSourceName)
     extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
+  override def isEmpty: Boolean = data.isEmpty
 }
 
 case class FileParserInput(file: File) extends RiddlParserInput {
@@ -121,6 +130,7 @@ case class FileParserInput(file: File) extends RiddlParserInput {
     try { source.getLines().mkString("\n") }
     finally { source.close() }
   }
+  override def isEmpty: Boolean = data.isEmpty
   val root: File = file.getParentFile
   def origin: String = file.getName
   def this(path: Path) = this(path.toFile)

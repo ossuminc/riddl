@@ -11,11 +11,12 @@ import org.scalatest.wordspec.AnyWordSpec
 class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationMessage#format" should {
     "produce a correct string" in {
-      Message(
+      val msg = Message(
         Location(1, 2, RiddlParserInput.empty),
         "the_message",
         Warning
-      ).format mustBe s"Warning: empty(1:2): the_message"
+      )
+      msg.format mustBe s"Warning: empty(1:2): the_message"
     }
     "compare based on locations" in {
       val v1 =

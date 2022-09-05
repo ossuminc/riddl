@@ -17,6 +17,9 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.Messages.Messages
+
 import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.Parsed.Failure
@@ -29,33 +32,13 @@ import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.mutable
 
-case class ParserError(
-  input: RiddlParserInput,
-  loc: Location,
-  msg: String,
-  context: String = "")
-    extends Throwable {
-
-  def format: String = {
-    if (loc.isEmpty) {
-      s"Error: ${input.origin}: $msg${if (context.nonEmpty) {
-        "\nContext: " + context
-      }}"
-
-    } else {
-      val errorLine = input.annotateErrorLine(loc)
-      s"Error: $loc: $msg but got:\n$errorLine${if (context.nonEmpty) { " Context: " + context }}"
-    }
-  }
-}
-
 /** Unit Tests For ParsingContext */
 trait ParsingContext {
 
   private val stack: InputStack = InputStack()
 
-  protected val errors: mutable.ListBuffer[ParserError] = mutable.ListBuffer
-    .empty[ParserError]
+  protected val errors: mutable.ListBuffer[Messages.Message] =
+    mutable.ListBuffer.empty[Messages.Message]
 
   @inline
   def current: RiddlParserInput = { stack.current }
@@ -132,13 +115,13 @@ trait ParsingContext {
     }
   }
 
-  def error(msg: String): Unit = {
-    val error = ParserError(current, Location.empty, msg)
-    errors.append(error)
+  def error(message: String): Unit = {
+    val msg = Messages.Message(Location.empty(current), message, Messages.Error)
+    errors.append(msg)
   }
-  def error(loc: Location, msg: String, context: String = ""): Unit = {
-    val error = ParserError(current, loc, msg, context)
-    errors.append(error)
+  def error(loc: Location, message: String, context: String = ""): Unit = {
+    val msg = Messages.Message(loc, message, Messages.Error, context)
+    errors.append(msg)
   }
 
   private def mkTerminals(list: List[Lazy[String]]): String = {
@@ -163,18 +146,18 @@ trait ParsingContext {
 
   def expect[T](
     parser: P[?] => P[T]
-  ): Either[Seq[ParserError], (T, RiddlParserInput)] = {
+  ): Either[Messages, (T, RiddlParserInput)] = {
     val input = current
     fastparse.parse(input, parser(_)) match {
       case Success(content, _) =>
         if (errors.nonEmpty) {
-          Left(errors.toSeq)
+          Left(errors.toList)
         } else {
           Right(content -> input)
         }
       case failure: Failure =>
         makeParseFailureError(failure)
-        Left(errors.toSeq)
+        Left(errors.toList)
       case _ => throw new IllegalStateException(
           "Parsed[T] should have matched Success or Failure"
         )

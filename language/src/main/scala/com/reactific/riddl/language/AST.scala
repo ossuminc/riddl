@@ -323,7 +323,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     message: LiteralString,
     description: Option[Description])
     extends SagaStepAction {
-    override def format: String = s"error \"${message.format}\""
+    override def format: String = s"severe \"${message.format}\""
   }
 
 
