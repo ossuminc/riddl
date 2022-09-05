@@ -46,13 +46,6 @@ trait Logger {
   }
 
   final def error(s: => String): Unit = { write(Error, s) }
-  final def error(s: => String, xcptn: Throwable): Unit = {
-    val message = s"""$s: $xcptn
-                     |${ExceptionUtils.getRootCauseStackTrace(xcptn)
-      .mkString("\n")}
-                     |""".stripMargin
-    write(Error, message)
-  }
 
   final def warn(s: => String): Unit = { write(Warning, s) }
 

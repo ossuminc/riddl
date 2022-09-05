@@ -2,11 +2,9 @@ package com.reactific.riddl
 
 /** Unit Tests To Run Riddlc On Examples */
 
-import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
+// import java.nio.file.{Files, Path}
 
-import java.nio.file.{Files, Path}
-
-class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
+class RunRiddlcOnExamplesTest /* extends HugoTranslateExamplesBase {
 
   val output = "riddlc/target/test/"
   val name = "ReactiveBBQ"
@@ -50,3 +48,4 @@ class RunRiddlcOnExamplesTest extends HugoTranslateExamplesBase {
     }
   }
 }
+  */
