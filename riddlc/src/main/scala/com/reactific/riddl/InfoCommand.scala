@@ -50,6 +50,7 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
     log.info("About riddlc:")
     log.info(s"           name: ${RiddlBuildInfo.name}")
     log.info(s"        version: ${RiddlBuildInfo.version}")
+    log.info(s"      copyright: ${RiddlBuildInfo.copyright}")
     log.info(s"     start year: ${RiddlBuildInfo.startYear}")
     log.info(s"       built at: ${RiddlBuildInfo.builtAtString}")
     log.info(s"       licenses: ${RiddlBuildInfo.licenses}")

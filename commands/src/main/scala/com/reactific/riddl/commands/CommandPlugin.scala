@@ -143,7 +143,7 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
    * reader should read an object having the same name as the command. The fields
    * of that object must correspond to the fields of the OPT type.
    * @param log A logger to use for output (discouraged)
-   * @return A [[pureconfig.ConfigReader]] that knows how to read OPT
+   * @return A pureconfig.ConfigReader[OPT] that knows how to read OPT
    */
   def getConfigReader() : ConfigReader[OPT]
 

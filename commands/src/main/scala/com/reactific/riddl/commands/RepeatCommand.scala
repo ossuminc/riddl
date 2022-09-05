@@ -88,14 +88,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
       ) -> Options()
   }
 
-  /**
-   * Provide a typesafe/Config reader for the commands options. This
-   * reader should read an object having the same name as the command. The fields
-   * of that object must correspond to the fields of the OPT type.
-   *
-   * @param log A logger to use for output (discouraged)
-   * @return A [[pureconfig.ConfigReader]] that knows how to read OPT
-   */
+
   override def getConfigReader(): ConfigReader[Options] = ???
 
   def allowCancel(options: Options): (Future[Boolean], () => Boolean) = {

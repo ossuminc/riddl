@@ -45,8 +45,8 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
    * been parsed and validated already so the job is to translate the root
    * argument into the directory of files.
    *
-   * @param root The [[RootContainer]] providing the parsed/validated input
-   * @param log A [[Logger]] to use for messages. Use sparingly, not for errors
+   * @param root The RootContainer providing the parsed/validated input
+   * @param log A Logger to use for messages. Use sparingly, not for errors
    * @param commonOptions The options common to all commands
    * @param options The options specific to your subclass implementation
    * @return A Right[Unit] if successful or Left[Messages] if not

@@ -25,14 +25,31 @@ import scopt.{OParser, *}
 import scopt.RenderingMode.OneColumn
 
 import java.io.File
+import java.util.Calendar
 
 /** Command Line Options for Riddl compiler program */
 
 object RiddlOptions {
 
   def usage: String = {
-    OParser.usage(commonOptionsParser, OneColumn) ++ "\n"
-    OParser.usage(commandsParser, OneColumn)
+    val common = OParser.usage(commonOptionsParser, OneColumn)
+    val commands = OParser.usage(commandsParser, OneColumn)
+    val improved_commands =
+      commands
+        .split(System.lineSeparator())
+        .flatMap { line =>
+          if (line.isEmpty || line.forall(_.isWhitespace)) {
+            Seq.empty[String]
+          } else if (line.startsWith("Command:")) {
+            Seq(System.lineSeparator() + line )
+          } else if (line.startsWith("Usage:")) {
+            Seq(line)
+          } else {
+            Seq("  " + line)
+          }
+        }
+        .mkString(System.lineSeparator())
+    common ++ "\n\n" ++ improved_commands
   }
 
   def parseCommonOptions(
@@ -89,9 +106,10 @@ object RiddlOptions {
     val list = for {
       plugin <- plugins
     } yield {
-      plugin.getOptions()
+      plugin.pluginName -> plugin.getOptions()
     }
-    OParser.sequence(list.head._1, list.tail.map(_._1)*)
+    val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
+    OParser.sequence(parsers.head, parsers.tail*)
   }
 
   private val commonOptionsParser: OParser[Unit, CommonOptions] = {
@@ -102,7 +120,9 @@ object RiddlOptions {
     OParser.sequence(
       programName("riddlc"),
       head(
-        "RIDDL Compiler (c) 2022 Reactive Software LLC. All rights reserved.",
+        s"RIDDL Compiler © ${RiddlBuildInfo.startYear}-${
+          Calendar.getInstance().get(Calendar.YEAR)
+        } Ossum Inc. All rights reserved.",
         "\nVersion: ",
         RiddlBuildInfo.version,
         "\n\nThis program parses, validates and translates RIDDL sources to other kinds",

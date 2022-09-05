@@ -8,32 +8,36 @@ weight: 999
 This is a "how to" guide on releasing the software. 
 
 ## Build & Test
+Make sure everything tests correctly from a clean start. 
 ```shell
 > cd riddl # top level directory of repository 
 > sbt "clean ; test"
 ...
 [info] All tests passed.
 ```
-
 If all tests do not pass, stop and fix the software
 
-## Set Version
-1. Pick a version number, x.y.z, based on current version and 
-   [semantic versioning rules](https://semver.org/)
-2. Formulate a short description string for the release, call it desc 
+## Stage
 ```shell
-% sbt
+> sbt stage
+...
+[info] Main Scala API documentation successful.
+[success] Total time: 29 s, completed Sep 5, 2022, 12:05:58 PM
+```
+If this task does not successfully complete, stop and fix the documentation which
+is likely to be references to Scala classes in the docs between `[[` and `]]`
+
+## Set Version
+Now that you've got things working, pick a version number and tag it:
+1. Pick a version number, x.y.z, based on current tagged version and 
+   [semantic versioning rules](https://semver.org/)
+2. Formulate a short description string for the release
+3. Run this:
+```shell
 > git tag -a ${x.y.z} -m "${release description}"
-> reload
-> show version
+> sbt show version # confirm it is the version you just set
 > git push --tags
 ```
-{{% hint warning "Running From SBT" %}}
-When you run the git commands from the SBT command prompt, you must 
-reload in order to get the correct build version number into the artifacts.
-Failing to do this will attempt to release a snapshot version which won't 
-go well for you.
-{{% /hint %}}
 
 ## Release To Maven
 1. First, publish the artifacts to oss.sonatype.org

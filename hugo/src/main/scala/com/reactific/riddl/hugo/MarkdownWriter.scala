@@ -19,7 +19,9 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST._
 import com.reactific.riddl.utils.TextFileWriter
+
 import java.nio.file.Path
+import scala.annotation.unused
 
 case class MarkdownWriter(
   filePath: Path,
@@ -318,7 +320,7 @@ case class MarkdownWriter(
   def emitBriefly(
     d: Definition,
     parents: Seq[String],
-    level: Int = 2
+    @unused level: Int = 2
   ): this.type = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
     emitTableRow("_Briefly_", d.brief.fold("Brief description missing.\n")(_.s))

@@ -34,14 +34,14 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
     OParser.sequence(cmd("git-check")
       .children(
         opt[File]("git-clone-dir")
-          .required
+          .required()
           .action( (f,opts) => opts.copy(gitCloneDir = Some(f.toPath)))
           .text(
             """Provides the top directory of a git repo clone that
               |contains the <input-file> to be processed.""".stripMargin
           ),
         opt[String]("user-name")
-          .optional
+          .optional()
           .action( (n,opts) => opts.copy(userName = n))
           .text("Name of the git user for pulling from remote"),
         opt[String]("access-token")

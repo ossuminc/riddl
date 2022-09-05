@@ -72,9 +72,8 @@ abstract class RunCommandOnExamplesTest[
   private final val suffix = "conf"
 
   def forEachConfigFile[T](f : (String, Path) => T): Seq[Either[Messages,T]] = {
-    val configs = FileUtils
-      .iterateFiles(srcDir.toFile, Array[String](suffix),true)
-      .asScala.toSeq
+    val configs = FileUtils.iterateFiles(
+      srcDir.toFile, Array[String](suffix),true).asScala.toSeq
     for {
       config <- configs
     } yield {
