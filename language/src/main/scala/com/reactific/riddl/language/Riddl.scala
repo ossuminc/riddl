@@ -18,7 +18,9 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
+import com.reactific.riddl.language.parsing.{
+  FileParserInput, RiddlParserInput, TopLevelParser
+}
 import com.reactific.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.{Files, Path}
@@ -32,7 +34,8 @@ case class CommonOptions(
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
-  debug: Boolean = false
+  debug: Boolean = false,
+  pluginsDir: Option[Path] = None
 )
 
 /** Primary Interface to Riddl Language parsing and validating */
@@ -67,85 +70,56 @@ object Riddl {
 
   def parse(
     path: Path,
-    log: Logger,
     options: CommonOptions
-  ): Option[RootContainer] = {
+  ): Either[Messages,RootContainer] = {
     if (Files.exists(path)) {
       val input = new FileParserInput(path)
-      parse(input, log, options)
+      parse(input, options)
     } else {
-      log.error(s"Input file `${path.toString} does not exist.")
-      None
+      Left(List(
+        Messages.error(s"Input file `${path.toString} does not exist.")
+      ))
     }
   }
 
   def parse(
     input: RiddlParserInput,
-    log: Logger,
     options: CommonOptions
-  ): Option[RootContainer] = {
+  ): Either[Messages,RootContainer] = {
     timer("parse", options.showTimes) {
-      TopLevelParser.parse(input) match {
-        case Left(errors) =>
-          errors.map(_.format).foreach(log.error(_))
-          log.info(s"Syntax Errors: ${errors.length}")
-          None
-        case Right(root) => Option(root)
-      }
+      TopLevelParser.parse(input)
     }
   }
 
   def validate(
     root: RootContainer,
-    log: Logger,
     commonOptions: CommonOptions
-  ): Option[RootContainer] = {
+  ): Either[Messages,RootContainer] = {
     timer("validation", commonOptions.showTimes) {
-      val messages: Seq[Message] =
-        Validation.validate(root, commonOptions)
-      if (messages.nonEmpty) {
-        val (warns, errs) = messages.partition(_.kind.isWarning)
-        val (severe, errors) = errs.partition(_.kind.isSevereError)
-        val missing = warns.filter(_.kind.isMissing)
-        val style = warns.filter(_.kind.isStyle)
-        val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
-        log.info(s"""Validation Warnings: ${warns.length}""")
-        if (commonOptions.showWarnings) {
-          warnings.map(_.format).foreach(log.warn(_))
-        }
-        if (commonOptions.showMissingWarnings) {
-          missing.map(_.format).foreach(log.warn(_))
-        }
-        if (commonOptions.showStyleWarnings) {
-          style.map(_.format).foreach(log.warn(_))
-        }
-        log.info(s"""Validation Errors: ${errors.length}""")
-        errors.map(_.format).foreach(log.error(_))
-        log.info(s"""Severe Errors: ${severe.length}""")
-        severe.map(_.format).foreach(log.severe(_))
-        if (errs.nonEmpty) { None }
-        else { Option(root) }
-      } else { Option(root) }
+      Validation.validate(root, commonOptions) match {
+        case list: Messages if list.isEmpty =>
+          Right(root)
+        case list: Messages =>
+          Left(list)
+      }
     }
   }
 
+
   def parseAndValidate(
     input: RiddlParserInput,
-    logger: Logger,
     commonOptions: CommonOptions
-  ): Option[RootContainer] = {
-    parse(input, logger, commonOptions) match {
-      case Some(root) => validate(root, logger, commonOptions)
-      case None       => None
+  ): Either[Messages,RootContainer] = {
+    parse(input, commonOptions).flatMap { root =>
+      validate(root, commonOptions)
     }
   }
 
   def parseAndValidate(
     path: Path,
-    logger: Logger,
     commonOptions: CommonOptions
-  ): Option[RootContainer] = {
-    parseAndValidate(RiddlParserInput(path), logger, commonOptions)
+  ): Either[Messages,RootContainer] = {
+    parseAndValidate(RiddlParserInput(path), commonOptions)
   }
 }
 
