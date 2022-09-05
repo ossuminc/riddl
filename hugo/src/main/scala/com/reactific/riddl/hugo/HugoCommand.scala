@@ -27,7 +27,6 @@ import scopt.OParser
 
 import java.net.URL
 import java.nio.file.Path
-import scala.util.control.NonFatal
 
 /** Unit Tests For HugoCommand */
 object HugoCommand {
