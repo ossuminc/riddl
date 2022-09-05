@@ -61,7 +61,7 @@ object HugoCommand {
 
 class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
   import HugoCommand.Options
-  override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  override def getOptions(): (OParser[Unit, Options], Options) = {
     import builder._
     cmd("hugo")
       .text(
@@ -105,7 +105,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
       ) -> HugoCommand.Options()
   }
 
-  override def getConfigReader(log: Logger): ConfigReader[Options] = {
+  override def getConfigReader(): ConfigReader[Options] = {
     (cur: ConfigCursor) =>
       for {
         topCur <- cur.asObjectCursor
@@ -151,15 +151,8 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
           cc => cc.asBoolean }
       } yield {
         def handleURL(url: Option[String]): Option[URL] = {
-          if (url.isEmpty || url.get.isEmpty) { None }
-          else {
-            try { Option(new java.net.URL(url.get)) }
-            catch {
-              case NonFatal(x) =>
-                log.warn(s"Malformed URL: ${x.toString}")
-                None
-            }
-          }
+          if (url.isEmpty || url.get.isEmpty) None
+          else Option(new java.net.URL(url.get))
         }
 
         val themes =
@@ -174,8 +167,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
                   case Right(s) => handleURL(Option(s))
                   case Left(x) =>
                     val errs = x.prettyPrint(1)
-                    log.error(errs)
-                    None
+                    throw new IllegalArgumentException(errs)
                 }
               }
             }
@@ -209,4 +201,19 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
   ): Either[Messages, Unit] = {
     HugoTranslator.translate(root, log, commonOptions, options)
   }
+
+  override def loadOptionsFrom(configFile: Path):
+  Either[Messages, HugoCommand.Options] = {
+    super.loadOptionsFrom(configFile).map { options =>
+      options.inputFile match {
+        case Some(inFile) =>
+          val parent = configFile.getParent.toAbsolutePath
+          val input = parent.resolve(inFile)
+          options.copy(inputFile = Some(input))
+        case None =>
+          options
+      }
+    }
+  }
+
 }

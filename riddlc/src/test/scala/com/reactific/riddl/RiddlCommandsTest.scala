@@ -15,7 +15,7 @@ class RiddlCommandsTest extends AnyWordSpec with Matchers {
       case Right(cmd) =>
         val args = Array(command)
         val log = SysLogger()
-        val (parser, default) = cmd.getOptions(log)
+        val (parser, default) = cmd.getOptions()
         val (result, _) = OParser.runParser(parser, args, default)
         result match {
           case Some(options) =>

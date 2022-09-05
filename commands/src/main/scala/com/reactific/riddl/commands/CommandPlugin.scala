@@ -21,7 +21,8 @@ object CommandPlugin {
       Left(errors(s"No command plugins loaded from: $pluginsDir"))
     } else {
       loaded.find(_.pluginName == name) match {
-        case Some(pl) if pl.isInstanceOf[CommandPlugin[CommandOptions]] => Right(pl)
+        case Some(pl) if pl.isInstanceOf[CommandPlugin[CommandOptions]] =>
+          Right(pl)
         case Some(plugin) =>
           Left(errors(
             s"Plugin for command $name is the wrong type ${
@@ -51,12 +52,14 @@ object CommandPlugin {
     log: Logger,
     commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir
-  ): Either[Messages, Unit] = {
-    loadCommandNamed(name, pluginsDir).map { cmd =>
-      cmd.loadOptionsFrom(optionsPath, log).map { opts: CommandOptions =>
-        require(opts.getClass == cmd.optionsClass)
-        cmd.run(opts, commonOptions, log)
-      }
+  ): Either[Messages, CommandPlugin[CommandOptions]] = {
+    for {
+      cmd <- loadCommandNamed(name, pluginsDir)
+      opts <- cmd.loadOptionsFrom(optionsPath)
+      _ <- cmd.run(opts, commonOptions, log)
+    } yield {
+      require(opts.getClass == cmd.optionsClass)
+      cmd
     }
   }
 
@@ -124,12 +127,12 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
    * @param log A logger to use for output (discouraged)
    * @return A pair: the OParser and the default values for OPT
    */
-  def getOptions(log: Logger): (OParser[Unit,OPT], OPT)
+  def getOptions(): (OParser[Unit,OPT], OPT)
 
   def parseOptions(
-    args: Array[String], log: Logger
+    args: Array[String]
   ): Option[OPT] = {
-    val (parser, default) = getOptions(log)
+    val (parser, default) = getOptions()
     val (result, effects) = OParser.runParser(parser, args, default)
     OParser.runEffects(effects)
     result
@@ -142,10 +145,10 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
    * @param log A logger to use for output (discouraged)
    * @return A [[pureconfig.ConfigReader]] that knows how to read OPT
    */
-  def getConfigReader(log: Logger) : ConfigReader[OPT]
+  def getConfigReader() : ConfigReader[OPT]
 
-  final def loadOptionsFrom(configFile: Path, log: Logger): Either[Messages,OPT] = {
-    ConfigSource.file(configFile).load[OPT](getConfigReader(log)) match {
+  def loadOptionsFrom(configFile: Path): Either[Messages,OPT] = {
+    ConfigSource.file(configFile).load[OPT](getConfigReader()) match {
       case Right(value) => Right(value)
       case Left(fails) => Left(errors(
         "Errors while reading ${configFile}:\n" + fails.prettyPrint(1)
@@ -153,12 +156,12 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
     }
   }
 
-  final def runFrom(
+  def runFrom(
     configFile: Path,
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    loadOptionsFrom(configFile, log)
+    loadOptionsFrom(configFile)
       .flatMap(run(_,commonOptions,log))
   }
 
@@ -182,7 +185,7 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
     commonOptions: CommonOptions,
     log: Logger
   ) : Either[Messages,Unit] = {
-    val maybeOptions: Option[OPT] = parseOptions(args, log)
+    val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match {
       case Some(opts: OPT) =>
         run(opts, commonOptions, log)

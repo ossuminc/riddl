@@ -18,7 +18,7 @@ case class TestOptions(
 
 /** A pluggable command for testing plugin commands! */
 class TestCommand extends CommandPlugin[TestOptions]("test") {
-  override def getOptions(log: Logger): (OParser[Unit, TestOptions], TestOptions) = {
+  override def getOptions(): (OParser[Unit, TestOptions], TestOptions) = {
     import builder.*
     cmd(pluginName)
       .action( (_,to) => to.copy(command = pluginName))
@@ -44,5 +44,5 @@ class TestCommand extends CommandPlugin[TestOptions]("test") {
     Right(())
   }
 
-  override def getConfigReader(log: Logger): ConfigReader[TestOptions] = ???
+  override def getConfigReader(): ConfigReader[TestOptions] = ???
 }

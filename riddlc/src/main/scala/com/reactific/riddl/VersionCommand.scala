@@ -21,7 +21,7 @@ object VersionCommand {
 class VersionCommand
   extends CommandPlugin[VersionCommand.Options]("version") {
   import VersionCommand.Options
-  override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  override def getOptions(): (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("version")
       .action((_, c) => c.copy(command = pluginName))
@@ -29,9 +29,8 @@ class VersionCommand
       -> VersionCommand.Options()
   }
 
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[VersionCommand.Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader():
+  ConfigReader[VersionCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)

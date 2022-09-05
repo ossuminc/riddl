@@ -1,7 +1,6 @@
 package com.reactific.riddl.commands
 import com.reactific.riddl.language.{CommonOptions, Messages}
-import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.language.Messages.{Messages, errors}
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
 
@@ -120,18 +119,12 @@ object CommandOptions {
 
   final def loadCommonOptions(
     path: Path,
-    log: Logger
-  ): Option[CommonOptions] = {
+  ): Either[Messages,CommonOptions] = {
     ConfigSource.file(path.toFile).load[CommonOptions] match {
-      case Right(loadedOptions) =>
-        Some(loadedOptions)
-      case Left(errors) =>
-        log.error(s"Failed to load options from $path because:")
-        val failures = errors.prettyPrint(1)
-        log.error(failures)
-        None
+      case Right(options) => Right(options)
+      case Left(failures) =>
+        Left(errors(s"Failed to load options from $path because:\n" +
+          failures.prettyPrint(1)))
     }
   }
-
-
 }

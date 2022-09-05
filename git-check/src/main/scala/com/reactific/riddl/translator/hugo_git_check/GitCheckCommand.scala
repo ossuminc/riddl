@@ -26,15 +26,9 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
   "hugo-git-check"
 ) {
   import GitCheckCommand.Options
-  /** Provide an scopt OParser for the commands options type, OPT
-    * @param log
-    *   A logger to use for output (discouraged)
-    * @return
-    *   A pair: the OParser and the default values for OPT
-    */
-  override def getOptions(
-    log: Logger
-  ): (OParser[Unit, Options], Options) = {
+
+  override def getOptions()
+  : (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder._
     OParser.sequence(cmd("git-check")
@@ -86,9 +80,7 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
       }
   }
 
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[Options] = hugoGitCheckReader
+  override def getConfigReader(): ConfigReader[Options] = hugoGitCheckReader
 
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug

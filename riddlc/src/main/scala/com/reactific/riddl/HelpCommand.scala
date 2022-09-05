@@ -20,16 +20,15 @@ object HelpCommand {
 
 class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
   import HelpCommand.Options
-  override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  override def getOptions(): (OParser[Unit, Options], Options) = {
     import builder._
     cmd("help").action((_, c) => c.copy(command = "help"))
       .text("Print out how to use this program")
       -> HelpCommand.Options()
   }
 
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[HelpCommand.Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader():
+  ConfigReader[HelpCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)

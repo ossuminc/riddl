@@ -20,16 +20,15 @@ object InfoCommand {
 
 class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   import InfoCommand.Options
-  override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  override def getOptions(): (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
       .text("Print out build information about this program")
       -> InfoCommand.Options()
   }
 
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[InfoCommand.Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader():
+  ConfigReader[InfoCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)

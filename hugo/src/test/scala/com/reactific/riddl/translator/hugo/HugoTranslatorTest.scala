@@ -1,5 +1,6 @@
 package com.reactific.riddl.translator.hugo
 
+import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
 import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.language.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
@@ -9,14 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 
 class HugoTranslatorTest extends
   RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
-    commandName = "hugo",
-    Path.of("hugo-translator/target/translator/")
+    commandName = "hugo"
   ) {
 
   "HugoTranslator" should {
     "handle all example sources" in {
-      pending
-      // runTests()
+      runTests()
     }
   }
 
@@ -24,14 +23,20 @@ class HugoTranslatorTest extends
     commandName: String,
     name: String,
     configFile: Path,
-    outDir: Path
+    command: CommandPlugin[CommandOptions]
   ): Assertion = {
-    if (commandName == "hugo")
-      runHugo()
-    else succeed
+    if (commandName == "hugo") {
+      command.loadOptionsFrom(configFile) match {
+        case Right(options) =>
+          val outDir = options.asInstanceOf[HugoCommand.Options].outputDir.get
+          runHugo(outDir)
+        case Left(errors) =>
+          fail(errors.format)
+      }
+    } else fail("wrong command!")
   }
 
-  def runHugo(): Assertion = {
+  def runHugo(outputDir: Path): Assertion = {
     import scala.sys.process._
     val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
     var hadErrorOutput: Boolean = false
@@ -47,9 +52,8 @@ class HugoTranslatorTest extends
     }
 
     val logger = ProcessLogger(fout, ferr)
-    val srcDir = outputDir
-    require(Files.isDirectory(srcDir))
-    val cwdFile = srcDir.toFile
+    require(Files.isDirectory(outputDir))
+    val cwdFile = outputDir.toFile
     val proc = Process("hugo", cwd = Option(cwdFile))
     proc.!(logger) match {
       case 0 =>

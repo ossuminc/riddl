@@ -20,7 +20,7 @@ object FromCommand {
 
 class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
   import FromCommand.Options
-  override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  override def getOptions(): (OParser[Unit, Options], Options) = {
     import builder._
     cmd("from")
       .action((_, c) => c.copy(command = pluginName))
@@ -36,9 +36,8 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
       -> FromCommand.Options()
   }
 
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[FromCommand.Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader():
+  ConfigReader[FromCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)

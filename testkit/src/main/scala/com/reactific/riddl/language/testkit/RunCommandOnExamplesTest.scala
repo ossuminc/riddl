@@ -36,11 +36,10 @@ abstract class RunCommandOnExamplesTest[
   OPT <: CommandOptions, CMD <: CommandPlugin[OPT]
 ] (
   val commandName: String,
-  val outputDir: Path
 ) extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   val examplesRepo: String = "https://github.com/reactific/riddl-examples"
-  val examplesVersion: String = "0.10.0"
+  val examplesVersion: String = "0.10.1"
   val examplesURL: URL =
     new URL(s"$examplesRepo/archive/refs/tags/$examplesVersion.zip")
   val tmpDir: Path = Files.createTempDirectory("RiddlTest")
@@ -64,7 +63,6 @@ abstract class RunCommandOnExamplesTest[
     val zip_path = tmpDir.resolve(fileName)
     Zip.unzip(zip_path, tmpDir)
     zip_path.toFile.delete()
-    if (!Files.isDirectory(outputDir)) { Files.createDirectories(outputDir) }
   }
 
   override def afterAll(): Unit = {
@@ -96,31 +94,27 @@ abstract class RunCommandOnExamplesTest[
    */
   def runTests(): Unit = {
     forEachConfigFile { case (name, path) =>
-      val outDir = outputDir.resolve(name)
-      Files.createDirectories(outDir)
       CommandPlugin
         .runCommandNamed(commandName, path, logger, commonOptions) match {
-        case Right(()) =>
-          onSuccess(commandName, name, path, outDir)
+        case Right(cmd) =>
+          onSuccess(commandName, name, path, cmd)
         case Left(messages) =>
-          fail(messages.map(_.format).mkString(System.lineSeparator()))
+          fail(messages.format)
       }
     }
   }
-
   /**
    * Override this to do additional checking after a successful command run
    * @param commandName The name of the command that succeeded
    * @param caseName The name of the test case
    * @param configFile The configuration file that was run
-   * @param outDir The output directory for translator commands
    * @return
    */
   def onSuccess(
     @unused commandName: String,
     @unused caseName: String,
     @unused configFile: Path,
-    @unused outDir: Path
+    @unused command: CommandPlugin[CommandOptions]
   ): Assertion = {
     succeed
   }

@@ -57,9 +57,7 @@ class PrettifyCommand extends
       .map(_ => ())
   }
 
-  override def getOptions(
-    log: Logger
-  ): (OParser[Unit, Options], Options) =  {
+  override def getOptions(): (OParser[Unit, Options], Options) =  {
     val builder = OParser.builder[Options]
     import builder._
     cmd("reformat").children(
@@ -77,9 +75,8 @@ class PrettifyCommand extends
         |standard layout written to the output-dir.  """.stripMargin
     ) -> PrettifyCommand.Options()
   }
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader():
+  ConfigReader[Options] = { (cur: ConfigCursor) =>
     for {
       objCur <- cur.asObjectCursor
       cmdCur <- objCur.atKey("prettify")

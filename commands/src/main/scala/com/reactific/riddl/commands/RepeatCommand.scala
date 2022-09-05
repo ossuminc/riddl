@@ -37,7 +37,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
    * @param log A logger to use for output (discouraged)
    * @return A pair: the OParser and the default values for OPT
    */
-  override def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  override def getOptions(): (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("repeat")
       .text(
@@ -96,7 +96,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
    * @param log A logger to use for output (discouraged)
    * @return A [[pureconfig.ConfigReader]] that knows how to read OPT
    */
-  override def getConfigReader(log: Logger): ConfigReader[Options] = ???
+  override def getConfigReader(): ConfigReader[Options] = ???
 
   def allowCancel(options: Options): (Future[Boolean], () => Boolean) = {
     if (!options.interactive) {Future.successful(false) -> (() => false)}

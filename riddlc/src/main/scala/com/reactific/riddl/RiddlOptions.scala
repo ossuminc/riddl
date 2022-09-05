@@ -20,7 +20,7 @@ import com.reactific.riddl.RIDDLC.log
 import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.{Messages, errors}
-import com.reactific.riddl.utils.{Logger, RiddlBuildInfo}
+import com.reactific.riddl.utils.RiddlBuildInfo
 import scopt.{OParser, *}
 import scopt.RenderingMode.OneColumn
 
@@ -68,15 +68,13 @@ object RiddlOptions {
     common -> remainingOptions
   }
 
-  def parseCommandOptions(
-    args: Array[String],
-    log: Logger
-  ): Either[Messages,CommandOptions] = {
+  def parseCommandOptions(args: Array[String]):
+  Either[Messages,CommandOptions] = {
     require(args.nonEmpty)
     val result = CommandPlugin.loadCommandNamed(args.head)
     result match {
       case Right(cmd) =>
-        cmd.parseOptions(args, log) match {
+        cmd.parseOptions(args) match {
           case Some(options) => Right(options)
           case None => Left(errors("Option parsing failed"))
         }
@@ -91,7 +89,7 @@ object RiddlOptions {
     val list = for {
       plugin <- plugins
     } yield {
-      plugin.getOptions(log)
+      plugin.getOptions()
     }
     OParser.sequence(list.head._1, list.tail.map(_._1)*)
   }

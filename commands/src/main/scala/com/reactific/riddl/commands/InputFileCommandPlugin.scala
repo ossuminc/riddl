@@ -1,5 +1,4 @@
 package com.reactific.riddl.commands
-import com.reactific.riddl.utils.Logger
 import pureconfig.{ConfigCursor, ConfigReader}
 import scopt.OParser
 
@@ -18,7 +17,7 @@ abstract class InputFileCommandPlugin(
  name: String
 ) extends CommandPlugin[InputFileCommandPlugin.Options](name) {
   import InputFileCommandPlugin.Options
-  def getOptions(log: Logger): (OParser[Unit, Options], Options) = {
+  def getOptions(): (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(name).children(
       opt[File]('i', "input-file").action((f, opt) =>
@@ -26,7 +25,7 @@ abstract class InputFileCommandPlugin(
     )) -> InputFileCommandPlugin.Options()
   }
 
-  override def getConfigReader(log: Logger): ConfigReader[Options] = {
+  override def getConfigReader(): ConfigReader[Options] = {
     (cur: ConfigCursor) => {
       for {
         topCur <- cur.asObjectCursor

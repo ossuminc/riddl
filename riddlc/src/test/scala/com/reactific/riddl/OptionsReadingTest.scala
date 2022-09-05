@@ -2,7 +2,6 @@ package com.reactific.riddl
 
 import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
 import com.reactific.riddl.hugo.HugoCommand
-import com.reactific.riddl.utils.SysLogger
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -12,11 +11,10 @@ class OptionsReadingTest extends AnyWordSpec with Matchers  {
 
   "Options Reading" must {
     "load hugo options from a file" in {
-      val log = SysLogger()
       val optionFile = Path.of(
         "riddlc/src/test/input/hugo-options.conf")
-      CommandOptions.loadCommonOptions(optionFile,log) match {
-        case Some(opts) =>
+      CommandOptions.loadCommonOptions(optionFile) match {
+        case Right(opts) =>
           opts.showTimes mustBe true
           opts.verbose mustBe true
           opts.quiet mustBe false
@@ -24,19 +22,20 @@ class OptionsReadingTest extends AnyWordSpec with Matchers  {
           opts.showWarnings mustBe true
           opts.showStyleWarnings mustBe false
           opts.showMissingWarnings mustBe false
-        case None =>
-          fail("Didn't read common optionss")
+        case Left(messages) =>
+          fail(messages.format)
       }
       CommandPlugin.loadCommandNamed("hugo") match {
         case Right(cmd) =>
-          cmd.loadOptionsFrom(optionFile, log) match {
+          cmd.loadOptionsFrom(optionFile) match {
             case Left(errors) =>
               fail(errors.format)
             case Right(options) =>
               val opts = options.asInstanceOf[HugoCommand.Options]
 
               opts.command mustBe "hugo"
-              opts.inputFile mustBe Option(Path.of("ReactiveBBQ.riddl"))
+              opts.inputFile must not(be(empty))
+              opts.inputFile.get.toString must include("ReactiveBBQ.riddl")
               opts.outputDir mustBe Option(Path.of(
                 "/tmp/foo/ReactiveBBQ"
               ))

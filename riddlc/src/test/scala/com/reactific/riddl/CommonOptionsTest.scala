@@ -1,7 +1,6 @@
 package com.reactific.riddl
 
 import com.reactific.riddl.commands.CommandOptions
-import com.reactific.riddl.utils.SysLogger
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -50,11 +49,10 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
 
     "common options override properly" in {
       val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
-      val log = SysLogger()
-      CommandOptions.loadCommonOptions(optionFile, log) match {
-        case None =>
-          fail(s"Could not load options from $optionFile")
-        case Some(opts) =>
+      CommandOptions.loadCommonOptions(optionFile) match {
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(opts) =>
           opts.showWarnings mustBe true
           opts.showStyleWarnings mustBe true
           opts.showMissingWarnings mustBe true
@@ -67,8 +65,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
       comm match {
         case Some(options) =>
           options.showTimes must be(true)
-          val logger = SysLogger()
-          RiddlOptions.parseCommandOptions(remaining, logger) match {
+          RiddlOptions.parseCommandOptions(remaining) match {
             case Right(options) =>
               options.inputFile mustBe Some(Path.of("file.riddl"))
             case Left(messages) =>
