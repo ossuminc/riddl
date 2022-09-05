@@ -19,7 +19,7 @@ object V {
   val jgit = "6.0.0.202111291000-r"
   val lang3 = "3.12.0"
   val pureconfig = "0.17.1"
-  val scalacheck = "1.15.4"
+  val scalacheck = "1.16.0"
   val scalatest = "3.2.9"
   val scopt = "4.1.0"
   val ujson = "1.5.0"
