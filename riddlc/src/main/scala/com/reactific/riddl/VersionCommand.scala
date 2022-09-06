@@ -49,7 +49,9 @@ class VersionCommand
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    println(RiddlBuildInfo.version)
+    if (commonOptions.verbose || !commonOptions.quiet) {
+      println(RiddlBuildInfo.version)
+    }
     Right(())
   }
 }

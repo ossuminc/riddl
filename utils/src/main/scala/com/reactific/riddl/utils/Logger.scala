@@ -18,6 +18,7 @@ package com.reactific.riddl.utils
 
 import org.apache.commons.lang3.exception.ExceptionUtils
 
+import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -31,8 +32,8 @@ object Logger {
   case object Error extends Lvl
   case object Warning extends Lvl
   case object Info extends Lvl
-
 }
+
 trait Logger {
   import Logger.*
 
@@ -51,12 +52,34 @@ trait Logger {
 
   final def info(s: => String): Unit = { write(Info, s) }
 
-  protected def write(level: Lvl, s: String): Unit
+  private var nSevere = 0
+  private var nError = 0
+  private var nWarning = 0
+  private var nInfo = 0
 
+  protected def write(level: Lvl, @unused s: String): Unit
+
+  protected def count(level: Lvl): Unit = {
+    level match {
+      case Severe => nSevere += 1
+      case Error => nError += 1
+      case Warning => nWarning += 1
+      case Info => nInfo += 1
+    }
+  }
+
+  def summary: String = {
+    s"""Severe Errors: $nSevere
+       |Normal Errors: $nError
+       |     Warnings: $nWarning
+       |         Info: $nInfo
+       |""".stripMargin
+  }
 }
 
 case class SysLogger() extends Logger {
-  def write(level: Logger.Lvl, s: String): Unit = {
+  override def write(level: Logger.Lvl, s: String): Unit = {
+    super.count(level)
     System.out.println(s"[$level] $s")
   }
 }
@@ -64,8 +87,11 @@ case class SysLogger() extends Logger {
 case class StringLogger(capacity: Int = 512 * 2) extends Logger {
   private val stringBuilder = new mutable.StringBuilder(capacity)
 
-  def write(level: Logger.Lvl, s: String): Unit = stringBuilder.append("[")
-    .append(level).append("] ").append(s).append("\n")
+  override def write(level: Logger.Lvl, s: String): Unit = {
+    super.count(level)
+    stringBuilder.append("[")
+      .append(level).append("] ").append(s).append("\n")
+  }
 
   override def toString: String = stringBuilder.toString()
 }
@@ -81,5 +107,8 @@ case class InMemoryLogger() extends Logger {
   /** Returns an Iterator of all lines logged to this logger, oldest-first */
   def lines(): Iterator[Line] = buffer.iterator
 
-  def write(level: Logger.Lvl, s: String): Unit = { buffer += Line(level, s) }
+  def write(level: Logger.Lvl, s: String): Unit = {
+    super.count(level)
+    buffer += Line(level, s)
+  }
 }

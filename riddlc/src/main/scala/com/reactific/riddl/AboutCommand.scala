@@ -48,7 +48,9 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options](
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    println(RiddlOptions.about)
+    if (commonOptions.verbose || !commonOptions.quiet) {
+      println(RiddlOptions.about)
+    }
     Right(())
   }
 }

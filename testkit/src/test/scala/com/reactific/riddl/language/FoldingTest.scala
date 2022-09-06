@@ -44,8 +44,7 @@ class FoldingTest extends ParsingTest {
 
       parseTopLevelDomains(input) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
+          fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
           val result = Folding.foldLeftWithStack(empty)(content) {
@@ -188,17 +187,24 @@ class FoldingTest extends ParsingTest {
       }
     }
 
-    case class Tracker(contPush: Int = 0, defs: Int = 0, contPop: Int = 0)
-      class Tracking extends Folding.Folder[Tracker] {
+    case class Tracker(
+      contPush: Int = 0,
+      defs: Int = 0,
+      contPop: Int = 0,
+    )
+
+    class Tracking(print: Boolean = true) extends Folding.Folder[Tracker] {
       def openContainer(
         t: Tracker,
         container: Definition,
         stack: Seq[Definition]
       ): Tracker = {
-        println(
-          "> " + container.identify + "(" + stack.map(_.identify)
-            .mkString(", ") + ")"
-        )
+        if (print) {
+          info(
+            "> " + container.identify + "(" + stack.map(_.identify)
+              .mkString(", ") + ")"
+          )
+        }
         t.copy(contPush = t.contPush + 1)
       }
 
@@ -207,10 +213,12 @@ class FoldingTest extends ParsingTest {
         definition: Definition,
         stack: Seq[Definition]
       ): Tracker = {
-        println(
-          "==" + definition.identify + "(" + stack.map(_.identify)
-            .mkString(", ") + ")"
-        )
+        if (print) {
+          info(
+            "==" + definition.identify + "(" + stack.map(_.identify)
+              .mkString(", ") + ")"
+          )
+        }
         t.copy(defs = t.defs + 1)
       }
 
@@ -219,11 +227,12 @@ class FoldingTest extends ParsingTest {
         container: Definition,
         stack: Seq[Definition]
       ): Tracker = {
-        println(
-          "< " + container.identify + "(" + stack.map(_.identify)
-            .mkString(", ") + ")"
-        )
-
+        if (print) {
+          info(
+            "< " + container.identify + "(" + stack.map(_.identify)
+              .mkString(", ") + ")"
+          )
+        }
         t.copy(contPop = t.contPop + 1)
       }
     }

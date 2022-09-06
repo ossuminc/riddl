@@ -18,7 +18,7 @@ package com.reactific.riddl
 
 import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.utils.{Logger, SysLogger}
+import com.reactific.riddl.utils.{Logger, StringLogger, SysLogger}
 import com.reactific.riddl.language.Messages.*
 
 import scala.util.control.NonFatal
@@ -31,7 +31,7 @@ object RIDDLC {
     if (resultCode != 0) { System.exit(resultCode) }
   }
 
-  val log: Logger = SysLogger()
+  var log: Logger = SysLogger()
 
   def runMain(args: Array[String]): Int = {
     try {
@@ -47,12 +47,20 @@ object RIDDLC {
             val name = remaining.head
             if (commonOptions.dryRun) {
               if (!commonOptions.quiet) {
-                println(s"Would have executed: ${remaining.mkString(" ")}")
+                log.info(s"Would have executed: ${remaining.mkString(" ")}")
               }
+            }
+            if (commonOptions.quiet) {
+              log = StringLogger()
             }
             CommandPlugin.
               runCommandWithArgs(name, remaining, log, commonOptions) match {
-              case Right(_) => 0
+              case Right(_) =>
+                if (commonOptions.quiet) {
+                  System.out.println(log.summary)
+                }
+                0
+
               case Left(messages) =>
                 if (commonOptions.quiet) {
                   highestSeverity(messages) + 1

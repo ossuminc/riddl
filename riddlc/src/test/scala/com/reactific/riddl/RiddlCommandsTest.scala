@@ -1,8 +1,5 @@
 package com.reactific.riddl
 
-import com.reactific.riddl.commands.CommandPlugin
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -17,70 +14,63 @@ class RiddlCommandsTest extends AnyWordSpec with Matchers {
 
   "Riddlc Commands" should {
     "generate info" in {
-      runSimpleCommand("info")
+      runCommand(Array("--quiet","info"))
     }
     "provide help" in {
-      runSimpleCommand("help")
+      runCommand(Array("--quiet","help"))
     }
     "print version" in {
-      runSimpleCommand("version")
+      runCommand(Array("--quiet","version"))
     }
     "handle parse" in {
-      val args = Array("parse", inputFile)
-      RIDDLC.runMain(args) mustBe 0
+      val args = Array("--quiet", "parse", inputFile)
+      runCommand(args)
     }
     "handle validate" in {
       val args = Array(
-        "--verbose", "--suppress-missing-warnings", "--suppress-style-warnings",
+        "--quiet","--suppress-missing-warnings", "--suppress-style-warnings",
         "validate", inputFile
         )
-      RIDDLC.runMain(args) mustBe 0
+      runCommand(args)
     }
     "handle dump" in {
       val args = Array(
-        "--verbose", "--suppress-missing-warnings", "--suppress-style-warnings",
+        "--quiet", "--suppress-missing-warnings", "--suppress-style-warnings",
         "dump", inputFile
       )
-      RIDDLC.runMain(args) mustBe 0
-
+      runCommand(args)
     }
     "handle hugo" in {
       val args = Array(
-        "--verbose", "--suppress-missing-warnings", "--suppress-style-warnings",
+        "--quiet", "--suppress-missing-warnings", "--suppress-style-warnings",
         "hugo", inputFile, "-o", outputDir("hugo")
       )
-      RIDDLC.runMain(args) mustBe 0
+      runCommand(args)
     }
     "handle hugo from config" in {
       val args = Array(
-        "--verbose", "--suppress-missing-warnings", "--suppress-style-warnings",
+        "--quiet", "--suppress-missing-warnings", "--suppress-style-warnings",
         "from", hugoConfig)
-      RIDDLC.runMain(args) mustBe 0
+      runCommand(args)
       // runHugo(path)
       // val root = Path.of(output).resolve(path)
       // val img = root.resolve("static/images/RBBQ.png")
       // Files.exists(img) mustBe true
     }
+
     "repeat validation of the ReactiveBBQ example" in {
       val args = Array(
-        "--verbose", "--suppress-missing-warnings", "--suppress-style-warnings",
+        "--quiet", "--suppress-missing-warnings", "--suppress-style-warnings",
         "repeat", validateConfig, "validate", "1s", "2")
-      RIDDLC.runMain(args) mustBe 0
+      runCommand(args)
     }
   }
 
-
-  def runSimpleCommand(
-    command: String,
+  def runCommand(
     args: Array[String] = Array.empty[String]
   ): Assertion = {
-    val log = SysLogger()
-    CommandPlugin.runCommandWithArgs(command,args, log, CommonOptions()) match {
-      case Right(_) =>
-        succeed
-      case Left(errors) =>
-        fail(errors.format)
-    }
+    val rc = RIDDLC.runMain(args)
+    rc mustBe 0
   }
 
 }

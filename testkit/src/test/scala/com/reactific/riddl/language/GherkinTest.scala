@@ -5,7 +5,7 @@ import com.reactific.riddl.language.testkit.ParsingTest
 
 /** Unit Tests For Handler */
 class GherkinTest extends ParsingTest {
-  "Examples" should {
+  "Gherkin" should {
     "allow triviality" in {
       val input =
         """
@@ -13,9 +13,9 @@ class GherkinTest extends ParsingTest {
           |""".stripMargin
       parseDefinition[Example](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString("\n")
-          fail(msg)
-        case Right(_) => succeed
+          fail(errors.format)
+        case Right(_) =>
+          succeed
       }
     }
   }

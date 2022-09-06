@@ -289,10 +289,9 @@ class TypeParserTest extends ParsingTest {
                                    |""".stripMargin)
       parseDomainDefinition[Type](rip, _.types.last) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
+          fail(errors.format)
         case Right((typeDef, rpi)) =>
-          info(typeDef.toString)
+          // info(typeDef.toString)
           typeDef mustEqual Type(
             (9, 3, rpi),
             Identifier((9, 8, rpi), "Complex"),
