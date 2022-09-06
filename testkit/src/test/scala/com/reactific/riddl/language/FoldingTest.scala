@@ -193,7 +193,7 @@ class FoldingTest extends ParsingTest {
       contPop: Int = 0,
     )
 
-    class Tracking(print: Boolean = true) extends Folding.Folder[Tracker] {
+    class Tracking(print: Boolean = false) extends Folding.Folder[Tracker] {
       def openContainer(
         t: Tracker,
         container: Definition,
