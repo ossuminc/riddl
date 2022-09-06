@@ -20,14 +20,14 @@ object InfoCommand {
 
 class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   import InfoCommand.Options
-  override def getOptions(): (OParser[Unit, Options], Options) = {
+  override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
       .text("Print out build information about this program")
       -> InfoCommand.Options()
   }
 
-  override def getConfigReader():
+  override def getConfigReader:
   ConfigReader[InfoCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
@@ -48,14 +48,13 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
     log: Logger
   ): Either[Messages, Unit] = {
     log.info("About riddlc:")
-    log.info(s"           name: ${RiddlBuildInfo.name}")
+    log.info(s"           name: riddlc")
     log.info(s"        version: ${RiddlBuildInfo.version}")
+    log.info(s"  documentation: https://riddl.tech")
     log.info(s"      copyright: ${RiddlBuildInfo.copyright}")
-    log.info(s"     start year: ${RiddlBuildInfo.startYear}")
     log.info(s"       built at: ${RiddlBuildInfo.builtAtString}")
     log.info(s"       licenses: ${RiddlBuildInfo.licenses}")
-    log.info(s"      org. name: ${RiddlBuildInfo.organizationName}")
-    log.info(s"      org. page: ${RiddlBuildInfo.organizationHomepage}")
+    log.info(s"   organization: ${RiddlBuildInfo.organizationName}")
     log.info(s"  scala version: ${RiddlBuildInfo.scalaVersion}")
     log.info(s"    sbt version: ${RiddlBuildInfo.sbtVersion}")
     Right(())

@@ -16,18 +16,14 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.AST.{Include, _}
+import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.{AST, _}
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.TextFileWriter
-import com.reactific.riddl.utils.TreeCopyFileVisitor
-import com.reactific.riddl.utils.Zip
-import com.reactific.riddl.utils.Tar
+import com.reactific.riddl.language.{AST, *}
+import com.reactific.riddl.utils.{Logger, PathUtils, Tar, TextFileWriter, TreeCopyFileVisitor, Zip}
 
 import java.io.File
 import java.net.URL
-import java.nio.file._
+import java.nio.file.*
 import scala.collection.mutable
 
 object HugoTranslator extends Translator[HugoCommand.Options] {
@@ -46,28 +42,36 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     directory.delete
   }
 
-  def loadATheme(from: Option[URL], destDir: Path): Unit = {
-    if (from.isDefined) {
-      val fileName = TextFileWriter.copyURLToDir(from, destDir)
+  def loadATheme(from: URL, destDir: Path): Unit = {
+    val fileName = PathUtils.copyURLToDir(from, destDir)
+    if (fileName.nonEmpty) {
       val zip_path = destDir.resolve(fileName)
-      fileName match {
-        case name if name.endsWith(".zip") =>
-          Zip.unzip(zip_path, destDir)
-          zip_path.toFile.delete()
-        case name if name.endsWith(".tar.gz") =>
-          Tar.untar(zip_path, destDir)
-          zip_path.toFile.delete()
-        case _ => throw new IllegalArgumentException(
+      if (Files.isRegularFile(zip_path)) {
+        fileName match {
+          case name if name.endsWith(".zip") =>
+            Zip.unzip(zip_path, destDir)
+            zip_path.toFile.delete()
+          case name if name.endsWith(".tar.gz") =>
+            Tar.untar(zip_path, destDir)
+            zip_path.toFile.delete()
+          case _ => throw new IllegalArgumentException(
             "Can only load a theme from .tar.gz or .zip file"
           )
+        }
+      } else {
+        throw new IllegalStateException(
+          s"The downloaded theme is not a regular file: $zip_path"
+        )
       }
     }
   }
 
   def loadThemes(options: HugoCommand.Options): Unit = {
-    for ((name, url) <- options.themes) {
+    for (
+      (name, url) <- options.themes if url.nonEmpty
+    ) {
       val destDir = options.themesRoot.resolve(name)
-      loadATheme(url, destDir)
+      loadATheme(url.get, destDir)
     }
   }
 

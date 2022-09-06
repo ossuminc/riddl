@@ -10,25 +10,26 @@ import scopt.OParser
 import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
-object HelpCommand {
+object AboutCommand {
   case class Options(
-    command: String = "help",
+    command: String = "about",
     inputFile: Option[Path] = None,
     targetCommand: Option[String] = None,
   ) extends CommandOptions
 }
 
-class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
-  import HelpCommand.Options
+class AboutCommand extends CommandPlugin[AboutCommand.Options](
+  "about") {
+  import AboutCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
-      .text("Print out how to use this program")
-      -> HelpCommand.Options()
+      .text("Print out information about RIDDL")
+      -> AboutCommand.Options()
   }
 
   override def getConfigReader:
-  ConfigReader[HelpCommand.Options] = { (cur: ConfigCursor) =>
+  ConfigReader[AboutCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)
@@ -43,11 +44,11 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
   }
 
   override def run(
-    options: HelpCommand.Options,
+    options: AboutCommand.Options,
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    println(RiddlOptions.usage)
+    println(RiddlOptions.about)
     Right(())
   }
 }

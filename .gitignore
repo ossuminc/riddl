@@ -14,3 +14,4 @@ target
 /foo
 doc/src/main/hugo/public/
 *.lock
+examples/src/riddl/ReactiveBBQ/static/images/logo.png

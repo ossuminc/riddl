@@ -7,8 +7,7 @@ import java.nio.file.Path
 
 class GitCheckTranslatorTest
   extends RunCommandOnExamplesTest[
-    GitCheckCommand.Options, GitCheckCommand
-  ]("git-check") {
+  GitCheckCommand.Options, GitCheckCommand]("git-check") {
 
   val output: String = "hugo-git-check/target/test"
 

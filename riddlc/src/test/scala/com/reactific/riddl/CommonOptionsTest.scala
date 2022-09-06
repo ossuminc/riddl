@@ -60,7 +60,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
     }
 
     "empty args are eliminated" in {
-      val opts = Array("--show-times", "parse", "", " -i", "  ", "file.riddl")
+      val opts = Array("--show-times", "parse", "", "  ", "file.riddl")
       val (comm, remaining) = RiddlOptions.parseCommonOptions(opts)
       comm match {
         case Some(options) =>

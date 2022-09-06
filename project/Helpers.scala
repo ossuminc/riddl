@@ -12,7 +12,6 @@ import sbtdynver.DynVerPlugin.autoImport.{
 
 /** V - Dependency Versions object */
 object V {
-  val cats = "2.8.0"
   val commons_io = "2.11.0"
   val compress = "1.21"
   val config = "1.4.2"
@@ -23,7 +22,6 @@ object V {
   val scalacheck = "1.16.0"
   val scalatest = "3.2.12"
   val scopt = "4.1.0"
-  val ujson = "2.0.0"
 }
 
 object Dep {
@@ -38,7 +36,6 @@ object Dep {
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
-
   val testing: Seq[ModuleID] = Seq(
     scalactic % "test", scalatest % "test", scalacheck % "test"
   )

@@ -3,7 +3,6 @@ package com.reactific.riddl.utils
 import com.reactific.riddl.utils.TextFileWriter.*
 
 import java.io.PrintWriter
-import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Files
@@ -63,22 +62,6 @@ object TextFileWriter {
   def copyResource(resourceName: String, destination: Path): Unit = {
     val src = this.getClass.getClassLoader.getResourceAsStream(resourceName)
     Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
-  }
-
-  def copyURLToDir(from: Option[URL], destDir: Path): String = {
-    if (from.isDefined) {
-      import java.io.InputStream
-      import java.nio.file.{ Files, StandardCopyOption }
-      val nameParts = from.get.getFile.split('/')
-      if (nameParts.nonEmpty) {
-        val fileName = nameParts.last
-        val in: InputStream = from.get.openStream
-        destDir.toFile.mkdirs()
-        val dl_path = destDir.resolve(fileName)
-        Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
-        fileName
-      } else { "" }
-    } else { "" }
   }
 
   def substitute(

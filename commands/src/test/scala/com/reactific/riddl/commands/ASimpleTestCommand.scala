@@ -8,9 +8,9 @@ import scopt.OParser
 
 import java.nio.file.Path
 
-object TestCommand {
+object ASimpleTestCommand {
   case class Options(
-    command: Command = PluginCommand("test"),
+    command: String = "test",
     arg1: String = "",
   ) extends CommandOptions {
     override def inputFile: Option[Path] = None
@@ -18,9 +18,9 @@ object TestCommand {
 }
 
 /** A pluggable command for testing plugin commands! */
-class TestCommand extends CommandPlugin[TestCommand.Options]("test") {
-  import TestCommand.Options
-  override def getOptions(log : Logger): (OParser[Unit, Options], Options) = {
+class ASimpleTestCommand extends CommandPlugin[ASimpleTestCommand.Options]("test") {
+  import ASimpleTestCommand.Options
+  override def getOptions: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
     OParser.sequence(
@@ -36,9 +36,7 @@ class TestCommand extends CommandPlugin[TestCommand.Options]("test") {
     ) -> Options()
   }
 
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
     for {
       objCur <- cur.asObjectCursor
       contentCur <- objCur.atKey("test")

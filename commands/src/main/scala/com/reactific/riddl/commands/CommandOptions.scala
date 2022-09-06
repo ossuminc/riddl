@@ -121,7 +121,12 @@ object CommandOptions {
     path: Path,
   ): Either[Messages,CommonOptions] = {
     ConfigSource.file(path.toFile).load[CommonOptions] match {
-      case Right(options) => Right(options)
+      case Right(options) =>
+        if (options.verbose) {
+          import com.reactific.riddl.utils.StringHelpers.toPrettyString
+          println(toPrettyString(options,1,Some("Loaded common options:")))
+        }
+        Right(options)
       case Left(failures) =>
         Left(errors(s"Failed to load options from $path because:\n" +
           failures.prettyPrint(1)))

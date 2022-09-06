@@ -20,15 +20,16 @@ object FromCommand {
 
 class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
   import FromCommand.Options
-  override def getOptions(): (OParser[Unit, Options], Options) = {
-    import builder._
+  override def getOptions: (OParser[Unit, Options], Options) = {
+    import builder.*
     cmd("from")
       .action((_, c) => c.copy(command = pluginName))
       .children(
         arg[File]("config-file")
           .action { (file, opt) => opt.copy(inputFile = Some(file.toPath))}
           .text("A HOCON configuration file with riddlc options in it."),
-        opt[Option[String]]("target-command")
+        arg[Option[String]]("target-command")
+          .optional()
           .action { (cmd, opt) => opt.copy(targetCommand = cmd) }
           .text("The name of the command to select from the configuration file")
       )
@@ -36,7 +37,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
       -> FromCommand.Options()
   }
 
-  override def getConfigReader():
+  override def getConfigReader:
   ConfigReader[FromCommand.Options] = { (cur: ConfigCursor) =>
     for {
       topCur <- cur.asObjectCursor
@@ -55,7 +56,6 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
     }
   }
 
-
   override def run(
     options: FromCommand.Options,
     commonOptions: CommonOptions,
@@ -64,5 +64,18 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
     CommandPlugin.runFromConfig(
       options.inputFile, options.targetCommand, commonOptions, log, pluginName
     )
+  }
+
+  override def replaceInputFile(
+    opts: Options, inputFile: Path
+  ): Options = {
+    opts.copy(inputFile = Some(inputFile))
+  }
+
+  override def loadOptionsFrom(configFile: Path, commonOptions: CommonOptions):
+  Either[Messages, Options] = {
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    }
   }
 }

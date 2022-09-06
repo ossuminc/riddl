@@ -5,7 +5,6 @@ import sbtbuildinfo.BuildInfoOption.ToMap
 import sbtbuildinfo.BuildInfoOption.BuildTime
 import java.util.Calendar
 
-
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
   Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
@@ -110,7 +109,11 @@ lazy val `git-check`: Project = project.in(file("git-check"))
     },
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
-  ).dependsOn(hugo % "compile->compile;test->test")
+  )
+  .dependsOn(
+    commands,
+    testkit % "test->compile"
+  )
 
 lazy val examples = project.in(file("examples"))
   .configure(C.withScalaCompile)
@@ -147,8 +150,9 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     utils % "compile->compile;test->test",
     commands,
     language,
-    hugo % "compile->compile;test->test",
-    `git-check` % "compile->compile;test->test"
+    hugo,
+    `git-check`,
+    testkit % "test->compile"
   ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),

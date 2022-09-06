@@ -1,10 +1,9 @@
 package com.reactific.riddl.utils
 
-import java.io.File
+import java.io.{File, InputStream}
 import java.net.URL
 import java.nio.file.{Files, Path}
-import java.io.InputStream
-import java.nio.file.{StandardCopyOption}
+import java.nio.file.StandardCopyOption
 
 object PathUtils {
 
@@ -23,12 +22,23 @@ object PathUtils {
   def copyURLToDir(from: URL, destDir: Path): String = {
     val nameParts = from.getFile.split('/')
     if (nameParts.nonEmpty) {
-      val fileName = nameParts.last
-      val in: InputStream = from.openStream
-      destDir.toFile.mkdirs()
+      val fileName = scala.util.Random.self.nextLong.toString ++ nameParts.last
+      Files.createDirectories(destDir)
       val dl_path = destDir.resolve(fileName)
-      Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
-      fileName
+      val in: InputStream = from.openStream
+      if (in == null) {
+        ""
+      } else {
+        try {
+          Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
+        }
+        finally if (in != null) in.close()
+      }
+      if (Files.isRegularFile(dl_path)) {
+        fileName
+      } else {
+        ""
+      }
     } else {""}
   }
 }

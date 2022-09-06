@@ -1,24 +1,30 @@
 package com.reactific.riddl.commands
 
-import com.reactific.riddl.language.{CommonOptions, Messages}
+import com.reactific.riddl.language.{CommonOptions, Messages, Riddl}
 import com.reactific.riddl.language.Messages.{Messages, errors}
+import com.reactific.riddl.utils.StringHelpers.toPrettyString
 import com.reactific.riddl.utils.{Logger, Plugin, PluginInterface, RiddlBuildInfo}
 import pureconfig.{ConfigReader, ConfigSource}
 import scopt.{OParser, OParserBuilder}
 
 import java.io.File
 import java.nio.file.Path
+import scala.annotation.unused
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.reflect.{ClassTag, classTag}
 
 object CommandPlugin {
   def loadCommandNamed(
     name: String,
+    commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
+    if (commonOptions.verbose) {
+      println(s"Loading command: $name")
+    }
     val loaded = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]](pluginsDir)
     if (loaded.isEmpty) {
-      Left(errors(s"No command plugins loaded from: $pluginsDir"))
+      Left(errors(s"No command found for '$name'"))
     } else {
       loaded.find(_.pluginName == name) match {
         case Some(pl) if pl.isInstanceOf[CommandPlugin[CommandOptions]] =>
@@ -41,7 +47,7 @@ object CommandPlugin {
     commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, Unit]= {
-    loadCommandNamed(name, pluginsDir).map { cmd =>
+    loadCommandNamed(name, commonOptions, pluginsDir).map { cmd =>
       cmd.run(args, commonOptions, log)
     }
   }
@@ -53,9 +59,12 @@ object CommandPlugin {
     commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
+    if (commonOptions.verbose) {
+      println(s"About to run $name with options from $optionsPath")
+    }
     for {
-      cmd <- loadCommandNamed(name, pluginsDir)
-      opts <- cmd.loadOptionsFrom(optionsPath)
+      cmd <- loadCommandNamed(name, commonOptions, pluginsDir)
+      opts <- cmd.loadOptionsFrom(optionsPath, commonOptions)
       _ <- cmd.run(opts, commonOptions, log)
     } yield {
       require(opts.getClass == cmd.optionsClass)
@@ -63,11 +72,20 @@ object CommandPlugin {
     }
   }
 
-  def loadCandidateCommands(configFile: Path): Either[Messages, Seq[String]] = {
+  def loadCandidateCommands(
+    configFile: Path,
+    commonOptions: CommonOptions = CommonOptions()
+  ): Either[Messages, Seq[String]] = {
     val names = ConfigSource.file(configFile.toFile).value()
       .map(_.keySet().asScala.toSeq)
     names match {
-      case Right(value) => Right(value)
+      case Right(value) =>
+        if (commonOptions.verbose) {
+          println(
+            s"Found candidate commands in $configFile: ${value.mkString(" ")}"
+          )
+        }
+        Right(value)
       case Left(fails) => Left(
           errors(
             s"Errors while reading $configFile:\n" +
@@ -85,7 +103,7 @@ object CommandPlugin {
     commandName: String
   ): Either[Messages, Unit] = {
     CommandOptions.withInputFile(configFile,commandName) { path =>
-      CommandPlugin.loadCandidateCommands(path).map { names =>
+      CommandPlugin.loadCandidateCommands(path,commonOptions).map { names =>
         targetCommand match {
           case None =>
             val messages = names.foldLeft(Messages.empty) { (m, name) =>
@@ -93,7 +111,7 @@ object CommandPlugin {
                 cmd.runFrom(path, commonOptions, log)
               } match {
                 case Right(_) => m ++ Messages.empty
-                case Left(msgs) => m ++ msgs
+                case Left(mess) => m ++ mess
               }
             }
             if (messages.isEmpty) {
@@ -124,15 +142,14 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
 
   /**
    * Provide an scopt OParser for the commands options type, OPT
-   * @param log A logger to use for output (discouraged)
    * @return A pair: the OParser and the default values for OPT
    */
-  def getOptions(): (OParser[Unit,OPT], OPT)
+  def getOptions: (OParser[Unit,OPT], OPT)
 
   def parseOptions(
     args: Array[String]
   ): Option[OPT] = {
-    val (parser, default) = getOptions()
+    val (parser, default) = getOptions
     val (result, effects) = OParser.runParser(parser, args, default)
     OParser.runEffects(effects)
     result
@@ -142,14 +159,25 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
    * Provide a typesafe/Config reader for the commands options. This
    * reader should read an object having the same name as the command. The fields
    * of that object must correspond to the fields of the OPT type.
-   * @param log A logger to use for output (discouraged)
    * @return A pureconfig.ConfigReader[OPT] that knows how to read OPT
    */
-  def getConfigReader() : ConfigReader[OPT]
+  def getConfigReader : ConfigReader[OPT]
 
-  def loadOptionsFrom(configFile: Path): Either[Messages,OPT] = {
-    ConfigSource.file(configFile).load[OPT](getConfigReader()) match {
-      case Right(value) => Right(value)
+  def loadOptionsFrom(
+    configFile: Path,
+    commonOptions: CommonOptions = CommonOptions()
+  ): Either[Messages,OPT] = {
+    if (commonOptions.verbose) {
+      println(s"Reading command options from: $configFile")
+    }
+    ConfigSource.file(configFile).load[OPT](getConfigReader) match {
+      case Right(value) =>
+        if (commonOptions.verbose) {
+          println(s"Read command options from $configFile")
+          import com.reactific.riddl.utils.StringHelpers.toPrettyString
+          println(toPrettyString(value, 1))
+        }
+        Right(value)
       case Left(fails) => Left(errors(
         "Errors while reading ${configFile}:\n" + fails.prettyPrint(1)
       ))
@@ -161,7 +189,7 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    loadOptionsFrom(configFile)
+    loadOptionsFrom(configFile, commonOptions)
       .flatMap(run(_,commonOptions,log))
   }
 
@@ -188,7 +216,13 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
     val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match {
       case Some(opts: OPT) =>
-        run(opts, commonOptions, log)
+        val command = args.mkString(" ")
+        if (commonOptions.verbose) {
+          println(s"Running command: $command")
+        }
+        Riddl.timer(command,show=commonOptions.showTimes,log) {
+          run(opts, commonOptions, log)
+        }
       case Some(_) =>
         Left(errors(s"Failed to match option type ${
           optionsClass.getSimpleName}"))
@@ -202,14 +236,41 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
   import builder.*
 
   def inputFile(f: OptionPlacer[File]): OParser[File, OPT] = {
-    opt[File]('i', "input-file").optional().action((v, c) => f(v, c))
+    arg[File]("input-file")
+      .required()
+      .action((v, c) => f(v, c))
       .text("required riddl input file to read")
   }
 
   def outputDir(f: OptionPlacer[File]): OParser[File, OPT] = {
-    opt[File]('o', "output-dir").optional().action((v, c) => f(v, c))
+    opt[File]('o', "output-dir")
+      .optional()
+      .action((v, c) => f(v, c))
       .text("required output directory for the generated output")
   }
 
+  def replaceInputFile(options: OPT, @unused inputFile: Path): OPT = options
+
+  def resolveInputFileToConfigFile(
+    options: OPT,
+    commonOptions:
+    CommonOptions,
+    configFile: Path
+  ): OPT = {
+    options.inputFile match {
+      case Some(inFile) =>
+        val parent = configFile.getParent.toAbsolutePath
+        val input = parent.resolve(inFile)
+        val result = replaceInputFile(options, input)
+        if (commonOptions.verbose) {
+          val pretty = toPrettyString(result, 1,
+            Some(s"Loaded these options:${System.lineSeparator()}"))
+          println(pretty)
+        }
+        result
+      case None =>
+        options
+    }
+  }
 }
 

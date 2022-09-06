@@ -27,6 +27,7 @@ import scopt.OParser
 
 import java.net.URL
 import java.nio.file.Path
+import scala.annotation.unused
 
 /** Unit Tests For HugoCommand */
 object HugoCommand {
@@ -60,8 +61,8 @@ object HugoCommand {
 
 class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
   import HugoCommand.Options
-  override def getOptions(): (OParser[Unit, Options], Options) = {
-    import builder._
+  override def getOptions: (OParser[Unit, Options], Options) = {
+    import builder.*
     cmd("hugo")
       .text(
         """Parse and validate the input-file and then translate it into the input
@@ -104,7 +105,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
       ) -> HugoCommand.Options()
   }
 
-  override def getConfigReader(): ConfigReader[Options] = {
+  override def getConfigReader: ConfigReader[Options] = {
     (cur: ConfigCursor) =>
       for {
         topCur <- cur.asObjectCursor
@@ -201,17 +202,16 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
     HugoTranslator.translate(root, log, commonOptions, options)
   }
 
-  override def loadOptionsFrom(configFile: Path):
+  override def replaceInputFile(
+    opts: Options, @unused inputFile: Path
+  ): Options = {
+    opts.copy(inputFile = Some(inputFile))
+  }
+
+  override def loadOptionsFrom(configFile: Path, commonOptions: CommonOptions):
   Either[Messages, HugoCommand.Options] = {
-    super.loadOptionsFrom(configFile).map { options =>
-      options.inputFile match {
-        case Some(inFile) =>
-          val parent = configFile.getParent.toAbsolutePath
-          val input = parent.resolve(inFile)
-          options.copy(inputFile = Some(input))
-        case None =>
-          options
-      }
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+      resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }
 
