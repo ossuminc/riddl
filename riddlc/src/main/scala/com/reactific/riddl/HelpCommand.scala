@@ -47,7 +47,9 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    println(RiddlOptions.usage)
+    if (commonOptions.verbose || !commonOptions.quiet) {
+      println(RiddlOptions.usage)
+    }
     Right(())
   }
 }

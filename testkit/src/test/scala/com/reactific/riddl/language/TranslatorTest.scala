@@ -40,8 +40,8 @@ class TranslatorTest extends ValidatingTest {
       val parents = scala.collection.mutable.Stack
         .empty[Definition]
       Folding.foldLeftWithStack(state, parents)(root) {
-        case (state, definition, stack) =>
-          log.info(stack.reverse.mkString(".") + "." + definition.id.format)
+        case (state, _/*definition*/, _/*stack*/) =>
+          // log.info(stack.reverse.mkString(".") + "." + definition.id.format)
           state
       }.generatedFiles
       Right(())

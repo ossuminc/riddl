@@ -19,8 +19,8 @@ class DumpCommand extends InputFileCommandPlugin("dump") {
   ): Either[Messages,Unit] = {
     options.withInputFile { (inputFile: Path) =>
       Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
-        println(s"AST of $inputFile is:")
-        println(toPrettyString(root,1, None))
+        log.info(s"AST of $inputFile is:")
+        log.info(toPrettyString(root,1, None))
         ()
       }
     }

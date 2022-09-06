@@ -14,8 +14,7 @@ class RegressionTests extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
+          fail(errors.format)
         case Right((domain, _)) => domain.description match {
             case Some(_) => succeed
             case None    => fail("no description")
@@ -30,8 +29,7 @@ class RegressionTests extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
+          fail(errors.format)
         case Right((domain, _)) => domain.description match {
             case Some(desc) => desc.lines.nonEmpty mustBe true
             case None       => fail("no description")
@@ -60,10 +58,9 @@ class RegressionTests extends ParsingTest {
           |""".stripMargin
       parseDomainDefinition[Type](RiddlParserInput(input), _.types.last) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(typeDef) =>
-          info(typeDef.toString)
+          fail(errors.format)
+        case Right(_) =>
+          // info(typeDef.toString)
           succeed
       }
     }
