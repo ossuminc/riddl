@@ -9,6 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++=
   Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
 
+maintainer := "reid@ossumin.com"
 
 lazy val riddl = (project in file("."))
   .settings(
