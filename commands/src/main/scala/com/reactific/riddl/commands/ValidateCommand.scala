@@ -26,7 +26,7 @@ import scala.annotation.unused
 /** Validate Command */
 class ValidateCommand extends InputFileCommandPlugin("validate") {
   import InputFileCommandPlugin.Options
-  def run(
+  override def run(
     options: Options,
     @unused commonOptions: CommonOptions,
     log:Logger

@@ -58,7 +58,7 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
     options: OPT
   ): Either[Messages, Unit]
 
-  final def run(
+  override final def run(
     options: OPT,
     commonOptions: CommonOptions,
     log: Logger
@@ -67,17 +67,21 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
     Riddl.timer(stage = "translate", showTimes) {
       options.withInputFile { inputFile: Path =>
         Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
-          if (commonOptions.verbose) log
-            .info(s"Starting translation of `${root.id.format}")
-          val messages =
-            (if (options.inputFile.isEmpty) {
+          if (commonOptions.verbose) {
+            log.info(s"Starting translation of `${root.id.format}")
+          }
+          val msgs1 = if (options.inputFile.isEmpty) {
                Messages.errors("An input path was not provided.")
-             } else { Messages.empty }) ++
-              (if (options.outputDir.isEmpty) {
+             } else { Messages.empty }
+          val msgs2 = if (options.outputDir.isEmpty) {
                  Messages.errors("An output path was not provided.")
-               } else { Messages.empty })
-          if (messages.nonEmpty) { Left(messages) }
-          else { translateImpl(root, log, commonOptions, options) }
+               } else { Messages.empty }
+          val messages = msgs1 ++ msgs2
+          if (messages.nonEmpty) {
+            Left(messages)
+          } else {
+            translateImpl(root, log, commonOptions, options)
+          }
         }
       }
     }

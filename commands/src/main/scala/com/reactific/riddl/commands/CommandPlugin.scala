@@ -1,7 +1,7 @@
 package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.{CommonOptions, Messages, Riddl}
-import com.reactific.riddl.language.Messages.{Messages, errors}
+import com.reactific.riddl.language.Messages.{Messages, errors, severes}
 import com.reactific.riddl.utils.StringHelpers.toPrettyString
 import com.reactific.riddl.utils.{Logger, Plugin, PluginInterface, RiddlBuildInfo}
 import pureconfig.{ConfigReader, ConfigSource}
@@ -62,13 +62,10 @@ object CommandPlugin {
     if (commonOptions.verbose) {
       println(s"About to run $name with options from $optionsPath")
     }
-    for {
-      cmd <- loadCommandNamed(name, commonOptions, pluginsDir)
-      opts <- cmd.loadOptionsFrom(optionsPath, commonOptions)
-      _ <- cmd.run(opts, commonOptions, log)
-    } yield {
-      require(opts.getClass == cmd.optionsClass)
-      cmd
+    loadCommandNamed(name, commonOptions, pluginsDir).flatMap { cmd =>
+      cmd.loadOptionsFrom(optionsPath, commonOptions).flatMap { opts =>
+        cmd.run(opts, commonOptions, log).map(_ => cmd)
+      }
     }
   }
 
@@ -174,6 +171,8 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
       case Right(value) =>
         if (commonOptions.verbose) {
           println(s"Read command options from $configFile")
+        }
+        if (commonOptions.debug) {
           import com.reactific.riddl.utils.StringHelpers.toPrettyString
           println(toPrettyString(value, 1))
         }
@@ -203,10 +202,16 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
    * @return Either a set of Messages on error or a Unit on success
    */
   def run(
-    options: OPT,
-    commonOptions: CommonOptions,
-    log: Logger
-  ): Either[Messages,Unit]
+    @unused options: OPT,
+    @unused commonOptions: CommonOptions,
+    @unused log: Logger
+  ): Either[Messages,Unit] = {
+    Left(severes(
+      s"""In command '$pluginName':
+         |the CommandPlugin.run(OPT,CommonOptions,Logger) method was not overridden"""
+        .stripMargin
+    ))
+  }
 
   def run(
     args : Array[String],
@@ -262,7 +267,7 @@ abstract class CommandPlugin[OPT <: CommandOptions : ClassTag](
         val parent = configFile.getParent.toAbsolutePath
         val input = parent.resolve(inFile)
         val result = replaceInputFile(options, input)
-        if (commonOptions.verbose) {
+        if (commonOptions.debug) {
           val pretty = toPrettyString(result, 1,
             Some(s"Loaded these options:${System.lineSeparator()}"))
           println(pretty)

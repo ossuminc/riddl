@@ -114,7 +114,11 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](
    * @param log           A logger for logging errors, warnings, and info
    * @return Either a set of Messages on error or a Unit on success
    */
-  override def run(options: Options, commonOptions: CommonOptions, log: Logger): Either[Messages, Unit] = {
+  override def run(
+    options: Options,
+    commonOptions: CommonOptions,
+    log: Logger
+  ): Either[Messages, Unit] = {
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate
     val sleepTime = refresh.toMillis

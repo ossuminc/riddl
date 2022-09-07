@@ -85,7 +85,8 @@ it is time to pick a version number and tag it:
 % cd riddl
 % sbt publishSigned
 ```
-1. When that is complete, log in to https://oss.sonatype.org/#stagingRepositories
+1. When that is complete, log in to 
+   [Sonatype OSS Repo](https://oss.sonatype.org/#stagingRepositories)
 2. Check the staged artifacts for sanity. All modules should be published with 
    the same release number
 3. Close the repository and add the release number in the notes

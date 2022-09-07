@@ -10,7 +10,7 @@ class PluginCommandTest extends PluginSpecBase(
   implClassPath = Path.of(
     "com/reactific/riddl/TestCommand.class"
   ),
-  testClassesDir = Path.of("riddlc/target/scala-2.13/test-classes/"),
+  moduleName = "riddlc",
   jarFilename = "test-command.jar"
 ) {
 

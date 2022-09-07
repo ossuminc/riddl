@@ -122,7 +122,7 @@ object CommandOptions {
   ): Either[Messages,CommonOptions] = {
     ConfigSource.file(path.toFile).load[CommonOptions] match {
       case Right(options) =>
-        if (options.verbose) {
+        if (options.debug) {
           import com.reactific.riddl.utils.StringHelpers.toPrettyString
           println(toPrettyString(options,1,Some("Loaded common options:")))
         }

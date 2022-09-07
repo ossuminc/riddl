@@ -19,7 +19,7 @@ lazy val riddl = (project in file("."))
     publishTo := Some(Resolver.defaultLocal),
   )
   .aggregate(
-    utils, language, testkit, hugo, `git-check`, prettify, examples,
+    utils, language, commands, testkit, prettify, hugo, `git-check`, examples,
     doc, riddlc, `sbt-riddl`
   )
 
@@ -54,6 +54,9 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
           Calendar.getInstance().get(Calendar.YEAR)} Ossum Inc."},
       scalaVersion,
       sbtVersion,
+      BuildInfoKey.map(scalaVersion) { case (k, v) =>
+        "scalaCompatVersion" -> v.substring(0, v.lastIndexOf('.'))
+      },
       BuildInfoKey.map(licenses) { case (k, v) =>
         k -> v.map(_._1).mkString(", ")
       }

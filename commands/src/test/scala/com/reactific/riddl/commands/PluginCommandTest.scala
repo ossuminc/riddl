@@ -11,9 +11,9 @@ class PluginCommandTest extends PluginSpecBase(
   svcClassPath = Path.of(
     "com/reactific/riddl/commands/CommandPlugin.class"),
   implClassPath = Path.of(
-    "com.reactific.riddl.commands.ASimpleTestCommand.class"
+    "com/reactific/riddl/commands/ASimpleTestCommand.class"
   ),
-  testClassesDir = Path.of("commands/target/scala-2.13/test-classes/"),
+  moduleName = "commands",
   jarFilename = "test-command.jar"
 )
 // abstract class PluginSpecBase(
