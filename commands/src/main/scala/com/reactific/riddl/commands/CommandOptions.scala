@@ -1,8 +1,10 @@
 package com.reactific.riddl.commands
 import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.Messages.{Messages, errors}
+import com.reactific.riddl.utils.Plugin
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
+import scopt.OParser
 
 import java.nio.file.Path
 
@@ -132,4 +134,27 @@ object CommandOptions {
           failures.prettyPrint(1)))
     }
   }
+
+  def parseCommandOptions(
+    args: Array[String]
+  ): Either[Messages, CommandOptions] = {
+    require(args.nonEmpty)
+    val result = CommandPlugin.loadCommandNamed(args.head)
+    result match {
+      case Right(cmd) => cmd.parseOptions(args) match {
+          case Some(options) => Right(options)
+          case None          => Left(errors("Option parsing failed"))
+        }
+      case Left(messages) => Left(messages)
+    }
+  }
+
+  val commandOptionsParser: OParser[Unit, CommandOptions] = {
+    val plugins = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]]()
+    val list =
+      for { plugin <- plugins } yield { plugin.pluginName -> plugin.getOptions }
+    val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
+    OParser.sequence(parsers.head, parsers.tail*)
+  }
+
 }
