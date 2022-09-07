@@ -1,50 +1,50 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Definition
-import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.testkit.ParsingTest
 
 class FoldingTest extends ParsingTest {
 
-  val input: String = """domain one is {
-                |  plant one is {
-                |    pipe a is { ??? }
-                |    term whomprat is described by "a 2m long rat on Tatooine"
-                |    flow b is {
-                |      inlet b_in is String
-                |      outlet b_out is Number
-                |    }
-                |  }
-                |  context one is { ??? }
-                |  context two is {
-                |    term ForcePush is described by "an ability of the Jedi"
-                |    function foo is {
-                |       requires { a: Integer, b: String }
-                |       returns {}
-                |     }
-                |    entity one is {
-                |      state entityState is { ??? }
-                |      handler one  is { ??? }
-                |      function one is { ??? }
-                |      invariant one is { ??? }
-                |    }
-                |    entity two is {
-                |      state entityState is { ??? }
-                |      handler one  is { ??? }
-                |      function one is { ??? }
-                |      invariant one is { ??? }
-                |    }
-                |    adaptor one for context over.consumption is { ??? }
-                |  }
-                |  type AString = String
-                |}
-                |""".stripMargin
+  val input: String =
+    """domain one is {
+      |  plant one is {
+      |    pipe a is { ??? }
+      |    term whomprat is described by "a 2m long rat on Tatooine"
+      |    flow b is {
+      |      inlet b_in is String
+      |      outlet b_out is Number
+      |    }
+      |  }
+      |  context one is { ??? }
+      |  context two is {
+      |    term ForcePush is described by "an ability of the Jedi"
+      |    function foo is {
+      |       requires { a: Integer, b: String }
+      |       returns {}
+      |     }
+      |    entity one is {
+      |      state entityState is { ??? }
+      |      handler one  is { ??? }
+      |      function one is { ??? }
+      |      invariant one is { ??? }
+      |    }
+      |    entity two is {
+      |      state entityState is { ??? }
+      |      handler one  is { ??? }
+      |      function one is { ??? }
+      |      invariant one is { ??? }
+      |    }
+      |    adaptor one for context over.consumption is { ??? }
+      |  }
+      |  type AString = String
+      |}
+      |""".stripMargin
 
   "Folding" should {
     "visit each definition" in {
 
       parseTopLevelDomains(input) match {
-        case Left(errors) =>
-          fail(errors.format)
+        case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
           val result = Folding.foldLeftWithStack(empty)(content) {
@@ -145,7 +145,8 @@ class FoldingTest extends ParsingTest {
               "Domain 'one'",
               "Context 'two'",
               "Function 'foo'",
-              "Field 'a'"),
+              "Field 'a'"
+            ),
             List(
               "Root 'Root'",
               "Domain 'one'",
@@ -190,8 +191,7 @@ class FoldingTest extends ParsingTest {
     case class Tracker(
       contPush: Int = 0,
       defs: Int = 0,
-      contPop: Int = 0,
-    )
+      contPop: Int = 0)
 
     class Tracking(print: Boolean = false) extends Folding.Folder[Tracker] {
       def openContainer(

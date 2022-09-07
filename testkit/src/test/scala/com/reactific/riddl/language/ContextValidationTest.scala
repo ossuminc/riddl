@@ -2,7 +2,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 
 class ContextValidationTest extends ValidatingTest {
 
@@ -24,5 +24,4 @@ class ContextValidationTest extends ValidatingTest {
     "allow entities" in { pending }
     "allow pipelines" in { pending }
   }
-
 }

@@ -1,8 +1,8 @@
 package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.hugo.{HugoCommand, HugoTranslator}
-import com.reactific.riddl.language.testkit.ValidatingTest
 import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.testkit.ValidatingTest
 import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 

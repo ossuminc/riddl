@@ -1,7 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.testkit.ValidatingTest
-
+import com.reactific.riddl.testkit.ValidatingTest
 import java.nio.file.Path
 
 /** Unit Tests For ExamplesTest */

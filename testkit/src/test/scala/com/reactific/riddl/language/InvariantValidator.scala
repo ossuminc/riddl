@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 
 class InvariantValidator extends ValidatingTest {
 
@@ -47,18 +47,17 @@ class InvariantValidator extends ValidatingTest {
       }
     }
     "allow conditional expressions" in {
-      parseAndValidateInContext[AST.Entity](
-        """
-          |entity user is {
-          | invariant large is { true }
-          |}
-          |""".stripMargin
-      ) { (_, _, msgs) =>
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "Invariant 'large' should have a description"
-        )
+      parseAndValidateInContext[AST.Entity]("""
+                                              |entity user is {
+                                              | invariant large is { true }
+                                              |}
+                                              |""".stripMargin) {
+        (_, _, msgs) =>
+          assertValidationMessage(
+            msgs,
+            MissingWarning,
+            "Invariant 'large' should have a description"
+          )
       }
 
     }

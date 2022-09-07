@@ -1,4 +1,4 @@
-package com.reactific.riddl.language.testkit
+package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*

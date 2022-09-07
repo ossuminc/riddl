@@ -2,7 +2,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Adaptor
 import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 
 /** Unit Tests For ConsumerTest */
 class AdaptorTest extends ValidatingTest {

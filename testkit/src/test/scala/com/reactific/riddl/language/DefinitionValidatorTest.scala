@@ -2,7 +2,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 
 class DefinitionValidatorTest extends ValidatingTest {
 

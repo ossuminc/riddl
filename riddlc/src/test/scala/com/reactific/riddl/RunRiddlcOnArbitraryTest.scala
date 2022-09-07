@@ -15,8 +15,7 @@
  */
 package com.reactific.riddl
 
-import com.reactific.riddl.language.testkit.RunCommandSpecBase
-
+import com.reactific.riddl.testkit.RunCommandSpecBase
 import java.nio.file.Files
 import java.nio.file.Path
 

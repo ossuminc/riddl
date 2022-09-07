@@ -1,7 +1,7 @@
 package com.reactific.riddl
 
 import com.reactific.riddl.commands.CommandPlugin
-import com.reactific.riddl.language.testkit.RunCommandSpecBase
+import com.reactific.riddl.testkit.RunCommandSpecBase
 import org.scalatest.Assertion
 
 class RiddlCommandsTest extends RunCommandSpecBase {

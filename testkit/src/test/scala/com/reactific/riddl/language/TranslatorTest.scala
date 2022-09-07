@@ -3,7 +3,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
 
 import java.nio.file.Path

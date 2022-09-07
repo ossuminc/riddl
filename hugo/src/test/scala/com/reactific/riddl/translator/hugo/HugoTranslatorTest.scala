@@ -2,7 +2,7 @@ package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
 import com.reactific.riddl.hugo.HugoCommand
-import com.reactific.riddl.language.testkit.RunCommandOnExamplesTest
+import com.reactific.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}

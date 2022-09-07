@@ -4,7 +4,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.StringParser
-import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.testkit.ParsingTest
 import org.scalatest.Assertion
 
 import scala.collection.immutable.ListMap

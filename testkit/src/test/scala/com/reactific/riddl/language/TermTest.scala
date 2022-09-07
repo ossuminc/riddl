@@ -5,7 +5,7 @@ import com.reactific.riddl.language.AST.Identifier
 import com.reactific.riddl.language.AST.LiteralString
 import com.reactific.riddl.language.AST.Term
 import com.reactific.riddl.language.ast.Location
-import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.testkit.ParsingTest
 class TermTest extends ParsingTest {
 
   "Term" should {

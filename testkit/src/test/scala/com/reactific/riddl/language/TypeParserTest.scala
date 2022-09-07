@@ -2,7 +2,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.{Field, *}
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.testkit.ParsingTest
 
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {
@@ -52,10 +52,8 @@ class TypeParserTest extends ParsingTest {
           Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
         "type url = URL" ->
           Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
-        "type FirstName = URL" -> Type(
-          1 -> 1,
-          Identifier(1 -> 6, "FirstName"), URL(1->18,None)
-        )
+        "type FirstName = URL" ->
+          Type(1 -> 1, Identifier(1 -> 6, "FirstName"), URL(1 -> 18, None))
       )
       checkDefinitions[Type, Type](cases, identity)
     }
@@ -84,8 +82,14 @@ class TypeParserTest extends ParsingTest {
         Alternation(
           1 -> 12,
           List(
-            AliasedTypeExpression(1 -> 21, PathIdentifier(1 -> 21, Seq("enum"))),
-            AliasedTypeExpression(1 -> 29, PathIdentifier(1 -> 29, Seq("stamp"))),
+            AliasedTypeExpression(
+              1 -> 21,
+              PathIdentifier(1 -> 21, Seq("enum"))
+            ),
+            AliasedTypeExpression(
+              1 -> 29,
+              PathIdentifier(1 -> 29, Seq("stamp"))
+            ),
             AliasedTypeExpression(1 -> 38, PathIdentifier(1 -> 38, Seq("url")))
           )
         )
@@ -100,7 +104,10 @@ class TypeParserTest extends ParsingTest {
                                    |""".stripMargin)
       val expected = Alternation(
         (3, 12, rpi),
-        List(AliasedTypeExpression((3, 21, rpi), PathIdentifier((3, 26, rpi), Seq("Foo"))))
+        List(AliasedTypeExpression(
+          (3, 21, rpi),
+          PathIdentifier((3, 26, rpi), Seq("Foo"))
+        ))
       )
       parseDomainDefinition[Type](rpi, _.types.last) match {
         case Left(errors) =>
@@ -204,9 +211,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "r1"),
-        RangeType(
-          (1, 11, rip), 21, 42
-        )
+        RangeType((1, 11, rip), 21, 42)
       )
       checkDefinition[Type, Type](rip, expected, identity)
 
@@ -218,7 +223,10 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "oneOrMoreA"),
         OneOrMore(
           (1, 24, rip),
-          AliasedTypeExpression((1, 24, rip), PathIdentifier((1, 24, rip), Seq("agg")))
+          AliasedTypeExpression(
+            (1, 24, rip),
+            PathIdentifier((1, 24, rip), Seq("agg"))
+          )
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -230,7 +238,10 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "oneOrMoreB"),
         OneOrMore(
           (1, 19, rip),
-          AliasedTypeExpression((1, 19, rip), PathIdentifier((1, 19, rip), Seq("agg")))
+          AliasedTypeExpression(
+            (1, 19, rip),
+            PathIdentifier((1, 19, rip), Seq("agg"))
+          )
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -242,7 +253,10 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "zeroOrMore"),
         ZeroOrMore(
           (1, 33, rip),
-          AliasedTypeExpression((1, 33, rip), PathIdentifier((1, 33, rip), Seq("agg")))
+          AliasedTypeExpression(
+            (1, 33, rip),
+            PathIdentifier((1, 33, rip), Seq("agg"))
+          )
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -254,18 +268,27 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "optional"),
         Optional(
           (1, 26, rip),
-          AliasedTypeExpression((1, 26, rip), PathIdentifier((1, 26, rip), Seq("agg")))
+          AliasedTypeExpression(
+            (1, 26, rip),
+            PathIdentifier((1, 26, rip), Seq("agg"))
+          )
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow messages defined with more natural syntax" in {
       val rip = RiddlParserInput("command foo is { a: Integer }")
-      val expected = Type((1,1,rip), Identifier((1, 9, rip), "foo"),
-        MessageType((1,16,rip),CommandKind,
-          Seq(
-            Field((1,18,rip),Identifier((1,18,rip),"a"), Integer((1,21,rip)))
-          )
+      val expected = Type(
+        (1, 1, rip),
+        Identifier((1, 9, rip), "foo"),
+        MessageType(
+          (1, 16, rip),
+          CommandKind,
+          Seq(Field(
+            (1, 18, rip),
+            Identifier((1, 18, rip), "a"),
+            Integer((1, 21, rip))
+          ))
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)
@@ -288,8 +311,7 @@ class TypeParserTest extends ParsingTest {
                                    |}
                                    |""".stripMargin)
       parseDomainDefinition[Type](rip, _.types.last) match {
-        case Left(errors) =>
-          fail(errors.format)
+        case Left(errors)          => fail(errors.format)
         case Right((typeDef, rpi)) =>
           // info(typeDef.toString)
           typeDef mustEqual Type(
