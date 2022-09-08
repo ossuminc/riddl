@@ -2,7 +2,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.testkit.ParsingTest
 
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {
@@ -12,26 +12,30 @@ class StreamingParserTest extends ParsingTest {
       |  outlet Weather is Forecast
       |} brief "foo" described by "This is a source for Forecast data"
       |""".stripMargin
-  def sourceExpected(rpi: RiddlParserInput, col: Int = 0, row: Int = 0) = Processor(
-    (row+1, col+1, rpi),
-    Identifier((row+1, col+8, rpi), "GetWeatherForecast"),
-    Source((row+1, col+1, rpi)),
-    List.empty[Inlet],
-    List(Outlet(
-      (row+2, 3, rpi),
-      Identifier((row+2, 10, rpi), "Weather"),
-      TypeRef((row+2, 21, rpi), PathIdentifier((row+2, 21, rpi), List("Forecast")))
-    )),
-    List.empty[Example],
-    Some(LiteralString((row+3, 9, rpi), "foo")),
-    Option(BlockDescription(
-      (row+3, 28, rpi),
-      List(LiteralString(
-        (row+3, 28, rpi),
-        "This is a source for Forecast " + "data"
+  def sourceExpected(rpi: RiddlParserInput, col: Int = 0, row: Int = 0) =
+    Processor(
+      (row + 1, col + 1, rpi),
+      Identifier((row + 1, col + 8, rpi), "GetWeatherForecast"),
+      Source((row + 1, col + 1, rpi)),
+      List.empty[Inlet],
+      List(Outlet(
+        (row + 2, 3, rpi),
+        Identifier((row + 2, 10, rpi), "Weather"),
+        TypeRef(
+          (row + 2, 21, rpi),
+          PathIdentifier((row + 2, 21, rpi), List("Forecast"))
+        )
+      )),
+      List.empty[Example],
+      Some(LiteralString((row + 3, 9, rpi), "foo")),
+      Option(BlockDescription(
+        (row + 3, 28, rpi),
+        List(LiteralString(
+          (row + 3, 28, rpi),
+          "This is a source for Forecast " + "data"
+        ))
       ))
-    ))
-  )
+    )
 
   "StreamingParser" should {
     "recognize a source processor" in {
@@ -41,8 +45,11 @@ class StreamingParserTest extends ParsingTest {
     "recognize a source processor in a context" in {
       val input = s"context foo is { $sourceInput }"
       val rpi = RiddlParserInput(input)
-      val expected = Context((1,1,rpi),Identifier((1,9,rpi),"foo"),
-        processors = Seq(sourceExpected(rpi, 17)))
+      val expected = Context(
+        (1, 1, rpi),
+        Identifier((1, 9, rpi), "foo"),
+        processors = Seq(sourceExpected(rpi, 17))
+      )
       checkDefinition[Context, Context](rpi, expected, identity)
     }
     "recognize a Pipe" in {
@@ -330,5 +337,3 @@ class StreamingParserTest extends ParsingTest {
     }
   }
 }
-
-// joint forecast is outlet GetWeatherForecast.Weather to WeatherForecast

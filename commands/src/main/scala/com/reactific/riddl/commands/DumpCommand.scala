@@ -12,7 +12,7 @@ import java.nio.file.Path
  */
 class DumpCommand extends InputFileCommandPlugin("dump") {
   import InputFileCommandPlugin.Options
-  def run(
+  override def run(
     options: Options,
     commonOptions: CommonOptions,
     log: Logger

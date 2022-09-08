@@ -11,7 +11,7 @@ import java.nio.file.Path
  */
 class ParseCommand extends InputFileCommandPlugin("parse") {
   import InputFileCommandPlugin.Options
-  def run(
+  override def run(
     options: Options,
     commonOptions: CommonOptions,
     log: Logger

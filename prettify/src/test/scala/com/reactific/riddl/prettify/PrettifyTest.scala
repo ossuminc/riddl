@@ -2,7 +2,7 @@ package com.reactific.riddl.prettify
 
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.testkit.RiddlFilesTestBase
+import com.reactific.riddl.testkit.RiddlFilesTestBase
 import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 

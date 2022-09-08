@@ -1,4 +1,5 @@
 import com.typesafe.sbt.packager.Keys.maintainer
+
 import sbt.Keys._
 import sbt._
 import sbt.io.Path.allSubpaths
@@ -6,9 +7,9 @@ import scoverage.ScoverageKeys.coverageEnabled
 import scoverage.ScoverageKeys.coverageFailOnMinimum
 import scoverage.ScoverageKeys.coverageMinimumBranchTotal
 import scoverage.ScoverageKeys.coverageMinimumStmtTotal
-import sbtdynver.DynVerPlugin.autoImport.{
-  dynverSeparator, dynverSonatypeSnapshots, dynverVTagPrefix
-}
+import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
+import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
+import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 
 /** V - Dependency Versions object */
 object V {
@@ -36,9 +37,8 @@ object Dep {
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
-  val testing: Seq[ModuleID] = Seq(
-    scalactic % "test", scalatest % "test", scalacheck % "test"
-  )
+  val testing: Seq[ModuleID] =
+    Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)
 
 }
@@ -48,11 +48,15 @@ object C {
     p.settings(
       ThisBuild / maintainer := "reid@reactific.com",
       ThisBuild / organization := "com.reactific",
-      ThisBuild / organizationHomepage := Some(new URL("https://reactific.com/")),
+      ThisBuild / organizationHomepage :=
+        Some(new URL("https://reactific.com/")),
       ThisBuild / organizationName := "Ossum Inc.",
       ThisBuild / startYear := Some(2019),
-      ThisBuild / licenses += ("Apache-2.0",
-        new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")),
+      ThisBuild / licenses +=
+        (
+          "Apache-2.0",
+          new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
+        ),
       ThisBuild / versionScheme := Option("semver-spec"),
       ThisBuild / dynverVTagPrefix := false,
       // NEVER  SET  THIS: version := "0.1"
@@ -61,11 +65,8 @@ object C {
     )
   }
 
-  lazy val scala3_2_Options: Seq[String] = Seq(
-    "-deprecation",
-    "-feature",
-    "-Werror"
-  )
+  lazy val scala3_2_Options: Seq[String] =
+    Seq("-deprecation", "-feature", "-Werror")
   lazy val scala2_13_Options: Seq[String] = Seq(
     "-target:17",
     // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
@@ -91,18 +92,14 @@ object C {
     "-Xlint:deprecation" // Enable linted deprecations.
   )
 
-  def withScalaCompile(p:Project): Project = {
-    p.configure(withInfo)
-      .settings(
-        scalaVersion := "2.13.8",
-        scalacOptions := {
-          if (scalaVersion.value.startsWith("3.2"))
-            scala3_2_Options
-          else if (scalaVersion.value.startsWith("2.13")) {
-            scala2_13_Options
-          } else
-            Seq.empty[String]
-        }
+  def withScalaCompile(p: Project): Project = {
+    p.configure(withInfo).settings(
+      scalaVersion := "2.13.8",
+      scalacOptions := {
+        if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
+        else if (scalaVersion.value.startsWith("2.13")) { scala2_13_Options }
+        else Seq.empty[String]
+      }
     )
   }
 

@@ -2,8 +2,8 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.testkit.ParsingTest
-import com.reactific.riddl.language.testkit.TestParser
+import com.reactific.riddl.testkit.ParsingTest
+import com.reactific.riddl.testkit.TestParser
 
 import java.nio.file.Path
 
@@ -25,7 +25,8 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.message mustBe "Expected one of (end-of-input | \"domain\")"
+          errors.head.message mustBe
+            "Expected one of (end-of-input | \"domain\")"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
@@ -307,8 +308,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) =>
-          content mustBe Adaptor(
+        case Right((content, rpi)) => content mustBe Adaptor(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "fuzz"),
             ContextRef(
@@ -348,7 +348,9 @@ class ParserTest extends ParsingTest {
                       Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
-                  _, _, _,
+                  _,
+                  _,
+                  _,
                   None,
                   None
                 ) =>

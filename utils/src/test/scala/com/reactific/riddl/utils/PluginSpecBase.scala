@@ -7,19 +7,24 @@ import org.scalatest.matchers.must.Matchers
 
 import java.io.PrintWriter
 import java.nio.file.{Files, Path}
+import scala.sys.process.Process
+
 /** Base class for testing plugins  */
 abstract class PluginSpecBase(
   svcClassPath: Path = Path.of(
     "com/reactific/riddl/utils/PluginInterface.class"),
   implClassPath: Path = Path.of(
     "com/reactific/riddl/utils/TestPlugin.class"),
-  testClassesDir: Path = Path.of(
-    "utils/target/scala-2.13/test-classes/"),
+  moduleName: String = "utils",
   jarFilename: String = "test-plugin.jar"
 ) extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   val tmpDir: Path = Files.createTempDirectory("RiddlTest")
   final val providerConfigurationBasePath = Path.of("META-INF/services/")
+
+  def testClassesDir: Path =
+    Path.of(moduleName + s"/target/scala-${
+      RiddlBuildInfo.scalaCompatVersion}/test-classes/")
 
   def makeClassString(p: Path): String = {
     p.toString.dropRight(".class".length).replace('/','.')
@@ -45,10 +50,11 @@ abstract class PluginSpecBase(
     }
     val command =
       s"jar cvf ${jarFile.toAbsolutePath} $implClassPath $providerRelativePath"
-    val process =
-      Runtime.getRuntime.exec(command, null, testClassesDir.toFile)
-    val rc = process.waitFor()
-    require(rc == 0, s"'$command' failed with RC $rc != 0")
+    val process = Process.apply(command, testClassesDir.toFile).run()
+    val rc = process.exitValue()
+    if (rc != 0) {
+      fail(s"'$command' failed with RC $rc != 0\n")
+    }
   }
   override def afterAll(): Unit = {
     Files.deleteIfExists(jarFile)

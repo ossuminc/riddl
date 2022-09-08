@@ -1,6 +1,6 @@
 package com.reactific.riddl
 
-import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.commands.{CommandOptions, CommandPlugin, CommonOptionsHelper}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.utils.Logger
@@ -49,7 +49,11 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options](
     log: Logger
   ): Either[Messages, Unit] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
-      println(RiddlOptions.about)
+        val about: String = {
+        CommonOptionsHelper.blurb ++ System.lineSeparator() ++
+          "Extensive Documentation here: https://riddl.tech"
+      }
+      println(about)
     }
     Right(())
   }

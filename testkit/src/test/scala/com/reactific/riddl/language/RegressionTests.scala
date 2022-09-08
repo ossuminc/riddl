@@ -3,7 +3,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.Type
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.testkit.ParsingTest
+import com.reactific.riddl.testkit.ParsingTest
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {
@@ -13,8 +13,7 @@ class RegressionTests extends ParsingTest {
                     |} explained as { "foo" }
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
-        case Left(errors) =>
-          fail(errors.format)
+        case Left(errors) => fail(errors.format)
         case Right((domain, _)) => domain.description match {
             case Some(_) => succeed
             case None    => fail("no description")
@@ -28,8 +27,7 @@ class RegressionTests extends ParsingTest {
                     |}
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
-        case Left(errors) =>
-          fail(errors.format)
+        case Left(errors) => fail(errors.format)
         case Right((domain, _)) => domain.description match {
             case Some(desc) => desc.lines.nonEmpty mustBe true
             case None       => fail("no description")
@@ -57,9 +55,8 @@ class RegressionTests extends ParsingTest {
           |}
           |""".stripMargin
       parseDomainDefinition[Type](RiddlParserInput(input), _.types.last) match {
-        case Left(errors) =>
-          fail(errors.format)
-        case Right(_) =>
+        case Left(errors) => fail(errors.format)
+        case Right(_)     =>
           // info(typeDef.toString)
           succeed
       }

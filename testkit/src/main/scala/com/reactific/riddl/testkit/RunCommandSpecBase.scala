@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.reactific.riddl
+package com.reactific.riddl.testkit
 
 import com.reactific.riddl.commands.CommandPlugin
+import org.scalatest.*
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.must.Matchers
 
-/** RIDDL Main Program */
-object RIDDLC {
+/** A base class for specs that just want to run a command */
+abstract class RunCommandSpecBase extends AnyWordSpec with Matchers {
 
-  final def main(args: Array[String]): Unit = {
-    val resultCode = CommandPlugin.runMain(args)
-    if (resultCode != 0) { System.exit(resultCode) }
-  }
+  def runWith(
+    commandArgs: Seq[String]
+  ): Assertion = { CommandPlugin.runMain(commandArgs.toArray) must be(0) }
 }

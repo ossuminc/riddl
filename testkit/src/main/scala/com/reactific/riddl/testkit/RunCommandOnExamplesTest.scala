@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.reactific.riddl.language.testkit
+package com.reactific.riddl.testkit
 
 /** Unit Tests For RunCommandOnExamplesTest */
 import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}

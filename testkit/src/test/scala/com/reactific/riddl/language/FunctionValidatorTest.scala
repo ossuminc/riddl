@@ -1,7 +1,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 
 class FunctionValidatorTest extends ValidatingTest {
 
@@ -22,7 +22,9 @@ class FunctionValidatorTest extends ValidatingTest {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _, _)))),
-                  _, _, _,
+                  _,
+                  _,
+                  _,
                   None,
                   None
                 )

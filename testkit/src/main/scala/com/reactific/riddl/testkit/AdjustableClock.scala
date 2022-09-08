@@ -1,4 +1,4 @@
-package com.reactific.riddl.language.testkit
+package com.reactific.riddl.testkit
 
 import java.time.{Clock, Instant, ZoneId}
 

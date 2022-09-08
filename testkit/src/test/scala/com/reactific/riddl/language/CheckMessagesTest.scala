@@ -3,7 +3,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.TopLevelParser
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 import org.scalatest.Assertion
 
 import java.io.File
