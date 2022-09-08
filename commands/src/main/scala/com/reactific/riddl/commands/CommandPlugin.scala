@@ -57,9 +57,9 @@ object CommandPlugin {
     commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, Unit] = {
-    loadCommandNamed(name, commonOptions, pluginsDir).map { cmd =>
-      cmd.run(args, commonOptions, log)
-    }
+    val result = loadCommandNamed(name, commonOptions, pluginsDir)
+      .flatMap { cmd => cmd.run(args, commonOptions, log) }
+    result
   }
 
   def runCommandNamed(
@@ -93,40 +93,36 @@ object CommandPlugin {
           )
         }
         Right(value)
-      case Left(fails) => Left(
-          errors(s"Errors while reading $configFile:\n" + fails.prettyPrint(1))
-        )
+      case Left(fails) =>
+        val message = s"Errors while reading $configFile:\n" +
+          fails.prettyPrint(1)
+        Left(errors(message))
     }
   }
 
   def runFromConfig(
     configFile: Option[Path],
-    targetCommand: Option[String],
+    targetCommand: String,
     commonOptions: CommonOptions,
     log: Logger,
     commandName: String
   ): Either[Messages, Unit] = {
-    CommandOptions.withInputFile(configFile, commandName) { path =>
-      CommandPlugin.loadCandidateCommands(path, commonOptions).map { names =>
-        targetCommand match {
-          case None =>
-            val messages = names.foldLeft(Messages.empty) { (m, name) =>
-              CommandPlugin.loadCommandNamed(name).map { cmd =>
-                cmd.runFrom(path, commonOptions, log)
-              } match {
-                case Right(_)   => m ++ Messages.empty
-                case Left(mess) => m ++ mess
-              }
-            }
-            if (messages.isEmpty) { Right(()) }
-            else { Left(messages) }
-          case Some(cmd) =>
-            if (names.contains(cmd)) {
-              CommandPlugin.runCommandNamed(cmd, path, log, commonOptions)
-            } else { Left(errors(s"Command '$cmd' is not defined in $path")) }
+    val result = CommandOptions.withInputFile(configFile, commandName) { path =>
+      val candidate = CommandPlugin.loadCandidateCommands(path, commonOptions)
+        .flatMap { names =>
+          if (names.contains(targetCommand)) {
+            CommandPlugin
+              .runCommandNamed(targetCommand, path, log, commonOptions)
+              .map(_ => ())
+          } else {
+            Left[Messages, Unit](errors(
+              s"Command '$targetCommand' is not defined in $path"
+            ))
+          }
         }
-      }
+      candidate
     }
+    result
   }
 
   def runMain(args: Array[String]): Int = {
@@ -150,12 +146,12 @@ object CommandPlugin {
               }
             }
             if (commonOptions.quiet) { log = StringLogger() }
-            CommandPlugin
-              .runCommandWithArgs(name, remaining, log, commonOptions) match {
+            val result = CommandPlugin
+              .runCommandWithArgs(name, remaining, log, commonOptions)
+            result match {
               case Right(_) =>
                 if (commonOptions.quiet) { System.out.println(log.summary) }
                 0
-
               case Left(messages) =>
                 if (commonOptions.quiet) { highestSeverity(messages) + 1 }
                 else { Messages.logMessages(messages, log) + 1 }
@@ -275,9 +271,10 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
         if (commonOptions.verbose) { println(s"Running command: $command") }
-        Riddl.timer(command, show = commonOptions.showTimes, log) {
+        val result = Riddl.timer(command, show = commonOptions.showTimes, log) {
           run(opts, commonOptions, log)
         }
+        result
       case Some(_) => Left(
           errors(s"Failed to match option type ${optionsClass.getSimpleName}")
         )

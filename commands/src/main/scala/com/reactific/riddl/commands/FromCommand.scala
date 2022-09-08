@@ -1,5 +1,4 @@
 package com.reactific.riddl.commands
-import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.utils.Logger
@@ -12,10 +11,11 @@ import java.nio.file.Path
 /** Unit Tests For FromCommand */
 object FromCommand {
   case class Options(
-    command: String = "from",
     inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None,
-  ) extends CommandOptions
+    targetCommand: String = ""
+  ) extends CommandOptions {
+    def command: String = "from"
+  }
 }
 
 class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
@@ -23,13 +23,11 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("from")
-      .action((_, c) => c.copy(command = pluginName))
       .children(
         arg[File]("config-file")
           .action { (file, opt) => opt.copy(inputFile = Some(file.toPath))}
           .text("A HOCON configuration file with riddlc options in it."),
-        arg[Option[String]]("target-command")
-          .optional()
+        arg[String]("target-command")
           .action { (cmd, opt) => opt.copy(targetCommand = cmd) }
           .text("The name of the command to select from the configuration file")
       )
@@ -45,9 +43,8 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
       objCur <- topRes.asObjectCursor
       inFileRes <- objCur.atKey("config-file").map(_.asString)
       inFile <- inFileRes
-      target <- optional[Option[String]](objCur, "target-command", None){
-        cc => cc.asString.map(Option(_))
-      }
+      targetRes <- objCur.atKey("target-command").map(_.asString)
+      target <- targetRes
     } yield {
       Options(
         inputFile = Some(Path.of(inFile)),
@@ -61,9 +58,10 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
-    CommandPlugin.runFromConfig(
+    val result = CommandPlugin.runFromConfig(
       options.inputFile, options.targetCommand, commonOptions, log, pluginName
     )
+    result
   }
 
   override def replaceInputFile(

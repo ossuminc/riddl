@@ -6,6 +6,7 @@ import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
+import pureconfig.ConfigReader.Result
 import pureconfig.error.CannotParse
 import scopt.OParser
 
@@ -24,7 +25,7 @@ object RepeatCommand {
 
   case class Options(
     inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None,
+    targetCommand: String = "",
     refreshRate: FiniteDuration = 10.seconds,
     maxCycles: Int = defaultMaxLoops,
     interactive: Boolean = false)
@@ -51,7 +52,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options]("repeat") {
         arg[File]("config-file").required()
           .action((f, c) => c.copy(inputFile = Some(f.toPath)))
           .text("The path to the configuration file that should be repeated"),
-        arg[Option[String]]("target-command").required().action { (cmd, opt) =>
+        arg[String]("target-command").required().action { (cmd, opt) =>
           opt.copy(targetCommand = cmd)
         }.text("The name of the command to select from the configuration file"),
         arg[FiniteDuration]("refresh-rate").optional().validate {
@@ -85,7 +86,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options]("repeat") {
   //  interactive = true
 
   private class OptionsReader extends ConfigReader[Options] {
-    override def from(cur: ConfigCursor) = for {
+    override def from(cur: ConfigCursor): Result[Options] = for {
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)
       objCur <- topRes.asObjectCursor
@@ -114,7 +115,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options]("repeat") {
     } yield {
       RepeatCommand.Options(
         Some(Path.of(inputPath)),
-        if (targetCommand.isEmpty) None else Some(targetCommand),
+        targetCommand,
         refreshRate,
         maxCycles,
         interactive

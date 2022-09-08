@@ -54,5 +54,31 @@ class PluginCommandTest
         Array(s"--plugins-dir=$tmpDir.toString", "test", "fee=fie,foo=fum")
       CommandPlugin.runMain(args) mustBe 0
     }
+
+    "handle wrong file as input" in {
+      val args = Array(
+        "--verbose",
+        "--suppress-style-warnings",
+        "--suppress-missing-warnings",
+        "from",
+        "commands/src/test/input/simple.riddl", // wrong file!
+        "hugo"
+      )
+      val rc = CommandPlugin.runMain(args)
+      rc must not(be(0))
+    }
+
+    "handle wrong command as target" in {
+      val args = Array(
+        "--verbose",
+        "--suppress-style-warnings",
+        "--suppress-missing-warnings",
+        "from",
+        "commands/src/test/input/repeat-options.conf", // wrong file!
+        "flumox"
+      )
+      val rc = CommandPlugin.runMain(args)
+      rc must not(be(0))
+    }
   }
 }

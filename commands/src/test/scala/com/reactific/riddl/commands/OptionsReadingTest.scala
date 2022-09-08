@@ -30,7 +30,7 @@ class OptionsReadingTest extends AnyWordSpec with Matchers {
               opts.command mustBe "repeat"
               opts.inputFile must not(be(empty))
               opts.inputFile.get.toString must include("ReactiveBBQ.conf")
-              opts.targetCommand.get must be("from")
+              opts.targetCommand must be("from")
               opts.refreshRate must be(5.seconds)
               opts.maxCycles must be(10)
               opts.interactive must be(true)
