@@ -1,7 +1,7 @@
 ---
 title: "Chef"
 date: 2022-02-25T14:37:29-07:00
-draft: true
+draft: false
 weight: 60
 ---
 

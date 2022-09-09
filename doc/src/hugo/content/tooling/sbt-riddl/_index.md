@@ -2,7 +2,7 @@
 title: "sbt-riddl"
 description: "The SBT plugin for RIDDL"
 type: "page"
-draft: true
+draft: false
 weight: 30
 ---
 

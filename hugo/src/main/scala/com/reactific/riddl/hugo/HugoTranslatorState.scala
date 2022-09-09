@@ -16,10 +16,10 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
-import com.reactific.riddl.language._
+import com.reactific.riddl.language.*
 
 import java.nio.file.Path
 
@@ -119,9 +119,13 @@ case class HugoTranslatorState(
   ): String = {
     options.sourceURL match {
       case Some(url) => options.viewPath match {
-          case Some(viewPath) => makeFilePath(definition) match {
-              case Some(filePath) => Path.of(url.toString, viewPath, filePath)
-                  .toString
+          case Some(viewPath) =>
+            makeFilePath(definition) match {
+              case Some(filePath) =>
+                val lineNo = definition.loc.line
+                url.toExternalForm ++ "/" ++
+                  Path.of(viewPath, filePath).toString ++
+                  s"#L$lineNo"
               case _ => ""
             }
           case None => ""

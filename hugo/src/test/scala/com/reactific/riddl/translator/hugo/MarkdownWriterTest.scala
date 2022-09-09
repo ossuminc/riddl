@@ -17,7 +17,7 @@ class MarkdownWriterTest extends ParsingTest {
     "emit a domain" in {
       val paths =
         Seq[String]("hugo-translator", "target", "test-output", "container.md")
-      val output = Path.of(paths.head, paths.tail: _*)
+      val output = Path.of(paths.head, paths.tail*)
       val input =
         """domain TestDomain {
           |  author is { name="Reid Spencer" email="reid@reactific.com" }
@@ -55,20 +55,20 @@ class MarkdownWriterTest extends ParsingTest {
               || _Definition Path_ | hugo-translator.target.test-output.TestDomain |
               || _View Source Link_ | [empty(1:1)]() |
               |
-              |## Details
+              |## *Details*
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
               |
-              |## Author
+              |## *Author*
               |* _Name_: Reid Spencer
               |* _Email_: reid@reactific.com
               |
-              |## Types
+              |## *Types*
               |
-              |### Others
+              |### _Others_
               |* [MyString](mystring)
               |
-              |## Domain Index
+              |## *Domain Index*
               |{{< toc-tree >}}
               |""".stripMargin
           emitted mustBe expected
@@ -114,8 +114,8 @@ class MarkdownWriterTest extends ParsingTest {
           |---
           || Term | Type | Brief Description |
           || :---: | :---: | :---              |
-          || [one](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The first term |
-          || [two](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "GitHub Link") | [Term](https://riddl.tech/concepts/term) | The second term |
+          || [`one`](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "GitHub Link") | [Term](https://riddl.tech/concepts/term/) | The first term |
+          || [`two`](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "GitHub Link") | [Term](https://riddl.tech/concepts/term/) | The second term |
           |""".stripMargin
       output mustBe expected
     }

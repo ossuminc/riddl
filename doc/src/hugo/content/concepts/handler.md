@@ -32,8 +32,8 @@ for a message, the default handler is used. If the message is not processed
 by the handler, then the entity's processing for that message is 
 
 ## Occurs In
-* [Entities](entities) - 
-* [Contexts](contexts) -
+* [Entities](entity) - 
+* [Contexts](context) -
 
 ## Contains
-* [On Clauses](onclauses) - a specification of how to handle an event
+* [On Clauses](onclause) - a specification of how to handle an event

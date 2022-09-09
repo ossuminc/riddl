@@ -1,5 +1,5 @@
 ---
-title: "Domains"
+title: "Domain"
 draft: false
 ---
 
@@ -33,12 +33,12 @@ might devise a domain hierarchy like this:
 
 Within a domain, you can define these things:
 
-* [Domains](domains)  - domains can have nested domains (subdomains)
-* [Options](options) - optional declarations about a definition
-* [Authors](authors) - who defined the domain
-* [Types](types) - information definitions used throughout the domain 
-* [Contexts](contexts) - a precisely defined bounded context within the domain
-* [Stories](stories) - a story about external entities interacting with the domain
-* [Plants](plants) - a data processing plant
-* [Terms](terms) - definition of a term relevant to the domain
-* [Includes](includes) - inclusion of entity content from a file
+* [Domains](domain) {{< icon "rotate-left" >}} - domains can have nested domains (subdomains)
+* [Options](option) - optional declarations about a definition
+* [Authors](author) - who defined the domain
+* [Types](type) - information definitions used throughout the domain 
+* [Contexts](context) - a precisely defined bounded context within the domain
+* [Stories](story) - a story about external entities interacting with the domain
+* [Plants](plant) - a data processing plant
+* [Terms](term) - definition of a term relevant to the domain
+* [Includes](include) - inclusion of entity content from a file
