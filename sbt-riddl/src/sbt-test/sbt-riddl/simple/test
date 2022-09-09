@@ -1,4 +1,4 @@
 # Put in sbt-test scripted checks in this file
 # See: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html for options
 > compile
-# $ exists target/scala-2.12/foo.jar
+> checkInfoOutput
