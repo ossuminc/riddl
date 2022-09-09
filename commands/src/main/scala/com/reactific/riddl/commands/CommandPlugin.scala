@@ -59,6 +59,10 @@ object CommandPlugin {
   ): Either[Messages, Unit] = {
     val result = loadCommandNamed(name, commonOptions, pluginsDir)
       .flatMap { cmd => cmd.run(args, commonOptions, log) }
+    if (commonOptions.verbose) {
+      val rc = if (result.isRight) "yes" else "no"
+      println(s"Ran: ${args.mkString(" ")}: success=$rc")
+    }
     result
   }
 
@@ -309,7 +313,10 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
   ): OPT = {
     options.inputFile match {
       case Some(inFile) =>
-        val parent = configFile.getParent.toAbsolutePath
+        val parent = Option(configFile.getParent) match {
+          case Some(path) => path
+          case None       => Path.of(".")
+        }
         val input = parent.resolve(inFile)
         val result = replaceInputFile(options, input)
         if (commonOptions.debug) {
