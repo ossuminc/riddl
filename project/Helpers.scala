@@ -17,7 +17,7 @@ object V {
   val compress = "1.21"
   val config = "1.4.2"
   val fastparse = "2.3.3"
-  val jgit = "6.2.0.202206071550-r"
+  val jgit = "6.3.0.202209071007-r"
   val lang3 = "3.12.0"
   val pureconfig = "0.17.1"
   val scalacheck = "1.16.0"
