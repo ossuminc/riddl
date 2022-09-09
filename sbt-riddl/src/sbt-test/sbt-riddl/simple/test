@@ -1,4 +1,8 @@
 # Put in sbt-test scripted checks in this file
 # See: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html for options
-> compile
+
+# First, everything happens on compile so make it happen
+#> compile
+
+# Now do a more detailed check (see build.sbt)
 > checkInfoOutput

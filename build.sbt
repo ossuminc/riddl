@@ -34,7 +34,6 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
   .configure(C.withCoverage()).enablePlugins(BuildInfoPlugin).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
-    maintainer := "reid@ossuminc.com",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
     buildInfoObject := "RiddlBuildInfo",
     buildInfoPackage := "com.reactific.riddl.utils",
@@ -131,7 +130,8 @@ lazy val doc = project.in(file("doc"))
   .configure(C.zipResource("hugo")).configure(C.withScalaCompile).settings(
     name := "riddl-doc",
     publishTo := Option(Resolver.defaultLocal),
-    // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+    maintainer := "reid@ossuminc.com",
+  // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
     // siteSubdirName / ScalaUnidoc := "api",
     // (mappings / (
     //   ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc
@@ -155,11 +155,16 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
-lazy val `sbt-riddl` = (project in file("sbt-riddl")).enablePlugins(SbtPlugin)
+lazy val `sbt-riddl` = (project in file("sbt-riddl"))
+  .enablePlugins(SbtPlugin, BuildInfoPlugin)
   .configure(C.mavenPublish).settings(
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.16",
+    buildInfoObject := "SbtRiddlPluginBuildInfo",
+    buildInfoPackage := "com.reactific.riddl.sbt",
+    buildInfoOptions := Seq(BuildTime),
+    buildInfoUsePackageAsPath := true,
     scriptedLaunchOpts := {
       scriptedLaunchOpts.value ++
         Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
