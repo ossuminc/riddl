@@ -1,7 +1,7 @@
 package com.reactific.riddl.commands
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.{Logger, StringHelpers}
 import pureconfig.{ConfigCursor, ConfigReader}
 import scopt.OParser
 
@@ -58,9 +58,24 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, Unit] = {
+    val loadedCO =
+      CommandOptions.loadCommonOptions(options.inputFile.get) match {
+        case Right(newCO: CommonOptions) =>
+          if (commonOptions.verbose) {
+            println(s"Read new common options from ${
+              options.inputFile.get} as:\n" +
+              StringHelpers.toPrettyString(newCO))
+          }
+          newCO
+        case Left(messages) =>
+          if (commonOptions.debug) {
+            println(s"Failed to read common options from ${
+              options.inputFile.get} because:\n" ++ messages.format)
+          }
+          commonOptions
+    }
     val result = CommandPlugin.runFromConfig(
-      options.inputFile, options.targetCommand, commonOptions, log, pluginName
-    )
+      options.inputFile, options.targetCommand, loadedCO, log, pluginName)
     result
   }
 
