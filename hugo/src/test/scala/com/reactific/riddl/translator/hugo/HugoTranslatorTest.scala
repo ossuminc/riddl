@@ -23,21 +23,22 @@ class HugoTranslatorTest extends
     commandName: String,
     name: String,
     configFile: Path,
-    command: CommandPlugin[CommandOptions]
+    command: CommandPlugin[CommandOptions],
+    tmpDir: Path
   ): Assertion = {
     if (commandName == "hugo") {
       command.loadOptionsFrom(configFile) match {
         case Right(options) =>
           val outDir = options.asInstanceOf[HugoCommand.Options].outputDir.get
-          runHugo(outDir)
+          runHugo(outDir,tmpDir)
         case Left(errors) =>
           fail(errors.format)
       }
     } else fail("wrong command!")
   }
 
-  def runHugo(outputDir: Path): Assertion = {
-    import scala.sys.process._
+  def runHugo(outputDir: Path, tmpDir: Path): Assertion = {
+    import scala.sys.process.*
     val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
     var hadErrorOutput: Boolean = false
     var hadWarningOutput: Boolean = false
@@ -55,6 +56,7 @@ class HugoTranslatorTest extends
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
     val command = "hugo"
+    println(s"Running hugo with cwd=$cwdFile, tmpDir=$tmpDir")
     val proc = Process(command, cwd = Option(cwdFile))
     proc.!(logger) match {
       case 0 =>
@@ -66,7 +68,7 @@ class HugoTranslatorTest extends
       case rc: Int =>
         fail(s"hugo run failed with rc=$rc:\n  " ++
           lineBuffer.mkString("\n ", "\n  ", "\n") ++
-          s"cwd=$cwdFile, command=$command\n"
+          s"tmpDir=$tmpDir\ncwd=$cwdFile\ncommand=$command\n"
         )
     }
   }

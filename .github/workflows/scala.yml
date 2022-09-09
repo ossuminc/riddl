@@ -28,6 +28,7 @@ jobs:
       uses: coursier/cache-action@v6
     - name: Build & Run Tests
       run: |
+        which hugo
         sbt -v clean packageBin +test
     - name: Cleanup Before Caching
       shell: bash

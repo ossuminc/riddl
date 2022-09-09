@@ -95,7 +95,7 @@ object Riddl {
     root: RootContainer,
     commonOptions: CommonOptions
   ): Either[Messages,RootContainer] = {
-    timer("validation", commonOptions.showTimes) {
+    timer("validate", commonOptions.showTimes) {
       Validation.validate(root, commonOptions) match {
         case list: Messages if list.isEmpty =>
           Right(root)

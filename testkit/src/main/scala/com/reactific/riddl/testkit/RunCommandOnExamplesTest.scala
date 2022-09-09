@@ -39,7 +39,7 @@ abstract class RunCommandOnExamplesTest[
 ) extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   val examplesRepo: String = "https://github.com/reactific/riddl-examples"
-  val examplesVersion: String = "0.10.1"
+  val examplesVersion: String = "0.14.0"
   val examplesURL: URL =
     new URL(s"$examplesRepo/archive/refs/tags/$examplesVersion.zip")
   val tmpDir: Path = Files.createTempDirectory("RiddlTest")
@@ -96,7 +96,7 @@ abstract class RunCommandOnExamplesTest[
       CommandPlugin
         .runCommandNamed(commandName, path, logger, commonOptions) match {
         case Right(cmd) =>
-          onSuccess(commandName, name, path, cmd)
+          onSuccess(commandName, name, path, cmd, tmpDir)
         case Left(messages) =>
           fail(messages.format)
       }
@@ -113,7 +113,8 @@ abstract class RunCommandOnExamplesTest[
     @unused commandName: String,
     @unused caseName: String,
     @unused configFile: Path,
-    @unused command: CommandPlugin[CommandOptions]
+    @unused command: CommandPlugin[CommandOptions],
+    @unused tempDir: Path
   ): Assertion = {
     succeed
   }
