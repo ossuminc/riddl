@@ -2,35 +2,56 @@
 title: "riddlc --help"
 description: "How to get riddlc to produce help output"
 date: 2022-02-24T14:19:59-07:00
-draft: true
+draft: false
 weight: 10
 ---
 
 riddlc is the command that makes all the magic happen. As you will see, riddlc 
-is a rich and powerful command. 
+is a rich and powerful tool for processing RIDDL input. 
 
-You can get a complete list of the command syntax and help text on the command line by running ```riddlc --help```.
+## Command Syntax overview
+`riddlc` uses a sub-command structure. At a high level, the command line syntax
+is very simple:
+```shell
+> riddlc [common options] command-name [command-options]
+```
+
+## Info Command Output
+For this version of `riddlc`:
+```shell
+> content % riddlc info
+[info] About riddlc:
+[info]            name: riddlc
+[info]         version: 0.14.0
+[info]   documentation: https://riddl.tech
+[info]       copyright: © 2019-2022 Ossum Inc.
+[info]        built at: 2022-09-09 11:28:07.485-0400
+[info]        licenses: Apache License, Version 2.0
+[info]    organization: Reactific Software LLC
+[info]   scala version: 2.13.8
+[info]     sbt version: 1.7.1
+```
+the help text shows the commands and options available:
 
 ```
-RIDDL Compiler (c) 2022 Reactive Software LLC. All rights reserved. 
-Version:  0.5.0-11-e0fd90eb-20220301-1528 
+RIDDL Compiler © 2019-2022 Ossum Inc. All rights reserved."
+Version: 0.13.3-2-49ff0a59-20220909-1104-SNAPSHOT
 
-This program parses, validates and translates RIDDL sources to other kinds 
-of documents. RIDDL is a language for system specification based on Domain 
-Drive Design, Reactive Architecture, and Agile principles.
+This program parses, validates and translates RIDDL sources to other kinds
+of documents. RIDDL is a language for system specification based on Domain
+Drive Design, Reactive Architecture, and distributed system principles.
 
-Usage: riddlc [parse|validate|reformat|hugo|hugo-git-check|from|help|repeat] [options] <args>...
 
-  -V | --version
-        
-  -h | --help
-        Print out help/usage information and exit
+Usage: riddlc [options]
+
   -t | --show-times
         Show compilation phase execution times 
-  -d <value> | --dry-run <value>
+  -d | --dry-run
         go through the motions but don't write any changes
   -v | --verbose
-        Provide detailed, step-by-step, output detailing riddlc's actions
+        Provide verbose output detailing riddlc's actions
+  -D | --debug
+        Enable debug output. Only useful for riddlc developers
   -q | --quiet
         Do not print out any output, just do the requested command
   -w | --suppress-warnings
@@ -39,107 +60,81 @@ Usage: riddlc [parse|validate|reformat|hugo|hugo-git-check|from|help|repeat] [op
         Show warnings about things that are missing
   -s | --suppress-style-warnings
         Show warnings about questionable input style. 
-Command: parse [options]
-Parse the input for syntactic compliance with riddl language.
-No validation or translation is done on the input
-  -i <value> | --input-file <value>
-        required riddl input file to read
-Command: validate [options]
-Parse the input and if successful validate the resulting model.
-No translation is done on the input.
-  -i <value> | --input-file <value>
-        required riddl input file to read
-Command: reformat [options]
-Parse and validate the input-file and then reformat it to a
-standard layout written to the output-dir.  
-  -i <value> | --input-file <value>
-        required riddl input file to read
-  -o <value> | --output-dir <value>
-        required output directory for the generated output
-  -s <value> | --single-file <value>
-        Resolve all includes and imports and write a single file with the same
-        file name as the input placed in the out-dir
-Command: hugo [options]
-Parse and validate the input-file and then translate it into the input
-needed for hugo to translate it to a functioning web site.
-  -i <value> | --input-file <value>
-        required riddl input file to read
-  -o <value> | --output-dir <value>
-        required output directory for the generated output
-  -p <value> | --project-name <value>
-        Optional project name to associate with the generated output
-  -e <value> | --erase-output <value>
-        Erase entire output directory before putting out files
-  -b <value> | --base-url <value>
-        Optional base URL for root of generated http URLs
-  -t <value> | --themes <value>
-        
-  -s <value> | --source-url <value>
-        URL to the input file's Git Repository
-  -h <value> | --edit-path <value>
-        Path to add to source-url to allow editing
-  -l <value> | --site-logo-url <value>
-        URL to the site's logo image for use by site
-  -p <value> | --site-logo-path <value>
-        Path, in 'static' directory to placement and use
-        of the site logo.
-Command: hugo-git-check [options] git-clone-dir
-This command checks the <git-clone-dir> directory for new commits
-and does a `git pull" command there if it finds some; otherwise
-it does nothing. If commits were pulled from the repository, then
-the hugo command is run to generate the hugo source files and hugo
-is run to make the web site available at hugo's default local web
-address:  |http://localhost:1313/
+  -P <value> | --plugins-dir <value>
+        Load riddlc command extension plugins from this directory.
 
-  git-clone-dir
-        Provides the top directory of a git repo clone that
-contains the <input-file> to be processed.
-  -i <value> | --input-file <value>
-        required riddl input file to read
-  -o <value> | --output-dir <value>
-        required output directory for the generated output
-  -p <value> | --project-name <value>
-        Optional project name to associate with the generated output
-  -e <value> | --erase-output <value>
-        Erase entire output directory before putting out files
-  -b <value> | --base-url <value>
-        Optional base URL for root of generated http URLs
-  -t <value> | --themes <value>
-        
-  -s <value> | --source-url <value>
-        URL to the input file's Git Repository
-  -h <value> | --edit-path <value>
-        Path to add to source-url to allow editing
-  -l <value> | --site-logo-url <value>
-        URL to the site's logo image for use by site
-  -p <value> | --site-logo-path <value>
-        Path, in 'static' directory to placement and use
-        of the site logo.
-Command: from [options] config-file
-Load riddlc options from a config file
-  config-file
-        A HOCON configuration file with riddlc options
-  -i <value> | --input-file <value>
-        required riddl input file to read
-  -o <value> | --output-dir <value>
-        required output directory for the generated output
+Usage:  [about|dump|from|help|hugo|info|parse|repeat|validate|version] <args>...
+
+Command: about
+  Print out information about RIDDL
+
+Command: dump input-file
+    input-file
+
+Command: from config-file target-command
+  Loads a configuration file and executes the command in it
+    config-file
+          A HOCON configuration file with riddlc options in it.
+    target-command
+          The name of the command to select from the configuration file
+
 Command: help
-Print out how to use this program
-Command: repeat config-file [refresh-rate] [max-cycles]
-This command supports the edit-build-check cycle. It doesn't end
-until <max-cycles> has completed or EOF is reached on standard
-input. During that time, the selected subcommands are repeated.
+  Print out how to use this program
 
-  config-file
-        The path to the configuration file that should be repeated
-  refresh-rate
-        Specifies the rate at which the <git-clone-dir> is checked
-for updates so the process to regenerate the hugo site is
-started
-  max-cycles
-        Limit the number of check cycles that will be repeated.
-  -n | --interactive
-        This option causes the repeat command to read from the standard
-        input and when it reaches EOF (Ctrl-D is entered) then it cancels
-        the loop to exit.
+Command: hugo [options] input-file
+  Parse and validate the input-file and then translate it into the input
+  needed for hugo to translate it to a functioning web site.
+    input-file
+          required riddl input file to read
+    -o <value> | --output-dir <value>
+          required output directory for the generated output
+    -p <value> | --project-name <value>
+          optional project name to associate with the generated output
+    -e <value> | --erase-output <value>
+          Erase entire output directory before putting out files
+    -b <value> | --base-url <value>
+          Optional base URL for root of generated http URLs
+    -t <value> | --themes <value>
+          Add theme name/url pairs to use alternative Hugo themes
+    -s <value> | --source-url <value>
+          URL to the input file's Git Repository
+    -h <value> | --edit-path <value>
+          Path to add to source-url to allow editing
+    -m <value> | --site-logo-path <value>
+          Path, in 'static' directory to placement and use
+          of the site logo.
+    -n <value> | --site-logo-url <value>
+          URL from which to copy the site logo.
+
+Command: info
+  Print out build information about this program
+
+Command: parse input-file
+    input-file
+
+Command: repeat [options] config-file target-command [refresh-rate] [max-cycles]
+  This command supports the edit-build-check cycle. It doesn't end
+  until <max-cycles> has completed or EOF is reached on standard
+  input. During that time, the selected subcommands are repeated.
+    config-file
+          The path to the configuration file that should be repeated
+    target-command
+          The name of the command to select from the configuration file
+    refresh-rate
+          Specifies the rate at which the <git-clone-dir> is checked
+  for updates so the process to regenerate the hugo site is
+  started
+    max-cycles
+          Limit the number of check cycles that will be repeated.
+    -n | --interactive
+          This option causes the repeat command to read from the standard
+          input and when it reaches EOF (Ctrl-D is entered) then it cancels
+          the loop to exit.
+
+Command: validate input-file
+    input-file
+
+Command: version
+  Print the version of riddlc and exits
+
 ```

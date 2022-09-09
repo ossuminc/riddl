@@ -1,7 +1,7 @@
 ---
 title: "Server"
 date: 2022-02-25T14:37:06-07:00
-draft: true
+draft: false
 weight: 40
 ---
 

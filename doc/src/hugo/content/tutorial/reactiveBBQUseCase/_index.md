@@ -1,7 +1,7 @@
 ---
 title: "Reactive BBQ Case Study"
 date: 2022-02-25T14:38:08-07:00
-draft: true
+draft: false
 weight: 10
 ---
 

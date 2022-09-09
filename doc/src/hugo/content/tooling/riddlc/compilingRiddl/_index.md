@@ -1,7 +1,7 @@
 ---
 title: "Compiling RIDDL"
 date: 2022-02-25T10:35:37-07:00
-draft: true
+draft: false
 weight: 50
 ---
 
