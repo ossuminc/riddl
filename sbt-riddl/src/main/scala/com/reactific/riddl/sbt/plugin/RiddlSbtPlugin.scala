@@ -16,6 +16,7 @@
 
 package com.reactific.riddl.sbt.plugin
 
+import com.reactific.riddl.sbt.SbtRiddlPluginBuildInfo
 import sbt.*
 import sbt.Keys.*
 import sbt.internal.util.ManagedLogger
@@ -34,6 +35,10 @@ object RiddlSbtPlugin extends AutoPlugin {
     lazy val riddlcOptions = {
       settingKey[Seq[String]]("Options for the riddlc compiler")
     }
+
+    lazy val riddlcMinVersion = {
+      settingKey[String]("Ensure the riddlc used is at least this version")
+    }
   }
 
   import autoImport.*
@@ -43,22 +48,65 @@ object RiddlSbtPlugin extends AutoPlugin {
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     riddlcPath := file("riddlc"),
     riddlcOptions := Seq("from", "src/main/riddl/riddlc.conf"),
+    riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
     compileTask := {
       val execPath = riddlcPath.value
       val options = riddlcOptions.value
-      val log: ManagedLogger = streams.value.log
-      translateToDoc(execPath, options, log)
-    }
+      val version = riddlcMinVersion.value
+      translateToDoc(execPath, options, version)
+    },
+    Compile / compile := Def.taskDyn {
+      val c = (Compile / compile).value
+      Def.task {
+        val _ = (Compile / compileTask).value
+        c
+      }
+    }.value
   )
+
+  def versionTriple(version: String): (Int, Int, Int) = {
+    val trimmed = version.indexOf('-') match {
+      case x: Int if x < 0 => version
+      case y: Int => version.take(y)
+    }
+    val parts = trimmed.split('.')
+    if (parts.length < 3) {
+      throw new IllegalArgumentException(
+        s"riddlc version ($version) has insufficient semantic versioning parts."
+      )
+    } else {
+      (parts(0).toInt, parts(1).toInt, parts(2).toInt)
+    }
+  }
+
+  def versionSameOrLater(actualVersion: String, minVersion: String): Boolean ={
+    if (actualVersion != minVersion) {
+      val (aJ,aN,aP) = versionTriple(actualVersion)
+      val (mJ,mN,mP) = versionTriple(minVersion)
+      aJ > mJ ||
+        ((aJ == mJ) && (
+          (aN > mN) || ((aN == mN) && (aP >= mP))))
+    } else {
+      true
+    }
+  }
 
   def translateToDoc(
     riddlc: sbt.File,
     options: Seq[String],
-    log: ManagedLogger
+    minimumVersion: String
   ): Unit = {
     import scala.sys.process.*
+    val check = riddlc.toString + " version"
+    val actualVersion = check.!!<.trim
+    val minVersion = minimumVersion.trim
+    if (!versionSameOrLater(actualVersion,minVersion)) {
+      throw new IllegalArgumentException(
+        s"riddlc version $actualVersion is below minimum required: $minVersion"
+      )
+    }
     val command = riddlc.toString + " " + options.mkString(" ")
     val logger = ProcessLogger(println(_))
-    command.lineStream(logger)
+    command.!(logger)
   }
 }
