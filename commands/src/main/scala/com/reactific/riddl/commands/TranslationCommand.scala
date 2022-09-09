@@ -67,9 +67,6 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
     Riddl.timer(stage = "translate", showTimes) {
       options.withInputFile { inputFile: Path =>
         Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
-          if (commonOptions.verbose) {
-            log.info(s"Starting translation of `${root.id.format}")
-          }
           val msgs1 = if (options.inputFile.isEmpty) {
                Messages.errors("An input path was not provided.")
              } else { Messages.empty }
@@ -80,6 +77,10 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
           if (messages.nonEmpty) {
             Left(messages)
           } else {
+            if (commonOptions.verbose) {
+              val domains = root.contents.map(_.id.value).mkString(", ")
+              log.info(s"Starting translation of domains: $domains")
+            }
             translateImpl(root, log, commonOptions, options)
           }
         }
