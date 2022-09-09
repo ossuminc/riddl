@@ -7,7 +7,7 @@ import org.scalatest.Assertion
 class RiddlCommandsTest extends RunCommandSpecBase {
 
   val inputFile = "testkit/src/test/input/rbbq.riddl"
-  val hugoConfig = "testkit/src/test/input/hugo.config"
+  val hugoConfig = "testkit/src/test/input/hugo.conf"
   val validateConfig = "testkit/src/test/input/validate.conf"
   val outputDir: String => String =
     (name: String) => s"riddlc/target/test/$name"

@@ -78,23 +78,21 @@ object CommandOptions {
     (cur: ConfigCursor) =>
       {
         for {
-          objCur <- cur.asObjectCursor
-          showTimes <- optional(objCur, "show-times", noBool)(c =>
-            c.asBoolean.map(Option(_))
-          )
-          verbose <- optional(objCur, "verbose", noBool)(cc =>
-            cc.asBoolean.map(Option(_))
-          )
-          dryRun <- optional(objCur, "dry-run", noBool)(cc =>
-            cc.asBoolean.map(Option(_))
-          )
+          topCur <- cur.asObjectCursor
+          topRes <- topCur.atKey("common")
+          objCur <- topRes.asObjectCursor
+          showTimes <- optional[Boolean](objCur, "show-times", false)(
+            c => c.asBoolean)
+          verbose <- optional(objCur, "verbose", false)(
+            cc => cc.asBoolean)
+          dryRun <- optional(objCur, "dry-run", false)(
+            cc => cc.asBoolean)
           quiet <-
-            optional(objCur, "quiet", noBool)(cc => cc.asBoolean.map(Option(_)))
-          debug <-
-            optional(objCur, "debug", noBool)(cc => cc.asBoolean.map(Option(_)))
-          suppressWarnings <- optional(objCur, "suppress-warnings", noBool) {
-            cc => cc.asBoolean.map(Option(_))
-          }
+            optional(objCur, "quiet", false)(cc => cc.asBoolean)
+          debug <- optional(objCur, "debug", false)(
+            cc => cc.asBoolean)
+          suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(
+            cc => cc.asBoolean.map(Option(_)))
           suppressStyleWarnings <-
             optional(objCur, "suppress-style-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
@@ -103,25 +101,51 @@ object CommandOptions {
             optional(objCur, "suppress-missing-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
             }
+          hideWarnings <- optional(objCur, "hide-warnings", noBool)(
+            cc => cc.asBoolean.map(Option(_)))
+          hideStyleWarnings <-
+            optional(objCur, "hide-style-warnings", noBool) { cc =>
+              cc.asBoolean.map(Option(_))
+            }
+          hideMissingWarnings <-
+            optional(objCur, "hide-missing-warnings", noBool) { cc =>
+              cc.asBoolean.map(Option(_))
+            }
+          showWarnings <- optional(objCur, "show-warnings", noBool) {
+            cc => cc.asBoolean.map(Option(_))
+          }
+          showStyleWarnings <-
+            optional(objCur, "show-style-warnings", noBool) { cc =>
+              cc.asBoolean.map(Option(_))
+            }
+          showMissingWarnings <-
+            optional(objCur, "show-missing-warnings", noBool) { cc =>
+              cc.asBoolean.map(Option(_))
+            }
           pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path]) {
             cc => cc.asString.map(f => Option(Path.of(f)))
           }
-          common <- optional[CommonOptions](objCur, "common", CommonOptions()) {
-            cur => commonOptionsReader.from(cur)
-          }
         } yield {
+          val default = CommonOptions()
+          val shouldShowWarnings = suppressWarnings.map(!_).getOrElse(
+            hideWarnings.map(!_).getOrElse(
+              showWarnings.getOrElse(default.showWarnings)))
+          val shouldShowMissing = suppressMissingWarnings.map(!_).getOrElse(
+            hideMissingWarnings.map(!_).getOrElse(
+              showMissingWarnings.getOrElse(default.showMissingWarnings)))
+          val shouldShowStyle = suppressStyleWarnings.map(!_).getOrElse(
+            hideStyleWarnings.map(!_).getOrElse(
+            showStyleWarnings.getOrElse(default.showStyleWarnings)))
+
           CommonOptions(
-            showTimes.getOrElse(common.showTimes),
-            verbose.getOrElse(common.verbose),
-            dryRun.getOrElse(common.dryRun),
-            quiet.getOrElse(common.quiet),
-            showWarnings = suppressWarnings.map(!_)
-              .getOrElse(common.showWarnings),
-            showMissingWarnings = suppressMissingWarnings.map(!_)
-              .getOrElse(common.showMissingWarnings),
-            showStyleWarnings = suppressStyleWarnings.map(!_)
-              .getOrElse(common.showStyleWarnings),
-            debug.getOrElse(common.debug),
+            showTimes,
+            verbose,
+            dryRun,
+            quiet,
+            shouldShowWarnings,
+            shouldShowMissing,
+            shouldShowStyle,
+            debug,
             pluginsDir
           )
         }
