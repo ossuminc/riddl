@@ -17,7 +17,7 @@ class MarkdownWriterTest extends ParsingTest {
     "emit a domain" in {
       val paths =
         Seq[String]("hugo-translator", "target", "test-output", "container.md")
-      val output = Path.of(paths.head, paths.tail: _*)
+      val output = Path.of(paths.head, paths.tail*)
       val input =
         """domain TestDomain {
           |  author is { name="Reid Spencer" email="reid@reactific.com" }
