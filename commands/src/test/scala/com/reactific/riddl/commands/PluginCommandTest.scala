@@ -80,18 +80,5 @@ class PluginCommandTest
       val rc = CommandPlugin.runMain(args)
       rc must not(be(0))
     }
-
-    "handle wrong command as target" in {
-      val args = Array(
-        "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
-        "from",
-        "commands/src/test/input/repeat-options.conf",
-        "repeat"
-      )
-      val rc = CommandPlugin.runMain(args)
-      rc must not(be(0))
-    }
   }
 }
