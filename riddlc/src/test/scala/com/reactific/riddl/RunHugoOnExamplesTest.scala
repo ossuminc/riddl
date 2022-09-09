@@ -36,7 +36,8 @@ class RunHugoOnExamplesTest extends
     @unused commandName: String,
     @unused caseName: String,
     @unused configFile: Path,
-    @unused command: CommandPlugin[CommandOptions]
+    @unused command: CommandPlugin[CommandOptions],
+    @unused tempDir: Path
   ): Assertion = {
     // TODO: check themes dir
     // TODO: check config.toml setting values
