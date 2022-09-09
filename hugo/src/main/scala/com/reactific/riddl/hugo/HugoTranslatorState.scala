@@ -119,9 +119,11 @@ case class HugoTranslatorState(
   ): String = {
     options.sourceURL match {
       case Some(url) => options.viewPath match {
-          case Some(viewPath) => makeFilePath(definition) match {
-              case Some(filePath) => Path.of(url.toString, viewPath, filePath)
-                  .toString
+          case Some(viewPath) =>
+            makeFilePath(definition) match {
+              case Some(filePath) =>
+                val result = url.toExternalForm ++ "/" ++ Path.of(viewPath, filePath).toString
+                result
               case _ => ""
             }
           case None => ""

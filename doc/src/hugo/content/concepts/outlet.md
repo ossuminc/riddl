@@ -1,12 +1,12 @@
 ---
-title: "Inlets"
+title: "Outlets"
 draft: false
 ---
 
 TBD
 
 ## Occurs In
-* [Processors](onclauses)
+* [Processors](onclause)
 
 ## Contains 
 Nothing

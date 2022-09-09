@@ -30,7 +30,9 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
       pending // FIXME: Never commit this as non-pending
       if (Files.isDirectory(Path.of(cwd))) {
         if (Files.isReadable(Path.of(cwd, config))) {
-          val args = Seq("--verbose", "--debug", "--show-times", "from", config)
+          val args = Seq(
+            "--verbose", "--debug", "--show-times", "from", config, "hugo"
+          )
           runWith(args)
         } else { fail(s"No configuration file at $config") }
       } else { fail(s"No directory to change to: $cwd") }

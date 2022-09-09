@@ -1,5 +1,5 @@
 ---
-title: "Authors"
+title: "AuthorInfo"
 draft: false
 ---
 
@@ -8,10 +8,10 @@ in which the author is defined.
 
 ## Occurs In
 
-* [Domains](domains)
-* [Contexts](contexts)
-* [Entities](entities)
-* [Stories](stories)
+* [Domains](domain)
+* [Contexts](context)
+* [Entities](entity)
+* [Stories](story)
 
 ## Contains
 No other definitions

@@ -8,8 +8,8 @@ be used to validate state changes in entities, or parameter values in
 functions.
 
 ## Occurs In
-* [Entities](entities) - specifies a rule on the state of an entity
-* [Functions](functions) - specifies a rule on the input parameters of a function
+* [Entities](entity) - specifies a rule on the state of an entity
+* [Functions](function) - specifies a rule on the input parameters of a function
 
 ## Contains
 Nothing

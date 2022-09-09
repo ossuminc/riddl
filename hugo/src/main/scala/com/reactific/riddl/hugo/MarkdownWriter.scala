@@ -17,7 +17,7 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.language.AST
-import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
@@ -97,17 +97,17 @@ case class MarkdownWriter(
   }
 
   def h1(heading: String): this.type = {
-    sb.append(s"\n# $heading\n")
+    sb.append(s"\n# ${bold(heading)}\n")
     this
   }
 
   def h2(heading: String): this.type = {
-    sb.append(s"\n## $heading\n")
+    sb.append(s"\n## ${bold(heading)}\n")
     this
   }
 
   def h3(heading: String): this.type = {
-    sb.append(s"\n### $heading\n")
+    sb.append(s"\n### ${italic(heading)}\n")
     this
   }
 
@@ -132,26 +132,23 @@ case class MarkdownWriter(
     this
   }
 
-  def title(definition: Definition): this.type = {
-    sb.append(s"# ${definition.identify}\n")
-    this
+  private def italic(phrase: String): String = {
+    s"_${phrase}_"
   }
 
-  def italic(phrase: String): this.type = {
-    sb.append(s"_${phrase}_")
-    this
+  private def bold(phrase: String): String = {
+    s"*$phrase*"
   }
 
-  def bold(phrase: String): this.type = {
-    sb.append(s"*$phrase*")
-    this
+  private def mono(phrase: String): String = {
+    s"`$phrase`"
   }
 
   def list[T](items: Seq[T]): this.type = {
     def emitPair(prefix: String, body: String): Unit = {
       if (prefix.startsWith("[") && body.startsWith("(")) {
         sb.append(s"* $prefix$body\n")
-      } else { sb.append(s"* _${prefix}_: $body\n") }
+      } else { sb.append(s"* ${italic(prefix)}: $body\n") }
     }
 
     for { item <- items } {
@@ -323,11 +320,14 @@ case class MarkdownWriter(
     @unused level: Int = 2
   ): this.type = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
-    emitTableRow("_Briefly_", d.brief.fold("Brief description missing.\n")(_.s))
+    val brief: String = d.brief.map(_.s)
+      .getOrElse("Brief description missing.")
+      .trim
+    emitTableRow(italic("Briefly"), brief)
     val path = (parents :+ d.id.format).mkString(".")
-    emitTableRow("_Definition Path_", path)
+    emitTableRow(italic("Definition Path"), path)
     val link = state.makeSourceLink(d)
-    emitTableRow("_View Source Link_", s"[${d.loc}]($link)")
+    emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
   def emitDetails(d: Option[Description], level: Int = 2): this.type = {
@@ -755,8 +755,8 @@ case class MarkdownWriter(
   ): this.type = {
     leafHead(adaptation, 20)
     emitDefDoc(adaptation, parents)
-    italic(s"From event").p(s": ${adaptation.messageRef.format}\n")
-    italic(s"To command").p(s": ${adaptation.messageRef.format}\n")
+    p(s"${italic(s"From event")}: ${adaptation.messageRef.format}\n")
+    p(s"${italic(s"To command")}: ${adaptation.messageRef.format}\n")
     h2("Examples")
     adaptation.examples.foreach(emitExample(_, parents, 3))
     this
@@ -794,9 +794,9 @@ case class MarkdownWriter(
   def emitTermRow(term: GlossaryEntry): Unit = {
     val slink =
       makeIconLink("gdoc_github", "GitHub Link", term.sourceLink)
-    val trm = s"[${term.term}](${term.link})$slink"
+    val trm = s"[${mono(term.term)}](${term.link})$slink"
     val typ = s"[${term.typ}](https://riddl.tech/concepts/${
-      term.typ.toLowerCase})"
+      term.typ.toLowerCase}/)"
     emitTableRow(trm, typ, term.brief)
   }
 

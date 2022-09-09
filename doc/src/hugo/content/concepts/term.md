@@ -6,9 +6,9 @@ draft: false
 TBD
 
 ## On Clauses
-* [Domains](domains)
-* [Contexts](contexts)
-* [Entities](entities)
+* [Domains](domain)
+* [Contexts](context)
+* [Entities](entity)
 
 ## Contains
 Nothing

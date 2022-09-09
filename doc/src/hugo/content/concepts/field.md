@@ -1,5 +1,5 @@
 ---
-title: "Fields"
+title: "Field"
 draft: false
 ---
 
@@ -11,10 +11,10 @@ mapping of a name to a type. For example:
 specifies that the field name `name` has type `Number`
 
 ## Occurs In
-* [Types](types) 
-* [States](states)
-* [Projections](projections)
-* [Functions](functions)
+* [Types](type) 
+* [States](state)
+* [Projections](projection)
+* [Functions](function)
 
 # Contains
 Nothing
