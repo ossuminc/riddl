@@ -29,7 +29,7 @@ jobs:
     - name: Build & Run Tests
       run: |
         which hugo
-        sbt -v clean packageBin +test
+        sbt -v clean Test/compile packageBin test
     - name: Cleanup Before Caching
       shell: bash
       run: |
