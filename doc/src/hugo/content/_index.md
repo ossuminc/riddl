@@ -18,13 +18,14 @@ documentation, so that you may utilize it efficiently.
 
 Everyone should read the [Introduction](introduction) section as it
 provides a high level introduction to RIDDL, defines what RIDDL is, 
-what it can do, who helped it come to fruition, and what it is based upon.  
-Definitely start with the [Introduction](introduction) if you're new to RIDDL.
+what it can do, what it is based upon, who helped it come to fruition, and 
+how to get help. Definitely start with the [Introduction](introduction) if 
+you're new to RIDDL.
 
 Everyone should also read the [Conceptual Overview](concepts) which 
-describes the various concepts used by RIDDL. This section will give you a 
-complete understanding of the ideas used in RIDDL, without worrying about the
-syntax of the language that is used to express those ideas.
+describes the various definitional concepts used by RIDDL. This section will 
+give you a complete understanding of the ideas used in RIDDL, without worrying
+about the syntax of the language that is used to express those ideas.
 
 People involved with RIDDL come from many professional roles so there are 
 [Guides](guides) that provide learning paths for those various roles.  
@@ -35,15 +36,16 @@ of a RIDDL model for a restaurant chain, and the resulting software system
 to operate it.
 
 For those that like to learn by example, the model produced in the 
-[Tutorial]({{< relref "tutorial" >}}) is presented, step-by-step, with new 
+[Tutorial](tutorial) is presented, step-by-step, with new 
 concepts added as they occur, in the [Example](examples) section.
 
 If you want to dive into the technical specification for the RIDDL language,
-you can go to the [Language](language) section and learn the language 
-grammatically. 
+you can go to the [Language](language) section and learn the language syntax 
+and grammar.
 
-If you want to dive into the software tools that RIDDL provides, you can go
-to the [Tooling](tooling) section and learn how to install and use them. 
+If you want to dive into the software libraries and tools that RIDDL provides, 
+you can go to the [Tooling](tooling) section and learn how to install and use
+them. 
 
 If you're interested in knowing how we plan to extend RIDDl in the future, 
 please review our [Future Work](future-work) section. 

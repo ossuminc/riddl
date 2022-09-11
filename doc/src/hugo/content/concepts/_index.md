@@ -122,3 +122,10 @@ With those clarifying simplifications, here's the hierarchy:
         * [OutletJoints]({{< relref "joint.md" >}})
         * [Pipes]({{< relref "pipe.md" >}})
 
+## Next
+When you're done exploring all the concepts, check out our 
+[guides]({{< relref "../guides/" >}}) next.
+
+## Full Index
+
+{{< toc-tree >}}

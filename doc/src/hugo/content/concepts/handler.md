@@ -4,7 +4,7 @@ draft: false
 ---
 
 A *handler* is a definition of how to handle 
-[messages]({{< relref "messages.md" >}}). A *handler* contains a set of
+[messages]({{< relref "message.md" >}}). A *handler* contains a set of
 [on clauses]({{< relref "onclause.md" >}}) that specify what to do for 
 the various kinds of messages.  
 
@@ -30,10 +30,10 @@ A *state handler* is one that processes messages while an entity is in that
 state. 
 
 ### Default Handler
-A default state handler is the "catch all" for an entity. When there is no 
-[Specific State Handler](#Specific State Handler) that provides processing 
-for a message, the default handler is used. If the message is not processed 
-by the handler, then the entity's processing for that message is 
+A default state handler is the "catch all" for an entity. When the entity is 
+new, or otherwise not in a specific state, this default handler is used to
+process each message. If the message is not processed by the handler, then 
+the entity's processing for that message is null (message ignored). 
 
 ## Occurs In
 * [Adaptors]({{< relref "adaptor.md" >}})
