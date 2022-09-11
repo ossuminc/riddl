@@ -25,6 +25,7 @@ pygmentsCodeFences = true
 disablePathToLower = true
 enableGitInfo = true
 pygmentsStyle = "monokailight"
+pluralizeListTitles = false
 
 # hugo outputs
 [outputs]

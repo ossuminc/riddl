@@ -8,7 +8,7 @@ weight: 80
 
 Some people can learn RIDDL faster by looking at examples than they can by 
 reading the informal definitions in the [language guide](../language) or the 
-formal definitions in the [grammar section](../audience/developers-guide/grammar). 
+formal definitions in the [grammar section](../guides/developers/grammar). 
 To support that mode of learning, this tutorial decomposes the domain of a 
 fictitious restaurant, The Reactive BBQ.
 

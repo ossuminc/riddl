@@ -1,15 +1,19 @@
 {
+  "css.js": {
+    "src": "js/css-a85b7f60.bundle.min.js",
+    "integrity": "sha512-UJu1Wxqkbc0wqfivVuIbrh1o40ut2iYQkx2S8gvzDhLfO7Zj2n9PSZlAzKGsj2/DyzPmUUKs+ALGlppvrKiMlw=="
+  },
   "main.js": {
     "src": "js/main-902b82d5.bundle.min.js",
     "integrity": "sha512-KfjmJn9/csyFT9kE/7rim3xU19ul/7X1pIPDtJmLXDMAuVgmECTwXU2q7SOnfNZH3AV5wjfTHsxmSZQ8L9I7nw=="
   },
   "mermaid.js": {
-    "src": "js/mermaid-bd9b7641.bundle.min.js",
-    "integrity": "sha512-idZY6I4cjFVIeJ6WN+QGgu51ZU5uNkZ6ZLscVc2FaVm7n99XnTAuZPsC56DaEgNm2DOK0IjV1aJPTEHdPFuoxw=="
+    "src": "js/mermaid-4aacc7a5.bundle.min.js",
+    "integrity": "sha512-E4ioGopFKK2mNj6IYmgdEbOIuCqi9CJN143IPCWndcxYbdu9xl7f20ulQjYfRwTBx7MQVrIBqLq3k0Mfd/8oSQ=="
   },
   "katex.js": {
-    "src": "js/katex-8f5d1c53.bundle.min.js",
-    "integrity": "sha512-V6pdV2EI9DxULqCVNz8JNsDv06IR4gVRNhOjIDW4e7AZFuXh0JhSTbHq2nU5sUXaTP/X+p8YS2OcoZyTDiioow=="
+    "src": "js/katex-8d0741cb.bundle.min.js",
+    "integrity": "sha512-25Qlbky4CO9ETeYAQAmBSOT32hziFxk1Z/A8/+2IQtqK1orAS5CcnGG3yKJGDLJHzHRxY/6k8tA7XXz6M8WAsA=="
   },
   "search.js": {
     "src": "js/search-1c4cfb2d.bundle.min.js",
@@ -19,9 +23,9 @@
     "src": "js/273-647fed29.chunk.min.js",
     "integrity": "sha512-ccb2FynPdwxbAu0R6doHLCzhykkAcN1PkbPRLCTSXSFqyyW07ARtug3GOg6uayq9EHnDwNSKY/PX2vx3lK4CXw=="
   },
-  "js/116-2bf49fb1.chunk.min.js": {
-    "src": "js/116-2bf49fb1.chunk.min.js",
-    "integrity": "sha512-yBCqcmxpVT8L4nP8RCIINK6ZzP27Ms1hPS4Whkg7tMl9FUmOHt/podhi9o988CZnEbzblGx/51+cDhN1ngIP6w=="
+  "js/116-9febb0f9.chunk.min.js": {
+    "src": "js/116-9febb0f9.chunk.min.js",
+    "integrity": "sha512-/Q9vU1uEeKauM/gIWkGW3dePuGUxMe3azDJyThwmV8lHAQU+g08KYYF3mzAeOjHtZCI3ZLzAMHlznQgrWx3mrg=="
   },
   "fonts/LiberationSans-Italic.woff": {
     "src": "fonts/LiberationSans-Italic.woff",
@@ -128,8 +132,8 @@
     "integrity": "sha512-uDKdJPnbrR3sjbZxVTnhUwWFgc02uUgG/Oj4G0sb0jJtcyVShsPBCefDdV1EalLkhZiVrHnSkiiM1hOIQ9aJjg=="
   },
   "main.scss": {
-    "src": "main-96593c38.min.css",
-    "integrity": "sha512-XhVwR07h+psrNjPD61IgEMnfUogYOtcydYYPVazgYJf1usbXw3VpVbDci57BcdjYDxZFhlv6a4K8j8CeUSgk0A=="
+    "src": "main-be78422f.min.css",
+    "integrity": "sha512-mcjHR+3cgo9XWy9DXfx0GWbkiN+vALV5kzNvQemlB2b0Y4l2z4c1NUi1rf8/G+oJfdwkUnFrQbuUAMyZPfvPgg=="
   },
   "favicon/apple-touch-startup-image-1792x828.png": {
     "src": "favicon/apple-touch-startup-image-1792x828.png",
@@ -204,8 +208,8 @@
     "integrity": "sha512-QMpRgeWeAmOnY+5kV7ko2T90q5Ssf/BdkDlils8RA/os/00+s85+LqCv75LA6x0mURQBRslXAYTvlExXQc8nnQ=="
   },
   "katex.css": {
-    "src": "katex-93898449.min.css",
-    "integrity": "sha512-+jN99xaxTfEnkXs3pd7HbOx3huOnHRvLCSHTSo5guaqvNSZmQuHzlU0F6iqxROksLb9MatYIhinBDlSY59UPQg=="
+    "src": "katex-9967707b.min.css",
+    "integrity": "sha512-aUUop6VDmegZLh49fW0s65OA1y78h1BGsAxX0uv08tKxMke4WwBw7jkJGSZKBqrCE78geAqsnAl60tSINIgnqQ=="
   },
   "fonts/KaTeX_Main-Italic.woff": {
     "src": "fonts/KaTeX_Main-Italic.woff",
@@ -389,7 +393,7 @@
   },
   "fonts/GeekdocIcons.woff": {
     "src": "fonts/GeekdocIcons.woff",
-    "integrity": "sha512-qVuXHoxbqTylOXDgZJsw9Gud7Q40p26X+nROC3yg/61me5xZlhvV0zky+8yBg99U8kaoqPIsbjTzky+nzHKGAg=="
+    "integrity": "sha512-6shzg8V4fFarsejo8qlvY3M/n2woxXTl/kRF9MvK+8u2H06mpbKzYyg2KuDIZtFU4cu5qke299EuaCaqvG83qg=="
   },
   "fonts/KaTeX_Size4-Regular.woff": {
     "src": "fonts/KaTeX_Size4-Regular.woff",
@@ -409,7 +413,7 @@
   },
   "fonts/GeekdocIcons.woff2": {
     "src": "fonts/GeekdocIcons.woff2",
-    "integrity": "sha512-sQmhdY6C9vuIHSrJvUTlw9Yb+LpBjT8e3mZMBMFldzRkWE613zzIlaLSRyGf1s1P2XyDLx5jtBVF/vp7TYvUVg=="
+    "integrity": "sha512-i8RlKFwGX6EDKhZ3J+KGV5QUzbv7Lwwsk5bAGUvVSa4FREWr59xi4CsuCUIaPwSNalhxC32H0EPRX2S8yK3bJw=="
   },
   "fonts/KaTeX_Size4-Regular.woff2": {
     "src": "fonts/KaTeX_Size4-Regular.woff2",
@@ -494,5 +498,9 @@
   "custom.css": {
     "src": "custom.css",
     "integrity": "sha512-1kALo+zc1L2u1rvyxPIew+ZDPWhnIA1Ei2rib3eHHbskQW+EMxfI9Ayyva4aV+YRrHvH0zFxvPSFIuZ3mfsbRA=="
+  },
+  "../VERSION": {
+    "src": "../VERSION",
+    "integrity": "sha512-XvmKEkEMPw1R0QWLSlyw+M6neMQWL9wY9CDkuKw5bMFrMDp9WMhKA6c/4smMDSZSxbM8WO0+kJGl+x+7n+OHcw=="
   }
 }

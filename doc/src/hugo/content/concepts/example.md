@@ -3,7 +3,7 @@ title: "Example"
 draft: false
 ---
 
-TBD
+Examples are  a direct how RIDDL 
 
 ## Occurs In
 * [On Clauses]({{< relref "onclause.md" >}})

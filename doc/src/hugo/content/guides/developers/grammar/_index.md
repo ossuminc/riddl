@@ -19,7 +19,7 @@ quoted string =  '"', { all characters - '"' }, '"';
 ```
 This form can be quite technical and is intended for those who are familiar with
 EBNF format and lexical parsing.  For a more descriptive introduction to the 
-language, please refer to the [Audience](../../../audience) section.
+language, please refer to the [Audience](../../../guides) section.
 
 
 The RIDDL syntax grammar is broken down into the following portions:
