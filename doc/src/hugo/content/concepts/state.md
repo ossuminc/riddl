@@ -6,7 +6,7 @@ draft: false
 TBD
 
 ## Occurs In
-* [Entities](entity)
+* [Entities]({{< relref "entity.md" >}})
 
 ## Contains
-* [Fields](field)
+* [Fields]({{< relref "field.md" >}})

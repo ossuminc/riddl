@@ -19,6 +19,7 @@ IN the above the context is named `BBQ` and its definition is 3 question marks.
 ## Contained Definitions
 
 ### Common
+* [Types](../../../common/types)
 
 ### Options
 A `context` may define options. Options help the translation tools know what to

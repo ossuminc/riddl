@@ -3,11 +3,15 @@ title: "Joints"
 draft: false
 ---
 
-Joints join [pipes](pipe) to [pipes](pipe) or [processors](processor)
+Joints join [pipe]({{< relref "domain.md" >}}) to 
+[pipes]({{< relref "pipe.md" >}}) or 
+[processors]({{< relref "processor.md" >}}). There are two kinds of joints: 
+* InletJoint -
+* OutletJoint - 
 
 ## Occurs In
 
-* [Plants](plant)
+* [Plants]({{< relref "domain.md" >}})
 
 
 ## Contains

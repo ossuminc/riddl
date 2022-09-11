@@ -7,10 +7,7 @@ weight: 1
 
 In this section we will explore what RIDDL is, by answering these questions:
 
-* [What is RIDDL?](what-is-riddl)
-* [What is RIDDL based on?](what-is-riddl-based-on)
-* [What can RIDDL do?](what-can-riddl-do)
-* [Why is RIDDL needed?](why-is-riddl-needed)
+{{< toc-tree >}}
 
 Click on the above links to explore this section; or, go to the next recommended section: 
 [Conceptual Overview](../concepts).

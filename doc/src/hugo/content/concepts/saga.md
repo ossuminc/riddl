@@ -6,7 +6,7 @@ draft: false
 TBD
 
 ## Occurs In
-* [Contexts](context)
+* [Contexts]({{< relref "context.md" >}})
 
 ## Contains
 TBD

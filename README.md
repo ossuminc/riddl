@@ -143,3 +143,17 @@ In `examples/src/test/scala` there is a `CheckExamplesSpec.scala` which runs
 the parser and validator on the examples in `examples/src/riddl`. Each 
 sub-directory there is a separate example. They are expected to parse and 
 validate cleanly without issue 
+
+### Contributing
+_Contributions are very welcome!_
+
+If you see an issue that you'd like to see fixed, or want us to consider a
+change, the best way to make it happen is to help out by submitting a 
+pull request implementing it. We welcome contributions from all, even if
+you are not yet familiar RIDDL. We will endeavour to guide you through the 
+process once you've submitted your PR. 
+
+Please refer to the CONTRIBUTING.md file for more details about the workflow, 
+and general hints on how to prepare your pull request. You can also ask for
+clarifications or guidance in GitHub issues directly
+
