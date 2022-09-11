@@ -211,7 +211,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
       .map(tpl => (Term.apply _).tupled(tpl))
   }
 
-  def author[u: P]: P[AuthorInfo] = {
+  def author[u: P]: P[Author] = {
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~
         (undefined((
@@ -226,7 +226,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
           (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
     ).map {
       case (loc, id, (name, email, org, title, url), brief, desc) =>
-        AuthorInfo(loc, id, name, email, org, title, url, brief, desc)
+        Author(loc, id, name, email, org, title, url, brief, desc)
     }
   }
 }

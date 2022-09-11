@@ -267,19 +267,21 @@ case class MarkdownWriter(
     }
   }
 
-  def emitC4ContainerDiagram(context: Context, parents: Seq[Definition]): this.type = {
-    val name = context.id.format
+
+
+  def emitC4ContainerDiagram(defntn: Context, parents: Seq[Definition]): this.type = {
+    val name = defntn.identify
     val brief: Definition => String = { defn: Definition =>
-      defn.brief.fold("not described")(_.s)
+      defn.brief.fold(s"${name} is not described.")(_.s)
     }
 
     val heading =
       s"""C4Context
-         |  title C4 Container Diagram for Bounded Context [$name]
+         |  title C4 Containment Diagram for [$name]
          |""".stripMargin.split('\n').toSeq
 
-    val containingDomains = parents.filter(_.isInstanceOf[Domain]).reverse
-    val systemBoundaries = containingDomains.zipWithIndex
+    val containers = parents.filter(_.isContainer).reverse
+    val systemBoundaries = containers.zipWithIndex
     val openedBoundaries = systemBoundaries .map {
       case (dom, n) =>
         val nm = dom.id.format
@@ -290,10 +292,10 @@ case class MarkdownWriter(
       case (_, n) => " ".repeat((n+1)*2) + "}"
     }
     val prefix = " ".repeat(parents.size*2)
-    val context_head = prefix + s"Boundary($name, $name, \"${brief(context)}\") {"
+    val context_head = prefix + s"Boundary($name, $name, \"${brief(defntn)}\") {"
     val context_foot = prefix + "}"
 
-    val body = context.entities.map( e =>
+    val body = defntn.entities.map( e =>
       prefix + s"  System(${e.id.format}, ${e.id.format}, \"${brief(e)}\")"
     )
     val lines: Seq[String] = heading ++ openedBoundaries ++
@@ -515,7 +517,7 @@ case class MarkdownWriter(
     this
   }
 
-  def emitAuthorInfo(authors: Seq[AuthorInfo], level: Int = 2): this.type = {
+  def emitAuthorInfo(authors: Seq[Author], level: Int = 2): this.type = {
     for (a <- authors) {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
         a.organization.fold(Seq.empty[(String, String)])(ls =>
@@ -649,10 +651,18 @@ case class MarkdownWriter(
     this
   }
 
+  def emitFiniteStateMachine(@unused entity: Entity): this.type = {
+    this
+  }
+
   def emitEntity(entity: Entity, parents: Seq[String]): this.type = {
     containerHead(entity,"Entity")
     emitDefDoc(entity, parents)
     emitOptions(entity.options)
+    if (entity.hasOption[EntityIsFiniteStateMachine]) {
+      h2("Finite State Machine")
+      emitFiniteStateMachine(entity)
+    }
     emitInvariants(entity.invariants)
     emitTypesToc(entity)
     toc("States", mkTocSeq(entity.states))

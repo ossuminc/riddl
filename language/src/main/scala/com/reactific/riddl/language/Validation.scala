@@ -96,7 +96,7 @@ object Validation {
             case o: Outlet       => validateOutlet(o, parents)
             case ij: InletJoint  => validateInletJoint(ij, parents)
             case oj: OutletJoint => validateOutletJoint(oj, parents)
-            case ai: AuthorInfo  => validateAuthorInfo(ai, parents)
+            case ai: Author  => validateAuthorInfo(ai, parents)
         }
         case ed: EntityDefinition => ed match {
             case t: Type      => validateType(t, parents)
@@ -128,7 +128,7 @@ object Validation {
             case s: Story       => validateStory(s, parents)
             case p: Plant       => validatePlant(p, parents)
             case t: Term        => validateTerm(t, parents)
-            case ai: AuthorInfo => validateAuthorInfo(ai, parents)
+            case ai: Author => validateAuthorInfo(ai, parents)
             case i: Include     => validateInclude(i)
           }
         case hd: HandlerDefinition => hd match {
@@ -217,7 +217,7 @@ object Validation {
     }
 
     def validateAuthorInfo(
-      ai: AuthorInfo,
+      ai: Author,
       parents: Seq[Definition]
     ): ValidationState = {
       checkDefinition(parents.head, ai)

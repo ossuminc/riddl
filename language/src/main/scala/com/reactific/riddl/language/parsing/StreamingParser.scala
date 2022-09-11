@@ -207,7 +207,7 @@ trait StreamingParser
         briefly ~ description
     ).map { case (loc, id, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
-      val authors = mapTo[AuthorInfo](groups.get(classOf[AuthorInfo]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val inJoints = mapTo[InletJoint](groups.get(classOf[InletJoint]))

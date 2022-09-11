@@ -2,6 +2,8 @@ package com.reactific.riddl.language.ast
 
 
 
+import com.reactific.riddl.language.parsing.RiddlParserInput
+
 import java.nio.file.Path
 import scala.reflect.{ClassTag, classTag}
 
@@ -155,49 +157,6 @@ trait Abstract {
     def isRootContainer: Boolean = false
   }
 
-
-  /** Base trait for option values for any option of a definition.
-   */
-  trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name +
-      args.map(_.format).mkString("(", ", ", ")")
-  }
-
-
-  /** Base trait that can be used in any definition that takes options and
-   * ensures the options are defined, can be queried, and formatted.
-   *
-   * @tparam T
-   * The sealed base trait of the permitted options for this definition
-   */
-  trait WithOptions[T <: OptionValue] extends Definition {
-    def options: Seq[T]
-
-    def hasOption[OPT <: T : ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-
-    def getOptionValue[OPT <: T : ClassTag]: Option[Seq[LiteralString]] =
-      options
-        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-        .map(_.args)
-
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 =>
-          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
-
-    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
-    override def hasOptions: Boolean = true
-  }
-
   /** Base trait for all definitions requiring an identifier for the definition
    * and providing the identify method to yield a string that provides the kind
    * and name
@@ -212,7 +171,6 @@ trait Abstract {
       val name = if (id.isEmpty) { "Anonymous" } else { id.format }
       s"$kind '$name'"
     }
-
 
     def identify: String = kindId
 
@@ -269,35 +227,221 @@ trait Abstract {
     */
   trait GherkinClause extends GherkinValue
 
+  /** Base trait for option values for any option of a definition.
+   */
+  trait OptionValue extends RiddlValue {
+    def name: String
+
+    def args: Seq[LiteralString] = Seq.empty[LiteralString]
+
+    override def format: String = name +
+      args.map(_.format).mkString("(", ", ", ")")
+  }
+
+
+  /** Base trait that can be used in any definition that takes options and
+   * ensures the options are defined, can be queried, and formatted.
+   *
+   * @tparam T
+   * The sealed base trait of the permitted options for this definition
+   */
+  trait WithOptions[T <: OptionValue] extends Definition {
+    def options: Seq[T]
+
+    def hasOption[OPT <: T : ClassTag]: Boolean = options
+      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+
+    def getOptionValue[OPT <: T : ClassTag]: Option[Seq[LiteralString]] =
+      options
+        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+        .map(_.args)
+
+    override def format: String = {
+      options.size match {
+        case 0 => ""
+        case 1 => s"option is ${options.head.format}"
+        case x: Int if x > 1 =>
+          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
+      }
+    }
+
+    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
+
+    override def hasOptions: Boolean = true
+  }
+
+  /** A term definition for the glossary */
+  case class Term(
+    loc: Location,
+    id: Identifier,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+    extends LeafDefinition with VitalDefinitionDefinition {
+    override def isEmpty: Boolean = description.isEmpty
+
+    final val kind: String = "Term"
+  }
+
+  /** Added to definitions that support a list of term definitions */
+  trait WithTerms {
+    def terms: Seq[Term]
+  }
+
+  /**
+   * A [[RiddlValue]] to record an inclusion of a file while parsing.
+   * @param loc The location of the include statement in the source
+   * @param contents The Vital Definitions read from the file
+   * @param path The [[java.nio.file.Path]] to the file included.
+   */
+  case class Include(
+    loc: Location = Location(RiddlParserInput.empty),
+    contents: Seq[Definition] = Seq.empty[Definition],
+    path: Option[Path] = None)
+    extends Definition with VitalDefinitionDefinition {
+
+    def id: Identifier = Identifier.empty
+
+    def brief: Option[LiteralString] = Option.empty[LiteralString]
+
+    def description: Option[Description] = None
+
+    override def isRootContainer: Boolean = true
+
+    final val kind: String = "Include"
+
+  }
+
+  /** Added to definitions that support includes */
+  trait WithIncludes extends Container[Definition] {
+    def includes: Seq[Include]
+
+    def containedDefinitions: Seq[Definition] = {
+      contents.flatMap {
+        case i: Include =>
+          i.contents
+        case d: Definition =>
+          Seq(d)
+      }
+    }
+  }
+
+
+  /** A [[RiddlValue]] that holds the author's information
+   *
+   * @param loc
+   * The location of the author information
+   * @param name
+   * The full name of the author
+   * @param email
+   * The author's email address
+   * @param organization
+   * The name of the organization the author is associated with
+   * @param title
+   * The author's title within the organization
+   * @param url
+   * A URL associated with the author
+   */
+  case class Author(
+    loc: Location,
+    id: Identifier,
+    name: LiteralString,
+    email: LiteralString,
+    organization: Option[LiteralString] = None,
+    title: Option[LiteralString] = None,
+    url: Option[java.net.URL] = None,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+    extends LeafDefinition with VitalDefinitionDefinition {
+    override def isEmpty: Boolean = {
+      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
+    }
+
+    final val kind: String = "Author"
+  }
+
+  trait WithAuthors extends Definition {
+    def authors: Seq[Author]
+
+    override def hasAuthors: Boolean = authors.nonEmpty
+  }
+
+  /** Base trait of any definition that is in the content of an adaptor
+   */
+  trait AdaptorDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a context
+   */
+  trait ContextDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a domain
+   */
+  trait DomainDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an entity.
+   */
+  trait EntityDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a function.
+   */
+  trait FunctionDefinition extends Definition
+
   /** Base trait of definitions that are part of a Handler Definition */
   trait HandlerDefinition extends Definition
+
+  /** Base trait of any definition that occurs in the body of a plant
+   */
+  trait PlantDefinition extends Definition
+
+  /** Base trait of any definition that occurs in the body of a projection */
+  trait ProjectionDefinition extends Definition
+
+  /** Base trait of definitions defined in a processor
+   */
+  trait ProcessorDefinition extends Definition
 
   /** Base trait of definitions that are part of a Saga Definition */
   trait SagaDefinition extends Definition
 
-  /** Base trait of any definition that is in the content of an adaptor
-    */
-  trait AdaptorDefinition extends Definition
+  /** Base trait of definitions that are part of a Saga Definition */
+  trait StateDefinition extends Definition
 
-  /** Base trait of any definition that is in the content of a context
-    */
-  trait ContextDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a domain
-    */
-  trait DomainDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an entity.
-    */
-  trait EntityDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a function.
-    */
-  trait FunctionDefinition extends Definition
-
-  /** Base trait of any definition that occurs in the body of a plant
-    */
-  trait PlantDefinition extends Definition
-
+  /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
+
+  trait VitalDefinitionDefinition extends
+    AdaptorDefinition with ContextDefinition with DomainDefinition with
+    EntityDefinition with FunctionDefinition with HandlerDefinition with
+    PlantDefinition with ProcessorDefinition with ProjectionDefinition with
+    SagaDefinition with StoryDefinition
+
+  trait VitalDefinition[T <: OptionValue] extends Definition
+    with WithOptions[T] with WithAuthors with WithIncludes with WithTerms {
+  }
+
+  //////////////////////////////////////////////////// UTILITY FUNCTIONS
+
+  private def authorsOfInclude(includes: Seq[Include]): Seq[Author] = {
+    for {
+      include <- includes
+      ai <- include.contents if ai.isInstanceOf[Author]
+      authInfo = ai.asInstanceOf[Author]
+    } yield {
+      authInfo
+    }
+  }
+
+  def authorsOf(defn: Definition): Seq[Author] = {
+    defn match {
+      case wa: WithAuthors =>
+        wa.authors ++ (
+          wa match {
+            case wi: WithIncludes =>
+              authorsOfInclude(wi.includes)
+            case _ =>
+              Seq.empty[Author]
+          })
+      case _ => Seq.empty[Author]
+    }
+  }
+
 }

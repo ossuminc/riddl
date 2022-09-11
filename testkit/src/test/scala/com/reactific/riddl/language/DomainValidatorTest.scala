@@ -42,7 +42,7 @@ class DomainValidatorTest extends ValidatingTest {
         (domain: Domain, rpi: RiddlParserInput, messages: Messages) =>
           domain mustNot be(empty)
           domain.contents mustNot be(empty)
-          val expectedAuthor = AuthorInfo(
+          val expectedAuthor = Author(
             (2, 3, rpi),
             Identifier((2, 10, rpi), "Reid"),
             LiteralString((3, 11, rpi), "Reid Spencer"),
