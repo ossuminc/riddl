@@ -8,6 +8,11 @@ weight: 40
 ## Originator
 
 ### [Reid Spencer](https://www.linkedin.com/in/reidspencer) {#reid-spencer}
+* Deeply experienced system architect, software developer and entrepreneur. 
+* Initiated RIDDL in 2019 and started committing changes to the repository 
+  at the end of 2021
+* Founder of Reactific Software LLC which was bought by
+  [Ossum Inc.](https://ossum.biz/) in 2022 which he also founded. 
 
 ## Contributors
 
@@ -26,6 +31,9 @@ Creator of [hugo](https://github.com/gohugo/)
 
 ### [Daniel Terhorst-North](https://www.linkedin.com/in/danielterhorstnorth/) {#dan-north}
 Creator of [Gherkin](https://cucumber.io/docs/gherkin/)
+
+### [Edward F. Moore](https://en.wikipedia.org/wiki/Edward_F._Moore) ${#edward-moore}
+Originator of the [Finite State Machine](https://en.wikipedia.org/wiki/Finite-state_machine)
 
 ### [Eric Brewer](https://www.linkedin.com/in/eric-brewer-1031254/) {$eric-brewer}
 Originator of the [CAP Theorem](https://en.wikipedia.org/wiki/CAP_theorem)

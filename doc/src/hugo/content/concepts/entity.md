@@ -59,9 +59,12 @@ Consider this diagram:
 
 </div>
 
-[//]: # (The following puts out nothing with geekdoc 0.35.2, unfortunately )
+<!-- 
+The following puts out nothing with geekdoc 0.35.2, unfortunately :(
 
 {{< img name="entities" size="origin" lazy="false" >}}
+
+-->
 
 Two instances of the same Entity may have different attribute values, but
 because both instances have the same identity value, they represent the same
