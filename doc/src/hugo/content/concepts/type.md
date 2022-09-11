@@ -15,7 +15,7 @@ definitions allowed, so we have grouped them into categories:
 
 {{< toc >}}
 
-## Predefined Types
+## Predefined Types {#prefdefined}
 RIDDL supports several predefined types that just "exist" because they are:
 * applicable to nearly all fields of study or knowledge domains
 * fundamental in nature, covering the [SI base units](https://en.wikipedia.org/wiki/SI_base_unit)
@@ -26,7 +26,7 @@ RIDDL inherently knows about these predefined types so to use them you just
 use their name, no further definition is required. Here are the 
 simple predefined types:
 
-### Simple Predefined Types
+### Simple Predefined Types {#simple}
 
 | Name        | Description                                                       |
 |-------------|-------------------------------------------------------------------|
@@ -48,7 +48,7 @@ simple predefined types:
 | Mole        | An SI unit of an amount of substance, measured in mol             |
 | Luminosity  | An SI unit of luminous intensity, measured in candelas            |
 
-### Parameterized Predefined Types
+### Parameterized Predefined Types {#parameterized}
 Some predefined types take parameters to customize their content, we 
 call these *parameterized predefined types*.
 
@@ -62,7 +62,7 @@ call these *parameterized predefined types*.
 | Currency  | (`country-code`)     | The currency of a nation using ISO 3166 country codes         |
 | Pattern   | (`regex`)            | A string value that conforms to a regular expression, `regex` |
 
-## Compound Types
+## Compounds
 Compound types add structure around the predefined types and require further
 definition in RIDDL.  
 
@@ -94,7 +94,7 @@ Cartesian coordinate system at point (x,y) with a given height and width:
 type Rectangle = { x: Number, y: Number, height: Number, width: Number }
 ```
 
-### Key/Value Mapping
+### Key/Value Mapping {#mapping}
 A type can be defined as a mapping from one type (the key) to another type
 (the value). For example, here is a dictionary definition that maps a word
 (lower case letters) to a type named DictionaryEntry that presumably
@@ -107,7 +107,8 @@ type dictionary = mapping from Pattern("[a-z]+") to DictionaryEntry
 An aggregate type (_value object_ in DDD) can be declared to be one of four
 kinds of message types using the `command`, `event`, `query`, and `result`
 keywords. These type definitions are useful for sending messages to
-[entities](entities) or across [pipe](pipes). 
+[entities]({{< relref "entity.md" >}}) or across 
+[pipes]({{< relref "pipe.md" >}}). 
 
 For example, here is a command definition:
 ```riddl
@@ -152,10 +153,10 @@ The prefixes allowed have a similar meaning to the suffixes:
 | many required | One or more instances of the preceding type               |
 
 ## Occurs In
-* [Domains](domains)
-* [Contexts](contexts)
-* [Entities](entities)
-* [Functions](functions)
+* [Domains]({{< relref "domain.md" >}})
+* [Contexts]({{< relref "context.md" >}})
+* [Entities]({{< relref "entity.md" >}})
+* [Functions]({< relref "fieldunction.md" >)
 
 ## Contains
-* [Fields](fields)
+* [Fields]({{< relref "field.md" >}})

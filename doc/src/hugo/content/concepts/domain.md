@@ -27,18 +27,24 @@ might devise a domain hierarchy like this:
 
 ## Occurs In
 
-* [Root](root)
+* [Root]({{< relref "root.md" >}})
 
 ## Contains
 
 Within a domain, you can define these things:
 
-* [Domains](domain) {{< icon "rotate-left" >}} - domains can have nested domains (subdomains)
-* [Options](option) - optional declarations about a definition
-* [Authors](author) - who defined the domain
-* [Types](type) - information definitions used throughout the domain 
-* [Contexts](context) - a precisely defined bounded context within the domain
-* [Stories](story) - a story about external entities interacting with the domain
-* [Plants](plant) - a data processing plant
-* [Terms](term) - definition of a term relevant to the domain
-* [Includes](include) - inclusion of entity content from a file
+* [Authors]({{< relref "author.md" >}}) - who defined the domain
+* [Contexts]({{< relref "context.md" >}}) - a precisely defined bounded context within the domain
+* [Domains]({{< relref "domain.md" >}}) {{< icon "rotate-left" >}} - domains 
+  can have nested domains (subdomains)
+* [Includes]({{< relref "include.md" >}}) - inclusion of entity content from a
+  file
+* [Options]({{< relref "option.md" >}}) - optional declarations about a 
+  definition
+* [Plants]({{< relref "plant.md" >}}) - a data processing plant
+* [Stories]({{< relref "story.md" >}}) - a story about external entities
+  interacting with the domain
+* [Terms]({{< relref "term.md" >}}) - definition of a term relevant to the
+  domain
+* [Types]({{< relref "type.md" >}}) - information definitions used throughout
+  the domain 

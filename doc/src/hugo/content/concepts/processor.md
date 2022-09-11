@@ -6,10 +6,10 @@ draft: false
 TBD
 
 ## Occurs In
-* [Contexts](context)
-* [Plants](plant)
+* [Contexts]({{< relref "domain.md" >}})
+* [Plants]({{< relref "plant.md" >}})
 
 # Contains
-* [Inlets](inlet)
-* [Outlets](outlet)
-* [Examples](example)
+* [Inlets]({{< relref "inlet.md" >}})
+* [Outlets]({{< relref "outlet.md" >}})
+* [Examples]({{< relref "example.md" >}})

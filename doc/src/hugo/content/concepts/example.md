@@ -6,8 +6,8 @@ draft: false
 TBD
 
 ## Occurs In
-* [On Clauses](onclause)
-* [Processors](processor)
+* [On Clauses]({{< relref "onclause.md" >}})
+* [Processors]({{< relref "processor.md" >}})
 
 ## Contains
-* [Actions](action)
+* [Actions]({{< relref "action.md" >}})

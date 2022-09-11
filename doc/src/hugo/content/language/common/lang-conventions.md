@@ -32,8 +32,8 @@ abstractions should be built. RIDDL is not a programming language, but its compi
 can generate structurally sound code that can be implemented by a software engineer.
 
 ### Every Definition Can Be Documented
-Every thing you can define can has a `described by` or `explained by` suffix which 
-lets you document the definition using markdown. 
+Every thing you can define can have a `described by`, `described in file`, or 
+`explained by` suffix which lets you document the definition using markdown. 
 
 ### Hierarchy Of Definitions
 Definitions are specified in a [strict containment hierarchy](../root). Definitions that can 
@@ -92,7 +92,7 @@ definitions. Such nested definitions are deemed to be **contained**.
 Not every definition is a container as it only applies to concepts
 like `domain`, `context` and `entity`.   
 
-The full list of all Container types is as follows:
+The full list of all Container definitions is as follows:
 
 * `topic`
 * `feature`
