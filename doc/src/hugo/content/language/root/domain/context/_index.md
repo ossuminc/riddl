@@ -7,7 +7,7 @@ draft: "false"
 
 
 A `context` definition in RIDDL represents the notion of a 
-[bounded context](../../../../audience/authors-guide/design/context) in DDD.
+[bounded context](../../../../guides/authors/design/context) in DDD.
 Contexts are introduced with the `context` keyword and have a 
 name, like this:
 ```riddl

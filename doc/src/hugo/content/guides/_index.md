@@ -1,24 +1,37 @@
 ---
-title: "Audience"
+title: "Guides"
 date: "2021-12-01T15:34:22-05:00"
 draft: "false"
-weight: 20
+weight: 10
 ---
+
+Before reading any of the guides in this section, please consider reading 
+the [conceptual overview of RIDDL]({{< relref "../concepts" >}}) as a
+prerequisite.
 
 There are four kinds of readers of this documentation based on the intent of
 the reader. Accordingly, the documentation has a guide for each kind of
 reader:
-* The [**Domain Expert's Guide**](domain-experts-guide) will help domain experts 
-  learn how to assist [authors](authors-guide) with the creation and 
-  validation of RIDDL specifications.
-* The [**Author's Guide**](authors-guide) will help RIDDL authors to create 
-  and prefect system specifications using RIDDL. 
-* The [**Implementor's Guide**](implementors-guide) will help software 
-  developers convert RIDDL specifications, and output from the riddl tools into
-  working software systems.
-* The [**Developer's Guide**](developers-guide) is for software developers and
-  other interested parties who want to help with development and usage of 
-  RIDDL itself.  
+
+<div style="background-color: darkslateblue; text-align: center; padding-left: 3px">
+{{< columns >}}
+{{< button size="large" relref="domain-experts" >}}Expert's Guide {{< /button >}}
+For knowledge domain experts who would provide concepts, structure, and event 
+flows to RIDDL [authors]({{< relref "authors">}}).
+<--->
+{{< button size="large" relref="authors" >}}Author's Guide {{<  /button >}}
+For those who will write RIDDL specifications and must know the language 
+intricacies for full and accurate specifications.
+<--->
+{{< button size="large" relref="implementors" >}}Implementor's Guide{{< /button >}}
+For those who will implement software systems based on RIDDL specifications and
+the output of RIDDL based tools.
+<--->
+{{< button size="large" relref="developers" >}}Developer's Guide {{< /button >}}
+For those who will work on the RIDDL software itself or help others with their
+use of it.
+{{< /columns >}}
+</div>
 
 The following sections define these roles more clearly:
 {{< toc >}}

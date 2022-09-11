@@ -24,18 +24,28 @@ implementation.
 ### [Bjørn Erik Pedersen](https://github.com/bep)
 Creator of [hugo](https://github.com/gohugo/)
 
+### [Daniel Terhorst-North](https://www.linkedin.com/in/danielterhorstnorth/) {#dan-north}
+Creator of [Gherkin](https://cucumber.io/docs/gherkin/)
+
+### [Eric Brewer](https://www.linkedin.com/in/eric-brewer-1031254/) {$eric-brewer}
+Originator of the [CAP Theorem](https://en.wikipedia.org/wiki/CAP_theorem)
+
 ### [Eric Evans](https://www.linkedin.com/in/ericevansddd/) {#eric-evans}
-Originated [DDD](https://www.domainlanguage.com/) and wrote seminal books
-on the subject:
+Originated [DDD](https://www.domainlanguage.com/) and authored seminal books
+on DDD:
 * [Domain-Driven Design: Tackling Complexity In The Heart Of Software](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215/ref=pd_lpo_1?pd_rd_i=0321125215&psc=1)
 * [Domain-Driven Design References: Definitions and Pattern Summaries](https://www.amazon.com/Domain-Driven-Design-Reference-Definitions-Summaries/dp/1457501198/ref=sr_1_1?crid=10W7DZB0JRODX&keywords=Domain+driven+design+reference&qid=1662835260&s=books&sprefix=domain+driven+design+reference%2Cstripbooks%2C58&sr=1-1) 
 
 ### [Jonas Bonér](https://www.linkedin.com/in/jonasboner/) {#jonas-boner}
-Originated [Akka](https://akka.io) and many distributed system patterns
+Creator of [Akka](https://akka.io) and many distributed system patterns
 
 ### [Kent Beck](https://www.linkedin.com/in/kentbeck/)
 Creator of [eXtreme Programming](http://www.extremeprogramming.org/)
 
+### [Robert Kaussow](https://github.com/xoxys)
+Creator of the [Geekdoc theme](https://geekdoc.de) for 
+[Hugo](http://github. com/gohugo/)
+
 ### [Vaughn Vernon](https://www.linkedin.com/in/vaughnvernon/) {#vaughn-vernon}
-[Domain Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon/dp/0134434420)
+Author of [Domain Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon/dp/0134434420)
 

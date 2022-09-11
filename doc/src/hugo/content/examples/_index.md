@@ -8,7 +8,7 @@ summary: "RIDDL Example: Reactive BBQ"
 
 Some people can learn RIDDL faster by looking at examples than by reading 
 the informal definitions in the [language guide](../language) or the 
-formal definitions in the [grammar section](../audience/developers-guide/grammar). To support that 
+formal definitions in the [grammar section](../guides/developers/grammar). To support that 
 mode of learning, this section decomposes the domain of a restaurant, 
 Reactive BBQ. 
 

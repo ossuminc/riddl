@@ -14,8 +14,8 @@ on how you want to work.
 ## Download
 This is the simplest way to get `riddlc`. It should run on Windows, Mac 
 and Linux. Follow these steps:
-* Go to [the riddlc downloads page](https://github.com/reactific/riddl/releases)
-* Select the release you want to install
+* Go to [the riddlc downloads page](https://github.com/reactific/riddl/releases/)
+* Click on the release title you want to install
 * Scroll down to the "Assets" section
 * Download the riddlc-{version}.zip file
 * Unzip that file on your computer
@@ -47,7 +47,7 @@ command in sbt. Follow these steps:
 
 * In your `plugins.sbt` file, add:
   `addSbtPlugin("com.reactific" % "sbt-riddl" % "{version}"). You can find 
-  the [available version here](https://github.com/reactific/riddl/releases)
+  the [latest available version here](https://github.com/reactific/riddl/releases)
 * In your `build.sbt` file, use `enablePlugins(SbtRiddlPlugin)` on your project
 * Set the following sbt settings:
     * `riddlcPath := file("...")` This defaults to "riddlc" which is 
