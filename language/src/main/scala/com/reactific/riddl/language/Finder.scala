@@ -40,4 +40,37 @@ case class Finder(root: Definition) {
   }
 
   def findEmpty: DefWithParents = findWithParents(_.isEmpty)
+
+  case class Statistics(
+    var definitions: Int = 0,
+    var incomplete: Int = 0,
+    var maximum_depth : Int = 0,
+    var missing_documentation: Int = 0,
+    var percent_complete: Float = 0.0F,
+    var percent_documented: Float = 0.0F
+  )
+
+  def generateStatistics(): Statistics = {
+    val stats = Folding.foldLeftWithStack(Statistics())(root) {
+      case (state, definition, parents) =>
+        if (parents.size >= state.maximum_depth ) {
+          state.maximum_depth = parents.size + 1
+        }
+        if (definition.brief.isEmpty || definition.description.isEmpty) {
+          state.missing_documentation += 1
+        }
+        if (definition.isEmpty) {
+          state.incomplete += 1
+        }
+        state.definitions += 1
+        state
+    }
+    val completed = stats.definitions - stats.incomplete
+    stats.percent_complete =
+      (completed.toFloat / stats.definitions.toFloat) * 100.0F
+    val documented = stats.definitions - stats.missing_documentation
+    stats.percent_documented =
+      (documented.toFloat / stats.definitions.toFloat)* 100.0F
+    stats
+  }
 }

@@ -18,13 +18,12 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.{
-  FileParserInput, RiddlParserInput, TopLevelParser
-}
+import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.{Files, Path}
 import java.time.Clock
+import scala.collection.SortedMap
 
 case class CommonOptions(
   showTimes: Boolean = false,
@@ -120,6 +119,22 @@ object Riddl {
     commonOptions: CommonOptions
   ): Either[Messages,RootContainer] = {
     parseAndValidate(RiddlParserInput(path), commonOptions)
+  }
+
+  type Stats = SortedMap[String, String]
+  def collectStats(inputFile: Path, commonOptions: CommonOptions):
+  Either[Messages,Stats] = {
+    parse(inputFile, commonOptions).map { root =>
+      val statistics = Finder(root).generateStatistics()
+      SortedMap(
+        "Definitions" -> statistics.definitions.toString,
+        "Incomplete" -> statistics.incomplete.toString,
+        "Maximum Depth" -> statistics.maximum_depth.toString,
+        "Missing Documentation" -> statistics.missing_documentation.toString,
+        "Percent Complete" -> statistics.percent_complete.toString,
+        "Percent Documented" -> statistics.percent_documented.toString
+      )
+    }
   }
 }
 
