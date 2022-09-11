@@ -139,8 +139,8 @@ case class HugoTranslatorState(
     val result = definition match {
       case _: OnClause => pars + "#" + definition.id.value.toLowerCase
       case _: Field | _: Enumerator | _: Invariant | _: Inlet | _: Outlet |
-          _: InletJoint | _: OutletJoint | _: AuthorInfo | _: SagaStep |
-          _: Include | _: RootContainer | _: Term => pars
+           _: InletJoint | _: OutletJoint | _: Author | _: SagaStep |
+           _: Include | _: RootContainer | _: Term => pars
       case _ => pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor
@@ -177,11 +177,11 @@ case class HugoTranslatorState(
   def findAuthor(
     defn: Definition,
     parents: Seq[Definition]
-  ): Seq[AuthorInfo] = {
+  ): Seq[Author] = {
     val result = AST.authorsOf(defn) match {
       case s if s.isEmpty =>
         parents.find(x => x.hasAuthors) match {
-          case None    => Seq.empty[AuthorInfo]
+          case None    => Seq.empty[Author]
           case Some(d) => AST.authorsOf(d)
         }
       case s => s

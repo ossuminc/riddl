@@ -106,7 +106,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Files.createDirectories(path.resolve("archetypes"))
     Files.createDirectories(path.resolve("content"))
     Files.createDirectories(path.resolve("data"))
-    Files.createDirectories(path.resolve("layouts"))
+    Files.createDirectories(path.resolve("template/layouts"))
     Files.createDirectories(path.resolve("public"))
     Files.createDirectories(path.resolve("static"))
     Files.createDirectories(path.resolve("themes"))
@@ -133,7 +133,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
 
   def writeConfigToml(
     options: HugoCommand.Options,
-    author: Option[AuthorInfo]
+    author: Option[Author]
   ): Unit = {
     import java.nio.charset.StandardCharsets
     import java.nio.file.Files
@@ -185,7 +185,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     makeDirectoryStructure(options.inputFile.get, log, options)
     val someAuthors = root.contents.headOption match {
       case Some(domain) => domain.authors
-      case None         => Seq.empty[AuthorInfo]
+      case None         => Seq.empty[Author]
     }
     writeConfigToml(options, someAuthors.headOption)
     val symtab = SymbolTable(root)
@@ -214,7 +214,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case t: Term       =>
         state.addToGlossary(t, stack)
       case _: Example | _: Inlet | _:Outlet | _: InletJoint | _: OutletJoint |
-           _: AuthorInfo | _: OnClause | _: Include  | _: RootContainer =>
+           _: Author | _: OnClause | _: Include | _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
@@ -258,9 +258,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   // scalastyle:off method.length
   def configTemplate(
     options: HugoCommand.Options,
-    author: Option[AuthorInfo]
+    author: Option[Author]
   ): String = {
-    val auth: AuthorInfo = author.getOrElse(AuthorInfo(
+    val auth: Author = author.getOrElse(Author(
       1 -> 1,
       id = Identifier(1->1,"unknown"),
       name = LiteralString(1 -> 1, "Not Provided"),

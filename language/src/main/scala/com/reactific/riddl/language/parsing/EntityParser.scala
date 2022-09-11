@@ -95,7 +95,7 @@ trait EntityParser extends TypeParser with HandlerParser {
         (noEntityBody | entityBody) ~ close ~ briefly ~ description
     ).map { case (loc, id, (options, entityDefs), briefly, description) =>
       val groups = entityDefs.groupBy(_.getClass)
-      val authors = mapTo[AuthorInfo](groups.get(classOf[AuthorInfo]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val states = mapTo[State](groups.get(classOf[State]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))

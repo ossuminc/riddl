@@ -125,7 +125,7 @@ trait DomainParser
         ~ close ~/ briefly ~ description
     ).map { case (loc, id, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
-      val authors = mapTo[AST.AuthorInfo](groups.get(classOf[AST.AuthorInfo]))
+      val authors = mapTo[AST.Author](groups.get(classOf[AST.Author]))
       val subdomains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))

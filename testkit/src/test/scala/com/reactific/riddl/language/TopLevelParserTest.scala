@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.AuthorInfo
+import com.reactific.riddl.language.AST.Author
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.DomainOption
 import com.reactific.riddl.language.AST.Identifier
@@ -24,7 +24,7 @@ class TopLevelParserTest extends ParsingTestBase {
     Location(1, 1, rip),
     Identifier(Location(1, 8, rip), "foo"),
     Seq.empty[DomainOption],
-    Seq.empty[AuthorInfo],
+    Seq.empty[Author],
     List(),
     List(),
     List(),
