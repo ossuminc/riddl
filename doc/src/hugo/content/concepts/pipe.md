@@ -7,7 +7,7 @@ Pipes make connections between [processors](processor) and [joints](joint)
 
 ## Occurs In
 
-* [Plants](plant)
+* [Plants](pl{{< relref "plant.md" >}}ant)
 
 
 ## Contains

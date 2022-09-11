@@ -8,10 +8,7 @@ definition should be regarded. Any translator can make use of any
 option. 
 
 ## Occurs In
-
-* [Domains](domain)
-* [Contexts](context)
-* [Entities](entity)
+All [vital definitions]({{< relref "vital.md" >}})
 
 ## Contains
-Nothing
+Option values which are simple identifiers with an optional string arguments.

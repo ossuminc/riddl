@@ -5,10 +5,8 @@ draft: false
 
 TBD
 
-## On Clauses
-* [Domains](domain)
-* [Contexts](context)
-* [Entities](entity)
+## Occurs In
+All [vital definitions]({{< relref "vital.md" >}})
 
 ## Contains
 Nothing

@@ -6,7 +6,7 @@ draft: false
 TBD
 
 ## Occurs In
-* [Domains](domain)
+* [Domains]({{< relref "domain.md" >}})
 
 ## Contains
-* [Fields](field)
+* [Fields]({{< relref "field.md" >}})

@@ -6,7 +6,7 @@ draft: false
 TBD
 
 ## Occurs In
-* [Actions](action)
+* [Actions]({{< relref "action.md" >}})
 
 ## Contains
 Nothing

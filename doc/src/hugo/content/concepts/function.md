@@ -5,10 +5,10 @@ draft: false
 TBD
 
 ## Occurs In
-* [Contexts](context)
-* [Entities](entity)
+* [Contexts]({{< relref "context.md" >}})
+* [Entities]({{< relref "entity.md" >}})
 
 ## Contains
-* [Fields](field)
-* [Examples](example)
-* [Functions](function) {{< icon "rotate-left" >}}
+* [Fields]({{< relref "field.md" >}})
+* [Examples]({{< relref "example.md" >}})
+* [Functions]({{< relref "function.md" >}}) {{< icon "rotate-left" >}}
