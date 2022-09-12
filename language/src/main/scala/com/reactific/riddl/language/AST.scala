@@ -918,6 +918,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include] = Seq.empty[Include],
     authors: Seq[Author] = Seq.empty[Author],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[EntityOption] with ContextDefinition
@@ -941,9 +942,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 5)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   sealed trait Adaptation extends AdaptorDefinition {
