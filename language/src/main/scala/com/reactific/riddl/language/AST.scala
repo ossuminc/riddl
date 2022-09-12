@@ -1539,8 +1539,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (outJoints.nonEmpty) score += Math.max(outJoints.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement this as parameter
   }
 
   /** The definition of one step in a saga with its undo step and example.
