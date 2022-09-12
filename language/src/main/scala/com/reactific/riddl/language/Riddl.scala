@@ -131,8 +131,10 @@ object Riddl {
         "Incomplete" -> statistics.incomplete.toString,
         "Maximum Depth" -> statistics.maximum_depth.toString,
         "Missing Documentation" -> statistics.missing_documentation.toString,
+        "Total Maturity"-> statistics.total_maturity.toString,
         "Percent Complete" -> statistics.percent_complete.toString,
-        "Percent Documented" -> statistics.percent_documented.toString
+        "Percent Documented" -> statistics.percent_documented.toString,
+        "Average Maturity" -> statistics.average_maturity.toString
       )
     }
   }

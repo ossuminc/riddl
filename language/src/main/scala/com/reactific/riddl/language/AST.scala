@@ -702,6 +702,16 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
     final val kind: String = "Function"
 
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (input.nonEmpty) score += 2
+      if (output.nonEmpty) score += 3
+      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 13)
+      if (examples.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
+      if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 12)
+      Math.max(score, maxMaturity)
+    }
+
     // TODO: Implement these as parameters
     override def includes: Seq[Include] = Seq.empty[Include]
 
@@ -710,6 +720,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def options: Seq[FunctionOption] = Seq.empty[FunctionOption]
 
     override def terms: Seq[Term] = Seq.empty[Term]
+
   }
 
   /** An invariant expression that can be used in the definition of an entity.
@@ -800,6 +811,13 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[OnClause] = clauses
     final val kind: String = "Handler"
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (clauses.nonEmpty)
+        score += Math.max(clauses.count(_.nonEmpty), maxMaturity)
+      Math.max(score, maxMaturity)
+    }
 
     // TODO: Implement these as parameters
     def authors: Seq[Author] = Seq.empty[Author]
@@ -908,6 +926,16 @@ object AST extends ast.Expressions with ast.TypeExpression {
     final val kind: String = "Entity"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (states.nonEmpty) score += Math.max(states.count(_.nonEmpty), 10)
+      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
+      if (handlers.nonEmpty) score += 1
+      if (invariants.nonEmpty) score += Math.max(invariants.count(_.nonEmpty), 10)
+      if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 5)
+      Math.max(score, maxMaturity)
+    }
 
     // TODO: Implement these as parameters
     def terms: Seq[Term] = Seq.empty[Term]
@@ -1043,6 +1071,13 @@ object AST extends ast.Expressions with ast.TypeExpression {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
     final val kind: String = "Adaptor"
 
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (adaptations.nonEmpty)
+        score += Math.max(adaptations.count(_.nonEmpty), maxMaturity)
+      Math.max(score, maxMaturity)
+    }
+
     override def authors: Seq[Author] = Seq.empty[Author]
 
     override def options: Seq[AdaptorOption] = Seq.empty[AdaptorOption]
@@ -1062,6 +1097,12 @@ object AST extends ast.Expressions with ast.TypeExpression {
   ) extends VitalDefinition[ProjectionOption] with ContextDefinition {
     lazy val contents: Seq[Field] = fields
     final val kind: String = "Projection"
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (fields.nonEmpty) score += Math.max(fields.count(_.nonEmpty), maxMaturity)
+      Math.max(score, maxMaturity)
+    }
 
     // TODO: Implement these as parameters
     def authors: Seq[Author] = Seq.empty[Author]
@@ -1190,6 +1231,18 @@ object AST extends ast.Expressions with ast.TypeExpression {
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if (adaptors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
+      if (sagas.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
+      if (processors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if (functions.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if (handlers.nonEmpty) score += 10
+      if (projections.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      Math.max(score, maxMaturity)
+    }
   }
 
   /** Definition of a pipe for data streaming purposes. Pipes are conduits
@@ -1333,6 +1386,14 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
       examples
     final val kind: String = shape.getClass.getSimpleName
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (inlets.nonEmpty) score += Math.max(inlets.count(_.nonEmpty), 5)
+      if (outlets.nonEmpty) score += Math.max(outlets.count(_.nonEmpty), 5)
+      if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 40)
+      Math.max(score, maxMaturity)
+    }
 
     // TODO: Implement these as parameters
     def includes: Seq[Include] = Seq.empty[Include]
@@ -1480,6 +1541,15 @@ object AST extends ast.Expressions with ast.TypeExpression {
       outJoints ++ terms ++ includes
     final val kind: String = "Plant"
 
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (pipes.nonEmpty) score += Math.max(pipes.count(_.nonEmpty), 10)
+      if (processors.nonEmpty) score += Math.max(processors.count(_.nonEmpty),20)
+      if (inJoints.nonEmpty) score += Math.max(inJoints.count(_.nonEmpty), 10)
+      if (outJoints.nonEmpty) score += Math.max(outJoints.count(_.nonEmpty), 10)
+      Math.max(score, maxMaturity)
+    }
+
     // TODO: Implement this as parameter
     override def options: Seq[PlantOption] = Seq.empty[PlantOption]
   }
@@ -1576,6 +1646,14 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
 
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (input.nonEmpty) score += 10
+      if (output.nonEmpty) score += 10
+      if (sagaSteps.nonEmpty) score += Math.max(sagaSteps.count(_.nonEmpty), 40)
+      Math.max(score, maxMaturity)
+    }
+
     // TODO: Implement these as parameters
     override def includes: Seq[Include] = Seq.empty[Include]
     override def authors: Seq[Author] = Seq.empty[Author]
@@ -1627,6 +1705,17 @@ object AST extends ast.Expressions with ast.TypeExpression {
       extends VitalDefinition[StoryOption] with DomainDefinition {
     override def contents: Seq[StoryDefinition] = examples ++ authors
     final val kind: String = "Story"
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (role.nonEmpty) score += 3
+      if (capability.nonEmpty) score += 3
+      if (benefit.nonEmpty) score += 3
+      if (shownBy.nonEmpty) score += 10
+      if (implementedBy.nonEmpty) score += 6
+      if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
+      Math.max(score, maxMaturity)
+    }
 
     // TODO: Implement these as parameters
     def includes: Seq[Include] = Seq.empty[Include]
@@ -1706,5 +1795,15 @@ object AST extends ast.Expressions with ast.TypeExpression {
         includes ++ authors
     }
     final val kind: String = "Domain"
+
+    override def maturity(parents: Seq[Definition]): Int = {
+      var score = super.maturity(parents)
+      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 15)
+      if (contexts.nonEmpty) score += Math.max(contexts.count(_.nonEmpty), 15)
+      if (plants.nonEmpty) score += Math.max(plants.count(_.nonEmpty), 10)
+      if (stories.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 15)
+      if (domains.nonEmpty) score += Math.max(domains.count(_.nonEmpty), 10)
+      Math.max(score, maxMaturity)
+    }
   }
 }

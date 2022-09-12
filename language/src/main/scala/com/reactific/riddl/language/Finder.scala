@@ -16,7 +16,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.Definition
+import com.reactific.riddl.language.AST.*
 
 case class Finder(root: Definition) {
 
@@ -46,8 +46,10 @@ case class Finder(root: Definition) {
     var incomplete: Int = 0,
     var maximum_depth : Int = 0,
     var missing_documentation: Int = 0,
+    var total_maturity: Int = 0,
     var percent_complete: Float = 0.0F,
-    var percent_documented: Float = 0.0F
+    var percent_documented: Float = 0.0F,
+    var average_maturity: Float = 0.0F
   )
 
   def generateStatistics(): Statistics = {
@@ -63,6 +65,13 @@ case class Finder(root: Definition) {
           state.incomplete += 1
         }
         state.definitions += 1
+        definition match {
+          case vd: VitalDefinition[?] =>
+            state.total_maturity += vd.maturity(parents)
+          case d: Definition if d.nonEmpty =>
+            state.total_maturity += d.contents.length
+          case _ => // ignore
+        }
         state
     }
     val completed = stats.definitions - stats.incomplete
@@ -71,6 +80,8 @@ case class Finder(root: Definition) {
     val documented = stats.definitions - stats.missing_documentation
     stats.percent_documented =
       (documented.toFloat / stats.definitions.toFloat)* 100.0F
+    stats.average_maturity =
+      (stats.total_maturity.toFloat / stats.definitions.toFloat)
     stats
   }
 }
