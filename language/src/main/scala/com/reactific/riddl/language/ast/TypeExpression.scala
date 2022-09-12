@@ -227,7 +227,8 @@ trait TypeExpression extends Abstract {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends LeafDefinition with AlwaysEmpty with SagaDefinition with FunctionDefinition {
+      extends LeafDefinition with AlwaysEmpty
+        with SagaDefinition with FunctionDefinition with ProjectionDefinition {
     override def format: String = s"${id.format}: ${typeEx.format}"
     final val kind: String = "Field"
   }

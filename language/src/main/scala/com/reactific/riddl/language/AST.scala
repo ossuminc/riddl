@@ -1085,13 +1085,17 @@ object AST extends ast.Expressions with ast.TypeExpression {
     }
   }
 
-  sealed trait ProjectionOption extends OptionValue
+  sealed abstract class  ProjectionOption(val name: String) extends OptionValue
 
   case class Projection(
     loc: Location,
     id: Identifier,
     fields: Seq[Field],
     // TODO: Should have a Handler to process queries and updates
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[ProjectionOption] with ContextDefinition {
@@ -1103,13 +1107,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (fields.nonEmpty) score += Math.max(fields.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def authors: Seq[Author] = Seq.empty[Author]
-    def includes: Seq[Include] = Seq.empty[Include]
-    def options: Seq[ProjectionOption] = Seq.empty[ProjectionOption]
-    def terms: Seq[Term] = Seq.empty[Term]
-
   }
 
   /** A reference to an context's projection definition
