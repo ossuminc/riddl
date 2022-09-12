@@ -24,6 +24,24 @@ import fastparse.ScalaWhitespace.*
 /** Unit Tests For FunctionParser */
 trait ProjectionParser extends TypeParser  {
 
+  def projectionOptions[u:P]: P[Seq[ProjectionOption]] = {
+    P("").map(_ => Seq.empty[ProjectionOption])
+  }
+
+  def projectionInclude[u:P]: P[Include] = {
+    include[ProjectionDefinition,u](projectionDefinitions(_))
+  }
+  def projectionDefinitions[u:P]: P[Seq[ProjectionDefinition]] = {
+    P(field | term | author | projectionInclude ).rep(0)
+  }
+
+  def projectionBody[u:P]:
+  P[(Seq[ProjectionOption],Seq[ProjectionDefinition])] = {
+    P(undefined(()).map(_ =>
+      (Seq.empty[ProjectionOption], Seq.empty[ProjectionDefinition])
+    ) | (projectionOptions ~ projectionDefinitions ))
+  }
+
   /** Parses projection definitions, e.g.
     *
     * {{{
@@ -35,11 +53,15 @@ trait ProjectionParser extends TypeParser  {
     */
   def projection[u: P]: P[Projection] = {
     P(location ~ Keywords.projection ~/ identifier ~ is ~ open ~
-      (
-        undefined(None).map { _ => Seq.empty[Field] } |  fields
-      ) ~ close ~ briefly ~ description
-    ).map { case (loc, id, fields, briefly, description) =>
-      Projection(loc, id, fields, briefly, description)
+      projectionBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (options, definitions), briefly, description) =>
+      val groups = definitions.groupBy(_.getClass)
+      val fields = mapTo[Field](groups.get(classOf[Field]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
+      Projection(loc, id, fields,
+        authors, includes, options, terms, briefly, description)
     }
   }
 }

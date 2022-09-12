@@ -27,6 +27,8 @@ class StreamingParserTest extends ParsingTest {
         )
       )),
       List.empty[Example],
+      Seq.empty[Include],Seq.empty[Author],Seq.empty[ProcessorOption],
+      Seq.empty[Term],
       Some(LiteralString((row + 3, 9, rpi), "foo")),
       Option(BlockDescription(
         (row + 3, 28, rpi),
@@ -187,6 +189,8 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
+            Seq.empty[Include], Seq.empty[Author], Seq.empty[ProcessorOption],
+            Seq.empty[Term],
             None,
             Option(BlockDescription(
               (7, 18, rpi),
@@ -219,6 +223,8 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
+            Seq.empty[Include], Seq.empty[Author], Seq.empty[ProcessorOption],
+            Seq.empty[Term],
             None,
             Option(BlockDescription(
               (12, 18, rpi),
@@ -243,6 +249,8 @@ class StreamingParserTest extends ParsingTest {
             )),
             List.empty[Outlet],
             List.empty[Example],
+            Seq.empty[Include], Seq.empty[Author], Seq.empty[ProcessorOption],
+            Seq.empty[Term],
             None,
             Option(BlockDescription(
               (16, 18, rpi),
@@ -324,6 +332,7 @@ class StreamingParserTest extends ParsingTest {
         Seq.empty[Term],
         Seq.empty[Include],
         Seq.empty[Author],
+        Seq.empty[PlantOption],
         None,
         Option(BlockDescription(
           (32, 1, rpi),

@@ -56,6 +56,11 @@ trait StreamingParser
         (outlet.map(Seq(_)) | undefined(Seq.empty[Outlet])) ~ close ~
         testedWithExamples ~ briefly ~ description
     ).map { case (location, id, outlets, examples, brief, description) =>
+      // FIXME: make the parsing such that sources include these things
+      val includes = Seq.empty[Include]
+      val authors = Seq.empty[Author]
+      val options = Seq.empty[ProcessorOption]
+      val terms = Seq.empty[Term]
       Processor(
         location,
         id,
@@ -63,6 +68,7 @@ trait StreamingParser
         Seq.empty[Inlet],
         outlets,
         examples,
+        includes, authors, options, terms, // FIXME: Parse these!
         brief,
         description
       )
@@ -75,6 +81,11 @@ trait StreamingParser
         (inlet.map(Seq(_)) | undefined(Seq.empty[Inlet])) ~ close ~
         testedWithExamples ~ briefly ~ description
     ).map { case (location, id, inlets, examples, brief, description) =>
+      // FIXME: make the parsing such that sinks include these things
+      val includes = Seq.empty[Include]
+      val authors = Seq.empty[Author]
+      val options = Seq.empty[ProcessorOption]
+      val terms = Seq.empty[Term]
       Processor(
         location,
         id,
@@ -82,6 +93,7 @@ trait StreamingParser
         inlets,
         Seq.empty[Outlet],
         examples,
+        includes, authors, options, terms, // FIXME: Parse these!
         brief,
         description
       )
@@ -96,6 +108,11 @@ trait StreamingParser
         testedWithExamples ~ briefly ~ description
     ).map {
       case (location, id, (inlet, outlet), examples, brief, description) =>
+        // FIXME: make the parsing such that flows include these things
+        val includes = Seq.empty[Include]
+        val authors = Seq.empty[Author]
+        val options = Seq.empty[ProcessorOption]
+        val terms = Seq.empty[Term]
         Processor(
           location,
           id,
@@ -103,6 +120,7 @@ trait StreamingParser
           inlet,
           outlet,
           examples,
+          includes, authors, options, terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -117,6 +135,11 @@ trait StreamingParser
         testedWithExamples ~ briefly ~ description
     ).map {
       case (location, id, (inlets, outlets), examples, brief, description) =>
+        // FIXME: make the parsing such that splits include these things
+        val includes = Seq.empty[Include]
+        val authors = Seq.empty[Author]
+        val options = Seq.empty[ProcessorOption]
+        val terms = Seq.empty[Term]
         Processor(
           location,
           id,
@@ -124,6 +147,7 @@ trait StreamingParser
           inlets,
           outlets,
           examples,
+          includes, authors, options, terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -138,6 +162,11 @@ trait StreamingParser
         testedWithExamples ~ briefly ~ description
     ).map {
       case (location, id, (inlets, outlets), examples, brief, description) =>
+        // FIXME: make the parsing such that merges include these things
+        val includes = Seq.empty[Include]
+        val authors = Seq.empty[Author]
+        val options = Seq.empty[ProcessorOption]
+        val terms = Seq.empty[Term]
         Processor(
           location,
           id,
@@ -145,6 +174,7 @@ trait StreamingParser
           inlets,
           outlets,
           examples,
+          includes, authors, options, terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -159,6 +189,11 @@ trait StreamingParser
         testedWithExamples ~ briefly ~ description
     ).map {
       case (location, id, (inlets, outlets), examples, brief, description) =>
+        // FIXME: make the parsing such that multis include these things
+        val includes = Seq.empty[Include]
+        val authors = Seq.empty[Author]
+        val options = Seq.empty[ProcessorOption]
+        val terms = Seq.empty[Term]
         Processor(
           location,
           id,
@@ -166,6 +201,7 @@ trait StreamingParser
           inlets,
           outlets,
           examples,
+          includes, authors, options, terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -188,25 +224,35 @@ trait StreamingParser
     }
   }
 
+  def plantOptions[x:P]: P[Seq[PlantOption]] = {
+    P("").map(_ => Seq.empty[PlantOption]) // FIXME: Need PlantOptions
+  }
   def plantInclude[X: P]: P[Include] = {
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
-  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
-    P(plantDefinition | plantInclude).rep(1)
+  def plantDefinition[u:P]: P[PlantDefinition & ContextDefinition] = {
+    P(pipeDefinition | processor | joint)
   }
 
-  def plantDefinition[u: P]: P[PlantDefinition & ContextDefinition] = {
-    P(pipeDefinition | processor | joint | term)
+  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
+    P(plantDefinition | term | author | plantInclude).rep(0)
   }
+
+  def plantBody[u: P]: P[(Seq[PlantOption],Seq[PlantDefinition])] = {
+    P( undefined(()).map(_ =>
+      (Seq.empty[PlantOption], Seq.empty[PlantDefinition]))
+      | (plantOptions ~ plantDefinitions)
+    )
+  }
+
 
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        (undefined(Seq.empty[PlantDefinition]) | plantDefinitions) ~ close ~
-        briefly ~ description
-    ).map { case (loc, id, defs, briefly, description) =>
-      val groups = defs.groupBy(_.getClass)
+        plantBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (options, definitions), briefly, description) =>
+      val groups = definitions.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
@@ -224,6 +270,7 @@ trait StreamingParser
         terms,
         includes,
         authors,
+        options,
         briefly,
         description
       )

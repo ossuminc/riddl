@@ -126,7 +126,7 @@ class ParserTest extends ParsingTest {
     }
     "allow options on context definitions" in {
       val input = RiddlParserInput(
-        "context bar is { options (function, wrapper, gateway ) }"
+        "context bar is { options (service, wrapper, gateway ) }"
       )
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
@@ -136,9 +136,9 @@ class ParserTest extends ParsingTest {
             (1, 1, rpi),
             Identifier((1, 9, rpi), "bar"),
             Seq(
-              FunctionOption((1, 27, rpi)),
-              WrapperOption((1, 37, rpi)),
-              GatewayOption((1, 46, rpi))
+              ServiceOption((1, 27, rpi)),
+              WrapperOption((1, 36, rpi)),
+              GatewayOption((1, 45, rpi))
             )
           )
       }
@@ -348,9 +348,7 @@ class ParserTest extends ParsingTest {
                       Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
-                  _,
-                  _,
-                  _,
+                  _, _, _,_,_,_,_,
                   None,
                   None
                 ) =>

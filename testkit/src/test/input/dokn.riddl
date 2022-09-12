@@ -28,7 +28,7 @@ domain dokn is {
 
     context Company is {
         entity Company is {
-            options(event sourced, available)
+            options(event-sourced, available)
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
             type CompanyAdded is event { ??? }
@@ -51,7 +51,7 @@ domain dokn is {
 
     context Driver is {
         entity Driver is {
-            options(event sourced, available)
+            options(event-sourced, available)
 
             type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
             type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
@@ -87,7 +87,7 @@ domain dokn is {
 
     context Note is {
         entity Note is {
-            options(event sourced, available)
+            options(event-sourced, available)
             state NoteBase is {
                 noteId: NoteId,
                 locationId: LocationId,
@@ -115,7 +115,7 @@ domain dokn is {
 
     context Location is {
         entity Location is {
-            options(event sourced, available)
+            options(event-sourced, available)
 
             type AddDeliveryLocation is command  { geohash: LatLong, label: String }
             type DeliveryLocationAdded is event  { }

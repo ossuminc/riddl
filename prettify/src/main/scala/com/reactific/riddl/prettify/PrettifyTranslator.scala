@@ -284,19 +284,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           .add(" is ").add(story.capability.format).addNL()
           .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format)
           .addNL()
-      ).step { state =>
-        if (story.examples.nonEmpty) {
-          state.withCurrent(
-            _.addIndent(Keywords.accepted).add(" by {").addNL().indent
-          )
-        } else { state }
-      }
+      )
     }
 
     def closeStory(state: ReformatState, story: Story): ReformatState = {
-      (if (story.examples.nonEmpty) {
-         state.withCurrent(_.outdent.addNL().addLine("}"))
-       } else { state }).withCurrent(_.closeDef(story))
+       state.withCurrent(_.closeDef(story))
     }
 
     def openAdaptor(

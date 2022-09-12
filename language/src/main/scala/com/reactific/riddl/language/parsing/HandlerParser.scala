@@ -17,10 +17,11 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.Keywords
-import com.reactific.riddl.language.Terminals.Readability
+import com.reactific.riddl.language.Terminals.{Keywords, Readability}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+
+import scala.reflect.ClassTag
 
 trait HandlerParser extends GherkinParser with FunctionParser {
 
@@ -36,29 +37,67 @@ trait HandlerParser extends GherkinParser with FunctionParser {
       onClauseBody ~ briefly ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
-  def onClauses[u: P]: P[Seq[OnClause]] = {
-    ((open ~ undefined(Seq.empty[OnClause]) ~ close) |
-      optionalNestedContent(onClause))
+  def handlerOptions[u: P]: P[Seq[HandlerOption]] = {
+    options[u, HandlerOption](
+      StringIn("partial").!
+    ) {
+      case (loc, "partial", _) => PartialHandlerOption(loc)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
   }
 
-  def contextHandler[u: P]: P[Handler] = {
+  def handlerApplicability[u:P, K <: Definition : ClassTag]:
+  P[Option[Reference[K]]] = {
+    (Readability.for_ ~ reference[u,K]).?
+  }
+
+  def handlerInclude[x: P]: P[Include] = {
+    include[HandlerDefinition, x](handlerDefinitions(_))
+  }
+
+  def handlerDefinitions[u:P]: P[Seq[HandlerDefinition]] = {
+    P( onClause | term | author | handlerInclude ).rep(0)
+  }
+
+  def handlerBody[u:P]: P[(Seq[HandlerOption], Seq[HandlerDefinition])] = {
+    undefined(()).map( _ =>
+      (Seq.empty[HandlerOption], Seq.empty[HandlerDefinition]))
+    | (handlerOptions ~ handlerDefinitions )
+  }
+
+  def contextHandler[u:P]: P[Handler] = {
     P(
       location ~ Keywords.handler ~/ identifier ~
-        (Readability.for_ ~ projectionRef).? ~ is ~ onClauses ~
-         briefly ~ description
-    ).map { case (loc, id, maybeProjection, clauses, briefly, description) =>
-      Handler(loc, id, maybeProjection, clauses, briefly, description)
+        (Readability.for_ ~ projectionRef).? ~ is ~ open ~
+        handlerBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, applicability, (options, definitions), briefly, description) =>
+      val groups = definitions.groupBy(_.getClass)
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
+      val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
+
+      Handler(loc, id, applicability, clauses,
+        authors, includes, options, terms, briefly, description
+      )
     }
   }
 
   def entityHandler[u: P]: P[Handler] = {
     P(
       Keywords.handler ~/ location ~ identifier ~
-        (Readability.for_ ~ stateRef).? ~ is ~ onClauses ~
-        briefly ~ description
-    ).map { case (loc, id, state, clauses, briefly, description) =>
-      Handler(loc, id, state, clauses, briefly, description)
+        (Readability.for_ ~ stateRef).? ~ is ~ open ~
+        handlerBody ~ close ~ briefly ~ description
+    ).map {
+      case (loc, id, applicability, (options, definitions), briefly, description) =>
+        val groups = definitions.groupBy(_.getClass)
+        val authors = mapTo[Author](groups.get(classOf[Author]))
+        val includes = mapTo[Include](groups.get(classOf[Include]))
+        val terms = mapTo[Term](groups.get(classOf[Term]))
+        val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
+        Handler(loc, id, applicability, clauses,
+          authors, includes, options, terms, briefly, description
+        )
     }
   }
-
 }

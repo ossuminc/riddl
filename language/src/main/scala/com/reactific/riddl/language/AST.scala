@@ -660,6 +660,16 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
 
+  /** Base class of all function options
+   *
+   * @param loc
+   * The location of the function option
+   */
+  sealed abstract class FunctionOption(val name: String) extends OptionValue
+
+  case class TailRecursive(loc: Location) extends
+    FunctionOption("tail-recursive")
+
   /** A function definition which can be part of a bounded context or an entity.
     *
     * @param loc
@@ -687,6 +697,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
     examples: Seq[Example] = Seq.empty[Example],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[FunctionOption] = Seq.empty[FunctionOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[FunctionOption] with WithTypes
@@ -711,16 +725,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 12)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    override def includes: Seq[Include] = Seq.empty[Include]
-
-    override def authors: Seq[Author] = Seq.empty[Author]
-
-    override def options: Seq[FunctionOption] = Seq.empty[FunctionOption]
-
-    override def terms: Seq[Term] = Seq.empty[Term]
-
   }
 
   /** An invariant expression that can be used in the definition of an entity.
@@ -779,7 +783,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
   }
 
-  sealed trait HandlerOption extends OptionValue
+  sealed abstract class HandlerOption(val name: String) extends OptionValue
+
+  case class PartialHandlerOption(loc: Location) extends HandlerOption("partial")
 
   /** A named handler of messages (commands, events, queries) that bundles
     * together a set of [[OnClause]] definitions and by doing so defines the
@@ -804,6 +810,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     id: Identifier,
     applicability: Option[Reference[?]] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[HandlerOption] = Seq.empty[HandlerOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[HandlerOption] with ContextDefinition with EntityDefinition
@@ -819,11 +829,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       Math.max(score, maxMaturity)
     }
 
-    // TODO: Implement these as parameters
-    def authors: Seq[Author] = Seq.empty[Author]
-    def includes: Seq[Include] = Seq.empty[Include]
-    def options: Seq[HandlerOption] = Seq.empty[HandlerOption]
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   /** A reference to a Handler
@@ -913,6 +918,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include] = Seq.empty[Include],
     authors: Seq[Author] = Seq.empty[Author],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[EntityOption] with ContextDefinition
@@ -936,9 +942,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 5)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   sealed trait Adaptation extends AdaptorDefinition {
@@ -1065,9 +1068,12 @@ object AST extends ast.Expressions with ast.TypeExpression {
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
     includes: Seq[Include] = Seq.empty[Include],
+    authors: Seq[Author] = Seq.empty[Author],
+    options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends VitalDefinition[AdaptorOption] with ContextDefinition {
+    description: Option[Description] = None
+  ) extends VitalDefinition[AdaptorOption] with ContextDefinition {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
     final val kind: String = "Adaptor"
 
@@ -1077,21 +1083,19 @@ object AST extends ast.Expressions with ast.TypeExpression {
         score += Math.max(adaptations.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
-
-    override def authors: Seq[Author] = Seq.empty[Author]
-
-    override def options: Seq[AdaptorOption] = Seq.empty[AdaptorOption]
-
-    override def terms: Seq[Term] = Seq.empty[Term]
   }
 
-  sealed trait ProjectionOption extends OptionValue
+  sealed abstract class  ProjectionOption(val name: String) extends OptionValue
 
   case class Projection(
     loc: Location,
     id: Identifier,
     fields: Seq[Field],
     // TODO: Should have a Handler to process queries and updates
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[ProjectionOption] with ContextDefinition {
@@ -1103,13 +1107,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (fields.nonEmpty) score += Math.max(fields.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def authors: Seq[Author] = Seq.empty[Author]
-    def includes: Seq[Include] = Seq.empty[Include]
-    def options: Seq[ProjectionOption] = Seq.empty[ProjectionOption]
-    def terms: Seq[Term] = Seq.empty[Term]
-
   }
 
   /** A reference to an context's projection definition
@@ -1150,12 +1147,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
     */
   case class ServiceOption(loc: Location) extends ContextOption("service")
 
-  /** A context's "function" option that suggests
-    *
-    * @param loc
-    *   The location of the function option
-    */
-  case class FunctionOption(loc: Location) extends ContextOption("function")
 
   /** A context's "gateway" option that suggests the bounded context is intended
     * to be an application gateway to the model. Gateway's provide
@@ -1350,7 +1341,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     def keyword: String = Keywords.multi
   }
 
-  sealed trait ProcessorOption extends OptionValue
+  sealed abstract class ProcessorOption(val name: String) extends OptionValue
 
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
@@ -1379,6 +1370,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],
+    includes: Seq[Include] = Seq.empty[Include],
+    authors: Seq[Author] = Seq.empty[Author],
+    options: Seq[ProcessorOption] = Seq.empty[ProcessorOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[ProcessorOption]
@@ -1394,12 +1389,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def includes: Seq[Include] = Seq.empty[Include]
-    def authors: Seq[Author] = Seq.empty[Author]
-    def options: Seq[ProcessorOption] = Seq.empty[ProcessorOption]
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   /** A reference to a pipe
@@ -1534,6 +1523,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
     authors: Seq[Author] = Seq.empty[Author],
+    options: Seq[PlantOption] = Seq.empty[PlantOption],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[PlantOption] with DomainDefinition {
@@ -1549,9 +1539,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (outJoints.nonEmpty) score += Math.max(outJoints.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement this as parameter
-    override def options: Seq[PlantOption] = Seq.empty[PlantOption]
   }
 
   /** The definition of one step in a saga with its undo step and example.
@@ -1635,6 +1622,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[SagaOption] with ContextDefinition {
@@ -1653,11 +1643,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (sagaSteps.nonEmpty) score += Math.max(sagaSteps.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    override def includes: Seq[Include] = Seq.empty[Include]
-    override def authors: Seq[Author] = Seq.empty[Author]
-    override def terms: Seq[Term] = Seq.empty[Term]
   }
 
   sealed trait StoryOption extends OptionValue
@@ -1700,6 +1685,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     implementedBy: Seq[DomainRef] = Seq.empty[DomainRef],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[StoryOption] = Seq.empty[StoryOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[StoryOption] with DomainDefinition {
@@ -1716,11 +1704,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def includes: Seq[Include] = Seq.empty[Include]
-    def options: Seq[StoryOption] = Seq.empty[StoryOption]
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   /** A reference to a domain definition

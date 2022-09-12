@@ -21,6 +21,8 @@ import com.reactific.riddl.language.Terminals.Keywords
 import fastparse.P
 import fastparse.ScalaWhitespace.*
 
+import scala.reflect.{ClassTag, classTag}
+
 trait ReferenceParser extends CommonParser {
 
   def commandRef[u: P]: P[CommandRef] = {
@@ -105,5 +107,19 @@ trait ReferenceParser extends CommonParser {
     P(location ~ Keywords.projection ~ pathIdentifier).map(
       tpl => (ProjectionRef.apply _).tupled(tpl))
 
+  }
+
+  def reference[u: P, K <: Definition : ClassTag]: P[Reference[K]] = {
+    val clazz = classTag[K].runtimeClass
+    val context = classOf[Context]
+    val entity = classOf[Entity]
+    val state = classOf[State]
+    val projection = classOf[Projection]
+    clazz match {
+      case c: Class[?] if c == context => contextRef.asInstanceOf[P[Reference[K]]]
+      case c: Class[?] if c == entity  => entityRef.asInstanceOf[P[Reference[K]]]
+      case c: Class[?] if c == state  => stateRef.asInstanceOf[P[Reference[K]]]
+      case c: Class[?] if c == projection => projectionRef.asInstanceOf[P[Reference[K]]]
+    }
   }
 }

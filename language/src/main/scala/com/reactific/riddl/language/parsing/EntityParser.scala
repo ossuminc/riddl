@@ -33,7 +33,7 @@ trait EntityParser extends TypeParser with HandlerParser {
         Options.transient,
         Options.consistent,
         Options.available,
-        Options.stateMachine,
+        Options.finiteStateMachine,
         Options.kind,
         Options.messageQueue
       ).!
@@ -44,7 +44,7 @@ trait EntityParser extends TypeParser with HandlerParser {
       case (loc, Options.transient, _)    => EntityTransient(loc)
       case (loc, Options.consistent, _)   => EntityIsConsistent(loc)
       case (loc, Options.available, _)    => EntityIsAvailable(loc)
-      case (loc, Options.stateMachine, _) => EntityIsFiniteStateMachine(loc)
+      case (loc, Options.`finiteStateMachine`, _) => EntityIsFiniteStateMachine(loc)
       case (loc, Options.kind, args)      => EntityKind(loc, args)
       case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
       case _ => throw new RuntimeException("Impossible case")
@@ -67,7 +67,8 @@ trait EntityParser extends TypeParser with HandlerParser {
 
   def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ briefly ~
+      location ~ Keywords.state ~/ identifier ~ is ~
+        aggregation ~ briefly ~
         description
     ).map(tpl => (State.apply _).tupled(tpl))
   }
@@ -77,7 +78,8 @@ trait EntityParser extends TypeParser with HandlerParser {
   }
 
   def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(author | entityHandler | function | invariant | typeDef | state | entityInclude)
+    P(author | entityHandler | function | invariant | typeDef | state |
+      entityInclude | term )
       .rep
   }
 
@@ -102,6 +104,7 @@ trait EntityParser extends TypeParser with HandlerParser {
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       Entity(
         loc,
         id,
@@ -113,6 +116,7 @@ trait EntityParser extends TypeParser with HandlerParser {
         invariants,
         includes,
         authors,
+        terms,
         briefly,
         description
       )

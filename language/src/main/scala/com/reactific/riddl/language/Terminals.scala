@@ -67,7 +67,7 @@ object Terminals {
     final val concept = "concept"
     final val consistent = "consistent"
     final val device = "device"
-    final val eventSourced = "event sourced"
+    final val eventSourced = "event-sourced"
     final val function = "function"
     final val gateway = "gateway"
     final val kind = "kind"
@@ -80,7 +80,8 @@ object Terminals {
     final val sync = "sync"
     final val value = "value"
     final val wrapper = "wrapper"
-    final val stateMachine = "fsm"
+    final val finiteStateMachine = "fsm"
+    final val tail_recursive = "tail-recursive"
     final val transient = "transient"
   }
 
