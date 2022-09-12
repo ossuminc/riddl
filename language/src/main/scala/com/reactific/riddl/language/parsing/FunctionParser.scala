@@ -17,12 +17,26 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Keywords, Punctuation}
+import com.reactific.riddl.language.Terminals.{Keywords, Options, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For FunctionParser */
 trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
+
+  def functionOptions[X: P]: P[Seq[FunctionOption]] = {
+    options[X, FunctionOption](
+      StringIn(Options.tail_recursive).!
+    ) {
+      case (loc, Options.tail_recursive, _) => TailRecursive(loc)
+      case (_, _, _) =>
+        throw new RuntimeException("Impossible case")
+    }
+  }
+
+  def functionInclude[x: P] : P[Include] = {
+    include[FunctionDefinition, x](functionDefinitions(_))
+  }
 
   def input[u: P]: P[Aggregation] = { P(Keywords.requires ~ Punctuation.colon.? ~ aggregation) }
 
@@ -33,11 +47,14 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
   }
 
   def functionDefinitions[u:P]: P[Seq[FunctionDefinition]] = {
-    P(typeDef | example | function).rep(0)
+    P( typeDef | example | function | term |  author | functionInclude)
+      .rep(0)
   }
 
-  def functionBody[u:P]: P[(Option[Aggregation],Option[Aggregation],Seq[FunctionDefinition])] = {
-    P(input.? ~ output.? ~ functionDefinitions)
+  def functionBody[u:P]: P[(Seq[FunctionOption], Option[Aggregation],Option[Aggregation],Seq[FunctionDefinition])] = {
+    P(undefined(None).map { _ =>
+      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition])}
+      | (functionOptions ~ input.? ~ output.? ~ functionDefinitions))
   }
 
   /** Parses function literals, i.e.
@@ -51,16 +68,17 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
     */
   def function[u: P]: P[Function] = {
     P(location ~ Keywords.function ~/ identifier ~ is ~ open ~
-      ( undefined(None).map { _ => (
-          None, None, Seq.empty[FunctionDefinition]
-        )
-      } |  functionBody) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (inp, outp, defns), briefly, description) =>
-      val groups = defns.groupBy(_.getClass)
+      functionBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (options, input, output, definitions), briefly, description) =>
+      val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val examples = mapTo[Example](groups.get(classOf[Example]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
-      Function(loc, id, inp, outp, types, functions, examples, briefly, description)
+      val terms = mapTo[Term](groups.get(classOf[Term]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
+      Function(loc, id, input, output, types, functions, examples,
+        authors, includes, options, terms, briefly, description)
     }
   }
 }

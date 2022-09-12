@@ -229,4 +229,5 @@ trait CommonParser extends NoWhiteSpaceParsers {
         Author(loc, id, name, email, org, title, url, brief, desc)
     }
   }
+
 }

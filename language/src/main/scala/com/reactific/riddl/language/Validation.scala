@@ -1067,7 +1067,7 @@ object Validation {
             optN
           )
           defn match {
-            case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _, _, _) =>
+            case Function(_, fid, Some(Aggregation(_, fields)), _, _, _, _, _, _, _, _, _, _) =>
               val paramNames = fields.map(_.id.value)
               val argNames = args.args.keys.map(_.value).toSeq
               val s1 = s.check(

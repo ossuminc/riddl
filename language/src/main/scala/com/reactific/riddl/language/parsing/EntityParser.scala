@@ -33,7 +33,7 @@ trait EntityParser extends TypeParser with HandlerParser {
         Options.transient,
         Options.consistent,
         Options.available,
-        Options.stateMachine,
+        Options.finiteStateMachine,
         Options.kind,
         Options.messageQueue
       ).!
@@ -44,7 +44,7 @@ trait EntityParser extends TypeParser with HandlerParser {
       case (loc, Options.transient, _)    => EntityTransient(loc)
       case (loc, Options.consistent, _)   => EntityIsConsistent(loc)
       case (loc, Options.available, _)    => EntityIsAvailable(loc)
-      case (loc, Options.stateMachine, _) => EntityIsFiniteStateMachine(loc)
+      case (loc, Options.`finiteStateMachine`, _) => EntityIsFiniteStateMachine(loc)
       case (loc, Options.kind, args)      => EntityKind(loc, args)
       case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
       case _ => throw new RuntimeException("Impossible case")

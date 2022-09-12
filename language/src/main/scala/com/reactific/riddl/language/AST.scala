@@ -660,6 +660,16 @@ object AST extends ast.Expressions with ast.TypeExpression {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
 
+  /** Base class of all function options
+   *
+   * @param loc
+   * The location of the function option
+   */
+  sealed abstract class FunctionOption(val name: String) extends OptionValue
+
+  case class TailRecursive(loc: Location) extends
+    FunctionOption("tail-recursive")
+
   /** A function definition which can be part of a bounded context or an entity.
     *
     * @param loc
@@ -687,6 +697,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
     examples: Seq[Example] = Seq.empty[Example],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[FunctionOption] = Seq.empty[FunctionOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[FunctionOption] with WithTypes
@@ -711,16 +725,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 12)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    override def includes: Seq[Include] = Seq.empty[Include]
-
-    override def authors: Seq[Author] = Seq.empty[Author]
-
-    override def options: Seq[FunctionOption] = Seq.empty[FunctionOption]
-
-    override def terms: Seq[Term] = Seq.empty[Term]
-
   }
 
   /** An invariant expression that can be used in the definition of an entity.
@@ -1150,12 +1154,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
     */
   case class ServiceOption(loc: Location) extends ContextOption("service")
 
-  /** A context's "function" option that suggests
-    *
-    * @param loc
-    *   The location of the function option
-    */
-  case class FunctionOption(loc: Location) extends ContextOption("function")
 
   /** A context's "gateway" option that suggests the bounded context is intended
     * to be an application gateway to the model. Gateway's provide
