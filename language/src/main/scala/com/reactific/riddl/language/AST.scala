@@ -1068,9 +1068,12 @@ object AST extends ast.Expressions with ast.TypeExpression {
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
     includes: Seq[Include] = Seq.empty[Include],
+    authors: Seq[Author] = Seq.empty[Author],
+    options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends VitalDefinition[AdaptorOption] with ContextDefinition {
+    description: Option[Description] = None
+  ) extends VitalDefinition[AdaptorOption] with ContextDefinition {
     lazy val contents: Seq[AdaptorDefinition] = adaptations ++ includes
     final val kind: String = "Adaptor"
 
@@ -1080,12 +1083,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
         score += Math.max(adaptations.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
-
-    override def authors: Seq[Author] = Seq.empty[Author]
-
-    override def options: Seq[AdaptorOption] = Seq.empty[AdaptorOption]
-
-    override def terms: Seq[Term] = Seq.empty[Term]
   }
 
   sealed trait ProjectionOption extends OptionValue

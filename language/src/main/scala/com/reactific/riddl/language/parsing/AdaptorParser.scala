@@ -26,6 +26,13 @@ import fastparse.ScalaWhitespace.*
 trait AdaptorParser
     extends ReferenceParser with GherkinParser with ActionParser {
 
+  def adaptorOptions[u:P]: P[Seq[AdaptorOption]] = {
+    P( "" ).map( _ => Seq.empty[AdaptorOption]) // FIXME: Need AdaptorOptions
+  }
+
+  def adaptorIncludes[u:P]: P[Include] = {
+    include[AdaptorDefinition,u](adaptorDefinitions(_))
+  }
   def adaptationPrefix[u: P]: P[(Location, Identifier)] = {
     P(location ~ Keywords.adapt ~ identifier ~ is ~ open ~ Readability.from)
   }
@@ -68,8 +75,8 @@ trait AdaptorParser
 
   def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      (eventCommand | commandCommand | eventAction | adaptorInclude)
-        .rep(1) |
+      (eventCommand | commandCommand | eventAction | adaptorInclude |
+        term | author).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }
@@ -78,14 +85,17 @@ trait AdaptorParser
   def adaptor[u: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~
-        contextRef ~ is ~ open ~ adaptorDefinitions ~ close ~ briefly ~
-        description
-    ).map { case (loc, id, cref, defs, briefly, description) =>
+        contextRef ~ is ~ open ~ adaptorOptions ~ adaptorDefinitions ~
+        close ~ briefly ~ description
+    ).map { case (loc, id, cref, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val includes = mapTo[Include](groups.get(classOf[Include]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       val adaptations: Seq[Adaptation] =
         defs.filter(_.isInstanceOf[Adaptation]).map(_.asInstanceOf[Adaptation])
-      Adaptor(loc, id, cref, adaptations, includes, briefly, description)
+      Adaptor(loc, id, cref, adaptations, includes, authors, options, terms,
+        briefly, description)
     }
   }
 }
