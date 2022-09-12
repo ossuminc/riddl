@@ -1341,7 +1341,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     def keyword: String = Keywords.multi
   }
 
-  sealed trait ProcessorOption extends OptionValue
+  sealed abstract class ProcessorOption(val name: String) extends OptionValue
 
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
@@ -1370,6 +1370,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],
+    includes: Seq[Include] = Seq.empty[Include],
+    authors: Seq[Author] = Seq.empty[Author],
+    options: Seq[ProcessorOption] = Seq.empty[ProcessorOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[ProcessorOption]
@@ -1385,12 +1389,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def includes: Seq[Include] = Seq.empty[Include]
-    def authors: Seq[Author] = Seq.empty[Author]
-    def options: Seq[ProcessorOption] = Seq.empty[ProcessorOption]
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   /** A reference to a pipe
