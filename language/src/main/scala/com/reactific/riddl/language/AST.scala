@@ -783,7 +783,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
 
   }
 
-  sealed trait HandlerOption extends OptionValue
+  sealed abstract class HandlerOption(val name: String) extends OptionValue
+
+  case class PartialHandlerOption(loc: Location) extends HandlerOption("partial")
 
   /** A named handler of messages (commands, events, queries) that bundles
     * together a set of [[OnClause]] definitions and by doing so defines the
@@ -808,6 +810,10 @@ object AST extends ast.Expressions with ast.TypeExpression {
     id: Identifier,
     applicability: Option[Reference[?]] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[HandlerOption] = Seq.empty[HandlerOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[HandlerOption] with ContextDefinition with EntityDefinition
@@ -823,11 +829,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       Math.max(score, maxMaturity)
     }
 
-    // TODO: Implement these as parameters
-    def authors: Seq[Author] = Seq.empty[Author]
-    def includes: Seq[Include] = Seq.empty[Include]
-    def options: Seq[HandlerOption] = Seq.empty[HandlerOption]
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   /** A reference to a Handler

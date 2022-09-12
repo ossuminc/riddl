@@ -67,7 +67,8 @@ trait EntityParser extends TypeParser with HandlerParser {
 
   def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~/ identifier ~ is ~ aggregation ~ briefly ~
+      location ~ Keywords.state ~/ identifier ~ is ~
+        aggregation ~ briefly ~
         description
     ).map(tpl => (State.apply _).tupled(tpl))
   }

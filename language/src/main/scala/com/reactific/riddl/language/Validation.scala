@@ -253,19 +253,7 @@ object Validation {
 
     def validateHandler(h: Handler, parents: Seq[Definition]): ValidationState = {
       checkContainer(parents.head, h)
-        .checkIf(h.applicability.nonEmpty) { st =>
-          st.checkOption(h.applicability, "applicability", h) { (st, ref) =>
-            ref match {
-              case StateRef(_, pid) => st.checkPathRef[State](pid, h)()
-              case ProjectionRef(_, pid) =>
-                st.checkPathRef[Projection](pid, h)()
-              case r: Reference[?] =>
-                st.addError(r.loc,
-                s"Invalid reference kind ${r.format} for a handler"
-              )
-            }
-          }
-        }.checkDescription(h).checkDescription(h)
+        .checkDescription(h)
     }
 
     def validateOnClause(oc: OnClause, parents: Seq[Definition]): ValidationState = {
