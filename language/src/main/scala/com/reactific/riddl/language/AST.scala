@@ -1523,6 +1523,7 @@ object AST extends ast.Expressions with ast.TypeExpression {
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include] = Seq.empty[Include],
     authors: Seq[Author] = Seq.empty[Author],
+    options: Seq[PlantOption] = Seq.empty[PlantOption],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[PlantOption] with DomainDefinition {
@@ -1540,7 +1541,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
     }
 
     // TODO: Implement this as parameter
-    override def options: Seq[PlantOption] = Seq.empty[PlantOption]
   }
 
   /** The definition of one step in a saga with its undo step and example.

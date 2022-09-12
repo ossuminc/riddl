@@ -332,6 +332,7 @@ class StreamingParserTest extends ParsingTest {
         Seq.empty[Term],
         Seq.empty[Include],
         Seq.empty[Author],
+        Seq.empty[PlantOption],
         None,
         Option(BlockDescription(
           (32, 1, rpi),

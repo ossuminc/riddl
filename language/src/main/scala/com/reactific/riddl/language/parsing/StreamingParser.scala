@@ -224,25 +224,35 @@ trait StreamingParser
     }
   }
 
+  def plantOptions[x:P]: P[Seq[PlantOption]] = {
+    P("").map(_ => Seq.empty[PlantOption]) // FIXME: Need PlantOptions
+  }
   def plantInclude[X: P]: P[Include] = {
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
-  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
-    P(plantDefinition | plantInclude).rep(1)
+  def plantDefinition[u:P]: P[PlantDefinition & ContextDefinition] = {
+    P(pipeDefinition | processor | joint)
   }
 
-  def plantDefinition[u: P]: P[PlantDefinition & ContextDefinition] = {
-    P(pipeDefinition | processor | joint | term)
+  def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
+    P(plantDefinition | term | author | plantInclude).rep(0)
   }
+
+  def plantBody[u: P]: P[(Seq[PlantOption],Seq[PlantDefinition])] = {
+    P( undefined(()).map(_ =>
+      (Seq.empty[PlantOption], Seq.empty[PlantDefinition]))
+      | (plantOptions ~ plantDefinitions)
+    )
+  }
+
 
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        (undefined(Seq.empty[PlantDefinition]) | plantDefinitions) ~ close ~
-        briefly ~ description
-    ).map { case (loc, id, defs, briefly, description) =>
-      val groups = defs.groupBy(_.getClass)
+        plantBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (options, definitions), briefly, description) =>
+      val groups = definitions.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
@@ -260,6 +270,7 @@ trait StreamingParser
         terms,
         includes,
         authors,
+        options,
         briefly,
         description
       )

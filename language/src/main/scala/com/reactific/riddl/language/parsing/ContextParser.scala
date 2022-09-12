@@ -58,7 +58,6 @@ trait ContextParser
     )
   }
 
-
   def context[u: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ is ~ open ~
