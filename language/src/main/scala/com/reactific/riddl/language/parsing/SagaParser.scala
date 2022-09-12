@@ -43,15 +43,35 @@ trait SagaParser extends ReferenceParser with ActionParser with GherkinParser wi
     }
   }
 
-  def sagaInput[u: P]: P[Aggregation] = { P(Keywords.input ~ aggregation) }
+  def sagaInclude[u:P]: P[Include] = {
+    include[SagaDefinition,u](sagaDefinitions(_))
+  }
+
+  def sagaDefinitions[u:P]: P[Seq[SagaDefinition]] = {
+    P(sagaStep | author | term | sagaInclude ).rep(2)
+  }
+
+  type SagaBodyType =
+    (Seq[SagaOption], Option[Aggregation], Option[Aggregation], Seq[SagaDefinition])
+  def sagaBody[u:P]: P[SagaBodyType] = {
+    P (undefined(()).map(_ =>
+        (Seq.empty[SagaOption], None, None, Seq.empty[SagaDefinition])
+      ) | (sagaOptions ~ input.? ~ output.? ~ sagaDefinitions)
+    )
+  }
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaOptions ~
-        optionalInputOrOutput ~ sagaStep.rep(2) ~
-        close ~ briefly ~ description
-    ).map { case (location, identifier, options, (input, output), actions, briefly, description) =>
-      Saga(location, identifier, options, input, output, actions, briefly, description)
+      location ~ Keywords.saga ~ identifier ~ is ~ open ~
+      sagaBody ~ close ~ briefly ~ description
+    ).map { case (location, identifier, (options, input, output, definitions), briefly, description) =>
+      val groups = definitions.groupBy(_.getClass)
+      val steps = mapTo[SagaStep](groups.get(classOf[SagaStep]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
+      Saga(location, identifier, options, input, output, steps,
+        authors, includes, terms, briefly, description)
     }
   }
 }

@@ -1624,6 +1624,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[SagaOption] with ContextDefinition {
@@ -1642,11 +1645,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (sagaSteps.nonEmpty) score += Math.max(sagaSteps.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    override def includes: Seq[Include] = Seq.empty[Include]
-    override def authors: Seq[Author] = Seq.empty[Author]
-    override def terms: Seq[Term] = Seq.empty[Term]
   }
 
   sealed trait StoryOption extends OptionValue
