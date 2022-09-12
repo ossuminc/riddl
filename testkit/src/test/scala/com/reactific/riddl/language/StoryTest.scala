@@ -17,7 +17,7 @@ class StoryTest extends ValidatingTest {
           |  benefit is "revise content more easily"
           |  shown by { http://example.com:80/path/to/WritingABook }
           |  implemented by { Path.To.Context }
-          |  accepted by {
+          |  /////////////
           |    example one {
           |      given "I need to write a book"
           |      when "I am writing the book"
@@ -28,7 +28,7 @@ class StoryTest extends ValidatingTest {
           |      when "I am revising the book"
           |      then "I can erase and re-type words on the screen"
           |    } described as "nothing"
-          |  }
+          |
           |} described as "A simple authoring story"
           |} described as "a parsing convenience"
           |""".stripMargin

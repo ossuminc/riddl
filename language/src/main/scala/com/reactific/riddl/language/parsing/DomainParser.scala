@@ -19,86 +19,18 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Terminals.Keywords
 import com.reactific.riddl.language.Terminals.Options
-import com.reactific.riddl.language.Terminals.Punctuation
-import com.reactific.riddl.language.Terminals.Readability
 import com.reactific.riddl.language.AST
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for domains. */
 trait DomainParser
-    extends CommonParser
+  extends CommonParser
     with ContextParser
+    with StoryParser
     with StreamingParser
     with TypeParser {
 
-  def story[u: P]: P[Story] = P(
-    location ~ Keywords.story ~ identifier ~ is ~ open ~
-      author.rep(0) ~
-      Keywords.role ~ is ~
-      literalString ~ Keywords.capability ~ is ~ literalString ~
-      Keywords.benefit ~ is ~ literalString ~
-      (Keywords.shown ~ Readability.by ~ open ~
-        httpUrl.rep(1, Punctuation.comma) ~ close).?.map { x =>
-        if (x.isEmpty) Seq.empty[java.net.URL] else x.get
-      } ~
-      (Keywords.implemented ~ Readability.by ~ open ~
-        domainRef.rep(1, Punctuation.comma) ~ close).?
-        .map(x => if (x.isEmpty) Seq.empty[DomainRef] else x.get) ~
-      (Keywords.accepted ~ Readability.by ~ open ~ examples ~ close).? ~ close ~
-      briefly ~ description
-  ).map {
-    case (
-          loc,
-          id,
-          authors,
-          role,
-          capa,
-          bene,
-          shown,
-          implemented,
-          Some(examples),
-          briefly,
-          description
-        ) => Story(
-        loc,
-        id,
-        role,
-        capa,
-        bene,
-        shown,
-        implemented,
-        examples,
-        authors,
-        briefly,
-        description
-      )
-    case (
-          loc,
-          id,
-          authors,
-          role,
-          capa,
-          bene,
-          shown,
-          implemented,
-          None,
-          briefly,
-          description
-        ) => Story(
-        loc,
-        id,
-        role,
-        capa,
-        bene,
-        shown,
-        implemented,
-        Seq.empty[Example],
-        authors,
-        briefly,
-        description
-      )
-  }
 
   def domainOptions[X: P]: P[Seq[DomainOption]] = {
     options[X, DomainOption](StringIn(Options.package_).!) {

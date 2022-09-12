@@ -1687,6 +1687,9 @@ object AST extends ast.Expressions with ast.TypeExpression {
     implementedBy: Seq[DomainRef] = Seq.empty[DomainRef],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[StoryOption] = Seq.empty[StoryOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[StoryOption] with DomainDefinition {
@@ -1703,11 +1706,6 @@ object AST extends ast.Expressions with ast.TypeExpression {
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
       Math.max(score, maxMaturity)
     }
-
-    // TODO: Implement these as parameters
-    def includes: Seq[Include] = Seq.empty[Include]
-    def options: Seq[StoryOption] = Seq.empty[StoryOption]
-    def terms: Seq[Term] = Seq.empty[Term]
   }
 
   /** A reference to a domain definition
