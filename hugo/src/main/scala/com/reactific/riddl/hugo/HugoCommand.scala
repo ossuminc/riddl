@@ -48,7 +48,8 @@ object HugoCommand {
     viewPath: Option[String] = Some("blob/main/src/main/riddl"),
     withGlossary: Boolean = true,
     withTODOList: Boolean = true,
-    withGraphicalTOC: Boolean = false
+    withGraphicalTOC: Boolean = false,
+    withStatistics: Boolean = true
   ) extends CommandOptions with TranslationCommand.Options {
     def command: String = "hugo"
     def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
@@ -81,8 +82,25 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
           } else { Right(()) }
         ),
         opt[Boolean]('e', name = "erase-output")
-          .text("Erase entire output directory before putting out files"),
-        opt[URL]('b', "base-url").optional().action((v, c) =>
+          .text("Erase entire output directory before putting out files")
+          .optional().action( (v, c) => c.copy(eraseOutput = v)),
+        opt[Boolean]('e', name = "with-statistics")
+          .text("Generate a statistics page accessible from index page")
+          .optional()
+          .action((v, c) => c.copy(withStatistics = v)),
+        opt[Boolean]('e', name = "with-glossary")
+          .text("Generate a glossary of terms and definitions ")
+          .optional()
+          .action((v, c) => c.copy(withGlossary = v)),
+        opt[Boolean]('e', name = "with-todo-list")
+          .text("Generate a To Do list")
+          .optional()
+          .action((v, c) => c.copy(withTODOList = v)),
+        opt[Boolean]('e', name = "with-graphical-toc")
+          .text("Generate a graphically navigable table of contents")
+          .optional()
+          .action((v, c) => c.copy(withGraphicalTOC = v)),
+       opt[URL]('b', "base-url").optional().action((v, c) =>
           c.copy(baseUrl = Some(v))
         ).text("Optional base URL for root of generated http URLs"),
         opt[Map[String, String]]('t', name = "themes")
@@ -147,6 +165,9 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
           cc => cc.asBoolean }
         withToDoList <- optional(objCur, "with-todo-list", true) {
           cc => cc.asBoolean }
+        withStatistics <- optional(objCur, "with-statistics", true) {
+          cc => cc.asBoolean
+        }
         withGraphicalTOC <- optional(objCur, "with-graphical-toc", false) {
           cc => cc.asBoolean }
       } yield {
@@ -188,7 +209,8 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
           Option(viewPath),
           withGlossary,
           withToDoList,
-          withGraphicalTOC
+          withGraphicalTOC,
+          withStatistics,
         )
       }
     }
