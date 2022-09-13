@@ -364,11 +364,9 @@ trait Abstract {
     def authors: Seq[Author]
 
     override def hasAuthors: Boolean = authors.nonEmpty
+
     def isAuthored(parents: Seq[Definition]): Boolean = {
-      hasAuthors || parents.exists(d =>
-        d.isInstanceOf[VitalDefinition[?]] &&
-          d.asInstanceOf[VitalDefinition[?]].hasAuthors
-      )
+      findAuthors(this, parents).nonEmpty
     }
   }
 
@@ -479,4 +477,15 @@ trait Abstract {
     }
   }
 
+  def findAuthors(defn: Definition, parents: Seq[Definition]): Seq[Author] = {
+    if (defn.hasAuthors) {
+      defn.asInstanceOf[WithAuthors].authors
+    } else {
+      parents.find(d =>
+        d.isInstanceOf[WithAuthors] &&
+          d.asInstanceOf[WithAuthors].hasAuthors
+      ).map(_.asInstanceOf[WithAuthors].authors)
+        .getOrElse(Seq.empty[Author])
+    }
+  }
 }

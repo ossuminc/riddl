@@ -41,36 +41,37 @@ case class CommonOptions(
 object Riddl {
 
   /** Runs a code block and returns its result, and prints its execution time to
-    * stdout. Execution time is only written if `show` is set to `true`.
-    *
-    * e.g.
-    *
-    * timer("my-stage", true) { 1 + 1 } // 2
-    *
-    * prints: Stage 'my-stage': 0.000 seconds
-    *
-    * @param stage
-    *   The name of the stage, is included in output message
-    * @param show
-    *   if `true`, then message is printed, otherwise not
-    * @param logger
-    *   The logger to which timing messages should be put out.
-    * @param f
-    *   the code block to execute
-    * @return
-    *   The result of running `f`
-    */
+   * stdout. Execution time is only written if `show` is set to `true`.
+   *
+   * e.g.
+   *
+   * timer("my-stage", true) { 1 + 1 } // 2
+   *
+   * prints: Stage 'my-stage': 0.000 seconds
+   *
+   * @param stage
+   * The name of the stage, is included in output message
+   * @param show
+   * if `true`, then message is printed, otherwise not
+   * @param logger
+   * The logger to which timing messages should be put out.
+   * @param f
+   * the code block to execute
+   * @return
+   * The result of running `f`
+   */
   def timer[T](
     stage: String,
     show: Boolean = true,
     logger: Logger = SysLogger()
-  )(f: => T
-  ): T = { RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f) }
+  )(
+    f: => T
+  ): T = {RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f)}
 
   def parse(
     path: Path,
     options: CommonOptions
-  ): Either[Messages,RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     if (Files.exists(path)) {
       val input = new FileParserInput(path)
       parse(input, options)
@@ -84,7 +85,7 @@ object Riddl {
   def parse(
     input: RiddlParserInput,
     options: CommonOptions
-  ): Either[Messages,RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     timer("parse", options.showTimes) {
       TopLevelParser.parse(input)
     }
@@ -93,7 +94,7 @@ object Riddl {
   def validate(
     root: RootContainer,
     commonOptions: CommonOptions
-  ): Either[Messages,RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     timer("validate", commonOptions.showTimes) {
       Validation.validate(root, commonOptions) match {
         case list: Messages if list.isEmpty =>
@@ -108,7 +109,7 @@ object Riddl {
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions
-  ): Either[Messages,RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     parse(input, commonOptions).flatMap { root =>
       validate(root, commonOptions)
     }
@@ -117,138 +118,143 @@ object Riddl {
   def parseAndValidate(
     path: Path,
     commonOptions: CommonOptions
-  ): Either[Messages,RootContainer] = {
+  ): Either[Messages, RootContainer] = {
     parseAndValidate(RiddlParserInput(path), commonOptions)
   }
 
   type Stats = SortedMap[String, String]
-  def collectStats(inputFile: Path, commonOptions: CommonOptions):
-  Either[Messages,Stats] = {
-    parse(inputFile, commonOptions).map { root =>
-      val stats = Finder(root).generateStatistics()
-      val completed = stats.definitions - stats.incomplete
-      val documented = stats.definitions - stats.missing_documentation
-      val empty = SortedMap.empty[String,String]
-      SortedMap(
-        "Definitions" -> stats.definitions.toString,
-        "Incomplete" -> stats.incomplete.toString,
-        "Maximum Depth" -> stats.maximum_depth.toString,
-        "Missing Documentation" -> stats.missing_documentation.toString,
-        "Total Maturity"-> stats.total_maturity.toString
-      ) ++ (if (stats.definitions > 0) {
-        val percent_complete =
-          (completed.toFloat / stats.definitions.toFloat) * 100.0F
-        val percent_documented =
-          (documented.toFloat / stats.definitions.toFloat) * 100.0F
-        val average_maturity =
-          (stats.total_maturity.toFloat / stats.definitions.toFloat)
-        SortedMap(
-          "Percent Complete" -> percent_complete.toString,
-          "Percent Documented" -> percent_documented.toString,
-          "Average Maturity" -> average_maturity.toString,
-        )
-      } else { empty }) ++ 
-        (if (stats.adaptorStats.count > 0) {
-          val average_maturity =
-            (stats.adaptorStats.maturitySum.toFloat / stats.adaptorStats.count)
-          SortedMap(  
-            "Adaptor Count" -> stats.adaptorStats.count.toString,
-            "Adaptor Total Maturity" -> stats.adaptorStats.maturitySum.toString,
-            "Adaptor Average Maturity" -> average_maturity.toString
-          )
-        } else { empty }) ++ 
-        (if (stats.contextStats.count > 0) {
-          val average_maturity =
-            (stats.contextStats.maturitySum.toFloat / stats.contextStats.count)
-          SortedMap(
-            "Context Count" -> stats.contextStats.count.toString,
-            "Context Total Maturity" -> stats.contextStats.maturitySum.toString,
-            "Context Average Maturity" -> average_maturity.toString
-          )
-        } else { empty }) ++
-        (if (stats.domainStats.count > 0) {
-          val average_maturity =
-            (stats.domainStats.maturitySum.toFloat / stats.domainStats.count)
-          SortedMap(
-            "Domain Count" -> stats.domainStats.count.toString,
-            "Domain Total Maturity" -> stats.domainStats.maturitySum.toString,
-            "Domain Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.entityStats.count > 0) {
-          val average_maturity =
-            (stats.entityStats.maturitySum.toFloat / stats.entityStats.count)
-          SortedMap(
-            "Entity Count" -> stats.entityStats.count.toString,
-            "Entity Total Maturity" -> stats.entityStats.maturitySum.toString,
-            "Entity Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.functionStats.count > 0) {
-          val average_maturity =
-            (stats.functionStats.maturitySum.toFloat / stats.functionStats.count)
-          SortedMap(
-            "Function Count" -> stats.functionStats.count.toString,
-            "Function Total Maturity" -> stats.functionStats.maturitySum.toString,
-            "Function Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.handlerStats.count > 0) {
-          val average_maturity =
-            (stats.handlerStats.maturitySum.toFloat / stats.handlerStats.count)
-          SortedMap(
-            "Handler Count" -> stats.handlerStats.count.toString,
-            "Handler Total Maturity" -> stats.handlerStats.maturitySum.toString,
-            "Handler Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.plantStats.count > 0) {
-          val average_maturity =
-            (stats.plantStats.maturitySum.toFloat / stats.plantStats.count)
-          SortedMap(
-            "Plant Count" -> stats.plantStats.count.toString,
-            "Plant Total Maturity" -> stats.plantStats.maturitySum.toString,
-            "Plant Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.processorStats.count > 0) {
-          val average_maturity =
-            (stats.processorStats.maturitySum.toFloat / stats.processorStats.count)
-          SortedMap(
-            "Processor Count" -> stats.processorStats.count.toString,
-            "Processor Total Maturity" -> stats.processorStats.maturitySum.toString,
-            "Processor Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.projectionStats.count > 0) {
-          val average_maturity =
-            (stats.projectionStats.maturitySum.toFloat / stats.projectionStats.count)
-          SortedMap(
-            "Projection Count" -> stats.projectionStats.count.toString,
-            "Projection Total Maturity" -> stats.projectionStats.maturitySum.toString,
-            "Projection Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.sagaStats.count > 0) {
-          val average_maturity =
-            (stats.sagaStats.maturitySum.toFloat / stats.sagaStats.count)
-          SortedMap(
-            "Saga Count" -> stats.sagaStats.count.toString,
-            "Saga Total Maturity" -> stats.sagaStats.maturitySum.toString,
-            "Saga Average Maturity" -> average_maturity.toString
-          )
-        } else empty) ++
-        (if (stats.storyStats.count > 0) {
-          val average_maturity =
-            (stats.storyStats.maturitySum.toFloat / stats.storyStats.count)
-          SortedMap(
-            "Story Count" -> stats.storyStats.count.toString,
-            "Story Total Maturity" -> stats.storyStats.maturitySum.toString,
-            "Story Average Maturity" -> average_maturity.toString
-          )
-        } else empty)
 
+  def collectStats(inputFile: Path, commonOptions: CommonOptions):
+  Either[Messages, Stats] = {
+    parse(inputFile, commonOptions).flatMap { root =>
+      collectStats(root)
     }
+  }
+
+  def collectStats(root: RootContainer):
+  Either[Messages, Stats] = {
+    val stats = Finder(root).generateStatistics()
+    val completed = stats.definitions - stats.incomplete
+    val documented = stats.definitions - stats.missing_documentation
+    val empty = SortedMap.empty[String, String]
+    Right(SortedMap(
+      "Definitions" -> stats.definitions.toString,
+      "Incomplete" -> stats.incomplete.toString,
+      "Maximum Depth" -> stats.maximum_depth.toString,
+      "Missing Documentation" -> stats.missing_documentation.toString,
+      "Total Maturity" -> stats.total_maturity.toString
+    ) ++ (if (stats.definitions > 0) {
+      val percent_complete =
+        (completed.toFloat / stats.definitions.toFloat) * 100.0F
+      val percent_documented =
+        (documented.toFloat / stats.definitions.toFloat) * 100.0F
+      val average_maturity =
+        (stats.total_maturity.toFloat / stats.definitions.toFloat)
+      SortedMap(
+        "Percent Complete" -> percent_complete.toString,
+        "Percent Documented" -> percent_documented.toString,
+        "Average Maturity" -> average_maturity.toString,
+      )
+    } else {empty}) ++
+      (if (stats.adaptorStats.count > 0) {
+        val average_maturity =
+          (stats.adaptorStats.maturitySum.toFloat / stats.adaptorStats.count)
+        SortedMap(
+          "Adaptor Count" -> stats.adaptorStats.count.toString,
+          "Adaptor Total Maturity" -> stats.adaptorStats.maturitySum.toString,
+          "Adaptor Average Maturity" -> average_maturity.toString
+        )
+      } else {empty}) ++
+      (if (stats.contextStats.count > 0) {
+        val average_maturity =
+          (stats.contextStats.maturitySum.toFloat / stats.contextStats.count)
+        SortedMap(
+          "Context Count" -> stats.contextStats.count.toString,
+          "Context Total Maturity" -> stats.contextStats.maturitySum.toString,
+          "Context Average Maturity" -> average_maturity.toString
+        )
+      } else {empty}) ++
+      (if (stats.domainStats.count > 0) {
+        val average_maturity =
+          (stats.domainStats.maturitySum.toFloat / stats.domainStats.count)
+        SortedMap(
+          "Domain Count" -> stats.domainStats.count.toString,
+          "Domain Total Maturity" -> stats.domainStats.maturitySum.toString,
+          "Domain Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.entityStats.count > 0) {
+        val average_maturity =
+          (stats.entityStats.maturitySum.toFloat / stats.entityStats.count)
+        SortedMap(
+          "Entity Count" -> stats.entityStats.count.toString,
+          "Entity Total Maturity" -> stats.entityStats.maturitySum.toString,
+          "Entity Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.functionStats.count > 0) {
+        val average_maturity =
+          (stats.functionStats.maturitySum.toFloat / stats.functionStats.count)
+        SortedMap(
+          "Function Count" -> stats.functionStats.count.toString,
+          "Function Total Maturity" -> stats.functionStats.maturitySum.toString,
+          "Function Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.handlerStats.count > 0) {
+        val average_maturity =
+          (stats.handlerStats.maturitySum.toFloat / stats.handlerStats.count)
+        SortedMap(
+          "Handler Count" -> stats.handlerStats.count.toString,
+          "Handler Total Maturity" -> stats.handlerStats.maturitySum.toString,
+          "Handler Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.plantStats.count > 0) {
+        val average_maturity =
+          (stats.plantStats.maturitySum.toFloat / stats.plantStats.count)
+        SortedMap(
+          "Plant Count" -> stats.plantStats.count.toString,
+          "Plant Total Maturity" -> stats.plantStats.maturitySum.toString,
+          "Plant Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.processorStats.count > 0) {
+        val average_maturity =
+          (stats.processorStats.maturitySum.toFloat / stats.processorStats.count)
+        SortedMap(
+          "Processor Count" -> stats.processorStats.count.toString,
+          "Processor Total Maturity" -> stats.processorStats.maturitySum.toString,
+          "Processor Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.projectionStats.count > 0) {
+        val average_maturity =
+          (stats.projectionStats.maturitySum.toFloat / stats.projectionStats.count)
+        SortedMap(
+          "Projection Count" -> stats.projectionStats.count.toString,
+          "Projection Total Maturity" -> stats.projectionStats.maturitySum.toString,
+          "Projection Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.sagaStats.count > 0) {
+        val average_maturity =
+          (stats.sagaStats.maturitySum.toFloat / stats.sagaStats.count)
+        SortedMap(
+          "Saga Count" -> stats.sagaStats.count.toString,
+          "Saga Total Maturity" -> stats.sagaStats.maturitySum.toString,
+          "Saga Average Maturity" -> average_maturity.toString
+        )
+      } else empty) ++
+      (if (stats.storyStats.count > 0) {
+        val average_maturity =
+          (stats.storyStats.maturitySum.toFloat / stats.storyStats.count)
+        SortedMap(
+          "Story Count" -> stats.storyStats.count.toString,
+          "Story Total Maturity" -> stats.storyStats.maturitySum.toString,
+          "Story Average Maturity" -> average_maturity.toString
+        )
+      } else empty))
   }
 }
 

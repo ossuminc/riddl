@@ -31,7 +31,7 @@ import java.nio.file.Path
  * @param commonOptions The common options all commands use
  */
 case class HugoTranslatorState(
-  root: AST.Definition,
+  root: RootContainer,
   symbolTable: SymbolTable,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
@@ -158,35 +158,34 @@ case class HugoTranslatorState(
     val glossary =
       if (options.withGlossary) { Seq("[Glossary](glossary)") }
       else { Seq.empty[String] }
-    val todoList =
-      if (options.withTODOList) { Seq("[To Do List](todolist)") }
+    val todoList = {
+      if (options.withTODOList) {Seq("[To Do List](todolist)")}
+      else {Seq.empty[String]}
+    }
+    val statistics = {
+      if (options.withStatistics) { Seq("[Statistics](statistics)") }
       else { Seq.empty[String] }
-    mdw.list(glossary ++ todoList)
+    }
+    mdw.list(glossary ++ todoList ++ statistics)
     mdw.emitIndex("Full")
   }
 
-  val lastFileWeight = 999
+  val glossaryWeight = 970
+  val toDoWeight = 980
+  val statsWeight = 990
+
+  def makeStatistics(): Unit = {
+    if (options.withStatistics) {
+      val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
+      mdw.emitStatistics(statsWeight, root)
+    }
+  }
 
   def makeGlossary(): Unit = {
     if (options.withGlossary) {
       val mdw = addFile(Seq.empty[String], "glossary.md")
-      mdw.emitGlossary(lastFileWeight, terms)
+      mdw.emitGlossary(glossaryWeight, terms)
     }
-  }
-
-  def findAuthor(
-    defn: Definition,
-    parents: Seq[Definition]
-  ): Seq[Author] = {
-    val result = AST.authorsOf(defn) match {
-      case s if s.isEmpty =>
-        parents.find(x => x.hasAuthors) match {
-          case None    => Seq.empty[Author]
-          case Some(d) => AST.authorsOf(d)
-        }
-      case s => s
-    }
-    result
   }
 
   def makeToDoList(root: RootContainer): Unit = {
@@ -195,7 +194,7 @@ case class HugoTranslatorState(
       val items: Seq[(String, String, String, String)] = for {
         (defn, pars) <- finder.findEmpty
         item = defn.identify
-        authors = findAuthor(defn, pars)
+        authors = AST.findAuthors(defn, pars)
         author =
           if (authors.isEmpty) { "Unspecified Author" }
           else {
@@ -211,16 +210,7 @@ case class HugoTranslatorState(
           s"[$item In $path]($link)"
         }).toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
-      mdw.fileHead(
-        "To Do List",
-        lastFileWeight - 1,
-        Option("A list of definitions needing more work")
-      )
-      mdw.h2("Definitions With Missing Content")
-      for { (key, items) <- map } {
-        mdw.h3(key)
-        mdw.list(items)
-      }
+      mdw.emitToDoList(toDoWeight, map)
     }
   }
 
@@ -228,6 +218,7 @@ case class HugoTranslatorState(
     makeIndex(root)
     makeGlossary()
     makeToDoList(root)
+    makeStatistics()
     files.foreach(_.write())
     files.map(_.filePath).toSeq
   }

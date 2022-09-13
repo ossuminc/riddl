@@ -16,12 +16,13 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.AST
+import com.reactific.riddl.language.{AST, Riddl}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
 import scala.annotation.unused
+import scala.collection.SortedMap
 
 case class MarkdownWriter(
   filePath: Path,
@@ -172,6 +173,17 @@ case class MarkdownWriter(
           if (description.nonEmpty) {
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
+        case (
+          prefix: String,
+          definition: String,
+          briefly: Option[LiteralString] @unchecked,
+          description: Option[Description]@unchecked
+          ) =>
+          emitPair(prefix, definition ++ " - " ++
+            briefly.map(_.s).getOrElse("{no brief}"))
+          if (description.nonEmpty) {
+            sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
+          }
         case (prefix: String, body: String) => emitPair(prefix, body)
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
@@ -312,7 +324,7 @@ case class MarkdownWriter(
 
   def emitFields(fields: Seq[Field]): this.type = {
     list(fields.map { field =>
-      (field.id.format, AST.kind(field.typeEx), field.description)
+      (field.id.format, AST.kind(field.typeEx), field.brief, field.description)
     })
   }
 
@@ -826,6 +838,38 @@ case class MarkdownWriter(
       emitTermRow(entry)
     }
     this
+  }
+
+  def emitToDoList(weight: Int, map: Map[String,Seq[String]]): Unit = {
+    fileHead("To Do List", weight,
+      Option("A list of definitions needing more work")
+    )
+    h2("Definitions With Missing Content")
+    for {(key, items) <- map} {
+      h3(key)
+      list(items)
+    }
+
+  }
+
+  def emitStatistics(weight: Int, root: RootContainer): this.type = {
+    fileHead("Model Statistics", weight,
+      Some("Statistical information about the RIDDL model documented"))
+
+    Riddl.collectStats(root) match {
+      case Right(stats: SortedMap[String,String]) =>
+        emitTableHead(Seq(
+          "Measurement" -> 'R',
+          "Value" -> 'L'
+        ))
+
+        stats.foreach {
+          case (k,v) => emitTableRow(k,v)
+        }
+        this
+      case Left(messages) =>
+        list(messages.format)
+    }
   }
 }
 
