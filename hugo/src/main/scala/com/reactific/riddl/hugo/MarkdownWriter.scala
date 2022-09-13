@@ -70,7 +70,6 @@ case class MarkdownWriter(
         "geekdocFilePath" ->s"${state.makeFilePath(cont).getOrElse("no-such-file")}"
       )
     )
-    tbd(cont)
   }
 
   def leafHead(definition: Definition, weight: Int): this.type = {
@@ -273,18 +272,17 @@ case class MarkdownWriter(
   def emitIndex(kind: String): this.type = {
     if (state.options.withGraphicalTOC) {
       h2("Graphical TOC Not Implemented Yet")
+      p("{{< toc-tree >}}")
     } else {
       h2(s"$kind Index")
       p("{{< toc-tree >}}")
     }
   }
 
-
-
   def emitC4ContainerDiagram(defntn: Context, parents: Seq[Definition]): this.type = {
     val name = defntn.identify
     val brief: Definition => String = { defn: Definition =>
-      defn.brief.fold(s"${name} is not described.")(_.s)
+      defn.brief.fold(s"$name is not described.")(_.s)
     }
 
     val heading =
@@ -374,7 +372,9 @@ case class MarkdownWriter(
     this
   }
 
-  def makePathIdRef(pid: PathIdentifier, parents: Seq[Definition]): String = {
+  private def makePathIdRef(
+    pid: PathIdentifier, parents: Seq[Definition]
+  ): String = {
     val resolved = state.resolvePath(pid, parents)
     if (resolved.isEmpty) {
       s"unresolved path: ${pid.format}"
@@ -385,7 +385,10 @@ case class MarkdownWriter(
     }
   }
 
-  def makeTypeName(pid: PathIdentifier, parents: Seq[Definition]): String = {
+  private def makeTypeName(
+    pid: PathIdentifier,
+    parents: Seq[Definition]
+  ): String = {
     val resolved = state.resolvePath(pid, parents)
     if (resolved.isEmpty) {
       s"unresolved"
@@ -394,7 +397,10 @@ case class MarkdownWriter(
     }
   }
 
-  def makeTypeName(typeEx: TypeExpression, parents: Seq[Definition]): String = {
+  private def makeTypeName(
+    typeEx: TypeExpression,
+    parents: Seq[Definition]
+  ): String = {
     val name = typeEx match {
       case AliasedTypeExpression(_, pid) => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
@@ -409,7 +415,7 @@ case class MarkdownWriter(
     name.replace(" ", "-")
   }
 
-  def resolveTypeExpression(
+  private def resolveTypeExpression(
     typeEx: TypeExpression,
     parents: Seq[Definition]
   ): String = {
