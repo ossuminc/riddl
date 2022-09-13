@@ -17,8 +17,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.*
-import com.reactific.riddl.language.Terminals.Punctuation.*
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.ast.Location
 import fastparse.*
@@ -37,8 +35,8 @@ trait TypeParser extends CommonParser {
   def stringType[u: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~
-        (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~
-          integer.? ~ Punctuation.roundClose).?
+        (roundOpen ~ integer.? ~ comma ~
+          integer.? ~ roundClose).?
     ).map {
       case (loc, Some((min, max))) => Strng(loc, min, max)
       case (loc, None)             => Strng(loc, None, None)
@@ -48,7 +46,7 @@ trait TypeParser extends CommonParser {
   def urlType[u: P]: P[URL] = {
     P(
       location ~ Predefined.URL ~
-        (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
+        (roundOpen ~ literalString ~ roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
@@ -77,7 +75,7 @@ trait TypeParser extends CommonParser {
     P(
       location ~ Predefined.Pattern ~/ roundOpen ~/
         (literalStrings |
-          Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
+          undefined(()).map(_ => Seq.empty[LiteralString])) ~
         roundClose./
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
@@ -93,7 +91,7 @@ trait TypeParser extends CommonParser {
   }
 
   def enumValue[u: P]: P[Option[Long]] = {
-    P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose).?
+    P(roundOpen ~ integer ~ roundClose).?
   }
 
   def enumerator[u: P]: P[Enumerator] = {
@@ -106,14 +104,14 @@ trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.any ~ Readability.of.? ~ open ~/
         (enumerator.rep(1, sep = comma.?) |
-          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close
+          undefined(()).map(_ => Seq.empty[Enumerator])) ~ close
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
   def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (Punctuation.undefined.!.map(_ => Seq.empty[AliasedTypeExpression]) |
+        (undefined(()).map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }
@@ -140,7 +138,7 @@ trait TypeParser extends CommonParser {
 
   def fields[u: P]: P[Seq[Field]] = {
     P(
-      Punctuation.undefined.!.map(_ => Seq.empty[Field]) |
+      undefined(()).map(_ => Seq.empty[Field]) |
         field.rep(min = 0, comma)
     )
   }

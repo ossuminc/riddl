@@ -17,16 +17,15 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.LiteralString
-import com.reactific.riddl.language.Terminals.Punctuation
 import fastparse.*
 import fastparse.NoWhitespace.*
 
 /** Parser rules that should not collect white space */
-trait NoWhiteSpaceParsers extends ParsingContext {
+trait NoWhiteSpaceParsers extends ParsingContext with Terminals {
 
   def markdownLine[u: P]: P[LiteralString] = {
     P(
-      location ~ Punctuation.verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
+      location ~ verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
         ("\n" | "\r").rep(min = 1, max = 2)
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
@@ -42,7 +41,7 @@ trait NoWhiteSpaceParsers extends ParsingContext {
   def strChars[u: P]: P[Unit] = P(CharsWhile(stringChars))
 
   def literalString[u: P]: P[LiteralString] = {
-    P(location ~ Punctuation.quote ~/ (strChars | escape).rep.! ~ Punctuation.quote)
+    P(location ~ quote ~/ (strChars | escape).rep.! ~ quote)
   }.map { tpl => (LiteralString.apply _).tupled(tpl) }
 
 }

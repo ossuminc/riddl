@@ -1,6 +1,4 @@
 package com.reactific.riddl.language.ast
-import com.reactific.riddl.language.Terminals
-import com.reactific.riddl.language.Terminals.{Keywords, Predefined}
 
 import scala.collection.immutable.ListMap
 
@@ -71,7 +69,7 @@ trait Expressions extends Abstract {
     *   The location of the undefined condition
     */
   case class UndefinedExpression(loc: Location) extends Expression {
-    override def format: String = Terminals.Punctuation.undefined
+    override def format: String = undefinedMark
 
     override def isEmpty: Boolean = true
   }
@@ -126,7 +124,7 @@ trait Expressions extends Abstract {
     entityId: PathIdentifier)
       extends Expression {
     override def format: String = {
-      Keywords.new_ + " " + Predefined.Id + "(" + entityId.format + ")"
+      Keywords.new_ + " Id(" + entityId.format + ")"
     }
   }
 
