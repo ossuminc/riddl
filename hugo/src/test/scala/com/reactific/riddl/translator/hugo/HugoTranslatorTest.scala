@@ -53,6 +53,9 @@ class HugoTranslatorTest extends
     }
 
     val logger = ProcessLogger(fout, ferr)
+    if (!Files.exists(outputDir)) {
+      Files.createDirectory(outputDir)
+    }
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
     val command = "hugo"
