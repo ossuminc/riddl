@@ -39,38 +39,38 @@ class HugoTranslatorTest extends
 
   def runHugo(outputDir: Path, tmpDir: Path): Assertion = {
     import scala.sys.process.*
-    val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
-    var hadErrorOutput: Boolean = false
-    var hadWarningOutput: Boolean = false
+    val output = ArrayBuffer[String]()
+    var hadErrorOutput: Boolean = output.nonEmpty
 
     def fout(line: String): Unit = {
-      lineBuffer.append(line)
-      if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
+      output.append(line)
     }
 
     def ferr(line: String): Unit = {
-      lineBuffer.append(line); hadErrorOutput = true
+      output.append(line); hadErrorOutput = true
     }
 
     val logger = ProcessLogger(fout, ferr)
     if (!Files.exists(outputDir)) {
-      Files.createDirectory(outputDir)
+      Files.createDirectories(outputDir)
     }
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
     val command = "hugo"
     println(s"Running hugo with cwd=$cwdFile, tmpDir=$tmpDir")
     val proc = Process(command, cwd = Option(cwdFile))
-    proc.!(logger) match {
+    proc.!<(logger) match {
       case 0 =>
         if (hadErrorOutput) {
-          fail("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  "))
-        } else if (hadWarningOutput) {
-          fail("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
-        } else { succeed }
+          fail("hugo wrote to stderr:\n  " + output.mkString("\n  "))
+        } else {
+          info("hugo issued warnings:\n  " + output.mkString("\n  "))
+        }
+        succeed
+
       case rc: Int =>
         fail(s"hugo run failed with rc=$rc:\n  " ++
-          lineBuffer.mkString("\n ", "\n  ", "\n") ++
+          output.mkString("\n ", "\n  ", "\n") ++
           s"tmpDir=$tmpDir\ncwd=$cwdFile\ncommand=$command\n"
         )
     }
