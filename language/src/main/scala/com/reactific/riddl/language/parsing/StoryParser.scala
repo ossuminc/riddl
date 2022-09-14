@@ -4,25 +4,24 @@ import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-trait StoryParser extends CommonParser
-  with ReferenceParser with GherkinParser {
+trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   type AgileStory = (LiteralString, LiteralString, LiteralString)
 
   def agileStory[u: P]: P[AgileStory] = {
-    P(Keywords.role ~ is ~ literalString ~
-      Keywords.capability ~ is ~ literalString ~
-      Keywords.benefit ~ is ~ literalString)
+    P(
+      Keywords.role ~ is ~ literalString ~ Keywords.capability ~ is ~
+        literalString ~ Keywords.benefit ~ is ~ literalString
+    )
   }
 
   type ShownBy = Seq[java.net.URL]
 
   def shownBy[u: P]: P[ShownBy] = {
-    P(Keywords.shown ~ Readability.by ~ open ~
-      httpUrl.rep(1, Punctuation.comma)
-      ~ close).?.map { x =>
-      if (x.isEmpty) Seq.empty[java.net.URL] else x.get
-    }
+    P(
+      Keywords.shown ~ Readability.by ~ open ~
+        httpUrl.rep(1, Punctuation.comma) ~ close
+    ).?.map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get }
   }
 
   def c4DefRef[u: P]: P[Reference[ContextDefinition]] = {

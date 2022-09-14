@@ -1,8 +1,4 @@
-ThisBuild / resolvers ++= Seq(
-  "Artima Maven Repository" at "https://repo.artima.com/releases"
-  // , "jetbrains-sbt" at "https://dl.bintray.com/jetbrains/sbt-plugins"
-)
-
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.34")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.6.3")
 addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "1.0.0")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.6")

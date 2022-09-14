@@ -131,11 +131,11 @@ lazy val doc = project.in(file("doc"))
     name := "riddl-doc",
     publishTo := Option(Resolver.defaultLocal),
     maintainer := "reid@ossuminc.com",
-  /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
-  mkdir -p themes/hugo-geekdoc/
-  curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
-   */
-  // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
+    /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
+       mkdir -p themes/hugo-geekdoc/
+       curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C themes/hugo-geekdoc/ --strip-components=1
+     */
+    // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
     // siteSubdirName / ScalaUnidoc := "api",
     // (mappings / (
     //   ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc
@@ -160,8 +160,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   )
 
 lazy val `sbt-riddl` = (project in file("sbt-riddl"))
-  .enablePlugins(SbtPlugin, BuildInfoPlugin)
-  .configure(C.mavenPublish).settings(
+  .enablePlugins(SbtPlugin, BuildInfoPlugin).configure(C.mavenPublish).settings(
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.16",
