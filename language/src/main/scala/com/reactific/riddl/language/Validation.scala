@@ -131,6 +131,16 @@ object Validation {
             case ai: Author => validateAuthorInfo(ai, parents)
             case i: Include     => validateInclude(i)
           }
+        case sd: StoryDefinition => sd match {
+          case _: C4.Design => this // FIXME: need to validate
+        }
+        case de: C4.DesignElement => de match {
+          case _: C4.Actor => this // FIXME: need to validate
+          case _: C4.Context => this // FIXME: need to validate
+          case _: C4.Container => this // FIXME: need to validate
+          case _: C4.Component => this // FIXME: need to validate
+          case _: C4.Interaction => this // FIXME: need to validate
+        }
         case hd: HandlerDefinition => hd match {
           case oc: OnClause => validateOnClause(oc, parents)
         }
@@ -1333,6 +1343,12 @@ object Validation {
             this.addError(
               loc,
               s"${proc.identify} should have >1 Outlets and >1 Inlets but has $outs and $ins"
+            )
+          } else { this }
+        case AST.Void(loc) =>
+          if (ins > 0 || outs > 0) {
+            this.addError(loc,
+              s"${proc.identify} should have no Outlets or Inlets but has $outs and $ins"
             )
           } else { this }
       }

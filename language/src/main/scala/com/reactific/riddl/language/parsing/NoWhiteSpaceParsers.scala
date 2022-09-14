@@ -17,7 +17,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.LiteralString
-import com.reactific.riddl.language.Terminals.Punctuation
 import fastparse.*
 import fastparse.NoWhitespace.*
 

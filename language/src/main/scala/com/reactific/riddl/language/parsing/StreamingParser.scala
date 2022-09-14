@@ -17,8 +17,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.Keywords
-import com.reactific.riddl.language.Terminals.Readability
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 

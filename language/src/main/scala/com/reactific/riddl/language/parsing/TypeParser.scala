@@ -17,8 +17,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.*
-import com.reactific.riddl.language.Terminals.Punctuation.*
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.ast.Location
 import fastparse.*
@@ -75,16 +73,17 @@ trait TypeParser extends CommonParser {
 
   def patternType[u: P]: P[Pattern] = {
     P(
-      location ~ Predefined.Pattern ~/ roundOpen ~/
+      location ~ Predefined.Pattern ~/  Punctuation.roundOpen ~/
         (literalStrings |
-          Punctuation.undefined.!.map(_ => Seq.empty[LiteralString])) ~
-        roundClose./
+          Punctuation.undefinedMark.!.map(_ => Seq.empty[LiteralString])) ~
+        Punctuation.roundClose./
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
 
   def uniqueIdType[u: P]: P[UniqueId] = {
-    ( location ~ Predefined.Id ~ roundOpen ~/ maybe(Keywords.entity) ~
-      pathIdentifier.? ~ roundClose./
+    ( location ~ Predefined.Id ~ Punctuation.roundOpen ~/
+      maybe(Keywords.entity) ~
+      pathIdentifier.? ~ Punctuation.roundClose./
     ).map {
         case (loc, Some(pid)) => UniqueId(loc, pid)
         case (loc, None) =>
@@ -105,15 +104,15 @@ trait TypeParser extends CommonParser {
   def enumeration[u: P]: P[Enumeration] = {
     P(
       location ~ Keywords.any ~ Readability.of.? ~ open ~/
-        (enumerator.rep(1, sep = comma.?) |
-          Punctuation.undefined.!.map(_ => Seq.empty[Enumerator])) ~ close
+        (enumerator.rep(1, sep = Punctuation.comma.?) |
+          Punctuation.undefinedMark.!.map(_ => Seq.empty[Enumerator])) ~ close
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
   def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (Punctuation.undefined.!.map(_ => Seq.empty[AliasedTypeExpression]) |
+        (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close
     ).map { x => (Alternation.apply _).tupled(x) }
   }
@@ -140,8 +139,8 @@ trait TypeParser extends CommonParser {
 
   def fields[u: P]: P[Seq[Field]] = {
     P(
-      Punctuation.undefined.!.map(_ => Seq.empty[Field]) |
-        field.rep(min = 0, comma)
+      Punctuation.undefinedMark.!.map(_ => Seq.empty[Field]) |
+        field.rep(min = 0, Punctuation.comma)
     )
   }
 
@@ -206,17 +205,23 @@ trait TypeParser extends CommonParser {
     */
   def rangeType[u: P]: P[RangeType] = {
     P(
-      location ~ Keywords.range ~ roundOpen ~/
-        integer.?.map(_.getOrElse(0L)) ~ comma ~
+      location ~ Keywords.range ~ Punctuation.roundOpen ~/
+        integer.?.map(_.getOrElse(0L)) ~ Punctuation.comma ~
         integer.?.map(_.getOrElse(Long.MaxValue)) ~
-        roundClose./
+        Punctuation.roundClose./
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 
   def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
     P(
       Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~
-        StringIn(question, asterisk, plus, ellipsisQuestion, ellipsis).!.?
+        StringIn(
+          Punctuation.question,
+          Punctuation.asterisk,
+          Punctuation.plus,
+          Punctuation.ellipsisQuestion,
+          Punctuation.ellipsis
+        ).!.?
     ).map {
       case (None, None, loc, typ, Some("?"))       => Optional(loc, typ)
       case (None, None, loc, typ, Some("+"))       => OneOrMore(loc, typ)

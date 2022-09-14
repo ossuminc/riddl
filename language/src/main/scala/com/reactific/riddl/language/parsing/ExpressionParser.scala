@@ -18,7 +18,6 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.{Keywords, Operators, Predefined, Punctuation}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -50,7 +49,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def arguments[u: P]: P[ArgList] = {
-    P(identifier ~ Punctuation.equals ~ expression)
+    P(identifier ~ Punctuation.equalsSign ~ expression)
       .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
       s.foldLeft(ListMap.empty[Identifier, Expression]) {
         case (b, (id, exp)) => b + (id -> exp)
@@ -127,7 +126,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def undefinedExpression[u: P]: P[UndefinedExpression] = {
-    P(location ~ Punctuation.undefined).map(UndefinedExpression)
+    P(location ~ Punctuation.undefinedMark).map(UndefinedExpression)
   }
 
   def valueExpression[u: P]: P[ValueExpression] = {

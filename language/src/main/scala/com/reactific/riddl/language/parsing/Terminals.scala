@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.parsing
 
 /** Terminal symbol definitions in various categories */
-object Terminals {
+trait Terminals {
 
   object Punctuation {
     final val asterisk = "*"
@@ -27,7 +27,7 @@ object Terminals {
     final val curlyOpen = "{"
     final val curlyClose = "}"
     final val dot = "."
-    final val equals = "="
+    final val equalsSign = "="
     final val ellipsis = "..."
     final val ellipsisQuestion = "...?"
     final val exclamation = "!"
@@ -38,14 +38,14 @@ object Terminals {
     final val roundClose = ")"
     final val squareOpen = "["
     final val squareClose = "]"
-    final val undefined = "???"
+    final val undefinedMark = "???"
     final val verticalBar = "|"
 
     val all: Seq[String] = Seq(
       comma,
       colon,
       dot,
-      equals,
+      equalsSign,
       quote,
       quote,
       curlyOpen,
@@ -54,7 +54,7 @@ object Terminals {
       squareClose,
       roundOpen,
       roundClose,
-      undefined,
+      undefinedMark,
       verticalBar
     )
   }
@@ -88,6 +88,7 @@ object Terminals {
   object Keywords {
     final val accepted = "accepted"
     final val action = "action"
+    final val actor = "actor"
     final val adapt = "adapt"
     final val adaptor = "adaptor"
     final val all = "all"
@@ -106,11 +107,14 @@ object Terminals {
     final val causing = "causing"
     final val command = "command"
     final val commands = "commands"
+    final val component = "component"
     final val condition = "condition"
     final val consumer = "consumer"
+    final val container = "container"
     final val context = "context"
     final val create = "create"
     final val described = "described"
+    final val design = "design"
     final val details = "details"
     final val do_ = "do"
     final val domain = "domain"
@@ -136,6 +140,7 @@ object Terminals {
     final val include = "include"
     final val inlet = "inlet"
     final val input = "input"
+    final val interaction = "interaction"
     final val invariant = "invariant"
     final val items = "items"
     final val joint = "joint"
@@ -196,6 +201,7 @@ object Terminals {
     final val `type` = "type"
     final val url = "url"
     final val value = "value"
+    final val void = "void"
     final val when = "when"
     final val yields = "yields"
     final val yield_ = "yield"

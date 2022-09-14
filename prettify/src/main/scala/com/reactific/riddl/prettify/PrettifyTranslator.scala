@@ -16,10 +16,9 @@
 
 package com.reactific.riddl.prettify
 
-import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.Terminals.Keywords
 import com.reactific.riddl.language.{CommonOptions, Folding, Translator}
 import com.reactific.riddl.utils.Logger
 
@@ -197,7 +196,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case _: RootContainer       =>
           // ignore
           state
-        case container: Definition with WithOptions[_] =>
+        case container: Definition with WithOptions[?] =>
           // Applies To: Context, Entity, Interaction
           state.withCurrent(_.openDef(container).emitOptions(container))
         case container: Definition =>

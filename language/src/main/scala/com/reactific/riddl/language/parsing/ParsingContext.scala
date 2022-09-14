@@ -33,7 +33,7 @@ import scala.annotation.unused
 import scala.collection.mutable
 
 /** Unit Tests For ParsingContext */
-trait ParsingContext {
+trait ParsingContext extends Terminals {
 
   private val stack: InputStack = InputStack()
 

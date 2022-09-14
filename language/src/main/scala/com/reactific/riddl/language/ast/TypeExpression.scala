@@ -1,7 +1,7 @@
 package com.reactific.riddl.language.ast
 
 /** Unit Tests For TypeExpression */
-trait TypeExpression extends Abstract {
+trait TypeExpression extends AbstractDefinitions {
 
 ///////////////////////////////////////////////////////////// TYPES
 
