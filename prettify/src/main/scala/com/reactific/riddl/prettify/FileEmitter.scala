@@ -2,7 +2,7 @@ package com.reactific.riddl.prettify
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
-import com.reactific.riddl.language.AST._
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.prettify.PrettifyTranslator.keyword
 
 import java.nio.charset.StandardCharsets

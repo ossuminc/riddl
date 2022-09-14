@@ -17,6 +17,10 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.Terminals.Operators
+import com.reactific.riddl.language.Terminals.Punctuation
+import com.reactific.riddl.language.Terminals.Readability
 import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
@@ -45,7 +49,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   }
 
   def undefined[u: P, RT](ret: RT): P[RT] = {
-    P(undefinedMark./).map(_ => ret)
+    P(Punctuation.undefinedMark./).map(_ => ret)
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
@@ -82,9 +86,12 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))
   ).?
 
+  def wholeNumber[u:P]: P[Long] = {
+    CharIn("0-9").rep(1).!.map(_.toLong)
+  }
+
   def integer[u:P]: P[Long] = {
-    StringIn(Operators.plus, Operators.minus).? ~
-      CharIn("0-9").rep(1).!.map(_.toLong)
+    StringIn(Operators.plus, Operators.minus).? ~ wholeNumber
   }
 
   def literalInteger[u: P]: P[LiteralInteger] = {
@@ -94,7 +101,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   def literalDecimal[u: P]: P[LiteralDecimal] = {
     P(
       location ~ StringIn(Operators.plus, Operators.minus).?.! ~ CharIn("0-9")
-        .rep(1).! ~ dot.! ~ CharIn("0-9").rep(0).?.! ~
+        .rep(1).! ~ Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
     ).map { case (loc, a, b, c, d, e) =>
       LiteralDecimal(loc, BigDecimal(a + b + c + d + e))
@@ -119,7 +126,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
     P(location ~
-      (anyIdentifier | "^".! | dot.!).repX(1))
+      (anyIdentifier | "^".! | Punctuation.dot.!).repX(1))
       .map {
         case (loc, strings) =>
           // PathIdentifiers have empty strings to mean go up one level,
@@ -138,22 +145,23 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
     P(StringIn(
       Readability.is,
       Readability.are,
-      colon,
-      equalsSign
+      Punctuation.colon,
+      Punctuation.equalsSign
     )).?
   }
 
-  def open[u: P]: P[Unit] = { P(curlyOpen) }
+  def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
-  def close[u: P]: P[Unit] = { P(curlyClose) }
+  def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
 
   def maybeOptionWithArgs[u: P](
     validOptions: => P[String]
   ): P[(Location, String, Seq[LiteralString])] = {
     P(
       location ~ validOptions ~
-        (roundOpen ~ literalString.rep(0, P(comma)) ~
-          roundClose).?
+        (Punctuation.roundOpen ~
+          literalString.rep(0, P(Punctuation.comma)) ~
+          Punctuation.roundClose).?
     ).map {
       case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
       case (loc, opt, None)            => (loc, opt, Seq.empty[LiteralString])
@@ -165,9 +173,9 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   )(mapper: => (Location, String, Seq[LiteralString]) => TY
   ): P[Seq[TY]] = {
     P(
-      (Keywords.options ~ roundOpen ~/
-        maybeOptionWithArgs(validOptions).rep(1, P(comma)) ~
-        roundClose).map(_.map { case (loc, opt, arg) =>
+      (Keywords.options ~ Punctuation.roundOpen ~/
+        maybeOptionWithArgs(validOptions).rep(1, P(Punctuation.comma)) ~
+        Punctuation.roundClose).map(_.map { case (loc, opt, arg) =>
         mapper(loc, opt, arg)
       }) |
         (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))

@@ -3,7 +3,7 @@ package com.reactific.riddl.language.ast
 import scala.collection.immutable.ListMap
 
 /** Unit Tests For Expressions */
-trait Expressions extends Abstract {
+trait Expressions extends AbstractDefinitions {
 
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
 
@@ -69,7 +69,7 @@ trait Expressions extends Abstract {
     *   The location of the undefined condition
     */
   case class UndefinedExpression(loc: Location) extends Expression {
-    override def format: String = undefinedMark
+    override def format: String = Punctuation.undefinedMark
 
     override def isEmpty: Boolean = true
   }

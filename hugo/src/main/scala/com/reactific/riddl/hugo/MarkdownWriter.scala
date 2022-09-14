@@ -714,15 +714,18 @@ case class MarkdownWriter(
     emitSagaSteps(saga.sagaSteps, parents)
   }
 
-  def emitStory(story: Story, parents: Seq[String]): this.type = {
+  def emitStory(story: Story, stack: Seq[Definition]): this.type = {
     containerHead(story, "Story")
+    val parents = state.makeParents(stack)
     emitDefDoc(story, parents)
     h2("Story")
     p(
       s"I, as a ${story.role.s}, want ${story.capability.s}, so that ${story.benefit.s}."
     )
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
-    list("Implemented By", story.implementedBy.map(_.format))
+    list("Designs", story.designs.map { d =>
+      s"[${d.identifyWithLoc}](${state.makeDocLink(d, parents)})"
+    })
   }
 
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {

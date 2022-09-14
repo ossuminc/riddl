@@ -16,33 +16,31 @@
 
 package com.reactific.riddl.language.parsing
 
-import fastparse.{IgnoreCase, P}
-
 /** Terminal symbol definitions in various categories */
 trait Terminals {
 
-  final val asterisk = "*"
-  final val at = "@"
-  final val comma = ","
-  final val colon = ":"
-  final val curlyOpen = "{"
-  final val curlyClose = "}"
-  final val dot = "."
-  final val equalsSign = "="
-  final val ellipsis = "..."
-  final val ellipsisQuestion = "...?"
-  final val exclamation = "!"
-  final val plus = "+"
-  final val question = "?"
-  final val quote = "\""
-  final val roundOpen = "("
-  final val roundClose = ")"
-  final val squareOpen = "["
-  final val squareClose = "]"
-  final val undefinedMark = "???"
-  final val verticalBar = "|"
-
   object Punctuation {
+    final val asterisk = "*"
+    final val at = "@"
+    final val comma = ","
+    final val colon = ":"
+    final val curlyOpen = "{"
+    final val curlyClose = "}"
+    final val dot = "."
+    final val equalsSign = "="
+    final val ellipsis = "..."
+    final val ellipsisQuestion = "...?"
+    final val exclamation = "!"
+    final val plus = "+"
+    final val question = "?"
+    final val quote = "\""
+    final val roundOpen = "("
+    final val roundClose = ")"
+    final val squareOpen = "["
+    final val squareClose = "]"
+    final val undefinedMark = "???"
+    final val verticalBar = "|"
+
     val all: Seq[String] = Seq(
       comma,
       colon,
@@ -90,6 +88,7 @@ trait Terminals {
   object Keywords {
     final val accepted = "accepted"
     final val action = "action"
+    final val actor = "actor"
     final val adapt = "adapt"
     final val adaptor = "adaptor"
     final val all = "all"
@@ -108,11 +107,14 @@ trait Terminals {
     final val causing = "causing"
     final val command = "command"
     final val commands = "commands"
+    final val component = "component"
     final val condition = "condition"
     final val consumer = "consumer"
+    final val container = "container"
     final val context = "context"
     final val create = "create"
     final val described = "described"
+    final val design = "design"
     final val details = "details"
     final val do_ = "do"
     final val domain = "domain"
@@ -138,6 +140,7 @@ trait Terminals {
     final val include = "include"
     final val inlet = "inlet"
     final val input = "input"
+    final val interaction = "interaction"
     final val invariant = "invariant"
     final val items = "items"
     final val joint = "joint"
@@ -198,31 +201,32 @@ trait Terminals {
     final val `type` = "type"
     final val url = "url"
     final val value = "value"
+    final val void = "void"
     final val when = "when"
     final val yields = "yields"
     final val yield_ = "yield"
   }
 
   object Predefined {
-    final def Abstract[p:P]: P[Unit] = IgnoreCase("Abstract")
-    final def Boolean[p:P]: P[Unit] = IgnoreCase("Boolean")
-    final def Date[p:P]: P[Unit] = IgnoreCase("Date")
-    final def DateTime[p:P]: P[Unit] = IgnoreCase("DateTime")
-    final def Decimal[p:P]: P[Unit] = IgnoreCase("Decimal")
-    final def Duration[p:P]: P[Unit] = IgnoreCase("Duration")
-    final def Id[p:P]: P[Unit] = IgnoreCase("Id")
-    final def Integer[p:P]: P[Unit] = IgnoreCase("Integer")
-    final def LatLong[p:P]: P[Unit] = IgnoreCase("LatLong")
-    final def Nothing[p:P]: P[Unit] = IgnoreCase("Nothing")
-    final def Number[p:P]: P[Unit] = IgnoreCase("Number")
-    final def Pattern[p:P]: P[Unit] = IgnoreCase("Pattern")
-    final def Real[p:P]: P[Unit] = IgnoreCase("Real")
-    final def String[p:P]: P[Unit] = IgnoreCase("String")
-    final def Time[p:P]: P[Unit] = IgnoreCase("Time")
-    final def TimeStamp[p:P]: P[Unit] = IgnoreCase("TimeStamp")
-    final def UniqueId[p:P]: P[Unit] = IgnoreCase("UniqueId")
-    final def URL[p:P]: P[Unit] = IgnoreCase("URL")
-    final def UUID[p:P]: P[Unit] = IgnoreCase("UUID")
+    final val Abstract = "Abstract"
+    final val Boolean = "Boolean"
+    final val Date = "Date"
+    final val DateTime = "DateTime"
+    final val Decimal = "Decimal"
+    final val Duration = "Duration"
+    final val Id = "Id"
+    final val Integer = "Integer"
+    final val LatLong = "LatLong"
+    final val Nothing = "Nothing"
+    final val Number = "Number"
+    final val Pattern = "Pattern"
+    final val Real = "Real"
+    final val String = "String"
+    final val Time = "Time"
+    final val TimeStamp = "TimeStamp"
+    final val UniqueId = "UniqueId"
+    final val URL = "URL"
+    final val UUID = "UUID"
   }
 
   object Readability {

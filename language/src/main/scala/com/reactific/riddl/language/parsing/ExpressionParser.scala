@@ -49,8 +49,8 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def arguments[u: P]: P[ArgList] = {
-    P(identifier ~ equalsSign ~ expression)
-      .rep(min = 0, comma).map { s: Seq[(Identifier, Expression)] =>
+    P(identifier ~ Punctuation.equalsSign ~ expression)
+      .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
       s.foldLeft(ListMap.empty[Identifier, Expression]) {
         case (b, (id, exp)) => b + (id -> exp)
       }
@@ -58,7 +58,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def argList[u: P]: P[ArgList] = {
-    P(roundOpen ~/ arguments ~ roundClose./)
+    P(Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose./)
   }
 
   def functionCallCondition[u: P]: P[FunctionCallCondition] = {
@@ -75,36 +75,36 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def orCondition[u: P]: P[OrCondition] = {
     P(
-      location ~ Operators.or ~ roundOpen ~/
-        condition.rep(2, comma) ~ roundClose./
+      location ~ Operators.or ~ Punctuation.roundOpen ~/
+        condition.rep(2, Punctuation.comma) ~ Punctuation.roundClose./
     ).map(t => (OrCondition.apply _).tupled(t))
   }
 
   def xorCondition[u: P]: P[XorCondition] = {
     P(
-      location ~ Operators.xor ~ roundOpen ~/
-        condition.rep(2, comma) ~ roundClose./
+      location ~ Operators.xor ~ Punctuation.roundOpen ~/
+        condition.rep(2, Punctuation.comma) ~ Punctuation.roundClose./
     ).map(tpl => (XorCondition.apply _).tupled(tpl))
   }
 
   def andCondition[u: P]: P[AndCondition] = {
     P(
-      location ~ Operators.and ~ roundOpen ~/
-        condition.rep(2, comma) ~ roundClose./
+      location ~ Operators.and ~ Punctuation.roundOpen ~/
+        condition.rep(2, Punctuation.comma) ~ Punctuation.roundClose./
     ).map(t => (AndCondition.apply _).tupled(t))
   }
 
   def notCondition[u: P]: P[NotCondition] = {
     P(
-      location ~ Operators.not ~ roundOpen ~/ condition ~
-        roundClose./
+      location ~ Operators.not ~ Punctuation.roundOpen ~/ condition ~
+        Punctuation.roundClose./
     ).map(t => (NotCondition.apply _).tupled(t))
   }
 
   def comparisonCondition[u: P]: P[Comparison] = {
     P(
-      location ~ comparator ~ roundOpen ~/ expression ~
-        comma ~ expression ~ roundClose./
+      location ~ comparator ~ Punctuation.roundOpen ~/ expression ~
+        Punctuation.comma ~ expression ~ Punctuation.roundClose./
     ).map { x => (Comparison.apply _).tupled(x) }
   }
 
@@ -126,21 +126,21 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def undefinedExpression[u: P]: P[UndefinedExpression] = {
-    P(location ~ undefinedMark).map(UndefinedExpression)
+    P(location ~ Punctuation.undefinedMark).map(UndefinedExpression)
   }
 
   def valueExpression[u: P]: P[ValueExpression] = {
-    P(location ~ at ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
+    P(location ~ Punctuation.at ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
   }
 
   def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
-    P( location ~ exclamation ~/ pathIdentifier ~ argList).map(tpl =>
+    P( location ~ Punctuation.exclamation ~/ pathIdentifier ~ argList).map(tpl =>
       (AggregateConstructionExpression.apply _).tupled(tpl))
   }
 
   def entityIdValue[u:P]: P[EntityIdExpression] = {
-    P(location ~ Keywords.new_ ~/ Predefined.Id ~ roundOpen ~
-      pathIdentifier ~ roundClose).map(tpl =>
+    P(location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
+      pathIdentifier ~ Punctuation.roundClose).map(tpl =>
       (EntityIdExpression.apply _).tupled(tpl))
   }
 
@@ -165,9 +165,9 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }.map { case (x, y) => x + y }
 
   def arbitraryOperator[u: P]: P[ArbitraryOperator] = {
-    P(location ~ operatorName ~ roundOpen ~
-      expression.rep(0, comma) ~
-      roundClose
+    P(location ~ operatorName ~ Punctuation.roundOpen ~
+      expression.rep(0, Punctuation.comma) ~
+      Punctuation.roundClose
     ).map { case (loc, name, expressions) =>
       ArbitraryOperator(loc, LiteralString(loc, name), expressions)
     }
@@ -182,24 +182,24 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
           Operators.div.! | Operators.mod.! | knownOperatorName
-        ) ~ roundOpen ~
-            expression.rep(0, comma) ~
-          roundClose
+        ) ~ Punctuation.roundOpen ~
+            expression.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
   def ternaryExpression[u: P]: P[Ternary] = {
     P(
-      location ~ Operators.if_ ~ roundOpen ~ condition ~
-        comma ~ expression ~ comma ~ expression ~
-        roundClose./
+      location ~ Operators.if_ ~ Punctuation.roundOpen ~ condition ~
+        Punctuation.comma ~ expression ~ Punctuation.comma ~ expression ~
+        Punctuation.roundClose./
     ).map(tpl => (Ternary.apply _).tupled(tpl))
   }
 
   def groupExpression[u: P]: P[GroupExpression] = {
-    P(location ~ roundOpen ~/
+    P(location ~ Punctuation.roundOpen ~/
       expression.rep(0, ",") ~
-      roundClose./
+      Punctuation.roundClose./
     ).map(tpl => (GroupExpression.apply _).tupled(tpl))
   }
 

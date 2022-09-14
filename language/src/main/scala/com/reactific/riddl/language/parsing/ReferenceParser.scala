@@ -17,13 +17,18 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import fastparse.P
+import fastparse.{P, StringIn}
 import fastparse.ScalaWhitespace.*
 
 import scala.reflect.{ClassTag, classTag}
 
 trait ReferenceParser extends CommonParser {
 
+  def adaptorRef[u: P]: P[AdaptorRef] = {
+    P(location ~ Keywords.adaptor ~ pathIdentifier).map(
+      tpl => (AdaptorRef.apply _).tupled(tpl))
+
+  }
   def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ pathIdentifier).map(
       tpl => (CommandRef.apply _).tupled(tpl))
@@ -57,6 +62,11 @@ trait ReferenceParser extends CommonParser {
       .map(tpl => (EntityRef.apply _).tupled(tpl))
   }
 
+  def functionRef[u: P]: P[FunctionRef] = {
+    P(location ~ maybe(Keywords.function) ~ pathIdentifier)
+      .map(tpl => (FunctionRef.apply _).tupled(tpl))
+  }
+
   def handlerRef[u: P]: P[HandlerRef] = {
     P(location ~ Keywords.handler ~ pathIdentifier).map(
       tpl => (HandlerRef.apply _).tupled(tpl))
@@ -70,11 +80,6 @@ trait ReferenceParser extends CommonParser {
   def typeRef[u: P]: P[TypeRef] = {
     P(location ~ maybe(Keywords.`type`) ~ pathIdentifier).map(
       tpl => (TypeRef.apply _).tupled(tpl))
-  }
-
-  def actionRef[u: P]: P[FunctionRef] = {
-    P(location ~ maybe(Keywords.action) ~ pathIdentifier)
-      .map(tpl => (FunctionRef.apply _).tupled(tpl))
   }
 
   def contextRef[u: P]: P[ContextRef] = {
@@ -102,10 +107,53 @@ trait ReferenceParser extends CommonParser {
       tpl => (InletRef.apply _).tupled(tpl))
   }
 
+  def processorRef[u:P]: P[ProcessorRef] = {
+    P(location ~
+      StringIn(Keywords.source, Keywords.sink, Keywords.merge, Keywords.split,
+        Keywords.void) ~
+      pathIdentifier
+    ).map(
+      tpl => (ProcessorRef.apply _).tupled(tpl)
+    )
+  }
+
   def projectionRef[u: P]: P[ProjectionRef] ={
     P(location ~ Keywords.projection ~ pathIdentifier).map(
       tpl => (ProjectionRef.apply _).tupled(tpl))
 
+  }
+
+  def sagaRef[u: P]: P[SagaRef] = {
+    P(location ~ Keywords.saga ~ pathIdentifier).map(
+      tpl => (SagaRef.apply _).tupled(tpl))
+  }
+
+  def c4ActorRef[u:P]: P[C4.ActorRef] = {
+    P(location ~ Keywords.actor ~ pathIdentifier).map(
+      tpl => (C4.ActorRef.apply _).tupled(tpl)
+    )
+  }
+
+  def c4ContextRef[u: P]: P[C4.ContextRef] = {
+    P(location ~ Keywords.context ~ pathIdentifier).map(
+      tpl => (C4.ContextRef.apply _).tupled(tpl)
+    )
+  }
+
+  def c4ContainerRef[u: P]: P[C4.ContainerRef] = {
+    P(location ~ Keywords.container ~ pathIdentifier).map(
+      tpl => (C4.ContainerRef.apply _).tupled(tpl)
+    )
+  }
+
+  def c4ComponentRef[u: P]: P[C4.ComponentRef] = {
+    P(location ~ Keywords.component ~ pathIdentifier).map(
+      tpl => (C4.ComponentRef.apply _).tupled(tpl)
+    )
+  }
+
+  def designElementRef[u:P]: P[Reference[C4.DesignElement]] = {
+    P(c4ActorRef | c4ContextRef | c4ContainerRef | c4ComponentRef)
   }
 
   def reference[u: P, K <: Definition : ClassTag]: P[Reference[K]] = {

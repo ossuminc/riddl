@@ -7,7 +7,7 @@ import com.reactific.riddl.testkit.ValidatingTest
 
 class StoryTest extends ValidatingTest {
 
-  "Story" should {
+  "Story" should { // TODO: validate designs
     "parse and validate a full example " in {
       val rpi = RiddlParserInput(
         """domain foo is {
@@ -16,7 +16,7 @@ class StoryTest extends ValidatingTest {
           |  capability is "edit on the screen"
           |  benefit is "revise content more easily"
           |  shown by { http://example.com:80/path/to/WritingABook }
-          |  implemented by { Path.To.Context }
+          |  design perfection is { title is  "Title"  }
           |  /////////////
           |    example one {
           |      given "I need to write a book"
@@ -51,8 +51,8 @@ class StoryTest extends ValidatingTest {
           story.shownBy mustNot be(empty)
           story.shownBy.head.toString mustBe
             "http://example.com:80/path/to/WritingABook"
-          story.implementedBy mustNot be(empty)
-          story.implementedBy.head.format mustBe "domain Path.To.Context"
+          story.designs mustNot be(empty)
+          // FIXME: story.designs.head.format mustBe "..."
       }
     }
   }
