@@ -23,13 +23,16 @@ import com.reactific.riddl.language.*
 
 import java.nio.file.Path
 
-/**
- * The processing state for the Hugo Translator
- * @param root RootContainer that was parsed
- * @param symbolTable A symbolTable for the names of things
- * @param options The options specific to Hugo Translator
- * @param commonOptions The common options all commands use
- */
+/** The processing state for the Hugo Translator
+  * @param root
+  *   RootContainer that was parsed
+  * @param symbolTable
+  *   A symbolTable for the names of things
+  * @param options
+  *   The options specific to Hugo Translator
+  * @param commonOptions
+  *   The common options all commands use
+  */
 case class HugoTranslatorState(
   root: RootContainer,
   symbolTable: SymbolTable,
@@ -39,6 +42,7 @@ case class HugoTranslatorState(
     with PathResolutionState[HugoTranslatorState] {
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
+    if (commonOptions.verbose) { println(s"Adding ${fileName}") }
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
       next.resolve(par)
     }
@@ -119,13 +123,11 @@ case class HugoTranslatorState(
   ): String = {
     options.sourceURL match {
       case Some(url) => options.viewPath match {
-          case Some(viewPath) =>
-            makeFilePath(definition) match {
+          case Some(viewPath) => makeFilePath(definition) match {
               case Some(filePath) =>
                 val lineNo = definition.loc.line
-                url.toExternalForm ++ "/" ++
-                  Path.of(viewPath, filePath).toString ++
-                  s"#L$lineNo"
+                url.toExternalForm ++ "/" ++ Path.of(viewPath, filePath)
+                  .toString ++ s"#L$lineNo"
               case _ => ""
             }
           case None => ""
@@ -139,8 +141,8 @@ case class HugoTranslatorState(
     val result = definition match {
       case _: OnClause => pars + "#" + definition.id.value.toLowerCase
       case _: Field | _: Enumerator | _: Invariant | _: Inlet | _: Outlet |
-           _: InletJoint | _: OutletJoint | _: Author | _: SagaStep |
-           _: Include | _: RootContainer | _: Term => pars
+          _: InletJoint | _: OutletJoint | _: Author | _: SagaStep |
+          _: Include | _: RootContainer | _: Term => pars
       case _ => pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor
@@ -159,8 +161,8 @@ case class HugoTranslatorState(
       if (options.withGlossary) { Seq("[Glossary](glossary)") }
       else { Seq.empty[String] }
     val todoList = {
-      if (options.withTODOList) {Seq("[To Do List](todolist)")}
-      else {Seq.empty[String]}
+      if (options.withTODOList) { Seq("[To Do List](todolist)") }
+      else { Seq.empty[String] }
     }
     val statistics = {
       if (options.withStatistics) { Seq("[Statistics](statistics)") }
