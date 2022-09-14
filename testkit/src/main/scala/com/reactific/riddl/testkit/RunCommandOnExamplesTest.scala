@@ -46,6 +46,7 @@ abstract class RunCommandOnExamplesTest[
   val examplesPath: Path =
     Path.of(s"riddl-examples-$examplesVersion/src/riddl")
   val srcDir: Path = tmpDir.resolve(examplesPath)
+  val outDir: Path = tmpDir.resolve("out")
 
   val commonOptions: CommonOptions = CommonOptions(
     showTimes = true,
@@ -88,15 +89,22 @@ abstract class RunCommandOnExamplesTest[
     }
   }
 
+  def outputDir = ""
   /**
    * Call this from your test suite subclass to run all the examples found.
    */
   def runTests(): Unit = {
     forEachConfigFile { case (name, path) =>
-      CommandPlugin
-        .runCommandNamed(commandName, path, logger, commonOptions) match {
+      val outputDir = outDir.resolve(name)
+
+      val result = CommandPlugin
+        .runCommandNamed(
+          commandName, path, logger, commonOptions,
+          outputDirOverride=Some(outputDir)
+        )
+      result match {
         case Right(cmd) =>
-          onSuccess(commandName, name, path, cmd, tmpDir)
+          onSuccess(commandName, name, path, cmd, outputDir)
         case Left(messages) =>
           fail(messages.format)
       }

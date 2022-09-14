@@ -58,12 +58,18 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
     options: OPT
   ): Either[Messages, Unit]
 
+  def overrideOptions(options: OPT, newOutputDir: Path): OPT
+
   override final def run(
-    options: OPT,
+    originalOptions: OPT,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     val showTimes = commonOptions.showTimes
+    val options = if (outputDirOverride.nonEmpty) {
+      overrideOptions(originalOptions, outputDirOverride.get)
+    } else { originalOptions }
     Riddl.timer(stage = "translate", showTimes) {
       options.withInputFile { inputFile: Path =>
         Riddl.parseAndValidate(inputFile, commonOptions).map { root =>

@@ -46,6 +46,10 @@ class PrettifyCommand extends
   TranslationCommand[PrettifyCommand.Options]("prettify") {
   import PrettifyCommand.Options
 
+  def overrideOptions(options: Options, newOutputDir: Path): Options = {
+    options.copy(outputDir = Some(newOutputDir))
+  }
+
   override def translateImpl(
     root: RootContainer,
     log: Logger,

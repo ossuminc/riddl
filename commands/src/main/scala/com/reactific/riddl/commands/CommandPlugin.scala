@@ -32,7 +32,7 @@ object CommandPlugin {
   def loadCommandNamed(
     name: String,
     commonOptions: CommonOptions = CommonOptions(),
-    pluginsDir: Path = Plugin.pluginsDir
+    pluginsDir: Path = Plugin.pluginsDir,
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
     if (commonOptions.verbose) { println(s"Loading command: $name") }
     val loaded = Plugin
@@ -71,14 +71,15 @@ object CommandPlugin {
     optionsPath: Path,
     log: Logger,
     commonOptions: CommonOptions = CommonOptions(),
-    pluginsDir: Path = Plugin.pluginsDir
+    pluginsDir: Path = Plugin.pluginsDir,
+    outputDirOverride: Option[Path] = None
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
     if (commonOptions.verbose) {
       println(s"About to run $name with options from $optionsPath")
     }
     loadCommandNamed(name, commonOptions, pluginsDir).flatMap { cmd =>
       cmd.loadOptionsFrom(optionsPath, commonOptions).flatMap { opts =>
-        cmd.run(opts, commonOptions, log).map(_ => cmd)
+        cmd.run(opts, commonOptions, log, outputDirOverride).map(_ => cmd)
       }
     }
   }
@@ -235,7 +236,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     log: Logger
   ): Either[Messages, Unit] = {
     loadOptionsFrom(configFile, commonOptions)
-      .flatMap(run(_, commonOptions, log))
+      .flatMap(run(_, commonOptions, log, None))
   }
 
   /** Execute the command given the options. Error should be returned as
@@ -251,12 +252,10 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     *   Either a set of Messages on error or a Unit on success
     */
   def run(
-    @unused
-    options: OPT,
-    @unused
-    commonOptions: CommonOptions,
-    @unused
-    log: Logger
+    @unused options: OPT,
+    @unused commonOptions: CommonOptions,
+    @unused log: Logger,
+    @unused outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     Left(severes(
       s"""In command '$pluginName':
@@ -268,7 +267,8 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
   def run(
     args: Array[String],
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path] = None
   ): Either[Messages, Unit] = {
     val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match {
@@ -276,7 +276,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
         val command = args.mkString(" ")
         if (commonOptions.verbose) { println(s"Running command: $command") }
         val result = Riddl.timer(command, show = commonOptions.showTimes, log) {
-          run(opts, commonOptions, log)
+          run(opts, commonOptions, log, outputDirOverride)
         }
         result
       case Some(_) => Left(

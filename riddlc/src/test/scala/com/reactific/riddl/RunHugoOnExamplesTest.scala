@@ -16,15 +16,7 @@ class RunHugoOnExamplesTest extends
   RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
     "hugo") {
 
-  val output: String = "target/test/hugo-examples"
-
-  def makeTranslatorOptions (fileName: String): HugoCommand.Options = {
-    val gitCloneDir = Path.of(".").toAbsolutePath.getParent
-    val relativeDir = Path.of(".").resolve(fileName).getParent
-    HugoCommand.Options(
-      Some(gitCloneDir), Some(relativeDir)
-    )
-  }
+  override val outDir: Path = Path.of("riddlc/target/test/hugo-examples")
 
   "Run Hugo On Examples" should {
     "work " in {

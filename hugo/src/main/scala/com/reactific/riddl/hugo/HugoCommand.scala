@@ -215,6 +215,10 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
       }
     }
 
+  def overrideOptions(options: Options, newOutputDir: Path): Options ={
+    options.copy(outputDir = Some(newOutputDir))
+  }
+
   override def translateImpl(
     root: RootContainer,
     log: Logger,

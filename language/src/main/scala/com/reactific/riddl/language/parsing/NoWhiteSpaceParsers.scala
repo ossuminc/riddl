@@ -21,11 +21,12 @@ import fastparse.*
 import fastparse.NoWhitespace.*
 
 /** Parser rules that should not collect white space */
-trait NoWhiteSpaceParsers extends ParsingContext {
+trait NoWhiteSpaceParsers extends ParsingContext with Terminals {
 
   def markdownLine[u: P]: P[LiteralString] = {
     P(
-      location ~ Punctuation.verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
+      location ~ Punctuation.verticalBar ~~
+        CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
         ("\n" | "\r").rep(min = 1, max = 2)
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }

@@ -29,7 +29,7 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST extends ast.Expressions with ast.TypeExpression {
+object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminals {
 
   /** Base trait of any definition that is a container and contains types
    */

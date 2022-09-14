@@ -97,7 +97,8 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
   override def run(
     options: Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     Left(errors("Not Implemented"))
   }

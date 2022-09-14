@@ -46,7 +46,8 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options](
   override def run(
     options: AboutCommand.Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
         val about: String = {
