@@ -152,7 +152,8 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options]("repeat") {
   override def run(
     options: Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate

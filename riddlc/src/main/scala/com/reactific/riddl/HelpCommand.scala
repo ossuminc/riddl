@@ -48,7 +48,8 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
   override def run(
     options: HelpCommand.Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
         val usage: String = {

@@ -51,7 +51,8 @@ class ASimpleTestCommand extends CommandPlugin[ASimpleTestCommand.Options]("test
   override def run(
     options: Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     println(s"arg1: '${options.arg1}''")
     Right(())

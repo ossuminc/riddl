@@ -47,7 +47,8 @@ class VersionCommand
   override def run(
     options: VersionCommand.Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
       println(RiddlBuildInfo.version)

@@ -29,7 +29,8 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
   override def run(
     options: Options,
     @unused commonOptions: CommonOptions,
-    log:Logger
+    log:Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     options.withInputFile { inputFile: Path =>
       Riddl.parseAndValidate(inputFile, commonOptions).map(_ => ())

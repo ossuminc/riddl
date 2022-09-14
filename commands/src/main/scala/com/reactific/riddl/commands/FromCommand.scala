@@ -56,7 +56,8 @@ class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
   override def run(
     options: FromCommand.Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     val loadedCO =
       CommandOptions.loadCommonOptions(options.inputFile.get) match {

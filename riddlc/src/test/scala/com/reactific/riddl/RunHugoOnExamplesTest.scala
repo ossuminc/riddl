@@ -16,7 +16,7 @@ class RunHugoOnExamplesTest extends
   RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
     "hugo") {
 
-  val output: String = "target/test/hugo-examples"
+  val output: String = "riddlc/target/test/hugo-examples"
 
   def makeTranslatorOptions (fileName: String): HugoCommand.Options = {
     val gitCloneDir = Path.of(".").toAbsolutePath.getParent

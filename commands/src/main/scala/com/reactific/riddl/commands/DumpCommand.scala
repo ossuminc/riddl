@@ -15,7 +15,8 @@ class DumpCommand extends InputFileCommandPlugin("dump") {
   override def run(
     options: Options,
     commonOptions: CommonOptions,
-    log: Logger
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages,Unit] = {
     options.withInputFile { (inputFile: Path) =>
       Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
