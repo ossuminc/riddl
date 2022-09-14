@@ -24,13 +24,12 @@ class HugoTranslatorTest extends
     name: String,
     configFile: Path,
     command: CommandPlugin[CommandOptions],
-    tmpDir: Path
+    outputDir: Path
   ): Assertion = {
     if (commandName == "hugo") {
       command.loadOptionsFrom(configFile) match {
-        case Right(options) =>
-          val outDir = options.asInstanceOf[HugoCommand.Options].outputDir.get
-          runHugo(outDir,tmpDir)
+        case Right(_) =>
+          runHugo(outputDir, tmpDir)
         case Left(errors) =>
           fail(errors.format)
       }
