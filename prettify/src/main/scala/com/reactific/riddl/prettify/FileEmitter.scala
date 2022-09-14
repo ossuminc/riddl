@@ -2,8 +2,7 @@ package com.reactific.riddl.prettify
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
-import com.reactific.riddl.language.AST._
-import com.reactific.riddl.language.Terminals.Keywords
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.prettify.PrettifyTranslator.keyword
 
 import java.nio.charset.StandardCharsets
@@ -291,7 +290,7 @@ case class FileEmitter(path: Path) {
 
   def emitUndefined(): FileEmitter = { add(" ???") }
 
-  def emitOptions(optionDef: WithOptions[_]): FileEmitter = {
+  def emitOptions(optionDef: WithOptions[?]): FileEmitter = {
     if (optionDef.options.nonEmpty) this.addLine(optionDef.format) else this
   }
 

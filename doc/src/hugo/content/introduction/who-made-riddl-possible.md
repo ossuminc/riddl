@@ -54,6 +54,9 @@ Creator of [eXtreme Programming](http://www.extremeprogramming.org/)
 Creator of the [Geekdoc theme](https://geekdoc.de) for 
 [Hugo](http://github. com/gohugo/)
 
+### [Simon Brown](https://www.linkedin.com/in/simonbrownjersey/)
+Creator of the [C4 Model For Software Architecture](https://c4model.com/)
+
 ### [Vaughn Vernon](https://www.linkedin.com/in/vaughnvernon/) {#vaughn-vernon}
 Author of [Domain Driven Design Distilled](https://www.amazon.com/Domain-Driven-Design-Distilled-Vaughn-Vernon/dp/0134434420)
 

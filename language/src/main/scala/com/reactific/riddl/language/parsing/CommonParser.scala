@@ -17,10 +17,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Terminals.Keywords
-import com.reactific.riddl.language.Terminals.Operators
-import com.reactific.riddl.language.Terminals.Punctuation
-import com.reactific.riddl.language.Terminals.Readability
 import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
@@ -29,7 +25,7 @@ import java.net.URL
 import java.nio.file.Path
 
 /** Common Parsing Rules */
-trait CommonParser extends NoWhiteSpaceParsers {
+trait CommonParser extends Terminals with NoWhiteSpaceParsers {
 
   def include[K <: Definition, u: P](parser: P[?] => P[Seq[K]]): P[Include] = {
     P(Keywords.include ~/ literalString).map { str: LiteralString =>
@@ -49,7 +45,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def undefined[u: P, RT](ret: RT): P[RT] = {
-    P(Punctuation.undefined./).map(_ => ret)
+    P(Punctuation.undefinedMark./).map(_ => ret)
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
@@ -86,9 +82,12 @@ trait CommonParser extends NoWhiteSpaceParsers {
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))
   ).?
 
+  def wholeNumber[u:P]: P[Long] = {
+    CharIn("0-9").rep(1).!.map(_.toLong)
+  }
+
   def integer[u:P]: P[Long] = {
-    StringIn(Operators.plus, Operators.minus).? ~
-      CharIn("0-9").rep(1).!.map(_.toLong)
+    StringIn(Operators.plus, Operators.minus).? ~ wholeNumber
   }
 
   def literalInteger[u: P]: P[LiteralInteger] = {
@@ -143,7 +142,7 @@ trait CommonParser extends NoWhiteSpaceParsers {
       Readability.is,
       Readability.are,
       Punctuation.colon,
-      Punctuation.equals
+      Punctuation.equalsSign
     )).?
   }
 
@@ -156,7 +155,8 @@ trait CommonParser extends NoWhiteSpaceParsers {
   ): P[(Location, String, Seq[LiteralString])] = {
     P(
       location ~ validOptions ~
-        (Punctuation.roundOpen ~ literalString.rep(0, P(Punctuation.comma)) ~
+        (Punctuation.roundOpen ~
+          literalString.rep(0, P(Punctuation.comma)) ~
           Punctuation.roundClose).?
     ).map {
       case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
