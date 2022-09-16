@@ -42,7 +42,8 @@ abstract class TextFileWriter extends OutputFile {
     write(writer)
   }
 
-  def nl: this.type = { sb.append("\n"); this }
+  val newLine = System.lineSeparator()
+  def nl: this.type = { sb.append(newLine); this }
 
   def fillTemplateFromResource(
     resourceName: String,

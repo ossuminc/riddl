@@ -1,32 +1,33 @@
 package com.reactific.riddl.prettify
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.collection.mutable
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.prettify.PrettifyTranslator.keyword
 
 import java.nio.charset.StandardCharsets
 
-/** Unit Tests For FileEmitter */
-case class FileEmitter(path: Path) {
+/** Unit Tests For RiddlFileEmitter */
+case class RiddlFileEmitter(filePath: Path) {
   private val lines: mutable.StringBuilder = new mutable.StringBuilder
-  private final val nl = "\n"
+  private final val nl = System.lineSeparator()
   private var indentLevel: Int = 0
   override def toString: String = lines.toString
   def asString: String = lines.toString()
 
   def spc: String = { " ".repeat(indentLevel) }
 
-  def addNL(): FileEmitter = { lines.append(nl); this }
+  def addNL(): RiddlFileEmitter = { lines.append(nl); this }
 
-  def add(str: String): FileEmitter = {
+  def add(str: String): RiddlFileEmitter = {
     lines.append(str)
     this
   }
 
-  def addSpace(): FileEmitter = add(spc)
+  def addSpace(): RiddlFileEmitter = add(spc)
 
-  def add(strings: Seq[LiteralString]): FileEmitter = {
+  def add(strings: Seq[LiteralString]): RiddlFileEmitter = {
     if (strings.sizeIs > 1) {
       lines.append("\n")
       strings.foreach(s => lines.append(s"""$spc"${s.s}"$nl"""))
@@ -34,7 +35,7 @@ case class FileEmitter(path: Path) {
     this
   }
 
-  def add[T](opt: Option[T])(map: T => String): FileEmitter = {
+  def add[T](opt: Option[T])(map: T => String): RiddlFileEmitter = {
     opt match {
       case None => this
       case Some(t) =>
@@ -43,23 +44,23 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def addIndent(): FileEmitter = {
+  def addIndent(): RiddlFileEmitter = {
     lines.append(s"$spc")
     this
   }
 
-  def addIndent(str: String): FileEmitter = {
+  def addIndent(str: String): RiddlFileEmitter = {
     lines.append(s"$spc$str")
     this
   }
 
-  def addLine(str: String): FileEmitter = {
+  def addLine(str: String): RiddlFileEmitter = {
     lines.append(s"$spc$str\n")
     this
   }
-  def indent: FileEmitter = { indentLevel = indentLevel + 2; this }
+  def indent: RiddlFileEmitter = { indentLevel = indentLevel + 2; this }
 
-  def outdent: FileEmitter = {
+  def outdent: RiddlFileEmitter = {
     require(indentLevel > 1, "unmatched indents")
     indentLevel = indentLevel - 2
     this
@@ -68,7 +69,7 @@ case class FileEmitter(path: Path) {
   def openDef(
     definition: Definition,
     withBrace: Boolean = true
-  ): FileEmitter = {
+  ): RiddlFileEmitter = {
     addSpace().add(s"${keyword(definition)} ${definition.id.format} is ")
     if (withBrace) {
       if (definition.isEmpty) { add("{ ??? }") }
@@ -80,19 +81,19 @@ case class FileEmitter(path: Path) {
   def closeDef(
     definition: Definition,
     withBrace: Boolean = true
-  ): FileEmitter = {
+  ): RiddlFileEmitter = {
     if (withBrace && !definition.isEmpty) { outdent.addIndent("}") }
     emitBrief(definition.brief)
     emitDescription(definition.description).add("\n")
   }
 
-  def emitBrief(brief: Option[LiteralString]): FileEmitter = {
+  def emitBrief(brief: Option[LiteralString]): RiddlFileEmitter = {
     brief.foldLeft(this) { (s, ls: LiteralString) =>
       s.add(s" briefly ${ls.format}")
     }
   }
 
-  def emitDescription(description: Option[Description]): FileEmitter = {
+  def emitDescription(description: Option[Description]): RiddlFileEmitter = {
     description.foldLeft(this) { (s, desc: Description) =>
       val s2 = s.add(" described as {\n").indent
       desc.lines.foldLeft(s2) { case (s3, line) =>
@@ -101,7 +102,7 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def emitString(s: Strng): FileEmitter = {
+  def emitString(s: Strng): RiddlFileEmitter = {
     (s.min, s.max) match {
       case (Some(n), Some(x)) => this.add(s"String($n,$x")
       case (None, Some(x))    => this.add(s"String(,$x")
@@ -119,7 +120,7 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def emitEnumeration(enumeration: Enumeration): FileEmitter = {
+  def emitEnumeration(enumeration: Enumeration): RiddlFileEmitter = {
     val head = this.add(s"any of {\n").indent
     val enumerators: String = enumeration.enumerators.map { enumerator =>
       enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
@@ -128,7 +129,7 @@ case class FileEmitter(path: Path) {
     head.add(enumerators).outdent.addLine("}")
   }
 
-  def emitAlternation(alternation: Alternation): FileEmitter = {
+  def emitAlternation(alternation: Alternation): RiddlFileEmitter = {
     add(s"one of {\n").indent.addIndent("")
       .emitTypeExpression(alternation.of.head)
     val s5 = alternation.of.tail.foldLeft(this) { (s4, te) =>
@@ -137,12 +138,12 @@ case class FileEmitter(path: Path) {
     s5.add("\n").outdent.addIndent("}")
   }
 
-  def emitField(field: Field): FileEmitter = {
+  def emitField(field: Field): RiddlFileEmitter = {
     this.add(s"${field.id.value}: ").emitTypeExpression(field.typeEx)
       .emitDescription(field.description)
   }
 
-  def emitFields(of: Seq[Field]): FileEmitter = {
+  def emitFields(of: Seq[Field]): RiddlFileEmitter = {
     if (of.isEmpty) { this.add("{ ??? }") }
     else if (of.sizeIs == 1) {
       val f: Field = of.head
@@ -157,16 +158,16 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def emitAggregation(aggregation: Aggregation): FileEmitter = {
+  def emitAggregation(aggregation: Aggregation): RiddlFileEmitter = {
     emitFields(aggregation.fields)
   }
 
-  def emitMapping(mapping: Mapping): FileEmitter = {
+  def emitMapping(mapping: Mapping): RiddlFileEmitter = {
     this.add(s"mapping from ").emitTypeExpression(mapping.from).add(" to ")
       .emitTypeExpression(mapping.to)
   }
 
-  def emitPattern(pattern: Pattern): FileEmitter = {
+  def emitPattern(pattern: Pattern): RiddlFileEmitter = {
     val line =
       if (pattern.pattern.sizeIs == 1) {
         "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
@@ -177,15 +178,15 @@ case class FileEmitter(path: Path) {
     this.add(line)
   }
 
-  def emitMessageType(mt: MessageType): FileEmitter = {
+  def emitMessageType(mt: MessageType): RiddlFileEmitter = {
     this.add(mt.messageKind.kind.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
-  def emitMessageRef(mr: MessageRef): FileEmitter = { this.add(mr.format) }
+  def emitMessageRef(mr: MessageRef): RiddlFileEmitter = { this.add(mr.format) }
 
-  def emitTypeRef(tr: TypeRef): FileEmitter = { this.add(tr.format) }
+  def emitTypeRef(tr: TypeRef): RiddlFileEmitter = { this.add(tr.format) }
 
-  def emitTypeExpression(typEx: TypeExpression): FileEmitter = {
+  def emitTypeExpression(typEx: TypeExpression): RiddlFileEmitter = {
     typEx match {
       case string: Strng                => emitString(string)
       case b: Bool                      => this.add(b.kind)
@@ -221,24 +222,24 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def emitType(t: Type): FileEmitter = {
+  def emitType(t: Type): RiddlFileEmitter = {
     this.add(s"${spc}type ${t.id.value} is ").emitTypeExpression(t.typ)
       .emitDescription(t.description).add("\n")
   }
 
   def emitCondition(
     condition: Condition
-  ): FileEmitter = { this.add(condition.format) }
+  ): RiddlFileEmitter = { this.add(condition.format) }
 
   def emitAction(
     action: Action
-  ): FileEmitter = { this.add(action.format) }
+  ): RiddlFileEmitter = { this.add(action.format) }
 
-  def emitActions(actions: Seq[Action]): FileEmitter = {
+  def emitActions(actions: Seq[Action]): RiddlFileEmitter = {
     actions.foldLeft(this)((s, a) => s.emitAction(a))
   }
 
-  def emitGherkinStrings(strings: Seq[LiteralString]): FileEmitter = {
+  def emitGherkinStrings(strings: Seq[LiteralString]): RiddlFileEmitter = {
     strings.size match {
       case 0 => add("\"\"")
       case 1 => add(strings.head.format)
@@ -249,7 +250,7 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def emitAGherkinClause(ghc: GherkinClause): FileEmitter = {
+  def emitAGherkinClause(ghc: GherkinClause): RiddlFileEmitter = {
     ghc match {
       case GivenClause(_, strings)  => emitGherkinStrings(strings)
       case WhenClause(_, condition) => emitCondition(condition)
@@ -261,7 +262,7 @@ case class FileEmitter(path: Path) {
   def emitGherkinClauses(
     kind: String,
     clauses: Seq[GherkinClause]
-  ): FileEmitter = {
+  ): RiddlFileEmitter = {
     clauses.size match {
       case 0 => this
       case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
@@ -273,7 +274,7 @@ case class FileEmitter(path: Path) {
     }
   }
 
-  def emitExample(example: Example): FileEmitter = {
+  def emitExample(example: Example): RiddlFileEmitter = {
     if (!example.isImplicit) { openDef(example) }
     emitGherkinClauses("given ", example.givens)
       .emitGherkinClauses("when", example.whens)
@@ -283,20 +284,20 @@ case class FileEmitter(path: Path) {
     this
   }
 
-  def emitExamples(examples: Seq[Example]): FileEmitter = {
+  def emitExamples(examples: Seq[Example]): RiddlFileEmitter = {
     examples.foreach(emitExample)
     this
   }
 
-  def emitUndefined(): FileEmitter = { add(" ???") }
+  def emitUndefined(): RiddlFileEmitter = { add(" ???") }
 
-  def emitOptions(optionDef: WithOptions[?]): FileEmitter = {
+  def emitOptions(optionDef: WithOptions[?]): RiddlFileEmitter = {
     if (optionDef.options.nonEmpty) this.addLine(optionDef.format) else this
   }
 
   def emit(): Path = {
-    Files.writeString(path, lines.toString(), StandardCharsets.UTF_8)
-    path
+    Files.writeString(filePath, lines.toString(), StandardCharsets.UTF_8)
+    filePath
   }
 
 }

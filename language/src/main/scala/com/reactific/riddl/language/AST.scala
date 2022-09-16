@@ -642,7 +642,7 @@ object AST
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: Location, id: PathIdentifier)
-      extends Reference[Entity] {
+      extends Reference[Entity] with StoryCaseUsesRefs {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
@@ -1095,7 +1095,7 @@ object AST
   case class AdaptorRef(
     loc: Location,
     id: PathIdentifier)
-      extends Reference[Adaptor] {
+      extends Reference[Adaptor] with StoryCaseUsesRefs {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
@@ -1134,7 +1134,7 @@ object AST
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-      extends Reference[Projection] {
+      extends Reference[Projection] with StoryCaseUsesRefs {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1174,18 +1174,6 @@ object AST
     *   The location of the gateway option
     */
   case class GatewayOption(loc: Location) extends ContextOption("gateway")
-
-  /** A reference to a bounded context
-    *
-    * @param loc
-    *   The location of the reference
-    * @param id
-    *   The path identifier for the referenced context
-    */
-  case class ContextRef(loc: Location, id: PathIdentifier)
-      extends Reference[Context] {
-    override def format: String = s"context ${id.format}"
-  }
 
   /** A bounded context definition. Bounded contexts provide a definitional
     * boundary on the language used to describe some aspect of a system. They
@@ -1252,6 +1240,20 @@ object AST
       if (projections.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
+  }
+
+  /** A reference to a bounded context
+    *
+    * @param loc
+    *   The location of the reference
+    * @param id
+    *   The path identifier for the referenced context
+    */
+  case class ContextRef(loc: Location, id: PathIdentifier)
+      extends Reference[Context]
+      with StoryCaseScopeRefs
+      with StoryCaseUsesRefs {
+    override def format: String = s"context ${id.format}"
   }
 
   /** Definition of a pipe for data streaming purposes. Pipes are conduits
@@ -1422,7 +1424,7 @@ object AST
     *   The path identifier of the referenced projection definition
     */
   case class ProcessorRef(loc: Location, id: PathIdentifier)
-      extends Reference[Processor] {
+      extends Reference[Processor] with StoryCaseUsesRefs {
     override def format: String = s"${Keywords.processor} ${id.format}"
   }
 
@@ -1685,142 +1687,117 @@ object AST
     }
   }
 
-  case class SagaRef(loc: Location, id: PathIdentifier) extends Reference[Saga]
+  case class SagaRef(loc: Location, id: PathIdentifier)
+      extends Reference[Saga] with StoryCaseUsesRefs
 
   /** C4 Object is just a namespace for the C4 classes because their names
     * collide with things in AST object.
     */
-  object C4 {
 
-    /** A sealed trait with the common characteristics of all elements of a C4
-      * design used for Stories.
-      *
-      * @tparam T
-      *   The kind of RIDDL element referenced by this element.
-      */
-    sealed trait DesignElement extends Definition {
-      def contents: Seq[Definition] = Seq.empty[Definition]
-    }
+  /** A sealed trait with the common characteristics of all elements of a C4
+    * storyCase used for Stories.
+    *
+    * @tparam T
+    *   The kind of RIDDL element referenced by this element.
+    */
+  sealed trait CaseElement extends Definition {
+    def contents: Seq[Definition] = Seq.empty[Definition]
+  }
 
-    case class Component(
-      loc: Location,
-      id: Identifier,
-      ref: Reference[ContextDefinition],
-      brief: Option[LiteralString] = None,
-      description: Option[AST.Description] = None)
-        extends DesignElement {
-      override def kind: String = "C4.Component"
-    }
+  /** An StoryActor (Role) who is the initiator of the user story. Actors may be
+    * persons or machines
+    *
+    * @param loc
+    *   The location of the actor in the source
+    * @param id
+    *   The name (role) of the actor
+    * @param is_a
+    *   What kind of thing the actor is
+    * @param brief
+    *   A brief description of the actor
+    * @param description
+    *   A longer description of the actor and its role
+    */
+  case class StoryActor(
+    loc: Location,
+    id: Identifier,
+    is_a: Option[LiteralString],
+    brief: Option[LiteralString],
+    description: Option[Description] = None)
+      extends LeafDefinition with StoryDefinition {
+    override def kind: String = "StoryActor"
+  }
 
-    case class ComponentRef(loc: Location, id: PathIdentifier)
-        extends Reference[Component]
+  /** A reference to an StoryActor using a path identifier
+    * @param loc
+    *   THe location of the StoryActor in the source code
+    * @param id
+    *   The path identifier that locates the references StoryActor
+    */
+  case class StoryActorRef(loc: Location, id: PathIdentifier)
+      extends Reference[StoryActor] with StoryCaseUsesRefs
 
-    case class Container(
-      loc: Location,
-      id: AST.Identifier,
-      ref: Option[Reference[AST.Context]],
-      components: Seq[Component] = Seq.empty[Component],
-      brief: Option[LiteralString] = None,
-      description: Option[AST.Description] = None)
-        extends DesignElement {
-      override def kind: String = "C4.Container"
-      override def contents: Seq[Definition] = components
-    }
+  case class StoryCaseScope(
+    loc: Location,
+    domainRef: DomainRef,
+    brief: Option[LiteralString] = None)
+      extends BrieflyDescribedValue
 
-    case class ContainerRef(loc: Location, id: PathIdentifier)
-        extends Reference[Container]
+  case class StoryCaseUse(
+    loc: Location,
+    ref: StoryCaseUsesRefs,
+    brief: Option[LiteralString] = None)
+      extends BrieflyDescribedValue
 
-    /** An Actor (Role) who is the initiator of the user story. Actors may be
-      * persons or machines
-      *
-      * @param loc
-      *   The location of the actor in the source
-      * @param id
-      *   The name (role) of the actor
-      * @param brief
-      *   A brief description of the actor
-      * @param description
-      *   A longer description of the actor and its role
-      */
-    case class Actor(
-      loc: Location,
-      id: Identifier,
-      brief: Option[LiteralString],
-      description: Option[Description] = None)
-        extends DesignElement {
-      override def kind: String = "C4.Actor"
-    }
+  /** One step in an Interaction between things
+    * @param loc
+    *   The location of the step definition
+    * @param step
+    *   the number of the step
+    * @param from
+    *   The CaseElement for the origin of the interaction
+    * @param to
+    *   The CaseElement for the destination of the interaction
+    */
+  case class InteractionStep(
+    loc: Location,
+    step: Long,
+    from: StoryCaseUsesRefs,
+    to: StoryCaseUsesRefs,
+    brief: Option[LiteralString] = None)
+      extends BrieflyDescribedValue
 
-    /** A reference to an Actor using a path identifier
-      * @param loc
-      *   THe location of the Actor in the source code
-      * @param id
-      *   The path identifier that locates the references Actor
-      */
-    case class ActorRef(loc: Location, id: PathIdentifier)
-        extends Reference[Actor]
-
-    /** An interaction between to C4.Design elements
-      * @param loc
-      * @param id
-      * @param step
-      * @param from
-      * @param to
-      * @param brief
-      * @param description
-      */
-    case class Interaction(
-      loc: Location,
-      id: Identifier,
-      step: Option[Long] = None,
-      from: Option[Reference[DesignElement]] = None,
-      to: Option[Reference[DesignElement]] = None,
-      brief: Option[LiteralString] = None,
-      description: Option[Description] = None)
-        extends DesignElement {
-      override def kind: String = "C4.Interaction"
-      override def contents: Seq[Definition] = Seq.empty[Definition]
-    }
-
-    case class Context(
-      loc: Location,
-      id: Identifier,
-      ref: Option[DomainRef] = None,
-      actor: Option[Actor] = None,
-      containers: Seq[Container] = Seq.empty[Container],
-      interactions: Seq[Interaction] = Seq.empty[Interaction],
-      brief: Option[LiteralString] = None,
-      description: Option[AST.Description] = None)
-        extends DesignElement {
-      override def kind: String = "C4.Container"
-
-      override def contents: Seq[Definition] = actor.map(Seq(_))
-        .getOrElse(Seq.empty[Definition]) ++ interactions ++ containers
-    }
-
-    case class ContextRef(loc: Location, id: PathIdentifier)
-        extends Reference[Context]
-
-    case class Design(
-      loc: Location,
-      id: Identifier,
-      title: Option[LiteralString] = None,
-      context: Option[C4.Context] = None,
-      brief: Option[LiteralString] = None,
-      description: Option[Description] = None)
-        extends StoryDefinition {
-
-      override def kind: String = "C4.Design"
-
-      def name: String = id.value
-
-      override def contents: Seq[Definition] = context.toSeq
-
-      /** The location in the parse at which this RiddlValue occurs */
-    }
+  case class StoryCase(
+    loc: Location,
+    id: Identifier,
+    title: Option[LiteralString] = None,
+    scope: Option[StoryCaseScope] = None,
+    uses: Seq[StoryCaseUse] = Seq.empty[StoryCaseUse],
+    interactions: Seq[InteractionStep],
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with StoryDefinition {
+    override def kind: String = "StoryCase"
   }
 
   sealed trait StoryOption extends OptionValue
+
+  /** An agile user story definition
+    * @param loc
+    *   Location of the user story
+    * @param role
+    *   Role of the actor for the story
+    * @param capability
+    *   The capability the actor wishes to utilize
+    * @param benefit
+    *   The benefit of that utilization
+    */
+  case class UserStory(
+    loc: Location,
+    actor: StoryActor,
+    capability: LiteralString = LiteralString.empty,
+    benefit: LiteralString = LiteralString.empty)
+      extends RiddlValue
 
   /** The definition of an agile user story. Stories define functionality from
     * the perspective of a certain kind of user (man or machine), interacting
@@ -1832,16 +1809,12 @@ object AST
     *   The location of the story definition
     * @param id
     *   The name of the story
-    * @param role
-    *   The role of the actor involved in the story
-    * @param capability
-    *   The capability utilized by the actor in the story
-    * @param benefit
-    *   The benefit, to the user, of using the capability.
+    * @param userStory
+    *   The user story per agile and xP
     * @param shownBy
     *   A list of URLs to visualizations or other materials related to the story
-    * @param implementedBy
-    *   A list of PathIdentifiers, presumably contexts, that implement the story
+    * @param cases
+    *   A list of StoryCase's that define the story
     * @param examples
     *   Gherkin examples to specify "done" for the implementation of the user
     *   story
@@ -1853,11 +1826,9 @@ object AST
   case class Story(
     loc: Location,
     id: Identifier,
-    role: LiteralString = LiteralString.empty,
-    capability: LiteralString = LiteralString.empty,
-    benefit: LiteralString = LiteralString.empty,
+    userStory: Option[UserStory] = None,
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
-    designs: Seq[C4.Design] = Seq.empty[C4.Design],
+    cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
     includes: Seq[Include] = Seq.empty[Include],
@@ -1867,34 +1838,29 @@ object AST
     description: Option[Description] = None)
       extends VitalDefinition[StoryOption] with DomainDefinition {
     override def contents: Seq[StoryDefinition] = {
-      designs ++ examples ++ authors ++ includes ++ terms
+      cases ++ examples ++ authors ++ includes ++ terms ++ {
+        if (userStory.nonEmpty) Seq(userStory.get.actor)
+        else Seq.empty[StoryActor]
+      }
+    }
+    override def isEmpty: Boolean = {
+      contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
     }
 
     final val kind: String = "Story"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (role.nonEmpty) score += 3
-      if (capability.nonEmpty) score += 3
-      if (benefit.nonEmpty) score += 3
+      if (userStory.nonEmpty) score += 3
       if (shownBy.nonEmpty) score += 10
-      if (designs.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
+      if (cases.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 9)
       Math.max(score, maxMaturity)
     }
   }
 
-  /** A reference to a domain definition
-    *
-    * @param loc
-    *   The location at which the domain definition occurs
-    * @param id
-    *   The path identifier for the referenced domain.
-    */
-  case class DomainRef(loc: Location, id: PathIdentifier)
-      extends Reference[Domain] {
-    override def format: String = s"domain ${id.format}"
-  }
+  case class StoryRef(loc: Location, id: PathIdentifier)
+      extends Reference[Saga] with StoryCaseUsesRefs
 
   /** Base trait for all options a Domain can have.
     */
@@ -1971,4 +1937,17 @@ object AST
       Math.max(score, maxMaturity)
     }
   }
+
+  /** A reference to a domain definition
+    *
+    * @param loc
+    *   The location at which the domain definition occurs
+    * @param id
+    *   The path identifier for the referenced domain.
+    */
+  case class DomainRef(loc: Location, id: PathIdentifier)
+      extends Reference[Domain] with StoryCaseUsesRefs with StoryCaseScopeRefs {
+    override def format: String = s"domain ${id.format}"
+  }
+
 }
