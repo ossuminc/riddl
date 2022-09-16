@@ -19,7 +19,9 @@ package com.reactific.riddl.prettify
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.{CommonOptions, Folding, Translator}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Folding
+import com.reactific.riddl.language.Translator
 import com.reactific.riddl.utils.Logger
 
 import java.nio.charset.StandardCharsets
@@ -74,17 +76,19 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
 
   def translate(
     root: RootContainer,
-    @unused log: Logger,
+    @unused
+    log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
-  ): Either[Messages,Unit] = {
+  ): Either[Messages, Unit] = {
     val state = doTranslation(root, log, commonOptions, options)
     Right(state.files)
   }
 
   def doTranslation(
     root: RootContainer,
-    @unused log: Logger,
+    @unused
+    log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
   ): ReformatState = {
@@ -108,11 +112,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     state.filesAsString
   }
 
-
   case class ReformatState(
     commonOptions: CommonOptions,
-    options: PrettifyCommand.Options
-  ) extends Folding.State[ReformatState] {
+    options: PrettifyCommand.Options)
+      extends Folding.State[ReformatState] {
 
     require(options.inputFile.nonEmpty, "No input file specified")
     require(options.outputDir.nonEmpty, "No output directory specified")
@@ -127,49 +130,51 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       outPath.resolve(suffixPath)
     }
 
-    private var generatedFiles: Seq[FileEmitter] = Seq.empty[FileEmitter]
+    private var generatedFiles: Seq[RiddlFileEmitter] = Seq
+      .empty[RiddlFileEmitter]
 
     def files: Seq[Path] = {
       closeStack()
       if (options.singleFile) {
         val content = filesAsString
-        Files.writeString(firstFile.path, content, StandardCharsets.UTF_8)
-        Seq(firstFile.path)
+        Files.writeString(firstFile.filePath, content, StandardCharsets.UTF_8)
+        Seq(firstFile.filePath)
       } else { for { emitter <- generatedFiles } yield { emitter.emit() } }
     }
 
     def filesAsString: String = {
       closeStack()
       generatedFiles
-        .map(fe => s"\n// From '${fe.path.toString}'\n${fe.asString}").mkString
+        .map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.asString}")
+        .mkString
     }
 
-    private val fileStack: mutable.Stack[FileEmitter] = mutable.Stack
-      .empty[FileEmitter]
+    private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack
+      .empty[RiddlFileEmitter]
 
     private def closeStack(): Unit = { while (fileStack.nonEmpty) popFile() }
 
-    def current: FileEmitter = fileStack.head
+    def current: RiddlFileEmitter = fileStack.head
 
-    private val firstFile: FileEmitter = {
-      val file = FileEmitter(outPathFor(inPath))
+    private val firstFile: RiddlFileEmitter = {
+      val file = RiddlFileEmitter(outPathFor(inPath))
       pushFile(file)
       file
     }
 
-    def addFile(file: FileEmitter): ReformatState = {
+    def addFile(file: RiddlFileEmitter): ReformatState = {
       generatedFiles = generatedFiles :+ file
       this
     }
 
-    def pushFile(file: FileEmitter): ReformatState = {
+    def pushFile(file: RiddlFileEmitter): ReformatState = {
       fileStack.push(file)
       addFile(file)
     }
 
     def popFile(): ReformatState = { fileStack.pop(); this }
 
-    def withCurrent(f: FileEmitter => Unit): ReformatState = {
+    def withCurrent(f: RiddlFileEmitter => Unit): ReformatState = {
       f(current); this
     }
   }
@@ -197,7 +202,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           // ignore
           state
         case container: Definition with WithOptions[?] =>
-          // Applies To: Context, Entity, Interaction
+          // Applies To: Context, Entity, Interactions
           state.withCurrent(_.openDef(container).emitOptions(container))
         case container: Definition =>
           // Applies To: Saga, Plant, Handler, Processor
@@ -220,7 +225,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case outlet: Outlet => doOutlet(state, outlet)
         case joint: Joint   => doJoint(state, joint)
         case _: Field => state // was handled by Type case in openContainer
-        case _ =>
+        case _        =>
           /* require(
             !definition.isInstanceOf[Definition],
             s"doDefinition should not be called for ${definition.getClass.getName}"
@@ -245,7 +250,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           // ignore
           state
         case container: Definition =>
-          // Applies To: Domain, Context, Entity, Adaptor, Interaction, Saga,
+          // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
           // Plant, Processor, Function, SagaStep
           state.withCurrent(_.closeDef(container))
       }
@@ -257,37 +262,52 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     ): ReformatState = {
       state.withCurrent(_.openDef(domain)).step { s1: ReformatState =>
         domain.authors.foldLeft(s1) { (st, author) =>
-          st.withCurrent(_.addIndent(s"author is {\n")
-            .indent
-            .addIndent(s"name = ${author.name.format}\n")
-            .addIndent(s"email = ${author.email.format}\n")
+          st.withCurrent(
+            _.addIndent(s"author is {\n").indent
+              .addIndent(s"name = ${author.name.format}\n")
+              .addIndent(s"email = ${author.email.format}\n")
           ).step { s2 =>
-            author.organization
-              .map(org => s2.withCurrent(
-                _.addIndent(s"organization =${org.format}\n")))
-              .orElse(Option(s2)).get
+            author.organization.map(org =>
+              s2.withCurrent(_.addIndent(s"organization =${org.format}\n"))
+            ).orElse(Option(s2)).get
           }.step { s3 =>
-            author.title
-              .map(title => s3.withCurrent(
-                _.addIndent(s"title = ${title.format}\n")))
-              .orElse(Option(s3)).get
+            author.title.map(title =>
+              s3.withCurrent(_.addIndent(s"title = ${title.format}\n"))
+            ).orElse(Option(s3)).get
           }.withCurrent(_.outdent.addIndent("}\n"))
         }
       }
     }
 
     def openStory(state: ReformatState, story: Story): ReformatState = {
-      state.withCurrent(
-        _.openDef(story).addIndent(Keywords.role).add(" is ")
-          .add(story.role.format).addNL().addIndent(Keywords.capability)
-          .add(" is ").add(story.capability.format).addNL()
-          .addIndent(Keywords.benefit).add(" is ").add(story.benefit.format)
-          .addNL()
-      )
+      state.withCurrent { st =>
+        if (story.userStory.isEmpty) {
+          st.openDef(story, withBrace = false).add(" ??? ")
+        } else {
+          val us = story.userStory.get
+          val actor = us.actor
+          st.openDef(story).add(Keywords.actor).add(actor.id.format).add(" is ")
+            .add(actor.is_a.map(_.format).getOrElse("\"\"")).addNL()
+            .add(Keywords.capability).add(" is ").add(us.capability.format)
+            .addNL().add(Keywords.benefit).add(" is ").add(us.benefit.format)
+            .addNL()
+        }
+      }
     }
+    /*
+    shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
+    cases: Seq[StoryCase] = Seq.empty[StoryCase],
+    examples: Seq[Example] = Seq.empty[Example],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include] = Seq.empty[Include],
+    options: Seq[StoryOption] = Seq.empty[StoryOption],
+    terms: Seq[Term] = Seq.empty[Term],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None)
+     */
 
     def closeStory(state: ReformatState, story: Story): ReformatState = {
-       state.withCurrent(_.closeDef(story))
+      state.withCurrent(_.closeDef(story))
     }
 
     def openAdaptor(
@@ -362,9 +382,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def doJoint(state: ReformatState, joint: Joint): ReformatState = {
-      val s = state.withCurrent(
-        _.addIndent(s"${keyword(joint)} ${joint.id.format} is ")
-      )
+      val s = state
+        .withCurrent(_.addIndent(s"${keyword(joint)} ${joint.id.format} is "))
       joint match {
         case InletJoint(_, _, inletRef, pipeRef, _, _) => s.withCurrent(
             _.addIndent(s"inlet ${inletRef.id.format} from")
@@ -398,10 +417,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           s.withCurrent(_.addIndent("requires ").emitTypeExpression(te).addNL())
         )
       }.step { s =>
-        function.output
-          .fold(s)(te => s.withCurrent(
-            _.addIndent("returns  ").emitTypeExpression(te).addNL())
-          )
+        function.output.fold(s)(te =>
+          s.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).addNL())
+        )
       }
     }
 
@@ -426,9 +444,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
             val relativePath = state.relativeToInPath(path)
             state.current.add(s"include \"$relativePath\"")
             val outPath = state.outPathFor(path)
-            state.pushFile(FileEmitter(outPath))
+            state.pushFile(RiddlFileEmitter(outPath))
           case None =>
-            state.current.add(s"include \"<missing file path>\"")
+            state.current.add(s"include \"<missing file filePath>\"")
             state
         }
       } else { state }

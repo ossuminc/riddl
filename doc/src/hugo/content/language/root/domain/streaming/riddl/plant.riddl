@@ -19,7 +19,7 @@ plant SensorMaintenance is {
   } explained as "Carries changes in the current weather forecast"
 
   pipe TemperatureChanges is {
-    transmit temperature
+    transmit type temperature
   } explained as "Carries changes in the current temperature"
 
   joint forecast is outlet GetWeatherForecast.Weather to pipe WeatherForecast

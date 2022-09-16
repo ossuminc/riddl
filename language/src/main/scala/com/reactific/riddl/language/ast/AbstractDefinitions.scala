@@ -1,24 +1,27 @@
 package com.reactific.riddl.language.ast
 
-
-import com.reactific.riddl.language.parsing.{Terminals, RiddlParserInput}
+import com.reactific.riddl.language.parsing.Terminals
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 
 trait AbstractDefinitions extends Terminals {
 
   /** The root trait of all things RIDDL AST. Every node in the tree is a
-   * RiddlNode.
-   */
+    * RiddlNode.
+    */
   trait RiddlNode {
+
     /** Format the node to a string */
     def format: String = ""
 
     /** Determine if this node is a container or not */
     def isContainer: Boolean = false
 
-    /** determine if this node is empty or not. Non-containers are always empty */
+    /** determine if this node is empty or not. Non-containers are always empty
+      */
     def isEmpty: Boolean = false
 
     @deprecatedOverriding(
@@ -28,21 +31,22 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** The root trait of all parsable values. If a parser returns something, its
-   * a RiddlValue. The distinguishing factor is the inclusion of the parsing
-   * location given by the `loc` field.
-   */
+    * a RiddlValue. The distinguishing factor is the inclusion of the parsing
+    * location given by the `loc` field.
+    */
   trait RiddlValue extends RiddlNode {
+
     /** The location in the parse at which this RiddlValue occurs */
     def loc: Location
   }
 
   /** Represents a literal string parsed between quote characters in the input
-   *
-   * @param loc
-   * The location in the input of the opening quote character
-   * @param s
-   * The parsed value of the string content
-   */
+    *
+    * @param loc
+    *   The location in the input of the opening quote character
+    * @param s
+    *   The parsed value of the string content
+    */
   case class LiteralString(loc: Location, s: String) extends RiddlValue {
     override def format = s"\"$s\""
 
@@ -53,13 +57,13 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** A RiddlValue that is a parsed identifier, typically the name of a
-   * definition.
-   *
-   * @param loc
-   * The location in the input where the identifier starts
-   * @param value
-   * The parsed value of the identifier
-   */
+    * definition.
+    *
+    * @param loc
+    *   The location in the input where the identifier starts
+    * @param value
+    *   The parsed value of the identifier
+    */
   case class Identifier(loc: Location, value: String) extends RiddlValue {
     override def format: String = value
 
@@ -70,32 +74,24 @@ trait AbstractDefinitions extends Terminals {
     val empty: Identifier = Identifier(Location.empty, "")
   }
 
-
-
   /** Represents a segmented identifier to a definition in the model. Path
-   * Identifiers are parsed from a dot-separated list of identifiers in the
-   * input. Path identifiers are used to reference other definitions in the
-   * model.
-   *
-   * @param loc
-   * Location in the input of the first letter of the path identifier
-   * @param value
-   * The list of strings that make up the path identifier
-   */
+    * Identifiers are parsed from a dot-separated list of identifiers in the
+    * input. Path identifiers are used to reference other definitions in the
+    * model.
+    *
+    * @param loc
+    *   Location in the input of the first letter of the path identifier
+    * @param value
+    *   The list of strings that make up the path identifier
+    */
   case class PathIdentifier(loc: Location, value: Seq[String])
-    extends RiddlValue {
+      extends RiddlValue {
     override def format: String = {
-      value.foldLeft(Seq.empty[String]) {
-        case (r: Seq[String], s: String) =>
-          if (s.isEmpty) {
-            r :+ "^"
-          } else if (r.isEmpty) {
-            Seq(s)
-          } else if (r.last != "^") {
-            r ++ Seq(".", s)
-          } else {
-            r :+ s
-          }
+      value.foldLeft(Seq.empty[String]) { case (r: Seq[String], s: String) =>
+        if (s.isEmpty) { r :+ "^" }
+        else if (r.isEmpty) { Seq(s) }
+        else if (r.last != "^") { r ++ Seq(".", s) }
+        else { r :+ s }
       }.mkString
     }
 
@@ -103,9 +99,8 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** The description of a definition. All definitions have a name and an
-   * optional description. This class provides the description part.
-   *
-   */
+    * optional description. This class provides the description part.
+    */
   trait Description extends RiddlValue {
     def loc: Location
 
@@ -117,35 +112,33 @@ trait AbstractDefinitions extends Terminals {
   case class BlockDescription(
     loc: Location = Location.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
-    extends Description {
-  }
+      extends Description {}
 
   case class FileDescription(
     loc: Location,
-    file: Path
-  ) extends Description {
+    file: Path)
+      extends Description {
     lazy val lines: Seq[LiteralString] = {
       val src = scala.io.Source.fromFile(file.toFile)
-      src.getLines().toSeq.map(LiteralString(loc,_))
+      src.getLines().toSeq.map(LiteralString(loc, _))
     }
   }
-
 
   trait BrieflyDescribedValue extends RiddlValue {
     def brief: Option[LiteralString]
   }
 
   /** Base trait of all values that have an optional Description
-   */
+    */
   trait DescribedValue extends RiddlValue {
     def description: Option[Description]
   }
 
   /** Base trait of any definition that is also a ContainerValue
-   *
-   * @tparam D
-   * The kind of definition that is contained by the container
-   */
+    *
+    * @tparam D
+    *   The kind of definition that is contained by the container
+    */
   trait Container[+D <: RiddlValue] extends RiddlValue {
     def contents: Seq[D]
 
@@ -157,17 +150,21 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** Base trait for all definitions requiring an identifier for the definition
-   * and providing the identify method to yield a string that provides the kind
-   * and name
-   */
-  trait Definition extends DescribedValue
-    with BrieflyDescribedValue with Container[Definition] {
+    * and providing the identify method to yield a string that provides the kind
+    * and name
+    */
+  trait Definition
+      extends DescribedValue
+      with BrieflyDescribedValue
+      with Container[Definition] {
     def id: Identifier
 
     def kind: String
 
     def kindId: String = {
-      val name = if (id.isEmpty) { "Anonymous" } else { id.format }
+      val name =
+        if (id.isEmpty) { "Anonymous" }
+        else { id.format }
       s"$kind '$name'"
     }
 
@@ -198,8 +195,7 @@ trait AbstractDefinitions extends Terminals {
     * @tparam T
     *   The type of definition to which the references refers.
     */
-  abstract class Reference[+T <: Definition: ClassTag]
-      extends RiddlValue {
+  abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
     def id: PathIdentifier
     def identify: String = {
       s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
@@ -208,9 +204,9 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** Base class for all actions. Actions are used in the "then" and "but"
-    * clauses of a Gherkin example such as in the body of a handler's
-    * `on` clause or in the definition of a Function. The subclasses define
-    * different kinds of actions that can be used.
+    * clauses of a Gherkin example such as in the body of a handler's `on`
+    * clause or in the definition of a Function. The subclasses define different
+    * kinds of actions that can be used.
     */
   trait Action extends DescribedValue
 
@@ -227,33 +223,30 @@ trait AbstractDefinitions extends Terminals {
   trait GherkinClause extends GherkinValue
 
   /** Base trait for option values for any option of a definition.
-   */
+    */
   trait OptionValue extends RiddlValue {
     def name: String
 
     def args: Seq[LiteralString] = Seq.empty[LiteralString]
 
-    override def format: String = name +
-      args.map(_.format).mkString("(", ", ", ")")
+    override def format: String = name + args.map(_.format)
+      .mkString("(", ", ", ")")
   }
 
-
   /** Base trait that can be used in any definition that takes options and
-   * ensures the options are defined, can be queried, and formatted.
-   *
-   * @tparam T
-   * The sealed base trait of the permitted options for this definition
-   */
+    * ensures the options are defined, can be queried, and formatted.
+    *
+    * @tparam T
+    *   The sealed base trait of the permitted options for this definition
+    */
   trait WithOptions[T <: OptionValue] extends Definition {
     def options: Seq[T]
 
-    def hasOption[OPT <: T : ClassTag]: Boolean = options
+    def hasOption[OPT <: T: ClassTag]: Boolean = options
       .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
 
-    def getOptionValue[OPT <: T : ClassTag]: Option[Seq[LiteralString]] =
-      options
-        .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-        .map(_.args)
+    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] = options
+      .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass).map(_.args)
 
     override def format: String = {
       options.size match {
@@ -275,7 +268,7 @@ trait AbstractDefinitions extends Terminals {
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-    extends LeafDefinition with VitalDefinitionDefinition {
+      extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = description.isEmpty
 
     final val kind: String = "Term"
@@ -287,17 +280,19 @@ trait AbstractDefinitions extends Terminals {
     def hasTerms: Boolean = terms.nonEmpty
   }
 
-  /**
-   * A [[RiddlValue]] to record an inclusion of a file while parsing.
-   * @param loc The location of the include statement in the source
-   * @param contents The Vital Definitions read from the file
-   * @param path The [[java.nio.file.Path]] to the file included.
-   */
+  /** A [[RiddlValue]] to record an inclusion of a file while parsing.
+    * @param loc
+    *   The location of the include statement in the source
+    * @param contents
+    *   The Vital Definitions read from the file
+    * @param path
+    *   The [[java.nio.file.Path]] to the file included.
+    */
   case class Include(
     loc: Location = Location(RiddlParserInput.empty),
     contents: Seq[Definition] = Seq.empty[Definition],
     path: Option[Path] = None)
-    extends Definition with VitalDefinitionDefinition {
+      extends Definition with VitalDefinitionDefinition {
 
     def id: Identifier = Identifier.empty
 
@@ -317,30 +312,27 @@ trait AbstractDefinitions extends Terminals {
 
     def containedDefinitions: Seq[Definition] = {
       contents.flatMap {
-        case i: Include =>
-          i.contents
-        case d: Definition =>
-          Seq(d)
+        case i: Include    => i.contents
+        case d: Definition => Seq(d)
       }
     }
   }
 
-
   /** A [[RiddlValue]] that holds the author's information
-   *
-   * @param loc
-   * The location of the author information
-   * @param name
-   * The full name of the author
-   * @param email
-   * The author's email address
-   * @param organization
-   * The name of the organization the author is associated with
-   * @param title
-   * The author's title within the organization
-   * @param url
-   * A URL associated with the author
-   */
+    *
+    * @param loc
+    *   The location of the author information
+    * @param name
+    *   The full name of the author
+    * @param email
+    *   The author's email address
+    * @param organization
+    *   The name of the organization the author is associated with
+    * @param title
+    *   The author's title within the organization
+    * @param url
+    *   A URL associated with the author
+    */
   case class Author(
     loc: Location,
     id: Identifier,
@@ -351,7 +343,7 @@ trait AbstractDefinitions extends Terminals {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-    extends LeafDefinition with VitalDefinitionDefinition {
+      extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
@@ -370,37 +362,37 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** Base trait of any definition that is in the content of an adaptor
-   */
+    */
   trait AdaptorDefinition extends Definition
 
   /** Base trait of any definition that is in the content of a context
-   */
+    */
   trait ContextDefinition extends Definition
 
   /** Base trait of any definition that is in the content of a domain
-   */
+    */
   trait DomainDefinition extends Definition
 
   /** Base trait of any definition that is in the content of an entity.
-   */
+    */
   trait EntityDefinition extends Definition
 
   /** Base trait of any definition that is in the content of a function.
-   */
+    */
   trait FunctionDefinition extends Definition
 
   /** Base trait of definitions that are part of a Handler Definition */
   trait HandlerDefinition extends Definition
 
   /** Base trait of any definition that occurs in the body of a plant
-   */
+    */
   trait PlantDefinition extends Definition
 
   /** Base trait of any definition that occurs in the body of a projection */
   trait ProjectionDefinition extends Definition
 
   /** Base trait of definitions defined in a processor
-   */
+    */
   trait ProcessorDefinition extends Definition
 
   /** Base trait of definitions that are part of a Saga Definition */
@@ -412,34 +404,51 @@ trait AbstractDefinitions extends Terminals {
   /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
 
-  trait VitalDefinitionDefinition extends
-    AdaptorDefinition with ContextDefinition with DomainDefinition with
-    EntityDefinition with FunctionDefinition with HandlerDefinition with
-    PlantDefinition with ProcessorDefinition with ProjectionDefinition with
-    SagaDefinition with StoryDefinition
+  /** Base trait of definitions that can bound scope of a Story */
+  trait StoryCaseScopeRefs
 
-  trait VitalDefinition[T <: OptionValue] extends Definition
-    with WithOptions[T] with WithAuthors with WithIncludes with WithTerms {
-    /**
-     * Compute the 'maturity' of a definition. Maturity is a score with no
-     * maximum but with scoring rules that target 100 points per definition.
-     * Maturity is broken down this
-     * way:
-     * - has a description - up to 50 points depending on # of non empty lines
-     * - has a brief description - 5 points
-     * - has options specified - 5 points
-     * - has terms defined -
-     * - has an author in or above the definition - 5 points
-     * -
-     * - definition specific things: 0.65
-     * @return
-     */
+  /** Base trait of definitions that can be used in a Story */
+  trait StoryCaseUsesRefs
+
+  trait VitalDefinitionDefinition
+      extends AdaptorDefinition
+      with ContextDefinition
+      with DomainDefinition
+      with EntityDefinition
+      with FunctionDefinition
+      with HandlerDefinition
+      with PlantDefinition
+      with ProcessorDefinition
+      with ProjectionDefinition
+      with SagaDefinition
+      with StoryDefinition
+
+  trait VitalDefinition[T <: OptionValue]
+      extends Definition
+      with WithOptions[T]
+      with WithAuthors
+      with WithIncludes
+      with WithTerms {
+
+    /** Compute the 'maturity' of a definition. Maturity is a score with no
+      * maximum but with scoring rules that target 100 points per definition.
+      * Maturity is broken down this way:
+      *   - has a description - up to 50 points depending on # of non empty
+      *     lines
+      *   - has a brief description - 5 points
+      *   - has options specified - 5 points
+      *   - has terms defined -
+      *   - has an author in or above the definition - 5 points
+      * -
+      *   - definition specific things: 0.65
+      * @return
+      */
     def maturity(parents: Seq[Definition]): Int = {
       var score = 0
       if (hasOptions) score += 5
       if (hasTerms) score += 5
       if (description.nonEmpty) {
-        score += 5 + Math.max(description.get.lines.count(_.nonEmpty),50)
+        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
       }
       if (brief.nonEmpty) score += 5
       if (includes.nonEmpty) score += 3
@@ -450,41 +459,33 @@ trait AbstractDefinitions extends Terminals {
 
   final val maxMaturity = 100
 
-  //////////////////////////////////////////////////// UTILITY FUNCTIONS
+  // ////////////////////////////////////////////////// UTILITY FUNCTIONS
 
   private def authorsOfInclude(includes: Seq[Include]): Seq[Author] = {
     for {
       include <- includes
       ai <- include.contents if ai.isInstanceOf[Author]
       authInfo = ai.asInstanceOf[Author]
-    } yield {
-      authInfo
-    }
+    } yield { authInfo }
   }
 
   def authorsOf(defn: Definition): Seq[Author] = {
     defn match {
-      case wa: WithAuthors =>
-        wa.authors ++ (
-          wa match {
-            case wi: WithIncludes =>
-              authorsOfInclude(wi.includes)
-            case _ =>
-              Seq.empty[Author]
+      case wa: WithAuthors => wa.authors ++
+          (wa match {
+            case wi: WithIncludes => authorsOfInclude(wi.includes)
+            case _                => Seq.empty[Author]
           })
       case _ => Seq.empty[Author]
     }
   }
 
   def findAuthors(defn: Definition, parents: Seq[Definition]): Seq[Author] = {
-    if (defn.hasAuthors) {
-      defn.asInstanceOf[WithAuthors].authors
-    } else {
+    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthors].authors }
+    else {
       parents.find(d =>
-        d.isInstanceOf[WithAuthors] &&
-          d.asInstanceOf[WithAuthors].hasAuthors
-      ).map(_.asInstanceOf[WithAuthors].authors)
-        .getOrElse(Seq.empty[Author])
+        d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors
+      ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[Author])
     }
   }
 }

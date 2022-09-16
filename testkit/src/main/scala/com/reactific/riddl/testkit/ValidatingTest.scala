@@ -110,14 +110,12 @@ abstract class ValidatingTest extends ParsingTest {
   }
 
   def parseAndValidateFile(
-    label: String,
     file: File,
     options: CommonOptions = CommonOptions()
   ): Assertion = {
     TopLevelParser.parse(file) match {
       case Left(errors) =>
-        val msgs = errors.iterator.map(_.format).mkString("\n")
-        fail(s"In $label:\n$msgs")
+        fail(errors.format)
       case Right(root) =>
         val messages = Validation.validate(root, options)
         val errors = messages.filter(_.kind.isError)
