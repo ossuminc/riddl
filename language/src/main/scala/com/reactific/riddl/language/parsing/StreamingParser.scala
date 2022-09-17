@@ -35,18 +35,19 @@ trait StreamingParser
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ identifier ~ is ~ typeRef ~/ toEntity.? ~ briefly ~ description
+      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ toEntity.? ~
+        briefly ~ description
     )./.map { tpl => (Inlet.apply _).tupled(tpl) }
-  }.log
+  }
 
   def fromEntity[u: P]: P[EntityRef] = { P(Readability.from ~ entityRef) }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ identifier ~ is ~ typeRef ~/ fromEntity.? ~ briefly ~
-        description
+      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ fromEntity.? ~
+        briefly ~ description
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
-  }.log
+  }
 
   def processorInclude[u: P](
     minInlets: Int = 0,
@@ -66,22 +67,30 @@ trait StreamingParser
     maxOutlets: Int = 0
   ): P[Seq[ProcessorDefinition]] = {
     P(
-      undefined[u, Seq[ProcessorDefinition]](Seq.empty[ProcessorDefinition]) |
-        ((Keywords.inlets ~ open ~ inlet.rep(minInlets, ",", maxInlets) ~ close)
-          .?.map(o => if (o.isEmpty) Seq.empty[Inlet] else o.get) ~
-          (Keywords.outlets ~ open ~ outlet.rep(minOutlets, ",", maxOutlets) ~
-            close).?.map(_.getOrElse(Seq.empty[Outlet])) ~
-          (term.log |
-            processorInclude(minInlets, maxInlets, minOutlets, maxOutlets).log |
-            author.log | example.log).rep(0)).map {
-          case (inlets, outlets, definitions) => outlets ++ inlets ++
-              definitions
-        }
+      (inlet.rep(minInlets, "", maxInlets) ~/
+        outlet.rep(minOutlets, "", maxOutlets) ~/
+        (term | processorInclude(minInlets, maxInlets, minOutlets, maxOutlets) |
+          author | example).rep(0)).map { case (inlets, outlets, definitions) =>
+        inlets ++ outlets ++ definitions
+      }
     )
-  }.log
+  }
 
   def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
     P("").map(_ => Seq.empty[ProcessorOption])
+  }
+
+  def processorBody[u: P](
+    minInlets: Int = 0,
+    maxInlets: Int = 0,
+    minOutlets: Int = 0,
+    maxOutlets: Int = 0
+  ): P[(Seq[ProcessorOption], Seq[ProcessorDefinition])] = {
+    P(
+      undefined((Seq.empty[ProcessorOption], Seq.empty[ProcessorDefinition])) |
+        (processorOptions ~
+          processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets))
+    )
   }
 
   def keywordToKind(keyword: String, location: Location): ProcessorShape = {
@@ -104,10 +113,10 @@ trait StreamingParser
     maxOutlets: Int = 0
   ): P[Processor] = {
     P(
-      location ~ keyword ~/ identifier ~ is ~ open ~ processorOptions ~
-        processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ description
-    ).map { case (location, id, options, definitions, brief, description) =>
+      location ~ keyword ~/ identifier ~ is ~ open ~
+        processorBody(minInlets, maxInlets, minOutlets, maxOutlets) ~ close ~
+        briefly ~ description
+    ).map { case (location, id, (options, definitions), brief, description) =>
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))

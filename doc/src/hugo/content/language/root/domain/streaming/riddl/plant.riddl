@@ -2,16 +2,16 @@ domain AnyDomain is {
 plant SensorMaintenance is {
 
   source GetWeatherForecast is {
-    outlets { Weather is type Forecast }
+    outlet Weather is type Forecast
   } described by "This is a source for Forecast data"
 
   flow GetCurrentTemperature is {
-    inlets { Weather is type Forecast }
-    outlets { CurrentTemp is type Temperature }
+    inlet Weather is type Forecast
+    outlet CurrentTemp is type Temperature
   } explained as "This is a Flow for the current temperature, when it changes"
 
   sink AttenuateSensor is {
-    inlets { CurrentTemp is type Temperature }
+    inlet CurrentTemp is type Temperature
   } explained as "This is a Sink for making sensor adjustments based on temperature"
 
   pipe WeatherForecast is {

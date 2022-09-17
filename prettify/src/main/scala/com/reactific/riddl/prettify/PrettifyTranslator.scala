@@ -194,6 +194,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case step: SagaStep         => openSagaStep(state, step)
         case include: Include       => openInclude(state, include)
         case adaptation: Adaptation => openAdaptation(state, adaptation)
+        case processor: Processor   => openProcessor(state, processor)
         case _: RootContainer       =>
           // ignore
           state
@@ -216,12 +217,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case invariant: Invariant => state.withCurrent(
             _.openDef(invariant).closeDef(invariant, withBrace = false)
           )
-        case pipe: Pipe     => doPipe(state, pipe)
-        case inlet: Inlet   => doInlet(state, inlet)
-        case outlet: Outlet => doOutlet(state, outlet)
-        case joint: Joint   => doJoint(state, joint)
-        case _: Field => state // was handled by Type case in openContainer
-        case _        =>
+        case pipe: Pipe   => doPipe(state, pipe)
+        case joint: Joint => doJoint(state, joint)
+        case _: Field     => state // was handled by Type case in openContainer
+        case _            =>
+          // inlets and outlets handled by openProcessor
           /* require(
             !definition.isInstanceOf[Definition],
             s"doDefinition should not be called for ${definition.getClass.getName}"
@@ -343,6 +343,16 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
+    def openProcessor(
+      state: ReformatState,
+      processor: Processor
+    ): ReformatState = {
+      state.withCurrent { file =>
+        file.openDef(processor)
+        processor.inlets.foreach(doInlet(state, _))
+        processor.outlets.foreach(doOutlet(state, _))
+      }
+    }
     def openOnClause(
       state: ReformatState,
       onClause: OnClause

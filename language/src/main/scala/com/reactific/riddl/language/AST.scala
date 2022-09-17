@@ -1405,7 +1405,7 @@ object AST
       extends VitalDefinition[ProcessorOption]
       with PlantDefinition
       with ContextDefinition {
-    override def contents: Seq[ProcessorDefinition] = outlets ++ inlets ++
+    override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
       examples ++ includes ++ authors ++ terms
     final val kind: String = shape.getClass.getSimpleName
 
@@ -1419,27 +1419,33 @@ object AST
 
     shape match {
       case Source(_) => require(
-          outlets.size == 1 && inlets.isEmpty,
+          isEmpty || (outlets.size == 1 && inlets.isEmpty),
           s"Invalid Source Streamlet ins: ${outlets.size} == 1, ${inlets.size} == 0"
         )
-      case Sink(_) =>
-        require(outlets.isEmpty && inlets.size == 1, "Invalid Sink Streamlet")
-      case Flow(_) =>
-        require(outlets.size == 1 && inlets.size == 1, "Invalid Flow Streamlet")
+      case Sink(_) => require(
+          isEmpty || (outlets.isEmpty && inlets.size == 1),
+          "Invalid Sink Streamlet"
+        )
+      case Flow(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.size == 1),
+          "Invalid Flow Streamlet"
+        )
       case Merge(_) => require(
-          outlets.size == 1 && inlets.size >= 2,
+          isEmpty || (outlets.size == 1 && inlets.size >= 2),
           "Invalid Merge Streamlet"
         )
       case Split(_) => require(
-          outlets.size >= 2 && inlets.size == 1,
+          isEmpty || (outlets.size >= 2 && inlets.size == 1),
           "Invalid Split Streamlet"
         )
       case Multi(_) => require(
-          outlets.size >= 2 && inlets.size >= 2,
+          isEmpty || (outlets.size >= 2 && inlets.size >= 2),
           "Invalid Multi Streamlet"
         )
-      case Void(_) =>
-        require(outlets.isEmpty && inlets.isEmpty, "Invalid Void Stream")
+      case Void(_) => require(
+          isEmpty || (outlets.isEmpty && inlets.isEmpty),
+          "Invalid Void Stream"
+        )
     }
 
   }
