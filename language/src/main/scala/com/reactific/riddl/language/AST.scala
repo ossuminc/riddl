@@ -808,7 +808,6 @@ object AST
   case class Handler(
     loc: Location,
     id: Identifier,
-    applicability: Option[Reference[?]] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[Author] = Seq.empty[Author],
     includes: Seq[Include] = Seq.empty[Include],

@@ -75,7 +75,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |      state only is {
           |        a : ^^^DSimple
           |      }
-          |      handler foo for state ^only is { ??? }
+          |      handler foo is { ??? }
           |    }
           |  }
           |}
@@ -126,7 +126,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers{
           |        state only is {
           |          a : ^^^^^Top
           |        }
-          |        handler foo for state ^only is {
+          |        handler foo  is {
           |          on event ^^blah {
           |            then set ^^only.a to @dSimple
           |          }

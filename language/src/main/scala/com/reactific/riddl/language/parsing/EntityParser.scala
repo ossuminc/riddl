@@ -77,7 +77,7 @@ trait EntityParser extends TypeParser with HandlerParser {
   }
 
   def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(author | entityHandler | function | invariant | typeDef | state |
+    P(author | handler | function | invariant | typeDef | state |
       entityInclude | term )
       .rep
   }

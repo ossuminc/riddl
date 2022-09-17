@@ -21,7 +21,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For FunctionParser */
-trait ProjectionParser extends TypeParser  {
+trait ProjectionParser extends TypeParser with HandlerParser {
 
   def projectionOptions[u:P]: P[Seq[ProjectionOption]] = {
     P("").map(_ => Seq.empty[ProjectionOption])
@@ -30,8 +30,9 @@ trait ProjectionParser extends TypeParser  {
   def projectionInclude[u:P]: P[Include] = {
     include[ProjectionDefinition,u](projectionDefinitions(_))
   }
+
   def projectionDefinitions[u:P]: P[Seq[ProjectionDefinition]] = {
-    P(field | term | author | projectionInclude ).rep(0)
+    P(field | term | author | projectionInclude | handler ).rep(0)
   }
 
   def projectionBody[u:P]:

@@ -20,8 +20,6 @@ import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-import scala.reflect.ClassTag
-
 trait HandlerParser extends GherkinParser with FunctionParser {
 
   def onClauseBody[u:P]: P[Seq[Example]] = {
@@ -45,11 +43,6 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     }
   }
 
-  def handlerApplicability[u:P, K <: Definition : ClassTag]:
-  P[Option[Reference[K]]] = {
-    (Readability.for_ ~ reference[u,K]).?
-  }
-
   def handlerInclude[x: P]: P[Include] = {
     include[HandlerDefinition, x](handlerDefinitions(_))
   }
@@ -64,39 +57,20 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     | (handlerOptions ~ handlerDefinitions )
   }
 
-  def contextHandler[u:P]: P[Handler] = {
+  def handler[u: P]: P[Handler] = {
     P(
-      location ~ Keywords.handler ~/ identifier ~
-        (Readability.for_ ~ projectionRef).? ~ is ~ open ~
+      Keywords.handler ~/ location ~ identifier ~ is ~ open ~
         handlerBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, applicability, (options, definitions), briefly, description) =>
+    ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val includes = mapTo[Include](groups.get(classOf[Include]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
 
-      Handler(loc, id, applicability, clauses,
+      Handler(loc, id, clauses,
         authors, includes, options, terms, briefly, description
       )
-    }
-  }
-
-  def entityHandler[u: P]: P[Handler] = {
-    P(
-      Keywords.handler ~/ location ~ identifier ~
-        (Readability.for_ ~ stateRef).? ~ is ~ open ~
-        handlerBody ~ close ~ briefly ~ description
-    ).map {
-      case (loc, id, applicability, (options, definitions), briefly, description) =>
-        val groups = definitions.groupBy(_.getClass)
-        val authors = mapTo[Author](groups.get(classOf[Author]))
-        val includes = mapTo[Include](groups.get(classOf[Include]))
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
-        Handler(loc, id, applicability, clauses,
-          authors, includes, options, terms, briefly, description
-        )
     }
   }
 }

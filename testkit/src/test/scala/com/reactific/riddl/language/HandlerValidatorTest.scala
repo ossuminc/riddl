@@ -135,28 +135,6 @@ class HandlerValidatorTest extends ValidatingTest {
       }
     }
 
-    "allow an on clause too set state from a correctly typed message field " in {
-      val input =
-        """
-          |domain entityTest is {
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  type EntityCommand is command { foo: Number }
-          |  state HamburgerState = { field1: Number }
-          |  handler doit for state HamburgerState is {
-          |    on command EntityCommand {
-          |      then set ^^HamburgerState.field1 to @^^EntityCommand.foo
-          |    }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
-        msgs.filter(_.kind == Error) must be(empty)
-      }
-    }
-
     "produce an error when on clause sets state from incompatible type of message field" in {
       val input = """
                     |domain entityTest is {
