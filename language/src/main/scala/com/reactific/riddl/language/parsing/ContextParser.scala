@@ -51,7 +51,7 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-      (author | typeDef | contextHandler | entity | adaptor | function | saga |
+      (author | typeDef | handler | entity | adaptor | function | saga |
         plantDefinition | projection | term | contextInclude
       ).rep(0)
     )

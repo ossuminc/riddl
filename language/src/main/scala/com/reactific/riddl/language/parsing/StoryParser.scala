@@ -44,7 +44,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ Readability.is ~ open ~
-        (undefined(()).map(_ =>
+        (undefined(
           (None, None, Seq.empty[StoryCaseUse], Seq.empty[InteractionStep])
         ) |
           ((Keywords.title ~ is ~ literalString).? ~ storyCaseScope.? ~

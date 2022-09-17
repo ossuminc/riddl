@@ -44,8 +44,8 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
     P(open ~ parser.rep(0) ~ close)
   }
 
-  def undefined[u: P, RT](ret: RT): P[RT] = {
-    P(Punctuation.undefinedMark./).map(_ => ret)
+  def undefined[u: P, RT](f: => RT): P[RT] = {
+    P(Punctuation.undefinedMark./).map(_ => f)
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }

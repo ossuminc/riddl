@@ -80,31 +80,34 @@ domain Everything is {
 
       event Inebriated is {}
 
-      state someState is { field:  SomeType }
+      state someState is {
+        fields { field:  SomeType }
+        handler foo is {
+          on command ACommand {
+            example only {
+              given "Something arrives "
+              when misc()
+              then tell event Inebriated() to entity Everything.full.SomeOtherThing
+            }
+          }
+        }
+      }
 
       function whenUnderTheInfluence is {
         requires {n:Nothing}
         returns: {b: Boolean}
       }
-
-      handler foo is {
-        on command ACommand {
-          example only {
-            given "Something arrives "
-            when misc()
-            then tell event Inebriated() to entity Everything.full.SomeOtherThing
-          }
-        }
-      }
     }
 
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
-      state otherThingState is { field: String }
-      handler fee is {
-        on event ItHappened {
-          example only {
-            then set SomeOtherThing.otherThingState.field to @ItHappened.field
+      state otherThingState is {
+        fields { field: String }
+        handler fee is {
+          on event ItHappened {
+            example only {
+              then set SomeOtherThing.otherThingState.field to @ItHappened.field
+            }
           }
         }
       }

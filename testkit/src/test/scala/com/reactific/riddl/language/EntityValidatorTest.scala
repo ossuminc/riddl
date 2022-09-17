@@ -16,7 +16,8 @@ class EntityValidatorTest extends ValidatingTest {
                     |""".stripMargin
       parseAndValidateInContext[Entity](input) {
         case (entity: Entity, rpi, msgs: Messages) =>
-          msgs.count(_.kind.isError) mustBe 2
+          msgs.count(_.kind.isError) mustBe 1
+          msgs.count(_.kind.isMissing) mustBe 2
           entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
           entity.options must contain(EntityIsAggregate((3, 19, rpi)))
@@ -26,12 +27,13 @@ class EntityValidatorTest extends ValidatingTest {
     }
 
     "handle entity with multiple states" in {
-      val input = """entity MultiState is {
-                    |  options(fsm)
-                    |  state foo is { field: String }
-                    |  state bar is { field2: Number }
-                    |  handler fum is { ??? }
-                    |}""".stripMargin
+      val input =
+        """entity MultiState is {
+          |  options(fsm)
+          |  state foo is { fields { field: String  } handler x is {???} }
+          |  state bar is { fields { field2: Number } handler x is {???} }
+          |  handler fum is { ??? }
+          |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
         case (entity: Entity, _, msgs: Messages) =>
           msgs.filter(_.kind.isError) mustBe empty
@@ -39,10 +41,11 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
     "error for finite-state-machine entities without at least two states" in {
-      val input = """entity MultiState is {
-                    |  options(fsm)
-                    |  state foo is { field: String }
-                    |}""".stripMargin
+      val input =
+        """entity MultiState is {
+          |  options(fsm)
+          |  state foo is { fields { field: String } handler x is {???}  }
+          |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
         case (_: Entity, _, msgs: Messages) => assertValidationMessage(
             msgs,
@@ -53,7 +56,9 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
     "catch missing things" in {
-      val input = "entity Hamburger is { state foo is {field:  SomeType } }"
+      val input = """entity Hamburger is {
+                    |  state foo is { fields { field:  SomeType } }
+                    |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
         case (_: Entity, _, msgs: Messages) =>
           assertValidationMessage(
@@ -65,7 +70,7 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Entity 'Hamburger' must define a handler"
+            "State 'foo' must define a handler"
           )
           assertValidationMessage(
             msgs,
@@ -76,17 +81,18 @@ class EntityValidatorTest extends ValidatingTest {
     }
 
     "produce an error for transient entity with empty event handler" in {
-      val input = """
-                    |domain foo is {
-                    |context bar is {
-                    |  entity Hamburger  is {
-                    |    options (aggregate, transient)
-                    |    state field is { field: SomeType }
-                    |    handler foo is {}
-                    |  }
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain foo is {
+          |context bar is {
+          |  entity Hamburger  is {
+          |    options (aggregate, transient)
+          |    state field is { fields { field: SomeType } handler x is {???}  }
+          |    handler foo is {}
+          |  }
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
@@ -95,45 +101,24 @@ class EntityValidatorTest extends ValidatingTest {
         )
       }
     }
-    "validate function examples" in {
-      parseAndValidateInContext[Function]("""
-                                            |  function AnAspect is {
-                                            |    EXAMPLE foobar {
-                                            |      GIVEN "everybody hates me"
-                                            |      AND "I'm depressed"
-                                            |      WHEN "I go fishing"
-                                            |      THEN "I'll just eat worms"
-                                            |      ELSE "I'm happy"
-                                            |    } described as {
-                                            |     "brief description"
-                                            |     "detailed description"
-                                            |    }
-                                            |  } described as "foo"
-                                            |""".stripMargin) {
-        case (feature, _, msgs) =>
-          feature.id.value mustBe "AnAspect"
-          assert(feature.examples.nonEmpty)
-          assert(msgs.isEmpty)
-          assert(msgs.forall(_.message.contains("should have a description")))
-      }
-    }
     "produce correct field references" in {
-      val input = """domain foo is {
-                    |context bar is {
-                    |  type DoIt = command { ??? }
-                    |  type Message = event { a: Integer }
-                    |  entity Hamburger  is {
-                    |    options (aggregate, transient)
-                    |    state field is { field: SomeType }
-                    |    handler baz is {
-                    |      on command DoIt {
-                    |        then tell event Message() to entity Hamburger
-                    |      }
-                    |    }
-                    |  }
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """domain foo is {
+          |context bar is {
+          |  type DoIt = command { ??? }
+          |  type Message = event { a: Integer }
+          |  entity Hamburger  is {
+          |    options (aggregate, transient)
+          |    state field is { fields { field: SomeType } handler x is { ??? } }
+          |    handler baz is {
+          |      on command DoIt {
+          |        then tell event Message() to entity Hamburger
+          |      }
+          |    }
+          |  }
+          |}
+          |}
+          |""".stripMargin
       parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,

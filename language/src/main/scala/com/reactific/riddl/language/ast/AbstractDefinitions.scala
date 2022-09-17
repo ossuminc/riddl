@@ -26,8 +26,7 @@ trait AbstractDefinitions extends Terminals {
 
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
-    )
-    final def nonEmpty: Boolean = !isEmpty
+    ) final def nonEmpty: Boolean = !isEmpty
   }
 
   /** The root trait of all parsable values. If a parser returns something, its
@@ -292,7 +291,7 @@ trait AbstractDefinitions extends Terminals {
     loc: Location = Location(RiddlParserInput.empty),
     contents: Seq[Definition] = Seq.empty[Definition],
     path: Option[Path] = None)
-      extends Definition with VitalDefinitionDefinition {
+      extends Definition with VitalDefinitionDefinition with RootDefinition {
 
     def id: Identifier = Identifier.empty
 
@@ -395,6 +394,8 @@ trait AbstractDefinitions extends Terminals {
     */
   trait ProcessorDefinition extends Definition
 
+  trait RootDefinition extends Definition
+
   /** Base trait of definitions that are part of a Saga Definition */
   trait SagaDefinition extends Definition
 
@@ -403,6 +404,9 @@ trait AbstractDefinitions extends Terminals {
 
   /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
+
+  trait TypeDefinition extends Definition
+
 
   /** Base trait of definitions that can bound scope of a Story */
   trait StoryCaseScopeRefs

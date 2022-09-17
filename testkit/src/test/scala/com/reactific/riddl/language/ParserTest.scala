@@ -222,8 +222,8 @@ class ParserTest extends ParsingTest {
     "allow entity definitions in contexts" in {
       val input = RiddlParserInput("""entity Hamburger is {
                                      |  options ( transient, aggregate )
-                                     |  state foo is { x: String }
-                                     |  handler foo is {}
+                                     |  state foo is { fields { x: String }
+                                     |  handler foo is {} }
                                      |  function AnAspect is {
                                      |    EXAMPLE foo {
                                      |      GIVEN "everybody hates me"
@@ -247,17 +247,16 @@ class ParserTest extends ParsingTest {
               (3, 3, rpi),
               Identifier((3, 9, rpi), "foo"),
               Aggregation(
-                (3, 16, rpi),
+                (3, 18, rpi),
                 Seq(Field(
-                  (3, 18, rpi),
-                  Identifier((3, 18, rpi), "x"),
-                  Strng((3, 21, rpi))
+                  (3, 27, rpi),
+                  Identifier((3, 27, rpi), "x"),
+                  Strng((3, 30, rpi))
                 ))
               ),
-              None
+              Seq.empty[Type],
+              Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "foo")))
             )),
-            handlers =
-              Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "foo"))),
             functions = Seq(Function(
               (5, 3, rpi),
               Identifier((5, 12, rpi), "AnAspect"),
@@ -348,7 +347,13 @@ class ParserTest extends ParsingTest {
                       Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
-                  _, _, _,_,_,_,_,
+                  _,
+                  _,
+                  _,
+                  _,
+                  _,
+                  _,
+                  _,
                   None,
                   None
                 ) =>

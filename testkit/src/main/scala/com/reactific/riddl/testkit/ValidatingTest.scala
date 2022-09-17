@@ -71,11 +71,7 @@ abstract class ValidatingTest extends ParsingTest {
     input: String,
     testCaseName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (
-      RootContainer,
-      RiddlParserInput,
-      Messages
-    ) => Assertion
+  )(validation: (RootContainer, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, testCaseName) match {
       case Left(errors) =>
@@ -94,8 +90,8 @@ abstract class ValidatingTest extends ParsingTest {
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, Messages) => Assertion
-    = (_,msgs) => defaultFail(msgs)
+  )(validation: (RootContainer, Messages) => Assertion =
+      (_, msgs) => defaultFail(msgs)
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
@@ -114,8 +110,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions()
   ): Assertion = {
     TopLevelParser.parse(file) match {
-      case Left(errors) =>
-        fail(errors.format)
+      case Left(errors) => fail(errors.format)
       case Right(root) =>
         val messages = Validation.validate(root, options)
         val errors = messages.filter(_.kind.isError)
@@ -135,7 +130,8 @@ abstract class ValidatingTest extends ParsingTest {
   def assertValidationMessage(
     msgs: Messages,
     searchFor: String
-  )(f: Message => Boolean ): Assertion = {
+  )(f: Message => Boolean
+  ): Assertion = {
     assert(
       msgs.exists(f),
       s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"
@@ -149,7 +145,7 @@ abstract class ValidatingTest extends ParsingTest {
   ): Assertion = {
     assert(
       msgs.exists(m => m.kind == expectedKind && m.message.contains(content)),
-      s"; expecting, but didn't find '$content', in:\n${msgs.mkString("\n")}"
+      s"; expecting, but didn't find '$content', in:\n${msgs.format}"
     )
   }
 }

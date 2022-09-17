@@ -262,14 +262,14 @@ case class MarkdownWriter(
 
   def emitERD(state: State, parents: Seq[Definition]): this.type = {
     h2("Entity Relationships")
-    val typ: Seq[String] = s"${state.id.format} {" +: state.typeEx.fields.map {
-      f =>
-        val typeName = makeTypeName(f.typeEx, parents)
-        val fieldName = f.id.format.replace(" ", "-")
-        val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
-        s"  $typeName $fieldName $comment"
+    val fields = state.aggregation.fields
+    val typ: Seq[String] = s"${state.id.format} {" +: fields.map { f =>
+      val typeName = makeTypeName(f.typeEx, parents)
+      val fieldName = f.id.format.replace(" ", "-")
+      val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
+      s"  $typeName $fieldName $comment"
     } :+ "}"
-    val relationships: Seq[String] = state.typeEx.fields
+    val relationships: Seq[String] = fields
       .map(makeERDRelationship(state.id.format, _, parents)).filter(_.nonEmpty)
     val lines = Seq("erDiagram") ++ typ ++ relationships
     emitMermaidDiagram(lines)
@@ -340,8 +340,7 @@ case class MarkdownWriter(
   def emitBriefly(
     d: Definition,
     parents: Seq[String],
-    @unused
-    level: Int = 2
+    @unused level: Int = 2
   ): this.type = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
     val brief: String = d.brief.map(_.s).getOrElse("Brief description missing.")
@@ -643,7 +642,7 @@ case class MarkdownWriter(
     emitDefDoc(state, this.state.makeParents(parents))
     emitERD(state, parents)
     h2("Fields")
-    emitFields(state.typeEx.fields)
+    emitFields(state.aggregation.fields)
   }
 
   def emitInvariants(invariants: Seq[Invariant]): this.type = {
@@ -675,8 +674,7 @@ case class MarkdownWriter(
   }
 
   def emitFiniteStateMachine(
-    @unused
-    entity: Entity
+    @unused entity: Entity
   ): this.type = { this }
 
   def emitEntity(entity: Entity, parents: Seq[String]): this.type = {
@@ -785,7 +783,7 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(projection, "Projection")
     emitDefDoc(projection, parents)
-    emitFields(projection.fields)
+    emitFields(projection.aggregation.fields)
   }
 
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
