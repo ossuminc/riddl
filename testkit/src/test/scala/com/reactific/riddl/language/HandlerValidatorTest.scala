@@ -13,10 +13,12 @@ class HandlerValidatorTest extends ValidatingTest {
           |domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
-          |  state HamburgerState = { field1: Number, field2: String }
-          |  handler foo is {
-          |    on command EntityCommand { example only { then set field1 to 445 } }
-          |    on event EntityEvent { example only { then set field1 to 678 } }
+          |  state HamburgerState = { 
+          |    fields { field1: Number, field2: String }
+          |    handler foo is {
+          |      on command EntityCommand { example only { then set field1 to 445 } }
+          |      on event EntityEvent { example only { then set field1 to 678 } }
+          |    }
           |  }
           |}
           |}
@@ -44,9 +46,10 @@ class HandlerValidatorTest extends ValidatingTest {
           |domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
-          |  state HamburgerState = { field1: Number }
-          |  handler foo is {
-          |    on event Incoming { example only { then set field1 to 678 } }
+          |  state HamburgerState = { fields { field1: Number } 
+          |    handler foo is {
+          |      on event Incoming { example only { then set field1 to 678 } }
+          |    }
           |  }
           |}
           |}
@@ -68,9 +71,10 @@ class HandlerValidatorTest extends ValidatingTest {
           |context EntityContext is {
           |entity Hamburger is {
           |  type Incoming is String
-          |  state HamburgerState = { field1: Number }
-          |  handler foo is {
-          |    on event Incoming { example only { then set field1 to 678 } }
+          |  state HamburgerState = { fields { field1: Number } 
+          |    handler foo is {
+          |      on event Incoming { example only { then set field1 to 678 } }
+          |    }
           |  }
           |}
           |}
@@ -80,7 +84,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Error,
-          "Reference[Type] 'Incoming'(7:8) should reference an event but is a String type instead"
+          "Reference[Type] 'Incoming'(7:10) should reference an event but is a String type instead"
         )
       }
     }
@@ -90,11 +94,12 @@ class HandlerValidatorTest extends ValidatingTest {
                     |domain entityTest is {
                     |context EntityContext is {
                     |entity Hamburger is {
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on command EntityCommand { example only {
-                    |      then set nonExistingField to 123
-                    |    } }
+                    |  state HamburgerState = { fields { field1: Number } 
+                    |    handler foo is {
+                    |      on command EntityCommand { example only {
+                    |        then set nonExistingField to 123
+                    |      } }
+                    |    }
                     |  }
                     |}
                     |}
@@ -116,11 +121,12 @@ class HandlerValidatorTest extends ValidatingTest {
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  type EntityCommand is command { foo: Number }
-                    |  state HamburgerState = { field1: Number }
-                    |  handler foo is {
-                    |    on command EntityCommand { example only {
-                    |      then set field1 to @bar
-                    |    } }
+                    |  state HamburgerState = { fields { field1: Number  } 
+                    |    handler foo is {
+                    |      on command EntityCommand { example only {
+                    |        then set field1 to @bar
+                    |      } }
+                    |    }
                     |  }
                     |}
                     |}
@@ -141,11 +147,13 @@ class HandlerValidatorTest extends ValidatingTest {
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  type EntityCommand is command { foo: String }
-                    |  state HamburgerState = { field1: Number }
-                    |  handler doit is {
-                    |    on command EntityCommand { example only {
-                    |      then set field1 to @foo
-                    |    } }
+                    |  state HamburgerState = {
+                    |    fields { field1: Number }
+                    |    handler doit is {
+                    |      on command EntityCommand { example only {
+                    |        then set field1 to @foo
+                    |      } }
+                    |    }
                     |  }
                     |}
                     |}

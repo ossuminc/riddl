@@ -53,7 +53,7 @@ class SymbolTableTest extends ParsingTest {
         Seq("whenUnderTheInfluence"),
         "Something"
       )
-      assertRefWithParent[Handler, Entity](Seq("foo"), "Something")
+      assertRefWithParent[Handler, State](Seq("foo"), "someState")
       assertRefWithParent[Type, Entity](Seq("somethingDate"), "Something")
     }
 
@@ -78,18 +78,16 @@ class SymbolTableTest extends ParsingTest {
                   |  }
                   |}""".stripMargin
       val input = RiddlParserInput(src)
-      Riddl.parseAndValidate(input,
-        CommonOptions(showMissingWarnings = false, showStyleWarnings=false)
+      Riddl.parseAndValidate(
+        input,
+        CommonOptions(showMissingWarnings = false, showStyleWarnings = false)
       ) match {
         case Right(model) =>
           model.isRootContainer must be(true)
           model.contents.headOption must not(be(empty))
           model.contents.head.contexts.size must be(1)
-        case Left(errors) =>
-          fail(
-            s"""Failed to parse & validate: " +
-               |${errors.format}""".stripMargin
-            )
+        case Left(errors) => fail(s"""Failed to parse & validate: " +
+                                     |${errors.format}""".stripMargin)
       }
     }
   }

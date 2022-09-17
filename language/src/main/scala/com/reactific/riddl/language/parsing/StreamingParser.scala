@@ -66,7 +66,10 @@ trait StreamingParser
         Seq.empty[Inlet],
         outlets,
         examples,
-        includes, authors, options, terms, // FIXME: Parse these!
+        includes,
+        authors,
+        options,
+        terms, // FIXME: Parse these!
         brief,
         description
       )
@@ -91,7 +94,10 @@ trait StreamingParser
         inlets,
         Seq.empty[Outlet],
         examples,
-        includes, authors, options, terms, // FIXME: Parse these!
+        includes,
+        authors,
+        options,
+        terms, // FIXME: Parse these!
         brief,
         description
       )
@@ -118,7 +124,10 @@ trait StreamingParser
           inlet,
           outlet,
           examples,
-          includes, authors, options, terms, // FIXME: Parse these!
+          includes,
+          authors,
+          options,
+          terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -145,7 +154,10 @@ trait StreamingParser
           inlets,
           outlets,
           examples,
-          includes, authors, options, terms, // FIXME: Parse these!
+          includes,
+          authors,
+          options,
+          terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -172,7 +184,10 @@ trait StreamingParser
           inlets,
           outlets,
           examples,
-          includes, authors, options, terms, // FIXME: Parse these!
+          includes,
+          authors,
+          options,
+          terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -199,7 +214,10 @@ trait StreamingParser
           inlets,
           outlets,
           examples,
-          includes, authors, options, terms, // FIXME: Parse these!
+          includes,
+          authors,
+          options,
+          terms, // FIXME: Parse these!
           brief,
           description
         )
@@ -222,14 +240,14 @@ trait StreamingParser
     }
   }
 
-  def plantOptions[x:P]: P[Seq[PlantOption]] = {
+  def plantOptions[x: P]: P[Seq[PlantOption]] = {
     P("").map(_ => Seq.empty[PlantOption]) // FIXME: Need PlantOptions
   }
   def plantInclude[X: P]: P[Include] = {
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
-  def plantDefinition[u:P]: P[PlantDefinition & ContextDefinition] = {
+  def plantDefinition[u: P]: P[PlantDefinition & ContextDefinition] = {
     P(pipeDefinition | processor | joint)
   }
 
@@ -237,18 +255,17 @@ trait StreamingParser
     P(plantDefinition | term | author | plantInclude).rep(0)
   }
 
-  def plantBody[u: P]: P[(Seq[PlantOption],Seq[PlantDefinition])] = {
-    P( undefined(()).map(_ =>
-      (Seq.empty[PlantOption], Seq.empty[PlantDefinition]))
-      | (plantOptions ~ plantDefinitions)
+  def plantBody[u: P]: P[(Seq[PlantOption], Seq[PlantDefinition])] = {
+    P(
+      undefined((Seq.empty[PlantOption], Seq.empty[PlantDefinition])) |
+        (plantOptions ~ plantDefinitions)
     )
   }
 
-
   def plant[u: P]: P[Plant] = {
     P(
-      location ~ Keywords.plant ~/ identifier ~ is ~ open ~/
-        plantBody ~ close ~ briefly ~ description
+      location ~ Keywords.plant ~/ identifier ~ is ~ open ~/ plantBody ~ close ~
+        briefly ~ description
     ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))

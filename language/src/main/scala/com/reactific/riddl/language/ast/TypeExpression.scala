@@ -166,7 +166,7 @@ trait TypeExpression extends AbstractDefinitions {
     enumVal: Option[Long] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends LeafDefinition {
+      extends LeafDefinition with TypeDefinition {
     override def format: String = id.format
     final val kind: String = "Enumerator"
     override def isEmpty: Boolean = true
@@ -229,7 +229,9 @@ trait TypeExpression extends AbstractDefinitions {
     description: Option[Description] = None)
       extends LeafDefinition
       with AlwaysEmpty
+      with TypeDefinition
       with SagaDefinition
+      with StateDefinition
       with FunctionDefinition
       with ProjectionDefinition {
     override def format: String = s"${id.format}: ${typeEx.format}"

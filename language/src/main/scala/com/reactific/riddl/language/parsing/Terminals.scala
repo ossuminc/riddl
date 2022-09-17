@@ -131,6 +131,7 @@ trait Terminals {
     final val execute = "execute"
     final val explained = "explained"
     final val feature = "feature"
+    final val fields = "fields"
     final val file = "file"
     final val flow = "flow"
     final val function = "function"

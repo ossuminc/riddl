@@ -241,7 +241,15 @@ object Validation {
 
     def validateState(s: State, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents.head, s).checkContainer(parents.headOption, s)
-        .checkDescription(s)
+        .checkAggregation(s.aggregation, s)
+        .addIf(s.aggregation.fields.isEmpty && !s.isEmpty) {
+          Message(
+            s.aggregation.loc,
+            s"${s.identify} must define at least one field"
+          )
+        }.addIf(s.handlers.isEmpty && !s.isEmpty) {
+          Message(s.loc, s"${s.identify} must define a handler")
+        }.checkDescription(s)
     }
 
     def validateFunction(
@@ -288,8 +296,12 @@ object Validation {
       checkContainer(parents.headOption, e).checkOptions[EntityOption](
         e.options,
         e.loc
-      ).addIf(e.handlers.isEmpty && !e.isEmpty) {
-        Message(e.loc, s"${e.identify} must define a handler")
+      ).addIf(e.states.isEmpty && !e.isEmpty) {
+        Message(
+          e.loc,
+          s"${e.identify} must define at least one state",
+          MissingWarning
+        )
       }.addIf(e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty)) {
         Message(e.loc, s"${e.identify} has only empty handlers", MissingWarning)
       }.addIf(e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2) {
@@ -383,20 +395,16 @@ object Validation {
     }
 
     def validateStoryActor(
-      @unused
-      sa: StoryActor,
-      @unused
-      parents: Seq[Definition]
+      @unused sa: StoryActor,
+      @unused parents: Seq[Definition]
     ): ValidationState = {
       // FIXME: need to validate StoryActor
       this
     }
 
     def validateStoryCase(
-      @unused
-      sc: StoryCase,
-      @unused
-      parents: Seq[Definition]
+      @unused sc: StoryCase,
+      @unused parents: Seq[Definition]
     ): ValidationState = {
       this
       // FIXME: need to validate StoryCase
@@ -572,7 +580,7 @@ object Validation {
 
     def checkAggregation(
       agg: Aggregation,
-      typeDef: Definition
+      definition: Definition
     ): ValidationState = {
       checkSequence(agg.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
@@ -580,7 +588,7 @@ object Validation {
           "Field names in aggregates should start with a lower case letter",
           StyleWarning,
           field.loc
-        ).checkTypeExpression(field.typeEx, typeDef).checkDescription(field)
+        ).checkTypeExpression(field.typeEx, definition).checkDescription(field)
       }
     }
 
@@ -1148,8 +1156,7 @@ object Validation {
       case _ => this // not of interest
     }
 
-    @tailrec
-    private def getPathIdType(
+    @tailrec private def getPathIdType(
       id: PathIdentifier,
       parents: Seq[Definition] = parents
     ): Option[TypeExpression] = {
@@ -1163,7 +1170,7 @@ object Validation {
           case Some(f: Function) => f.output
           case Some(t: Type)     => Some(t.typ)
           case Some(f: Field)    => Some(f.typeEx)
-          case Some(s: State)    => Some(s.typeEx)
+          case Some(s: State)    => Some(s.aggregation)
           case Some(Pipe(_, _, tt, _, _)) =>
             val te = tt.map(x => AliasedTypeExpression(x.loc, x.id))
             Some(te.getOrElse(Abstract(id.loc)))

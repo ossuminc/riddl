@@ -152,14 +152,15 @@ object AST
       extends Definition
       with ContextDefinition
       with EntityDefinition
+      with StateDefinition
       with FunctionDefinition
       with DomainDefinition {
-    override def contents: Seq[Definition] = {
+    override def contents: Seq[TypeDefinition] = {
       typ match {
         case Aggregation(_, fields)      => fields
         case Enumeration(_, enumerators) => enumerators
         case MessageType(_, _, fields)   => fields
-        case _                           => Seq.empty[Definition]
+        case _                           => Seq.empty[TypeDefinition]
       }
     }
     def isMessageKind: Boolean = { typ.isInstanceOf[MessageType] }
@@ -821,7 +822,8 @@ object AST
       with StateDefinition
       with ProjectionDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
-    override def contents: Seq[OnClause] = clauses
+    override def contents: Seq[HandlerDefinition] = clauses ++ includes ++
+      terms ++ authors
     final val kind: String = "Handler"
 
     override def maturity(parents: Seq[Definition]): Int = {
@@ -863,14 +865,15 @@ object AST
   case class State(
     loc: Location,
     id: Identifier,
-    typeEx: Aggregation,
-    // TODO: States can have Handlers too
-    // TODO: States should be able to take TypeRef for definition of content
+    aggregation: Aggregation,
+    types: Seq[Type] = Seq.empty[Type],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends EntityDefinition {
 
-    override def contents: Seq[Field] = typeEx.fields
+    override def contents: Seq[StateDefinition] = aggregation.fields ++ types ++
+      handlers
     final val kind: String = "State"
   }
 
@@ -929,7 +932,7 @@ object AST
 
     lazy val contents: Seq[EntityDefinition] = {
       states ++ types ++ handlers ++ functions ++ invariants ++ includes
-      ++ authors
+      ++ authors ++ terms
     }
 
     final val kind: String = "Entity"
@@ -1039,7 +1042,7 @@ object AST
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
       extends Adaptation {
-    def contents: Seq[Definition] = examples
+    def contents: Seq[Example] = examples
     override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
     final val kind: String = "Event Action Adaptation"
   }
@@ -1078,7 +1081,7 @@ object AST
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[AdaptorOption] with ContextDefinition {
-    lazy val contents: Seq[Definition] = {
+    lazy val contents: Seq[AdaptorDefinition] = {
       adaptations ++ includes ++ authors ++ terms
     }
     final val kind: String = "Adaptor"
@@ -1103,8 +1106,8 @@ object AST
   case class Projection(
     loc: Location,
     id: Identifier,
-    fields: Seq[Field],
-    // TODO: Should have a Handler to process queries and updates
+    aggregation: Aggregation,
+    handlers: Seq[Handler] = Seq.empty[Handler],
     authors: Seq[Author] = Seq.empty[Author],
     includes: Seq[Include] = Seq.empty[Include],
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
@@ -1112,15 +1115,15 @@ object AST
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[ProjectionOption] with ContextDefinition {
-    lazy val contents: Seq[Definition] = {
-      fields ++ authors ++ includes ++ terms
+    lazy val contents: Seq[ProjectionDefinition] = {
+      aggregation.fields ++ authors ++ includes ++ terms
     }
     final val kind: String = "Projection"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (fields.nonEmpty) score +=
-        Math.max(fields.count(_.nonEmpty), maxMaturity)
+      if (aggregation.fields.nonEmpty) score +=
+        Math.max(aggregation.fields.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
@@ -1917,6 +1920,7 @@ object AST
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[DomainOption]
+      with RootDefinition
       with WithTypes
       with DomainDefinition {
 

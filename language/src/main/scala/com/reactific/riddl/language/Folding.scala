@@ -34,8 +34,7 @@ object Folding {
   )(f: SimpleDispatch[S]
   ): S = {
     child match {
-      case defn: LeafDefinition =>
-        f(parent, defn, state)
+      case defn: LeafDefinition => f(parent, defn, state)
       case defn: Definition =>
         val result = f(parent, child, state)
         defn.contents.foldLeft(result) { case (next, child) =>
@@ -46,8 +45,7 @@ object Folding {
 
   final def foldLeftWithStack[S](
     value: S,
-    parents: mutable.Stack[Definition] = mutable.Stack
-      .empty[Definition]
+    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
   )(top: Definition
   )(f: (S, Definition, Seq[Definition]) => S
   ): S = {
@@ -57,39 +55,21 @@ object Folding {
       top.contents.foldLeft(initial) { (next, definition) =>
         definition match {
           case i: Include => i.contents.foldLeft(next) {
-            case (n, d: LeafDefinition) =>
-              f(n, d, parents.toSeq)
-            case (n, cd: Definition) =>
-              foldLeftWithStack(n, parents)(cd)(f)
-          }
-          case d: LeafDefinition =>
-            f(next, d, parents.toSeq)
-          case c: Definition =>
-            foldLeftWithStack(next, parents)(c)(f)
+              case (n, d: LeafDefinition) => f(n, d, parents.toSeq)
+              case (n, cd: Definition) => foldLeftWithStack(n, parents)(cd)(f)
+            }
+          case d: LeafDefinition => f(next, d, parents.toSeq)
+          case c: Definition     => foldLeftWithStack(next, parents)(c)(f)
         }
       }
     } finally { parents.pop() }
   }
 
-  /*  final def foldLeft[S](
-    value: S,
-    parents: mutable.Stack[ParentDefOf[Definition]] =
-    mutable.Stack.empty[ParentDefOf[Definition]]
-  )(top: Seq[ParentDefOf[Definition]])(
-    f: (S, Definition, mutable.Stack[ParentDefOf[Definition]]) => S
-  ): S = {
-    top.foldLeft(value) {
-      case (next, definition: ParentDefOf[Definition]) =>
-        foldLeftWithStack(next, parents)(definition)(f)
-    }
-  }*/
-
   final def foldAround[S](
     value: S,
     top: Definition,
     folder: Folder[S],
-    parents: mutable.Stack[Definition] =
-      mutable.Stack.empty[Definition]
+    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
   ): S = {
     // Let them know a container is being opened
     val startState = folder.openContainer(value, top, parents.toSeq)
@@ -132,7 +112,7 @@ object Folding {
 
   trait State[S <: State[?]] {
     def step(f: S => S): S = f(this.asInstanceOf[S])
-    def stepIf(predicate:Boolean = true)(f: S => S): S = {
+    def stepIf(predicate: Boolean = true)(f: S => S): S = {
       if (predicate) f(this.asInstanceOf[S]) else this.asInstanceOf[S]
     }
   }
@@ -175,12 +155,12 @@ object Folding {
           if (isReportStyleWarnings) {
             msgs += msg
             this.asInstanceOf[S]
-          } else {this.asInstanceOf[S]}
+          } else { this.asInstanceOf[S] }
         case MissingWarning =>
           if (isReportMissingWarnings) {
             msgs += msg
             this.asInstanceOf[S]
-          } else {this.asInstanceOf[S]}
+          } else { this.asInstanceOf[S] }
         case _ =>
           msgs += msg
           this.asInstanceOf[S]
@@ -203,7 +183,7 @@ object Folding {
     private def findCandidates(
       n: String,
       pstack: mutable.Stack[Definition],
-      nstack: mutable.Stack[String],
+      nstack: mutable.Stack[String]
     ): Seq[Definition] = {
       // First get the list of candidate matches from the current node
       pstack.headOption match {
@@ -212,15 +192,13 @@ object Folding {
           Seq.empty[Definition]
         case Some(s: AST.State) =>
           // If we're at a entity's state, the state's fields are next
-          s.typeEx.fields
+          s.aggregation.fields
         case Some(Field(_, _, Aggregation(_, fields), _, _)) =>
           // if we're at a field composed of more fields, those fields are it
           fields
-        case Some(Type(_, _, Aggregation(_, fields), _, _)) =>
-          fields
-        case Some(Type(_, _, MessageType(_, _, fields), _, _)) =>
-          fields
-        case Some(OnClause(_, msgRef, _, _, _)) =>
+        case Some(Type(_, _, Aggregation(_, fields), _, _))    => fields
+        case Some(Type(_, _, MessageType(_, _, fields), _, _)) => fields
+        case Some(OnClause(_, msgRef, _, _, _))                =>
           // if we're at an onClause that references a message then we
           // need to push that message's path on the name stack
           nstack.push(n) // undo the pop above
@@ -246,7 +224,7 @@ object Folding {
           val conts = p.asInstanceOf[Container[Definition]].contents
           conts.flatMap {
             case Include(_, contents, _) => contents
-            case d: Definition => Seq(d)
+            case d: Definition           => Seq(d)
           }
         case _ =>
           // anything else isn't searchable so n can't be found
@@ -255,14 +233,14 @@ object Folding {
     }
 
     /** Resolve a PathIdentifier If the path is already resolved or it has no
-     * empty components then we can resolve it from the map or the symbol
-     * table.
-     *
-     * @param pid
-     * The path to consider
-     * @return
-     * Either an error or a definition
-     */
+      * empty components then we can resolve it from the map or the symbol
+      * table.
+      *
+      * @param pid
+      *   The path to consider
+      * @return
+      *   Either an error or a definition
+      */
     def resolveRelativePath(
       pid: PathIdentifier,
       parents: Seq[Definition] = parents
@@ -288,20 +266,19 @@ object Folding {
             case None => // do nothing
             case Some(d) =>
               if (vstack.contains(d)) {
-                this.addError(pid.loc, msg =
-                  s"""Path resolution encountered a loop at ${d.identify}
-                     |  for name '$n' when resolving ${pid.format}
-                     |  in definition context: ${
-                    parents.map(_.identify).mkString("\n    ", "\n    ", "\n")
-                  }
-                     |""".stripMargin)
+                this.addError(
+                  pid.loc,
+                  msg = s"""Path resolution encountered a loop at ${d.identify}
+                           |  for name '$n' when resolving ${pid.format}
+                           |  in definition context: ${parents.map(_.identify)
+                    .mkString("\n    ", "\n    ", "\n")}
+                           |""".stripMargin
+                )
                 pstack.clear()
               } else {
                 val preFindSize = nstack.size
                 val candidates = findCandidates(n, pstack, nstack)
-                if (nstack.size > preFindSize) {
-                  vstack.push(d)
-                }
+                if (nstack.size > preFindSize) { vstack.push(d) }
 
                 // Now find the match, if any, and handle appropriately
                 val found = candidates.find(_.id.value == n)
@@ -318,8 +295,7 @@ object Folding {
         }
       }
       if (pstack.size == 1) {
-        if (pstack.head.isInstanceOf[RootContainer])
-          pstack.pop()
+        if (pstack.head.isInstanceOf[RootContainer]) pstack.pop()
       }
       pstack.toSeq
     }
@@ -335,20 +311,18 @@ object Folding {
         case (d, parents) :: Nil => // list.size == 1
           d +: parents
         case _ => // list.size > 1
-            Seq.empty[Definition]
+          Seq.empty[Definition]
       }
     }
 
     def resolvePath(
-      pid: PathIdentifier, parents: Seq[Definition] = parents
+      pid: PathIdentifier,
+      parents: Seq[Definition] = parents
     ): Seq[Definition] = {
-      if (pid.value.isEmpty) {
-        Seq.empty[Definition]
-      } else if (pid.value.exists(_.isEmpty)) {
+      if (pid.value.isEmpty) { Seq.empty[Definition] }
+      else if (pid.value.exists(_.isEmpty)) {
         resolveRelativePath(pid, parents)
-      } else {
-        resolvePathFromSymbolTable(pid)
-      }
+      } else { resolvePathFromSymbolTable(pid) }
     }
   }
 }
