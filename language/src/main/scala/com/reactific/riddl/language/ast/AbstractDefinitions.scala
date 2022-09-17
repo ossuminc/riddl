@@ -394,6 +394,7 @@ trait AbstractDefinitions extends Terminals {
     */
   trait ProcessorDefinition extends Definition
 
+  /** Base trait of definitions defined at root scope */
   trait RootDefinition extends Definition
 
   /** Base trait of definitions that are part of a Saga Definition */
@@ -406,7 +407,6 @@ trait AbstractDefinitions extends Terminals {
   trait StoryDefinition extends Definition
 
   trait TypeDefinition extends Definition
-
 
   /** Base trait of definitions that can bound scope of a Story */
   trait StoryCaseScopeRefs

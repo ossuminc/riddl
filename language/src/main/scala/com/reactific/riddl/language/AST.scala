@@ -1416,6 +1416,38 @@ object AST
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
+
+    shape match {
+      case Source(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.isEmpty),
+          s"Invalid Source Streamlet ins: ${outlets.size} == 1, ${inlets.size} == 0"
+        )
+      case Sink(_) => require(
+          isEmpty || (outlets.isEmpty && inlets.size == 1),
+          "Invalid Sink Streamlet"
+        )
+      case Flow(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.size == 1),
+          "Invalid Flow Streamlet"
+        )
+      case Merge(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.size >= 2),
+          "Invalid Merge Streamlet"
+        )
+      case Split(_) => require(
+          isEmpty || (outlets.size >= 2 && inlets.size == 1),
+          "Invalid Split Streamlet"
+        )
+      case Multi(_) => require(
+          isEmpty || (outlets.size >= 2 && inlets.size >= 2),
+          "Invalid Multi Streamlet"
+        )
+      case Void(_) => require(
+          isEmpty || (outlets.isEmpty && inlets.isEmpty),
+          "Invalid Void Stream"
+        )
+    }
+
   }
 
   /** A reference to an context's projection definition

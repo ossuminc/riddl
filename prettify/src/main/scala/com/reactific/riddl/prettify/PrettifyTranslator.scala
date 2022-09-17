@@ -194,6 +194,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case step: SagaStep         => openSagaStep(state, step)
         case include: Include       => openInclude(state, include)
         case adaptation: Adaptation => openAdaptation(state, adaptation)
+        case processor: Processor   => openProcessor(state, processor)
         case _: RootContainer       =>
           // ignore
           state
@@ -216,12 +217,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case invariant: Invariant => state.withCurrent(
             _.openDef(invariant).closeDef(invariant, withBrace = false)
           )
-        case pipe: Pipe     => doPipe(state, pipe)
-        case inlet: Inlet   => doInlet(state, inlet)
-        case outlet: Outlet => doOutlet(state, outlet)
-        case joint: Joint   => doJoint(state, joint)
-        case _: Field => state // was handled by Type case in openContainer
-        case _        =>
+        case pipe: Pipe   => doPipe(state, pipe)
+        case joint: Joint => doJoint(state, joint)
+        case _: Field     => state // was handled by Type case in openContainer
+        case _            =>
+          // inlets and outlets handled by openProcessor
           /* require(
             !definition.isInstanceOf[Definition],
             s"doDefinition should not be called for ${definition.getClass.getName}"
@@ -290,17 +290,6 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         }
       }
     }
-    /*
-    shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
-    cases: Seq[StoryCase] = Seq.empty[StoryCase],
-    examples: Seq[Example] = Seq.empty[Example],
-    authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
-    options: Seq[StoryOption] = Seq.empty[StoryOption],
-    terms: Seq[Term] = Seq.empty[Term],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-     */
 
     def closeStory(state: ReformatState, story: Story): ReformatState = {
       state.withCurrent(_.closeDef(story))
@@ -354,6 +343,16 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
+    def openProcessor(
+      state: ReformatState,
+      processor: Processor
+    ): ReformatState = {
+      state.withCurrent { file =>
+        file.openDef(processor)
+        processor.inlets.foreach(doInlet(state, _))
+        processor.outlets.foreach(doOutlet(state, _))
+      }
+    }
     def openOnClause(
       state: ReformatState,
       onClause: OnClause
@@ -425,7 +424,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         if (state.nonEmpty) {
           if (state.aggregation.isEmpty) { s1.add("fields { ??? } ").addNL() }
           else {
-            s1.add("fields ").emitFields(state.aggregation.fields).addNL()
+            s1.addIndent("fields ").emitFields(state.aggregation.fields).addNL()
           }
         }
       }
