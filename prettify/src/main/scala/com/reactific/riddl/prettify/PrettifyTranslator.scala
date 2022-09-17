@@ -290,17 +290,6 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         }
       }
     }
-    /*
-    shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
-    cases: Seq[StoryCase] = Seq.empty[StoryCase],
-    examples: Seq[Example] = Seq.empty[Example],
-    authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
-    options: Seq[StoryOption] = Seq.empty[StoryOption],
-    terms: Seq[Term] = Seq.empty[Term],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-     */
 
     def closeStory(state: ReformatState, story: Story): ReformatState = {
       state.withCurrent(_.closeDef(story))
@@ -425,7 +414,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         if (state.nonEmpty) {
           if (state.aggregation.isEmpty) { s1.add("fields { ??? } ").addNL() }
           else {
-            s1.add("fields ").emitFields(state.aggregation.fields).addNL()
+            s1.addIndent("fields ").emitFields(state.aggregation.fields).addNL()
           }
         }
       }

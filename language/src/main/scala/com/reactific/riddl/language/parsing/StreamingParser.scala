@@ -17,6 +17,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -30,202 +31,161 @@ trait StreamingParser
       briefly ~ description
   }.map { tpl => (Pipe.apply _).tupled(tpl) }
 
+  def toEntity[u: P]: P[EntityRef] = { P(Readability.to ~/ entityRef) }
+
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~/ identifier ~ is ~ typeRef ~/ toEntity.? ~
-        briefly ~ description
-    ).map { tpl => (Inlet.apply _).tupled(tpl) }
-  }
+      location ~ identifier ~ is ~ typeRef ~/ toEntity.? ~ briefly ~ description
+    )./.map { tpl => (Inlet.apply _).tupled(tpl) }
+  }.log
+
+  def fromEntity[u: P]: P[EntityRef] = { P(Readability.from ~ entityRef) }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~/ identifier ~ is ~ typeRef ~/ fromEntity.? ~
-        briefly ~ description
-    ).map { tpl => (Outlet.apply _).tupled(tpl) }
+      location ~ identifier ~ is ~ typeRef ~/ fromEntity.? ~ briefly ~
+        description
+    )./.map { tpl => (Outlet.apply _).tupled(tpl) }
+  }.log
+
+  def processorInclude[u: P](
+    minInlets: Int = 0,
+    maxInlets: Int = 0,
+    minOutlets: Int = 0,
+    maxOutlets: Int = 0
+  ): P[Include] = {
+    include[ProcessorDefinition, u](
+      processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets)(_)
+    )
   }
 
-  def toEntity[u: P]: P[EntityRef] = { P(Readability.to ~/ entityRef) }
-
-  def fromEntity[u: P]: P[EntityRef] = { P(Readability.from ~/ entityRef) }
-
-  def source[u: P]: P[Processor] = {
+  def processorDefinitions[u: P](
+    minInlets: Int = 0,
+    maxInlets: Int = 0,
+    minOutlets: Int = 0,
+    maxOutlets: Int = 0
+  ): P[Seq[ProcessorDefinition]] = {
     P(
-      location ~ Keywords.source ~/ identifier ~ is ~ open ~
-        (outlet.map(Seq(_)) | undefined(Seq.empty[Outlet])) ~ close ~
-        testedWithExamples ~ briefly ~ description
-    ).map { case (location, id, outlets, examples, brief, description) =>
-      // FIXME: make the parsing such that sources include these things
-      val includes = Seq.empty[Include]
-      val authors = Seq.empty[Author]
-      val options = Seq.empty[ProcessorOption]
-      val terms = Seq.empty[Term]
+      undefined[u, Seq[ProcessorDefinition]](Seq.empty[ProcessorDefinition]) |
+        ((Keywords.inlets ~ open ~ inlet.rep(minInlets, ",", maxInlets) ~ close)
+          .?.map(o => if (o.isEmpty) Seq.empty[Inlet] else o.get) ~
+          (Keywords.outlets ~ open ~ outlet.rep(minOutlets, ",", maxOutlets) ~
+            close).?.map(_.getOrElse(Seq.empty[Outlet])) ~
+          (term.log |
+            processorInclude(minInlets, maxInlets, minOutlets, maxOutlets).log |
+            author.log | example.log).rep(0)).map {
+          case (inlets, outlets, definitions) => outlets ++ inlets ++
+              definitions
+        }
+    )
+  }.log
+
+  def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
+    P("").map(_ => Seq.empty[ProcessorOption])
+  }
+
+  def keywordToKind(keyword: String, location: Location): ProcessorShape = {
+    keyword match {
+      case "source" => Source(location)
+      case "sink"   => Sink(location)
+      case "flow"   => Flow(location)
+      case "merge"  => Merge(location)
+      case "split"  => Split(location)
+      case "multi"  => Multi(location)
+      case "void"   => Void(location)
+    }
+  }
+
+  def processorTemplate[u: P](
+    keyword: String,
+    minInlets: Int = 0,
+    maxInlets: Int = 0,
+    minOutlets: Int = 0,
+    maxOutlets: Int = 0
+  ): P[Processor] = {
+    P(
+      location ~ keyword ~/ identifier ~ is ~ open ~ processorOptions ~
+        processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets) ~
+        close ~ briefly ~ description
+    ).map { case (location, id, options, definitions, brief, description) =>
+      val groups = definitions.groupBy(_.getClass)
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
+      val examples = mapTo[Example](groups.get(classOf[Example]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val includes = mapTo[Include](groups.get(classOf[Include]))
       Processor(
         location,
         id,
-        Source(location),
-        Seq.empty[Inlet],
+        keywordToKind(keyword, location),
+        inlets,
         outlets,
         examples,
         includes,
         authors,
         options,
-        terms, // FIXME: Parse these!
+        terms,
         brief,
         description
       )
     }
+  }
+
+  val MaxStreamlets = 1000
+
+  def source[u: P]: P[Processor] = {
+    processorTemplate(Keywords.source, minOutlets = 1, maxOutlets = 1)
   }
 
   def sink[u: P]: P[Processor] = {
-    P(
-      location ~ Keywords.sink ~/ identifier ~ is ~ open ~
-        (inlet.map(Seq(_)) | undefined(Seq.empty[Inlet])) ~ close ~
-        testedWithExamples ~ briefly ~ description
-    ).map { case (location, id, inlets, examples, brief, description) =>
-      // FIXME: make the parsing such that sinks include these things
-      val includes = Seq.empty[Include]
-      val authors = Seq.empty[Author]
-      val options = Seq.empty[ProcessorOption]
-      val terms = Seq.empty[Term]
-      Processor(
-        location,
-        id,
-        Sink(location),
-        inlets,
-        Seq.empty[Outlet],
-        examples,
-        includes,
-        authors,
-        options,
-        terms, // FIXME: Parse these!
-        brief,
-        description
-      )
-    }
+    processorTemplate(Keywords.sink, minInlets = 1, maxInlets = 1)
   }
 
   def flow[u: P]: P[Processor] = {
-    P(
-      location ~ Keywords.flow ~/ identifier ~ is ~ open ~
-        ((inlet.map(Seq(_)) ~ outlet.map(Seq(_))) |
-          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
-        testedWithExamples ~ briefly ~ description
-    ).map {
-      case (location, id, (inlet, outlet), examples, brief, description) =>
-        // FIXME: make the parsing such that flows include these things
-        val includes = Seq.empty[Include]
-        val authors = Seq.empty[Author]
-        val options = Seq.empty[ProcessorOption]
-        val terms = Seq.empty[Term]
-        Processor(
-          location,
-          id,
-          Flow(location),
-          inlet,
-          outlet,
-          examples,
-          includes,
-          authors,
-          options,
-          terms, // FIXME: Parse these!
-          brief,
-          description
-        )
-    }
+    processorTemplate(
+      Keywords.flow,
+      minInlets = 1,
+      maxInlets = 1,
+      minOutlets = 1,
+      maxOutlets = 1
+    )
   }
 
   def split[u: P]: P[Processor] = {
-    P(
-      location ~ Keywords.split ~/ identifier ~ is ~ open ~
-        ((inlet.map(Seq(_)) ~ outlet.rep(2)) |
-          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
-        testedWithExamples ~ briefly ~ description
-    ).map {
-      case (location, id, (inlets, outlets), examples, brief, description) =>
-        // FIXME: make the parsing such that splits include these things
-        val includes = Seq.empty[Include]
-        val authors = Seq.empty[Author]
-        val options = Seq.empty[ProcessorOption]
-        val terms = Seq.empty[Term]
-        Processor(
-          location,
-          id,
-          Split(location),
-          inlets,
-          outlets,
-          examples,
-          includes,
-          authors,
-          options,
-          terms, // FIXME: Parse these!
-          brief,
-          description
-        )
-    }
+    processorTemplate(
+      Keywords.split,
+      minInlets = 1,
+      maxInlets = 1,
+      minOutlets = 2,
+      maxOutlets = MaxStreamlets
+    )
   }
 
   def merge[u: P]: P[Processor] = {
-    P(
-      location ~ Keywords.merge ~/ identifier ~ is ~ open ~
-        ((inlet.rep(2) ~ outlet.map(Seq(_))) |
-          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
-        testedWithExamples ~ briefly ~ description
-    ).map {
-      case (location, id, (inlets, outlets), examples, brief, description) =>
-        // FIXME: make the parsing such that merges include these things
-        val includes = Seq.empty[Include]
-        val authors = Seq.empty[Author]
-        val options = Seq.empty[ProcessorOption]
-        val terms = Seq.empty[Term]
-        Processor(
-          location,
-          id,
-          Merge(location),
-          inlets,
-          outlets,
-          examples,
-          includes,
-          authors,
-          options,
-          terms, // FIXME: Parse these!
-          brief,
-          description
-        )
-    }
+    processorTemplate(
+      Keywords.merge,
+      minInlets = 2,
+      maxInlets = MaxStreamlets,
+      minOutlets = 1,
+      maxOutlets = 1
+    )
   }
 
   def multi[u: P]: P[Processor] = {
-    P(
-      location ~ Keywords.multi ~/ identifier ~ is ~ open ~
-        ((inlet.rep(2) ~ outlet.rep(2)) |
-          undefined((Seq.empty[Inlet], Seq.empty[Outlet]))) ~ close ~
-        testedWithExamples ~ briefly ~ description
-    ).map {
-      case (location, id, (inlets, outlets), examples, brief, description) =>
-        // FIXME: make the parsing such that multis include these things
-        val includes = Seq.empty[Include]
-        val authors = Seq.empty[Author]
-        val options = Seq.empty[ProcessorOption]
-        val terms = Seq.empty[Term]
-        Processor(
-          location,
-          id,
-          Multi(location),
-          inlets,
-          outlets,
-          examples,
-          includes,
-          authors,
-          options,
-          terms, // FIXME: Parse these!
-          brief,
-          description
-        )
-    }
+    processorTemplate(
+      Keywords.multi,
+      minInlets = 2,
+      maxInlets = MaxStreamlets,
+      minOutlets = 2,
+      maxOutlets = MaxStreamlets
+    )
   }
 
+  def void[u: P]: P[Processor] = { processorTemplate(Keywords.void) }
+
   def processor[u: P]: P[Processor] =
-    P(source | flow | sink | merge | split | multi)
+    P(source | flow | sink | merge | split | multi | void)
 
   def joint[u: P]: P[Joint] = {
     P(
