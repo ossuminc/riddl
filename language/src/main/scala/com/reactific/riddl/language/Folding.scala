@@ -22,6 +22,7 @@ import com.reactific.riddl.language.ast.Location
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+// import scala.reflect.ClassTag
 
 object Folding {
 
@@ -324,5 +325,22 @@ object Folding {
         resolveRelativePath(pid, parents)
       } else { resolvePathFromSymbolTable(pid) }
     }
+
+    /*
+    def resolvePathTo[TY <: Definition: ClassTag](
+      pid: PathIdentifier,
+      parents: Seq[Definition] = parents
+    ): Seq[Definition] = {
+      if (pid.value.isEmpty) { Seq.empty[Definition] }
+      else if (pid.value.exists(_.isEmpty)) {
+        resolveRelativePath(pid, parents)
+      } else { resolvePathFromHierarchy(pid) }
+    }
+
+    private def resolvePathFromHierarchy[TY <: Definition: ClassTag](
+      pid: PathIdentifier,
+      parents: Seq[Definition] = parents
+    ): Seq[Definition] = {}
+     */
   }
 }

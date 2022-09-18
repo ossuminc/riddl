@@ -149,5 +149,26 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
           |""".stripMargin
       parseResult(RiddlParserInput(input))
     }
+    "resolve simple path directly" in {
+      val input = """domain D {
+                    |  context C {
+                    |    command DoIt is { value: Number }
+                    |    type Info is { g: Number }
+                    |    entity E is {
+                    |      state S is {
+                    |        fields { f: C.Info }
+                    |        handler E_Handler is {
+                    |          on command DoIt {
+                    |            then set S.f.g to @DoIt.value
+                    |          }
+                    |        }
+                    |      }
+                    |    }
+                    |  }
+                    |}
+                    |""".stripMargin
+      parseResult(RiddlParserInput(input))
+
+    }
   }
 }

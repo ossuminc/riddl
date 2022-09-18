@@ -178,6 +178,12 @@ trait AbstractDefinitions extends Terminals {
     def hasAuthors: Boolean = false
 
     def hasTypes: Boolean = false
+
+    def find[TY <: Definition: ClassTag](name: String): Option[Definition] = {
+      contents.find(d =>
+        d.getClass == classTag[TY].runtimeClass && d.id.value == name
+      )
+    }
   }
 
   trait LeafDefinition extends Definition {
