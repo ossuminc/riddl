@@ -160,16 +160,12 @@ trait AbstractDefinitions extends Terminals {
 
     def kind: String
 
-    def kindId: String = {
-      val name =
-        if (id.isEmpty) { "Anonymous" }
-        else { id.format }
-      s"$kind '$name'"
+    def identify: String = {
+      if (id.isEmpty) { s"Anonymous $kind" }
+      else { s"$kind '${id.format}'" }
     }
 
-    def identify: String = kindId
-
-    def identifyWithLoc: String = s"$kindId at $loc"
+    def identifyWithLoc: String = s"$identify at $loc"
 
     def isImplicit: Boolean = id.value.isEmpty
 
@@ -179,10 +175,8 @@ trait AbstractDefinitions extends Terminals {
 
     def hasTypes: Boolean = false
 
-    def find[TY <: Definition: ClassTag](name: String): Option[Definition] = {
-      contents.find(d =>
-        d.getClass == classTag[TY].runtimeClass && d.id.value == name
-      )
+    def find(name: String): Option[Definition] = {
+      contents.find(_.id.value == name)
     }
   }
 

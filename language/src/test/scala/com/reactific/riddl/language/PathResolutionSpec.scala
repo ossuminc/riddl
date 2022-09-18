@@ -8,8 +8,10 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class PathResolutionSpec extends AnyWordSpec with Matchers {
 
-  def parseResult(
+  def parseAndValidate(
     input: RiddlParserInput
+  )(onFailure: Messages.Messages => Assertion,
+    onSuccess: => Assertion
   ): Assertion = {
     TopLevelParser.parse(input) match {
       case Left(errors) => fail(errors.map(_.format).mkString("\n"))
@@ -17,15 +19,23 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
           model,
           CommonOptions(showMissingWarnings = false, showStyleWarnings = false)
         ) match {
-          case msgs: Messages.Messages if msgs.nonEmpty =>
-            fail(msgs.map(_.format).mkString("\n"))
-          case _ => succeed
+          case msgs: Messages.Messages if msgs.nonEmpty => onFailure(msgs)
+          case _                                        => onSuccess
         }
     }
   }
 
+  def parseResult(
+    input: RiddlParserInput
+  ): Assertion = {
+    parseAndValidate(input)(
+      msgs => fail(msgs.map(_.format).mkString("\n")),
+      succeed
+    )
+  }
+
   "PathResolution" must {
-    "resolve full path" in {
+    "resolve a full path" in {
       val rpi = """domain A {
                   |  domain B {
                   |    domain C {
@@ -33,6 +43,19 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                   |    }
                   |  }
                   |  type APrime = A.B.C.D
+                  |}""".stripMargin
+      parseResult(RiddlParserInput(rpi))
+    }
+
+    "resolve a relative path" in {
+      val rpi = """domain A {
+                  |  domain B {
+                  |    domain C {
+                  |      type D = String
+                  |    }
+                  |    type FromB = B.C.D
+                  |  }
+                  |  
                   |}""".stripMargin
       parseResult(RiddlParserInput(rpi))
     }
@@ -149,17 +172,44 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
           |""".stripMargin
       parseResult(RiddlParserInput(input))
     }
+    "deal with cyclic references" in {
+      val input = """domain A {
+                    |  type T is { tp: ^.TPrime }
+                    |  type TPrime is { t: ^.T }
+                    |  command DoIt is {}
+                    |  context C {
+                    |    entity E {
+                    |      state S {
+                    |        fields {
+                    |          f: ^^^^.TPrime
+                    |        }
+                    |        handler foo is { 
+                    |         on command DoIt {
+                    |           then set A.C.E.S.f to true
+                    |         }
+                    |        }
+                    |      }
+                    |    }    
+                    |  }  
+                    |}  
+                    |""".stripMargin
+      parseAndValidate(RiddlParserInput(input))(
+        _.size mustBe (1),
+        fail("Should have failed")
+      )
+    }
+
     "resolve simple path directly" in {
       val input = """domain D {
                     |  context C {
                     |    command DoIt is { value: Number }
-                    |    type Info is { g: Number }
+                    |    type Info is { g: C.DoIt }
                     |    entity E is {
                     |      state S is {
                     |        fields { f: C.Info }
                     |        handler E_Handler is {
                     |          on command DoIt {
-                    |            then set S.f.g to @DoIt.value
+                    |            then set ^^^S.f.g.value to @DoIt.value
                     |          }
                     |        }
                     |      }

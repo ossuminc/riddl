@@ -687,9 +687,13 @@ object Validation {
         )
       }
 
-    private def formatDefinitions[T <: Definition](list: List[T]): String = {
-      list.map { dfntn => "  " + dfntn.id.value + " (" + dfntn.loc + ")" }
-        .mkString("\n")
+    private def formatDefinitions[T <: Definition](
+      list: List[(T, SymbolTable#Parents)]
+    ): String = {
+      list.map { case (definition, parents) =>
+        "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
+          definition.id.value + " (" + definition.loc + ")"
+      }.mkString("\n")
     }
 
     def resolvePathFromSymTab[T <: Definition: ClassTag](
@@ -728,7 +732,7 @@ object Validation {
             addError(
               pid.loc,
               s"""Path reference '${pid.format}' is ambiguous. Definitions are:
-                 |${formatDefinitions(definitions)}""".stripMargin
+                 |${formatDefinitions(list)}""".stripMargin
             )
             Seq.empty[Definition]
           }
@@ -745,7 +749,7 @@ object Validation {
       val tc = classTag[T].runtimeClass
       def notResolved(): Unit = {
         val message = s"Path '${pid.format}' was not resolved," +
-          s" in ${container.kind} '${container.id.value}'"
+          s" in ${container.identify}"
         val referTo = if (kind.nonEmpty) kind.get else tc.getSimpleName
 
         addError(
@@ -756,38 +760,23 @@ object Validation {
           }
         )
       }
-      if (pid.value.isEmpty) {
-        val message =
-          s"An empty path cannot be resolved to ${article(tc.getSimpleName)} was expected"
-        addError(pid.loc, message)
-      } else if (pid.value.exists(_.isEmpty)) {
-        val resolution = resolvePath(pid)
-        resolution.headOption match {
-          case None =>
-            notResolved()
-            this
-          /* FIXME: Can't know dynamic type at compile time!
-          case Some(x) if x.getClass != tc =>
-            val message = s"Path '${pid.format}' resolved to ${
-              article(
-                x.getClass.getSimpleName)
-            } but ${
-              article(
-                tc.getSimpleName)
-            } was expected"
-            addError(pid.loc, message)
-           */
-          case Some(d) => // class matched, we're good!
-            validator(this, tc, pid, d.getClass, d, None)
-        }
-      } else {
-        val result = resolvePathFromSymTab[T](pid)
-        if (result.isEmpty) {
+
+      val found: Option[Definition] = {
+        if (pid.value.isEmpty) {
+          val message =
+            s"An empty path cannot be resolved to ${article(tc.getSimpleName)}."
+          addError(pid.loc, message)
+          None
+        } else if (pid.value.exists(_.isEmpty)) {
+          resolveRelativePath(pid).headOption
+        } else { resolvePathFromSymTab[T](pid).headOption }
+      }
+
+      found match {
+        case None =>
           notResolved()
           this
-        } else {
-          validator(this, tc, pid, result.head.getClass, result.head, None)
-        }
+        case Some(d) => validator(this, tc, pid, d.getClass, d, None)
       }
     }
 

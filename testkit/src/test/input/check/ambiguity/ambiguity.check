@@ -20,8 +20,8 @@ Missing: ambiguity.riddl(2:3): Context 'ProductInventory' should have a descript
    context ProductInventory is {
    ^
 Error: ambiguity.riddl(9:19): Path reference 'Product' is ambiguous. Definitions are:
-   Product (ambiguity.riddl(3:5))
-   Product (ambiguity.riddl(6:5)):
+   Inventory.ProductInventory.Product (ambiguity.riddl(3:5))
+   Inventory.Vendor.Product (ambiguity.riddl(6:5)):
    type Alias = Id(Product)
                    ^
 Missing: ambiguity.riddl(6:5): Entity 'Product' in Context 'Vendor' should have content:
