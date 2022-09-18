@@ -287,25 +287,6 @@ trait TypeExpression extends AbstractDefinitions {
     override def format: String = s"mapping from ${from.format} to ${to.format}"
   }
 
-  /** A type expression that defines a set of integer values from a minimum
-    * value to a maximum value, inclusively.
-    *
-    * @param loc
-    *   The location of the RangeType type expression
-    * @param min
-    *   The minimum value of the RangeType
-    * @param max
-    *   The maximum value of the RangeType
-    */
-  case class RangeType(
-    loc: Location,
-    min: Long,
-    max: Long)
-      extends TypeExpression {
-    override def format: String = s"range($min,$max)"
-
-  }
-
   /** A type expression whose value is a reference to an instance of an entity.
     *
     * @param loc
@@ -337,6 +318,10 @@ trait TypeExpression extends AbstractDefinitions {
       extends TypeExpression {
     override def format: String =
       s"pattern(${pattern.map(_.format).mkString(", ")})"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Strng]
+    }
   }
 
   /** A type expression for values that ensure a unique identifier for a
@@ -352,6 +337,11 @@ trait TypeExpression extends AbstractDefinitions {
     entityPath: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"Id(${entityPath.format})"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
   }
 
   /** A type expression for an aggregation type expression that is marked as
@@ -403,6 +393,10 @@ trait TypeExpression extends AbstractDefinitions {
     max: Option[Long] = None)
       extends PredefinedType {
     override lazy val kind: String = "String"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
+    }
   }
 
   /** The simplest type expression: Abstract An abstract type expression is one
@@ -417,6 +411,15 @@ trait TypeExpression extends AbstractDefinitions {
     loc: Location)
       extends PredefinedType {
     def kind: String = "Abstract"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = true
+  }
+
+  sealed trait NumericType extends PredefinedType {
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
+    }
   }
 
   /** A predefined type expression for boolean values (true / false)
@@ -424,7 +427,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Bool(loc: Location) extends PredefinedType {
+  case class Bool(loc: Location) extends NumericType {
     def kind: String = "Boolean"
   }
 
@@ -433,7 +436,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the number type expression
     */
-  case class Number(loc: Location) extends PredefinedType {
+  case class Number(loc: Location) extends NumericType {
     def kind: String = "Number"
   }
 
@@ -442,8 +445,30 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the integer type expression
     */
-  case class Integer(loc: Location) extends PredefinedType {
+  case class Integer(loc: Location) extends NumericType {
     def kind: String = "Integer"
+  }
+
+  /** A type expression that defines a set of integer values from a minimum
+    * value to a maximum value, inclusively.
+    *
+    * @param loc
+    *   The location of the RangeType type expression
+    * @param min
+    *   The minimum value of the RangeType
+    * @param max
+    *   The maximum value of the RangeType
+    */
+  case class RangeType(
+    loc: Location,
+    min: Long,
+    max: Long)
+      extends NumericType {
+    override def format: String = s"range($min,$max)"
+    def kind: String = "Range"
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
+    }
   }
 
   /** A predefined type expression for a decimal value including IEEE floating
@@ -452,7 +477,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the decimal integer type expression
     */
-  case class Decimal(loc: Location) extends PredefinedType {
+  case class Decimal(loc: Location) extends NumericType {
     def kind: String = "Decimal"
   }
 
@@ -461,17 +486,25 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the real number type expression
     */
-  case class Real(loc: Location) extends PredefinedType {
+  case class Real(loc: Location) extends NumericType {
     def kind: String = "Real"
   }
+
+  sealed trait TimeType extends PredefinedType
 
   /** A predefined type expression for a calendar date.
     *
     * @param loc
     *   The location of the date type expression.
     */
-  case class Date(loc: Location) extends PredefinedType {
+  case class Date(loc: Location) extends TimeType {
     def kind: String = "Date"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
+      other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
   }
 
   /** A predefined type expression for a clock time with hours, minutes,
@@ -480,8 +513,14 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the time type expression.
     */
-  case class Time(loc: Location) extends PredefinedType {
+  case class Time(loc: Location) extends TimeType {
     def kind: String = "Time"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
+      other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
   }
 
   /** A predefined type expression for a calendar date and clock time
@@ -490,8 +529,14 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the datetime type expression.
     */
-  case class DateTime(loc: Location) extends PredefinedType {
+  case class DateTime(loc: Location) extends TimeType {
     def kind: String = "DateTime"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] ||
+      other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
   }
 
   /** A predefined type expression for a timestamp that records the number of
@@ -500,8 +545,14 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the timestamp
     */
-  case class TimeStamp(loc: Location) extends PredefinedType {
+  case class TimeStamp(loc: Location) extends TimeType {
     def kind: String = "TimeStamp"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
+      other.isInstanceOf[Date] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
   }
 
   /** A predefined type expression for a time duration that records the number
@@ -510,7 +561,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the duration type expression
     */
-  case class Duration(loc: Location) extends PredefinedType {
+  case class Duration(loc: Location) extends TimeType {
     def kind: String = "Duration"
   }
 
@@ -554,6 +605,7 @@ trait TypeExpression extends AbstractDefinitions {
     */
   case class Nothing(loc: Location) extends PredefinedType {
     def kind: String = "Nothing"
-  }
 
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = false
+  }
 }
