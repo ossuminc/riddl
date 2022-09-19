@@ -8,7 +8,6 @@ import org.scalatest.wordspec.AnyWordSpec
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends AnyWordSpec with must.Matchers {
 
-
   "Types" should {
     "support domain definitions" in {
       Domain((0, 0), Identifier((1, 1), "foo")) must be
@@ -34,26 +33,32 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       Optional(
         (0, 0),
         AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String")))
-      ) mustBe
-        Optional((0, 0), AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String"))))
+      ) mustBe Optional(
+        (0, 0),
+        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String")))
+      )
       ZeroOrMore(
         (0, 0),
         AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time")))
-      ) mustBe
-        ZeroOrMore((0, 0), AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time"))))
+      ) mustBe ZeroOrMore(
+        (0, 0),
+        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time")))
+      )
       OneOrMore(
         (0, 0),
         AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL")))
-      ) mustBe
-        OneOrMore((0, 0), AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL"))))
+      ) mustBe OneOrMore(
+        (0, 0),
+        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL")))
+      )
     }
   }
 
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(Location(), Nil).format mustBe ""
-      PathIdentifier(Location(), List("", "foo", "baz"))
-        .format mustBe "^foo.baz"
+      PathIdentifier(Location(), List("", "foo", "baz")).format mustBe
+        "^foo.baz"
       PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe
         "foo.bar.baz"
       PathIdentifier(Location(), List("foo")).format mustBe "foo"
@@ -61,9 +66,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   }
 
   "RootContainer" should {
-    "be at location 0,0" in {
-      RootContainer(Nil).loc mustBe Location.empty
-    }
+    "be at location 0,0" in { RootContainer(Nil).loc mustBe Location.empty }
     "have no description" in { RootContainer(Nil).description mustBe None }
     "have no brief" in { RootContainer(Nil).brief mustBe None }
     "have no id" in { RootContainer(Nil).identify mustBe "Root" }
@@ -150,7 +153,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
             Seq(
               Field(Location(), Identifier(Location(), "a"), Bool(Location()))
             )
-          )),
+          ))
         ))
 
         val invariants = Seq(Invariant(

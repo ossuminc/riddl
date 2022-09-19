@@ -3,23 +3,24 @@
 domain Everything is {
 
   type SomeType is String
-  type DoAThing is command { thingField: Integer }
+  command DoAThing is { thingField: Integer }
 
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
 
   plant APlant is {
-    source Source is { outlet Commands is DoAThing } described by "Data Source"
-    sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    pipe AChannel is { transmit DoAThing } explained as "A Channel"
+    source Source is { outlet Commands is type DoAThing } described by "Data Source"
+    sink Sink is { inlet Commands is type DoAThing } explained as "Data Sink"
+    pipe AChannel is { transmit type DoAThing } explained as "A Channel"
     joint input is outlet Source.Commands to pipe AChannel
     joint output is inlet Sink.Commands from pipe AChannel
   }
 
   story WritingABook is {
-    role is "Author"
+    actor Author is "human" briefly "A scoundrel"
     capability is "edit on the screen"
     benefit is "revise content more easily"
+    case primary is { ??? }
     example one {
       given "I need to write a book"
       when "I am writing the book"
@@ -79,31 +80,34 @@ domain Everything is {
 
       event Inebriated is {}
 
-      state someState is { field:  SomeType }
+      state someState is {
+        fields { field:  SomeType }
+        handler foo is {
+          on command ACommand {
+            example only {
+              given "Something arrives "
+              when misc()
+              then tell event Inebriated() to entity Everything.full.SomeOtherThing
+            }
+          }
+        }
+      }
 
       function whenUnderTheInfluence is {
         requires {n:Nothing}
         returns: {b: Boolean}
       }
-
-      handler foo is {
-        on command ACommand {
-          example only {
-            given "Something arrives "
-            when misc()
-            then tell event Inebriated() to entity Everything.full.SomeOtherThing
-          }
-        }
-      }
     }
 
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
-      state otherThingState is { field: String }
-      handler fee is {
-        on event ItHappened {
-          example only {
-            then set SomeOtherThing.otherThingState.field to @ItHappened.field
+      state otherThingState is {
+        fields { field: String }
+        handler fee is {
+          on event ItHappened {
+            example only {
+              then set SomeOtherThing.otherThingState.field to @ItHappened.field
+            }
           }
         }
       }

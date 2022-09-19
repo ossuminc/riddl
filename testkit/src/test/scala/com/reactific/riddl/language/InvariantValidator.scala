@@ -21,8 +21,8 @@ class InvariantValidator extends ValidatingTest {
         )
         assertValidationMessage(
           msgs,
-          Error,
-          "Entity 'user' must define a handler"
+          MissingWarning,
+          "Entity 'user' must define at least one state"
         )
         assertValidationMessage(
           msgs,

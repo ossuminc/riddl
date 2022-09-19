@@ -20,7 +20,7 @@ object V {
   val jgit = "6.3.0.202209071007-r"
   val lang3 = "3.12.0"
   val pureconfig = "0.17.1"
-  val scalacheck = "1.16.0"
+  val scalacheck = "1.17.0"
   val scalatest = "3.2.12"
   val scopt = "4.1.0"
 }
@@ -46,7 +46,7 @@ object Dep {
 object C {
   def withInfo(p: Project): Project = {
     p.settings(
-      ThisBuild / maintainer := "reid@reactific.com",
+      ThisBuild / maintainer := "reid@ossum.biz",
       ThisBuild / organization := "com.reactific",
       ThisBuild / organizationHomepage :=
         Some(new URL("https://reactific.com/")),
@@ -141,8 +141,9 @@ object C {
     p.configure(withScalaCompile).settings(
       ThisBuild / dynverSonatypeSnapshots := true,
       ThisBuild / dynverSeparator := "-",
+      maintainer := "reid@ossum.biz",
       organization := "com.reactific",
-      organizationName := "Reactific Software LLC",
+      organizationName := "Ossum Inc.",
       organizationHomepage := Some(url("https://riddl.tech")),
       scmInfo := Some(ScmInfo(
         url("https://github.com/reactific/riddl"),

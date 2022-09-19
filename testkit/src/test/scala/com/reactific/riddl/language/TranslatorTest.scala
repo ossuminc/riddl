@@ -4,7 +4,9 @@ import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.testkit.ValidatingTest
-import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.OutputFile
+import com.reactific.riddl.utils.StringLogger
 
 import java.nio.file.Path
 
@@ -35,12 +37,11 @@ class TranslatorTest extends ValidatingTest {
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions
-    ): Either[Messages,Unit] = {
+    ): Either[Messages, Unit] = {
       val state = TestTranslatorState(options)
-      val parents = scala.collection.mutable.Stack
-        .empty[Definition]
+      val parents = scala.collection.mutable.Stack.empty[Definition]
       Folding.foldLeftWithStack(state, parents)(root) {
-        case (state, _/*definition*/, _/*stack*/) =>
+        case (state, _ /*definition*/, _ /*stack*/ ) =>
           // log.info(stack.reverse.mkString(".") + "." + definition.id.format)
           state
       }.generatedFiles
@@ -53,6 +54,7 @@ class TranslatorTest extends ValidatingTest {
   val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
 
   "Translator" should {
+    pending // this needs to move to riddl-examples repository
     for { (name, fileName) <- roots } {
       s"translate $name" in {
         val tt = new TestTranslator
@@ -62,13 +64,13 @@ class TranslatorTest extends ValidatingTest {
           Some(Path.of(s"testkit/target/translator-test").resolve(fileName))
         )
         tt.parseValidateTranslate(
-          inputPath, logger,
-          CommonOptions(showStyleWarnings = false, showMissingWarnings=false),
+          inputPath,
+          logger,
+          CommonOptions(showStyleWarnings = false, showMissingWarnings = false),
           options
         ) match {
-          case Right(_) => succeed
-          case Left(messages) =>
-            fail(messages.mkString(System.lineSeparator()))
+          case Right(_)       => succeed
+          case Left(messages) => fail(messages.format)
         }
       }
     }

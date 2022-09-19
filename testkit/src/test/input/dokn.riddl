@@ -35,16 +35,18 @@ domain dokn is {
             type CompanyEvent is one of { type CompanyAdded }
 
             state CompanyBase is {
+              fields {
                 companyId: CompanyId,
                 mailingAddress: Address,
                 primaryContactName: String,
                 primaryContactPhone: MobileNumber,
                 primaryContactEmail: EmailAddress
-            }
-            handler CompanyBaseHandler is {
-                on command AddCompany {
-                    then publish event CompanyAdded() to dokn.CompanyPlant.CompanyEvents
-                }
+              }
+              handler CompanyBaseHandler is {
+                  on command AddCompany {
+                      then publish event CompanyAdded() to pipe dokn.CompanyPlant.CompanyEvents
+                  }
+              }
             }
         }
     }
@@ -62,25 +64,27 @@ domain dokn is {
             type PlaceDriverOnDuty is command { mobile: MobileNumber }
 
             state DriverBase is {
+              fields {
                 driverId: DriverId,
                 name: String,
                 onDutyTime: TimeStamp,
                 companyId: CompanyId
-            }
-            handler DriverBaseHandler is {
-                on command AddDriverToCompany {
-                  then reply with event DriverAddedToCompany (
-                    name = @AddDriverToCompany.name,
-                    mobile = @AddDriverToCompany.mobile,
-                    companyId = @AddDriverToCompany.companyId
-                  )
-                }
-                on command RemoveDriverFromCompany {
-                  then reply with event DriverRemovedFromCompany(
-                    mobile = @RemoveDriverFromCompany.mobile,
-                    companyId = @RemoveDriverFromCompany.companyId
-                  )
-                }
+              }
+              handler DriverBaseHandler is {
+                  on command AddDriverToCompany {
+                    then reply with event DriverAddedToCompany (
+                      name = @AddDriverToCompany.name,
+                      mobile = @AddDriverToCompany.mobile,
+                      companyId = @AddDriverToCompany.companyId
+                    )
+                  }
+                  on command RemoveDriverFromCompany {
+                    then reply with event DriverRemovedFromCompany(
+                      mobile = @RemoveDriverFromCompany.mobile,
+                      companyId = @RemoveDriverFromCompany.companyId
+                    )
+                  }
+              }
             }
         }
     }
@@ -89,6 +93,7 @@ domain dokn is {
         entity Note is {
             options(event-sourced, available)
             state NoteBase is {
+              fields {
                 noteId: NoteId,
                 locationId: LocationId,
                 companyId: CompanyId,
@@ -96,8 +101,9 @@ domain dokn is {
                 upvoteCount: Integer,
                 downvoteCount: Integer,
                 approved: Boolean
+              }
+              handler NoteBaseHandler is { ??? }
             }
-            handler NoteBaseHandler is { ??? }
         }
     }
 
@@ -105,11 +111,13 @@ domain dokn is {
         entity Media is {
             options(consistent)
             state MediaBase is {
+              fields {
                 mediaId: MediaId,
                 path: String,
                 companyId: CompanyId
+              }
+              handler MediaBaseHandler is { ??? }
             }
-            handler MediaBaseHandler is { ??? }
         }
     }
 
@@ -138,32 +146,34 @@ domain dokn is {
             type LocationNotes is result { notes: NoteList }
 
             state LocationBase is {
+              fields {
                 locationId: LocationId,
                 geohash: LatLong,
                 label: String ,
-                address: ^^^^Address,
+                address: Address,
                 notes: NoteList,
                 ticketCount: Integer,
                 loadingMethod: LoadingMethod
-            }
-            handler Base is {
-                on command AddDeliveryLocation { then reply event DeliveryLocationAdded() }
-                on command ChangeLocationName {
-                    then reply with event LocationNameChanged(
-                        newName = @ChangeLocationName.newName
-                    )
-                }
-                on command ReportTicketReceived { then reply event TicketReportedAtLocation()  }
-                on command ModifyNotesAtLocation {
-                    then reply with event NotesForLocationModified(
-                        note = @ModifyNotesAtLocation.newNote
-                    )
-                }
-                on event LocationAddressReceived {
-                    then set LocationBase.address to @^^LocationAddressReceived.newAddress
-                }
-                on query getLocationDetails { then tell result LocationDetails() to Driver }
-                on query getLocationNotes { then tell result LocationNotes(notes=empty()) to Driver }
+              }
+              handler Base is {
+                  on command AddDeliveryLocation { then reply event DeliveryLocationAdded() }
+                  on command ChangeLocationName {
+                      then reply with event LocationNameChanged(
+                          newName = @ChangeLocationName.newName
+                      )
+                  }
+                  on command ReportTicketReceived { then reply event TicketReportedAtLocation()  }
+                  on command ModifyNotesAtLocation {
+                      then reply with event NotesForLocationModified(
+                          note = @ModifyNotesAtLocation.newNote
+                      )
+                  }
+                  on event LocationAddressReceived {
+                      then set LocationBase.address to @^^LocationAddressReceived.newAddress
+                  }
+                  on query getLocationDetails { then tell result LocationDetails() to entity Driver }
+                  on query getLocationNotes { then tell result LocationNotes(notes=empty()) to entity Driver }
+              }
             }
         }
     }
