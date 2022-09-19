@@ -141,8 +141,9 @@ object C {
     p.configure(withScalaCompile).settings(
       ThisBuild / dynverSonatypeSnapshots := true,
       ThisBuild / dynverSeparator := "-",
+      maintainer := "reid@ossum.biz",
       organization := "com.reactific",
-      organizationName := "Reactific Software LLC",
+      organizationName := "Ossum Inc.",
       organizationHomepage := Some(url("https://riddl.tech")),
       scmInfo := Some(ScmInfo(
         url("https://github.com/reactific/riddl"),
