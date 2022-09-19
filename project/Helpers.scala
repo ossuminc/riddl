@@ -46,7 +46,7 @@ object Dep {
 object C {
   def withInfo(p: Project): Project = {
     p.settings(
-      ThisBuild / maintainer := "reid@reactific.com",
+      ThisBuild / maintainer := "reid@ossum.biz",
       ThisBuild / organization := "com.reactific",
       ThisBuild / organizationHomepage :=
         Some(new URL("https://reactific.com/")),
