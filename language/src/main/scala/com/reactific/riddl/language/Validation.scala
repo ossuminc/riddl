@@ -398,7 +398,9 @@ object Validation {
       @unused sa: StoryActor,
       @unused parents: Seq[Definition]
     ): ValidationState = {
-      // FIXME: need to validate StoryActor
+      checkDefinition(sa, parents.head).checkIf(sa.is_a.isEmpty) { vs =>
+        vs.addMissing(sa.loc, s"${sa.identify} is missing its kind")
+      }.checkDescription(sa)
       this
     }
 
@@ -406,8 +408,21 @@ object Validation {
       @unused sc: StoryCase,
       @unused parents: Seq[Definition]
     ): ValidationState = {
-      this
-      // FIXME: need to validate StoryCase
+      checkDefinition(sc, parents.head).stepIf(sc.nonEmpty) { vs =>
+        vs.checkIf(sc.title.isEmpty)(
+          _.addMissing(sc.loc, s"${sc.identify} is missing a title")
+        )
+        vs.checkIf(sc.uses.isEmpty)(
+          _.addMissing(sc.loc, s"${sc.identify} doesn't use any definitions")
+        )
+        vs.checkIf(sc.scope.isEmpty)(
+          _.addError(sc.loc, s"${sc.identify} does not define a scope")
+        )
+        vs.checkIf(sc.interactions.isEmpty)(_.addMissing(
+          sc.loc,
+          s"${sc.identify} doesn't define any interactions"
+        ))
+      }.checkDescription(sc)
     }
 
     def validatePlant(
@@ -664,20 +679,19 @@ object Validation {
     }
 
     private type SingleMatchValidationFunction = (
-      ValidationState,
-      Class[?],
-      PathIdentifier,
-      Class[? <: Definition],
-      Definition,
-      Option[Definition]
+      /* state:*/ ValidationState,
+      /* classFound:*/ Class[?],
+      /* pathIdSought:*/ PathIdentifier,
+      /* classSought*/ Class[? <: Definition],
+      /* definitionFound*/ Definition
     ) => ValidationState
 
     private val nullSingleMatchingValidationFunction
-      : SingleMatchValidationFunction = (state, _, _, _, _, _) => { state }
+      : SingleMatchValidationFunction = (state, _, _, _, _) => { state }
 
     private val defaultSingleMatchValidationFunction
       : SingleMatchValidationFunction =
-      (state, foundClass, id, defClass, _, _) => {
+      (state, foundClass, id, defClass, _) => {
         state.check(
           foundClass.isAssignableFrom(defClass),
           s"'${id.format}' was expected to be ${article(foundClass.getSimpleName)} but is " +
@@ -712,8 +726,7 @@ object Validation {
             expectedClass,
             pid,
             actualClass,
-            d,
-            None
+            d
           )
           d +: parents
         case list => // list.size > 1
@@ -760,23 +773,22 @@ object Validation {
           }
         )
       }
-
       val found: Option[Definition] = {
         if (pid.value.isEmpty) {
           val message =
-            s"An empty path cannot be resolved to ${article(tc.getSimpleName)}."
+            s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
           addError(pid.loc, message)
           None
         } else if (pid.value.exists(_.isEmpty)) {
           resolveRelativePath(pid).headOption
         } else { resolvePathFromSymTab[T](pid).headOption }
       }
-
       found match {
-        case None =>
+        case None => // no match, report error
           notResolved()
           this
-        case Some(d) => validator(this, tc, pid, d.getClass, d, None)
+        case Some(d) => // class matched, we're good!
+          validator(this, tc, pid, d.getClass, d)
       }
     }
 
@@ -794,7 +806,7 @@ object Validation {
       if (ref.isEmpty) { addError(ref.id.loc, s"${ref.identify} is empty") }
       else {
         checkPathRef[Type](ref.id, topDef, Some(kind.kind)) {
-          (state, _, _, _, defn, _) =>
+          (state, _, _, _, defn) =>
             defn match {
               case Type(_, _, typ, _, _) => typ match {
                   case MessageType(_, mk, _) => state.check(
@@ -1050,31 +1062,18 @@ object Validation {
       defn: Definition
     ): ValidationState = {
       checkArgList(args, defn).checkPathRef[Function](pathId, defn) {
-        (state, foundClass, id, defClass, defn, optN) =>
+        (state, foundClass, id, defClass, defn) =>
           val s = defaultSingleMatchValidationFunction(
             state,
             foundClass,
             id,
             defClass,
-            defn,
-            optN
+            defn
           )
           defn match {
-            case Function(
-                  _,
-                  fid,
-                  Some(Aggregation(_, fields)),
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _
-                ) =>
+            case f: Function if f.input.nonEmpty =>
+              val fid = f.id
+              val fields = f.input.get.fields
               val paramNames = fields.map(_.id.value)
               val argNames = args.args.keys.map(_.value).toSeq
               val s1 = s.check(
@@ -1264,7 +1263,7 @@ object Validation {
     ): ValidationState = {
       val id = messageConstructor.msg.id
       val kind = messageConstructor.msg.messageKind.kind
-      checkPathRef[Type](id, defn, Some(kind)) { (state, _, id, _, defn, _) =>
+      checkPathRef[Type](id, defn, Some(kind)) { (state, _, id, _, defn) =>
         defn match {
           case Type(_, _, typ, _, _) => typ match {
               case mt: MessageType =>

@@ -4,5 +4,8 @@
 # First, everything happens on compile so make it happen
 #> compile
 
+# Try a simple riddlc command
+> riddlc info
+
 # Now do a more detailed check (see build.sbt)
 > checkInfoOutput
