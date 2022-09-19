@@ -45,16 +45,17 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   lazy val compileTask = taskKey[Unit]("A task to invoke riddlc compiler")
 
-  /* FIXME: Make this work
   // Allow riddlc to be run from inside an sbt shell
-  def helloAll = Command.args(
+  def riddlcCommand = Command.args(
     name = "riddlc",
     display = "<options> <command> <args...> ; `riddlc help` for details"
   ) { (state, args) =>
-    runRiddlc(riddlcPath.value, args, riddlcMinVersion.value)
+    val project = Project.extract(state)
+    val path = project.get(riddlcPath)
+    val minVersion = project.get(riddlcMinVersion)
+    runRiddlc(path, args, minVersion)
     state
   }
-   */
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     riddlcPath := file("riddlc"),
@@ -66,6 +67,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       val version = riddlcMinVersion.value
       runRiddlc(execPath, options, version)
     },
+    commands ++= Seq(riddlcCommand),
     Compile / compile := Def.taskDyn {
       val c = (Compile / compile).value
       Def.task {
