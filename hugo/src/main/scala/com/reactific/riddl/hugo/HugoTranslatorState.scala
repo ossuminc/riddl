@@ -42,7 +42,6 @@ case class HugoTranslatorState(
     with PathResolutionState[HugoTranslatorState] {
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
-    if (commonOptions.verbose) { println(s"Adding ${fileName}") }
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
       next.resolve(par)
     }
@@ -142,7 +141,7 @@ case class HugoTranslatorState(
       case _: OnClause => pars + "#" + definition.id.value.toLowerCase
       case _: Field | _: Enumerator | _: Invariant | _: Inlet | _: Outlet |
           _: InletJoint | _: OutletJoint | _: Author | _: SagaStep |
-          _: Include | _: RootContainer | _: Term => pars
+          _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
       case _ => pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor

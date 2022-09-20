@@ -216,7 +216,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
       case _: Example | _: Inlet | _: Outlet | _: InletJoint | _: OutletJoint |
-          _: Author | _: OnClause | _: Include | _: RootContainer =>
+          _: Author | _: OnClause | _: Include[Definition] @unchecked |
+          _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state

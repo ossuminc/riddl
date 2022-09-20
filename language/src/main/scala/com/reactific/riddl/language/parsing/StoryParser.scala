@@ -82,7 +82,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     P("").map(_ => Seq.empty[StoryOption]) // FIXME: What options are needed?
   }
 
-  def storyInclude[u: P]: P[Include] = {
+  def storyInclude[u: P]: P[Include[StoryDefinition]] = {
     include[StoryDefinition, u](storyDefinitions(_))
   }
 
@@ -114,7 +114,9 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
         val groups = definitions.groupBy(_.getClass)
         val authors = mapTo[Author](groups.get(classOf[Author]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include](groups.get(classOf[Include]))
+        val includes = mapTo[Include[StoryDefinition]](groups.get(
+          classOf[Include[StoryDefinition]]
+        ))
         val examples = mapTo[Example](groups.get(classOf[Example]))
         val cases = mapTo[StoryCase](groups.get(classOf[StoryCase]))
         Story(

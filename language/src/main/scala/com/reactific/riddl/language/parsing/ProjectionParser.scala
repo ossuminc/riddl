@@ -28,7 +28,7 @@ trait ProjectionParser extends TypeParser with HandlerParser {
     P("").map(_ => Seq.empty[ProjectionOption])
   }
 
-  def projectionInclude[u: P]: P[Include] = {
+  def projectionInclude[u: P]: P[Include[ProjectionDefinition]] = {
     include[ProjectionDefinition, u](projectionDefinitions(_))
   }
 
@@ -71,7 +71,7 @@ trait ProjectionParser extends TypeParser with HandlerParser {
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-        val includes = mapTo[Include](groups.get(classOf[Include]))
+        val includes = mapTo[Include[ProjectionDefinition]](groups.get(classOf[Include[ProjectionDefinition]]))
         val authors = mapTo[Author](groups.get(classOf[Author]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         Projection(

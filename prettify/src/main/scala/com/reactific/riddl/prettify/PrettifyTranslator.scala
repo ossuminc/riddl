@@ -184,15 +184,16 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): ReformatState = {
       container match {
-        case s: Story               => openStory(state, s)
-        case domain: Domain         => openDomain(state, domain)
-        case adaptor: Adaptor       => openAdaptor(state, adaptor)
-        case typ: Type              => state.current.emitType(typ); state
-        case function: Function     => openFunction(state, function)
-        case st: State              => openState(state, st)
-        case oc: OnClause           => openOnClause(state, oc)
-        case step: SagaStep         => openSagaStep(state, step)
-        case include: Include       => openInclude(state, include)
+        case s: Story           => openStory(state, s)
+        case domain: Domain     => openDomain(state, domain)
+        case adaptor: Adaptor   => openAdaptor(state, adaptor)
+        case typ: Type          => state.current.emitType(typ); state
+        case function: Function => openFunction(state, function)
+        case st: State          => openState(state, st)
+        case oc: OnClause       => openOnClause(state, oc)
+        case step: SagaStep     => openSagaStep(state, step)
+        case include: Include[Definition] @unchecked =>
+          openInclude(state, include)
         case adaptation: Adaptation => openAdaptation(state, adaptation)
         case processor: Processor   => openProcessor(state, processor)
         case _: RootContainer       =>
@@ -236,11 +237,12 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): ReformatState = {
       container match {
-        case _: Type          => state // openContainer did all of it
-        case story: Story     => closeStory(state, story)
-        case st: State        => state.withCurrent(_.closeDef(st))
-        case _: OnClause      => closeOnClause(state)
-        case include: Include => closeInclude(state, include)
+        case _: Type      => state // openContainer did all of it
+        case story: Story => closeStory(state, story)
+        case st: State    => state.withCurrent(_.closeDef(st))
+        case _: OnClause  => closeOnClause(state)
+        case include: Include[Definition] @unchecked =>
+          closeInclude(state, include)
         case adaptation: AdaptorDefinition => closeAdaptation(state, adaptation)
         case _: RootContainer              =>
           // ignore
@@ -440,9 +442,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
-    def openInclude(
+    def openInclude[T <: Definition](
       state: ReformatState,
-      @unused include: Include
+      @unused include: Include[T]
     ): ReformatState = {
       if (!state.options.singleFile) {
         include.path match {
@@ -458,9 +460,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       } else { state }
     }
 
-    def closeInclude(
+    def closeInclude[T <: Definition](
       state: ReformatState,
-      @unused include: Include
+      @unused include: Include[T]
     ): ReformatState = {
       if (!state.options.singleFile) { state.popFile() }
       else { state }

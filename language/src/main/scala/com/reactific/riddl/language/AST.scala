@@ -697,19 +697,21 @@ object AST
     functions: Seq[Function] = Seq.empty[Function],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[FunctionDefinition]] = Seq
+      .empty[Include[FunctionDefinition]],
     options: Seq[FunctionOption] = Seq.empty[FunctionOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[FunctionOption]
+      extends VitalDefinition[FunctionOption, FunctionDefinition]
       with WithTypes
       with EntityDefinition
       with ContextDefinition
       with FunctionDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++ output.map(_.fields)
-        .getOrElse(Seq.empty[Field]) ++ types ++ functions ++ examples
+      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
+        functions ++ examples
     }
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
@@ -811,18 +813,19 @@ object AST
     id: Identifier,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[HandlerDefinition]] = Seq
+      .empty[Include[HandlerDefinition]],
     options: Seq[HandlerOption] = Seq.empty[HandlerOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[HandlerOption]
+      extends VitalDefinition[HandlerOption, HandlerDefinition]
       with ContextDefinition
       with EntityDefinition
       with StateDefinition
       with ProjectionDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
-    override def contents: Seq[HandlerDefinition] = clauses ++ includes ++
+    override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
       terms ++ authors
     final val kind: String = "Handler"
 
@@ -921,17 +924,18 @@ object AST
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[EntityDefinition]] = Seq
+      .empty[Include[EntityDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[EntityOption]
+      extends VitalDefinition[EntityOption, EntityDefinition]
       with ContextDefinition
       with WithTypes {
 
-    lazy val contents: Seq[EntityDefinition] = {
-      states ++ types ++ handlers ++ functions ++ invariants ++ includes
+    override lazy val contents: Seq[EntityDefinition] = {
+      super.contents ++ states ++ types ++ handlers ++ functions ++ invariants
       ++ authors ++ terms
     }
 
@@ -1074,15 +1078,17 @@ object AST
     id: Identifier,
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[AdaptorDefinition]] = Seq
+      .empty[Include[AdaptorDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[AdaptorOption] with ContextDefinition {
-    lazy val contents: Seq[AdaptorDefinition] = {
-      adaptations ++ includes ++ authors ++ terms
+      extends VitalDefinition[AdaptorOption, AdaptorDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[AdaptorDefinition] = {
+      super.contents ++ adaptations ++ authors ++ terms
     }
     final val kind: String = "Adaptor"
 
@@ -1109,14 +1115,16 @@ object AST
     aggregation: Aggregation,
     handlers: Seq[Handler] = Seq.empty[Handler],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[ProjectionDefinition]] = Seq
+      .empty[Include[ProjectionDefinition]],
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[ProjectionOption] with ContextDefinition {
-    lazy val contents: Seq[ProjectionDefinition] = {
-      aggregation.fields ++ authors ++ includes ++ terms
+      extends VitalDefinition[ProjectionOption, ProjectionDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[ProjectionDefinition] = {
+      super.contents ++ aggregation.fields ++ authors ++ terms
     }
     final val kind: String = "Projection"
 
@@ -1215,18 +1223,19 @@ object AST
     processors: Seq[Processor] = Seq.empty[Processor],
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[ContextDefinition]] = Seq
+      .empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
     authors: Seq[Author] = Seq.empty[Author],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[ContextOption]
+      extends VitalDefinition[ContextOption, ContextDefinition]
       with DomainDefinition
       with WithTypes {
-    lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
-      sagas ++ functions ++ terms ++ includes ++ authors ++ projections ++
-      handlers
+    override lazy val contents: Seq[ContextDefinition] = super.contents ++
+      types ++ entities ++ adaptors ++ sagas ++ functions ++ terms ++ authors ++
+      projections ++ handlers
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1396,17 +1405,18 @@ object AST
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[ProcessorDefinition]] = Seq
+      .empty[Include[ProcessorDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     options: Seq[ProcessorOption] = Seq.empty[ProcessorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[ProcessorOption]
+      extends VitalDefinition[ProcessorOption, ProcessorDefinition]
       with PlantDefinition
       with ContextDefinition {
-    override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
-      examples ++ includes ++ authors ++ terms
+    override def contents: Seq[ProcessorDefinition] = super.contents ++
+      inlets ++ outlets ++ examples ++ authors ++ terms
     final val kind: String = shape.getClass.getSimpleName
 
     override def maturity(parents: Seq[Definition]): Int = {
@@ -1595,14 +1605,16 @@ object AST
     inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
     outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[PlantDefinition]] = Seq
+      .empty[Include[PlantDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     options: Seq[PlantOption] = Seq.empty[PlantOption],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[PlantOption] with DomainDefinition {
-    lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
-      outJoints ++ terms ++ includes ++ authors
+      extends VitalDefinition[PlantOption, PlantDefinition]
+      with DomainDefinition {
+    override lazy val contents: Seq[PlantDefinition] = super.contents ++
+      pipes ++ processors ++ inJoints ++ outJoints ++ terms ++ authors
     final val kind: String = "Plant"
 
     override def maturity(parents: Seq[Definition]): Int = {
@@ -1698,15 +1710,16 @@ object AST
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[SagaDefinition]] = Seq.empty[Include[SagaDefinition]],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[SagaOption] with ContextDefinition {
-    lazy val contents: Seq[SagaDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++ output.map(_.fields)
-        .getOrElse(Seq.empty[Field]) ++ sagaSteps ++ authors ++ terms ++
-        includes
+      extends VitalDefinition[SagaOption, SagaDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[SagaDefinition] = {
+      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++
+        authors ++ terms
     }
     final val kind: String = "Saga"
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
@@ -1865,14 +1878,16 @@ object AST
     cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[StoryDefinition]] = Seq
+      .empty[Include[StoryDefinition]],
     options: Seq[StoryOption] = Seq.empty[StoryOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[StoryOption] with DomainDefinition {
+      extends VitalDefinition[StoryOption, StoryDefinition]
+      with DomainDefinition {
     override def contents: Seq[StoryDefinition] = {
-      cases ++ examples ++ authors ++ includes ++ terms ++ {
+      super.contents ++ cases ++ examples ++ authors ++ terms ++ {
         if (userStory.nonEmpty) Seq(userStory.get.actor)
         else Seq.empty[StoryActor]
       }
@@ -1948,17 +1963,18 @@ object AST
     stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[DomainDefinition]] = Seq
+      .empty[Include[DomainDefinition]],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[DomainOption]
+      extends VitalDefinition[DomainOption, DomainDefinition]
       with RootDefinition
       with WithTypes
       with DomainDefinition {
 
-    def contents: Seq[DomainDefinition] = {
-      domains ++ types ++ contexts ++ plants ++ stories ++ terms ++ includes ++
-        authors
+    override lazy val contents: Seq[DomainDefinition] = {
+      super.contents ++ domains ++ types ++ contexts ++ plants ++ stories ++
+        terms ++ authors
     }
     final val kind: String = "Domain"
 
