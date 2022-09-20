@@ -1,10 +1,14 @@
 package com.reactific.riddl.language
 
+import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.Path
 
 class PathResolutionSpec extends AnyWordSpec with Matchers {
 
@@ -55,7 +59,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                   |    }
                   |    type FromB = B.C.D
                   |  }
-                  |  
+                  |
                   |}""".stripMargin
       parseResult(RiddlParserInput(rpi))
     }
@@ -183,18 +187,22 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |        fields {
                     |          f: ^^^^.TPrime
                     |        }
-                    |        handler foo is { 
+                    |        handler foo is {
                     |         on command DoIt {
-                    |           then set A.C.E.S.f to true
+                    |           then set S.f.t to true
                     |         }
                     |        }
                     |      }
-                    |    }    
-                    |  }  
-                    |}  
+                    |    }
+                    |  }
+                    |}
                     |""".stripMargin
       parseAndValidate(RiddlParserInput(input))(
-        _.size mustBe (1),
+        { messages =>
+          messages.format matches "^.*requires assignment compatibility"
+          println(messages.format)
+          messages.size mustBe 1
+        },
         fail("Should have failed")
       )
     }
@@ -208,8 +216,8 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |      state S is {
                     |        fields { f: C.Info }
                     |        handler E_Handler is {
-                    |          on command DoIt {
-                    |            then set ^^^S.f.g.value to @DoIt.value
+                    |          on command C.DoIt {
+                    |            then set S.f.g.value to @C.DoIt.value
                     |          }
                     |        }
                     |      }
@@ -218,6 +226,44 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |}
                     |""".stripMargin
       parseResult(RiddlParserInput(input))
+    }
+    "resolve simple path through an include" in {
+      val eL = Location.empty
+      val root = RootContainer(
+        contents = Seq(Domain(
+          eL,
+          Identifier(eL, "D"),
+          includes = Seq(Include(
+            eL,
+            contents = Seq(
+              Context(
+                eL,
+                Identifier(eL, "C1"),
+                types = Seq(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
+              ),
+              Context(
+                eL,
+                Identifier(eL, "C2"),
+                types = Seq(Type(
+                  eL,
+                  Identifier(eL, "C2_T"),
+                  AliasedTypeExpression(
+                    eL,
+                    PathIdentifier(eL, Seq("D", "C1", "C1_T"))
+                  )
+                ))
+              )
+            ),
+            Some(Path.of("foo"))
+          ))
+        )),
+        Seq.empty[RiddlParserInput]
+      )
+      root.contents.head.contents.length mustBe 2
+      root.contents.head.contents.forall(_.kind == "Context")
+      val messages = Validation.validate(root, CommonOptions())
+      val errors = messages.filter(_.kind >= Messages.Error)
+      if (errors.nonEmpty) fail(errors.format) else succeed
 
     }
   }

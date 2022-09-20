@@ -24,6 +24,8 @@ class TypeValidatorTest extends ValidatingTest {
     "identify undefined type references" in {
       parseAndValidate[Domain]("""
                                  |domain foo is {
+                                 |// type Foo is Number
+                                 |// type Bar is Integer
                                  |type Rename is Bar
                                  |type OneOrMore is many Bar
                                  |type ZeroOrMore is many optional Bar
@@ -33,7 +35,7 @@ class TypeValidatorTest extends ValidatingTest {
                                  |type Order is Id(Bar)
                                  |}
                                  |""".stripMargin) {
-        case (_: Domain, _, msgsAndWarnings: Seq[Message]) =>
+        case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
           val errors = msgsAndWarnings.filter(_.kind == Error)
           assert(errors.size == 9, "Should have 9 errors")
           assert(
@@ -80,7 +82,7 @@ class TypeValidatorTest extends ValidatingTest {
         case (_: Domain, _, msgs: Messages) => assertValidationMessage(
             msgs,
             Error,
-            "'TypeTest' was expected to be an Entity but is a Context instead"
+            "'TypeTest' was expected to be an Entity but is a Context."
           )
       }
     }

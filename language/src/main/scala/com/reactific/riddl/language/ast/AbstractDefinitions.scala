@@ -287,9 +287,9 @@ trait AbstractDefinitions extends Terminals {
     * @param path
     *   The [[java.nio.file.Path]] to the file included.
     */
-  case class Include(
+  case class Include[T <: Definition](
     loc: Location = Location(RiddlParserInput.empty),
-    contents: Seq[Definition] = Seq.empty[Definition],
+    contents: Seq[T] = Seq.empty[T],
     path: Option[Path] = None)
       extends Definition with VitalDefinitionDefinition with RootDefinition {
 
@@ -306,14 +306,10 @@ trait AbstractDefinitions extends Terminals {
   }
 
   /** Added to definitions that support includes */
-  trait WithIncludes extends Container[Definition] {
-    def includes: Seq[Include]
-
-    def containedDefinitions: Seq[Definition] = {
-      contents.flatMap {
-        case i: Include    => i.contents
-        case d: Definition => Seq(d)
-      }
+  trait WithIncludes[T <: Definition] extends Container[T] {
+    def includes: Seq[Include[T]]
+    def contents: Seq[T] = {
+      includes.flatMap(_.contents)
     }
   }
 
@@ -427,11 +423,11 @@ trait AbstractDefinitions extends Terminals {
       with SagaDefinition
       with StoryDefinition
 
-  trait VitalDefinition[T <: OptionValue]
+  trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
       with WithOptions[T]
       with WithAuthors
-      with WithIncludes
+      with WithIncludes[CT]
       with WithTerms {
 
     /** Compute the 'maturity' of a definition. Maturity is a score with no
@@ -465,7 +461,7 @@ trait AbstractDefinitions extends Terminals {
 
   // ////////////////////////////////////////////////// UTILITY FUNCTIONS
 
-  private def authorsOfInclude(includes: Seq[Include]): Seq[Author] = {
+  private def authorsOfInclude(includes: Seq[Include[?]]): Seq[Author] = {
     for {
       include <- includes
       ai <- include.contents if ai.isInstanceOf[Author]
@@ -477,7 +473,7 @@ trait AbstractDefinitions extends Terminals {
     defn match {
       case wa: WithAuthors => wa.authors ++
           (wa match {
-            case wi: WithIncludes => authorsOfInclude(wi.includes)
+            case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
             case _                => Seq.empty[Author]
           })
       case _ => Seq.empty[Author]
