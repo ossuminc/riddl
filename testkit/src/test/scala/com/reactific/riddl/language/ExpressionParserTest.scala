@@ -103,7 +103,7 @@ class ExpressionParserTest extends ParsingTest {
     }
     "accept pow abstract binary" in {
       parseExpression("pow(2,3)") { expr: Expression =>
-        expr mustBe ArithmeticOperator(
+        expr mustBe NumberFunction(
           Location(1 -> 1),
           "pow",
           Seq(
@@ -127,17 +127,11 @@ class ExpressionParserTest extends ParsingTest {
         )
       }
     }
-    "accept arithmetic expression with 0 number of args" in {
-      parseExpression("now()") { expr: Expression =>
-        expr mustBe
-          ArithmeticOperator(Location(1 -> 1), "now", Seq.empty[Expression])
-      }
-    }
     "accept arbitrary expression with many  args" in {
       parseExpression("wow(0,0,0,0,0,0)") { expr: Expression =>
         expr mustBe ArbitraryOperator(
           Location(1 -> 1),
-          LiteralString(1->1,"wow"),
+          LiteralString(1 -> 1, "wow"),
           Seq(
             LiteralInteger(Location(1 -> 5), 0),
             LiteralInteger(Location(1 -> 7), 0),
@@ -164,6 +158,25 @@ class ExpressionParserTest extends ParsingTest {
         )
       }
     }
-
+    "accept the now() operator" in {
+      parseExpression("now()") { expr: Expression =>
+        expr mustBe TimeStampFunction(1 -> 1, "now", Seq.empty[Expression])
+      }
+    }
+    "accept the today() operator" in {
+      parseExpression("today()") { expr: Expression =>
+        expr mustBe DateFunction(1 -> 1, "today", Seq.empty[Expression])
+      }
+    }
+    "accept the random() operator" in {
+      parseExpression("random()") { expr: Expression =>
+        expr mustBe NumberFunction(1 -> 1, "random", Seq.empty[Expression])
+      }
+    }
+    "accept the length() operator" in {
+      parseExpression("length()") { expr: Expression =>
+        expr mustBe StringFunction(1 -> 1, "length", Seq.empty[Expression])
+      }
+    }
   }
 }

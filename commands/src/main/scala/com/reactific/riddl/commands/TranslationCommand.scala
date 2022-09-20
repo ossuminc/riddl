@@ -15,7 +15,10 @@
  */
 package com.reactific.riddl.commands
 
-import com.reactific.riddl.language.{CommonOptions, Messages, Riddl, TranslatingOptions}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.Riddl
+import com.reactific.riddl.language.TranslatingOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.Logger
@@ -31,26 +34,32 @@ object TranslationCommand {
   }
 }
 
-/**
- * An abstract base class for translation style commands. That is, they
- * translate an input file into an output directory of files.
- * @param name The name of the command to pass to [[CommandPlugin]]
- * @tparam OPT The option type for the command
- */
-abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](name: String)
-  extends CommandPlugin[OPT](name) {
+/** An abstract base class for translation style commands. That is, they
+  * translate an input file into an output directory of files.
+  * @param name
+  *   The name of the command to pass to [[CommandPlugin]]
+  * @tparam OPT
+  *   The option type for the command
+  */
+abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
+  name: String)
+    extends CommandPlugin[OPT](name) {
 
-  /**
-   * Implement this in your subclass to do the translation. The input will have
-   * been parsed and validated already so the job is to translate the root
-   * argument into the directory of files.
-   *
-   * @param root The RootContainer providing the parsed/validated input
-   * @param log A Logger to use for messages. Use sparingly, not for errors
-   * @param commonOptions The options common to all commands
-   * @param options The options specific to your subclass implementation
-   * @return A Right[Unit] if successful or Left[Messages] if not
-   */
+  /** Implement this in your subclass to do the translation. The input will have
+    * been parsed and validated already so the job is to translate the root
+    * argument into the directory of files.
+    *
+    * @param root
+    *   The RootContainer providing the parsed/validated input
+    * @param log
+    *   A Logger to use for messages. Use sparingly, not for errors
+    * @param commonOptions
+    *   The options common to all commands
+    * @param options
+    *   The options specific to your subclass implementation
+    * @return
+    *   A Right[Unit] if successful or Left[Messages] if not
+    */
   protected def translateImpl(
     root: RootContainer,
     log: Logger,
@@ -66,63 +75,33 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
-    val showTimes = commonOptions.showTimes
-    val options = if (outputDirOverride.nonEmpty) {
-      overrideOptions(originalOptions, outputDirOverride.get)
-    } else { originalOptions }
-    Riddl.timer(stage = "translate", showTimes) {
+    val options =
+      if (outputDirOverride.nonEmpty) {
+        overrideOptions(originalOptions, outputDirOverride.get)
+      } else { originalOptions }
+
+    val msgs1 =
+      if (options.inputFile.isEmpty) {
+        Messages.errors("An input path was not provided.")
+      } else { Messages.empty }
+    val msgs2 =
+      if (options.outputDir.isEmpty) {
+        Messages.errors("An output path was not provided.")
+      } else { Messages.empty }
+
+    val messages = msgs1 ++ msgs2
+
+    if (messages.nonEmpty) {
+      Left(messages) // no point even parsing if there are option errors
+    } else {
       options.withInputFile { inputFile: Path =>
         Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
-          val msgs1 = if (options.inputFile.isEmpty) {
-               Messages.errors("An input path was not provided.")
-             } else { Messages.empty }
-          val msgs2 = if (options.outputDir.isEmpty) {
-                 Messages.errors("An output path was not provided.")
-               } else { Messages.empty }
-          val messages = msgs1 ++ msgs2
-          if (messages.nonEmpty) {
-            Left(messages)
-          } else {
-            if (commonOptions.verbose) {
-              val domains = root.contents.map(_.id.value).mkString(", ")
-              log.info(s"Starting translation of domains: $domains")
-            }
+          val showTimes = commonOptions.showTimes
+          Riddl.timer(stage = "translate", showTimes) {
             translateImpl(root, log, commonOptions, options)
           }
         }
       }
     }
   }
-
- /*
-  def getOptions(log: Logger): (OParser[Unit, OPT], OPT) = {
-    import builder.*
-    cmd(name)
-      .children(
-        arg[File]("input-file").action((f, opt) =>
-      opt.copy(inputFile = Some(f.toPath))
-    )) -> InputFileCommandPlugin.Options()
-  }
-
-  override def getConfigReader(
-    log: Logger
-  ): ConfigReader[OPT] = { (cur: ConfigCursor) =>
-    {
-      for {
-        topCur <- cur.asObjectCursor
-        topRes <- topCur.atKey(name)
-        objCur <- topRes.asObjectCursor
-        inFileRes <- objCur.atKey("input-file").map(_.asString)
-        inFile <- inFileRes
-        outDirRes <- objCur.atKey("output-dir").map(_.asString)
-        outDir <- outDirRes
-        projNameRes <- objCur.atKey("project-name").map(_.asString)
-        projName <- projNameRes
-      } yield {
-        projNameRes
-      }
-    }
-  }
-  */
-
 }

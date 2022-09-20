@@ -29,8 +29,7 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST
-    extends ast.Expressions with ast.TypeExpression with parsing.Terminals {
+object AST extends ast.Expressions with parsing.Terminals {
 
   /** Base trait of any definition that is a container and contains types
     */
@@ -262,7 +261,10 @@ object AST
     * @param args
     *   An argument list that should correspond to teh fields of the message
     */
-  case class MessageConstructor(msg: MessageRef, args: ArgList = ArgList())
+  case class MessageConstructor(
+    loc: Location,
+    msg: MessageRef,
+    args: ArgList = ArgList())
       extends RiddlNode {
     override def format: String = msg.format + {
       if (args.nonEmpty) { args.format }
