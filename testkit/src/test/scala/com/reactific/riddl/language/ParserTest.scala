@@ -213,6 +213,7 @@ class ParserTest extends ParsingTest {
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
             Some(ArbitraryCondition(
+              (1, 22, rpi),
               LiteralString((1, 22, rpi), "x is greater or equal to 10")
             )),
             None
@@ -276,6 +277,7 @@ class ParserTest extends ParsingTest {
                 Seq(WhenClause(
                   (9, 7, rpi),
                   ArbitraryCondition(
+                    (9, 12, rpi),
                     LiteralString((9, 12, rpi), "I go fishing")
                   )
                 )),

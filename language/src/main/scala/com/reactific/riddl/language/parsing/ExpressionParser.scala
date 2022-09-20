@@ -18,6 +18,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -45,7 +46,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def arbitraryCondition[u: P]: P[ArbitraryCondition] = {
-    P(literalString).map(ls => ArbitraryCondition(ls))
+    P(literalString).map(ls => ArbitraryCondition(ls.loc, ls))
   }
 
   def arguments[u: P]: P[ArgList] = {
@@ -175,15 +176,12 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     }
   }
 
-  def knownOperatorName[u: P]: P[String] = { StringIn("pow", "now").! }
-
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
-          Operators.div.! | Operators.mod.! | knownOperatorName) ~
-        Punctuation.roundOpen ~ expression.rep(0, Punctuation.comma) ~
-        Punctuation.roundClose
+          Operators.div.! | Operators.mod.!) ~ Punctuation.roundOpen ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
@@ -202,11 +200,45 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     ).map(tpl => (GroupExpression.apply _).tupled(tpl))
   }
 
+  def functionCall[u: P](
+    names: => P[String]
+  ): P[(Location, String, Seq[Expression])] = {
+    P(
+      location ~ names ~ Punctuation.roundOpen ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
+    )
+  }
+
+  def knownTimestamps[u: P]: P[TimeStampFunction] = {
+    P(functionCall(StringIn("now").!).map { tpl =>
+      (TimeStampFunction.apply _).tupled(tpl)
+    })
+  }
+
+  def knownDates[u: P]: P[DateFunction] = {
+    functionCall(StringIn("today").!).map { tpl =>
+      (DateFunction.apply _).tupled(tpl)
+    }
+  }
+
+  def knownNumbers[u: P]: P[NumberFunction] = {
+    functionCall(StringIn("random", "pow").!).map { tpl =>
+      (NumberFunction.apply _).tupled(tpl)
+    }
+  }
+
+  def knownStrings[u: P]: P[StringFunction] = {
+    functionCall(StringIn("length").!).map { tpl =>
+      (StringFunction.apply _).tupled(tpl)
+    }
+  }
+
   def expression[u: P]: P[Expression] = {
     P(
       terminalExpression | aggregateConstruction | ternaryExpression |
-        groupExpression | arithmeticOperator | arbitraryOperator |
-        functionCallExpression
+        groupExpression | arithmeticOperator | knownTimestamps | knownDates |
+        knownNumbers | knownStrings | arbitraryOperator | functionCallExpression
     )
   }
+
 }

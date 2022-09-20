@@ -1146,16 +1146,8 @@ object Validation {
 
     def getExpressionType(expr: Expression): Option[TypeExpression] = {
       expr match {
-        case ne: NumericExpression => ne match {
-            case LiteralInteger(loc, _)        => Some(Integer(loc))
-            case LiteralDecimal(loc, _)        => Some(Decimal(loc))
-            case ArithmeticOperator(loc, _, _) => Some(Number(loc))
-          }
-        case cond: Condition                    => Some(Bool(cond.loc))
         case EntityIdExpression(loc, pid)       => Some(UniqueId(loc, pid))
         case ValueExpression(_, path)           => getPathIdType(path)
-        case ae: ArbitraryExpression            => Some(Abstract(ae.loc))
-        case ao: ArbitraryOperator              => Some(Abstract(ao.loc))
         case FunctionCallExpression(_, name, _) => getPathIdType(name)
         case GroupExpression(loc, expressions)  =>
           // the type of a group is the last expression but it could be empty
@@ -1163,7 +1155,6 @@ object Validation {
             case None       => Some(Abstract(loc))
             case Some(expr) => getExpressionType(expr)
           }
-        case UndefinedExpression(loc)                   => Some(Abstract(loc))
         case AggregateConstructionExpression(_, pid, _) => getPathIdType(pid)
         case Ternary(loc, _, expr1, expr2) =>
           val expr1Ty = getExpressionType(expr1)
@@ -1180,6 +1171,7 @@ object Validation {
             )
             None
           }
+        case e: Expression => Some(e.expressionType)
       }
     }
 
@@ -1229,7 +1221,7 @@ object Validation {
                   unset.filterNot(_.isImplicit).foldLeft(state) {
                     (next, field) =>
                       next.addError(
-                        field.loc,
+                        messageConstructor.loc,
                         s"${field.identify} was not set in message constructor"
                       )
                   }
