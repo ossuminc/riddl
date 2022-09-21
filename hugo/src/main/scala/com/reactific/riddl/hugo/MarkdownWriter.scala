@@ -20,7 +20,9 @@ import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
+import com.reactific.riddl.utils.PathUtils
 
+import java.nio.file.Files
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.SortedMap
@@ -275,22 +277,21 @@ case class MarkdownWriter(
     emitMermaidDiagram(lines)
   }
 
-  case class Level(
+  private case class Level(
     name: String,
-    brief: String,
-    link: String,
+    value: Long,
     children: Seq[Level]) {
     override def toString: String = {
-      s"{name:\"$name\", brief:\"$brief\",link: \"$link\",children: [${children
-        .map(_.toString).mkString(",")}]}"
+      s"{name:\"$name\",value:$value,children:[${children.map(_.toString).mkString(",")}]}"
     }
   }
 
-  def makeData(container: Definition, parents: Seq[String]): Level = {
+  private def makeData(container: Definition, parents: Seq[String]): Level = {
+    val href = this.state.makeDocLink(container, parents)
+    val name = s"<a href=\\\"$href\\\">${container.identify}</a>"
     Level(
-      container.identify,
-      container.brief.map(_.s).getOrElse(""),
-      this.state.makeDocLink(container, parents),
+      name,
+      container.contents.length,
       children = {
         val newParents = container.id.value +: parents
         container.contents.map(makeData(_, newParents))
@@ -306,11 +307,28 @@ case class MarkdownWriter(
     if (state.options.withGraphicalTOC) {
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
-      val mdw = state.addFile(parents, "index.json")
-      mdw.sb.append(json)
-      mdw.nl
-      mdw.write()
-      p("[Raw Json](./index.json)")
+      val resourceName = "js/zoomable-circle-pack.js"
+      val jsPath = state.options.outputDir.get.resolve("static")
+        .resolve(resourceName)
+      if (!Files.exists(jsPath)) {
+        Files.createDirectories(jsPath.getParent)
+        PathUtils.copyResource(resourceName, jsPath)
+      }
+
+      val javascript = s"""
+                          |<div id="graphical-index">
+                          |  <script src="https://d3js.org/d3.v7.min.js"></script>
+                          |  <script src="/$resourceName"></script>
+                          |  <script>
+                          |    console.log('d3', d3.version)
+                          |    let data = $json ;
+                          |    let svg = zoomableCirclePack(data, 932);
+                          |    var element = document.getElementById("graphical-index");
+                          |    element.appendChild(svg);
+                          |  </script>
+                          |</div>
+          """.stripMargin
+      p(javascript)
     }
     h2(s"Textual $kind Index")
     p("{{< toc-tree >}}")
