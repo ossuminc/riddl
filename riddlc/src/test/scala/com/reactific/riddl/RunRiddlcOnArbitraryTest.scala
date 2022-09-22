@@ -30,7 +30,7 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
 
   "riddlc" should {
     s"run from $config" in {
-      // pending // FIXME: Never commit this as non-pending
+      pending // FIXME: Never commit this as non-pending
       if (Files.isDirectory(Path.of(cwd))) {
         val fullPath = Path.of(cwd, config)
         if (Files.isReadable(fullPath)) {
