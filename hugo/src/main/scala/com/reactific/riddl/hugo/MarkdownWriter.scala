@@ -292,7 +292,9 @@ case class MarkdownWriter(
       this.state.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
-        container.contents.map(makeData(_, newParents))
+        container.contents.filter(d =>
+          d.nonEmpty && !d.isInstanceOf[OnClause] && !d.isInstanceOf[Example]
+        ).map(makeData(_, newParents))
       }
     )
   }

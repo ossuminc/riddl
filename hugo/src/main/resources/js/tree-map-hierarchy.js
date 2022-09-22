@@ -6,18 +6,19 @@ function treeMapHierarchy(original_data, width) {
 
   let color = d3.scaleLinear()
       .domain([0, 5])
-      .range(["hsl(128, 80%,80%)", "hsl(228, 20%,20%)"])
+      .range(["hsl(128, 80%,80%)", "hsl(228, 30%,40%)"])
       .interpolate(d3.interpolateHcl)
 
   let hierarchy = d3.hierarchy(original_data)
       .sum(d => d.children.length)
-      // .sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.value - a.value);
 
   let treemapLayout = d3.treemap()
       .size([width, height])
       //.tile('treemapSquarify')
       .padding(3);
 
+  treemapLayout.tile(d3['treemapSquarify'])
   let root = treemapLayout(hierarchy)
   let focus = root;
   let view;
