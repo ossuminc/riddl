@@ -279,19 +279,17 @@ case class MarkdownWriter(
 
   private case class Level(
     name: String,
-    value: Long,
+    href: String,
     children: Seq[Level]) {
     override def toString: String = {
-      s"{name:\"$name\",value:$value,children:[${children.map(_.toString).mkString(",")}]}"
+      s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
     }
   }
 
   private def makeData(container: Definition, parents: Seq[String]): Level = {
-    val href = this.state.makeDocLink(container, parents)
-    val name = s"<a href=\\\"$href\\\">${container.identify}</a>"
     Level(
-      name,
-      container.contents.length,
+      container.identify,
+      this.state.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
         container.contents.map(makeData(_, newParents))
@@ -307,7 +305,7 @@ case class MarkdownWriter(
     if (state.options.withGraphicalTOC) {
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
-      val resourceName = "js/zoomable-circle-pack.js"
+      val resourceName = "js/tree-map-hierarchy.js"
       val jsPath = state.options.outputDir.get.resolve("static")
         .resolve(resourceName)
       if (!Files.exists(jsPath)) {
@@ -322,7 +320,7 @@ case class MarkdownWriter(
                           |  <script>
                           |    console.log('d3', d3.version)
                           |    let data = $json ;
-                          |    let svg = zoomableCirclePack(data, 932);
+                          |    let svg = treeMapHierarchy(data, 932);
                           |    var element = document.getElementById("graphical-index");
                           |    element.appendChild(svg);
                           |  </script>

@@ -10,14 +10,13 @@ function zoomableCirclePack(original_data, width) {
       .interpolate(d3.interpolateHcl)
 
   let hierarchy = d3.hierarchy(original_data)
-      .sum(d => d.value)
+      .sum(d => d.children.length)
       .sort((a, b) => b.value - a.value);
 
   console.log("hierarchy", hierarchy)
 
   let pack = d3.pack()
       .size([width, height])
-      .value( d => d.children.size )
       .padding(3)
 
   let root = pack(hierarchy)
@@ -31,7 +30,7 @@ function zoomableCirclePack(original_data, width) {
     .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
     .style("display", "block")
     .style("margin", "0 -14px")
-    .style("background", color(42))
+    .style("background", "grey")
     .style("cursor", "pointer")
     .on("click", (event) => zoom(event, root));
 
