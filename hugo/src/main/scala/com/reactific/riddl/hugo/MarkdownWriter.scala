@@ -307,7 +307,7 @@ case class MarkdownWriter(
     if (state.options.withGraphicalTOC) {
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
-      val resourceName = "js/tree-map-hierarchy.js"
+      val resourceName = "js/tree-map-hierarchy2.js"
       val jsPath = state.options.outputDir.get.resolve("static")
         .resolve(resourceName)
       if (!Files.exists(jsPath)) {

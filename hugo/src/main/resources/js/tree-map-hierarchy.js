@@ -10,15 +10,18 @@ function treeMapHierarchy(original_data, width) {
       .interpolate(d3.interpolateHcl)
 
   let hierarchy = d3.hierarchy(original_data)
-      .sum(d => d.children.length)
+      .sum(d => d.value)
       .sort((a, b) => b.value - a.value);
 
   let treemapLayout = d3.treemap()
       .size([width, height])
-      //.tile('treemapSquarify')
-      .padding(3);
+      .paddingOuter(3)
+      .paddingTop(19)
+      .paddingInner(1)
+      .round(true)
 
-  treemapLayout.tile(d3['treemapSquarify'])
+  // treemapLayout.tile(d3['treemapSquarify'])
+
   let root = treemapLayout(hierarchy)
   let focus = root;
   let view;
@@ -35,10 +38,10 @@ function treeMapHierarchy(original_data, width) {
       .selectAll('rect')
       .data(root.descendants())
       .join('rect')
-      .attr('x', function(d) { return d.x0; })
-      .attr('y', function(d) { return d.y0; })
-      .attr('width', function(d) { return d.x1 - d.x0; })
-      .attr('height', function(d) { return d.y1 - d.y0; })
+      .attr('x', d =>  d.x0 )
+      .attr('y', d =>  d.y0 )
+      .attr('width', d => d.x1 - d.x0 )
+      .attr('height', d => d.y1 - d.y0 )
       .attr("fill", d => d.children ? color(d.depth) : "grey")
       .attr("pointer-events", d => !d.children ? "none" : null)
       .on("mouseover", function() { d3.select(this).attr("stroke", "#000"); })
