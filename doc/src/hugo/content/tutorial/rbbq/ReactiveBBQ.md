@@ -5,8 +5,9 @@ draft: "false"
 weight: 30
 ---
 
-
-{{% code file=examples/rbbq/ReactiveBBQ.riddl language=riddl %}}
+```riddl
+Render https://github.com/reactific/riddl-examples/blob/main/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl
+```
 
 Everything in RIDDL revolves around creating domains and subdomains. These
 are logical groupings of definitions that *belong* together, presumably

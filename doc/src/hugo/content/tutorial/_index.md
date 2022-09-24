@@ -20,3 +20,5 @@ have a concrete reference implementation and the companion language
 references to guide you. You can find the fully implemented 
 Reactive BBQ RIDDL specification here. The language reference can be 
 found here.
+
+[Read more here](rbbq) 
