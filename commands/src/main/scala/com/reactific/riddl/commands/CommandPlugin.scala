@@ -32,7 +32,7 @@ object CommandPlugin {
   def loadCommandNamed(
     name: String,
     commonOptions: CommonOptions = CommonOptions(),
-    pluginsDir: Path = Plugin.pluginsDir,
+    pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
     if (commonOptions.verbose) { println(s"Loading command: $name") }
     val loaded = Plugin
@@ -302,8 +302,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
 
   def replaceInputFile(
     options: OPT,
-    @unused
-    inputFile: Path
+    @unused inputFile: Path
   ): OPT = options
 
   def resolveInputFileToConfigFile(

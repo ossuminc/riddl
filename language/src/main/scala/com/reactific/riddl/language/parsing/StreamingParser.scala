@@ -54,7 +54,7 @@ trait StreamingParser
     maxInlets: Int = 0,
     minOutlets: Int = 0,
     maxOutlets: Int = 0
-  ): P[Include] = {
+  ): P[Include[ProcessorDefinition]] = {
     include[ProcessorDefinition, u](
       processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
@@ -123,7 +123,9 @@ trait StreamingParser
       val examples = mapTo[Example](groups.get(classOf[Example]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val authors = mapTo[Author](groups.get(classOf[Author]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val includes = mapTo[Include[ProcessorDefinition]](groups.get(
+        classOf[Include[ProcessorDefinition]]
+      ))
       Processor(
         location,
         id,
@@ -212,7 +214,7 @@ trait StreamingParser
   def plantOptions[x: P]: P[Seq[PlantOption]] = {
     P("").map(_ => Seq.empty[PlantOption]) // FIXME: Need PlantOptions
   }
-  def plantInclude[X: P]: P[Include] = {
+  def plantInclude[X: P]: P[Include[PlantDefinition]] = {
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
@@ -243,7 +245,9 @@ trait StreamingParser
       val inJoints = mapTo[InletJoint](groups.get(classOf[InletJoint]))
       val outJoints = mapTo[OutletJoint](groups.get(classOf[OutletJoint]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val includes = mapTo[Include[PlantDefinition]](groups.get(
+        classOf[Include[PlantDefinition]]
+      ))
       Plant(
         loc,
         id,

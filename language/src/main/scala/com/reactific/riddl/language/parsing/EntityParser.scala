@@ -94,7 +94,7 @@ trait EntityParser extends TypeParser with HandlerParser {
     }
   }
 
-  def entityInclude[X: P]: P[Include] = {
+  def entityInclude[X: P]: P[Include[EntityDefinition]] = {
     include[EntityDefinition, X](entityDefinitions(_))
   }
 
@@ -125,7 +125,9 @@ trait EntityParser extends TypeParser with HandlerParser {
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val includes = mapTo[Include[EntityDefinition]](groups.get(
+        classOf[Include[EntityDefinition]]
+      ))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       Entity(
         loc,

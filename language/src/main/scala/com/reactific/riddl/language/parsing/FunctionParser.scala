@@ -24,16 +24,13 @@ import fastparse.ScalaWhitespace.*
 trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
 
   def functionOptions[X: P]: P[Seq[FunctionOption]] = {
-    options[X, FunctionOption](
-      StringIn(Options.tail_recursive).!
-    ) {
+    options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
-      case (_, _, _) =>
-        throw new RuntimeException("Impossible case")
+      case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  def functionInclude[x: P] : P[Include] = {
+  def functionInclude[x: P]: P[Include[FunctionDefinition]] = {
     include[FunctionDefinition, x](functionDefinitions(_))
   }
 
@@ -45,19 +42,25 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
     P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)
   }
 
-  def optionalInputOrOutput[u: P]: P[(Option[Aggregation], Option[Aggregation])] = {
-    P(input.? ~ output.?)
+  def optionalInputOrOutput[
+    u: P
+  ]: P[(Option[Aggregation], Option[Aggregation])] = { P(input.? ~ output.?) }
+
+  def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
+    P(typeDef | example | function | term | author | functionInclude).rep(0)
   }
 
-  def functionDefinitions[u:P]: P[Seq[FunctionDefinition]] = {
-    P( typeDef | example | function | term |  author | functionInclude)
-      .rep(0)
-  }
-
-  def functionBody[u:P]: P[(Seq[FunctionOption], Option[Aggregation],Option[Aggregation],Seq[FunctionDefinition])] = {
+  def functionBody[u: P]: P[
+    (
+      Seq[FunctionOption],
+      Option[Aggregation],
+      Option[Aggregation],
+      Seq[FunctionDefinition]
+    )
+  ] = {
     P(undefined(None).map { _ =>
-      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition])}
-      | (functionOptions ~ input.? ~ output.? ~ functionDefinitions))
+      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition])
+    } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions))
   }
 
   /** Parses function literals, i.e.
@@ -70,18 +73,41 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
     * }}}
     */
   def function[u: P]: P[Function] = {
-    P(location ~ Keywords.function ~/ identifier ~ is ~ open ~
-      functionBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, (options, input, output, definitions), briefly, description) =>
-      val groups = definitions.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val examples = mapTo[Example](groups.get(classOf[Example]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val authors = mapTo[Author](groups.get(classOf[Author]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
-      Function(loc, id, input, output, types, functions, examples,
-        authors, includes, options, terms, briefly, description)
+    P(
+      location ~ Keywords.function ~/ identifier ~ is ~ open ~ functionBody ~
+        close ~ briefly ~ description
+    ).map {
+      case (
+            loc,
+            id,
+            (options, input, output, definitions),
+            briefly,
+            description
+          ) =>
+        val groups = definitions.groupBy(_.getClass)
+        val types = mapTo[Type](groups.get(classOf[Type]))
+        val examples = mapTo[Example](groups.get(classOf[Example]))
+        val functions = mapTo[Function](groups.get(classOf[Function]))
+        val terms = mapTo[Term](groups.get(classOf[Term]))
+        val authors = mapTo[Author](groups.get(classOf[Author]))
+        val includes = mapTo[Include[FunctionDefinition]](groups.get(
+          classOf[Include[FunctionDefinition]]
+        ))
+        Function(
+          loc,
+          id,
+          input,
+          output,
+          types,
+          functions,
+          examples,
+          authors,
+          includes,
+          options,
+          terms,
+          briefly,
+          description
+        )
     }
   }
 }

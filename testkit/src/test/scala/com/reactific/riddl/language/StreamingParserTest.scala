@@ -27,7 +27,9 @@ class StreamingParserTest extends ParsingTest {
         )
       )),
       List.empty[Example],
-      Seq.empty[Include],Seq.empty[Author],Seq.empty[ProcessorOption],
+      Seq.empty[Include[ProcessorDefinition]],
+      Seq.empty[Author],
+      Seq.empty[ProcessorOption],
       Seq.empty[Term],
       Some(LiteralString((row + 3, 9, rpi), "foo")),
       Option(BlockDescription(
@@ -189,7 +191,9 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
-            Seq.empty[Include], Seq.empty[Author], Seq.empty[ProcessorOption],
+            Seq.empty[Include[ProcessorDefinition]],
+            Seq.empty[Author],
+            Seq.empty[ProcessorOption],
             Seq.empty[Term],
             None,
             Option(BlockDescription(
@@ -223,7 +227,9 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Example],
-            Seq.empty[Include], Seq.empty[Author], Seq.empty[ProcessorOption],
+            Seq.empty[Include[ProcessorDefinition]],
+            Seq.empty[Author],
+            Seq.empty[ProcessorOption],
             Seq.empty[Term],
             None,
             Option(BlockDescription(
@@ -249,7 +255,9 @@ class StreamingParserTest extends ParsingTest {
             )),
             List.empty[Outlet],
             List.empty[Example],
-            Seq.empty[Include], Seq.empty[Author], Seq.empty[ProcessorOption],
+            Seq.empty[Include[ProcessorDefinition]],
+            Seq.empty[Author],
+            Seq.empty[ProcessorOption],
             Seq.empty[Term],
             None,
             Option(BlockDescription(
@@ -330,7 +338,7 @@ class StreamingParserTest extends ParsingTest {
           )
         ),
         Seq.empty[Term],
-        Seq.empty[Include],
+        Seq.empty[Include[PlantDefinition]],
         Seq.empty[Author],
         Seq.empty[PlantOption],
         None,

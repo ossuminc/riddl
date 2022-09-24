@@ -3,26 +3,25 @@ package com.reactific.riddl.language.ast
 import scala.collection.immutable.ListMap
 
 /** Unit Tests For Expressions */
-trait Expressions extends AbstractDefinitions {
+trait Expressions extends TypeExpression {
 
   // ///////////////////////////////// ///////////////////////// VALUE EXPRESSIONS
 
   /** Base trait of all expressions
     */
   sealed trait Expression extends RiddlValue {
-    def isCondition: Boolean = false
-    def isNumeric: Boolean = false
+    def expressionType: TypeExpression
   }
 
   /** Base trait for expressions that yield a boolean value (a condition)
     */
-  sealed trait Condition extends Expression {
-    override def isCondition: Boolean = false
+  sealed abstract class Condition(loc: Location) extends Expression {
+    def expressionType: TypeExpression = Bool(loc)
   }
 
   /** Base trait for expressions that yield a numeric value */
-  sealed trait NumericExpression extends Expression {
-    override def isNumeric: Boolean = true
+  sealed abstract class NumericExpression(loc: Location) extends Expression {
+    def expressionType: TypeExpression = Number(loc)
   }
 
   /** Represents the use of an arithmetic operator or well-known function call.
@@ -44,7 +43,7 @@ trait Expressions extends AbstractDefinitions {
     loc: Location,
     operator: String,
     operands: Seq[Expression])
-      extends NumericExpression {
+      extends NumericExpression(loc) {
     override def format: String = operator + operands.mkString("(", ",", ")")
   }
 
@@ -60,6 +59,7 @@ trait Expressions extends AbstractDefinitions {
   case class ValueExpression(loc: Location, path: PathIdentifier)
       extends Expression {
     override def format: String = "@" + path.format
+    def expressionType: TypeExpression = Abstract(loc)
   }
 
   /** Represents a expression that will be specified later and uses the ???
@@ -70,6 +70,7 @@ trait Expressions extends AbstractDefinitions {
     */
   case class UndefinedExpression(loc: Location) extends Expression {
     override def format: String = Punctuation.undefinedMark
+    def expressionType: TypeExpression = Abstract(loc)
 
     override def isEmpty: Boolean = true
   }
@@ -109,6 +110,7 @@ trait Expressions extends AbstractDefinitions {
       if (args.nonEmpty) { args.format }
       else { "()" }
     }
+    def expressionType: TypeExpression = Abstract(loc)
   }
 
   /** A helper class for creating expressions that represent the creation of a
@@ -126,6 +128,7 @@ trait Expressions extends AbstractDefinitions {
     override def format: String = {
       Keywords.new_ + " Id(" + entityId.format + ")"
     }
+    def expressionType: TypeExpression = UniqueId(loc, entityId)
   }
 
   /** A RIDDL Function call. The only callable thing here is a function
@@ -144,6 +147,7 @@ trait Expressions extends AbstractDefinitions {
     arguments: ArgList)
       extends Expression {
     override def format: String = name.format + arguments.format
+    def expressionType: TypeExpression = Abstract(loc)
   }
 
   case class ArbitraryOperator(
@@ -153,6 +157,7 @@ trait Expressions extends AbstractDefinitions {
       extends Expression {
     override def format: String = opName.format + "(" + arguments.map(_.format)
       .mkString("(", ", ", ")") + ")"
+    def expressionType: TypeExpression = Abstract(loc)
   }
 
   /** A syntactic convenience for grouping a list of expressions.
@@ -166,6 +171,10 @@ trait Expressions extends AbstractDefinitions {
       extends Expression {
     override def format: String = {
       s"(${expressions.map(_.format).mkString(", ")})"
+    }
+    def expressionType: TypeExpression = expressions.lastOption match {
+      case Some(expr) => expr.expressionType
+      case None       => Abstract(loc)
     }
   }
 
@@ -187,8 +196,12 @@ trait Expressions extends AbstractDefinitions {
     expr1: Expression,
     expr2: Expression)
       extends Expression {
+    require(expr1.expressionType.isAssignmentCompatible(expr2.expressionType))
     override def format: String =
       s"if(${condition.format},${expr1.format},${expr2.format})"
+
+    def expressionType: TypeExpression = expr1.expressionType
+
   }
 
   /** An expression that is a literal constant integer value
@@ -199,8 +212,9 @@ trait Expressions extends AbstractDefinitions {
     *   The number to use as the value of the expression
     */
   case class LiteralInteger(loc: Location, n: BigInt)
-      extends NumericExpression {
+      extends NumericExpression(loc) {
     override def format: String = n.toString()
+    override def expressionType: TypeExpression = Integer(loc)
   }
 
   /** An expression that is a liberal constant decimal value
@@ -210,8 +224,9 @@ trait Expressions extends AbstractDefinitions {
     *   The decimal number to use as the value of the expression
     */
   case class LiteralDecimal(loc: Location, d: BigDecimal)
-      extends NumericExpression {
+      extends NumericExpression(loc) {
     override def format: String = d.toString
+    override def expressionType: TypeExpression = Decimal(loc)
   }
 
   // /////////////////////////////////////////////////////////// Conditional Expressions
@@ -220,7 +235,7 @@ trait Expressions extends AbstractDefinitions {
     * @param loc
     *   The location of this expression value
     */
-  case class True(loc: Location) extends Condition {
+  case class True(loc: Location) extends Condition(loc) {
     override def format: String = "true"
   }
 
@@ -228,7 +243,7 @@ trait Expressions extends AbstractDefinitions {
     * @param loc
     *   The location of this expression value
     */
-  case class False(loc: Location) extends Condition {
+  case class False(loc: Location) extends Condition(loc) {
     override def format: String = "false"
   }
 
@@ -245,9 +260,8 @@ trait Expressions extends AbstractDefinitions {
     * @param cond
     *   The arbitrary condition provided as a quoted string
     */
-  case class ArbitraryCondition(cond: LiteralString) extends Condition {
-    override def loc: Location = cond.loc
-
+  case class ArbitraryCondition(loc: Location, cond: LiteralString)
+      extends Condition(loc) {
     override def format: String = cond.format
   }
 
@@ -260,7 +274,7 @@ trait Expressions extends AbstractDefinitions {
     *   The path to the value for this condition
     */
   case class ValueCondition(loc: Location, path: PathIdentifier)
-      extends Condition {
+      extends Condition(loc) {
     override def format: String = "@" + path.format
   }
 
@@ -279,7 +293,7 @@ trait Expressions extends AbstractDefinitions {
     loc: Location,
     name: PathIdentifier,
     arguments: ArgList)
-      extends Condition {
+      extends Condition(loc) {
     override def format: String = name.format + arguments.format
   }
 
@@ -325,7 +339,8 @@ trait Expressions extends AbstractDefinitions {
     op: Comparator,
     expr1: Expression,
     expr2: Expression)
-      extends Condition {
+      extends Condition(loc) {
+    require(expr1.expressionType.isAssignmentCompatible(expr2.expressionType))
     override def format: String = op.format + Seq(expr1.format, expr2.format)
       .mkString("(", ",", ")")
   }
@@ -337,13 +352,14 @@ trait Expressions extends AbstractDefinitions {
     * @param cond1
     *   The condition being negated
     */
-  case class NotCondition(loc: Location, cond1: Condition) extends Condition {
+  case class NotCondition(loc: Location, cond1: Condition)
+      extends Condition(loc) {
     override def format: String = "not(" + cond1 + ")"
   }
 
   /** Base class for conditions with two operands
     */
-  abstract class MultiCondition extends Condition {
+  abstract class MultiCondition(loc: Location) extends Condition(loc) {
     def conditions: Seq[Condition]
 
     override def format: String = conditions.mkString("(", ",", ")")
@@ -357,7 +373,7 @@ trait Expressions extends AbstractDefinitions {
     *   The conditions (minimum 2) that must all be true for "and" to be true
     */
   case class AndCondition(loc: Location, conditions: Seq[Condition])
-      extends MultiCondition {
+      extends MultiCondition(loc) {
     override def format: String = "and" + super.format
   }
 
@@ -370,7 +386,7 @@ trait Expressions extends AbstractDefinitions {
     *   true
     */
   case class OrCondition(loc: Location, conditions: Seq[Condition])
-      extends MultiCondition {
+      extends MultiCondition(loc) {
     override def format: String = "or" + super.format
   }
 
@@ -382,7 +398,7 @@ trait Expressions extends AbstractDefinitions {
     *   be true.
     */
   case class XorCondition(loc: Location, conditions: Seq[Condition])
-      extends MultiCondition {
+      extends MultiCondition(loc) {
     override def format: String = "xor" + super.format
   }
 
@@ -400,6 +416,33 @@ trait Expressions extends AbstractDefinitions {
     override def loc: Location = cond.loc
 
     override def format: String = cond.format
+    override def expressionType: TypeExpression = Abstract(loc)
+  }
+
+  // /////////////////////////////////////////////////////////// Typed Functions
+
+  /** Base trait for expressions that yield a numeric value */
+  sealed abstract class TimeExpression(loc: Location) extends Expression {
+    def expressionType: TypeExpression = TimeStamp(loc)
+  }
+
+  case class TimeStampFunction(
+    loc: Location,
+    name: String,
+    args: Seq[Expression])
+      extends TimeExpression(loc)
+
+  case class DateFunction(loc: Location, name: String, args: Seq[Expression])
+      extends TimeExpression(loc) {
+    override def expressionType: TypeExpression = Date(loc)
+  }
+
+  case class NumberFunction(loc: Location, name: String, args: Seq[Expression])
+      extends NumericExpression(loc)
+
+  case class StringFunction(loc: Location, name: String, args: Seq[Expression])
+      extends Expression {
+    override def expressionType: TypeExpression = Strng(loc)
   }
 
 }

@@ -18,6 +18,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -26,14 +27,14 @@ import scala.collection.immutable.ListMap
 /** Parser rules for value expressions */
 trait ExpressionParser extends CommonParser with ReferenceParser {
 
-  ////////////////////////////////////////// Conditions == Boolean Expression
+  // //////////////////////////////////////// Conditions == Boolean Expression
 
   def condition[u: P]: P[Condition] = {
     P(terminalCondition | logicalConditions | functionCallCondition)
   }
 
   def terminalCondition[u: P]: P[Condition] = {
-    P(trueCondition | falseCondition  | arbitraryCondition)
+    P(trueCondition | falseCondition | arbitraryCondition)
   }
 
   def trueCondition[u: P]: P[True] = {
@@ -45,16 +46,16 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def arbitraryCondition[u: P]: P[ArbitraryCondition] = {
-    P(literalString).map(ls => ArbitraryCondition(ls))
+    P(literalString).map(ls => ArbitraryCondition(ls.loc, ls))
   }
 
   def arguments[u: P]: P[ArgList] = {
     P(identifier ~ Punctuation.equalsSign ~ expression)
       .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
-      s.foldLeft(ListMap.empty[Identifier, Expression]) {
-        case (b, (id, exp)) => b + (id -> exp)
-      }
-    }.map { lm => ArgList(lm) }
+        s.foldLeft(ListMap.empty[Identifier, Expression]) {
+          case (b, (id, exp)) => b + (id -> exp)
+        }
+      }.map { lm => ArgList(lm) }
   }
 
   def argList[u: P]: P[ArgList] = {
@@ -112,14 +113,14 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     P(StringIn("<=", "!=", "==", ">=", "<", ">")).!./.map {
       case "==" => AST.eq
       case "!=" => AST.ne
-      case "<" => AST.lt
+      case "<"  => AST.lt
       case "<=" => AST.le
-      case ">" => AST.gt
+      case ">"  => AST.gt
       case ">=" => AST.ge
     }
   }
 
-  ////////////////////////////////////////// Expressions == Any Type
+  // //////////////////////////////////////// Expressions == Any Type
 
   def arbitraryExpression[u: P]: P[ArbitraryExpression] = {
     P(literalString).map(ls => ArbitraryExpression(ls))
@@ -130,24 +131,26 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def valueExpression[u: P]: P[ValueExpression] = {
-    P(location ~ Punctuation.at ~ pathIdentifier).map(tpl => (ValueExpression.apply _).tupled(tpl))
+    P(location ~ Punctuation.at ~ pathIdentifier)
+      .map(tpl => (ValueExpression.apply _).tupled(tpl))
   }
 
   def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
-    P( location ~ Punctuation.exclamation ~/ pathIdentifier ~ argList).map(tpl =>
-      (AggregateConstructionExpression.apply _).tupled(tpl))
+    P(location ~ Punctuation.exclamation ~/ pathIdentifier ~ argList)
+      .map(tpl => (AggregateConstructionExpression.apply _).tupled(tpl))
   }
 
-  def entityIdValue[u:P]: P[EntityIdExpression] = {
-    P(location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
-      pathIdentifier ~ Punctuation.roundClose).map(tpl =>
-      (EntityIdExpression.apply _).tupled(tpl))
+  def entityIdValue[u: P]: P[EntityIdExpression] = {
+    P(
+      location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
+        pathIdentifier ~ Punctuation.roundClose
+    ).map(tpl => (EntityIdExpression.apply _).tupled(tpl))
   }
 
   def terminalExpression[u: P]: P[Expression] = {
-    P(terminalCondition | literalDecimal | literalInteger |
-       entityIdValue | valueExpression | undefinedExpression |
-      arbitraryExpression
+    P(
+      terminalCondition | literalDecimal | literalInteger | entityIdValue |
+        valueExpression | undefinedExpression | arbitraryExpression
     )
   }
 
@@ -165,26 +168,20 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }.map { case (x, y) => x + y }
 
   def arbitraryOperator[u: P]: P[ArbitraryOperator] = {
-    P(location ~ operatorName ~ Punctuation.roundOpen ~
-      expression.rep(0, Punctuation.comma) ~
-      Punctuation.roundClose
+    P(
+      location ~ operatorName ~ Punctuation.roundOpen ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
     ).map { case (loc, name, expressions) =>
       ArbitraryOperator(loc, LiteralString(loc, name), expressions)
     }
-  }
-
-  def knownOperatorName[u:P]: P[String] = {
-    StringIn("pow", "now").!
   }
 
   def arithmeticOperator[u: P]: P[ArithmeticOperator] = {
     P(
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
-          Operators.div.! | Operators.mod.! | knownOperatorName
-        ) ~ Punctuation.roundOpen ~
-            expression.rep(0, Punctuation.comma) ~
-          Punctuation.roundClose
+          Operators.div.! | Operators.mod.!) ~ Punctuation.roundOpen ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
@@ -197,17 +194,51 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }
 
   def groupExpression[u: P]: P[GroupExpression] = {
-    P(location ~ Punctuation.roundOpen ~/
-      expression.rep(0, ",") ~
-      Punctuation.roundClose./
+    P(
+      location ~ Punctuation.roundOpen ~/ expression.rep(0, ",") ~
+        Punctuation.roundClose./
     ).map(tpl => (GroupExpression.apply _).tupled(tpl))
+  }
+
+  def functionCall[u: P](
+    names: => P[String]
+  ): P[(Location, String, Seq[Expression])] = {
+    P(
+      location ~ names ~ Punctuation.roundOpen ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
+    )
+  }
+
+  def knownTimestamps[u: P]: P[TimeStampFunction] = {
+    P(functionCall(StringIn("now").!).map { tpl =>
+      (TimeStampFunction.apply _).tupled(tpl)
+    })
+  }
+
+  def knownDates[u: P]: P[DateFunction] = {
+    functionCall(StringIn("today").!).map { tpl =>
+      (DateFunction.apply _).tupled(tpl)
+    }
+  }
+
+  def knownNumbers[u: P]: P[NumberFunction] = {
+    functionCall(StringIn("random", "pow").!).map { tpl =>
+      (NumberFunction.apply _).tupled(tpl)
+    }
+  }
+
+  def knownStrings[u: P]: P[StringFunction] = {
+    functionCall(StringIn("length").!).map { tpl =>
+      (StringFunction.apply _).tupled(tpl)
+    }
   }
 
   def expression[u: P]: P[Expression] = {
     P(
       terminalExpression | aggregateConstruction | ternaryExpression |
-        groupExpression | arithmeticOperator |
-        arbitraryOperator | functionCallExpression
+        groupExpression | arithmeticOperator | knownTimestamps | knownDates |
+        knownNumbers | knownStrings | arbitraryOperator | functionCallExpression
     )
   }
+
 }

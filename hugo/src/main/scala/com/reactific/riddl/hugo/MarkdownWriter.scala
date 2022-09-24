@@ -386,7 +386,7 @@ case class MarkdownWriter(
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    val resolved = state.resolvePath(pid, parents)
+    val resolved = state.resolvePath(pid, parents)()()
     if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
     else {
       val slink = state.makeSourceLink(resolved.head)
@@ -400,8 +400,8 @@ case class MarkdownWriter(
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    val resolved = state.resolvePath(pid, parents)
-    if (resolved.isEmpty) { s"unresolved" }
+    val resolved = state.resolvePath(pid, parents)()()
+    if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
     else { resolved.head.id.format }
   }
 

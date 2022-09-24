@@ -40,7 +40,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     }
   }
 
-  def handlerInclude[x: P]: P[Include] = {
+  def handlerInclude[x: P]: P[Include[HandlerDefinition]] = {
     include[HandlerDefinition, x](handlerDefinitions(_))
   }
 
@@ -61,7 +61,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val includes = mapTo[Include[HandlerDefinition]](groups.get(classOf[Include[HandlerDefinition]]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
 

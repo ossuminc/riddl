@@ -32,8 +32,8 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def errorAction[u: P]: P[ErrorAction] = {
-    P(location ~ Keywords.error ~ literalString ~ description).map {
-      tpl => (ErrorAction.apply _).tupled(tpl)
+    P(location ~ Keywords.error ~ literalString ~ description).map { tpl =>
+      (ErrorAction.apply _).tupled(tpl)
     }
   }
 
@@ -46,11 +46,10 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def appendAction[u: P]: P[AppendAction] = {
     P(
-      location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
-        ~ description
+      location ~ Keywords.append ~/ expression ~ Readability.to ~
+        pathIdentifier ~ description
     ).map { t => (AppendAction.apply _).tupled(t) }
   }
-
 
   def morphAction[u: P]: P[MorphAction] = {
     P(
@@ -67,7 +66,8 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
-    P(messageRef ~ argList).map(tpl => (MessageConstructor.apply _).tupled(tpl))
+    P(location ~ messageRef ~ argList)
+      .map(tpl => (MessageConstructor.apply _).tupled(tpl))
   }
 
   def returnAction[u: P]: P[ReturnAction] = {
@@ -82,8 +82,8 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
 
   def publishAction[u: P]: P[PublishAction] = {
     P(
-      Keywords.publish ~/ location ~ messageConstructor ~
-        Readability.to ~ pipeRef ~ description
+      Keywords.publish ~/ location ~ messageConstructor ~ Readability.to ~
+        pipeRef ~ description
     ).map { t => (PublishAction.apply _).tupled(t) }
   }
 

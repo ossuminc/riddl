@@ -32,20 +32,19 @@ case class Finder(root: Definition) {
   def findWithParents(
     select: Definition => Boolean
   ): DefWithParents = {
-    Folding.foldLeftWithStack(Seq.empty[(Definition,
-      Seq[Definition])])(root) {
+    Folding.foldLeftWithStack(Seq.empty[(Definition, Seq[Definition])])(root) {
       case (state, definition, parents) =>
-        if (select(definition)) state :+ (definition -> parents)  else state
+        if (select(definition)) state :+ (definition -> parents) else state
     }
   }
 
   def findEmpty: DefWithParents = findWithParents(_.isEmpty)
 
-  case class KindStats(var count: Int = 0, var maturitySum: Int = 0 )
+  case class KindStats(var count: Int = 0, var maturitySum: Int = 0)
   case class Statistics(
     var definitions: Int = 0,
     var incomplete: Int = 0,
-    var maximum_depth : Int = 0,
+    var maximum_depth: Int = 0,
     var missing_documentation: Int = 0,
     var total_maturity: Int = 0,
     var terms_count: Int = 0,
@@ -59,24 +58,21 @@ case class Finder(root: Definition) {
     var processorStats: KindStats = KindStats(),
     var projectionStats: KindStats = KindStats(),
     var sagaStats: KindStats = KindStats(),
-    var storyStats: KindStats = KindStats()
-  )
+    var storyStats: KindStats = KindStats())
 
   def generateStatistics(): Statistics = {
     val stats = Folding.foldLeftWithStack(Statistics())(root) {
       case (state, definition, parents) =>
-        if (parents.size >= state.maximum_depth ) {
+        if (parents.size >= state.maximum_depth) {
           state.maximum_depth = parents.size + 1
         }
         if (definition.brief.isEmpty || definition.description.isEmpty) {
           state.missing_documentation += 1
         }
-        if (definition.isEmpty) {
-          state.incomplete += 1
-        }
+        if (definition.isEmpty) { state.incomplete += 1 }
         state.definitions += 1
         definition match {
-          case vd: VitalDefinition[?] =>
+          case vd: VitalDefinition[?, ?] =>
             state.total_maturity += vd.maturity(parents)
             vd match {
               case a: Adaptor =>
@@ -117,7 +113,7 @@ case class Finder(root: Definition) {
             if (d.nonEmpty) { state.total_maturity += d.contents.length }
             d match {
               case _: Term => state.terms_count += 1
-              case _ => // ignore
+              case _       => // ignore
             }
           case _ => // ignore
         }

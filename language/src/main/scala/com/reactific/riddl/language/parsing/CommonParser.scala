@@ -27,7 +27,7 @@ import java.nio.file.Path
 /** Common Parsing Rules */
 trait CommonParser extends Terminals with NoWhiteSpaceParsers {
 
-  def include[K <: Definition, u: P](parser: P[?] => P[Seq[K]]): P[Include] = {
+  def include[K <: Definition, u: P](parser: P[?] => P[Seq[K]]): P[Include[K]] = {
     P(Keywords.include ~/ literalString).map { str: LiteralString =>
       doInclude[K](str)(parser)
     }
