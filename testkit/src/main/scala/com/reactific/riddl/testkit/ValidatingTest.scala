@@ -23,8 +23,9 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val msgs = Validation.validate(model)
         val clazz = classTag[D].runtimeClass
+        val result = Validation.validate(model)
+        val msgs = result.messages
         model.contexts.head.contents.filter(_.getClass == clazz).map {
           d: ContextDefinition =>
             val reducedMessages = msgs.filterNot(_.loc.line == 1)
@@ -43,8 +44,8 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val msgs = Validation.validate(model, options)
-        val reducedMessages = msgs.filterNot(_.loc.line == 1)
+        val result = Validation.validate(model, options)
+        val reducedMessages = result.messages.filterNot(_.loc.line == 1)
         validator(model.contexts.head, rpi, reducedMessages)
     }
   }
@@ -56,8 +57,8 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[D](input) match {
       case Left(errors) => fail(errors.format)
       case Right((model: D @unchecked, rpi)) =>
-        val msgs = Validation.validate(model)
-        validator(model, rpi, msgs)
+        val result = Validation.validate(model)
+        validator(model, rpi, result.messages)
     }
   }
 
@@ -72,8 +73,8 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $testCaseName:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, root.inputs.head, messages)
+        val result = Validation.validate(root, options)
+        validation(root, root.inputs.head, result.messages)
     }
   }
 
@@ -94,8 +95,8 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, messages)
+        val result = Validation.validate(root, options)
+        validation(root, result.messages)
     }
   }
 
@@ -106,7 +107,8 @@ abstract class ValidatingTest extends ParsingTest {
     TopLevelParser.parse(file) match {
       case Left(errors) => fail(errors.format)
       case Right(root) =>
-        val messages = Validation.validate(root, options)
+        val result = Validation.validate(root, options)
+        val messages = result.messages
         val errors = messages.filter(_.kind.isError)
         val warnings = messages.filter(_.kind.isWarning)
         info(s"${errors.length} Errors:")

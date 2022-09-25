@@ -34,14 +34,31 @@ import scala.collection.mutable
 /** Validates an AST */
 object Validation {
 
+  /** The result of the validation process, yielding information useful to
+    * subsequent passes.
+    * @param messages
+    *   The messages generated during validation
+    * @param symTab
+    *   The SymbolTable generated during the validation
+    * @param uses
+    *   The mapping of definitions to the definitions they use
+    * @param usedBy
+    *   The mapping of definitions to the definitions they are used by
+    */
+  case class Result(
+    messages: Messages,
+    symTab: SymbolTable,
+    uses: Map[Definition, Seq[Definition]],
+    usedBy: Map[Definition, Seq[Definition]])
+
   def validate(
     root: Definition,
     commonOptions: CommonOptions = CommonOptions()
-  ): Messages.Messages = {
+  ): Result = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, root, commonOptions)
     val parents = mutable.Stack.empty[Definition]
-    val result =
+    val endState =
       try { state.validateDefinitions(root, parents).checkOverloads(symTab) }
       catch {
         case NonFatal(xcptn) =>
@@ -49,7 +66,12 @@ object Validation {
             .mkString("\n")
           state.addSevere(Location.empty, message)
       }
-    result.messages.sortBy(_.loc)
+    Result(
+      endState.messages.sortBy(_.loc),
+      symTab,
+      endState.uses.toMap,
+      endState.usedBy.toMap
+    )
   }
 
   case class ValidationState(
@@ -57,6 +79,21 @@ object Validation {
     root: Definition = RootContainer.empty,
     commonOptions: CommonOptions = CommonOptions())
       extends Folding.PathResolutionState[ValidationState] {
+
+    val uses: mutable.HashMap[Definition, Seq[Definition]] = mutable.HashMap
+      .empty[Definition, Seq[Definition]]
+    val usedBy: mutable.HashMap[Definition, Seq[Definition]] = mutable.HashMap
+      .empty[Definition, Seq[Definition]]
+
+    def associateUsage(user: Definition, use: Definition): Unit = {
+      val used = uses.getOrElse(user, Seq.empty[Definition])
+      val new_used = used :+ use
+      uses.update(user, new_used)
+
+      val usages = usedBy.getOrElse(use, Seq.empty[Definition])
+      val new_usages = usages :+ user
+      usedBy.update(use, new_usages)
+    }
 
     def validateDefinitions(
       definition: Definition,
@@ -739,6 +776,7 @@ object Validation {
         val result = resolvePath(pid) { definitions =>
           if (definitions.nonEmpty) {
             val d = definitions.head
+            associateUsage(container, d)
             single(this, tc, pid, d.getClass, d)
             definitions
           } else { definitions }

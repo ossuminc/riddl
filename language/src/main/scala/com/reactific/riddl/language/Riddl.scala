@@ -18,6 +18,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.Validation.Result
 import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.utils.{Logger, SysLogger}
 
@@ -97,10 +98,11 @@ object Riddl {
   ): Either[Messages, RootContainer] = {
     timer("validate", commonOptions.showTimes) {
       Validation.validate(root, commonOptions) match {
-        case list: Messages if list.isEmpty =>
-          Right(root)
-        case list: Messages =>
-          Left(list)
+        case Result(messages, _,_,_) =>
+          if (messages.isEmpty)
+            Right(root)
+          else
+            Left(messages)
       }
     }
   }
