@@ -10,11 +10,11 @@ The RIDDL specification language borrows concepts from:
 * [Reactive System Architecture (RSA)](https://www.reactivemanifesto.org/)
 * [Unified Modeling Language (UML)](https://en.wikipedia.org/wiki/Unified_Modeling_Language) 
 * [Agile User Stories](https://en.wikipedia.org/wiki/User_story)
-* [Behavior Driven Development (BDD)](https://en.wikipedia.org/wiki/Behavior-driven_development) 
-* and other widely adopted software development and design practices. 
+* [Behavior Driven Development (BDD)](https://en.wikipedia.org/wiki/Behavior-driven_development)
+* [C4 Model Of Software Architecture](https://c4model.com)
 
 RIDDL aims to capture business concepts and architectural details in a way that
-is consumable by business oriented professionals yet can also be directly
+is consumable by business professionals yet can also be directly
 translated into various technical and non-technical artifacts, including: 
 * a documentation web-site 
 * various architectural diagrams (context maps, sequence diagrams, and so on)
