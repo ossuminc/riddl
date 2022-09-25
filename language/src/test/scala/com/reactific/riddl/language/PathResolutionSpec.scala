@@ -19,10 +19,12 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
   ): Assertion = {
     TopLevelParser.parse(input) match {
       case Left(errors) => fail(errors.map(_.format).mkString("\n"))
-      case Right(model) => Validation.validate(
+      case Right(model) =>
+        val result = Validation.validate(
           model,
           CommonOptions(showMissingWarnings = false, showStyleWarnings = false)
-        ) match {
+        )
+        result.messages match {
           case msgs: Messages.Messages if msgs.nonEmpty => onFailure(msgs)
           case _                                        => onSuccess
         }
@@ -261,7 +263,8 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
       )
       root.contents.head.contents.length mustBe 2
       root.contents.head.contents.forall(_.kind == "Context")
-      val messages = Validation.validate(root, CommonOptions())
+      val result = Validation.validate(root, CommonOptions())
+      val messages = result.messages
       val errors = messages.filter(_.kind >= Messages.Error)
       if (errors.nonEmpty) fail(errors.format) else succeed
 

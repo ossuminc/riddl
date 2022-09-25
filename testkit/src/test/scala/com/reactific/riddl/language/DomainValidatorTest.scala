@@ -11,7 +11,7 @@ class DomainValidatorTest extends ValidatingTest {
   "DomainValidator" should {
     "identify duplicate domain definitions" in {
       val rpi = RiddlParserInput.empty
-      val theErrors: Messages = Validation.validate(
+      val result = Validation.validate(
         RootContainer(
           Seq(
             Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
@@ -21,6 +21,7 @@ class DomainValidatorTest extends ValidatingTest {
         ),
         CommonOptions()
       )
+      val theErrors: Messages = result.messages
       theErrors must not be empty
       val messages = theErrors.map(_.format)
       val notOccur =
