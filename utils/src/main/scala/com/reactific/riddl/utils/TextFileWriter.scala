@@ -5,8 +5,6 @@ import com.reactific.riddl.utils.TextFileWriter.*
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -60,11 +58,6 @@ abstract class TextFileWriter extends OutputFile {
 
 object TextFileWriter {
 
-  def copyResource(resourceName: String, destination: Path): Unit = {
-    val src = this.getClass.getClassLoader.getResourceAsStream(resourceName)
-    Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
-  }
-
   def substitute(
     template: String,
     substitutions: Map[String, String]
@@ -72,8 +65,7 @@ object TextFileWriter {
     val textLength = template.length
     val builder = new mutable.StringBuilder(textLength)
 
-    @tailrec
-    def loop(text: String): mutable.StringBuilder = {
+    @tailrec def loop(text: String): mutable.StringBuilder = {
       if (text.isEmpty) { builder }
       else if (text.startsWith("${")) {
         val endBrace = text.indexOf("}")
