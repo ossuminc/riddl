@@ -35,8 +35,8 @@ class CheckMessagesTest extends ValidatingTest {
         val msgs = errors.iterator.map(_.format).mkString("\n")
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, messages)
+        val result = Validation.validate(root, options)
+        validation(root, result.messages)
     }
   }
 
