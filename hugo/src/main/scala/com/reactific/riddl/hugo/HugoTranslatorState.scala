@@ -168,7 +168,7 @@ case class HugoTranslatorState(
       else { Seq.empty[String] }
     }
     mdw.list(glossary ++ todoList ++ statistics)
-    mdw.emitIndex("Full")
+    mdw.emitIndex("Full", root, Seq.empty[String])
   }
 
   val glossaryWeight = 970

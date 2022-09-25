@@ -24,7 +24,6 @@ lazy val riddl = (project in file(".")).settings(
   prettify,
   hugo,
   `git-check`,
-  examples,
   doc,
   riddlc,
   plugin
@@ -123,16 +122,16 @@ lazy val `git-check`: Project = project.in(file("git-check"))
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(commands, testkit % "test->compile")
 
-lazy val examples = project.in(file("examples")).configure(C.withScalaCompile)
-  .settings(
-    name := "riddl-examples",
-    Compile / packageBin / publishArtifact := false,
-    Compile / packageDoc / publishArtifact := false,
-    Compile / packageSrc / publishArtifact := false,
-    publishTo := Option(Resolver.defaultLocal),
-    libraryDependencies ++=
-      Seq("org.scalatest" %% "scalatest" % "3.2.13" % "test")
-  ).dependsOn(hugo % "test->test", riddlc)
+//lazy val examples = project.in(file("examples")).configure(C.withScalaCompile)
+//  .settings(
+//    name := "riddl-examples",
+//    Compile / packageBin / publishArtifact := false,
+//    Compile / packageDoc / publishArtifact := false,
+//    Compile / packageSrc / publishArtifact := false,
+//    publishTo := Option(Resolver.defaultLocal),
+//    libraryDependencies ++=
+//      Seq("org.scalatest" %% "scalatest" % "3.2.13" % "test")
+//  ).dependsOn(hugo % "test->test", riddlc)
 
 // Define a `Configuration` for each project.
 
@@ -158,7 +157,7 @@ lazy val scaladocSiteSettings = scaladocSiteProjects
 
 lazy val doc = project.in(file("doc"))
   .enablePlugins(ScalaUnidocPlugin, SitePlugin, SiteScaladocPlugin, HugoPlugin)
-  .configure(C.withInfo).configure(C.zipResource("hugo"))
+  .configure(C.withInfo) // .configure(C.zipResource("hugo"))
   .configure(C.withScalaCompile).settings(scaladocSiteSettings).settings(
     name := "riddl-doc",
     publishTo := Option(Resolver.defaultLocal),
@@ -166,7 +165,7 @@ lazy val doc = project.in(file("doc"))
     // Hugo / baseURL := uri("https://riddl.tech"),
     SiteScaladoc / siteSubdirName := "api",
     ScalaUnidoc / unidoc / unidocProjectFilter :=
-      inAnyProject -- inProjects(examples, plugin),
+      inAnyProject -- inProjects(plugin),
     ScalaUnidoc / scalaVersion := (compile / scalaVersion).value,
 
     /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:

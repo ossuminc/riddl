@@ -1072,7 +1072,7 @@ object Validation {
       defn: Definition
     ): ValidationState = expression match {
       case ValueExpression(_, path) =>
-        // FIXME: Can we validate based on type? What if a Type is returned?
+        // TODO: Can we validate based on type? What if a Type is returned?
         checkPathRef[Field](path, defn)(nullSingleMatchingValidationFunction)()
       case GroupExpression(_, expressions) => checkSequence(expressions) {
           (st, expr) => st.checkExpression(expr, defn)
