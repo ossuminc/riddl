@@ -79,7 +79,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   }
 
   def storyOptions[u: P]: P[Seq[StoryOption]] = {
-    P("").map(_ => Seq.empty[StoryOption]) // FIXME: What options are needed?
+    P("").map(_ => Seq.empty[StoryOption]) // TODO: What options are needed?
   }
 
   def storyInclude[u: P]: P[Include[StoryDefinition]] = {

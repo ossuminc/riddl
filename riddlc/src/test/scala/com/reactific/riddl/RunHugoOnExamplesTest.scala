@@ -1,6 +1,7 @@
 package com.reactific.riddl
 
-import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.commands.CommandOptions
+import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
@@ -12,17 +13,12 @@ import scala.annotation.unused
 
 // import java.nio.file.{Files, Path}
 
-class RunHugoOnExamplesTest extends
-  RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
-    "hugo") {
+class RunHugoOnExamplesTest
+    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
 
   override val outDir: Path = Path.of("riddlc/target/test/hugo-examples")
 
-  "Run Hugo On Examples" should {
-    "work " in {
-      runTests()
-    }
-  }
+  "Run Hugo On Examples" should { "work " in { runTests() } }
 
   override def onSuccess(
     @unused commandName: String,
@@ -37,4 +33,3 @@ class RunHugoOnExamplesTest extends
     succeed
   }
 }
-
