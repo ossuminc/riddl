@@ -20,7 +20,9 @@ import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
+import com.reactific.riddl.utils.PathUtils
 
+import java.nio.file.Files
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.SortedMap
@@ -275,14 +277,61 @@ case class MarkdownWriter(
     emitMermaidDiagram(lines)
   }
 
-  def emitIndex(kind: String): this.type = {
-    if (state.options.withGraphicalTOC) {
-      h2("Graphical TOC Not Implemented Yet")
-      p("{{< toc-tree >}}")
-    } else {
-      h2(s"$kind Index")
-      p("{{< toc-tree >}}")
+  private case class Level(
+    name: String,
+    href: String,
+    children: Seq[Level]) {
+    override def toString: String = {
+      s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
     }
+  }
+
+  private def makeData(container: Definition, parents: Seq[String]): Level = {
+    Level(
+      container.identify,
+      this.state.makeDocLink(container, parents),
+      children = {
+        val newParents = container.id.value +: parents
+        container.contents.filter(d =>
+          d.nonEmpty && !d.isInstanceOf[OnClause] && !d.isInstanceOf[Example]
+        ).map(makeData(_, newParents))
+      }
+    )
+  }
+
+  def emitIndex(
+    kind: String,
+    top: Definition,
+    parents: Seq[String]
+  ): this.type = {
+    if (state.options.withGraphicalTOC) {
+      h2(s"Graphical $kind Index")
+      val json = makeData(top, parents).toString
+      val resourceName = "js/tree-map-hierarchy2.js"
+      val jsPath = state.options.outputDir.get.resolve("static")
+        .resolve(resourceName)
+      if (!Files.exists(jsPath)) {
+        Files.createDirectories(jsPath.getParent)
+        PathUtils.copyResource(resourceName, jsPath)
+      }
+
+      val javascript = s"""
+                          |<div id="graphical-index">
+                          |  <script src="https://d3js.org/d3.v7.min.js"></script>
+                          |  <script src="/$resourceName"></script>
+                          |  <script>
+                          |    console.log('d3', d3.version)
+                          |    let data = $json ;
+                          |    let svg = treeMapHierarchy(data, 932);
+                          |    var element = document.getElementById("graphical-index");
+                          |    element.appendChild(svg);
+                          |  </script>
+                          |</div>
+          """.stripMargin
+      p(javascript)
+    }
+    h2(s"Textual $kind Index")
+    p("{{< toc-tree >}}")
   }
 
   def emitC4ContainerDiagram(
@@ -560,7 +609,7 @@ case class MarkdownWriter(
     toc("Stories", mkTocSeq(domain.stories))
     toc("Plants", mkTocSeq(domain.plants))
     emitTerms(domain.terms)
-    emitIndex("Domain")
+    emitIndex("Domain", domain, parents)
     this
   }
 
@@ -633,7 +682,7 @@ case class MarkdownWriter(
     toc("Entities", mkTocSeq(context.entities))
     toc("Sagas", mkTocSeq(context.sagas))
     emitTerms(context.terms)
-    emitIndex("Context")
+    emitIndex("Context", context, parents)
     this
   }
 
@@ -690,7 +739,7 @@ case class MarkdownWriter(
     toc("States", mkTocSeq(entity.states))
     toc("Functions", mkTocSeq(entity.functions))
     toc("Handlers", mkTocSeq(entity.handlers))
-    emitIndex("Entity")
+    emitIndex("Entity", entity, parents)
   }
 
   def emitSagaSteps(actions: Seq[SagaStep], parents: Seq[String]): this.type = {
@@ -716,6 +765,7 @@ case class MarkdownWriter(
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)
     emitSagaSteps(saga.sagaSteps, parents)
+    emitIndex("Saga", saga, parents)
   }
 
   def emitStory(story: Story, stack: Seq[Definition]): this.type = {
@@ -747,7 +797,7 @@ case class MarkdownWriter(
     list("Input Joints", mkTocSeq(plant.inJoints))
     list("Output Joints", mkTocSeq(plant.outJoints))
     emitTerms(plant.terms)
-    emitIndex("Plant")
+    emitIndex("Plant", plant, parents)
   }
 
   def emitPipe(pipe: Pipe, parents: Seq[String]): this.type = {
@@ -774,6 +824,8 @@ case class MarkdownWriter(
       emitBriefly(outlet, parents, 4)
       emitDetails(outlet.description, 4)
     }
+    emitIndex("Processor", proc, parents)
+
     this
   }
 
@@ -791,6 +843,7 @@ case class MarkdownWriter(
     emitDefDoc(adaptor, parents)
     p(s"Applicable To: ${adaptor.ref.format}")
     toc("Adaptations", mkTocSeq(adaptor.adaptations))
+    emitIndex("Adaptor", adaptor, parents)
   }
 
   def emitAdaptation(

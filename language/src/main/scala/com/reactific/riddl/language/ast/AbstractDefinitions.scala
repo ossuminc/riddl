@@ -308,9 +308,7 @@ trait AbstractDefinitions extends Terminals {
   /** Added to definitions that support includes */
   trait WithIncludes[T <: Definition] extends Container[T] {
     def includes: Seq[Include[T]]
-    def contents: Seq[T] = {
-      includes.flatMap(_.contents)
-    }
+    def contents: Seq[T] = { includes.flatMap(_.contents) }
   }
 
   /** A [[RiddlValue]] that holds the author's information
@@ -474,7 +472,7 @@ trait AbstractDefinitions extends Terminals {
       case wa: WithAuthors => wa.authors ++
           (wa match {
             case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
-            case _                => Seq.empty[Author]
+            case _                              => Seq.empty[Author]
           })
       case _ => Seq.empty[Author]
     }

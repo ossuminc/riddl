@@ -1,23 +1,36 @@
 package com.reactific.riddl.utils
 
-import java.io.{File, InputStream}
+import java.io.File
+import java.io.InputStream
 import java.net.URL
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 object PathUtils {
 
-  /**
-   * Determine if a program is in the current system PATH environment var
-   * @param program The name of the program to find
-   * @return True if the program is in the path, false otherwise
-   */
-  def existsInPath(program: String): Boolean = {
-    System.getenv("PATH").split(java.util.regex.Pattern.quote(
-      File.pathSeparator)
-    ).map(Path.of(_)).exists(p => Files.isExecutable(p.resolve(program)))
+  /** Copy a resource from the classpath of this program to a destination file
+    * @param resourceName
+    *   name/path of the resource relative to src/main/resources
+    * @param destination
+    *   path to the destination
+    */
+  def copyResource(resourceName: String, destination: Path): Unit = {
+    val src = this.getClass.getClassLoader.getResourceAsStream(resourceName)
+    Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
   }
 
+  /** Determine if a program is in the current system PATH environment var
+    * @param program
+    *   The name of the program to find
+    * @return
+    *   True if the program is in the path, false otherwise
+    */
+  def existsInPath(program: String): Boolean = {
+    System.getenv("PATH")
+      .split(java.util.regex.Pattern.quote(File.pathSeparator)).map(Path.of(_))
+      .exists(p => Files.isExecutable(p.resolve(program)))
+  }
 
   def copyURLToDir(from: URL, destDir: Path): String = {
     val nameParts = from.getFile.split('/')
@@ -26,19 +39,13 @@ object PathUtils {
       Files.createDirectories(destDir)
       val dl_path = destDir.resolve(fileName)
       val in: InputStream = from.openStream
-      if (in == null) {
-        ""
-      } else {
-        try {
-          Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING)
-        }
+      if (in == null) { "" }
+      else {
+        try { Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING) }
         finally if (in != null) in.close()
       }
-      if (Files.isRegularFile(dl_path)) {
-        fileName
-      } else {
-        ""
-      }
-    } else {""}
+      if (Files.isRegularFile(dl_path)) { fileName }
+      else { "" }
+    } else { "" }
   }
 }
