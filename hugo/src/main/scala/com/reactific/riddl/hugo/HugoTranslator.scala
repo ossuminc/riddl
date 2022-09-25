@@ -24,7 +24,6 @@ import com.reactific.riddl.language.*
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.PathUtils
 import com.reactific.riddl.utils.Tar
-import com.reactific.riddl.utils.TextFileWriter
 import com.reactific.riddl.utils.TreeCopyFileVisitor
 import com.reactific.riddl.utils.Zip
 
@@ -103,7 +102,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
 
   def copyResource(destination: Path, src: String = ""): Unit = {
     val name = if (src.isEmpty) destination.getFileName.toString else src
-    TextFileWriter.copyResource(name, destination)
+    PathUtils.copyResource(name, destination)
   }
 
   def manuallyMakeNewHugoSite(path: Path): Unit = {

@@ -68,7 +68,7 @@ class MarkdownWriterTest extends ParsingTest {
               |### _Others_
               |* [MyString](mystring)
               |
-              |## *Domain Index*
+              |## *Textual Domain Index*
               |{{< toc-tree >}}
               |""".stripMargin
           emitted mustBe expected
