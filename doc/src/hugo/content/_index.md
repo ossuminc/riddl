@@ -7,9 +7,7 @@ creatordisplayname: "Reid Spencer"
 creatoremail: "reid@ossuminc.com"
 ---
 
-![RIDDL Logo](/images/RIDDL-Logo-128x128.png)
-
-RIDDL is a language and toolset for specifying a system design. RIDDL is not
+<img src="/images/RIDDL-Logo.svg" align="left" width="100px"/>IDDL is a language and toolset for specifying a system design. RIDDL is not
 a programming language, but it uses ideas from prior works, unique 
 combinations of those ideas, and some original ideas.  
  
@@ -35,17 +33,12 @@ For those that like to learn incrementally, there is a
 of a RIDDL model for a restaurant chain, and the resulting software system 
 to operate it.
 
-For those that like to learn by example, the model produced in the 
-[Tutorial](tutorial) is presented, step-by-step, with new 
-concepts added as they occur, in the [Example](examples) section.
-
 If you want to dive into the technical specification for the RIDDL language,
 you can go to the [Language](language) section and learn the language syntax 
 and grammar.
 
-If you want to dive into the software libraries and tools that RIDDL provides, 
-you can go to the [Tooling](tooling) section and learn how to install and use
-them. 
+If you want to learn to use the tools that RIDDL provides, you can go to 
+the [Tooling](tooling) section and learn how to install and use them. 
 
 If you're interested in knowing how we plan to extend RIDDl in the future, 
 please review our [Future Work](future-work) section. 
