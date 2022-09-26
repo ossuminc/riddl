@@ -2,7 +2,6 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.LiteralString
-import com.reactific.riddl.language.AST.Story
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.testkit.ValidatingTest
 
@@ -34,7 +33,7 @@ class StoryTest extends ValidatingTest {
           |} described as "a parsing convenience"
           |""".stripMargin
       )
-      parseAndValidate[Domain](rpi) {
+      parseAndValidateDomain(rpi) {
         case (
               domain: Domain,
               rpi: RiddlParserInput,
@@ -60,7 +59,8 @@ class StoryTest extends ValidatingTest {
 
     "parse and validate a full example" in {
       val rpi = RiddlParserInput(
-        """story EstablishOrganization is {
+        """domain foo is {
+          |story EstablishOrganization is {
           |  actor Owner is "a person"
           |  capability is "establish an organization"
           |  benefit is "I can conduct business as that organization"
@@ -91,11 +91,13 @@ class StoryTest extends ValidatingTest {
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
+          |} briefly "A placeholder" described by "Not important"
           |""".stripMargin
       )
-      parseAndValidate[Story](rpi) {
-        case (story: Story, _: RiddlParserInput, msgs: Messages.Messages) =>
-          story mustNot be(empty)
+      parseAndValidateDomain(rpi) {
+        case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+          domain mustNot be(empty)
+          domain.stories mustNot be(empty)
           msgs mustBe empty
           succeed
       }

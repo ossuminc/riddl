@@ -34,12 +34,14 @@ import java.nio.file.Path
   *   The common options all commands use
   */
 case class HugoTranslatorState(
-  root: RootContainer,
+  result: Validation.Result,
   symbolTable: SymbolTable,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
     extends TranslatorState[MarkdownWriter]
     with PathResolutionState[HugoTranslatorState] {
+
+  final val root: Definition = result.root // base class compliance
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -178,7 +180,7 @@ case class HugoTranslatorState(
   def makeStatistics(): Unit = {
     if (options.withStatistics) {
       val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
-      mdw.emitStatistics(statsWeight, root)
+      mdw.emitStatistics(statsWeight, result.root)
     }
   }
 

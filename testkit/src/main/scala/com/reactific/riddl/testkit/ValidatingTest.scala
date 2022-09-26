@@ -24,7 +24,8 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
-        val result = Validation.validate(model)
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root)
         val msgs = result.messages
         model.contexts.head.contents.filter(_.getClass == clazz).map {
           d: ContextDefinition =>
@@ -44,20 +45,22 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val result = Validation.validate(model, options)
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root, options)
         val reducedMessages = result.messages.filterNot(_.loc.line == 1)
         validator(model.contexts.head, rpi, reducedMessages)
     }
   }
 
-  def parseAndValidate[D <: Definition: ClassTag](
+  def parseAndValidateDomain(
     input: RiddlParserInput
-  )(validator: (D, RiddlParserInput, Messages) => Assertion
+  )(validator: (Domain, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    parseDefinition[D](input) match {
+    parseDefinition[Domain](input) match {
       case Left(errors) => fail(errors.format)
-      case Right((model: D @unchecked, rpi)) =>
-        val result = Validation.validate(model)
+      case Right((model: Domain, rpi)) =>
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root)
         validator(model, rpi, result.messages)
     }
   }

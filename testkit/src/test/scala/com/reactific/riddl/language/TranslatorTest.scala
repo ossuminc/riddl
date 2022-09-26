@@ -1,7 +1,6 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Definition
-import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.testkit.ValidatingTest
 import com.reactific.riddl.utils.Logger
@@ -33,14 +32,14 @@ class TranslatorTest extends ValidatingTest {
     val defaultOptions: TestTranslatingOptions = TestTranslatingOptions()
 
     override def translate(
-      root: RootContainer,
+      result: Validation.Result,
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions
     ): Either[Messages, Unit] = {
       val state = TestTranslatorState(options)
       val parents = scala.collection.mutable.Stack.empty[Definition]
-      Folding.foldLeftWithStack(state, parents)(root) {
+      Folding.foldLeftWithStack(state, parents)(result.root) {
         case (state, _ /*definition*/, _ /*stack*/ ) =>
           // log.info(stack.reverse.mkString(".") + "." + definition.id.format)
           state

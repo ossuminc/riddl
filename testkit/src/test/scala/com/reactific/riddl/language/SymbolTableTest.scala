@@ -82,7 +82,8 @@ class SymbolTableTest extends ParsingTest {
         input,
         CommonOptions(showMissingWarnings = false, showStyleWarnings = false)
       ) match {
-        case Right(model) =>
+        case Right(result) =>
+          val model = result.root
           model.isRootContainer must be(true)
           model.contents.headOption must not(be(empty))
           model.contents.head.contexts.size must be(1)

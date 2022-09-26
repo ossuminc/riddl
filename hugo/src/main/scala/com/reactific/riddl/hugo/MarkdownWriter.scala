@@ -305,15 +305,34 @@ case class MarkdownWriter(
     parents: Seq[String]
   ): this.type = {
     if (state.options.withGraphicalTOC) {
+      h2("Usage Relationships")
+      h3("Used By")
+      state.result.usedBy.get(top) match {
+        case Some(users) =>
+          val user_ids = users.map { definition =>
+            val link = state.makeDocLink(definition, parents)
+            s"[${definition.identify}]($link)"
+          }
+          list[String](user_ids)
+        case None => list[String](Seq("None"))
+      }
+      h3("Uses")
+      state.result.uses.get(top) match {
+        case Some(usages) =>
+          val user_ids = usages.map { definition =>
+            val link = state.makeDocLink(definition, parents)
+            s"[${definition.identify}]($link)"
+          }
+          list[String](user_ids)
+        case None => list[String](Seq("None"))
+      }
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
       val resourceName = "js/tree-map-hierarchy2.js"
       val jsPath = state.options.outputDir.get.resolve("static")
         .resolve(resourceName)
-      if (!Files.exists(jsPath)) {
-        Files.createDirectories(jsPath.getParent)
-        PathUtils.copyResource(resourceName, jsPath)
-      }
+      if (!Files.exists(jsPath)) { Files.createDirectories(jsPath.getParent) }
+      PathUtils.copyResource(resourceName, jsPath)
 
       val javascript = s"""
                           |<div id="graphical-index">

@@ -15,12 +15,13 @@
  */
 package com.reactific.riddl.commands
 
+import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.TranslatingOptions
+import com.reactific.riddl.language.Validation
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -61,7 +62,7 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
     *   A Right[Unit] if successful or Left[Messages] if not
     */
   protected def translateImpl(
-    root: RootContainer,
+    validationResult: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
@@ -95,10 +96,11 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
       Left(messages) // no point even parsing if there are option errors
     } else {
       options.withInputFile { inputFile: Path =>
-        Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
+        Riddl.parse(inputFile, commonOptions).map { root: RootContainer =>
+          val result = Riddl.validate(root, commonOptions)
           val showTimes = commonOptions.showTimes
           Riddl.timer(stage = "translate", showTimes) {
-            translateImpl(root, log, commonOptions, options)
+            translateImpl(result, log, commonOptions, options)
           }
         }
       }

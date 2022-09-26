@@ -93,7 +93,7 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           MissingWarning,
@@ -119,7 +119,7 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
