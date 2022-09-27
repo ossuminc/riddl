@@ -294,6 +294,7 @@ object Validation {
 
     def validateState(s: State, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents.head, s).checkContainer(parents.headOption, s)
+        .checkAggregation(s.aggregation, s)
         .addIf(s.aggregation.fields.isEmpty && !s.isEmpty) {
           Message(
             s.aggregation.loc,
@@ -308,7 +309,12 @@ object Validation {
       f: Function,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, f).checkDescription(f)
+      checkContainer(parents.headOption, f)
+        .checkOptions[FunctionOption](f.options, f.loc)
+        .stepIf(f.input.nonEmpty) { vs => vs.checkAggregation(f.input.get, f) }
+        .stepIf(f.output.nonEmpty) { vs =>
+          vs.checkAggregation(f.output.get, f)
+        }.checkDescription(f)
     }
 
     def validateHandler(
@@ -368,7 +374,8 @@ object Validation {
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, p).checkDescription(p)
+      checkContainer(parents.headOption, p).checkAggregation(p.aggregation, p)
+        .checkDescription(p)
     }
 
     def validateAdaptor(
@@ -992,6 +999,7 @@ object Validation {
         container.loc
       )
     }
+
     def checkAction(
       action: Action,
       defn: Definition

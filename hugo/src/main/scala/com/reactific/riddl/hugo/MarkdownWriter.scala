@@ -142,6 +142,18 @@ case class MarkdownWriter(
 
   private def mono(phrase: String): String = { s"`$phrase`" }
 
+  def listOf[T <: Definition](
+    kind: String,
+    items: Seq[T],
+    level: Int = 2
+  ): this.type = {
+    heading(kind, level)
+    val refs = items.map { definition =>
+      state.makeDocAndParentsLinks(definition)
+    }
+    list(refs)
+  }
+
   def list[T](items: Seq[T]): this.type = {
     def emitPair(prefix: String, body: String): Unit = {
       if (prefix.startsWith("[") && body.startsWith("(")) {
@@ -299,33 +311,24 @@ case class MarkdownWriter(
     )
   }
 
+  def emitUsage(definition: Definition): this.type = {
+    state.result.usedBy.get(definition) match {
+      case Some(users) => listOf("Used By", users)
+      case None        => h2("Used By None")
+    }
+    state.result.uses.get(definition) match {
+      case Some(usages) => listOf("Uses", usages)
+      case None         => h2("Uses Nothing")
+    }
+    this
+  }
+
   def emitIndex(
     kind: String,
     top: Definition,
     parents: Seq[String]
   ): this.type = {
     if (state.options.withGraphicalTOC) {
-      h2("Usage Relationships")
-      h3("Used By")
-      state.result.usedBy.get(top) match {
-        case Some(users) =>
-          val user_ids = users.map { definition =>
-            val link = state.makeDocLink(definition, parents)
-            s"[${definition.identify}]($link)"
-          }
-          list[String](user_ids)
-        case None => list[String](Seq("None"))
-      }
-      h3("Uses")
-      state.result.uses.get(top) match {
-        case Some(usages) =>
-          val user_ids = usages.map { definition =>
-            val link = state.makeDocLink(definition, parents)
-            s"[${definition.identify}]($link)"
-          }
-          list[String](user_ids)
-        case None => list[String](Seq("None"))
-      }
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
       val resourceName = "js/tree-map-hierarchy2.js"
@@ -420,9 +423,9 @@ case class MarkdownWriter(
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
-  def emitDetails(d: Option[Description], level: Int = 2): this.type = {
+  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
     if (d.nonEmpty) {
-      heading("Details", level)
+      heading("Description", level)
       val description = d.get.lines.map(_.s)
       description.foreach(p)
     }
@@ -443,10 +446,18 @@ case class MarkdownWriter(
     level: Int = 2
   ): this.type = {
     emitBriefly(definition, parents, level)
-    emitDetails(definition.description, level)
+    emitDescription(definition.description, level)
     if (definition.hasAuthors) {
       emitAuthorInfo(definition.asInstanceOf[WithAuthors].authors)
     }
+    this
+  }
+
+  def emitShortDefDoc(
+    definition: Definition
+  ): this.type = {
+    definition.brief.foreach(b => p(italic(b.s)))
+    definition.description.foreach(d => p(d.lines.mkString("\n")))
     this
   }
 
@@ -587,6 +598,7 @@ case class MarkdownWriter(
     containerHead(typ, suffix)
     emitDefDoc(typ, state.makeParents(stack))
     emitTypeExpression(typ.typ, typ +: stack)
+    emitUsage(typ)
   }
 
   def emitTypesToc(definition: WithTypes): this.type = {
@@ -627,34 +639,52 @@ case class MarkdownWriter(
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Stories", mkTocSeq(domain.stories))
     toc("Plants", mkTocSeq(domain.plants))
+    emitUsage(domain)
     emitTerms(domain.terms)
     emitIndex("Domain", domain, parents)
     this
   }
 
-  def emitExample(
-    example: Example,
-    parents: Seq[String],
+  def emitExamples(
+    examples: Seq[Example],
     level: Int = 2
   ): this.type = {
-    val hLevel = {
-      if (example.isImplicit) { level }
-      else {
-        heading(example.id.format, level)
-        level + 1
-      }
+    heading("Examples", level)
+    var count = 0
+    examples.foreach { example =>
+      if (example.isImplicit) {
+        count += 1
+        heading(s"Anonymous Example $count", level + 1)
+      } else { heading(example.id.format, level) }
+      emitExample(example, level + 1)
     }
-    emitDefDoc(example, parents, hLevel)
-    heading("GIVEN", hLevel)
-    list(example.givens.map { given =>
-      given.scenario.map("    *" + _.s + "\n")
-    })
-    heading("WHEN", hLevel)
-    list(example.whens.map { when => when.condition.format })
-    heading("THEN", hLevel)
-    list(example.thens.map { then_ => then_.action.format })
-    heading("BUT", hLevel)
-    list(example.buts.map { but => but.action.format })
+    this
+  }
+
+  def emitExample(
+    example: Example,
+    level: Int = 2
+  ): this.type = {
+    emitShortDefDoc(example)
+    if (example.givens.nonEmpty) {
+      heading("GIVEN", level)
+      list(example.givens.map { given =>
+        given.scenario.map("    *" + _.s + "\n")
+      })
+    }
+    if (example.whens.nonEmpty) {
+      heading("WHEN", level)
+      list(example.whens.map { when => when.condition.format })
+    }
+    if (example.thens.nonEmpty) {
+      heading("THEN", level)
+      list(example.thens.map { then_ => then_.action.format })
+    }
+    if (example.buts.nonEmpty) {
+      heading("BUT", level)
+      list(example.buts.map { but => but.action.format })
+    }
+    this
   }
 
   def emitInputOutput(
@@ -679,8 +709,9 @@ case class MarkdownWriter(
     emitTypesToc(function)
     emitInputOutput(function.input, function.output)
     h2("Examples")
-    val functionExampleLevel = 3
-    function.examples.foreach(emitExample(_, parents, functionExampleLevel))
+    emitExamples(function.examples)
+    emitUsage(function)
+    emitTerms(function.terms)
     this
   }
 
@@ -700,6 +731,7 @@ case class MarkdownWriter(
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Entities", mkTocSeq(context.entities))
     toc("Sagas", mkTocSeq(context.sagas))
+    emitUsage(context)
     emitTerms(context.terms)
     emitIndex("Context", context, parents)
     this
@@ -711,6 +743,7 @@ case class MarkdownWriter(
     emitERD(state, parents)
     h2("Fields")
     emitFields(state.aggregation.fields)
+    emitUsage(state)
   }
 
   def emitInvariants(invariants: Seq[Invariant]): this.type = {
@@ -721,7 +754,7 @@ case class MarkdownWriter(
         val expr = invariant.expression.map(_.format)
           .getOrElse("<not specified>")
         sb.append("* ").append(expr).append("\n")
-        emitDetails(invariant.description, 4)
+        emitDescription(invariant.description, 4)
       }
     }
     this
@@ -732,12 +765,11 @@ case class MarkdownWriter(
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       h3("On " + clause.msg.format)
-      emitDetails(clause.description, level = 4)
-      val clauseParents = parents :+ handler.id.format
-      emitBriefly(clause, clauseParents)
-      h4("Examples")
-      clause.examples.foreach(emitExample(_, clauseParents, 5))
+      emitShortDefDoc(clause)
+      emitExamples(clause.examples, 4)
     }
+    emitUsage(handler)
+    emitTerms(handler.terms)
     this
   }
 
@@ -758,23 +790,23 @@ case class MarkdownWriter(
     toc("States", mkTocSeq(entity.states))
     toc("Functions", mkTocSeq(entity.functions))
     toc("Handlers", mkTocSeq(entity.handlers))
+    emitUsage(entity)
+    emitTerms(entity.terms)
     emitIndex("Entity", entity, parents)
   }
 
-  def emitSagaSteps(actions: Seq[SagaStep], parents: Seq[String]): this.type = {
+  def emitSagaSteps(actions: Seq[SagaStep]): this.type = {
     h2("Saga Actions")
     actions.foreach { action =>
-      h3(action.id.format)
-      emitBriefly(action, parents, 4)
+      h3(action.identify)
+      emitShortDefDoc(action)
       h4("Messaging")
       list(Seq(
         "Do:" -> action.doAction.format,
         "Undo:" -> action.undoAction.format
       ))
       p(action.format)
-      h4("Examples")
-      action.examples.foreach(emitExample(_, parents, 5))
-      emitDetails(action.description, 4)
+      emitExamples(action.examples, 4)
     }
     this
   }
@@ -783,7 +815,9 @@ case class MarkdownWriter(
     emitDefDoc(saga, parents)
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)
-    emitSagaSteps(saga.sagaSteps, parents)
+    emitSagaSteps(saga.sagaSteps)
+    emitUsage(saga)
+    emitTerms(saga.terms)
     emitIndex("Saga", saga, parents)
   }
 
@@ -802,9 +836,11 @@ case class MarkdownWriter(
     list(
       "Designs",
       story.cases.map { d =>
-        s"[${d.identifyWithLoc}](${state.makeDocLink(d, parents)})"
+        s"[${d.identifyWithLoc}](${state.makeDocLink(d)})"
       }
     )
+    emitUsage(story)
+    emitTerms(story.terms)
   }
 
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
@@ -815,6 +851,7 @@ case class MarkdownWriter(
     list("Pipes", mkTocSeq(plant.pipes))
     list("Input Joints", mkTocSeq(plant.inJoints))
     list("Output Joints", mkTocSeq(plant.outJoints))
+    emitUsage(plant)
     emitTerms(plant.terms)
     emitIndex("Plant", plant, parents)
   }
@@ -825,7 +862,7 @@ case class MarkdownWriter(
     if (pipe.transmitType.nonEmpty) {
       p(s"Transmission Type: ${pipe.transmitType.get.format} ")
     }
-    this
+    emitUsage(pipe)
   }
 
   def emitProcessor(proc: Processor, parents: Seq[String]): this.type = {
@@ -833,19 +870,25 @@ case class MarkdownWriter(
     emitDefDoc(proc, parents)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
-      h3(inlet.id.format + s": ${inlet.type_.format}")
-      emitBriefly(inlet, parents, 4)
-      emitDetails(inlet.description, 4)
+      val link = state.makeDocLink(inlet)
+      h3(inlet.id.format + s": [${inlet.type_.format}]($link)")
+      emitShortDefDoc(inlet)
+      if (inlet.entity.nonEmpty) {
+        p(s"Sunken to ${inlet.entity.get.identify}")
+      }
     }
     h2("Outlets")
     proc.outlets.foreach { outlet =>
-      h3(outlet.id.format + s": ${outlet.type_.format}")
-      emitBriefly(outlet, parents, 4)
-      emitDetails(outlet.description, 4)
+      val link = state.makeDocLink(outlet)
+      h3(outlet.id.format + s": [${outlet.type_.format}]($link)")
+      emitShortDefDoc(outlet)
+      if (outlet.entity.nonEmpty) {
+        p(s"Sourced from ${outlet.entity.get.identify}")
+      }
     }
+    emitUsage(proc)
+    emitTerms(proc.terms)
     emitIndex("Processor", proc, parents)
-
-    this
   }
 
   def emitProjection(
@@ -855,6 +898,9 @@ case class MarkdownWriter(
     containerHead(projection, "Projection")
     emitDefDoc(projection, parents)
     emitFields(projection.aggregation.fields)
+    listOf("Handlers", projection.handlers)
+    emitUsage(projection)
+    emitTerms(projection.terms)
   }
 
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
@@ -862,6 +908,8 @@ case class MarkdownWriter(
     emitDefDoc(adaptor, parents)
     p(s"Applicable To: ${adaptor.ref.format}")
     toc("Adaptations", mkTocSeq(adaptor.adaptations))
+    emitUsage(adaptor)
+    emitTerms(adaptor.terms)
     emitIndex("Adaptor", adaptor, parents)
   }
 
@@ -873,8 +921,7 @@ case class MarkdownWriter(
     emitDefDoc(adaptation, parents)
     p(s"${italic(s"From event")}: ${adaptation.messageRef.format}\n")
     p(s"${italic(s"To command")}: ${adaptation.messageRef.format}\n")
-    h2("Examples")
-    adaptation.examples.foreach(emitExample(_, parents, 3))
+    emitExamples(adaptation.examples)
     this
   }
 
