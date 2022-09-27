@@ -1,0 +1,4 @@
+domain FooBar is {
+    include "Foo/foo"
+    include "Bar/bar"
+}
