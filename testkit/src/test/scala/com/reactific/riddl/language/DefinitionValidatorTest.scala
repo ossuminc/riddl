@@ -8,7 +8,7 @@ class DefinitionValidatorTest extends ValidatingTest {
 
   "Definition Validation" should {
     "warn when an identifier is less than 3 characters" in {
-      parseAndValidate[Domain]("""domain po is {
+      parseAndValidateDomain("""domain po is {
                                  |type Ba is String
                                  |}
                                  |""".stripMargin) {

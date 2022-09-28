@@ -19,7 +19,6 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.AST.Include
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.*
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.PathUtils
@@ -132,7 +131,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if (commonOptions.verbose) { println(s"Generating output to: ${outDir}") }
+    if (commonOptions.verbose) { println(s"Generating output to: $outDir") }
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)
@@ -169,17 +168,17 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   }
 
   override def translate(
-    root: AST.RootContainer,
+    result: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options
   ): Either[Messages, Unit] = {
-    doTranslation(root, log, commonOptions, options)
+    doTranslation(result, log, commonOptions, options)
     Right(())
   }
 
   def doTranslation(
-    root: AST.RootContainer,
+    result: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options
@@ -190,13 +189,14 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       "Output path is empty"
     )
     makeDirectoryStructure(options.inputFile.get, log, options, commonOptions)
+    val root = result.root
     val someAuthors = root.contents.headOption match {
       case Some(domain) => domain.authors
       case None         => Seq.empty[Author]
     }
     writeConfigToml(options, someAuthors.headOption)
     val symtab = SymbolTable(root)
-    val state = HugoTranslatorState(root, symtab, options, commonOptions)
+    val state = HugoTranslatorState(result, symtab, options, commonOptions)
     val parentStack = mutable.Stack[Definition]()
 
     Folding.foldLeftWithStack(state, parentStack)(root)(processingFolder)
@@ -246,7 +246,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case c: Context    => mkd.emitContext(c, stack)
           case d: Domain     => mkd.emitDomain(d, parents)
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
-          case p: Processor  => mkd.emitProcessor(p, parents)
+          case p: Processor  => mkd.emitProcessor(p, stack)
           case p: Projection => mkd.emitProjection(p, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case s: Story      => mkd.emitStory(s, stack)

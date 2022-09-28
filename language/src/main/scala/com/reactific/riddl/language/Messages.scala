@@ -20,9 +20,7 @@ object Messages {
 
     def severity: Int
 
-    def compare(that: KindOfMessage): Int = {
-      this.severity - that.severity
-    }
+    def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
   final case object Info extends KindOfMessage {
@@ -77,33 +75,30 @@ object Messages {
     loc: Location,
     message: String,
     kind: KindOfMessage = Error,
-    context: String = ""
-  ) extends Ordered[Message] {
+    context: String = "")
+      extends Ordered[Message] {
     override def compare(that: Message): Int = {
       val comparison = this.loc.compare(that.loc)
-      if (comparison == 0) {
-        this.kind.compare(that.kind)
-      } else comparison
+      if (comparison == 0) { this.kind.compare(that.kind) }
+      else comparison
     }
 
     def format: String = {
       val nl = System.lineSeparator()
-      val ctxt = if (context.nonEmpty) { s"${nl}Context: $context" } else ""
+      val ctxt =
+        if (context.nonEmpty) { s"${nl}Context: $context" }
+        else ""
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
       if (loc.isEmpty || loc.source.isEmpty || errorLine.isEmpty) {
         s"$kind: $loc: $message$ctxt"
-      } else {
-        s"$kind: $loc: $message:$nl$errorLine$ctxt"
-      }
+      } else { s"$kind: $loc: $message:$nl$errorLine$ctxt" }
     }
   }
 
   def error(
     message: String,
-    loc: Location = Location.empty,
-  ): Message = {
-    Message(loc, message)
-  }
+    loc: Location = Location.empty
+  ): Message = { Message(loc, message) }
 
   def warning(message: String, loc: Location = Location.empty): Message = {
     Message(loc, message, Warning)
@@ -114,7 +109,7 @@ object Messages {
   }
 
   def errors(message: String, loc: Location = Location.empty): Messages = {
-    List(Message(loc,message))
+    List(Message(loc, message))
   }
 
   def warnings(message: String, loc: Location = Location.empty): Messages = {
@@ -128,29 +123,27 @@ object Messages {
   type Messages = List[Message]
 
   implicit class MessagesAuxiliary(msgs: Messages) {
-    def format: String = {
-      msgs.map(_.format).mkString(System.lineSeparator())
+    def format: String = { msgs.map(_.format).mkString(System.lineSeparator()) }
+    def isOnlyWarnings: Boolean = {
+      msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
   }
 
   val empty: Messages = List.empty[Message]
 
   def highestSeverity(messages: Messages): Int = {
-    messages.foldLeft(0) {
-      case (n, m) =>
-        Math.max(m.kind.severity, n)
-    }
+    messages.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
   }
 
   def logMessages(messages: Messages, log: Logger): Int = {
     messages.sorted.foreach { msg =>
       msg.kind match {
-        case Info => log.info(msg.format)
-        case StyleWarning => log.warn(msg.format)
+        case Info           => log.info(msg.format)
+        case StyleWarning   => log.warn(msg.format)
         case MissingWarning => log.warn(msg.format)
-        case Warning => log.warn(msg.format)
-        case Error => log.error(msg.format)
-        case SevereError => log.severe(msg.format)
+        case Warning        => log.warn(msg.format)
+        case Error          => log.error(msg.format)
+        case SevereError    => log.severe(msg.format)
       }
     }
     highestSeverity(messages)

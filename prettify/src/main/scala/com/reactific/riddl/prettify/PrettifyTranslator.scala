@@ -19,9 +19,7 @@ package com.reactific.riddl.prettify
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Folding
-import com.reactific.riddl.language.Translator
+import com.reactific.riddl.language.{CommonOptions, Folding, Translator, Validation}
 import com.reactific.riddl.utils.Logger
 
 import java.nio.charset.StandardCharsets
@@ -75,34 +73,34 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
   }
 
   def translate(
-    root: RootContainer,
+    results: Validation.Result,
     @unused log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
   ): Either[Messages, Unit] = {
-    val state = doTranslation(root, log, commonOptions, options)
+    val state = doTranslation(results, log, commonOptions, options)
     Right(state.files)
   }
 
   def doTranslation(
-    root: RootContainer,
+    results: Validation.Result,
     @unused log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
   ): ReformatState = {
     val state = ReformatState(commonOptions, options)
     val folder = new ReformatFolder
-    Folding.foldAround(state, root, folder)
+    Folding.foldAround(state, results.root, folder)
   }
 
   def translateToString(
-    root: RootContainer,
+    results: Validation.Result,
     logger: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
   ): String = {
     val state = doTranslation(
-      root,
+      results,
       logger,
       commonOptions,
       options.copy(singleFile = true)

@@ -18,7 +18,6 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.Validation.Result
 import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.utils.{Logger, SysLogger}
 
@@ -95,15 +94,9 @@ object Riddl {
   def validate(
     root: RootContainer,
     commonOptions: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Validation.Result = {
     timer("validate", commonOptions.showTimes) {
-      Validation.validate(root, commonOptions) match {
-        case Result(messages, _,_,_) =>
-          if (messages.isEmpty)
-            Right(root)
-          else
-            Left(messages)
-      }
+      Validation.validate(root, commonOptions)
     }
   }
 
@@ -111,16 +104,21 @@ object Riddl {
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages,Validation.Result] = {
     parse(input, commonOptions).flatMap { root =>
-      validate(root, commonOptions)
+      val result = validate(root, commonOptions)
+      if (result.messages.isOnlyWarnings) {
+        Right(result)
+      } else {
+        Left(result.messages)
+      }
     }
   }
 
   def parseAndValidate(
     path: Path,
     commonOptions: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages, Validation.Result] = {
     parseAndValidate(RiddlParserInput(path), commonOptions)
   }
 

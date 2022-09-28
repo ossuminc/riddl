@@ -37,7 +37,9 @@ object Validation {
   /** The result of the validation process, yielding information useful to
     * subsequent passes.
     * @param messages
-    *   The messages generated during validation
+    *   The messages generated during validation that were not fatal
+    * @param root
+    *   The RootContainer passed into the validate method.
     * @param symTab
     *   The SymbolTable generated during the validation
     * @param uses
@@ -47,18 +49,30 @@ object Validation {
     */
   case class Result(
     messages: Messages,
+    root: RootContainer,
     symTab: SymbolTable,
     uses: Map[Definition, Seq[Definition]],
     usedBy: Map[Definition, Seq[Definition]])
 
+  /** Run a validation algorithm in a single pass through the AST that looks for
+    * inconsistencies, missing definitions, style violations, errors, etc.
+    * @param root
+    *   The result of parsing as a RootContainer. This contains the AST that is
+    *   validated.
+    * @param commonOptions
+    *   THe options to use when validating, indicating the verbosity level, etc.
+    * @return
+    *   A Validation.Result is returned containing the root passed in, the
+    *   validation messages generated and analytical results.
+    */
   def validate(
-    root: Definition,
+    root: RootContainer,
     commonOptions: CommonOptions = CommonOptions()
   ): Result = {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, root, commonOptions)
     val parents = mutable.Stack.empty[Definition]
-    val endState =
+    val endState = {
       try { state.validateDefinitions(root, parents).checkOverloads(symTab) }
       catch {
         case NonFatal(xcptn) =>
@@ -66,8 +80,10 @@ object Validation {
             .mkString("\n")
           state.addSevere(Location.empty, message)
       }
+    }
     Result(
       endState.messages.sortBy(_.loc),
+      root,
       symTab,
       endState.uses.toMap,
       endState.usedBy.toMap
@@ -292,7 +308,8 @@ object Validation {
       f: Function,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, f).checkDescription(f)
+      checkContainer(parents.headOption, f)
+        .checkOptions[FunctionOption](f.options, f.loc).checkDescription(f)
     }
 
     def validateHandler(
@@ -352,7 +369,8 @@ object Validation {
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, p).checkDescription(p)
+      checkContainer(parents.headOption, p).checkAggregation(p.aggregation)
+        .checkDescription(p)
     }
 
     def validateAdaptor(
@@ -589,8 +607,7 @@ object Validation {
     }
 
     def checkAggregation(
-      agg: Aggregation,
-      definition: Definition
+      agg: Aggregation
     ): ValidationState = {
       checkSequence(agg.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
@@ -598,7 +615,7 @@ object Validation {
           "Field names in aggregates should start with a lower case letter",
           StyleWarning,
           field.loc
-        ).checkTypeExpression(field.typeEx, definition).checkDescription(field)
+        ).checkDescription(field)
       }
     }
 
@@ -632,7 +649,7 @@ object Validation {
       typ match {
         case AliasedTypeExpression(_, id: PathIdentifier) =>
           checkPathRef[Type](id, defn)()()
-        case agg: Aggregation            => checkAggregation(agg, defn)
+        case agg: Aggregation            => checkAggregation(agg)
         case mt: MessageType             => checkMessageType(mt, defn)
         case alt: Alternation            => checkAlternation(alt, defn)
         case mapping: Mapping            => checkMapping(mapping, defn)
@@ -976,6 +993,7 @@ object Validation {
         container.loc
       )
     }
+
     def checkAction(
       action: Action,
       defn: Definition

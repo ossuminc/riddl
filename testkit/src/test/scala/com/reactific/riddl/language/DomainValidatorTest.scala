@@ -39,7 +39,7 @@ class DomainValidatorTest extends ValidatingTest {
                     |  } described as "identifying"
                     |} described as "example"
                     |""".stripMargin
-      parseAndValidate[Domain](input) {
+      parseAndValidateDomain(input) {
         (domain: Domain, rpi: RiddlParserInput, messages: Messages) =>
           domain mustNot be(empty)
           domain.contents mustNot be(empty)

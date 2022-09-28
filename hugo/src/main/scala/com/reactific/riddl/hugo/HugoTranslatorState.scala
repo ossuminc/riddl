@@ -34,12 +34,14 @@ import java.nio.file.Path
   *   The common options all commands use
   */
 case class HugoTranslatorState(
-  root: RootContainer,
+  result: Validation.Result,
   symbolTable: SymbolTable,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
     extends TranslatorState[MarkdownWriter]
     with PathResolutionState[HugoTranslatorState] {
+
+  final val root: Definition = result.root // base class compliance
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -134,15 +136,33 @@ case class HugoTranslatorState(
       case None => ""
     }
   }
+  def makeDocLink(definition: Definition): String = {
+    val parents = makeParents(symbolTable.parentsOf(definition))
+    makeDocLink(definition, parents)
+  }
+
+  def makeDocAndParentsLinks(definition: Definition): String = {
+    val parents = symbolTable.parentsOf(definition)
+    val docLink = makeDocLink(definition, makeParents(parents))
+    if (parents.isEmpty) { s"[${definition.identify}]($docLink)" }
+    else {
+      val parent = parents.head
+      val parentLink = makeDocLink(parent, makeParents(parents.tail))
+      s"[${definition.identify}]($docLink) in [${parent.identify}]($parentLink)"
+    }
+  }
 
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
-      case _: OnClause => pars + "#" + definition.id.value.toLowerCase
-      case _: Field | _: Enumerator | _: Invariant | _: Inlet | _: Outlet |
-          _: InletJoint | _: OutletJoint | _: Author | _: SagaStep |
+      case _: OnClause | _: Example | _: Inlet | _: Outlet => pars + "#" +
+          definition.id.value.toLowerCase
+      case _: Field | _: Enumerator | _: Invariant | _: InletJoint |
+          _: OutletJoint | _: Author | _: SagaStep |
           _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
-      case _ => pars + "/" + definition.id.value.toLowerCase
+      case _ =>
+        if (parents.isEmpty) pars + definition.id.value.toLowerCase
+        else pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor
     result.replace(" ", "-")
@@ -178,7 +198,7 @@ case class HugoTranslatorState(
   def makeStatistics(): Unit = {
     if (options.withStatistics) {
       val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
-      mdw.emitStatistics(statsWeight, root)
+      mdw.emitStatistics(statsWeight, result.root)
     }
   }
 

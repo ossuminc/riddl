@@ -9,7 +9,7 @@ class TypeValidatorTest extends ValidatingTest {
 
   "TypeValidator" should {
     "ensure type names start with capital letter" in {
-      parseAndValidate[Domain]("""domain foo is {
+      parseAndValidateDomain("""domain foo is {
                                  |type bar is String
                                  |}
                                  |""".stripMargin) {
@@ -22,7 +22,7 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
     "identify undefined type references" in {
-      parseAndValidate[Domain]("""
+      parseAndValidateDomain("""
                                  |domain foo is {
                                  |// type Foo is Number
                                  |// type Bar is Integer
@@ -53,7 +53,7 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
     "allow ??? in aggregate bodies without warning" in {
-      parseAndValidate[Domain]("""domain foo {
+      parseAndValidateDomain("""domain foo {
                                  |type Empty is { ??? } explained as "empty"
                                  |} explained as "nothing"
                                  |""".stripMargin) {
@@ -62,7 +62,7 @@ class TypeValidatorTest extends ValidatingTest {
     }
 
     "identify when pattern type does not refer to a valid pattern" in {
-      parseAndValidate[Domain]("""
+      parseAndValidateDomain("""
                                  |domain foo is {
                                  |type pat is Pattern("[")
                                  |}
@@ -73,7 +73,7 @@ class TypeValidatorTest extends ValidatingTest {
     }
 
     "identify when unique ID types reference something other than an entity" in {
-      parseAndValidate[Domain]("""
+      parseAndValidateDomain("""
                                  |domain foo is {
                                  |context TypeTest is { ??? }
                                  |type Order is Id(TypeTest)

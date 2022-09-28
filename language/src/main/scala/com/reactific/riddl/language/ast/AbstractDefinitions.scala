@@ -421,41 +421,6 @@ trait AbstractDefinitions extends Terminals {
       with SagaDefinition
       with StoryDefinition
 
-  trait VitalDefinition[T <: OptionValue, CT <: Definition]
-      extends Definition
-      with WithOptions[T]
-      with WithAuthors
-      with WithIncludes[CT]
-      with WithTerms {
-
-    /** Compute the 'maturity' of a definition. Maturity is a score with no
-      * maximum but with scoring rules that target 100 points per definition.
-      * Maturity is broken down this way:
-      *   - has a description - up to 50 points depending on # of non empty
-      *     lines
-      *   - has a brief description - 5 points
-      *   - has options specified - 5 points
-      *   - has terms defined -
-      *   - has an author in or above the definition - 5 points
-      * -
-      *   - definition specific things: 0.65
-      * @return
-      */
-    def maturity(parents: Seq[Definition]): Int = {
-      var score = 0
-      if (hasOptions) score += 5
-      if (hasTerms) score += 5
-      if (description.nonEmpty) {
-        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
-      }
-      if (brief.nonEmpty) score += 5
-      if (includes.nonEmpty) score += 3
-      if (isAuthored(parents)) score += 2
-      score
-    }
-  }
-
-  final val maxMaturity = 100
 
   // ////////////////////////////////////////////////// UTILITY FUNCTIONS
 

@@ -16,10 +16,10 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.utils.{Logger, OutputFile}
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.OutputFile
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -53,30 +53,30 @@ trait TranslatorState[OF <: OutputFile] {
     files.map(_.filePath).toSeq
   }
 
-  def addFile(file: OF): Unit = {
-    files.append(file)
-  }
+  def addFile(file: OF): Unit = { files.append(file) }
 }
 
 /** Base class of all Translators
- * @tparam OPT The options class used by the translator */
+  * @tparam OPT
+  *   The options class used by the translator
+  */
 trait Translator[OPT <: TranslatingOptions] {
 
   def translate(
-    root: RootContainer,
+    result: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Either[Messages,Unit]
+  ): Either[Messages, Unit]
 
   final def parseValidateTranslate(
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Either[Messages,Unit] = {
+  ): Either[Messages, Unit] = {
     require(options.inputFile.nonEmpty, "Input path option must not be empty")
-    Riddl.parseAndValidate(options.inputFile.get, commonOptions).flatMap { root =>
-      translate(root, log, commonOptions, options)
+    Riddl.parseAndValidate(options.inputFile.get, commonOptions).flatMap {
+      results => translate(results, log, commonOptions, options)
     }
   }
 
@@ -85,9 +85,9 @@ trait Translator[OPT <: TranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Either[Messages,Unit] = {
-    Riddl.parseAndValidate(input, commonOptions).flatMap { root =>
-      translate(root, log, commonOptions, options)
+  ): Either[Messages, Unit] = {
+    Riddl.parseAndValidate(input, commonOptions).flatMap { results =>
+      translate(results, log, commonOptions, options)
     }
   }
 }

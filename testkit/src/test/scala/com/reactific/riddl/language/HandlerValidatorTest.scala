@@ -13,7 +13,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
-          |  state HamburgerState = { 
+          |  state HamburgerState = {
           |    fields { field1: Number, field2: String }
           |    handler foo is {
           |      on command EntityCommand { example only { then set field1 to 445 } }
@@ -24,7 +24,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_: Domain, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
@@ -46,7 +46,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
-          |  state HamburgerState = { fields { field1: Number } 
+          |  state HamburgerState = { fields { field1: Number }
           |    handler foo is {
           |      on event Incoming { example only { then set field1 to 678 } }
           |    }
@@ -55,7 +55,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
@@ -71,7 +71,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |context EntityContext is {
           |entity Hamburger is {
           |  type Incoming is String
-          |  state HamburgerState = { fields { field1: Number } 
+          |  state HamburgerState = { fields { field1: Number }
           |    handler foo is {
           |      on event Incoming { example only { then set field1 to 678 } }
           |    }
@@ -80,7 +80,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
@@ -94,7 +94,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |domain entityTest is {
                     |context EntityContext is {
                     |entity Hamburger is {
-                    |  state HamburgerState = { fields { field1: Number } 
+                    |  state HamburgerState = { fields { field1: Number }
                     |    handler foo is {
                     |      on command EntityCommand { example only {
                     |        then set nonExistingField to 123
@@ -105,7 +105,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
@@ -121,7 +121,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |context EntityContext is {
                     |entity Hamburger is {
                     |  type EntityCommand is command { foo: Number }
-                    |  state HamburgerState = { fields { field1: Number  } 
+                    |  state HamburgerState = { fields { field1: Number  }
                     |    handler foo is {
                     |      on command EntityCommand { example only {
                     |        then set field1 to @bar
@@ -132,7 +132,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
@@ -159,7 +159,7 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidate[Domain](input) { case (_, _, msgs: Messages) =>
+      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,

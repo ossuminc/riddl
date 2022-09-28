@@ -31,6 +31,42 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   */
 object AST extends ast.Expressions with parsing.Terminals {
 
+  sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
+      extends Definition
+      with WithOptions[T]
+      with WithAuthors
+      with WithIncludes[CT]
+      with WithTerms {
+
+    /** Compute the 'maturity' of a definition. Maturity is a score with no
+      * maximum but with scoring rules that target 100 points per definition.
+      * Maturity is broken down this way:
+      *   - has a description - up to 50 points depending on # of non empty
+      *     lines
+      *   - has a brief description - 5 points
+      *   - has options specified - 5 points
+      *   - has terms defined -
+      *   - has an author in or above the definition - 5 points
+      * -
+      *   - definition specific things: 0.65
+      * @return
+      */
+    def maturity(parents: Seq[Definition]): Int = {
+      var score = 0
+      if (hasOptions) score += 5
+      if (hasTerms) score += 5
+      if (description.nonEmpty) {
+        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
+      }
+      if (brief.nonEmpty) score += 5
+      if (includes.nonEmpty) score += 3
+      if (isAuthored(parents)) score += 2
+      score
+    }
+  }
+
+  final val maxMaturity = 100
+
   /** Base trait of any definition that is a container and contains types
     */
   trait WithTypes extends Definition {
@@ -162,7 +198,6 @@ object AST extends ast.Expressions with parsing.Terminals {
         case _                           => Seq.empty[TypeDefinition]
       }
     }
-    def isMessageKind: Boolean = { typ.isInstanceOf[MessageType] }
     final val kind: String = "Type"
   }
   type Command = Type
@@ -663,11 +698,15 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   /** Base class of all function options
     *
-    * @param loc
-    *   The location of the function option
+    * @param name
+    *   The name of the option
     */
   sealed abstract class FunctionOption(val name: String) extends OptionValue
 
+  /** A function option to mark a function as being tail recursive
+    * @param loc
+    *   The location of the tail recursive option
+    */
   case class TailRecursive(loc: Location)
       extends FunctionOption("tail-recursive")
 
@@ -859,7 +898,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The location of the state definition
     * @param id
     *   The name of the state definition
-    * @param typeEx
+    * @param aggregation
     *   The aggregation that provides the field name and type expression
     *   associations
     * @param brief
@@ -1739,20 +1778,6 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class SagaRef(loc: Location, id: PathIdentifier)
       extends Reference[Saga] with StoryCaseUsesRefs
 
-  /** C4 Object is just a namespace for the C4 classes because their names
-    * collide with things in AST object.
-    */
-
-  /** A sealed trait with the common characteristics of all elements of a C4
-    * storyCase used for Stories.
-    *
-    * @tparam T
-    *   The kind of RIDDL element referenced by this element.
-    */
-  sealed trait CaseElement extends Definition {
-    def contents: Seq[Definition] = Seq.empty[Definition]
-  }
-
   /** An StoryActor (Role) who is the initiator of the user story. Actors may be
     * persons or machines
     *
@@ -1834,8 +1859,8 @@ object AST extends ast.Expressions with parsing.Terminals {
   /** An agile user story definition
     * @param loc
     *   Location of the user story
-    * @param role
-    *   Role of the actor for the story
+    * @param actor
+    *   The actor, or instigator, of the story
     * @param capability
     *   The capability the actor wishes to utilize
     * @param benefit
