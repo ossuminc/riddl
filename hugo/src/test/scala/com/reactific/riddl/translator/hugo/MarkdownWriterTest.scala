@@ -59,7 +59,7 @@ class MarkdownWriterTest extends ParsingTest {
               || _Definition Path_ | hugo-translator.target.test-output.TestDomain |
               || _View Source Link_ | [empty(1:1)]() |
               |
-              |## *Details*
+              |## *Description*
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
               |
@@ -71,6 +71,10 @@ class MarkdownWriterTest extends ParsingTest {
               |
               |### _Others_
               |* [MyString](mystring)
+              |
+              |## *Used By None*
+              |
+              |## *Uses Nothing*
               |
               |## *Textual Domain Index*
               |{{< toc-tree >}}

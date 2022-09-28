@@ -198,7 +198,6 @@ object AST extends ast.Expressions with parsing.Terminals {
         case _                           => Seq.empty[TypeDefinition]
       }
     }
-    // def isMessageKind: Boolean = { typ.isInstanceOf[MessageType] }
     final val kind: String = "Type"
   }
   type Command = Type

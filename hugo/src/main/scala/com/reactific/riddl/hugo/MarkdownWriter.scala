@@ -471,7 +471,7 @@ case class MarkdownWriter(
       val slink = state.makeSourceLink(resolved.head)
       val link = state
         .makeDocLink(resolved.head, state.makeParents(resolved.tail))
-      s"[${resolved.head.identify}]($link) at [source]($slink)"
+      s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
     }
   }
 
@@ -865,30 +865,34 @@ case class MarkdownWriter(
     emitUsage(pipe)
   }
 
-  def emitProcessor(proc: Processor, parents: Seq[String]): this.type = {
+  def emitProcessor(proc: Processor, parents: Seq[Definition]): this.type = {
     leafHead(proc, weight = 30)
-    emitDefDoc(proc, parents)
+    val parList = state.makeParents(parents)
+    emitDefDoc(proc, parList)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
-      val link = state.makeDocLink(inlet)
-      h3(inlet.id.format + s": [${inlet.type_.format}]($link)")
+      val typeRef = makePathIdRef(inlet.type_.id, parents)
+      val entityRef =
+        if (inlet.entity.nonEmpty) {
+          " sunken to " + makePathIdRef(inlet.entity.get.id, parents)
+        } else ""
+      h3(inlet.id.format)
+      p(typeRef + entityRef)
       emitShortDefDoc(inlet)
-      if (inlet.entity.nonEmpty) {
-        p(s"Sunken to ${inlet.entity.get.identify}")
-      }
     }
     h2("Outlets")
     proc.outlets.foreach { outlet =>
-      val link = state.makeDocLink(outlet)
-      h3(outlet.id.format + s": [${outlet.type_.format}]($link)")
-      emitShortDefDoc(outlet)
-      if (outlet.entity.nonEmpty) {
-        p(s"Sourced from ${outlet.entity.get.identify}")
+      val typeRef = makePathIdRef(outlet.type_.id, parents)
+      val entityRef = if (outlet.entity.nonEmpty) {
+        " sourced from " + makePathIdRef(outlet.entity.get.id, parents)
       }
+      h3(outlet.id.format)
+      p(typeRef + entityRef)
+      emitShortDefDoc(outlet)
     }
     emitUsage(proc)
     emitTerms(proc.terms)
-    emitIndex("Processor", proc, parents)
+    emitIndex("Processor", proc, parList)
   }
 
   def emitProjection(

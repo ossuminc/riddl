@@ -52,7 +52,15 @@ class UsageSpec extends AnyWordSpec with Matchers {
               result.usedBy.keys must contain(use)
               result.usedBy(use) must contain(user)
             }
-
+            // print it out for debugging
+            println("Uses:")
+            result.uses.foreach { case (k, v) =>
+              println(k.identify + " => " + v.map(_.identify).mkString(", "))
+            }
+            println("\nUsed By:")
+            result.usedBy.foreach { case (k, v) =>
+              println(k.identify + " => " + v.map(_.identify).mkString(", "))
+            }
             // But let's make sure we get the right results
             result.uses.size mustBe (7)
             result.usedBy.size mustBe (6)

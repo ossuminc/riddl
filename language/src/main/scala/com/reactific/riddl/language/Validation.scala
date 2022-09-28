@@ -294,7 +294,6 @@ object Validation {
 
     def validateState(s: State, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents.head, s).checkContainer(parents.headOption, s)
-        .checkAggregation(s.aggregation, s)
         .addIf(s.aggregation.fields.isEmpty && !s.isEmpty) {
           Message(
             s.aggregation.loc,
@@ -310,11 +309,7 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       checkContainer(parents.headOption, f)
-        .checkOptions[FunctionOption](f.options, f.loc)
-        .stepIf(f.input.nonEmpty) { vs => vs.checkAggregation(f.input.get, f) }
-        .stepIf(f.output.nonEmpty) { vs =>
-          vs.checkAggregation(f.output.get, f)
-        }.checkDescription(f)
+        .checkOptions[FunctionOption](f.options, f.loc).checkDescription(f)
     }
 
     def validateHandler(
@@ -374,7 +369,7 @@ object Validation {
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, p).checkAggregation(p.aggregation, p)
+      checkContainer(parents.headOption, p).checkAggregation(p.aggregation)
         .checkDescription(p)
     }
 
@@ -612,8 +607,7 @@ object Validation {
     }
 
     def checkAggregation(
-      agg: Aggregation,
-      definition: Definition
+      agg: Aggregation
     ): ValidationState = {
       checkSequence(agg.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
@@ -621,7 +615,7 @@ object Validation {
           "Field names in aggregates should start with a lower case letter",
           StyleWarning,
           field.loc
-        ).checkTypeExpression(field.typeEx, definition).checkDescription(field)
+        ).checkDescription(field)
       }
     }
 
@@ -655,7 +649,7 @@ object Validation {
       typ match {
         case AliasedTypeExpression(_, id: PathIdentifier) =>
           checkPathRef[Type](id, defn)()()
-        case agg: Aggregation            => checkAggregation(agg, defn)
+        case agg: Aggregation            => checkAggregation(agg)
         case mt: MessageType             => checkMessageType(mt, defn)
         case alt: Alternation            => checkAlternation(alt, defn)
         case mapping: Mapping            => checkMapping(mapping, defn)
