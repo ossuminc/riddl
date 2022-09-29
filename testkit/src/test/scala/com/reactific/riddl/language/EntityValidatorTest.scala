@@ -17,7 +17,7 @@ class EntityValidatorTest extends ValidatingTest {
       parseAndValidateInContext[Entity](input) {
         case (entity: Entity, rpi, msgs: Messages) =>
           msgs.count(_.kind.isError) mustBe 1
-          msgs.count(_.kind.isMissing) mustBe 2
+          msgs.count(_.kind.isMissing) mustBe 3
           entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
           entity.options must contain(EntityIsAggregate((3, 19, rpi)))

@@ -178,3 +178,39 @@ Missing: everything.riddl(66:7): State 'someState' should have a description:
 Missing: everything.riddl(86:7): State 'otherThingState' should have a description:
        state otherThingState is { fields { then: String } }
        ^
+Missing: everything.riddl(24:5): Type 'str' is unused:
+     type str is String             // Define str as a String
+     ^
+Missing: everything.riddl(26:5): Type 'boo' is unused:
+     type boo is Boolean            // Define boo as a Boolean
+     ^
+Missing: everything.riddl(28:5): Type 'dat' is unused:
+     type dat is Date               // Define dat as a Date
+     ^
+Missing: everything.riddl(29:5): Type 'tim' is unused:
+     type tim is Time               // Define tim as a Time
+     ^
+Missing: everything.riddl(34:5): Type 'PeachType' is unused:
+     type PeachType is { a: Integer }
+     ^
+Missing: everything.riddl(38:5): Type 'alt' is unused:
+     type alt is one of { enum or stamp or url }
+     ^
+Missing: everything.riddl(48:5): Type 'oneOrMore' is unused:
+     type oneOrMore is many agg
+     ^
+Missing: everything.riddl(49:5): Type 'zeroOrMore' is unused:
+     type zeroOrMore is agg*
+     ^
+Missing: everything.riddl(50:5): Type 'optional' is unused:
+     type optional is agg?
+     ^
+Missing: everything.riddl(59:5): Entity 'Something' is unused:
+     entity Something is {
+     ^
+Missing: everything.riddl(62:7): Type 'somethingDate' is unused:
+       type somethingDate is Date
+       ^
+Missing: everything.riddl(68:7): Function 'whenUnderTheInfluence' is unused:
+       function whenUnderTheInfluence is {
+       ^
