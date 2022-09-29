@@ -86,12 +86,49 @@ abstract class RunCommandOnExamplesTest[
     }
   }
 
+  def forAConfigFile[T](
+    fileName: String
+  )(f: (String, Path) => T
+  ): Either[Messages, T] = {
+    FileUtils.iterateFiles(srcDir.toFile, Array[String](suffix), true).asScala
+      .toSeq
+      .find(file => file.isFile && file.getName == s"$fileName.conf") match {
+      case Some(config) =>
+        val name = config.getName.dropRight(suffix.length + 1)
+        CommandPlugin.loadCandidateCommands(config.toPath).flatMap { cmds =>
+          if (cmds.contains(commandName)) { Right(f(name, config.toPath)) }
+          else { Left(errors(s"Command $commandName not found in $config")) }
+        }
+      case None => Left(errors(s"Config file $fileName.conf not found"))
+    }
+  }
+
   def outputDir = ""
 
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTests(): Unit = {
     forEachConfigFile { case (name, path) =>
+      val outputDir = outDir.resolve(name)
+
+      val result = CommandPlugin.runCommandNamed(
+        commandName,
+        path,
+        logger,
+        commonOptions,
+        outputDirOverride = Some(outputDir)
+      )
+      result match {
+        case Right(cmd) => onSuccess(commandName, name, path, cmd, outputDir)
+        case Left(messages) => fail(messages.format)
+      }
+    }
+  }
+
+  /** Call this from your test suite subclass to run all the examples found.
+    */
+  def runTest(confFileName: String): Unit = {
+    forAConfigFile(confFileName) { case (name, path) =>
       val outputDir = outDir.resolve(name)
 
       val result = CommandPlugin.runCommandNamed(

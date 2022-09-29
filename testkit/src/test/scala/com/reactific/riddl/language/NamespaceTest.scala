@@ -1,40 +1,27 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.commands.CommandPlugin
-import com.reactific.riddl.testkit.RunCommandSpecBase
+import com.reactific.riddl.commands.ASimpleTestCommand
+import com.reactific.riddl.testkit.RunCommandOnExamplesTest
 
 /** Unit Tests For Includes */
-class NamespaceTest extends RunCommandSpecBase {
+class NamespaceTest
+    extends RunCommandOnExamplesTest[
+      ASimpleTestCommand.Options,
+      ASimpleTestCommand
+    ](commandName = "test") {
   "FooBarSameDomain" should {
     "error w/ highest severity level 5" in {
-      val args = Array[String](
-        "--suppress-style-warnings",
-        "validate",
-        "examples/src/riddl/FooBarSameDomain/FooBar.riddl"
-      )
-      CommandPlugin.runMain(args) mustEqual 5
+      runTest("FooBarSameDomain") mustEqual 5
     }
   }
 
   "FooBarTwoDomains" should {
     "error w/ highest severity level 5" in {
-      val args = Array[String](
-        "--suppress-style-warnings",
-        "validate",
-        "examples/src/riddl/FooBarTwoDomains/FooBar.riddl"
-      )
-      CommandPlugin.runMain(args) mustEqual 5
+      runTest("FooBarTwoDomains") mustEqual 5
     }
   }
 
   "FooBarSuccess" should {
-    "succeed in compilation" in {
-      val args = Array[String](
-        "--suppress-style-warnings",
-        "validate",
-        "examples/src/riddl/FooBarSuccess/FooBar.riddl"
-      )
-      CommandPlugin.runMain(args) mustEqual 0
-    }
+    "succeed in compilation" in { runTest("FooBarSuccess") mustEqual 0 }
   }
 }
