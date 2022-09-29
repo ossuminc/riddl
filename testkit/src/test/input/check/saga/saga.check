@@ -49,3 +49,18 @@ Style: saga.riddl(6:57): Field identifier 'b' is too short. The minimum length i
 Missing: saga.riddl(26:7): SagaStep 'Two' should have a description:
        step Two is {
        ^
+Missing: saga.riddl(12:5): Entity 'blah' is unused:
+     entity blah is { ??? }
+     ^
+Missing: saga.riddl(3:5): Type 'Something' is unused:
+     type Something = command { ??? }
+     ^
+Missing: saga.riddl(4:5): Type 'UndoSomething' is unused:
+     type UndoSomething = command { ??? }
+     ^
+Missing: saga.riddl(5:5): Function 'AnotherThing' is unused:
+     function AnotherThing {
+     ^
+Missing: saga.riddl(8:5): Function 'UndoAnotherThing' is unused:
+     function UndoAnotherThing {
+     ^

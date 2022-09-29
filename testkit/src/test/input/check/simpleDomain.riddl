@@ -1,5 +1,5 @@
 domain foo is {
-  type Fum = String described by "A Fum Description"
+  term Fum described by "A Fum Description"
 } brief "this is the brief description"
 described as {
     "this is the detailed description"

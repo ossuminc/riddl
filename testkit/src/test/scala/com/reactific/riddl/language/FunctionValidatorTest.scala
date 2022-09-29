@@ -55,11 +55,11 @@ class FunctionValidatorTest extends ValidatingTest {
                     |  } described as "foo"
                     |""".stripMargin
 
-      parseAndValidateInContext[Function](input) { case (feature, _, msgs) =>
-        feature.id.value mustBe "AnAspect"
-        assert(feature.examples.nonEmpty)
-        assert(msgs.isEmpty)
-        assert(msgs.forall(_.message.contains("should have a description")))
+      parseAndValidateInContext[Function](input) { case (function, _, msgs) =>
+        function.id.value mustBe "AnAspect"
+        function.examples mustNot be(empty)
+        msgs mustNot be(empty)
+        msgs.format must include("Function 'AnAspect' is unused")
       }
     }
   }

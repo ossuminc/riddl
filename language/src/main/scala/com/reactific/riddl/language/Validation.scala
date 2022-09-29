@@ -73,8 +73,10 @@ object Validation {
     val state = ValidationState(symTab, root, commonOptions)
     val parents = mutable.Stack.empty[Definition]
     val endState = {
-      try { state.validateDefinitions(root, parents).checkOverloads(symTab) }
-      catch {
+      try {
+        state.validateDefinitions(root, parents).checkUnused()
+          .checkOverloads(symTab)
+      } catch {
         case NonFatal(xcptn) =>
           val message = ExceptionUtils.getRootCauseStackTrace(xcptn)
             .mkString("\n")
@@ -100,6 +102,10 @@ object Validation {
       .empty[Definition, Seq[Definition]]
     val usedBy: mutable.HashMap[Definition, Seq[Definition]] = mutable.HashMap
       .empty[Definition, Seq[Definition]]
+
+    var entities: Seq[Entity] = Seq.empty[Entity]
+    var types: Seq[Type] = Seq.empty[Type]
+    var functions: Seq[Function] = Seq.empty[Function]
 
     def associateUsage(user: Definition, use: Definition): Unit = {
       val used = uses.getOrElse(user, Seq.empty[Definition])
@@ -280,6 +286,7 @@ object Validation {
     }
 
     def validateType(t: Type, parents: Seq[Definition]): ValidationState = {
+      types = types :+ t
       checkDefinition(parents.head, t).check(
         t.id.value.head.isUpper,
         s"${t.identify} should start with a capital letter",
@@ -308,6 +315,7 @@ object Validation {
       f: Function,
       parents: Seq[Definition]
     ): ValidationState = {
+      functions = functions :+ f
       checkContainer(parents.headOption, f)
         .checkOptions[FunctionOption](f.options, f.loc).checkDescription(f)
     }
@@ -345,6 +353,7 @@ object Validation {
     }
 
     def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {
+      this.entities = this.entities :+ e
       checkContainer(parents.headOption, e).checkOptions[EntityOption](
         e.options,
         e.loc
@@ -483,6 +492,34 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       checkContainer(parents.headOption, p).checkDescription(p)
+    }
+
+    def checkUnused(): ValidationState = {
+      for { e <- entities } {
+        check(
+          !e.isEmpty && usedBy.contains(e),
+          s"${e.identify} is unused",
+          MissingWarning,
+          e.loc
+        )
+      }
+      for { t <- types } {
+        check(
+          usedBy.contains(t),
+          s"${t.identify} is unused",
+          MissingWarning,
+          t.loc
+        )
+      }
+      for { f <- functions } {
+        check(
+          usedBy.contains(f),
+          s"${f.identify} is unused",
+          MissingWarning,
+          f.loc
+        )
+      }
+      this
     }
 
     def checkOverloads(

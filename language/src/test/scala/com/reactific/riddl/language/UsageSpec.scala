@@ -75,6 +75,43 @@ class UsageSpec extends AnyWordSpec with Matchers {
           }
       }
     }
-  }
+    "unused entities generate a warning" in {
+      val input = """domain foo {
+                    |  context Bar is {
+                    |    entity fooBar is { 
+                    |      state AState { 
+                    |        { field: Number }
+                    |        handler fooBarHandlerForAState is { 
+                    |          ??? 
+                    |        } described as "inconsequential" 
+                    |      } described as "inconsequential"
+                    |    } described as "unused"
+                    |  } described as "inconsequential"
+                    |} described as "inconsequential"
+                    |""".stripMargin
+      val commonOptions = CommonOptions(showMissingWarnings = true)
+      Riddl.parse(RiddlParserInput(input), commonOptions) match {
+        case Left(messages) => fail(messages.format)
+        case Right(model) =>
+          val result = Validation.validate(model, commonOptions)
+          info(result.messages.format)
+          result.messages.size mustBe (2)
+          result.messages.head.format must include("Entity 'fooBar' is unused")
+      }
 
+    }
+    "unused types generate a warning" in {
+      val input = """domain foo {
+                    |  type Bar = Number described as "consequential"
+                    |} described as "inconsequential"
+                    |""".stripMargin
+      Riddl.parse(RiddlParserInput(input), CommonOptions()) match {
+        case Left(messages) => fail(messages.format)
+        case Right(model) =>
+          val result = Validation.validate(model, CommonOptions())
+          result.messages.size mustBe (1)
+          result.messages.head.format must include("Type 'Bar' is unused")
+      }
+    }
+  }
 }
