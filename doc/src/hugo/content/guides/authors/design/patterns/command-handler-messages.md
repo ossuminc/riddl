@@ -7,12 +7,12 @@ weight: 10
 ---
 
 ## Introduction To Messages
-If you are not familiar with the concept of `Messages` as it pertains to RIDDL, see [here](../../../../../concepts/message/).
+If you are not familiar with the concept of `Messages` as it pertains to RIDDL, see [here]({{< relref "concepts/message.md" >}}).
 This document pertains only to Commands and Events.
 
 ## Problem Statement
 There are implementation designs to be made regarding the arrangement of input (`Command`) and output (`Event`) data 
-across [`Command Handlers`](../../../../../concepts/handler#Command%20Handler). This documents pertains all types of `Command Handlers`.
+across `Command` [`Handlers`]({{< relref "concepts/handler.md">}}). This documents pertains all types of `Command Handlers`.
 
 These decisions can be summarized in 4 alternatives:
 1. Should separate commands on the same entity all yield the same event, containing the exact changed entity?
@@ -28,8 +28,8 @@ back in the event, it is easier to detect a wrong event name.
 2. All commands should have unique corresponding events. They should only return the exact new version of the entity 
 on entity creation commands because all subsequent changes should have their own specific commands
 3. Versions of entities where all fields are optional should be used only for commands that are ensured to modify 
-[RIDDL Predefined Types](../../../../../language/common/types#Predefined%20Types) in the entity, except for lists. 
+[RIDDL Predefined Types]({{< relref "language/common/types.md#Predefined Types" >}}) in the entity, except for lists. 
 This is because non-list Predefined Types are ensured to be lightweight objects.
 4. For all other commands, ie. commands that are ensured to modify lists or 
-[RIDDL Compound Types](../../../../../concepts/type#compounds), the modified data should be surfaced as individual 
+[RIDDL Compound Types]({{< relref "concepts/type.md#compounds" >}}), the modified data should be surfaced as individual 
 parameters of the event corresponding to the command
