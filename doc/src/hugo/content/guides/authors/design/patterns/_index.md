@@ -6,7 +6,7 @@ draft: "false"
 weight: 10
 ---
 
-This section helps authors with the task of using RIDDL to design a system.
+This section helps authors with the task of using RIDDL to design a system via recommended patterns for various systems.
 
 
 {{< toc-tree >}}
