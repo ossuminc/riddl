@@ -1,0 +1,17 @@
+name: 'get-riddlc'
+description: 'Download the riddlc translator'
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Setup JRE"
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    - run: |
+        version="0.15.0"
+        wget --quiet https://github.com/reactific/riddl/releases/download/${version}/riddlc-${version}.zip
+        unzip riddlc-${version}.zip
+        export PATH="${PATH}:riddlc-${version}/bin"
+      shell: bash
