@@ -9,7 +9,7 @@ weight: 10
 ## Q: Should the event for each command have a version of the entity where all fields are optional,
 such that only changed data is sent back to gateway?
 
-### Example:
+### Examples:
 
 ```
 type InfoUpdated {

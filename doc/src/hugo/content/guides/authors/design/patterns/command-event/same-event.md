@@ -8,7 +8,7 @@ weight: 10
 
 ## Q: Should separate commands on the same entity all yield the same event, containing the exact changed entity?
 
-### Example:
+### Examples:
 
 ```
 event UserModified {

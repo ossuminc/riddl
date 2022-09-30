@@ -8,7 +8,7 @@ weight: 10
 
 ## Q: Should the events for each command have only the fields that might have changed, listed individually, when replying to gateway?
 
-### Example:
+### Examples:
 ```
 event UserMembersModified {
     id: OrganizationId,

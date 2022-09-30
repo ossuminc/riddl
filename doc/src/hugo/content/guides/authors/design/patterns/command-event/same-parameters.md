@@ -8,7 +8,7 @@ weight: 10
 
 ## Q: Should each command have its own event, containing the exact changed entity?
 
-### Example:
+### Examples:
 
 ```
 event OrganizationEstablished {
