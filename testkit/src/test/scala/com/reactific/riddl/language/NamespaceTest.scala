@@ -8,7 +8,7 @@ class NamespaceTest
     extends RunCommandOnExamplesTest[
       ASimpleTestCommand.Options,
       ASimpleTestCommand
-    ](commandName = "test") {
+    ](commandName = "validate") {
   "FooBarSameDomain" should {
     "error w/ highest severity level 5" in {
       runTest("FooBarSameDomain") mustEqual 5
