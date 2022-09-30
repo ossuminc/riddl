@@ -6,18 +6,18 @@ draft: "false"
 weight: 10
 ---
 
-# Same Event
-
 ## Q: Should separate commands on the same entity all yield the same event, containing the exact changed entity?
 
 ### Example:
 
+```
 event UserModified {
     id: MemberId,
     info: Info,
     members: MemberId*,
     contacts: Contacts,
 }
+```
 
 ## Suggestions
 

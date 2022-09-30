@@ -6,16 +6,15 @@ draft: "false"
 weight: 10
 ---
 
-# Optional Versioning
-
 ## Q: Should the events for each command have only the fields that might have changed, listed individually, when replying to gateway?
 
 ### Example:
-
+```
 event UserMembersModified {
     id: OrganizationId,
     members: MemberId*
 }
+```
 
 ## Suggestions
 

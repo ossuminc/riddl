@@ -1,18 +1,17 @@
 ---
 title: "3 - Optional Parameters"
-description: "Optional Version of Entity"
+description: "Entities where every parameter is optional"
 date: 2022-02-25T10:50:32-07:00
 draft: "false"
 weight: 10
 ---
-
-# Optional Versioning
 
 ## Q: Should the event for each command have a version of the entity where all fields are optional,
 such that only changed data is sent back to gateway?
 
 ### Example:
 
+```
 type InfoUpdated {
     name: String?,
     address: Address?,
@@ -41,6 +40,7 @@ event UserContactsModified {
     id: OrganizationId
     contacts: ContactsUpdated,
 }
+```
 
 ## Suggestions
 

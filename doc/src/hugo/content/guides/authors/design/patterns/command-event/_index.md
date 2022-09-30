@@ -26,6 +26,7 @@ fields on User entities. This applies to State based entities as well.
 
 ### Here are the riddl specs we will be assuming for each example (borrowed from improving-riddl):
 
+```
 entity Organization is {
     state Active is {
         info: Info,
@@ -89,3 +90,4 @@ command ModifyUserContacts {
     userId: MemberId,
     alternate: Alternate
 }
+```

@@ -6,12 +6,11 @@ draft: "false"
 weight: 10
 ---
 
-# Optional Versioning
-
 ## Q: Should each command have its own event, containing the exact changed entity?
 
 ### Example:
 
+```
 event OrganizationEstablished {
     id: OrganizationId
     info: Info,
@@ -39,6 +38,7 @@ event OrganizationContactsModified {
     members: MemberId*,
     contacts: Contacts,
 }
+```
 
 ## Suggestions
 
