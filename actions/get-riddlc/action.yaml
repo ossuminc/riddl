@@ -13,5 +13,5 @@ runs:
         version="0.15.0"
         wget --quiet https://github.com/reactific/riddl/releases/download/${version}/riddlc-${version}.zip
         unzip riddlc-${version}.zip
-        echo "${pwd}/riddc-${version}/bin" >> $GITHUB_PATH
+        echo "$(pwd)/riddc-${version}/bin" >> $GITHUB_PATH
       shell: bash
