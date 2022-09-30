@@ -171,7 +171,6 @@ object Folding {
   }
 
   trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
-    def root: Definition
 
     def symbolTable: SymbolTable
 

@@ -172,17 +172,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options
-  ): Either[Messages, Unit] = {
-    doTranslation(result, log, commonOptions, options)
-    Right(())
-  }
-
-  def doTranslation(
-    result: Validation.Result,
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: HugoCommand.Options
-  ): Seq[Path] = {
+  ): Either[Messages, HugoTranslatorState] = {
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
     require(
       options.outputRoot.getFileName.toString.nonEmpty,
@@ -195,12 +185,14 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case None         => Seq.empty[Author]
     }
     writeConfigToml(options, someAuthors.headOption)
-    val symtab = SymbolTable(root)
-    val state = HugoTranslatorState(result, symtab, options, commonOptions)
+
+    val state = HugoTranslatorState(result, options, commonOptions)
     val parentStack = mutable.Stack[Definition]()
 
-    Folding.foldLeftWithStack(state, parentStack)(root)(processingFolder)
-      .close(root)
+    val newState = Folding
+      .foldLeftWithStack(state, parentStack)(root)(processingFolder)
+    newState.close(root)
+    Right(newState)
   }
 
   def processingFolder(

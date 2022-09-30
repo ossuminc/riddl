@@ -1,9 +1,11 @@
 package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.hugo.GlossaryEntry
+import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.hugo.HugoTranslatorState
 import com.reactific.riddl.hugo.MarkdownWriter
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.SymbolTable
 import com.reactific.riddl.language.Validation
@@ -38,7 +40,8 @@ class MarkdownWriterTest extends ParsingTest {
           val symtab = SymbolTable(root)
           val result = Validation
             .Result(Messages.empty, root, symtab, Map.empty, Map.empty)
-          val state = HugoTranslatorState(result, symtab)
+          val state =
+            HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
           val mkd = MarkdownWriter(output, state)
           mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
@@ -105,7 +108,8 @@ class MarkdownWriterTest extends ParsingTest {
       val symtab = SymbolTable(root)
       val result = Validation
         .Result(Messages.empty, root, symtab, Map.empty, Map.empty)
-      val state = HugoTranslatorState(result, symtab)
+      val state =
+        HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
       val mdw = MarkdownWriter(Path.of("foo.md"), state)
       mdw.emitGlossary(10, Seq(term1, term2))
       val strw = new StringWriter()

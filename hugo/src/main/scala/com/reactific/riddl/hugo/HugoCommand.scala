@@ -37,6 +37,7 @@ object HugoCommand {
     inputFile: Option[Path] = None,
     outputDir: Option[Path] = None,
     projectName: Option[String] = None,
+    enterpriseName: Option[String] = None,
     eraseOutput: Boolean = false,
     siteTitle: Option[String] = None,
     siteDescription: Option[String] = None,
@@ -78,7 +79,14 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
         .text("optional project name to associate with the generated output")
         .validate(n =>
           if (n.isBlank) {
-            Left("optional project-name cannot be blank or empty")
+            Left("option project-name cannot be blank or empty")
+          } else { Right(()) }
+        ),
+      opt[String]('E', "enterprise-name").optional()
+        .action((v, c) => c.copy(projectName = Option(v)))
+        .text("optional enterprise name for C4 diagram output").validate(n =>
+          if (n.isBlank) {
+            Left("option enterprise-name cannot be blank or empty")
           } else { Right(()) }
         ),
       opt[Boolean]('e', name = "erase-output")
@@ -132,6 +140,10 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
       projectName <- optional(objCur, "project-name", "No Project Name") {
         cur => cur.asString
       }
+      enterpriseName <-
+        optional(objCur, "enterprise-name", "No Enterprise Name") { cur =>
+          cur.asString
+        }
       siteTitle <- optional(objCur, "site-title", "No Site Title") { cur =>
         cur.asString
       }
@@ -198,6 +210,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
         Option(Path.of(inputPath)),
         Option(Path.of(outputPath)),
         Option(projectName),
+        Option(enterpriseName),
         eraseOutput,
         Option(siteTitle),
         Option(siteDescription),
@@ -227,6 +240,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
     options: Options
   ): Either[Messages, Unit] = {
     HugoTranslator.translate(result, log, commonOptions, options)
+    Right(())
   }
 
   override def replaceInputFile(

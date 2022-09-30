@@ -30,7 +30,7 @@ trait TranslatingOptions {
   def projectName: Option[String]
 }
 
-trait TranslatorState[OF <: OutputFile] {
+trait TranslatingState[OF <: OutputFile] {
   def options: TranslatingOptions
 
   val files: mutable.ListBuffer[OF] = mutable.ListBuffer.empty[OF]
@@ -53,27 +53,30 @@ trait TranslatorState[OF <: OutputFile] {
     files.map(_.filePath).toSeq
   }
 
-  def addFile(file: OF): Unit = { files.append(file) }
+  def addFile(file: OF): this.type = { files.append(file) ; this }
 }
+
+trait TranslationResult
 
 /** Base class of all Translators
   * @tparam OPT
   *   The options class used by the translator
   */
-trait Translator[OPT <: TranslatingOptions] {
+trait Translator[
+  OPT <: TranslatingOptions] {
 
   def translate(
     result: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Either[Messages, Unit]
+  ): Either[Messages, TranslationResult]
 
   final def parseValidateTranslate(
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, TranslationResult] = {
     require(options.inputFile.nonEmpty, "Input path option must not be empty")
     Riddl.parseAndValidate(options.inputFile.get, commonOptions).flatMap {
       results => translate(results, log, commonOptions, options)
@@ -85,7 +88,7 @@ trait Translator[OPT <: TranslatingOptions] {
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, TranslationResult] = {
     Riddl.parseAndValidate(input, commonOptions).flatMap { results =>
       translate(results, log, commonOptions, options)
     }

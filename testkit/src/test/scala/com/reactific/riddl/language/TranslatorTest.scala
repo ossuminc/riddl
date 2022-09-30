@@ -24,7 +24,7 @@ class TranslatorTest extends ValidatingTest {
       extends TranslatingOptions
 
   case class TestTranslatorState(options: TestTranslatingOptions)
-      extends TranslatorState[OutputFile] {
+      extends TranslatingState[OutputFile] with TranslationResult {
     override def generatedFiles: Seq[Path] = Seq.empty[Path]
   }
 
@@ -36,15 +36,14 @@ class TranslatorTest extends ValidatingTest {
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions
-    ): Either[Messages, Unit] = {
+    ): Either[Messages, TestTranslatorState] = {
       val state = TestTranslatorState(options)
       val parents = scala.collection.mutable.Stack.empty[Definition]
-      Folding.foldLeftWithStack(state, parents)(result.root) {
+      Right(Folding.foldLeftWithStack(state, parents)(result.root) {
         case (state, _ /*definition*/, _ /*stack*/ ) =>
           // log.info(stack.reverse.mkString(".") + "." + definition.id.format)
           state
-      }.generatedFiles
-      Right(())
+      })
     }
   }
 

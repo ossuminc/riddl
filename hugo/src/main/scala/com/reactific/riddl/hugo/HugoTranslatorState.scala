@@ -16,6 +16,8 @@
 
 package com.reactific.riddl.hugo
 
+import com.reactific.riddl.c4.C4Command
+import com.reactific.riddl.c4.C4Translator
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
@@ -35,13 +37,21 @@ import java.nio.file.Path
   */
 case class HugoTranslatorState(
   result: Validation.Result,
-  symbolTable: SymbolTable,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
-    extends TranslatorState[MarkdownWriter]
-    with PathResolutionState[HugoTranslatorState] {
+    extends TranslatingState[MarkdownWriter]
+    with PathResolutionState[HugoTranslatorState]
+    with TranslationResult {
+
+  final val symbolTable: SymbolTable = result.symTab
 
   final val root: Definition = result.root // base class compliance
+
+  final val c4State = C4Translator.translateImpl(
+    result,
+    commonOptions,
+    C4Command.Options(enterpriseName = options.enterpriseName)
+  ).toOption
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
