@@ -58,9 +58,9 @@ Another note to make is that if a subfield of an object is expected to change fr
 the field is a `collection` that could be very long, as described above, or otherwise potentially heavy object. Depending on how frequently 
 a subfield, however nested, is expected to change, or depending on its potential load, or both, it should be given its own `Command`/`Event`
 pair. This ensures it is not interrupting or interrupted by the flow of other changes being handled less frequently. The `Event` in this case
-should be [surfaced]{{{< relref "surfaced-parameters.md" >}}} instead.
+should be [surfaced]({{< relref "surfaced-parameters.md" >}}) instead.
 
 Keep in mind that using optional versions of objects like InfoUpdated does lead to a bit more overhead, both in terms of development and in terms
 of message size. Optional parameters still consume space in protobuffer messages, even if just to indicate emptiness, and modifying a data field on
 a returned type would require not forgetting to modify the optional version correctly. Protobuffer message space used to indicate emptiness should
-especially be taken into consideration when comparing this solution to [surfaced parameters]{{{< relref "surfaced-parameters.md" >}}} instead
+especially be taken into consideration when comparing this solution to [surfaced parameters]({{< relref "surfaced-parameters.md" >}}) instead

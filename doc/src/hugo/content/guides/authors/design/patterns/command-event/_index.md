@@ -88,6 +88,6 @@ command AddMembersToUser {
 
 command ModifyUserContacts {
     userId: MemberId,
-    alternate: Alternate
+    contacts: Contacts
 }
 ```
