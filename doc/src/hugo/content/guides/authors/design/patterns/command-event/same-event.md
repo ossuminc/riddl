@@ -21,5 +21,7 @@ event UserModified {
 
 ## Suggestions
 
-This pattern is an anti-pattern most of the time because it results in lack of transparency. In an event driven system
-it is important to be able to easily discover the corresponding event for a command or vice-versa.
+In an event driven system it is important to have distinct events for each operation such that there is a
+structural difference in the responses. This pattern is advised against for diverse sets of operations, and
+keeping in mind advantages of other patterns mentioned in this document.
+

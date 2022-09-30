@@ -44,4 +44,5 @@ event OrganizationContactsModified {
 
 This affords much more traceability, but there is a lot of extraneous data coming back in non-creation events. While it makes sense
 to return the entire entity in UserEstablished as it was just created and has never been received from backend where data could 
-have been added automatically, the other events could have their parameters pared down a bit. 
+have been added automatically, the other events could have their parameters pared down a bit. This could be considered an anti-pattern]
+from that perspective.
