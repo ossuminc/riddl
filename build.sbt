@@ -183,8 +183,8 @@ lazy val doc = project.in(file("doc"))
 val Riddlc = config("riddlc")
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
-  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish)
-  .configure(C.withCoverage()).dependsOn(
+  .enablePlugins(MiniDependencyTreePlugin, GraalVMNativeImagePlugin)
+  .configure(C.mavenPublish).configure(C.withCoverage()).dependsOn(
     utils % "compile->compile;test->test",
     commands,
     language,
