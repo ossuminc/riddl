@@ -79,13 +79,13 @@ class StoryTest extends ValidatingTest {
           |     projection OrganizationViews briefly "This is how you find them"
           |    }
           |    interaction is {
-          |      step 1 from actor Owner to context OrganizationContext
+          |      step from actor Owner "creates an Organization" to context OrganizationContext
           |        briefly "initial invocation",
-          |      step 2 from context OrganizationContext to entity Organization
+          |      step from context OrganizationContext "send creation message" to entity Organization
           |        briefly "send creation message",
-          |      step 3 from entity Organization to projection OrganizationViews
+          |      step from entity Organization "add new organization" to projection OrganizationViews
           |        briefly "add new organization",
-          |      step 4 from entity Organization to actor Owner
+          |      step from entity Organization "organizationAdded" to actor Owner
           |        briefly "organization added"
           |    }
           |  }

@@ -22,6 +22,7 @@ lazy val riddl = (project in file(".")).settings(
   commands,
   testkit,
   prettify,
+  c4,
   hugo,
   `git-check`,
   doc,
@@ -202,6 +203,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
+    graalVMNativeImageOptions ++= Seq("--verbose", "--no-fallback"),
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 

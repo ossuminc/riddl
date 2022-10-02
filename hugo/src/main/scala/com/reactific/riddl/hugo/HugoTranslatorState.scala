@@ -22,8 +22,18 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.*
+import com.structurizr.`export`.Diagram
+import com.structurizr.`export`.mermaid.MermaidDiagramExporter
+import com.structurizr.view.ComponentView
+import com.structurizr.view.ContainerView
+import com.structurizr.view.DynamicView
+import com.structurizr.view.SystemContextView
+import com.structurizr.view.SystemLandscapeView
+import com.structurizr.view.View
 
 import java.nio.file.Path
+import scala.collection.mutable
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 /** The processing state for the Hugo Translator
   * @param root
@@ -181,6 +191,12 @@ case class HugoTranslatorState(
   def makeIndex(root: RootContainer): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
     mdw.fileHead("Index", 10, Option("The main index to the content"))
+    makeC4SystemLandscapeView match {
+      case Some(view) =>
+        mdw.h2("Landscape View")
+        mdw.emitMermaidDiagram(view)
+      case None => // nothing
+    }
     mdw.h2("Domains")
     val domains = root.contents.sortBy(_.id.value)
       .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
@@ -252,5 +268,35 @@ case class HugoTranslatorState(
     makeStatistics()
     files.foreach(_.write())
     files.map(_.filePath).toSeq
+  }
+
+  def makeC4View[T <: View](view: T): String = {
+    val exporter = new MermaidDiagramExporter
+    val diagram: Diagram = view match {
+      case slv: SystemLandscapeView => exporter.export(slv)
+      case scv: SystemContextView   => exporter.export(scv)
+      case cmpv: ComponentView      => exporter.export(cmpv)
+      case conv: ContainerView      => exporter.export(conv)
+      case dynv: DynamicView        => exporter.export(dynv)
+    }
+    val result = new mutable.StringBuilder()
+    result.append(diagram.getDefinition)
+    for (frame <- diagram.getFrames.asScala) {
+      result.append(frame.getDefinition)
+    }
+    result.toString()
+  }
+
+  def makeC4ViewFor(definition: Definition): Option[String] = {
+    c4State.map { state =>
+      val view = state.viewByDef(definition)
+      makeC4View(view)
+    }
+  }
+  def makeC4SystemLandscapeView: Option[String] = {
+    c4State.map { state =>
+      val view = state.views.getSystemLandscapeViews.asScala.head
+      makeC4View(view)
+    }
   }
 }

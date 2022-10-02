@@ -237,13 +237,30 @@ case class MarkdownWriter(
     result
   }
 
+  def emitMermaidDiagram(content: String): this.type = {
+    this.emitMermaidDiagram(content.split(System.lineSeparator()).toIndexedSeq)
+  }
+
   def emitMermaidDiagram(lines: Seq[String]): this.type = {
+    /*p("""<script>
+        |let geekdoc_color_mode = Storage.getItem(\"hugo-geekdoc.color-mode\")
+        |</script>
+        |""".stripMargin)*/
+    val configs = Map(
+      "securityLevel" -> "loose",
+      "theme" -> "dark",
+      "logLevel" -> { if (state.commonOptions.debug) "1" else "4" }
+    )
     p("{{< mermaid class=\"text-center\">}}")
-    lines.foreach(p)
+    val config =
+      s"%%{init: { ${configs.map { case (k, v) => s"\"$k\": \"$v\"" }.mkString(", ")} }}%%"
+    val improved = (config +: lines).map(_.trim).filter(_.nonEmpty)
+      .filterNot(_.startsWith("style")).filterNot(_.startsWith("linkStyle"))
+    improved.foreach(p)
     p("{{< /mermaid >}}")
     if (state.commonOptions.debug) {
-      p("```mermaid")
-      lines.foreach(p)
+      p("```")
+      improved.foreach(p)
       p("```")
     } else { this }
   }
@@ -277,14 +294,15 @@ case class MarkdownWriter(
   def emitERD(state: State, parents: Seq[Definition]): this.type = {
     h2("Entity Relationships")
     val fields = state.aggregation.fields
-    val typ: Seq[String] = s"${state.id.format} {" +: fields.map { f =>
+    val typ: Seq[String] = s"  ${state.id.format} {" +: fields.map { f =>
       val typeName = makeTypeName(f.typeEx, parents)
       val fieldName = f.id.format.replace(" ", "-")
-      val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
-      s"  $typeName $fieldName $comment"
-    } :+ "}"
+      val comment = "\"" + f.briefValue + "\""
+      s"    $typeName $fieldName $comment"
+    } :+ "  }"
     val relationships: Seq[String] = fields
       .map(makeERDRelationship(state.id.format, _, parents)).filter(_.nonEmpty)
+      .map("  " + _)
     val lines = Seq("erDiagram") ++ typ ++ relationships
     emitMermaidDiagram(lines)
   }
@@ -715,16 +733,21 @@ case class MarkdownWriter(
     this
   }
 
-  def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
-    h2("Context Map")
-    emitC4ContainerDiagram(focus, parents)
+  def emitContextMap(focus: Context): this.type = {
+    state.makeC4ViewFor(focus) match {
+      case Some(view) =>
+        h2("Context Map")
+        emitMermaidDiagram(Seq(view))
+      case None => this // skip
+    }
+    // emitC4ContainerDiagram(focus, parents)
   }
 
   def emitContext(context: Context, stack: Seq[Definition]): this.type = {
     containerHead(context, "Context")
     val parents = state.makeParents(stack)
     emitDefDoc(context, parents)
-    emitContextMap(context, stack)
+    emitContextMap(context)
     emitOptions(context.options)
     emitTypesToc(context)
     toc("Functions", mkTocSeq(context.functions))

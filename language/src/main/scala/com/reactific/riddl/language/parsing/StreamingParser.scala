@@ -77,7 +77,10 @@ trait StreamingParser
   }
 
   def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
-    P("").map(_ => Seq.empty[ProcessorOption])
+    options[u, ProcessorOption](StringIn(Options.technology).!) {
+      case (loc, Options.technology, args) => ProcessorTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
   }
 
   def processorBody[u: P](

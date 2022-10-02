@@ -37,6 +37,8 @@ trait AbstractDefinitions extends Terminals {
 
     /** The location in the parse at which this RiddlValue occurs */
     def loc: Location
+
+    def format: String
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -125,12 +127,19 @@ trait AbstractDefinitions extends Terminals {
 
   trait BrieflyDescribedValue extends RiddlValue {
     def brief: Option[LiteralString]
+    def briefValue: String = {
+      brief.map(_.s).getOrElse("No brief description.")
+    }
   }
 
   /** Base trait of all values that have an optional Description
     */
   trait DescribedValue extends RiddlValue {
     def description: Option[Description]
+    def descriptionValue: String = {
+      description.map(_.lines.map(_.s))
+        .mkString("", System.lineSeparator(), System.lineSeparator())
+    }
   }
 
   /** Base trait of any definition that is also a ContainerValue
@@ -406,7 +415,7 @@ trait AbstractDefinitions extends Terminals {
   trait StoryCaseScopeRefs
 
   /** Base trait of definitions that can be used in a Story */
-  trait StoryCaseUsesRefs
+  trait StoryCaseUsesRefs[T <: Definition] extends Reference[T]
 
   trait VitalDefinitionDefinition
       extends AdaptorDefinition
@@ -420,7 +429,6 @@ trait AbstractDefinitions extends Terminals {
       with ProjectionDefinition
       with SagaDefinition
       with StoryDefinition
-
 
   // ////////////////////////////////////////////////// UTILITY FUNCTIONS
 

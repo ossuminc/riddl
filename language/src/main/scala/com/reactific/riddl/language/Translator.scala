@@ -18,6 +18,8 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.AST.Definition
+import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.OutputFile
 
@@ -53,7 +55,15 @@ trait TranslatingState[OF <: OutputFile] {
     files.map(_.filePath).toSeq
   }
 
-  def addFile(file: OF): this.type = { files.append(file) ; this }
+  def addFile(file: OF): this.type = { files.append(file); this }
+
+  def makeDefPath(
+    definition: Definition,
+    parents: Seq[Definition]
+  ): Seq[String] = {
+    parents.filterNot(x => x.isInstanceOf[RootContainer]).map(_.id.value) :+
+      definition.id.value
+  }
 }
 
 trait TranslationResult
@@ -62,8 +72,7 @@ trait TranslationResult
   * @tparam OPT
   *   The options class used by the translator
   */
-trait Translator[
-  OPT <: TranslatingOptions] {
+trait Translator[OPT <: TranslatingOptions] {
 
   def translate(
     result: Validation.Result,

@@ -42,6 +42,7 @@ trait SagaParser
       case (loc, option, _) if option == Options.parallel => ParallelOption(loc)
       case (loc, option, _) if option == Options.sequential =>
         SequentialOption(loc)
+      case (loc, Options.technology, args) => SagaTechnologyOption(loc, args)
       case (loc, option, _) =>
         throw new IllegalStateException(s"Unknown saga option $option at $loc")
     }
