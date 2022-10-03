@@ -4,7 +4,7 @@ import com.reactific.riddl.commands.ASimpleTestCommand
 import com.reactific.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.exceptions.TestFailedException
 
-/** Unit Tests For Includes */
+/** Compilation Tests For Includes Examples */
 class NamespaceTest
     extends RunCommandOnExamplesTest[
       ASimpleTestCommand.Options,
