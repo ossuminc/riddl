@@ -19,12 +19,6 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def storyCaseUses[u: P]: P[Seq[StoryCaseUse]] = {
-    P(Keywords.uses ~/ open ~ (location ~ storyDefRef ~ briefly).map {
-      case (loc, ref, brief) => StoryCaseUse(loc, ref, brief)
-    }.rep(0, Punctuation.comma) ~ close)
-  }
-
   def interactionStep[u: P]: P[InteractionStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ storyDefRef ~
@@ -44,13 +38,11 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ Readability.is ~ open ~
-        (undefined(
-          (None, None, Seq.empty[StoryCaseUse], Seq.empty[InteractionStep])
-        ) |
+        (undefined((None, None, Seq.empty[InteractionStep])) |
           ((Keywords.title ~ is ~ literalString).? ~ storyCaseScope.? ~
-            storyCaseUses ~ interactionSteps)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (title, scope, uses, steps), brief, description) =>
-      StoryCase(loc, id, title, scope, uses, steps, brief, description)
+            interactionSteps)) ~ close ~ briefly ~ description
+    ).map { case (loc, id, (title, scope, steps), brief, description) =>
+      StoryCase(loc, id, title, scope, steps, brief, description)
     }
   }
 

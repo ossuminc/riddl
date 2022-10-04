@@ -409,7 +409,6 @@ trait AbstractDefinitions extends Terminals {
   /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
 
-  trait TypeDefinition extends Definition
 
   /** Base trait of definitions that can bound scope of a Story */
   trait StoryCaseScopeRefs

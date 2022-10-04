@@ -1879,7 +1879,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     id: Identifier,
     title: Option[LiteralString] = None,
     scope: Option[StoryCaseScope] = None,
-    uses: Seq[StoryCaseUse] = Seq.empty[StoryCaseUse],
     interactions: Seq[InteractionStep],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
@@ -1913,7 +1912,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     benefit: LiteralString = LiteralString.empty)
       extends RiddlValue {
     override def format: String = {
-      s"As a ${actor.id.value}, I want ${capability.s}, so that ${benefit.s}"
+      s"I, as a ${actor.id.value}, want ${capability.s}, so that ${benefit.s}."
     }
 
   }

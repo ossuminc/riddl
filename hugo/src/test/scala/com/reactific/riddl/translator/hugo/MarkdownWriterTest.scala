@@ -10,7 +10,6 @@ import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.SymbolTable
 import com.reactific.riddl.language.Validation
 import com.reactific.riddl.testkit.ParsingTest
-
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.file.Path

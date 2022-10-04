@@ -27,12 +27,12 @@ Error: ambiguity.riddl(9:19): Path reference 'Product' is ambiguous. Definitions
 Missing: ambiguity.riddl(6:5): Entity 'Product' in Context 'Vendor' should have content:
      entity Product is {???}
      ^
-Missing: ambiguity.riddl(3:5): Entity 'Product' is unused:
+Warning: ambiguity.riddl(3:5): Entity 'Product' is unused:
      entity Product is {???}
      ^
-Missing: ambiguity.riddl(6:5): Entity 'Product' is unused:
+Warning: ambiguity.riddl(6:5): Entity 'Product' is unused:
      entity Product is {???}
      ^
-Missing: ambiguity.riddl(9:3): Type 'Alias' is unused:
+Warning: ambiguity.riddl(9:3): Type 'Alias' is unused:
    type Alias = Id(Product)
    ^

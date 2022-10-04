@@ -849,11 +849,14 @@ case class MarkdownWriter(
     val parents = state.makeParents(stack)
     emitDefDoc(story, parents)
     if (story.userStory.nonEmpty) {
-      val role = story.userStory.get.actor.identify
-      val capability = story.userStory.get.capability
-      val benefit = story.userStory.get.benefit
       h2("User Story")
-      p(s"I, as a $role, want $capability, so that $benefit.")
+      p(story.userStory.map(_.format).getOrElse("Unknown story"))
+    }
+    state.makeC4ViewFor(story) match {
+      case Some(view) =>
+        h2("Dynamic View")
+        emitMermaidDiagram(view)
+      case None => // nothing
     }
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
     list(

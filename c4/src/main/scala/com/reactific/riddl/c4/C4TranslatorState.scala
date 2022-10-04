@@ -9,6 +9,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
 import com.structurizr.Workspace
 import com.structurizr.model.Model
+import com.structurizr.model.Relationship
 import com.structurizr.model.StaticStructureElement
 import com.structurizr.view.View
 import com.structurizr.view.ViewSet
@@ -39,4 +40,7 @@ case class C4TranslatorState(
 
   val viewByDef: mutable.Map[Definition, View] = mutable.Map
     .empty[Definition, View]
+
+  val storyRelationships: mutable.Map[Story, Seq[Relationship]] = mutable.Map
+    .empty[Story, Seq[Relationship]]
 }

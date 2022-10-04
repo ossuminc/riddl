@@ -20,6 +20,9 @@ object Messages {
 
     def severity: Int
 
+    def isIgnorable: Boolean = severity <= Warning.severity
+    def isActionable: Boolean = severity >= Error.severity
+
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
@@ -127,6 +130,10 @@ object Messages {
     def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
+    def isIgnorable: Boolean = {
+      msgs.isEmpty || !msgs.exists(_.kind >= Warning)
+    }
+    def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
   }
 
   val empty: Messages = List.empty[Message]

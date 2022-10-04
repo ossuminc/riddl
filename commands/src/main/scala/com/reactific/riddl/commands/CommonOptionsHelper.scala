@@ -68,7 +68,8 @@ object CommonOptionsHelper {
         c.copy(
           showWarnings = false,
           showMissingWarnings = false,
-          showStyleWarnings = false
+          showStyleWarnings = false,
+          showUnusedWarnings = false
         )
       ).text("Suppress all warning messages so only errors are shown"),
       opt[Unit]('m', name = "suppress-missing-warnings").optional()
@@ -76,6 +77,9 @@ object CommonOptionsHelper {
         .text("Show warnings about things that are missing"),
       opt[Unit]('s', name = "suppress-style-warnings").optional()
         .action((_, c) => c.copy(showStyleWarnings = false))
+        .text("Show warnings about questionable input style. "),
+      opt[Unit]('u', name = "suppress-unused-warnings").optional()
+        .action((_, c) => c.copy(showUnusedWarnings = false))
         .text("Show warnings about questionable input style. "),
       opt[File]('P', name = "plugins-dir").optional()
         .action((file, c) => c.copy(pluginsDir = Some(file.toPath)))

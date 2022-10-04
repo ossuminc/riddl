@@ -1,5 +1,6 @@
 package com.reactific.riddl.c4
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.Messages.errors
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Folding
 import com.reactific.riddl.language.Translator
@@ -10,11 +11,15 @@ import com.structurizr.model.Enterprise
 import com.structurizr.model.InteractionStyle
 import com.structurizr.model.Location
 import com.structurizr.model.Person
+import com.structurizr.model.Relationship
 import com.structurizr.model.SoftwareSystem
 import com.structurizr.model.StaticStructureElement
+import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.annotation.unused
 import scala.collection.mutable
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.util.control.NonFatal
 
 object C4Translator extends Translator[C4Command.Options] {
 
@@ -24,7 +29,12 @@ object C4Translator extends Translator[C4Command.Options] {
     commonOptions: CommonOptions,
     options: C4Command.Options
   ): Either[Messages, C4TranslatorState] = {
-    translateImpl(result, commonOptions, options)
+    try { translateImpl(result, commonOptions, options) }
+    catch {
+      case NonFatal(x) =>
+        val message = ExceptionUtils.getRootCauseMessage(x)
+        Left(errors(message))
+    }
   }
 
   def translateImpl(
@@ -49,12 +59,16 @@ object C4Translator extends Translator[C4Command.Options] {
 
   def pathIdToC4Component(
     state: C4TranslatorState,
-    pid: PathIdentifier
+    pid: PathIdentifier,
+    container: Definition
   ): StaticStructureElement = {
-    val stack = state.resolvePath(pid)()()
-    assert(stack.nonEmpty, s"Cannot resolve path: $pid")
-    val used = stack.head
-    state.elementByDef(used)
+    val parents = container +: state.symbolTable.parentsOf(container)
+    state.pathIdToDefinition(pid, parents) match {
+      case Some(definition) => state.elementByDef(definition)
+      case None => throw new IllegalArgumentException(
+          s"Failure to get definition for path ${pid.format}"
+        )
+    }
   }
 
   def addComponents(
@@ -161,12 +175,12 @@ object C4Translator extends Translator[C4Command.Options] {
             case Some(list) => list.map(_.s).mkString(", ")
             case None       => "JSON/HTTP"
           }
-          for {
+          val relationships: Seq[Relationship] = for {
             aCase <- s.cases
             interaction <- aCase.interactions
-          } {
-            val domainRef = aCase.scope.get.domainRef
-            val elem = pathIdToC4Component(state, domainRef.id)
+          } yield {
+            val domainPid = aCase.scope.get.domainRef.id
+            val elem = pathIdToC4Component(state, domainPid, s)
             val technology = {
               s.getOptionValue[StoryTechnologyOption] match {
                 case Some(list) => list.map(_.s).mkString(", ")
@@ -174,14 +188,18 @@ object C4Translator extends Translator[C4Command.Options] {
               }
             }
             p.uses(elem.asInstanceOf[SoftwareSystem], "requires", technology)
-            val from = pathIdToC4Component(state, interaction.from.id)
-            val to = pathIdToC4Component(state, interaction.to.id)
+            val fromDef = state.pathIdToDefinition(interaction.from.id, parents)
+              .get
+            val fromC4 = state.elementByDef(fromDef)
+            val toDef = state.pathIdToDefinition(interaction.to.id, parents).get
+            val toC4 = state.elementByDef(toDef)
             val how = interaction.relationship
-            to match {
-              case p: Person => from.delivers(p, how, tech, style)
-              case s: StaticStructureElement => from.uses(s, how, tech, style)
+            toC4 match {
+              case p: Person => fromC4.delivers(p, how, tech, style)
+              case s: StaticStructureElement => fromC4.uses(s, how, tech, style)
             }
           }
+          state.storyRelationships.addOne((s, relationships))
         }
         state
       case _: Function   => state // functions in contexts only
@@ -235,8 +253,20 @@ object C4Translator extends Translator[C4Command.Options] {
             state.viewByDef.addOne((c, cv))
         }
         state
-      case _: Entity     => state
-      case _: Story      => state
+      case _: Entity => state
+      case s: Story =>
+        val domain = parents.head
+        state.elementByDef(domain) match {
+          case ss: SoftwareSystem =>
+            val dv = state.views.createDynamicView(ss, s.id.value, s.briefValue)
+            dv.setExternalBoundariesVisible(true)
+            val person = state.elementByDef(s.userStory.get.actor)
+            val rels = person.getRelationships
+            rels.asScala.foreach(dv.add)
+            val relationships = state.storyRelationships(s)
+            relationships.foreach(dv.add)
+            state
+        }
       case _: Handler    => state // context handlers only
       case _: Function   => state // functions in contexts only
       case _: Adaptor    => state // TBD

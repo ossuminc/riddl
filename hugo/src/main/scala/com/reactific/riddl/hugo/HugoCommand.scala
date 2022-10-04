@@ -239,8 +239,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
     commonOptions: CommonOptions,
     options: Options
   ): Either[Messages, Unit] = {
-    HugoTranslator.translate(result, log, commonOptions, options)
-    Right(())
+    HugoTranslator.translate(result, log, commonOptions, options).map(_ => ())
   }
 
   override def replaceInputFile(

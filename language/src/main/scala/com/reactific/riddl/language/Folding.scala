@@ -174,12 +174,10 @@ object Folding {
 
     def symbolTable: SymbolTable
 
-    var parents: Seq[Definition] = Seq.empty[Definition]
-
-    def setParents(pars: Seq[Definition]): S = {
-      parents = pars
-      this.asInstanceOf[S]
-    }
+    def pathIdToDefinition(
+      pid: PathIdentifier,
+      parents: Seq[Definition]
+    ): Option[Definition] = { resolvePath(pid, parents)()().headOption }
 
     private def adjustStacksForPid(
       searchFor: String,
@@ -405,7 +403,7 @@ object Folding {
 
     def resolvePath(
       pid: PathIdentifier,
-      parents: Seq[Definition] = parents
+      parents: Seq[Definition]
     )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle
     )(onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
         doNothingMultiple
