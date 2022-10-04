@@ -6,12 +6,12 @@ import scala.collection.mutable
 
 object MermaidDiagramsPlugin {
   val containerStyles = Array(
-    "fill:#000088,stroke:black,stroke-width:6,border:solid,color:white", // Navy Blue Solid
-    "fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white", // Navy Blue Solid
-    "fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white", // Navy Blue Solid
-    "fill:#6666EE,stroke:black,stroke-width:3,border:solid,color:black", // Navy Blue Solid
-    "fill:#8888FF,stroke:black,stroke-width:2,border:solid,color:black", // Navy Blue Solid
-    "fill:#AAAAFF,stroke:black,stroke-width:1,border:solid,color:black" // Navy Blue Solid
+    "fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:3em", // Navy Blue Solid
+    "fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:3em", // Navy Blue Solid
+    "fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white,margin-top:3em", // Navy Blue Solid
+    "fill:#6666EE,stroke:black,stroke-width:3,border:solid,color:black,margin-top:3em", // Navy Blue Solid
+    "fill:#8888FF,stroke:black,stroke-width:2,border:solid,color:black,margin-top:3em", // Navy Blue Solid
+    "fill:#AAAAFF,stroke:black,stroke-width:1,border:solid,color:black,margin-top:3em" // Navy Blue Solid
   )
   case class Node(name: String, brief: String, kids: Seq[Node])
 }
@@ -35,26 +35,24 @@ class MermaidDiagramsPlugin extends DiagramMakerPlugin {
   }
 
   def openBox(definition: AST.Definition, level: Int = 0): String = {
-    val technology = getTechnology(definition)
-    val name = definition.id.value
-    val head = "  ".repeat(level) +
-      s"subgraph $name [\"$name<br/><small>${definition.briefValue}<br/>($technology)</small>\"]\n"
-    val containers: Seq[Definition] = {
+    val contents: Seq[Definition] = {
       definition match {
         case r: RootContainer => r.contents
-        case d: Domain => d.domains ++ d.contexts ++
-            d.includes.flatMap(_.contents)
-              .filter(x => x.isInstanceOf[Context] || x.isInstanceOf[Domain])
-        case c: Context => c.entities ++ c.handlers ++ c.projections ++
-            c.processors ++ c.sagas
+        case d: Domain        => d.domains ++ d.includes
+        case i: Include[Definition] @unchecked => i.contents
+            .filter(_.isInstanceOf[Domain])
         case _ => Seq.empty[Definition]
       }
     }
-    val mid = containers.foldLeft("") { case (s, c) =>
-      s + openBox(c, level + 1)
-    }
-    head + mid + "  ".repeat(level) + "end\n" + "  ".repeat(level) +
-      s"style $name ${containerStyles(level)}\n"
+    val mid = contents.foldLeft("") { case (s, c) => s + openBox(c, level + 1) }
+    if (!definition.isImplicit) {
+      val technology = getTechnology(definition)
+      val name = definition.id.value
+      val head = "  ".repeat(level) +
+        s"subgraph $name [\"$name<br/><small>${definition.briefValue}<br/>($technology)</small>\"]\n"
+      head + mid + "  ".repeat(level) + "end\n" + "  ".repeat(level) +
+        s"style $name ${containerStyles(level)}\n"
+    } else { mid }
   }
 
   // def traverseDomainsAndContexts
