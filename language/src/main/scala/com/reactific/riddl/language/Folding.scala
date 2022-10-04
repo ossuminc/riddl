@@ -177,7 +177,10 @@ object Folding {
     def pathIdToDefinition(
       pid: PathIdentifier,
       parents: Seq[Definition]
-    ): Option[Definition] = { resolvePath(pid, parents)()().headOption }
+    ): Option[Definition] = {
+      val result = resolvePath(pid, parents)()()
+      result.headOption
+    }
 
     private def adjustStacksForPid(
       searchFor: String,
@@ -410,7 +413,8 @@ object Folding {
     ): Seq[Definition] = {
       if (pid.value.isEmpty) { Seq.empty[Definition] }
       else if (pid.value.exists(_.isEmpty)) {
-        onSingle(resolveRelativePath(pid, parents))
+        val resolution = resolveRelativePath(pid, parents)
+        onSingle(resolution)
       } else {
         val result = resolvePathFromHierarchy(pid, parents)
         if (result.nonEmpty) { onSingle(result) }
