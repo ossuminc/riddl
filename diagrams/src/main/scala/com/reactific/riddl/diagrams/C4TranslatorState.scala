@@ -1,4 +1,4 @@
-package com.reactific.riddl.c4
+package com.reactific.riddl.diagrams
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.SymbolTable

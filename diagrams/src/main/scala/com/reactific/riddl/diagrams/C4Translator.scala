@@ -1,4 +1,4 @@
-package com.reactific.riddl.c4
+package com.reactific.riddl.diagrams
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.Messages.errors
 import com.reactific.riddl.language.CommonOptions

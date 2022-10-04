@@ -247,15 +247,16 @@ case class MarkdownWriter(
         |</script>
         |""".stripMargin)*/
     val configs = Map(
-      "securityLevel" -> "loose",
-      "theme" -> "dark",
+      "securityLevel" -> "'loose'",
+      "flowchart" ->
+        "{ useMaxWidth: true, htmlLabels: true, curve: 'cardinal' }",
+      "theme" -> "'dark'",
       "logLevel" -> { if (state.commonOptions.debug) "1" else "4" }
     )
     p("{{< mermaid class=\"text-center\">}}")
     val config =
-      s"%%{init: { ${configs.map { case (k, v) => s"\"$k\": \"$v\"" }.mkString(", ")} }}%%"
+      s"%%{init: { ${configs.map { case (k, v) => s"\"$k\": $v" }.mkString(", ")} }}%%"
     val improved = (config +: lines).map(_.trim).filter(_.nonEmpty)
-      .filterNot(_.startsWith("style")).filterNot(_.startsWith("linkStyle"))
     improved.foreach(p)
     p("{{< /mermaid >}}")
     if (state.commonOptions.debug) {
@@ -733,14 +734,9 @@ case class MarkdownWriter(
     this
   }
 
-  def emitContextMap(focus: Context): this.type = {
-    state.makeC4ViewFor(focus) match {
-      case Some(view) =>
-        h2("Context Map")
-        emitMermaidDiagram(Seq(view))
-      case None => this // skip
-    }
+  def emitContextMap(@unused focus: Context): this.type = {
     // emitC4ContainerDiagram(focus, parents)
+    this
   }
 
   def emitContext(context: Context, stack: Seq[Definition]): this.type = {
@@ -852,12 +848,12 @@ case class MarkdownWriter(
       h2("User Story")
       p(story.userStory.map(_.format).getOrElse("Unknown story"))
     }
-    state.makeC4ViewFor(story) match {
+    /*state.makeC4ViewFor(story) match {
       case Some(view) =>
         h2("Dynamic View")
         emitMermaidDiagram(view)
       case None => // nothing
-    }
+    }*/
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
     list(
       "Designs",

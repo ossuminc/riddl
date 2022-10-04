@@ -1850,12 +1850,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = None)
       extends BrieflyDescribedValue
 
-  case class StoryCaseUse(
-    loc: Location,
-    ref: StoryCaseUsesRefs[?],
-    brief: Option[LiteralString] = None)
-      extends BrieflyDescribedValue
-
   /** One step in an Interaction between things
     * @param loc
     *   The location of the step definition

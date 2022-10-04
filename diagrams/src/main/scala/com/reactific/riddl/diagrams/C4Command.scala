@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.reactific.riddl.c4
+package com.reactific.riddl.diagrams
 
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.TranslationCommand

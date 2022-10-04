@@ -16,24 +16,12 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.c4.C4Command
-import com.reactific.riddl.c4.C4Translator
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.*
-import com.structurizr.`export`.Diagram
-import com.structurizr.`export`.mermaid.MermaidDiagramExporter
-import com.structurizr.view.ComponentView
-import com.structurizr.view.ContainerView
-import com.structurizr.view.DynamicView
-import com.structurizr.view.SystemContextView
-import com.structurizr.view.SystemLandscapeView
-import com.structurizr.view.View
 
 import java.nio.file.Path
-import scala.collection.mutable
-import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 /** The processing state for the Hugo Translator
   * @param root
@@ -55,13 +43,7 @@ case class HugoTranslatorState(
 
   final val symbolTable: SymbolTable = result.symTab
 
-  final val root: Definition = result.root // base class compliance
-
-  final val c4State = C4Translator.translateImpl(
-    result,
-    commonOptions,
-    C4Command.Options(enterpriseName = options.enterpriseName)
-  ).toOption
+  final val root: RootContainer = result.root // base class compliance
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -191,7 +173,7 @@ case class HugoTranslatorState(
   def makeIndex(root: RootContainer): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
     mdw.fileHead("Index", 10, Option("The main index to the content"))
-    makeC4SystemLandscapeView match {
+    makeSystemLandscapeView match {
       case Some(view) =>
         mdw.h2("Landscape View")
         mdw.emitMermaidDiagram(view)
@@ -270,33 +252,11 @@ case class HugoTranslatorState(
     files.map(_.filePath).toSeq
   }
 
-  def makeC4View[T <: View](view: T): String = {
-    val exporter = new MermaidDiagramExporter
-    val diagram: Diagram = view match {
-      case slv: SystemLandscapeView => exporter.export(slv)
-      case scv: SystemContextView   => exporter.export(scv)
-      case cmpv: ComponentView      => exporter.export(cmpv)
-      case conv: ContainerView      => exporter.export(conv)
-      case dynv: DynamicView        => exporter.export(dynv)
-    }
-    val result = new mutable.StringBuilder()
-    result.append(diagram.getDefinition)
-    for (frame <- diagram.getFrames.asScala) {
-      result.append(frame.getDefinition)
-    }
-    result.toString()
-  }
-
-  def makeC4ViewFor(definition: Definition): Option[String] = {
-    c4State.map { state =>
-      val view = state.viewByDef(definition)
-      makeC4View(view)
-    }
-  }
-  def makeC4SystemLandscapeView: Option[String] = {
-    c4State.map { state =>
-      val view = state.views.getSystemLandscapeViews.asScala.head
-      makeC4View(view)
-    }
+  def makeSystemLandscapeView: Option[String] = {
+    import com.reactific.riddl.diagrams.MermaidDiagramsPlugin
+    val mdp = new MermaidDiagramsPlugin
+    val diagram = mdp
+      .makeRootOverview(root, options.enterpriseName.getOrElse("No Name"))
+    Some(diagram)
   }
 }
