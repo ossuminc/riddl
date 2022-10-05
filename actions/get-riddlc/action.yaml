@@ -13,6 +13,8 @@ runs:
         version="0.15.1"
         wget --quiet https://github.com/reactific/riddl/releases/download/${version}/riddlc-${version}.zip
         unzip riddlc-${version}.zip
-        echo "$(pwd)/riddlc-${version}/bin" >> $GITHUB_PATH
-        echo $GITHUB_PATH
+        export riddlc_path="$(pwd)/riddlc-${version}/bin"
+        echo "riddlc_path = $riddlc_path"
+        echo "$riddlc_path" >> $GITHUB_PATH
+        echo GITHUB_PATH = $GITHUB_PATH
       shell: bash
