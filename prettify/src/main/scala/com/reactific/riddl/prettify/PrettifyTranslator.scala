@@ -19,14 +19,13 @@ package com.reactific.riddl.prettify
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.Folder
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.{CommonOptions, Folding, Translator, Validation}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Folding
+import com.reactific.riddl.language.Translator
+import com.reactific.riddl.language.Validation
 import com.reactific.riddl.utils.Logger
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
 import scala.annotation.unused
-import scala.collection.mutable
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
@@ -77,9 +76,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     @unused log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
-  ): Either[Messages, Unit] = {
-    val state = doTranslation(results, log, commonOptions, options)
-    Right(state.files)
+  ): Either[Messages, PrettifyState] = {
+    Right(doTranslation(results, log, commonOptions, options))
   }
 
   def doTranslation(
@@ -87,8 +85,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     @unused log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
-  ): ReformatState = {
-    val state = ReformatState(commonOptions, options)
+  ): PrettifyState = {
+    val state = PrettifyState(commonOptions, options)
     val folder = new ReformatFolder
     Folding.foldAround(state, results.root, folder)
   }
@@ -108,79 +106,12 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     state.filesAsString
   }
 
-  case class ReformatState(
-    commonOptions: CommonOptions,
-    options: PrettifyCommand.Options)
-      extends Folding.State[ReformatState] {
-
-    require(options.inputFile.nonEmpty, "No input file specified")
-    require(options.outputDir.nonEmpty, "No output directory specified")
-
-    private val inPath: Path = options.inputFile.get
-    private val outPath: Path = options.outputDir.get
-
-    def relativeToInPath(path: Path): Path = inPath.relativize(path)
-
-    def outPathFor(path: Path): Path = {
-      val suffixPath = if (path.isAbsolute) relativeToInPath(path) else path
-      outPath.resolve(suffixPath)
-    }
-
-    private var generatedFiles: Seq[RiddlFileEmitter] = Seq
-      .empty[RiddlFileEmitter]
-
-    def files: Seq[Path] = {
-      closeStack()
-      if (options.singleFile) {
-        val content = filesAsString
-        Files.writeString(firstFile.filePath, content, StandardCharsets.UTF_8)
-        Seq(firstFile.filePath)
-      } else { for { emitter <- generatedFiles } yield { emitter.emit() } }
-    }
-
-    def filesAsString: String = {
-      closeStack()
-      generatedFiles
-        .map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.asString}")
-        .mkString
-    }
-
-    private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack
-      .empty[RiddlFileEmitter]
-
-    private def closeStack(): Unit = { while (fileStack.nonEmpty) popFile() }
-
-    def current: RiddlFileEmitter = fileStack.head
-
-    private val firstFile: RiddlFileEmitter = {
-      val file = RiddlFileEmitter(outPathFor(inPath))
-      pushFile(file)
-      file
-    }
-
-    def addFile(file: RiddlFileEmitter): ReformatState = {
-      generatedFiles = generatedFiles :+ file
-      this
-    }
-
-    def pushFile(file: RiddlFileEmitter): ReformatState = {
-      fileStack.push(file)
-      addFile(file)
-    }
-
-    def popFile(): ReformatState = { fileStack.pop(); this }
-
-    def withCurrent(f: RiddlFileEmitter => Unit): ReformatState = {
-      f(current); this
-    }
-  }
-
-  class ReformatFolder extends Folder[ReformatState] {
+  class ReformatFolder extends Folder[PrettifyState] {
     override def openContainer(
-      state: ReformatState,
+      state: PrettifyState,
       container: Definition,
       parents: Seq[Definition]
-    ): ReformatState = {
+    ): PrettifyState = {
       container match {
         case s: Story           => openStory(state, s)
         case domain: Domain     => openDomain(state, domain)
@@ -207,10 +138,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     override def doDefinition(
-      state: ReformatState,
+      state: PrettifyState,
       definition: Definition,
       parents: Seq[Definition]
-    ): ReformatState = {
+    ): PrettifyState = {
       definition match {
         case example: Example => state.withCurrent(_.emitExample(example))
         case invariant: Invariant => state.withCurrent(
@@ -230,10 +161,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     override def closeContainer(
-      state: ReformatState,
+      state: PrettifyState,
       container: Definition,
       parents: Seq[Definition]
-    ): ReformatState = {
+    ): PrettifyState = {
       container match {
         case _: Type      => state // openContainer did all of it
         case story: Story => closeStory(state, story)
@@ -253,10 +184,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def openDomain(
-      state: ReformatState,
+      state: PrettifyState,
       domain: Domain
-    ): ReformatState = {
-      state.withCurrent(_.openDef(domain)).step { s1: ReformatState =>
+    ): PrettifyState = {
+      state.withCurrent(_.openDef(domain)).step { s1: PrettifyState =>
         domain.authors.foldLeft(s1) { (st, author) =>
           st.withCurrent(
             _.addIndent(s"author is {\n").indent
@@ -275,7 +206,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    def openStory(state: ReformatState, story: Story): ReformatState = {
+    def openStory(state: PrettifyState, story: Story): PrettifyState = {
       state.withCurrent { st =>
         if (story.userStory.isEmpty) {
           st.openDef(story, withBrace = false).add(" ??? ")
@@ -283,22 +214,21 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           val us = story.userStory.get
           val actor = us.actor
           st.openDef(story).add(Keywords.actor).add(actor.id.format).add(" is ")
-            .add(actor.is_a.map(_.format).getOrElse("\"\"")).addNL()
-            .add(Keywords.capability).add(" is ").add(us.capability.format)
-            .addNL().add(Keywords.benefit).add(" is ").add(us.benefit.format)
-            .addNL()
+            .add(actor.is_a.map(_.format).getOrElse("\"\"")).nl
+            .add(Keywords.capability).add(" is ").add(us.capability.format).nl
+            .add(Keywords.benefit).add(" is ").add(us.benefit.format).nl
         }
       }
     }
 
-    def closeStory(state: ReformatState, story: Story): ReformatState = {
+    def closeStory(state: PrettifyState, story: Story): PrettifyState = {
       state.withCurrent(_.closeDef(story))
     }
 
     def openAdaptor(
-      state: ReformatState,
+      state: PrettifyState,
       adaptor: Adaptor
-    ): ReformatState = {
+    ): PrettifyState = {
       state.withCurrent(
         _.addIndent(keyword(adaptor)).add(" ").add(adaptor.id.format)
           .add(" for ").add(adaptor.ref.format).add(" is {")
@@ -309,9 +239,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def openAdaptation(
-      state: ReformatState,
+      state: PrettifyState,
       adaptation: Adaptation
-    ): ReformatState = {
+    ): PrettifyState = {
       adaptation match {
         case ec8: EventCommandA8n => state.withCurrent(
             _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
@@ -334,9 +264,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def closeAdaptation(
-      state: ReformatState,
+      state: PrettifyState,
       adaptation: AdaptorDefinition
-    ): ReformatState = {
+    ): PrettifyState = {
       state.withCurrent(
         _.outdent.addIndent("}\n").outdent.addIndent("}\n")
           .emitBrief(adaptation.brief).emitDescription(adaptation.description)
@@ -344,9 +274,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def openProcessor(
-      state: ReformatState,
+      state: PrettifyState,
       processor: Processor
-    ): ReformatState = {
+    ): PrettifyState = {
       state.withCurrent { file =>
         file.openDef(processor)
         processor.inlets.foreach(doInlet(state, _))
@@ -354,19 +284,19 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
     def openOnClause(
-      state: ReformatState,
+      state: PrettifyState,
       onClause: OnClause
-    ): ReformatState = {
+    ): PrettifyState = {
       state.withCurrent(
         _.addIndent("on ").emitMessageRef(onClause.msg).add(" {\n").indent
       )
     }
 
-    def closeOnClause(state: ReformatState): ReformatState = {
+    def closeOnClause(state: PrettifyState): PrettifyState = {
       state.withCurrent(_.outdent.addIndent("}\n"))
     }
 
-    def doPipe(state: ReformatState, pipe: Pipe): ReformatState = {
+    def doPipe(state: PrettifyState, pipe: Pipe): PrettifyState = {
       state.withCurrent(_.openDef(pipe)).step { state =>
         pipe.transmitType match {
           case Some(typ) => state
@@ -376,7 +306,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }.withCurrent(_.closeDef(pipe))
     }
 
-    def doJoint(state: ReformatState, joint: Joint): ReformatState = {
+    def doJoint(state: PrettifyState, joint: Joint): PrettifyState = {
       val s = state
         .withCurrent(_.addIndent(s"${keyword(joint)} ${joint.id.format} is "))
       joint match {
@@ -391,49 +321,49 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    def doInlet(state: ReformatState, inlet: Inlet): ReformatState = {
+    def doInlet(state: PrettifyState, inlet: Inlet): PrettifyState = {
       state.withCurrent(
         _.addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
       )
     }
 
-    def doOutlet(state: ReformatState, outlet: Outlet): ReformatState = {
+    def doOutlet(state: PrettifyState, outlet: Outlet): PrettifyState = {
       state.withCurrent(
         _.addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
       )
     }
 
     def openFunction[TCD <: Definition](
-      state: ReformatState,
+      state: PrettifyState,
       function: Function
-    ): ReformatState = {
+    ): PrettifyState = {
       state.withCurrent(_.openDef(function)).step { s =>
         function.input.fold(s)(te =>
-          s.withCurrent(_.addIndent("requires ").emitTypeExpression(te).addNL())
+          s.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
         )
       }.step { s =>
         function.output.fold(s)(te =>
-          s.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).addNL())
+          s.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
         )
       }
     }
 
-    def openState(reformatState: ReformatState, state: State): ReformatState = {
+    def openState(reformatState: PrettifyState, state: State): PrettifyState = {
       reformatState.withCurrent { st =>
         val s1 = st.openDef(state)
         if (state.nonEmpty) {
-          if (state.aggregation.isEmpty) { s1.add("fields { ??? } ").addNL() }
+          if (state.aggregation.isEmpty) { s1.add("fields { ??? } ").nl }
           else {
-            s1.addIndent("fields ").emitFields(state.aggregation.fields).addNL()
+            s1.addIndent("fields ").emitFields(state.aggregation.fields).nl
           }
         }
       }
     }
 
     def openSagaStep(
-      state: PrettifyTranslator.ReformatState,
+      state: PrettifyState,
       step: SagaStep
-    ): ReformatState = {
+    ): PrettifyState = {
       state.withCurrent(
         _.openDef(step).emitAction(step.doAction).add("reverted by")
           .emitAction(step.undoAction)
@@ -441,9 +371,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def openInclude[T <: Definition](
-      state: ReformatState,
+      state: PrettifyState,
       @unused include: Include[T]
-    ): ReformatState = {
+    ): PrettifyState = {
       if (!state.options.singleFile) {
         include.path match {
           case Some(path) =>
@@ -459,9 +389,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
 
     def closeInclude[T <: Definition](
-      state: ReformatState,
+      state: PrettifyState,
       @unused include: Include[T]
-    ): ReformatState = {
+    ): PrettifyState = {
       if (!state.options.singleFile) { state.popFile() }
       else { state }
     }

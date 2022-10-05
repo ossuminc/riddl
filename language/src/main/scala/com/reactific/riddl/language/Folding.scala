@@ -171,15 +171,15 @@ object Folding {
   }
 
   trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
-    def root: Definition
 
     def symbolTable: SymbolTable
 
-    var parents: Seq[Definition] = Seq.empty[Definition]
-
-    def setParents(pars: Seq[Definition]): S = {
-      parents = pars
-      this.asInstanceOf[S]
+    def pathIdToDefinition(
+      pid: PathIdentifier,
+      parents: Seq[Definition]
+    ): Option[Definition] = {
+      val result = resolvePath(pid, parents)()()
+      result.headOption
     }
 
     private def adjustStacksForPid(
@@ -406,14 +406,15 @@ object Folding {
 
     def resolvePath(
       pid: PathIdentifier,
-      parents: Seq[Definition] = parents
+      parents: Seq[Definition]
     )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle
     )(onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
         doNothingMultiple
     ): Seq[Definition] = {
       if (pid.value.isEmpty) { Seq.empty[Definition] }
       else if (pid.value.exists(_.isEmpty)) {
-        onSingle(resolveRelativePath(pid, parents))
+        val resolution = resolveRelativePath(pid, parents)
+        onSingle(resolution)
       } else {
         val result = resolvePathFromHierarchy(pid, parents)
         if (result.nonEmpty) { onSingle(result) }

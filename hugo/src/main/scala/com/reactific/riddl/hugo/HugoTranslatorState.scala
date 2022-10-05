@@ -35,13 +35,15 @@ import java.nio.file.Path
   */
 case class HugoTranslatorState(
   result: Validation.Result,
-  symbolTable: SymbolTable,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
-    extends TranslatorState[MarkdownWriter]
-    with PathResolutionState[HugoTranslatorState] {
+    extends TranslatingState[MarkdownWriter]
+    with PathResolutionState[HugoTranslatorState]
+    with TranslationResult {
 
-  final val root: Definition = result.root // base class compliance
+  final val symbolTable: SymbolTable = result.symTab
+
+  final val root: RootContainer = result.root // base class compliance
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -171,6 +173,12 @@ case class HugoTranslatorState(
   def makeIndex(root: RootContainer): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
     mdw.fileHead("Index", 10, Option("The main index to the content"))
+    makeSystemLandscapeView match {
+      case Some(view) =>
+        mdw.h2("Landscape View")
+        mdw.emitMermaidDiagram(view)
+      case None => // nothing
+    }
     mdw.h2("Domains")
     val domains = root.contents.sortBy(_.id.value)
       .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
@@ -242,5 +250,13 @@ case class HugoTranslatorState(
     makeStatistics()
     files.foreach(_.write())
     files.map(_.filePath).toSeq
+  }
+
+  def makeSystemLandscapeView: Option[String] = {
+    import com.reactific.riddl.diagrams.MermaidDiagramsPlugin
+    val mdp = new MermaidDiagramsPlugin
+    val diagram = mdp
+      .makeRootOverview(root, options.enterpriseName.getOrElse("No Name"))
+    Some(diagram)
   }
 }

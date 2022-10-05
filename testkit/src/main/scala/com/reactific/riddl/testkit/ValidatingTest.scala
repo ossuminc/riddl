@@ -84,6 +84,7 @@ abstract class ValidatingTest extends ParsingTest {
   private def defaultFail(msgs: Messages): Assertion = {
     fail(msgs.map(_.format).mkString("\n"))
   }
+
   def validateFile(
     label: String,
     fileName: String,
@@ -119,7 +120,7 @@ abstract class ValidatingTest extends ParsingTest {
         info(s"${warnings.length} Warnings:")
         if (warnings.nonEmpty) { info(warnings.format) }
         errors mustBe empty
-        warnings mustBe empty
+        warnings.forall(_.message.contains("is unused")) mustBe true
     }
   }
 
