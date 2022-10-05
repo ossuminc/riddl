@@ -142,8 +142,9 @@ object Messages {
     messages.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
   }
 
-  def logMessages(messages: Messages, log: Logger): Int = {
-    messages.sorted.foreach { msg =>
+  def logMessages(messages: Messages, log: Logger, options: CommonOptions): Int = {
+    val list = if (options.sortMessagesByLocation) messages.sorted else messages
+    list.foreach { msg =>
       msg.kind match {
         case Info           => log.info(msg.format)
         case StyleWarning   => log.warn(msg.format)

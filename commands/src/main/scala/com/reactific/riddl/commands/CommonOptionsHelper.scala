@@ -83,7 +83,11 @@ object CommonOptionsHelper {
         .text("Show warnings about questionable input style. "),
       opt[File]('P', name = "plugins-dir").optional()
         .action((file, c) => c.copy(pluginsDir = Some(file.toPath)))
-        .text("Load riddlc command extension plugins from this directory.")
+        .text("Load riddlc command extension plugins from this directory."),
+      opt[Boolean]('S', name = "sort-warnings-by-location").optional()
+        .action((_, c) => c.copy(sortMessagesByLocation = true)).text(
+          "Print all messages sorted by the file name and line number in which they occur."
+        )
     )
   }
 

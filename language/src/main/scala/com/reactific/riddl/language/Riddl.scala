@@ -36,6 +36,7 @@ case class CommonOptions(
   showUnusedWarnings: Boolean = true,
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
+  sortMessagesByLocation: Boolean = false
 )
 
 /** Primary Interface to Riddl Language parsing and validating */
