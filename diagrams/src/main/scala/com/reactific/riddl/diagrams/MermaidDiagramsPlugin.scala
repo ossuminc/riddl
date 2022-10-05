@@ -6,14 +6,13 @@ import scala.collection.mutable
 
 object MermaidDiagramsPlugin {
   val containerStyles = Array(
-    "fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:3em", // Navy Blue Solid
-    "fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:3em", // Navy Blue Solid
-    "fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white,margin-top:3em", // Navy Blue Solid
-    "fill:#6666EE,stroke:black,stroke-width:3,border:solid,color:black,margin-top:3em", // Navy Blue Solid
-    "fill:#8888FF,stroke:black,stroke-width:2,border:solid,color:black,margin-top:3em", // Navy Blue Solid
-    "fill:#AAAAFF,stroke:black,stroke-width:1,border:solid,color:black,margin-top:3em" // Navy Blue Solid
+    "font-size:1pc,fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:3pc",
+    "font-size:1pc,fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:3pc",
+    "font-size:1pc,fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white,margin-top:3pc",
+    "font-size:1pc,fill:#6666EE,stroke:black,stroke-width:3,border:solid,color:black,margin-top:3pc",
+    "font-size:1pc,fill:#8888FF,stroke:black,stroke-width:2,border:solid,color:black,margin-top:3pc",
+    "font-size:1pc,fill:#AAAAFF,stroke:black,stroke-width:1,border:solid,color:black,margin-top:3pc"
   )
-  case class Node(name: String, brief: String, kids: Seq[Node])
 }
 
 class MermaidDiagramsPlugin extends DiagramMakerPlugin {
