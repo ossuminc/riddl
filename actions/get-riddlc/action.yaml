@@ -14,6 +14,7 @@ runs:
         wget --quiet https://github.com/reactific/riddl/releases/download/${version}/riddlc-${version}.zip
         unzip riddlc-${version}.zip
         export RIDDLC="$(pwd)/riddlc-${version}/bin"
+        echo "RIDDLC = ${RIDDLC}"
         echo "$RIDDLC" >> $GITHUB_PATH
         echo GITHUB_PATH = "$GITHUB_PATH"
         echo `which riddlc`

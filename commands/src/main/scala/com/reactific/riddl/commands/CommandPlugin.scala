@@ -174,7 +174,7 @@ object CommandPlugin {
                 0
               case Left(messages) =>
                 if (commonOptions.quiet) { highestSeverity(messages) + 1 }
-                else { Messages.logMessages(messages, log) + 1 }
+                else { Messages.logMessages(messages, log, commonOptions) + 1 }
             }
           }
         case None =>
