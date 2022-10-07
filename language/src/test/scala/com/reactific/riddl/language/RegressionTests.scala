@@ -1,7 +1,9 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Domain, Type}
+import com.reactific.riddl.language.AST.Domain
+import com.reactific.riddl.language.AST.Type
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {
   "Regressions" should {
@@ -56,6 +58,50 @@ class RegressionTests extends ParsingTest {
         case Right(_)     =>
           // info(typeDef.toString)
           succeed
+      }
+    }
+    "catch types with predefined expression with a suffix" in {
+      val input = """domain foo {
+                    |  type Bug is IntegerRange briefly "oops"
+                    |}""".stripMargin
+
+      def extract(root: AST.RootContainer): Type = {
+        root.contents.head.types.head
+      }
+      parseTopLevelDomain[Type](input, extract) match {
+        case Left(messages) =>
+          messages mustNot be(empty)
+          messages.size mustBe (1)
+          val msg = messages.head
+          msg.kind mustBe (Messages.Error)
+          msg.format.contains("IntegerRange") mustBe (true)
+          succeed
+        case _ => fail("should have generated an error")
+      }
+    }
+
+    "case types with predefined expression in an aggregation" in {
+      val input = """domain foo {
+                    |  type DateRange = Duration
+                    |  type Thing is {
+                    |    locationId: LocationId,
+                    |    schedule: DateRange+
+                    |  }
+                    |}
+                    |""".stripMargin
+      def extract(root: AST.RootContainer): Type = {
+        root.contents.head.types.head
+      }
+      parseTopLevelDomain[Type](input, extract) match {
+        case Left(messages) =>
+          messages mustNot be(empty)
+          messages.size mustBe (1)
+          val msg = messages.head
+          msg.kind mustBe (Messages.Error)
+          msg.format.contains("DateRange+") mustBe (true)
+          succeed
+        case _ => fail("should have generated an error")
+
       }
     }
   }
