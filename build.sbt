@@ -22,7 +22,6 @@ lazy val riddl = (project in file(".")).settings(
   commands,
   testkit,
   prettify,
-  diagrams,
   hugo,
   `git-check`,
   doc,
@@ -99,14 +98,6 @@ lazy val prettify = project.in(file("prettify")).configure(C.mavenPublish)
   .settings(name := "riddl-prettify", libraryDependencies ++= Dep.testing)
   .dependsOn(commands, testkit % "test->compile").dependsOn(utils)
 
-val Diagrams = config("diagrams")
-lazy val diagrams: Project = project.in(file("diagrams"))
-  .configure(C.mavenPublish).settings(
-    name := "riddl-diagrams",
-    libraryDependencies ++= Dep.testing ++
-      Seq(Dep.structurizr, Dep.structurizr_export)
-  ).dependsOn(utils, commands, testkit % "test->compile")
-
 val HugoTrans = config("hugo")
 lazy val hugo: Project = project.in(file("hugo")).configure(C.mavenPublish)
   .settings(
@@ -118,7 +109,7 @@ lazy val hugo: Project = project.in(file("hugo")).configure(C.mavenPublish)
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
   .dependsOn(language % "compile->compile", commands, testkit % "test->compile")
-  .dependsOn(utils, diagrams)
+  .dependsOn(utils)
 
 lazy val GitCheck = config("git-check")
 lazy val `git-check`: Project = project.in(file("git-check"))

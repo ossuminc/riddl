@@ -253,10 +253,9 @@ case class HugoTranslatorState(
   }
 
   def makeSystemLandscapeView: Option[String] = {
-    import com.reactific.riddl.diagrams.MermaidDiagramsPlugin
     val mdp = new MermaidDiagramsPlugin
     val diagram = mdp
-      .makeRootOverview(root, options.enterpriseName.getOrElse("No Name"))
+      .makeRootOverview(root)
     Some(diagram)
   }
 }

@@ -1,3 +1,4 @@
+
 function treeMapHierarchy(original_data, width) {
 
   let format = d3.format(",d")
@@ -24,7 +25,7 @@ function treeMapHierarchy(original_data, width) {
       .attr("viewBox", [0, 0, width, height])
       .style("font", "10px sans-serif");
 
-  const shadow = DOM.uid("shadow");
+  const shadow = DOM.uid("shadow")
 
   svg.append("filter")
       .attr("id", shadow.id)
