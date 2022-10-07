@@ -6,8 +6,10 @@ draft: "false"
 weight: 10
 ---
 
-## Q: Should the event for each command have a version of the entity where all fields are optional,
-or lists, such that only changed data is sent back to gateway?
+*Question:*
+> Should the event for each command have a version of the entity where all 
+> fields are optional, or lists, such that only changed data is sent back to
+> the gateway?
 
 ### Examples:
 

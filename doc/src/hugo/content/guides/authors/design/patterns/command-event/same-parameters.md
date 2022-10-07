@@ -6,7 +6,8 @@ draft: "false"
 weight: 10
 ---
 
-## Q: Should each command have its own event, containing the exact changed entity?
+*Question:*
+> Should each command have its own event, containing the exact changed entity?
 
 ### Examples:
 
@@ -42,7 +43,9 @@ event OrganizationContactsModified {
 
 ## Suggestions
 
-This affords much more traceability, but there is a lot of extraneous data coming back in non-creation events. While it makes sense
-to return the entire entity in UserEstablished as it was just created and has never been received from backend where data could 
-have been added automatically, the other events could have their parameters pared down a bit. This could be considered an anti-pattern]
-from that perspective.
+This affords much more traceability, but there is a lot of extraneous data 
+coming back in non-creation events. While it makes sense to return the entire
+entity in UserEstablished as it was just created and has never been received
+from backend where data could have been added automatically, the other events
+could have their parameters pared down a bit. This could be considered an
+antipattern from that perspective.

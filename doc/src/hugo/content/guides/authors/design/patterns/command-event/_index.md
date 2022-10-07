@@ -7,24 +7,28 @@ weight: 10
 ---
 
 ## Introduction To Messages
-If you are not familiar with the concept of `Messages` as it pertains to RIDDL, see [here]({{< relref "concepts/message.md" >}}).
-This document pertains only to Commands and Events.
+If you are not familiar with the concept of `Messages` as it pertains to RIDDL,
+see [here]({{< relref "concepts/message.md" >}}). This document pertains only
+to Commands and Events.
 
 ## Backend v Gateway
-This design spec considers only designing services themselves. As such it ignores usability features like fine-grained command
+This design spec considers only designing services themselves. As such it ignores
+usability features like fine-grained command
 parameters for updating data, unless justified. In a gateway service more consideration would have to be made for usability.
 
 ## Problem Statement
-There are implementation designs to be made regarding the arrangement of input (`Command`) and output (`Event`) data 
-across `Command` [`Handlers`]({{< relref "concepts/handler.md">}}). This documents pertains all types of `Command Handlers`.
+There are implementation designs to be made regarding the arrangement of input
+(`Command`) and output (`Event`) data across 
+[`Handlers`]({{< relref "concepts/handler.md">}}). This documents pertains 
+to all types of `Command Handlers`.
 
-These decisions can be summarized in 4 alternatives:
-{{< toc-tree >}}
 
-In this section we will be trying to figure out how to structure commands for creating, modifying, and deleting 
-fields on User entities. This applies to State based entities as well.
+## Preliminary Definitions
+In this section we will be trying to figure out how to structure commands for
+creating, modifying, and deleting fields on User entities. 
 
-### Here are the riddl specs we will be assuming for each example (borrowed from improving-riddl):
+Here are the riddl specs we will be assuming for each example (borrowed from 
+the evolving [improving.app](https://improving-app/riddl):
 
 ```
 entity Organization is {
@@ -48,7 +52,8 @@ type Info is {
 }
 
 type OrganizationId is Id (Organization)
-type MemberId is Id (Member) briefly "Member is not relevant here, so it will not be shown here."
+type MemberId is Id (Member) briefly 
+"Member is not relevant here, so it will not be shown here."
 
 type Address is {
     line1: String,
@@ -59,7 +64,8 @@ type Address is {
     postalCode: PostalCode
 }
 
-type MobileNumber is Pattern("\(([0-9]{3})\)([0-9]{3})-([0-9]{4})") described as "North American Phone Number standard"
+type MobileNumber is Pattern("\(([0-9]{3})\)([0-9]{3})-([0-9]{4})") 
+described as "North American Phone Number standard"
 
 type EmailAddress is String
 
@@ -91,3 +97,8 @@ command ModifyUserContacts {
     contacts: Contacts
 }
 ```
+
+## Solutions To Consider
+
+{{< toc-tree >}}
+

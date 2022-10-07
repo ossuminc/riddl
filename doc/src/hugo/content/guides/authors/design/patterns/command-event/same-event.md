@@ -6,7 +6,9 @@ draft: "false"
 weight: 10
 ---
 
-## Q: Should separate commands on the same entity all yield the same event, containing the exact changed entity?
+*Question:*
+> Should separate commands on the same entity all yield the same event, 
+> containing the exact changed entity?
 
 ### Examples:
 
@@ -21,7 +23,8 @@ event UserModified {
 
 ## Suggestions
 
-In an event driven system it is important to have distinct events for each operation such that there is a
-structural difference in the responses. This pattern is advised against for diverse sets of operations, and
-keeping in mind advantages of other patterns mentioned in this document.
+In an event driven system it is important to have distinct events for each 
+operation such that there is a structural difference in the responses. This 
+pattern is advised against for diverse sets of operations, and keeping in mind
+advantages of other patterns mentioned in this section.
 
