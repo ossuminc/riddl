@@ -15,14 +15,12 @@
  */
 
 package com.reactific.riddl.hugo
-
+import D3Diagrams.Level
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
-import com.reactific.riddl.utils.PathUtils
 
-import java.nio.file.Files
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.SortedMap
@@ -308,15 +306,6 @@ case class MarkdownWriter(
     emitMermaidDiagram(lines)
   }
 
-  private case class Level(
-    name: String,
-    href: String,
-    children: Seq[Level]) {
-    override def toString: String = {
-      s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
-    }
-  }
-
   private def makeData(container: Definition, parents: Seq[String]): Level = {
     Level(
       container.identify,
@@ -349,27 +338,10 @@ case class MarkdownWriter(
   ): this.type = {
     if (state.options.withGraphicalTOC) {
       h2(s"Graphical $kind Index")
-      val json = makeData(top, parents).toString
-      val resourceName = "js/tree-map-hierarchy2.js"
-      val jsPath = state.options.outputDir.get.resolve("static")
-        .resolve(resourceName)
-      if (!Files.exists(jsPath)) { Files.createDirectories(jsPath.getParent) }
-      PathUtils.copyResource(resourceName, jsPath)
-
-      val javascript = s"""
-                          |<div id="graphical-index">
-                          |  <script src="https://d3js.org/d3.v7.min.js"></script>
-                          |  <script src="/$resourceName"></script>
-                          |  <script>
-                          |    console.log('d3', d3.version)
-                          |    let data = $json ;
-                          |    let svg = treeMapHierarchy(data, 932);
-                          |    var element = document.getElementById("graphical-index");
-                          |    element.appendChild(svg);
-                          |  </script>
-                          |</div>
-          """.stripMargin
-      p(javascript)
+      val levels = makeData(top, parents)
+      val stateDir = state.options.outputDir.get.resolve("static")
+      p(D3Diagrams.overview(stateDir, levels))
+      p("TBD")
     }
     h2(s"Textual $kind Index")
     p("{{< toc-tree >}}")

@@ -33,7 +33,7 @@ import scala.collection.mutable
 
 object HugoTranslator extends Translator[HugoCommand.Options] {
 
-  val geekDoc_version = "v0.35.5"
+  val geekDoc_version = "v0.35.6"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -92,7 +92,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
         .toAbsolutePath
       Files.createDirectories(img.getParent)
-      if (!Files.exists(img)) { copyResource(img, "RIDDL-Logo.ico") }
+      if (!Files.exists(img)) {
+        copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
+      }
       // copy source to target using Files Class
       val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
       Files.walkFileTree(sourceDir, visitor)
@@ -108,12 +110,28 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Files.createDirectories(path)
     Files.createDirectories(path.resolve("archetypes"))
     Files.createDirectories(path.resolve("content"))
+    Files.createDirectories(path.resolve("public"))
     Files.createDirectories(path.resolve("data"))
-    Files.createDirectories(path.resolve("template/layouts"))
+    Files.createDirectories(path.resolve("layouts"))
     Files.createDirectories(path.resolve("public"))
     Files.createDirectories(path.resolve("static"))
     Files.createDirectories(path.resolve("themes"))
-    copyResource(path.resolve("archetypes").resolve("default.md"))
+    val resourceDir = "hugo/"
+    val resources = Seq(
+      "archetypes/default.md",
+      "layouts/partials/head/custom.html",
+      "layouts/shortcodes/faq.html",
+      "static/custom.css",
+      "static/images/RIDDL-Logo.ico",
+      "static/images/popup-link-icon.svg"
+    )
+    resources.foreach { resource =>
+      val resourcePath = resourceDir + resource
+      val destination = path
+        .resolve(resource.replaceAll("/", File.pathSeparator))
+      Files.createDirectories(destination.getParent)
+      PathUtils.copyResource(resourcePath, destination)
+    }
   }
 
   def makeDirectoryStructure(
@@ -288,7 +306,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = $themes
-       |
+       |       
        |# Author information from config
        |[author]
        |    name = "${auth.name.s}"
