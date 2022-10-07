@@ -169,8 +169,8 @@ lazy val doc = project.in(file("doc"))
     ScalaUnidoc / scalaVersion := (compile / scalaVersion).value,
 
     /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
-  mkdir -p themes/hugo-geekdoc/
-  curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
+    mkdir -p themes/hugo-geekdoc/
+    curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
      */
     // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
     // siteSubdirName / ScalaUnidoc := "api",
@@ -183,8 +183,8 @@ lazy val doc = project.in(file("doc"))
 val Riddlc = config("riddlc")
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
-  .enablePlugins(MiniDependencyTreePlugin).configure(C.mavenPublish)
-  .configure(C.withCoverage()).dependsOn(
+  .enablePlugins(MiniDependencyTreePlugin, GraalVMNativeImagePlugin)
+  .configure(C.mavenPublish).configure(C.withCoverage()).dependsOn(
     utils % "compile->compile;test->test",
     commands,
     language,
@@ -194,6 +194,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
+    graalVMNativeImageOptions ++= Seq("--verbose", "--no-fallback"),
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 

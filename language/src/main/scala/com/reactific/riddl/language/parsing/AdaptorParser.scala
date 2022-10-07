@@ -26,7 +26,10 @@ trait AdaptorParser
     extends ReferenceParser with GherkinParser with ActionParser {
 
   def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
-    P("").map(_ => Seq.empty[AdaptorOption]) // TODO: Need AdaptorOptions
+    options[u, AdaptorOption](StringIn(Options.technology).!) {
+      case (loc, Options.technology, args) => AdaptorTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
   }
 
   def adaptationPrefix[u: P]: P[(Location, Identifier)] = {
@@ -87,7 +90,9 @@ trait AdaptorParser
         briefly ~ description
     ).map { case (loc, id, cref, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
-      val includes = mapTo[Include[AdaptorDefinition]](groups.get(classOf[Include[AdaptorDefinition]]))
+      val includes = mapTo[Include[AdaptorDefinition]](groups.get(
+        classOf[Include[AdaptorDefinition]]
+      ))
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val adaptations: Seq[Adaptation] = defs.filter(_.isInstanceOf[Adaptation])

@@ -36,13 +36,15 @@ trait ContextParser
         Options.wrapper,
         Options.gateway,
         Options.service,
-        Options.package_
+        Options.package_,
+        Options.technology
       ).!
     ) {
-      case (loc, Options.wrapper, _)     => WrapperOption(loc)
-      case (loc, Options.gateway, _)     => GatewayOption(loc)
-      case (loc, Options.service, _)     => ServiceOption(loc)
-      case (loc, Options.package_, args) => ContextPackageOption(loc, args)
+      case (loc, Options.wrapper, _)       => WrapperOption(loc)
+      case (loc, Options.gateway, _)       => GatewayOption(loc)
+      case (loc, Options.service, _)       => ServiceOption(loc)
+      case (loc, Options.package_, args)   => ContextPackageOption(loc, args)
+      case (loc, Options.technology, args) => ContextTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }

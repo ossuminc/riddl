@@ -27,14 +27,14 @@ trait TypeParser extends CommonParser {
 
   def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
-      location ~ Keywords.reference ~ Readability.to ~/ maybe(Keywords.entity) ~
-        pathIdentifier
+      location ~ Keywords.reference ~ Readability.to.? ~/
+        maybe(Keywords.entity) ~ pathIdentifier
     ).map { tpl => (EntityReferenceTypeExpression.apply _).tupled(tpl) }
   }
 
   def stringType[u: P]: P[Strng] = {
     P(
-      location ~ Predefined.String ~
+      location ~ Predefined.String ~/
         (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~
           Punctuation.roundClose).?
     ).map {
@@ -45,7 +45,7 @@ trait TypeParser extends CommonParser {
 
   def urlType[u: P]: P[URL] = {
     P(
-      location ~ Predefined.URL ~
+      location ~ Predefined.URL ~/
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
@@ -68,12 +68,12 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.UUID).map(AST.UUID) |
         (location ~ Predefined.Nothing).map(AST.Nothing) |
         (location ~ Punctuation.undefinedMark).map(AST.Abstract)
-    )
+    )./
   }
 
   def patternType[u: P]: P[Pattern] = {
     P(
-      location ~ Predefined.Pattern ~/ Punctuation.roundOpen ~/
+      location ~ Predefined.Pattern ~/ Punctuation.roundOpen ~
         (literalStrings |
           Punctuation.undefinedMark.!.map(_ => Seq.empty[LiteralString])) ~
         Punctuation.roundClose./
@@ -91,7 +91,7 @@ trait TypeParser extends CommonParser {
   }
 
   def enumValue[u: P]: P[Option[Long]] = {
-    P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose).?
+    P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose./).?
   }
 
   def enumerator[u: P]: P[Enumerator] = {
@@ -102,9 +102,9 @@ trait TypeParser extends CommonParser {
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
-      location ~ Keywords.any ~ Readability.of.? ~ open ~/
+      location ~ Keywords.any ~ Readability.of.? ~/ open ~/
         (enumerator.rep(1, sep = Punctuation.comma.?) |
-          Punctuation.undefinedMark.!.map(_ => Seq.empty[Enumerator])) ~ close
+          Punctuation.undefinedMark.!.map(_ => Seq.empty[Enumerator])) ~ close./
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
@@ -113,18 +113,18 @@ trait TypeParser extends CommonParser {
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (Punctuation.undefinedMark.!
           .map(_ => Seq.empty[AliasedTypeExpression]) |
-          aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close
+          aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
   def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
-    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)
+    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./
       .map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
   }
 
   def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(
-      simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+      simplePredefinedTypes./ | patternType | uniqueIdType | enumeration |
         alternation | entityReferenceType | mappingType | rangeType |
         aliasedTypeExpression
     ))
