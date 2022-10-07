@@ -17,6 +17,8 @@ class HugoTranslatorTest
 
   "HugoTranslator" should { "handle all example sources" in { runTests() } }
 
+  override def validate(name: String): Boolean = name == "ReactiveBBQ"
+
   override def onSuccess(
     commandName: String,
     name: String,

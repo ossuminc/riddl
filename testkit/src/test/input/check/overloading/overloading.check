@@ -10,3 +10,9 @@ Missing: overloading.riddl(4:1): Type 'Device' should have a description:
 Style: overloading.riddl(4:25): Enumerator 'Keyboard' overloads Type 'Keyboard' at overloading.riddl(3:1):
  type Device is any of { Keyboard, Mouse, Monitor}
                          ^
+Warning: overloading.riddl(3:1): Type 'Keyboard' is unused:
+ type Keyboard is {locale: Locale}
+ ^
+Warning: overloading.riddl(4:1): Type 'Device' is unused:
+ type Device is any of { Keyboard, Mouse, Monitor}
+ ^

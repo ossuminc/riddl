@@ -37,6 +37,8 @@ trait AbstractDefinitions extends Terminals {
 
     /** The location in the parse at which this RiddlValue occurs */
     def loc: Location
+
+    def format: String
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -125,12 +127,19 @@ trait AbstractDefinitions extends Terminals {
 
   trait BrieflyDescribedValue extends RiddlValue {
     def brief: Option[LiteralString]
+    def briefValue: String = {
+      brief.map(_.s).getOrElse("No brief description.")
+    }
   }
 
   /** Base trait of all values that have an optional Description
     */
   trait DescribedValue extends RiddlValue {
     def description: Option[Description]
+    def descriptionValue: String = {
+      description.map(_.lines.map(_.s))
+        .mkString("", System.lineSeparator(), System.lineSeparator())
+    }
   }
 
   /** Base trait of any definition that is also a ContainerValue
@@ -400,13 +409,12 @@ trait AbstractDefinitions extends Terminals {
   /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
 
-  trait TypeDefinition extends Definition
 
   /** Base trait of definitions that can bound scope of a Story */
   trait StoryCaseScopeRefs
 
   /** Base trait of definitions that can be used in a Story */
-  trait StoryCaseUsesRefs
+  trait StoryCaseUsesRefs[T <: Definition] extends Reference[T]
 
   trait VitalDefinitionDefinition
       extends AdaptorDefinition
@@ -420,42 +428,6 @@ trait AbstractDefinitions extends Terminals {
       with ProjectionDefinition
       with SagaDefinition
       with StoryDefinition
-
-  trait VitalDefinition[T <: OptionValue, CT <: Definition]
-      extends Definition
-      with WithOptions[T]
-      with WithAuthors
-      with WithIncludes[CT]
-      with WithTerms {
-
-    /** Compute the 'maturity' of a definition. Maturity is a score with no
-      * maximum but with scoring rules that target 100 points per definition.
-      * Maturity is broken down this way:
-      *   - has a description - up to 50 points depending on # of non empty
-      *     lines
-      *   - has a brief description - 5 points
-      *   - has options specified - 5 points
-      *   - has terms defined -
-      *   - has an author in or above the definition - 5 points
-      * -
-      *   - definition specific things: 0.65
-      * @return
-      */
-    def maturity(parents: Seq[Definition]): Int = {
-      var score = 0
-      if (hasOptions) score += 5
-      if (hasTerms) score += 5
-      if (description.nonEmpty) {
-        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
-      }
-      if (brief.nonEmpty) score += 5
-      if (includes.nonEmpty) score += 3
-      if (isAuthored(parents)) score += 2
-      score
-    }
-  }
-
-  final val maxMaturity = 100
 
   // ////////////////////////////////////////////////// UTILITY FUNCTIONS
 

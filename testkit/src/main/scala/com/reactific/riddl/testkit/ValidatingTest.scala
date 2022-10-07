@@ -23,8 +23,10 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val msgs = Validation.validate(model)
         val clazz = classTag[D].runtimeClass
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root)
+        val msgs = result.messages
         model.contexts.head.contents.filter(_.getClass == clazz).map {
           d: ContextDefinition =>
             val reducedMessages = msgs.filterNot(_.loc.line == 1)
@@ -43,21 +45,23 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val msgs = Validation.validate(model, options)
-        val reducedMessages = msgs.filterNot(_.loc.line == 1)
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root, options)
+        val reducedMessages = result.messages.filterNot(_.loc.line == 1)
         validator(model.contexts.head, rpi, reducedMessages)
     }
   }
 
-  def parseAndValidate[D <: Definition: ClassTag](
+  def parseAndValidateDomain(
     input: RiddlParserInput
-  )(validator: (D, RiddlParserInput, Messages) => Assertion
+  )(validator: (Domain, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    parseDefinition[D](input) match {
+    parseDefinition[Domain](input) match {
       case Left(errors) => fail(errors.format)
-      case Right((model: D @unchecked, rpi)) =>
-        val msgs = Validation.validate(model)
-        validator(model, rpi, msgs)
+      case Right((model: Domain, rpi)) =>
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root)
+        validator(model, rpi, result.messages)
     }
   }
 
@@ -72,14 +76,15 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $testCaseName:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, root.inputs.head, messages)
+        val result = Validation.validate(root, options)
+        validation(root, root.inputs.head, result.messages)
     }
   }
 
   private def defaultFail(msgs: Messages): Assertion = {
     fail(msgs.map(_.format).mkString("\n"))
   }
+
   def validateFile(
     label: String,
     fileName: String,
@@ -94,8 +99,8 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, messages)
+        val result = Validation.validate(root, options)
+        validation(root, result.messages)
     }
   }
 
@@ -106,7 +111,8 @@ abstract class ValidatingTest extends ParsingTest {
     TopLevelParser.parse(file) match {
       case Left(errors) => fail(errors.format)
       case Right(root) =>
-        val messages = Validation.validate(root, options)
+        val result = Validation.validate(root, options)
+        val messages = result.messages
         val errors = messages.filter(_.kind.isError)
         val warnings = messages.filter(_.kind.isWarning)
         info(s"${errors.length} Errors:")
@@ -114,7 +120,7 @@ abstract class ValidatingTest extends ParsingTest {
         info(s"${warnings.length} Warnings:")
         if (warnings.nonEmpty) { info(warnings.format) }
         errors mustBe empty
-        warnings mustBe empty
+        warnings.forall(_.message.contains("is unused")) mustBe true
     }
   }
 

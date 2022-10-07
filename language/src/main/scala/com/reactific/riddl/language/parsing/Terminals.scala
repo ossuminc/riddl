@@ -69,6 +69,7 @@ trait Terminals {
     final val consistent = "consistent"
     final val device = "device"
     final val eventSourced = "event-sourced"
+    final val finiteStateMachine = "fsm"
     final val function = "function"
     final val gateway = "gateway"
     final val kind = "kind"
@@ -81,8 +82,8 @@ trait Terminals {
     final val sync = "sync"
     final val value = "value"
     final val wrapper = "wrapper"
-    final val finiteStateMachine = "fsm"
     final val tail_recursive = "tail-recursive"
+    final val technology = "technology"
     final val transient = "transient"
   }
 
@@ -206,7 +207,6 @@ trait Terminals {
     final val transmit = "transmit"
     final val `type` = "type"
     final val url = "url"
-    final val uses = "uses"
     final val value = "value"
     final val void = "void"
     final val when = "when"

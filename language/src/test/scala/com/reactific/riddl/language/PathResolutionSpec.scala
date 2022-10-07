@@ -17,12 +17,16 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
   )(onFailure: Messages.Messages => Assertion,
     onSuccess: => Assertion
   ): Assertion = {
+    val commonOptions = CommonOptions(
+      showMissingWarnings = false,
+      showUnusedWarnings = false,
+      showStyleWarnings = false
+    )
     TopLevelParser.parse(input) match {
       case Left(errors) => fail(errors.map(_.format).mkString("\n"))
-      case Right(model) => Validation.validate(
-          model,
-          CommonOptions(showMissingWarnings = false, showStyleWarnings = false)
-        ) match {
+      case Right(model) =>
+        val result = Validation.validate(model, commonOptions)
+        result.messages match {
           case msgs: Messages.Messages if msgs.nonEmpty => onFailure(msgs)
           case _                                        => onSuccess
         }
@@ -73,7 +77,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
       parseResult(RiddlParserInput(input))
     }
 
-    "resolve ^^Name.Item" in {
+    "resolve ^^B.InB" in {
       val input = """domain A {
                     |  domain B {
                     |    type InB = String
@@ -130,20 +134,20 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |    context C {
                     |      type Simple = String
                     |    }
-                    |    type Simple = .C.Simple // relative to context
+                    |    type Simple = C.Simple // relative to context
                     |    type BSimple = A.B.C.Simple // full path
                     |    type CSimple = ^C.Simple // partial path
                     |    context D {
                     |      type ATop = ^^^.Top
                     |      type DSimple = ^E.ESimple // partial path
                     |      entity E {
-                    |        type ESimple = ^^^C.Simple // partial path
+                    |        type ESimple = ^^^CSimple // partial path
                     |        event blah is { dSimple: ^^^.DSimple }
                     |        state only is {
                     |          fields { a : Top }
                     |          handler foo  is {
                     |            on event ^^^blah {
-                    |              then set ^^only.a to @dSimple
+                    |              then set ^^only.a to @^^^blah.dSimple
                     |            }
                     |          }
                     |        }
@@ -261,7 +265,8 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
       )
       root.contents.head.contents.length mustBe 2
       root.contents.head.contents.forall(_.kind == "Context")
-      val messages = Validation.validate(root, CommonOptions())
+      val result = Validation.validate(root, CommonOptions())
+      val messages = result.messages
       val errors = messages.filter(_.kind >= Messages.Error)
       if (errors.nonEmpty) fail(errors.format) else succeed
 
