@@ -22,6 +22,7 @@ import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.Messages.errors
+import com.reactific.riddl.language.Messages.warnings
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.PathUtils
 import com.reactific.riddl.utils.SysLogger
@@ -74,14 +75,22 @@ abstract class RunCommandOnExamplesTest[
 
   private final val suffix = "conf"
 
+  def validate(@unused name: String): Boolean = true
+
   def forEachConfigFile[T](f: (String, Path) => T): Seq[Either[Messages, T]] = {
     val configs = FileUtils
       .iterateFiles(srcDir.toFile, Array[String](suffix), true).asScala.toSeq
-    for { config <- configs } yield {
-      val name = config.getName.dropRight(suffix.length + 1)
-      CommandPlugin.loadCandidateCommands(config.toPath).flatMap { cmds =>
-        if (cmds.contains(commandName)) { Right(f(name, config.toPath)) }
+    for {
+      config <- configs
+      name = config.getName.dropRight(suffix.length + 1)
+    } yield {
+      if (validate(name)) {
+        val commands = CommandPlugin.loadCandidateCommands(config.toPath)
+        if (commands.contains(commandName)) { Right(f(name, config.toPath)) }
         else { Left(errors(s"Command $commandName not found in $config")) }
+      } else {
+        info(s"Skipping $name")
+        Left(warnings(s"Command $commandName skipped for $name"))
       }
     }
   }

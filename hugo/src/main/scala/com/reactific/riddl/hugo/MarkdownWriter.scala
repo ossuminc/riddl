@@ -15,14 +15,12 @@
  */
 
 package com.reactific.riddl.hugo
-
+import D3Diagrams.Level
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
-import com.reactific.riddl.utils.PathUtils
 
-import java.nio.file.Files
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.SortedMap
@@ -237,13 +235,31 @@ case class MarkdownWriter(
     result
   }
 
+  def emitMermaidDiagram(content: String): this.type = {
+    this.emitMermaidDiagram(content.split(System.lineSeparator()).toIndexedSeq)
+  }
+
   def emitMermaidDiagram(lines: Seq[String]): this.type = {
+    /*p("""<script>
+        |let geekdoc_color_mode = Storage.getItem(\"hugo-geekdoc.color-mode\")
+        |</script>
+        |""".stripMargin)*/
+    val configs = Map(
+      "securityLevel" -> "'loose'",
+      "flowchart" ->
+        "{ useMaxWidth: true, htmlLabels: true, curve: 'cardinal' }",
+      "theme" -> "'dark'",
+      "logLevel" -> { if (state.commonOptions.debug) "1" else "4" }
+    )
     p("{{< mermaid class=\"text-center\">}}")
-    lines.foreach(p)
+    val config =
+      s"%%{init: { ${configs.map { case (k, v) => s"\"$k\": $v" }.mkString(", ")} }}%%"
+    val improved = (config +: lines).map(_.trim).filter(_.nonEmpty)
+    improved.foreach(p)
     p("{{< /mermaid >}}")
     if (state.commonOptions.debug) {
-      p("```mermaid")
-      lines.foreach(p)
+      p("```")
+      improved.foreach(p)
       p("```")
     } else { this }
   }
@@ -277,25 +293,17 @@ case class MarkdownWriter(
   def emitERD(state: State, parents: Seq[Definition]): this.type = {
     h2("Entity Relationships")
     val fields = state.aggregation.fields
-    val typ: Seq[String] = s"${state.id.format} {" +: fields.map { f =>
+    val typ: Seq[String] = s"  ${state.id.format} {" +: fields.map { f =>
       val typeName = makeTypeName(f.typeEx, parents)
       val fieldName = f.id.format.replace(" ", "-")
-      val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
-      s"  $typeName $fieldName $comment"
-    } :+ "}"
+      val comment = "\"" + f.briefValue + "\""
+      s"    $typeName $fieldName $comment"
+    } :+ "  }"
     val relationships: Seq[String] = fields
       .map(makeERDRelationship(state.id.format, _, parents)).filter(_.nonEmpty)
+      .map("  " + _)
     val lines = Seq("erDiagram") ++ typ ++ relationships
     emitMermaidDiagram(lines)
-  }
-
-  private case class Level(
-    name: String,
-    href: String,
-    children: Seq[Level]) {
-    override def toString: String = {
-      s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
-    }
   }
 
   private def makeData(container: Definition, parents: Seq[String]): Level = {
@@ -330,27 +338,10 @@ case class MarkdownWriter(
   ): this.type = {
     if (state.options.withGraphicalTOC) {
       h2(s"Graphical $kind Index")
-      val json = makeData(top, parents).toString
-      val resourceName = "js/tree-map-hierarchy2.js"
-      val jsPath = state.options.outputDir.get.resolve("static")
-        .resolve(resourceName)
-      if (!Files.exists(jsPath)) { Files.createDirectories(jsPath.getParent) }
-      PathUtils.copyResource(resourceName, jsPath)
-
-      val javascript = s"""
-                          |<div id="graphical-index">
-                          |  <script src="https://d3js.org/d3.v7.min.js"></script>
-                          |  <script src="/$resourceName"></script>
-                          |  <script>
-                          |    console.log('d3', d3.version)
-                          |    let data = $json ;
-                          |    let svg = treeMapHierarchy(data, 932);
-                          |    var element = document.getElementById("graphical-index");
-                          |    element.appendChild(svg);
-                          |  </script>
-                          |</div>
-          """.stripMargin
-      p(javascript)
+      val levels = makeData(top, parents)
+      val stateDir = state.options.outputDir.get.resolve("static")
+      p(D3Diagrams.overview(stateDir, levels))
+      p("TBD")
     }
     h2(s"Textual $kind Index")
     p("{{< toc-tree >}}")
@@ -715,16 +706,16 @@ case class MarkdownWriter(
     this
   }
 
-  def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
-    h2("Context Map")
-    emitC4ContainerDiagram(focus, parents)
+  def emitContextMap(@unused focus: Context): this.type = {
+    // emitC4ContainerDiagram(focus, parents)
+    this
   }
 
   def emitContext(context: Context, stack: Seq[Definition]): this.type = {
     containerHead(context, "Context")
     val parents = state.makeParents(stack)
     emitDefDoc(context, parents)
-    emitContextMap(context, stack)
+    emitContextMap(context)
     emitOptions(context.options)
     emitTypesToc(context)
     toc("Functions", mkTocSeq(context.functions))
@@ -826,12 +817,15 @@ case class MarkdownWriter(
     val parents = state.makeParents(stack)
     emitDefDoc(story, parents)
     if (story.userStory.nonEmpty) {
-      val role = story.userStory.get.actor.identify
-      val capability = story.userStory.get.capability
-      val benefit = story.userStory.get.benefit
       h2("User Story")
-      p(s"I, as a $role, want $capability, so that $benefit.")
+      p(story.userStory.map(_.format).getOrElse("Unknown story"))
     }
+    /*state.makeC4ViewFor(story) match {
+      case Some(view) =>
+        h2("Dynamic View")
+        emitMermaidDiagram(view)
+      case None => // nothing
+    }*/
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
     list(
       "Designs",

@@ -20,6 +20,9 @@ object Messages {
 
     def severity: Int
 
+    def isIgnorable: Boolean = severity <= Warning.severity
+    def isActionable: Boolean = severity >= Error.severity
+
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
@@ -127,6 +130,10 @@ object Messages {
     def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
+    def isIgnorable: Boolean = {
+      msgs.isEmpty || !msgs.exists(_.kind >= Warning)
+    }
+    def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
   }
 
   val empty: Messages = List.empty[Message]
@@ -135,8 +142,9 @@ object Messages {
     messages.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
   }
 
-  def logMessages(messages: Messages, log: Logger): Int = {
-    messages.sorted.foreach { msg =>
+  def logMessages(messages: Messages, log: Logger, options: CommonOptions): Int = {
+    val list = if (options.sortMessagesByLocation) messages.sorted else messages
+    list.foreach { msg =>
       msg.kind match {
         case Info           => log.info(msg.format)
         case StyleWarning   => log.warn(msg.format)
