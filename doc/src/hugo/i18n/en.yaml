@@ -1,0 +1,6 @@
+footer_build_with: >
+  Built with <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a>
+footer_legal_notice:
+  By &copy;2022 Ossum Inc. <a href="/legal" class="gdoc-footer__link">All Rights Reserved.</a>
+footer_privacy_policy:
+  <a href="/privacy" class="gdoc-footer__link">Privacy</a>

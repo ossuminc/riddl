@@ -28,6 +28,7 @@ trait CommandOptions {
 }
 
 object CommandOptions {
+
   def withInputFile(
     inputFile: Option[Path],
     commandName: String
@@ -81,18 +82,18 @@ object CommandOptions {
           topCur <- cur.asObjectCursor
           topRes <- topCur.atKey("common")
           objCur <- topRes.asObjectCursor
-          showTimes <- optional[Boolean](objCur, "show-times", false)(
-            c => c.asBoolean)
-          verbose <- optional(objCur, "verbose", false)(
-            cc => cc.asBoolean)
-          dryRun <- optional(objCur, "dry-run", false)(
-            cc => cc.asBoolean)
-          quiet <-
-            optional(objCur, "quiet", false)(cc => cc.asBoolean)
-          debug <- optional(objCur, "debug", false)(
-            cc => cc.asBoolean)
+          showTimes <-
+            optional[Boolean](objCur, "show-times", false)(c => c.asBoolean)
+          verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
+          dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
+          quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
+          debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
+          sortMessages <- optional(objCur, "sort-messages-by-location", noBool)(
+            cc => cc.asBoolean.map(Option(_))
+          )
           suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(
-            cc => cc.asBoolean.map(Option(_)))
+            cc => cc.asBoolean.map(Option(_))
+          )
           suppressStyleWarnings <-
             optional(objCur, "suppress-style-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
@@ -101,25 +102,28 @@ object CommandOptions {
             optional(objCur, "suppress-missing-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
             }
-          hideWarnings <- optional(objCur, "hide-warnings", noBool)(
-            cc => cc.asBoolean.map(Option(_)))
-          hideStyleWarnings <-
-            optional(objCur, "hide-style-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
+          hideWarnings <- optional(objCur, "hide-warnings", noBool)(cc =>
+            cc.asBoolean.map(Option(_))
+          )
+          hideStyleWarnings <- optional(objCur, "hide-style-warnings", noBool) {
+            cc => cc.asBoolean.map(Option(_))
+          }
           hideMissingWarnings <-
             optional(objCur, "hide-missing-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
             }
-          showWarnings <- optional(objCur, "show-warnings", noBool) {
+          showWarnings <- optional(objCur, "show-warnings", noBool) { cc =>
+            cc.asBoolean.map(Option(_))
+          }
+          showStyleWarnings <- optional(objCur, "show-style-warnings", noBool) {
             cc => cc.asBoolean.map(Option(_))
           }
-          showStyleWarnings <-
-            optional(objCur, "show-style-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
           showMissingWarnings <-
             optional(objCur, "show-missing-warnings", noBool) { cc =>
+              cc.asBoolean.map(Option(_))
+            }
+          showUnusedWarnings <-
+            optional(objCur, "show-unused-warnings", noBool) { cc =>
               cc.asBoolean.map(Option(_))
             }
           pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path]) {
@@ -127,16 +131,18 @@ object CommandOptions {
           }
         } yield {
           val default = CommonOptions()
-          val shouldShowWarnings = suppressWarnings.map(!_).getOrElse(
-            hideWarnings.map(!_).getOrElse(
-              showWarnings.getOrElse(default.showWarnings)))
-          val shouldShowMissing = suppressMissingWarnings.map(!_).getOrElse(
-            hideMissingWarnings.map(!_).getOrElse(
-              showMissingWarnings.getOrElse(default.showMissingWarnings)))
+          val shouldShowWarnings = suppressWarnings.map(!_)
+            .getOrElse(hideWarnings.map(!_).getOrElse(showWarnings.getOrElse(
+              default.showWarnings
+            )))
+          val shouldShowMissing = suppressMissingWarnings.map(!_)
+            .getOrElse(hideMissingWarnings.map(!_).getOrElse(
+              showMissingWarnings.getOrElse(default.showMissingWarnings)
+            ))
           val shouldShowStyle = suppressStyleWarnings.map(!_).getOrElse(
-            hideStyleWarnings.map(!_).getOrElse(
-            showStyleWarnings.getOrElse(default.showStyleWarnings)))
-
+            hideStyleWarnings.map(!_)
+              .getOrElse(showStyleWarnings.getOrElse(default.showStyleWarnings))
+          )
           CommonOptions(
             showTimes,
             verbose,
@@ -145,8 +151,11 @@ object CommandOptions {
             shouldShowWarnings,
             shouldShowMissing,
             shouldShowStyle,
+            showUnusedWarnings = showUnusedWarnings
+              .getOrElse(default.showStyleWarnings),
             debug,
-            pluginsDir
+            pluginsDir,
+            sortMessagesByLocation = sortMessages.getOrElse(false)
           )
         }
       }

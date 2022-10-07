@@ -19,7 +19,6 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.AST.Include
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.*
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.PathUtils
@@ -34,7 +33,7 @@ import scala.collection.mutable
 
 object HugoTranslator extends Translator[HugoCommand.Options] {
 
-  val geekDoc_version = "v0.34.2"
+  val geekDoc_version = "v0.35.6"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -93,7 +92,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
         .toAbsolutePath
       Files.createDirectories(img.getParent)
-      if (!Files.exists(img)) { copyResource(img, "RIDDL-Logo.ico") }
+      if (!Files.exists(img)) {
+        copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
+      }
       // copy source to target using Files Class
       val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
       Files.walkFileTree(sourceDir, visitor)
@@ -109,12 +110,28 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Files.createDirectories(path)
     Files.createDirectories(path.resolve("archetypes"))
     Files.createDirectories(path.resolve("content"))
+    Files.createDirectories(path.resolve("public"))
     Files.createDirectories(path.resolve("data"))
-    Files.createDirectories(path.resolve("template/layouts"))
+    Files.createDirectories(path.resolve("layouts"))
     Files.createDirectories(path.resolve("public"))
     Files.createDirectories(path.resolve("static"))
     Files.createDirectories(path.resolve("themes"))
-    copyResource(path.resolve("archetypes").resolve("default.md"))
+    val resourceDir = "hugo/"
+    val resources = Seq(
+      "archetypes/default.md",
+      "layouts/partials/head/custom.html",
+      "layouts/shortcodes/faq.html",
+      "static/custom.css",
+      "static/images/RIDDL-Logo.ico",
+      "static/images/popup-link-icon.svg"
+    )
+    resources.foreach { resource =>
+      val resourcePath = resourceDir + resource
+      val destination = path
+        .resolve(resource.replaceAll("/", File.pathSeparator))
+      Files.createDirectories(destination.getParent)
+      PathUtils.copyResource(resourcePath, destination)
+    }
   }
 
   def makeDirectoryStructure(
@@ -132,7 +149,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if (commonOptions.verbose) { println(s"Generating output to: ${outDir}") }
+    if (commonOptions.verbose) { println(s"Generating output to: $outDir") }
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)
@@ -169,38 +186,31 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   }
 
   override def translate(
-    root: AST.RootContainer,
+    result: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options
-  ): Either[Messages, Unit] = {
-    doTranslation(root, log, commonOptions, options)
-    Right(())
-  }
-
-  def doTranslation(
-    root: AST.RootContainer,
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: HugoCommand.Options
-  ): Seq[Path] = {
+  ): Either[Messages, HugoTranslatorState] = {
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
     require(
       options.outputRoot.getFileName.toString.nonEmpty,
       "Output path is empty"
     )
     makeDirectoryStructure(options.inputFile.get, log, options, commonOptions)
+    val root = result.root
     val someAuthors = root.contents.headOption match {
       case Some(domain) => domain.authors
       case None         => Seq.empty[Author]
     }
     writeConfigToml(options, someAuthors.headOption)
-    val symtab = SymbolTable(root)
-    val state = HugoTranslatorState(root, symtab, options, commonOptions)
+
+    val state = HugoTranslatorState(result, options, commonOptions)
     val parentStack = mutable.Stack[Definition]()
 
-    Folding.foldLeftWithStack(state, parentStack)(root)(processingFolder)
-      .close(root)
+    val newState = Folding
+      .foldLeftWithStack(state, parentStack)(root)(processingFolder)
+    newState.close(root)
+    Right(newState)
   }
 
   def processingFolder(
@@ -229,6 +239,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
+          case sa: StoryActor => state.addToGlossary(sa, stack)
+          case sc: StoryCase  => state.addToGlossary(sc, stack)
           case _ =>
             require(requirement = false, "Failed to handle LeafDefinition")
             state
@@ -246,7 +258,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case c: Context    => mkd.emitContext(c, stack)
           case d: Domain     => mkd.emitDomain(d, parents)
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
-          case p: Processor  => mkd.emitProcessor(p, parents)
+          case p: Processor  => mkd.emitProcessor(p, stack)
           case p: Projection => mkd.emitProjection(p, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case s: Story      => mkd.emitStory(s, stack)
@@ -294,7 +306,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = $themes
-       |
+       |       
        |# Author information from config
        |[author]
        |    name = "${auth.name.s}"
