@@ -28,6 +28,9 @@ import com.reactific.riddl.utils.PathUtils
 import com.reactific.riddl.utils.SysLogger
 import com.reactific.riddl.utils.Zip
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.filefilter.DirectoryFileFilter
+import org.apache.commons.io.filefilter.NotFileFilter
+import org.apache.commons.io.filefilter.TrueFileFilter
 import org.scalatest.*
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -57,7 +60,8 @@ abstract class RunCommandOnExamplesTest[
     showTimes = true,
     showWarnings = false,
     showMissingWarnings = false,
-    showStyleWarnings = false
+    showStyleWarnings = false,
+    verbose = true
   )
 
   val logger: Logger = SysLogger()
@@ -95,12 +99,66 @@ abstract class RunCommandOnExamplesTest[
     }
   }
 
+  def forAFolder[T](
+    folderName: String
+  )(f: (String, Path) => T
+  ): Either[Messages, T] = FileUtils.iterateFilesAndDirs(
+    srcDir.toFile,
+    DirectoryFileFilter.DIRECTORY,
+    new NotFileFilter(TrueFileFilter.INSTANCE)
+  ).asScala.toSeq
+    .find(file => file.isDirectory && file.getName == "riddl") match {
+    case Some(riddlDir) =>
+      riddlDir.listFiles.toSeq.filter(file => file.isDirectory)
+        .find(_.getName.endsWith(folderName)) match {
+        case Some(folder) =>
+          println(folder.listFiles.toSeq)
+          folder.listFiles.toSeq.find(_.getName.endsWith(".conf")) match {
+            case Some(config) => CommandPlugin
+                .loadCandidateCommands(config.toPath).flatMap { cmds =>
+                  if (cmds.contains(commandName)) {
+                    Right(f(folderName, config.toPath))
+                  } else {
+                    Left(errors(s"Command $commandName not found in $config"))
+                  }
+                }
+            case None => Left(errors(
+                s"No config file found in RIDDL-examples folder $folderName"
+              ))
+          }
+        case None =>
+          Left(errors(s"RIDDL-examples folder $folderName not found"))
+      }
+    case None =>
+      Left(errors(s"riddl-examples/riddl top level folder not found"))
+  }
+
   def outputDir = ""
 
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTests(): Unit = {
     forEachConfigFile { case (name, path) =>
+      val outputDir = outDir.resolve(name)
+
+      val result = CommandPlugin.runCommandNamed(
+        commandName,
+        path,
+        logger,
+        commonOptions,
+        outputDirOverride = Some(outputDir)
+      )
+      result match {
+        case Right(cmd) => onSuccess(commandName, name, path, cmd, outputDir)
+        case Left(messages) => fail(messages.format)
+      }
+    }
+  }
+
+  /** Call this from your test suite subclass to run all the examples found.
+    */
+  def runTest(folderName: String): Unit = {
+    forAFolder(folderName) { case (name, path) =>
       val outputDir = outDir.resolve(name)
 
       val result = CommandPlugin.runCommandNamed(

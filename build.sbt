@@ -91,7 +91,7 @@ val TestKit = config("testkit")
 
 lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
-  .dependsOn(commands)
+  .dependsOn(commands % "compile->compile;test->test")
 
 val Prettify = config("prettify")
 lazy val prettify = project.in(file("prettify")).configure(C.mavenPublish)
