@@ -37,17 +37,13 @@ trait ParsingContext extends Terminals {
 
   private val stack: InputStack = InputStack()
 
-  protected val errors: mutable.ListBuffer[Messages.Message] =
-    mutable.ListBuffer.empty[Messages.Message]
+  protected val errors: mutable.ListBuffer[Messages.Message] = mutable
+    .ListBuffer.empty[Messages.Message]
 
-  @inline
-  def current: RiddlParserInput = { stack.current }
-  @inline
-  def push(path: Path): Unit = { stack.push(path) }
-  @inline
-  def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
-  @inline
-  def pop: RiddlParserInput = {
+  @inline def current: RiddlParserInput = { stack.current }
+  @inline def push(path: Path): Unit = { stack.push(path) }
+  @inline def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
+  @inline def pop: RiddlParserInput = {
     val rpi = stack.pop
     filesSeen.append(rpi)
     rpi
@@ -75,8 +71,7 @@ trait ParsingContext extends Terminals {
   }
 
   def importDomain(
-    @unused
-    file: File
+    @unused file: File
   ): Domain = {
     // TODO: implement importDomain
     Domain(Location(), Identifier(Location(), "NotImplemented"))
@@ -85,7 +80,7 @@ trait ParsingContext extends Terminals {
   def doInclude[T <: Definition](
     str: LiteralString
   )(rule: P[?] => P[Seq[T]]
-  ): Include = {
+  ): Include[T] = {
     val name = str.s + ".riddl"
     val path = current.root.toPath.resolve(name)
     if (Files.exists(path) && !Files.isHidden(path)) {
@@ -94,12 +89,10 @@ trait ParsingContext extends Terminals {
         try {
           this.expect[Seq[T]](rule) match {
             case Left(theErrors) =>
-              theErrors
-                .filterNot(errors.contains)
-                .foreach(errors.append)
-              Include(str.loc, Seq.empty[T], Some(path))
+              theErrors.filterNot(errors.contains).foreach(errors.append)
+              Include[T](str.loc, Seq.empty[T], Some(path))
             case Right((parseResult, _)) =>
-              Include(str.loc, parseResult, Some(path))
+              Include[T](str.loc, parseResult, Some(path))
           }
         } finally { pop }
       } else {
@@ -107,11 +100,11 @@ trait ParsingContext extends Terminals {
           str.loc,
           s"File '$name' exits but can't be read, so it can't be included."
         )
-        Include(str.loc, Seq.empty[Definition], Some(path))
+        Include[T](str.loc, Seq.empty[T], Some(path))
       }
     } else {
       error(str.loc, s"File '$name' does not exist, so it can't be included.")
-      Include(str.loc, Seq.empty[Definition], Some(path))
+      Include[T](str.loc, Seq.empty[T], Some(path))
     }
   }
 
@@ -150,11 +143,8 @@ trait ParsingContext extends Terminals {
     val input = current
     fastparse.parse(input, parser(_)) match {
       case Success(content, _) =>
-        if (errors.nonEmpty) {
-          Left(errors.toList)
-        } else {
-          Right(content -> input)
-        }
+        if (errors.nonEmpty) { Left(errors.toList) }
+        else { Right(content -> input) }
       case failure: Failure =>
         makeParseFailureError(failure)
         Left(errors.toList)

@@ -32,28 +32,32 @@ trait ContextParser
 
   def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](
-      StringIn(Options.wrapper, Options.gateway, Options.service,
-        Options.package_).!
+      StringIn(
+        Options.wrapper,
+        Options.gateway,
+        Options.service,
+        Options.package_,
+        Options.technology
+      ).!
     ) {
-      case (loc, Options.wrapper, _)  => WrapperOption(loc)
-      case (loc, Options.gateway, _)  => GatewayOption(loc)
-      case (loc, Options.service, _)  => ServiceOption(loc)
-      case (loc, Options.package_, args) => ContextPackageOption(loc, args)
-      case (_, _, _)                  =>
-        throw new RuntimeException("Impossible case")
+      case (loc, Options.wrapper, _)       => WrapperOption(loc)
+      case (loc, Options.gateway, _)       => GatewayOption(loc)
+      case (loc, Options.service, _)       => ServiceOption(loc)
+      case (loc, Options.package_, args)   => ContextPackageOption(loc, args)
+      case (loc, Options.technology, args) => ContextTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  def contextInclude[X: P]: P[Include] = {
+  def contextInclude[X: P]: P[Include[ContextDefinition]] = {
     include[ContextDefinition, X](contextDefinitions(_))
   }
 
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-      (author | typeDef | contextHandler | entity | adaptor | function | saga |
-        plantDefinition | projection | term | contextInclude
-      ).rep(0)
+        (author | typeDef | handler | entity | adaptor | function | saga |
+          plantDefinition | projection | term | contextInclude).rep(0)
     )
   }
 
@@ -70,7 +74,9 @@ trait ContextParser
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val includes = mapTo[Include[ContextDefinition]](groups.get(
+        classOf[Include[ContextDefinition]]
+      ))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val projections = mapTo[Projection](groups.get(classOf[Projection]))

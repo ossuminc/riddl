@@ -21,12 +21,12 @@ abstract class ValidatingTest extends ParsingTest {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     val rpi = RiddlParserInput(parseString)
     parseDefinition[Domain](rpi) match {
-      case Left(errors) =>
-        val msg = errors.map(_.format).mkString("\n")
-        fail(msg)
+      case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val msgs = Validation.validate(model)
         val clazz = classTag[D].runtimeClass
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root)
+        val msgs = result.messages
         model.contexts.head.contents.filter(_.getClass == clazz).map {
           d: ContextDefinition =>
             val reducedMessages = msgs.filterNot(_.loc.line == 1)
@@ -43,27 +43,25 @@ abstract class ValidatingTest extends ParsingTest {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     val rpi = RiddlParserInput(parseString)
     parseDefinition[Domain](rpi) match {
-      case Left(errors) =>
-        val msg = errors.map(_.format).mkString("\n")
-        fail(msg)
+      case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val msgs = Validation.validate(model, options)
-        val reducedMessages = msgs.filterNot(_.loc.line == 1)
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root, options)
+        val reducedMessages = result.messages.filterNot(_.loc.line == 1)
         validator(model.contexts.head, rpi, reducedMessages)
     }
   }
 
-  def parseAndValidate[D <: Definition: ClassTag](
+  def parseAndValidateDomain(
     input: RiddlParserInput
-  )(validator: (D, RiddlParserInput, Messages) => Assertion
+  )(validator: (Domain, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    parseDefinition[D](input) match {
-      case Left(errors) =>
-        val msg = errors.map(_.format).mkString("\n")
-        fail(msg)
-      case Right((model: D @unchecked, rpi)) =>
-        val msgs = Validation.validate(model)
-        validator(model, rpi, msgs)
+    parseDefinition[Domain](input) match {
+      case Left(errors) => fail(errors.format)
+      case Right((model: Domain, rpi)) =>
+        val root = RootContainer(Seq(model), Seq(rpi))
+        val result = Validation.validate(root)
+        validator(model, rpi, result.messages)
     }
   }
 
@@ -71,73 +69,66 @@ abstract class ValidatingTest extends ParsingTest {
     input: String,
     testCaseName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (
-      RootContainer,
-      RiddlParserInput,
-      Messages
-    ) => Assertion
+  )(validation: (RootContainer, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, testCaseName) match {
       case Left(errors) =>
-        val msgs = errors.iterator.map(_.format).mkString("\n")
+        val msgs = errors.format
         fail(s"In $testCaseName:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, root.inputs.head, messages)
+        val result = Validation.validate(root, options)
+        validation(root, root.inputs.head, result.messages)
     }
   }
 
   private def defaultFail(msgs: Messages): Assertion = {
     fail(msgs.map(_.format).mkString("\n"))
   }
+
   def validateFile(
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, Messages) => Assertion
-    = (_,msgs) => defaultFail(msgs)
+  )(validation: (RootContainer, Messages) => Assertion =
+      (_, msgs) => defaultFail(msgs)
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
       case Left(errors) =>
-        val msgs = errors.iterator.map(_.format).mkString("\n")
+        val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        val messages = Validation.validate(root, options)
-        validation(root, messages)
+        val result = Validation.validate(root, options)
+        validation(root, result.messages)
     }
   }
 
   def parseAndValidateFile(
-    label: String,
     file: File,
     options: CommonOptions = CommonOptions()
   ): Assertion = {
     TopLevelParser.parse(file) match {
-      case Left(errors) =>
-        val msgs = errors.iterator.map(_.format).mkString("\n")
-        fail(s"In $label:\n$msgs")
+      case Left(errors) => fail(errors.format)
       case Right(root) =>
-        val messages = Validation.validate(root, options)
+        val result = Validation.validate(root, options)
+        val messages = result.messages
         val errors = messages.filter(_.kind.isError)
-        val warnings: Seq[Message] = messages.filter(_.kind.isWarning)
+        val warnings = messages.filter(_.kind.isWarning)
         info(s"${errors.length} Errors:")
-        if (errors.nonEmpty) { info(errors.map(_.format).mkString("\n")) }
+        if (errors.nonEmpty) { info(errors.format) }
         info(s"${warnings.length} Warnings:")
-        if (warnings.nonEmpty) {
-          val asString = warnings.map(_.format).mkString("\n")
-          info(asString)
-        }
+        if (warnings.nonEmpty) { info(warnings.format) }
         errors mustBe empty
-        warnings mustBe empty
+        warnings.forall(_.message.contains("is unused")) mustBe true
     }
   }
 
   def assertValidationMessage(
     msgs: Messages,
     searchFor: String
-  )(f: Message => Boolean ): Assertion = {
+  )(f: Message => Boolean
+  ): Assertion = {
     assert(
       msgs.exists(f),
       s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"
@@ -151,7 +142,7 @@ abstract class ValidatingTest extends ParsingTest {
   ): Assertion = {
     assert(
       msgs.exists(m => m.kind == expectedKind && m.message.contains(content)),
-      s"; expecting, but didn't find '$content', in:\n${msgs.mkString("\n")}"
+      s"; expecting, but didn't find '$content', in:\n${msgs.format}"
     )
   }
 }

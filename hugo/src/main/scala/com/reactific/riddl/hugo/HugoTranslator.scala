@@ -16,10 +16,15 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.AST.{Include, *}
+import com.reactific.riddl.language.AST.Include
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.{AST, *}
-import com.reactific.riddl.utils.{Logger, PathUtils, Tar, TextFileWriter, TreeCopyFileVisitor, Zip}
+import com.reactific.riddl.language.*
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.PathUtils
+import com.reactific.riddl.utils.Tar
+import com.reactific.riddl.utils.TreeCopyFileVisitor
+import com.reactific.riddl.utils.Zip
 
 import java.io.File
 import java.net.URL
@@ -28,7 +33,7 @@ import scala.collection.mutable
 
 object HugoTranslator extends Translator[HugoCommand.Options] {
 
-  val geekDoc_version = "v0.34.2"
+  val geekDoc_version = "v0.35.5"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -55,8 +60,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             Tar.untar(zip_path, destDir)
             zip_path.toFile.delete()
           case _ => throw new IllegalArgumentException(
-            "Can only load a theme from .tar.gz or .zip file"
-          )
+              "Can only load a theme from .tar.gz or .zip file"
+            )
         }
       } else {
         throw new IllegalStateException(
@@ -67,9 +72,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   }
 
   def loadThemes(options: HugoCommand.Options): Unit = {
-    for (
-      (name, url) <- options.themes if url.nonEmpty
-    ) {
+    for ((name, url) <- options.themes if url.nonEmpty) {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url.get, destDir)
     }
@@ -96,9 +99,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     }
   }
 
-  def copyResource(destination: Path, src: String = ""):Unit = {
+  def copyResource(destination: Path, src: String = ""): Unit = {
     val name = if (src.isEmpty) destination.getFileName.toString else src
-    TextFileWriter.copyResource(name, destination)
+    PathUtils.copyResource(name, destination)
   }
 
   def manuallyMakeNewHugoSite(path: Path): Unit = {
@@ -116,16 +119,19 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   def makeDirectoryStructure(
     inputPath: Path,
     log: Logger,
-    options: HugoCommand.Options
+    options: HugoCommand.Options,
+    commonOptions: CommonOptions
   ): Unit = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) {if (options.eraseOutput) {deleteAll(outDir)}}
-    else {outDir.mkdirs()}
+    if (outDir.exists()) { if (options.eraseOutput) { deleteAll(outDir) } }
+    else { outDir.mkdirs() }
+
     val parent = outDir.getParentFile
     require(
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
+    if (commonOptions.verbose) { println(s"Generating output to: $outDir") }
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)
@@ -162,59 +168,47 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   }
 
   override def translate(
-    root: AST.RootContainer,
+    result: Validation.Result,
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options
-  ): Either[Messages, Unit] = {
-    doTranslation(root, log, commonOptions, options)
-    Right(())
-  }
-
-  def doTranslation(
-    root: AST.RootContainer,
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: HugoCommand.Options
-  ): Seq[Path] = {
+  ): Either[Messages, HugoTranslatorState] = {
     require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
     require(
       options.outputRoot.getFileName.toString.nonEmpty,
       "Output path is empty"
     )
-    makeDirectoryStructure(options.inputFile.get, log, options)
+    makeDirectoryStructure(options.inputFile.get, log, options, commonOptions)
+    val root = result.root
     val someAuthors = root.contents.headOption match {
       case Some(domain) => domain.authors
       case None         => Seq.empty[Author]
     }
     writeConfigToml(options, someAuthors.headOption)
-    val symtab = SymbolTable(root)
-    val state = HugoTranslatorState(root, symtab, options, commonOptions)
+
+    val state = HugoTranslatorState(result, options, commonOptions)
     val parentStack = mutable.Stack[Definition]()
 
-    Folding
+    val newState = Folding
       .foldLeftWithStack(state, parentStack)(root)(processingFolder)
-      .close(root)
+    newState.close(root)
+    Right(newState)
   }
 
   def processingFolder(
     state: HugoTranslatorState,
     defn: Definition,
     stack: Seq[Definition]
-  ): HugoTranslatorState  = {
+  ): HugoTranslatorState = {
     defn match {
-      case f: Field =>
-        state.addToGlossary(f, stack)
-      case i: Invariant =>
-        state.addToGlossary(i, stack)
-      case e: Enumerator =>
-        state.addToGlossary(e, stack)
-      case ss: SagaStep =>
-        state.addToGlossary(ss, stack)
-      case t: Term       =>
-        state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _:Outlet | _: InletJoint | _: OutletJoint |
-           _: Author | _: OnClause | _: Include | _: RootContainer =>
+      case f: Field      => state.addToGlossary(f, stack)
+      case i: Invariant  => state.addToGlossary(i, stack)
+      case e: Enumerator => state.addToGlossary(e, stack)
+      case ss: SagaStep  => state.addToGlossary(ss, stack)
+      case t: Term       => state.addToGlossary(t, stack)
+      case _: Example | _: Inlet | _: Outlet | _: InletJoint | _: OutletJoint |
+          _: Author | _: OnClause | _: Include[Definition] @unchecked |
+          _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
@@ -222,13 +216,15 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         // These are leaf nodes, they get their own file or other special
         // handling.
         leaf match {
-            // handled by definition that contains the term
-          case p: Pipe         =>
+          // handled by definition that contains the term
+          case p: Pipe =>
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
+          case sa: StoryActor => state.addToGlossary(sa, stack)
+          case sc: StoryCase  => state.addToGlossary(sc, stack)
           case _ =>
-            require(requirement=false, "Failed to handle LeafDefinition")
+            require(requirement = false, "Failed to handle LeafDefinition")
             state
         }
       case container: Definition =>
@@ -244,7 +240,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case c: Context    => mkd.emitContext(c, stack)
           case d: Domain     => mkd.emitDomain(d, parents)
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
-          case p: Processor  => mkd.emitProcessor(p, parents)
+          case p: Processor  => mkd.emitProcessor(p, stack)
           case p: Projection => mkd.emitProjection(p, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case s: Story      => mkd.emitStory(s, stack)
@@ -252,8 +248,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case a: Adaptation => mkd.emitAdaptation(a, parents)
         }
         state.addToGlossary(container, stack)
-      }
     }
+  }
 
   // scalastyle:off method.length
   def configTemplate(
@@ -262,14 +258,15 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   ): String = {
     val auth: Author = author.getOrElse(Author(
       1 -> 1,
-      id = Identifier(1->1,"unknown"),
+      id = Identifier(1 -> 1, "unknown"),
       name = LiteralString(1 -> 1, "Not Provided"),
       email = LiteralString(1 -> 1, "somebody@somewere.tld")
     ))
     val themes: String = {
       options.themes.map(_._1).mkString("[ \"", "\", \"", "\" ]")
     }
-    val baseURL: String = options.baseUrl.fold("https://example.prg/")(_.toString)
+    val baseURL: String = options.baseUrl
+      .fold("https://example.prg/")(_.toString)
     val srcURL: String = options.sourceURL.fold("")(_.toString)
     val editPath: String = options.editPath.getOrElse("")
     val siteLogoPath: String = options.siteLogoPath.getOrElse("images/logo.png")
@@ -277,7 +274,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     val privacyPath: String = "/privacy"
     val siteTitle = options.siteTitle.getOrElse("Unspecified Site Title")
     val siteName = options.projectName.getOrElse("Unspecified Project Name")
-    val siteDescription = options.siteDescription.getOrElse("Unspecified Project Description")
+    val siteDescription = options.siteDescription
+      .getOrElse("Unspecified Project Description")
 
     s"""######################## Hugo Configuration ####################
        |

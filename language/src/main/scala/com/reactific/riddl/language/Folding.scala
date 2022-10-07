@@ -19,7 +19,9 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.utils.SeqHelpers.*
 
+import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -34,20 +36,18 @@ object Folding {
   )(f: SimpleDispatch[S]
   ): S = {
     child match {
-      case defn: LeafDefinition =>
-        f(parent, defn, state)
-      case defn: Definition =>
+      case definition: LeafDefinition => f(parent, definition, state)
+      case definition: Definition =>
         val result = f(parent, child, state)
-        defn.contents.foldLeft(result) { case (next, child) =>
-          foldEachDefinition[S](defn, child, next)(f)
+        definition.contents.foldLeft(result) { case (next, child) =>
+          foldEachDefinition[S](definition, child, next)(f)
         }
     }
   }
 
   final def foldLeftWithStack[S](
     value: S,
-    parents: mutable.Stack[Definition] = mutable.Stack
-      .empty[Definition]
+    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
   )(top: Definition
   )(f: (S, Definition, Seq[Definition]) => S
   ): S = {
@@ -56,40 +56,22 @@ object Folding {
     try {
       top.contents.foldLeft(initial) { (next, definition) =>
         definition match {
-          case i: Include => i.contents.foldLeft(next) {
-            case (n, d: LeafDefinition) =>
-              f(n, d, parents.toSeq)
-            case (n, cd: Definition) =>
-              foldLeftWithStack(n, parents)(cd)(f)
-          }
-          case d: LeafDefinition =>
-            f(next, d, parents.toSeq)
-          case c: Definition =>
-            foldLeftWithStack(next, parents)(c)(f)
+          case i: Include[Definition] @unchecked => i.contents.foldLeft(next) {
+              case (n, d: LeafDefinition) => f(n, d, parents.toSeq)
+              case (n, cd: Definition) => foldLeftWithStack(n, parents)(cd)(f)
+            }
+          case d: LeafDefinition => f(next, d, parents.toSeq)
+          case c: Definition     => foldLeftWithStack(next, parents)(c)(f)
         }
       }
     } finally { parents.pop() }
   }
 
-  /*  final def foldLeft[S](
-    value: S,
-    parents: mutable.Stack[ParentDefOf[Definition]] =
-    mutable.Stack.empty[ParentDefOf[Definition]]
-  )(top: Seq[ParentDefOf[Definition]])(
-    f: (S, Definition, mutable.Stack[ParentDefOf[Definition]]) => S
-  ): S = {
-    top.foldLeft(value) {
-      case (next, definition: ParentDefOf[Definition]) =>
-        foldLeftWithStack(next, parents)(definition)(f)
-    }
-  }*/
-
   final def foldAround[S](
     value: S,
     top: Definition,
     folder: Folder[S],
-    parents: mutable.Stack[Definition] =
-      mutable.Stack.empty[Definition]
+    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
   ): S = {
     // Let them know a container is being opened
     val startState = folder.openContainer(value, top, parents.toSeq)
@@ -132,7 +114,7 @@ object Folding {
 
   trait State[S <: State[?]] {
     def step(f: S => S): S = f(this.asInstanceOf[S])
-    def stepIf(predicate:Boolean = true)(f: S => S): S = {
+    def stepIf(predicate: Boolean = true)(f: S => S): S = {
       if (predicate) f(this.asInstanceOf[S]) else this.asInstanceOf[S]
     }
   }
@@ -175,12 +157,12 @@ object Folding {
           if (isReportStyleWarnings) {
             msgs += msg
             this.asInstanceOf[S]
-          } else {this.asInstanceOf[S]}
+          } else { this.asInstanceOf[S] }
         case MissingWarning =>
           if (isReportMissingWarnings) {
             msgs += msg
             this.asInstanceOf[S]
-          } else {this.asInstanceOf[S]}
+          } else { this.asInstanceOf[S] }
         case _ =>
           msgs += msg
           this.asInstanceOf[S]
@@ -189,165 +171,269 @@ object Folding {
   }
 
   trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
-    def root: Definition
 
     def symbolTable: SymbolTable
 
-    var parents: Seq[Definition] = Seq.empty[Definition]
+    def pathIdToDefinition(
+      pid: PathIdentifier,
+      parents: Seq[Definition]
+    ): Option[Definition] = {
+      val result = resolvePath(pid, parents)()()
+      result.headOption
+    }
 
-    def captureHierarchy(pars: Seq[Definition]): S = {
-      parents = pars
-      this.asInstanceOf[S]
+    private def adjustStacksForPid(
+      searchFor: String,
+      pid: PathIdentifier,
+      parentStack: mutable.Stack[Definition],
+      nameStack: mutable.Stack[String]
+    ): Seq[Definition] = {
+      // Since we're at a field that references another type then we
+      // need to push that type's path on the name stack which is just itself
+      nameStack.push(searchFor)
+      // Now push the names we found in the pid, to be resolved yet
+      nameStack.pushAll(pid.value.reverse)
+      // Get the next name to resolve
+      val top = pid.value.head
+      // If it is a resolvable name and that name is on the parent stack
+      if (top.nonEmpty && parentStack.exists(_.id.value == top)) {
+        // Remove the top of stack name we just pushed, because we just found it
+        nameStack.pop()
+        // Drop up the stack until we find the name we just found
+        parentStack.popUntil(_.id.value == top)
+      }
+      Seq.empty[Definition]
     }
 
     private def findCandidates(
-      n: String,
-      pstack: mutable.Stack[Definition],
-      nstack: mutable.Stack[String],
+      searchFor: String,
+      parentStack: mutable.Stack[Definition],
+      nameStack: mutable.Stack[String]
     ): Seq[Definition] = {
-      // First get the list of candidate matches from the current node
-      pstack.headOption match {
-        case None =>
-          // empty result means nothing to search
-          Seq.empty[Definition]
-        case Some(s: AST.State) =>
-          // If we're at a entity's state, the state's fields are next
-          s.typeEx.fields
-        case Some(Field(_, _, Aggregation(_, fields), _, _)) =>
-          // if we're at a field composed of more fields, those fields are it
-          fields
-        case Some(Type(_, _, Aggregation(_, fields), _, _)) =>
-          fields
-        case Some(Type(_, _, MessageType(_, _, fields), _, _)) =>
-          fields
-        case Some(OnClause(_, msgRef, _, _, _)) =>
-          // if we're at an onClause that references a message then we
-          // need to push that message's path on the name stack
-          nstack.push(n) // undo the pop above
-          nstack.pushAll(msgRef.id.value.reverse)
-          Seq.empty[Definition]
-        case Some(Field(_, _, AliasedTypeExpression(_, pid), _, _)) =>
-          // if we're at a field that references another type then we
-          // need to push that types path on the name stack
-          nstack.push(n)
-          nstack.pushAll(pid.value.reverse)
-          Seq.empty[Definition]
-        case Some(Type(_, _, AliasedTypeExpression(_, pid), _, _)) =>
-          // if we're at a type definition that references another type then
-          // we need to push that type's path on the name stack
-          nstack.push(n)
-          nstack.pushAll(pid.value.reverse)
-          Seq.empty[Definition]
-        case Some(f: Function) if f.input.nonEmpty =>
-          // If we're at a Function node, the functions input parameters
-          // are the candidates to search next
-          f.input.get.fields
-        case Some(p) if p.isContainer =>
-          val conts = p.asInstanceOf[Container[Definition]].contents
-          conts.flatMap {
-            case Include(_, contents, _) => contents
-            case d: Definition => Seq(d)
-          }
-        case _ =>
-          // anything else isn't searchable so n can't be found
-          Seq.empty[Definition]
+      if (parentStack.isEmpty) {
+        // Nothing in the parent stack so we're done searching and
+        // we return empty to signal nothing found
+        Seq.empty[Definition]
+      } else {
+        parentStack.head match {
+          case oc: OnClause =>
+            // if we're at an onClause that references a message then we
+            // need to push that message's path on the name stack
+            adjustStacksForPid(searchFor, oc.msg.id, parentStack, nameStack)
+          case f: Field => f.typeEx match {
+              case Aggregation(_, fields) =>
+                // if we're at a field composed of more fields, then those fields
+                // what we are looking for
+                fields
+              case Enumeration(_, enumerators) => enumerators
+              case MessageType(_, _, fields)   =>
+                // Message types have fields too, those fields are what we seek
+                fields
+              case AliasedTypeExpression(_, pid) =>
+                // if we're at a field that references another type then we
+                // need to push that types path on the name stack
+                adjustStacksForPid(searchFor, pid, parentStack, nameStack)
+              case _ =>
+                // Any other type expression can't be descend into
+                Seq.empty[Definition]
+            }
+          case t: Type => t.typ match {
+              case Aggregation(_, fields)        => fields
+              case Enumeration(_, enumerators)   => enumerators
+              case MessageType(_, _, fields)     => fields
+              case AliasedTypeExpression(_, pid) =>
+                // if we're at a type definition that references another type then
+                // we need to push that type's path on the name stack
+                adjustStacksForPid(searchFor, pid, parentStack, nameStack)
+              case _ =>
+                // Any other type expression can't be descended into
+                Seq.empty[Definition]
+            }
+          case d: Definition => d.contents
+        }
       }
     }
 
-    /** Resolve a PathIdentifier If the path is already resolved or it has no
-     * empty components then we can resolve it from the map or the symbol
-     * table.
-     *
-     * @param pid
-     * The path to consider
-     * @return
-     * Either an error or a definition
-     */
-    def resolveRelativePath(
+    // final val maxTraversal = 10
+
+    /** Resolve a Relative PathIdentifier. If the path is already resolved or it
+      * has no empty components then we can resolve it from the map or the
+      * symbol table.
+      *
+      * @param pid
+      *   The path to consider
+      * @param parents
+      *   The parent stack to provide the context from which the search starts
+      * @return
+      *   Either an error or a definition
+      */
+    private def resolveRelativePath(
       pid: PathIdentifier,
-      parents: Seq[Definition] = parents
+      parents: Seq[Definition]
     ): Seq[Definition] = {
-      val vstack = mutable.Stack.empty[Definition]
-      val pstack = mutable.Stack.empty[Definition]
+
+      // Initialize the visited stack. This is used to detect looping. We
+      // should never visit the same definition twice but if we do we will
+      // catch it below.
+      val visitedStack = mutable.Stack.empty[Definition]
+
       // Implicit definitions don't have names so they don't count in the stack
       val namedParents = parents.filterNot(_.isImplicit).reverse
-      pstack.pushAll(namedParents)
-      val nstack = mutable.Stack.empty[String]
-      nstack.pushAll(pid.value.reverse)
-      while (nstack.nonEmpty) {
-        val n = nstack.pop()
-        // if we're supposed to pop parent off the stack ...
-        if (n.isEmpty) {
+
+      // Build the parent stack from the named parents
+      val parentStack = mutable.Stack.empty[Definition]
+      parentStack.pushAll(namedParents)
+
+      // Build the name stack from the PathIdentifier provided
+      val nameStack = mutable.Stack.empty[String]
+      nameStack.pushAll(pid.value.reverse)
+
+      // Loop over the names in the stack. Note that mutable stacks are used
+      // here because the algorithm can adjust them as it finds intermediary
+      // definitions. If the name stack becomes empty, we're done searching.
+      while (nameStack.nonEmpty) {
+        // Pop the name we're currently looking for and save it
+        val soughtName = nameStack.pop()
+
+        // if the name indicates we are supposed to pop parent off the stack ...
+        if (soughtName.isEmpty) {
           // if there is a parent to pop off the stack
-          if (pstack.nonEmpty) {
-            // pop it and the new result is the new head
-            pstack.pop()
+          if (parentStack.nonEmpty) {
+            // pop it and the result is the new head, if there's no more names
+            parentStack.pop()
           }
         } else {
-          pstack.headOption match {
-            case None => // do nothing
-            case Some(d) =>
-              if (vstack.contains(d)) {
-                this.addError(pid.loc, msg =
-                  s"""Path resolution encountered a loop at ${d.identify}
-                     |  for name '$n' when resolving ${pid.format}
-                     |  in definition context: ${
-                    parents.map(_.identify).mkString("\n    ", "\n    ", "\n")
-                  }
-                     |""".stripMargin)
-                pstack.clear()
-              } else {
-                val preFindSize = nstack.size
-                val candidates = findCandidates(n, pstack, nstack)
-                if (nstack.size > preFindSize) {
-                  vstack.push(d)
-                }
+          // We have a name to search for if the parent stack is not empty
+          if (parentStack.nonEmpty) {
+            val definition =
+              parentStack.head // get the next definition of the parentStack
 
-                // Now find the match, if any, and handle appropriately
-                val found = candidates.find(_.id.value == n)
-                found match {
-                  case Some(q: Definition) =>
-                    // found the named item, and it is a Container, so put it on
-                    // the stack in case there are more things to resolve
-                    pstack.push(q)
-                  case None =>
-                  // No search result, there may be more things
-                }
+            // If we have already visited this definition, its an error
+            if (visitedStack.contains(definition)) {
+              // Generate the error message
+              this.addError(
+                pid.loc,
+                msg = s"""Path resolution encountered a loop at ${definition
+                  .identify}
+                         |  for name '$soughtName' when resolving ${pid.format}
+                         |  in definition context: ${parents.map(_.identify)
+                  .mkString("\n    ", "\n    ", "\n")}
+                         |""".stripMargin
+              )
+              // Signal we're done searching with no result
+              parentStack.clear()
+            } else {
+              // otherwise we are good to search for soughtName
+
+              // Look where we are and find the candidate things that could
+              // possibly match soughtName
+              val candidates =
+                findCandidates(soughtName, parentStack, nameStack)
+
+              // If the name stack grew because findCandidates added to it
+              val newSoughtName =
+                if (candidates.isEmpty) {
+                  // then push the definition on the visited stack because we
+                  // already resolved this one and looked for candidates, no
+                  // point looping through here again.
+                  visitedStack.push(definition)
+
+                  // The name we are now searching for may have been updated by the
+                  // findCandidates function adjusting the stacks.
+                  nameStack.headOption match {
+                    case None       => soughtName
+                    case Some(name) => name
+                  }
+
+                } else { soughtName }
+
+              // Now find the match, if any, and handle appropriately
+              val found = candidates.find(_.id.value == newSoughtName)
+              found match {
+                case Some(q: Definition) =>
+                  // found the named item, and it is a Container, so put it on
+                  // the stack in case there are more things to resolve
+                  parentStack.push(q)
+                case None =>
+                // No search result, there may be more things to find in
+                // the next iteration
               }
+            }
           }
         }
       }
-      if (pstack.size == 1) {
-        if (pstack.head.isInstanceOf[RootContainer])
-          pstack.pop()
+
+      // if there is a single thing left on the stack and that things is
+      // a RootContainer
+      if (
+        parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer]
+      ) {
+        // then pop it off because RootContainers don't count and we want to
+        // rightfully return an empty sequence for "not found"
+        parentStack.pop()
       }
-      pstack.toSeq
+      // Convert parent stack to immutable sequence
+      parentStack.toSeq
     }
 
-    def resolvePathFromSymbolTable(
-      pid: PathIdentifier
+    private def resolvePathFromHierarchy(
+      pid: PathIdentifier,
+      parents: Seq[Definition]
     ): Seq[Definition] = {
-      val symTabCompatibleNameSearch = pid.value.reverse
-      val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
-      list match {
-        case Nil => // nothing found
-          Seq.empty[Definition]
-        case (d, parents) :: Nil => // list.size == 1
-          d +: parents
-        case _ => // list.size > 1
-            Seq.empty[Definition]
+      // First, scan up through the parent stack to find the starting place
+      val top = pid.value.head
+      val newParents = parents.dropUntil(_.id.value == top)
+      if (newParents.isEmpty) {
+        newParents // is empty, signalling "not found"
+      } else if (pid.value.length == 1) {
+        // we found the only name so let's just return it because the found
+        // definition is just the head of the adjusted newParents
+        Seq(newParents.head)
+      } else {
+        // we found the starting point, adjust the PathIdentifier to drop the
+        // one we found, and
+        val newPid = PathIdentifier(pid.loc, pid.value.drop(1))
+        resolveRelativePath(newPid, newParents)
       }
     }
+
+    def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
+      defStack
+    }
+    def doNothingMultiple(
+      @unused list: List[(Definition, Seq[Definition])]
+    ): Seq[Definition] = { Seq.empty[Definition] }
 
     def resolvePath(
-      pid: PathIdentifier, parents: Seq[Definition] = parents
+      pid: PathIdentifier,
+      parents: Seq[Definition]
+    )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle
+    )(onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
+        doNothingMultiple
     ): Seq[Definition] = {
-      if (pid.value.isEmpty) {
-        Seq.empty[Definition]
-      } else if (pid.value.exists(_.isEmpty)) {
-        resolveRelativePath(pid, parents)
+      if (pid.value.isEmpty) { Seq.empty[Definition] }
+      else if (pid.value.exists(_.isEmpty)) {
+        val resolution = resolveRelativePath(pid, parents)
+        onSingle(resolution)
       } else {
-        resolvePathFromSymbolTable(pid)
+        val result = resolvePathFromHierarchy(pid, parents)
+        if (result.nonEmpty) { onSingle(result) }
+        else {
+          val symTabCompatibleNameSearch = pid.value.reverse
+          val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
+          list match {
+            case Nil => // nothing found
+              // We couldn't find the path in the hierarchy or the symbol table
+              // so let's signal this by returning an empty sequence
+              Seq.empty[Definition]
+            case (d, parents) :: Nil => // exact match
+              // Give caller an option to do something or morph the results
+              onSingle(d +: parents)
+            case list => // ambiguous match
+              // Give caller an option to do something or morph the results
+              onMultiple(list)
+          }
+        }
       }
     }
   }

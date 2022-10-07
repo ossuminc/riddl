@@ -3,6 +3,7 @@ package com.reactific.riddl.testkit
 import org.scalatest.Assertion
 
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 
 abstract class RiddlFilesTestBase extends ValidatingTest {
@@ -13,22 +14,27 @@ abstract class RiddlFilesTestBase extends ValidatingTest {
     val dirKids = dirFile.listFiles().toSeq
     val (files, dir) = dirKids.partition(_.isFile())
     if (!recurse) { files.filter(_.toString.endsWith(".riddl")) }
-    else { files.filter(_.toString.endsWith(".riddl")) ++ dir.flatMap(f => findRiddlFiles(f)) }
-  }
-
-  def doOneFile(rootDir: Path, file: File): Unit = {
-    s"check ${file.getPath}" in { checkAFile(rootDir, file) }
-  }
-
-  def checkItems(items: Seq[(String, Boolean)]): Unit = {
-    for { item <- items } {
-      val dirFile = new File(item._1)
-      require(dirFile.exists(), s"Test item '${item._1}' doesn't exist!")
-      if (dirFile.isDirectory) {
-        val dirPath: Path = dirFile.toPath
-        val files = findRiddlFiles(dirFile, item._2)
-        files.foreach(file => doOneFile(dirPath, file))
-      } else { doOneFile(dirFile.getParentFile.toPath, dirFile) }
+    else {
+      files.filter(_.toString.endsWith(".riddl")) ++
+        dir.flatMap(f => findRiddlFiles(f))
     }
+  }
+
+  def processAFile(file: String): Unit = {
+    val filePath = Path.of(file)
+    if (!Files.isRegularFile(filePath)) {
+      fail(s"Not a regular file: $filePath")
+    } else if (!filePath.getFileName.toString.endsWith(".riddl")) {
+      fail(s"Not a .riddl file: $filePath")
+    } else { checkAFile(filePath.getParent, filePath.toFile) }
+  }
+
+  def processADirectory(directory: String): Unit = {
+    val dirFile = new File(directory)
+    if (dirFile.isDirectory) {
+      val dirPath: Path = dirFile.toPath
+      val files = findRiddlFiles(dirFile, true)
+      files.foreach(file => checkAFile(dirPath, file))
+    } else { checkAFile(dirFile.getParentFile.toPath, dirFile) }
   }
 }

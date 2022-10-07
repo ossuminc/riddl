@@ -31,8 +31,10 @@ domain ReactiveBBQ is {
     }
     entity OrderViewer is {
     option is kind("device")
-     state OrderState is { field: type OrderViewType }
-     handler input is {}
+     state OrderState is {
+       fields { field: type OrderViewType }
+       handler input is { ??? }
+     }
     } explained as {
       |# brief
       |This is an OrderViewer
@@ -78,11 +80,13 @@ domain ReactiveBBQ is {
     type RewardEvent is one of { AccrualEvent or AwardEvent }
     entity RewardsAccount is {
       state RewardState is {
-        id is CustomerId,
-        points is Number,
-        rewardEvents is many optional RewardEvent
+        fields {
+          id is CustomerId,
+          points is Number,
+          rewardEvents is many optional RewardEvent
+        }
+        handler Inputs is { ??? }
       }
-      handler Inputs is {}
     }
 
     adaptor PaymentAdapter for context Payment is {
@@ -96,10 +100,12 @@ domain ReactiveBBQ is {
     entity Order is {
       option is aggregate
       state OrderState is {
-        orderId is OrderId,
-        customerId is CustomerId
+        fields {
+          orderId is OrderId,
+          customerId is CustomerId
+        }
+        handler foo  is {}
       }
-      handler foo  is {}
     }
   }
   // #Order
@@ -109,11 +115,13 @@ domain ReactiveBBQ is {
     entity Payment is {
       option is aggregate
       state PaymentState is {
-        orderId is OrderId,
-        amount is Number,
-        cardToken is String
+        fields {
+          orderId is OrderId,
+          amount is Number,
+          cardToken is String
+        }
+        handler foo is { ??? }
       }
-      handler foo is {}
     }
   }
   // #Payment
@@ -122,15 +130,17 @@ domain ReactiveBBQ is {
   context Menu is {
     entity MenuItem is {
       state MenuState is {
-        something: String
+        fields { something: String }
+        handler foo is {}
       }
-      handler foo is {}
     }
     type MenuItemRef is reference to entity MenuItem
     entity Menu is {
       option is aggregate
-      state typical is { items: many MenuItemRef }
-      handler foo is {}
+      state typical is {
+        fields { items: many MenuItemRef }
+        handler foo is { ??? }
+      }
     }
   }
   // #Menu
@@ -145,14 +155,18 @@ domain ReactiveBBQ is {
       date is Date
     }
     entity Location is {
-      state typical is { name: String }
-      handler foo is {}
+      state typical is {
+        fields { name: String }
+        handler foo is {}
+      }
     } explained as "This is a retail store Location"
 
     entity Reservation is {
      options ( aggregate )
-     state reservation is { value: ReservationValue }
-     handler ofInputs is {}
+     state reservation is {
+       fields { value: ReservationValue }
+       handler ofInputs is {}
+     }
     }
   }
   // #Reservation

@@ -23,21 +23,21 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for domains. */
 trait DomainParser
-  extends CommonParser
+    extends CommonParser
     with ContextParser
     with StoryParser
     with StreamingParser
     with TypeParser {
 
-
   def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](StringIn(Options.package_).!) {
-      case (loc, Options.package_, args) => DomainPackageOption(loc, args)
+    options[X, DomainOption](StringIn(Options.package_, Options.technology).!) {
+      case (loc, Options.package_, args)   => DomainPackageOption(loc, args)
+      case (loc, Options.technology, args) => DomainTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  def domainInclude[X: P]: P[Include] = {
+  def domainInclude[X: P]: P[Include[DomainDefinition]] = {
     include[DomainDefinition, X](domainContent(_))
   }
 
@@ -50,9 +50,9 @@ trait DomainParser
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~ is ~ open ~/
-        domainOptions ~ (undefined(Seq.empty[DomainDefinition]) | domainContent)
-        ~ close ~/ briefly ~ description
+      location ~ Keywords.domain ~/ identifier ~ is ~ open ~/ domainOptions ~
+        (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/
+        briefly ~ description
     ).map { case (loc, id, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val authors = mapTo[AST.Author](groups.get(classOf[AST.Author]))
@@ -62,7 +62,9 @@ trait DomainParser
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include](groups.get(classOf[Include]))
+      val includes = mapTo[Include[DomainDefinition]](groups.get(
+        classOf[Include[DomainDefinition]]
+      ))
       Domain(
         loc,
         id,

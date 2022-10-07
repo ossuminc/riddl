@@ -22,12 +22,14 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 import java.net.URL
-import java.nio.file.Path
+import java.nio.file.Files
 
 /** Common Parsing Rules */
 trait CommonParser extends Terminals with NoWhiteSpaceParsers {
 
-  def include[K <: Definition, u: P](parser: P[?] => P[Seq[K]]): P[Include] = {
+  def include[K <: Definition, u: P](
+    parser: P[?] => P[Seq[K]]
+  ): P[Include[K]] = {
     P(Keywords.include ~/ literalString).map { str: LiteralString =>
       doInclude[K](str)(parser)
     }
@@ -44,8 +46,8 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
     P(open ~ parser.rep(0) ~ close)
   }
 
-  def undefined[u: P, RT](ret: RT): P[RT] = {
-    P(Punctuation.undefinedMark./).map(_ => ret)
+  def undefined[u: P, RT](f: => RT): P[RT] = {
+    P(Punctuation.undefinedMark./).map(_ => f)
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
@@ -69,8 +71,15 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   }
 
   def fileDescription[u: P]: P[FileDescription] = {
-    P(location ~ Keywords.file ~ literalString)
-      .map(tpl => FileDescription(tpl._1, Path.of(tpl._2.s)))
+    P(location ~ Keywords.file ~ literalString).map { tpl =>
+      val path = current.root.toPath.resolve(tpl._2.s)
+      if (Files.isReadable(path) && Files.isRegularFile(path)) {
+        FileDescription(tpl._1, path)
+      } else {
+        error(tpl._1, s"Description file cannot be read: $path ", "")
+        FileDescription(tpl._1, path)
+      }
+    }
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
@@ -82,11 +91,9 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))
   ).?
 
-  def wholeNumber[u:P]: P[Long] = {
-    CharIn("0-9").rep(1).!.map(_.toLong)
-  }
+  def wholeNumber[u: P]: P[Long] = { CharIn("0-9").rep(1).!.map(_.toLong) }
 
-  def integer[u:P]: P[Long] = {
+  def integer[u: P]: P[Long] = {
     StringIn(Operators.plus, Operators.minus).? ~ wholeNumber
   }
 
@@ -121,20 +128,18 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~
-      (anyIdentifier | "^".! | Punctuation.dot.!).repX(1))
-      .map {
-        case (loc, strings) =>
-          // PathIdentifiers have empty strings to mean go up one level,
-          // and do not need a dot to indicate descent into a new definition
-          // because concatenation is sufficient.
-          val mappedStrings = strings.flatMap {
-            case s: String if s == "^" => Seq("")
-            case s: String if s == "." => Seq.empty[String]
-            case s: String => Seq(s)
-          }
-          PathIdentifier(loc, mappedStrings)
-      }
+    P(location ~ (anyIdentifier | "^".! | Punctuation.dot.!).repX(1)).map {
+      case (loc, strings) =>
+        // PathIdentifiers have empty strings to mean go up one level,
+        // and do not need a dot to indicate descent into a new definition
+        // because concatenation is sufficient.
+        val mappedStrings = strings.flatMap {
+          case s: String if s == "^" => Seq("")
+          case s: String if s == "." => Seq.empty[String]
+          case s: String             => Seq(s)
+        }
+        PathIdentifier(loc, mappedStrings)
+    }
   }
 
   def is[u: P]: P[Unit] = {
@@ -155,8 +160,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   ): P[(Location, String, Seq[LiteralString])] = {
     P(
       location ~ validOptions ~
-        (Punctuation.roundOpen ~
-          literalString.rep(0, P(Punctuation.comma)) ~
+        (Punctuation.roundOpen ~ literalString.rep(0, P(Punctuation.comma)) ~
           Punctuation.roundClose).?
     ).map {
       case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
@@ -220,13 +224,13 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
           Option.empty[LiteralString],
           Option.empty[LiteralString],
           Option.empty[java.net.URL]
-        )) | (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-          literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-          (Keywords.title ~ is ~ literalString).? ~
-          (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map {
-      case (loc, id, (name, email, org, title, url), brief, desc) =>
-        Author(loc, id, name, email, org, title, url, brief, desc)
+        )) |
+          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+            (Keywords.title ~ is ~ literalString).? ~
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
+      Author(loc, id, name, email, org, title, url, brief, desc)
     }
   }
 

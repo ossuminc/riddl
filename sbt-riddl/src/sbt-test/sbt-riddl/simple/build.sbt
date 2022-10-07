@@ -2,7 +2,7 @@ import scala.sys.process.Process
 
 lazy val root = (project in file(".")).enablePlugins(RiddlSbtPlugin).settings(
   version := "0.1",
-  scalaVersion := "2.12.6",
+  scalaVersion := "2.12.17",
   TaskKey[Unit]("checkInfoOutput") := {
     val i = Seq("--verbose", "info")
     val p1 = Process("riddlc", i)
@@ -12,7 +12,7 @@ lazy val root = (project in file(".")).enablePlugins(RiddlSbtPlugin).settings(
       sys.error("output should contain 'name: riddlc'")
     }
     val plugin_version = sys.props.get("plugin.version").getOrElse("0")
-    if (!out1.contains(s"version: $plugin_version")) {
+    if (!out1.contains(s"version: ")) {
       sys.error(s"output should contain 'version: $plugin_version")
     }
     val v = Seq(

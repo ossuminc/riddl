@@ -23,20 +23,27 @@ import com.reactific.riddl.language.*
 
 import java.nio.file.Path
 
-/**
- * The processing state for the Hugo Translator
- * @param root RootContainer that was parsed
- * @param symbolTable A symbolTable for the names of things
- * @param options The options specific to Hugo Translator
- * @param commonOptions The common options all commands use
- */
+/** The processing state for the Hugo Translator
+  * @param root
+  *   RootContainer that was parsed
+  * @param symbolTable
+  *   A symbolTable for the names of things
+  * @param options
+  *   The options specific to Hugo Translator
+  * @param commonOptions
+  *   The common options all commands use
+  */
 case class HugoTranslatorState(
-  root: RootContainer,
-  symbolTable: SymbolTable,
+  result: Validation.Result,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
-    extends TranslatorState[MarkdownWriter]
-    with PathResolutionState[HugoTranslatorState] {
+    extends TranslatingState[MarkdownWriter]
+    with PathResolutionState[HugoTranslatorState]
+    with TranslationResult {
+
+  final val symbolTable: SymbolTable = result.symTab
+
+  final val root: RootContainer = result.root // base class compliance
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -119,13 +126,11 @@ case class HugoTranslatorState(
   ): String = {
     options.sourceURL match {
       case Some(url) => options.viewPath match {
-          case Some(viewPath) =>
-            makeFilePath(definition) match {
+          case Some(viewPath) => makeFilePath(definition) match {
               case Some(filePath) =>
                 val lineNo = definition.loc.line
-                url.toExternalForm ++ "/" ++
-                  Path.of(viewPath, filePath).toString ++
-                  s"#L$lineNo"
+                url.toExternalForm ++ "/" ++ Path.of(viewPath, filePath)
+                  .toString ++ s"#L$lineNo"
               case _ => ""
             }
           case None => ""
@@ -133,15 +138,33 @@ case class HugoTranslatorState(
       case None => ""
     }
   }
+  def makeDocLink(definition: Definition): String = {
+    val parents = makeParents(symbolTable.parentsOf(definition))
+    makeDocLink(definition, parents)
+  }
+
+  def makeDocAndParentsLinks(definition: Definition): String = {
+    val parents = symbolTable.parentsOf(definition)
+    val docLink = makeDocLink(definition, makeParents(parents))
+    if (parents.isEmpty) { s"[${definition.identify}]($docLink)" }
+    else {
+      val parent = parents.head
+      val parentLink = makeDocLink(parent, makeParents(parents.tail))
+      s"[${definition.identify}]($docLink) in [${parent.identify}]($parentLink)"
+    }
+  }
 
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
-      case _: OnClause => pars + "#" + definition.id.value.toLowerCase
-      case _: Field | _: Enumerator | _: Invariant | _: Inlet | _: Outlet |
-           _: InletJoint | _: OutletJoint | _: Author | _: SagaStep |
-           _: Include | _: RootContainer | _: Term => pars
-      case _ => pars + "/" + definition.id.value.toLowerCase
+      case _: OnClause | _: Example | _: Inlet | _: Outlet => pars + "#" +
+          definition.id.value.toLowerCase
+      case _: Field | _: Enumerator | _: Invariant | _: InletJoint |
+          _: OutletJoint | _: Author | _: SagaStep |
+          _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
+      case _ =>
+        if (parents.isEmpty) pars + definition.id.value.toLowerCase
+        else pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor
     result.replace(" ", "-")
@@ -150,6 +173,12 @@ case class HugoTranslatorState(
   def makeIndex(root: RootContainer): Unit = {
     val mdw = addFile(Seq.empty[String], "_index.md")
     mdw.fileHead("Index", 10, Option("The main index to the content"))
+    makeSystemLandscapeView match {
+      case Some(view) =>
+        mdw.h2("Landscape View")
+        mdw.emitMermaidDiagram(view)
+      case None => // nothing
+    }
     mdw.h2("Domains")
     val domains = root.contents.sortBy(_.id.value)
       .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
@@ -159,15 +188,15 @@ case class HugoTranslatorState(
       if (options.withGlossary) { Seq("[Glossary](glossary)") }
       else { Seq.empty[String] }
     val todoList = {
-      if (options.withTODOList) {Seq("[To Do List](todolist)")}
-      else {Seq.empty[String]}
+      if (options.withTODOList) { Seq("[To Do List](todolist)") }
+      else { Seq.empty[String] }
     }
     val statistics = {
       if (options.withStatistics) { Seq("[Statistics](statistics)") }
       else { Seq.empty[String] }
     }
     mdw.list(glossary ++ todoList ++ statistics)
-    mdw.emitIndex("Full")
+    mdw.emitIndex("Full", root, Seq.empty[String])
   }
 
   val glossaryWeight = 970
@@ -177,7 +206,7 @@ case class HugoTranslatorState(
   def makeStatistics(): Unit = {
     if (options.withStatistics) {
       val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
-      mdw.emitStatistics(statsWeight, root)
+      mdw.emitStatistics(statsWeight, result.root)
     }
   }
 
@@ -221,5 +250,13 @@ case class HugoTranslatorState(
     makeStatistics()
     files.foreach(_.write())
     files.map(_.filePath).toSeq
+  }
+
+  def makeSystemLandscapeView: Option[String] = {
+    import com.reactific.riddl.diagrams.MermaidDiagramsPlugin
+    val mdp = new MermaidDiagramsPlugin
+    val diagram = mdp
+      .makeRootOverview(root, options.enterpriseName.getOrElse("No Name"))
+    Some(diagram)
   }
 }

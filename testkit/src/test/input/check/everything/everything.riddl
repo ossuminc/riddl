@@ -63,7 +63,7 @@ domain Everything is {
 
       command ACommand is {}
 
-      state someState is { someField:  SomeType }
+      state someState is { fields { someField:  SomeType } }
 
       function whenUnderTheInfluence is {
         requires { n: Nothing }
@@ -83,7 +83,7 @@ domain Everything is {
 
     entity SomeOtherThing is {
       type ItHappened is event { when: String }
-      state otherThingState is { then: String }
+      state otherThingState is { fields { then: String } }
       handler fee is {
         on event ItHappened {
           example only {

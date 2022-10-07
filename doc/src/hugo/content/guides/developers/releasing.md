@@ -33,11 +33,13 @@ Now that riddlc is staged, run the `hugo` command on a large multi-file
 specification such as
 [the Improving App](https://github.com/improving-ottawa/improving-app-riddl). 
 This will expose any language change issues. If this doesn't pass, go back
-and fix the software again and start from scratch. 
+and fix the software again and start from scratch. The test case named 
+`RunRiddlcOnArbitraryTest` will do this for you if you clone that repo and 
+adjust the paths in that test case for your clone. Don't commit that change.
 
 ## Commit Changes
 You've probably made changes as a result of the above. Commit those to a branch
-and push to github (origin)
+(except the change to `RunRiddlcOnArbitraryTest`) and push it to GitHub (origin)
 
 ## Make a Pull Request
 Use the branch you just created on GitHub to make a pull request and wait for
@@ -47,7 +49,7 @@ workflows, merge it to `main` branch
 
 ## Check Out Main branch
 ```shell
-git check main
+git checkout main
 ```
 Make sure there are no changes in your working tree.  One way to do this is to
 ```shell
@@ -63,16 +65,27 @@ nothing to commit, working tree clean
 then you're okay to proceed; otherwise, fix the issues and restart this 
 releasing process.
 
+## Pick a Version Number
+We are trying to follow [semantic versioning rules](https://semver.org/) 
+for RIDDL. Use GitHub's features to 
+assess what has changed in the version you are releasing. If the language has
+changed syntax or semantics you must increase the major version number. Try to
+batch such changes.
+
+Pick a version number, x.y.z, based on current tagged version and the nature 
+of the changes and the semver.org rules.
+
 ## Set Version
 Now that:
 * you've got things working,
-* all your code changes are committed and pushed
-* you've got a clean working tree on the `main` branch
-it is time to pick a version number and tag it:
-1. Pick a version number, x.y.z, based on current tagged version and 
-   [semantic versioning rules](https://semver.org/)
-2. Formulate a short description string for the release
-3. Run this:
+* all your code changes are committed and pushed,
+* you've got a clean working tree on the `main` branch,
+* you've picked a version number
+
+it is time to 
+
+1. Formulate a short description string for the release
+2. Run this:
 ```shell
 > git tag -a ${x.y.z} -m "${release description}"
 > sbt show version # confirm it is the version you just set
@@ -99,6 +112,8 @@ it is time to pick a version number and tag it:
 > project riddlc
 > Universal/packageBin
 > Universal/packageOsxDmg
+> graalvm-native-image/packageBin
+> 
 ```
 
 ## Create Release On GitHub
@@ -118,12 +133,12 @@ open https://github.com/reactific/riddl/releases/new
 
 
 ## Update riddl-actions
-* Open https://github.com/reactific/riddl-actions/edit/main/riddlc/action.yaml
+* Open https://github.com/reactific/riddl/edit/main/actions/get-riddlc/action.yaml
 * Scroll to the bottom of the page
-* Update the version numbers (3 times) in the last lines of teh file to match
+* Update the version number value set in the `version` variable to 
   the ${x.y.z} version you released above.
-* Create a ${x.y.z} tag on your change and push it. 
+* Commit, push, merge.
 
-## Update riddl-examples
-* Open https://github.com/reactific/riddl-examples/edit/main/.github/workflows/gh-pages.yml
-* On line 22 change the riddl-action version number at the end to ${x.y.z}
+The change to this file does not need to be included in the release tag. 
+Always do this last because other projects are dependent on this action and the
+action is dependent on the uploaded artifacts.

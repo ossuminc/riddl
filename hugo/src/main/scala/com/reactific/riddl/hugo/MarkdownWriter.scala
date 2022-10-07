@@ -16,18 +16,21 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.{AST, Riddl}
+import com.reactific.riddl.language.AST
+import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
+import com.reactific.riddl.utils.PathUtils
 
+import java.nio.file.Files
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.SortedMap
 
 case class MarkdownWriter(
   filePath: Path,
-  state: HugoTranslatorState
-) extends TextFileWriter {
+  state: HugoTranslatorState)
+    extends TextFileWriter {
 
   def fileHead(
     title: String,
@@ -67,7 +70,8 @@ case class MarkdownWriter(
       ),
       Map(
         "geekdocCollapseSection" -> "true",
-        "geekdocFilePath" ->s"${state.makeFilePath(cont).getOrElse("no-such-file")}"
+        "geekdocFilePath" ->
+          s"${state.makeFilePath(cont).getOrElse("no-such-file")}"
       )
     )
   }
@@ -132,16 +136,22 @@ case class MarkdownWriter(
     this
   }
 
-  private def italic(phrase: String): String = {
-    s"_${phrase}_"
-  }
+  private def italic(phrase: String): String = { s"_${phrase}_" }
 
-  private def bold(phrase: String): String = {
-    s"*$phrase*"
-  }
+  private def bold(phrase: String): String = { s"*$phrase*" }
 
-  private def mono(phrase: String): String = {
-    s"`$phrase`"
+  private def mono(phrase: String): String = { s"`$phrase`" }
+
+  def listOf[T <: Definition](
+    kind: String,
+    items: Seq[T],
+    level: Int = 2
+  ): this.type = {
+    heading(kind, level)
+    val refs = items.map { definition =>
+      state.makeDocAndParentsLinks(definition)
+    }
+    list(refs)
   }
 
   def list[T](items: Seq[T]): this.type = {
@@ -154,10 +164,11 @@ case class MarkdownWriter(
     for { item <- items } {
       item match {
         case (
-          prefix: String,
-          description: String,
-          sublist: Seq[String] @unchecked,
-          desc: Option[Description] @unchecked) =>
+              prefix: String,
+              description: String,
+              sublist: Seq[String] @unchecked,
+              desc: Option[Description] @unchecked
+            ) =>
           emitPair(prefix, description)
           sublist.foreach(s => sb.append(s"    * $s\n"))
           if (desc.nonEmpty) {
@@ -173,13 +184,15 @@ case class MarkdownWriter(
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
         case (
-          prefix: String,
-          definition: String,
-          briefly: Option[LiteralString] @unchecked,
-          description: Option[Description]@unchecked
-          ) =>
-          emitPair(prefix, definition ++ " - " ++
-            briefly.map(_.s).getOrElse("{no brief}"))
+              prefix: String,
+              definition: String,
+              briefly: Option[LiteralString] @unchecked,
+              description: Option[Description] @unchecked
+            ) =>
+          emitPair(
+            prefix,
+            definition ++ " - " ++ briefly.map(_.s).getOrElse("{no brief}")
+          )
           if (description.nonEmpty) {
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
@@ -187,9 +200,9 @@ case class MarkdownWriter(
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
-        case body: String => sb.append(s"* $body\n")
+        case body: String    => sb.append(s"* $body\n")
         case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
-        case x: Any       => sb.append(s"* ${x.toString}\n")
+        case x: Any          => sb.append(s"* ${x.toString}\n")
       }
     }
     this
@@ -203,7 +216,11 @@ case class MarkdownWriter(
     this
   }
 
-  def toc(kindOfThing: String, contents: Seq[String], level: Int = 2): this.type = {
+  def toc(
+    kindOfThing: String,
+    contents: Seq[String],
+    level: Int = 2
+  ): this.type = {
     if (contents.nonEmpty) {
       val items = contents.map { name =>
         s"[$name]" -> s"(${name.toLowerCase})"
@@ -220,34 +237,56 @@ case class MarkdownWriter(
     result
   }
 
+  def emitMermaidDiagram(content: String): this.type = {
+    this.emitMermaidDiagram(content.split(System.lineSeparator()).toIndexedSeq)
+  }
+
   def emitMermaidDiagram(lines: Seq[String]): this.type = {
+    /*p("""<script>
+        |let geekdoc_color_mode = Storage.getItem(\"hugo-geekdoc.color-mode\")
+        |</script>
+        |""".stripMargin)*/
+    val configs = Map(
+      "securityLevel" -> "'loose'",
+      "flowchart" ->
+        "{ useMaxWidth: true, htmlLabels: true, curve: 'cardinal' }",
+      "theme" -> "'dark'",
+      "logLevel" -> { if (state.commonOptions.debug) "1" else "4" }
+    )
     p("{{< mermaid class=\"text-center\">}}")
-    lines.foreach(p)
+    val config =
+      s"%%{init: { ${configs.map { case (k, v) => s"\"$k\": $v" }.mkString(", ")} }}%%"
+    val improved = (config +: lines).map(_.trim).filter(_.nonEmpty)
+    improved.foreach(p)
     p("{{< /mermaid >}}")
     if (state.commonOptions.debug) {
-      p("```mermaid")
-      lines.foreach(p)
+      p("```")
+      improved.foreach(p)
       p("```")
     } else { this }
   }
 
-  def makeERDRelationship(from: String, to: Field, parents: Seq[Definition]): String = {
+  def makeERDRelationship(
+    from: String,
+    to: Field,
+    parents: Seq[Definition]
+  ): String = {
     val typeName = makeTypeName(to.typeEx, parents)
     if (typeName.nonEmpty) {
       to.typeEx match {
         case _: OneOrMore =>
-          if (typeName.isEmpty) typeName else {
-            from + " ||--|{ " + typeName + " : references" }
+          if (typeName.isEmpty) typeName
+          else { from + " ||--|{ " + typeName + " : references" }
         case _: ZeroOrMore =>
-          if (typeName.isEmpty) typeName else {
-            from + " ||--o{ " + typeName + " : references" }
+          if (typeName.isEmpty) typeName
+          else { from + " ||--o{ " + typeName + " : references" }
         case _: Optional =>
-          if (typeName.isEmpty) typeName else {
-            from + " ||--o| " + typeName + " : references" }
+          if (typeName.isEmpty) typeName
+          else { from + " ||--o| " + typeName + " : references" }
         case _: AliasedTypeExpression | _: EntityReferenceTypeExpression |
             _: UniqueId =>
-          if (typeName.isEmpty) typeName else {
-            from + " ||--|| " + typeName + " : references" }
+          if (typeName.isEmpty) typeName
+          else { from + " ||--|| " + typeName + " : references" }
         case _ => ""
       }
     } else { typeName }
@@ -255,68 +294,130 @@ case class MarkdownWriter(
 
   def emitERD(state: State, parents: Seq[Definition]): this.type = {
     h2("Entity Relationships")
-    val typ: Seq[String] = s"${state.id.format} {" +:
-      state.typeEx.fields.map { f =>
-        val typeName = makeTypeName(f.typeEx, parents)
-        val fieldName = f.id.format.replace(" ", "-")
-        val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
-        s"  $typeName $fieldName $comment"
-      } :+ "}"
-    val relationships: Seq[String] = state.typeEx.fields
-      .map(makeERDRelationship(state.id.format,_,parents))
-      .filter(_.nonEmpty)
+    val fields = state.aggregation.fields
+    val typ: Seq[String] = s"  ${state.id.format} {" +: fields.map { f =>
+      val typeName = makeTypeName(f.typeEx, parents)
+      val fieldName = f.id.format.replace(" ", "-")
+      val comment = "\"" + f.briefValue + "\""
+      s"    $typeName $fieldName $comment"
+    } :+ "  }"
+    val relationships: Seq[String] = fields
+      .map(makeERDRelationship(state.id.format, _, parents)).filter(_.nonEmpty)
+      .map("  " + _)
     val lines = Seq("erDiagram") ++ typ ++ relationships
     emitMermaidDiagram(lines)
   }
 
-  def emitIndex(kind: String): this.type = {
-    if (state.options.withGraphicalTOC) {
-      h2("Graphical TOC Not Implemented Yet")
-      p("{{< toc-tree >}}")
-    } else {
-      h2(s"$kind Index")
-      p("{{< toc-tree >}}")
+  private case class Level(
+    name: String,
+    href: String,
+    children: Seq[Level]) {
+    override def toString: String = {
+      s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
     }
   }
 
-  def emitC4ContainerDiagram(defntn: Context, parents: Seq[Definition]): this.type = {
+  private def makeData(container: Definition, parents: Seq[String]): Level = {
+    Level(
+      container.identify,
+      this.state.makeDocLink(container, parents),
+      children = {
+        val newParents = container.id.value +: parents
+        container.contents.filter(d =>
+          d.nonEmpty && !d.isInstanceOf[OnClause] && !d.isInstanceOf[Example]
+        ).map(makeData(_, newParents))
+      }
+    )
+  }
+
+  def emitUsage(definition: Definition): this.type = {
+    state.result.usedBy.get(definition) match {
+      case Some(users) => listOf("Used By", users)
+      case None        => h2("Used By None")
+    }
+    state.result.uses.get(definition) match {
+      case Some(usages) => listOf("Uses", usages)
+      case None         => h2("Uses Nothing")
+    }
+    this
+  }
+
+  def emitIndex(
+    kind: String,
+    top: Definition,
+    parents: Seq[String]
+  ): this.type = {
+    if (state.options.withGraphicalTOC) {
+      h2(s"Graphical $kind Index")
+      val json = makeData(top, parents).toString
+      val resourceName = "js/tree-map-hierarchy2.js"
+      val jsPath = state.options.outputDir.get.resolve("static")
+        .resolve(resourceName)
+      if (!Files.exists(jsPath)) { Files.createDirectories(jsPath.getParent) }
+      PathUtils.copyResource(resourceName, jsPath)
+
+      val javascript = s"""
+                          |<div id="graphical-index">
+                          |  <script src="https://d3js.org/d3.v7.min.js"></script>
+                          |  <script src="/$resourceName"></script>
+                          |  <script>
+                          |    console.log('d3', d3.version)
+                          |    let data = $json ;
+                          |    let svg = treeMapHierarchy(data, 932);
+                          |    var element = document.getElementById("graphical-index");
+                          |    element.appendChild(svg);
+                          |  </script>
+                          |</div>
+          """.stripMargin
+      p(javascript)
+    }
+    h2(s"Textual $kind Index")
+    p("{{< toc-tree >}}")
+  }
+
+  def emitC4ContainerDiagram(
+    defntn: Context,
+    parents: Seq[Definition]
+  ): this.type = {
     val name = defntn.identify
     val brief: Definition => String = { defn: Definition =>
       defn.brief.fold(s"$name is not described.")(_.s)
     }
 
-    val heading =
-      s"""C4Context
-         |  title C4 Containment Diagram for [$name]
-         |""".stripMargin.split('\n').toSeq
+    val heading = s"""C4Context
+                     |  title C4 Containment Diagram for [$name]
+                     |""".stripMargin.split('\n').toSeq
 
     val containers = parents.filter(_.isContainer).reverse
     val systemBoundaries = containers.zipWithIndex
-    val openedBoundaries = systemBoundaries .map {
-      case (dom, n) =>
-        val nm = dom.id.format
-        val keyword = if (n == 0) "Enterprise_Boundary" else "System_Boundary"
-        " ".repeat((n+1)*2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
+    val openedBoundaries = systemBoundaries.map { case (dom, n) =>
+      val nm = dom.id.format
+      val keyword = if (n == 0) "Enterprise_Boundary" else "System_Boundary"
+      " ".repeat((n + 1) * 2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
     }
-    val closedBoundaries = systemBoundaries.reverse.map {
-      case (_, n) => " ".repeat((n+1)*2) + "}"
+    val closedBoundaries = systemBoundaries.reverse.map { case (_, n) =>
+      " ".repeat((n + 1) * 2) + "}"
     }
-    val prefix = " ".repeat(parents.size*2)
-    val context_head = prefix + s"Boundary($name, $name, \"${brief(defntn)}\") {"
+    val prefix = " ".repeat(parents.size * 2)
+    val context_head = prefix +
+      s"Boundary($name, $name, \"${brief(defntn)}\") {"
     val context_foot = prefix + "}"
 
-    val body = defntn.entities.map( e =>
+    val body = defntn.entities.map(e =>
       prefix + s"  System(${e.id.format}, ${e.id.format}, \"${brief(e)}\")"
     )
-    val lines: Seq[String] = heading ++ openedBoundaries ++
-      Seq(context_head) ++ body ++ Seq(context_foot) ++ closedBoundaries
+    val lines: Seq[String] = heading ++ openedBoundaries ++ Seq(context_head) ++
+      body ++ Seq(context_foot) ++ closedBoundaries
     emitMermaidDiagram(lines)
   }
 
   def emitTerms(terms: Seq[Term]): this.type = {
-    list("Terms", terms.map(t =>
-      (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description)
-    ))
+    list(
+      "Terms",
+      terms.map(t =>
+        (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description)
+      )
+    )
     this
   }
 
@@ -332,8 +433,7 @@ case class MarkdownWriter(
     @unused level: Int = 2
   ): this.type = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
-    val brief: String = d.brief.map(_.s)
-      .getOrElse("Brief description missing.")
+    val brief: String = d.brief.map(_.s).getOrElse("Brief description missing.")
       .trim
     emitTableRow(italic("Briefly"), brief)
     val path = (parents :+ d.id.format).mkString(".")
@@ -342,9 +442,9 @@ case class MarkdownWriter(
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
-  def emitDetails(d: Option[Description], level: Int = 2): this.type = {
+  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
     if (d.nonEmpty) {
-      heading("Details", level)
+      heading("Description", level)
       val description = d.get.lines.map(_.s)
       description.foreach(p)
     }
@@ -364,24 +464,33 @@ case class MarkdownWriter(
     parents: Seq[String],
     level: Int = 2
   ): this.type = {
-    emitBriefly(definition,parents, level)
-    emitDetails(definition.description, level)
+    emitBriefly(definition, parents, level)
+    emitDescription(definition.description, level)
     if (definition.hasAuthors) {
       emitAuthorInfo(definition.asInstanceOf[WithAuthors].authors)
     }
     this
   }
 
+  def emitShortDefDoc(
+    definition: Definition
+  ): this.type = {
+    definition.brief.foreach(b => p(italic(b.s)))
+    definition.description.foreach(d => p(d.lines.mkString("\n")))
+    this
+  }
+
   private def makePathIdRef(
-    pid: PathIdentifier, parents: Seq[Definition]
+    pid: PathIdentifier,
+    parents: Seq[Definition]
   ): String = {
-    val resolved = state.resolvePath(pid, parents)
-    if (resolved.isEmpty) {
-      s"unresolved path: ${pid.format}"
-    } else {
+    val resolved = state.resolvePath(pid, parents)()()
+    if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
+    else {
       val slink = state.makeSourceLink(resolved.head)
-      val link = state.makeDocLink(resolved.head, state.makeParents(resolved.tail))
-      s"[${resolved.head.identify}]($link) at [source]($slink)"
+      val link = state
+        .makeDocLink(resolved.head, state.makeParents(resolved.tail))
+      s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
     }
   }
 
@@ -389,12 +498,9 @@ case class MarkdownWriter(
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    val resolved = state.resolvePath(pid, parents)
-    if (resolved.isEmpty) {
-      s"unresolved"
-    } else {
-      resolved.head.id.format
-    }
+    val resolved = state.resolvePath(pid, parents)()()
+    if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
+    else { resolved.head.id.format }
   }
 
   private def makeTypeName(
@@ -402,15 +508,15 @@ case class MarkdownWriter(
     parents: Seq[Definition]
   ): String = {
     val name = typeEx match {
-      case AliasedTypeExpression(_, pid) => makeTypeName(pid, parents)
+      case AliasedTypeExpression(_, pid)         => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
-      case UniqueId(_, pid) => makeTypeName(pid, parents)
-      case Alternation(_, of) =>
-        of.map(ate => makeTypeName(ate.pid, parents)).mkString("-")
-      case _: Mapping => "Mapping"
+      case UniqueId(_, pid)                      => makeTypeName(pid, parents)
+      case Alternation(_, of) => of.map(ate => makeTypeName(ate.pid, parents))
+          .mkString("-")
+      case _: Mapping     => "Mapping"
       case _: Aggregation => "Aggregation"
       case _: MessageType => "Message"
-      case _ => typeEx.format
+      case _              => typeEx.format
     }
     name.replace(" ", "-")
   }
@@ -441,8 +547,7 @@ case class MarkdownWriter(
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
         s"${mt.messageKind.kind} message of: " + data.mkString(", ")
-      case _ =>
-        typeEx.format
+      case _ => typeEx.format
     }
   }
 
@@ -462,7 +567,7 @@ case class MarkdownWriter(
         heading("Unique Identifier To", headLevel)
         p(s"Entity ${makePathIdRef(uid.entityPath, parents)}")
       case alt: Alternation =>
-        heading("Alternation Of", headLevel )
+        heading("Alternation Of", headLevel)
         val data = alt.of.map { te: AliasedTypeExpression =>
           makePathIdRef(te.pid, parents)
         }
@@ -471,7 +576,7 @@ case class MarkdownWriter(
         heading("Aggregation Of", headLevel)
         val data = agg.fields.map { f: Field =>
           val pars = f +: parents
-          (f.id.format, resolveTypeExpression(f.typeEx,pars))
+          (f.id.format, resolveTypeExpression(f.typeEx, pars))
         }
         list("Fields", data, headLevel + 1)
       case mt: MessageType =>
@@ -494,44 +599,42 @@ case class MarkdownWriter(
             e.description.map(_.lines.map(_.s)).toSeq.flatten
           (e.id.format, docBlock)
         }
-        list( data )
-      case Pattern(_,strs) =>
+        list(data)
+      case Pattern(_, strs) =>
         heading("Pattern Of", headLevel)
         list(strs.map("`" + _.s + "`"))
       case _ =>
         heading("Type", headLevel)
-        p(resolveTypeExpression(typeEx,parents))
+        p(resolveTypeExpression(typeEx, parents))
     }
   }
 
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
     val suffix = typ.typ match {
       case mt: MessageType => mt.messageKind.kind.capitalize
-      case _ => "Type"
+      case _               => "Type"
     }
     containerHead(typ, suffix)
     emitDefDoc(typ, state.makeParents(stack))
-    emitTypeExpression(typ.typ, typ+: stack)
+    emitTypeExpression(typ.typ, typ +: stack)
+    emitUsage(typ)
   }
 
   def emitTypesToc(definition: WithTypes): this.type = {
     val groups = definition.types.groupBy { typ =>
       typ.typ match {
-        case mt: MessageType =>
-          mt.messageKind match {
+        case mt: MessageType => mt.messageKind match {
             case CommandKind => "Commands"
-            case EventKind => "Events"
-            case QueryKind => "Queries"
-            case ResultKind => "Results"
-            case OtherKind => "Others"
+            case EventKind   => "Events"
+            case QueryKind   => "Queries"
+            case ResultKind  => "Results"
+            case OtherKind   => "Others"
           }
         case _ => "Others"
       }
     }.toSeq.sortBy(_._1)
     h2("Types")
-    for { (label, list) <- groups } {
-      toc( label, mkTocSeq(list), 3)
-    }
+    for { (label, list) <- groups } { toc(label, mkTocSeq(list), 3) }
     this
   }
 
@@ -548,42 +651,59 @@ case class MarkdownWriter(
   }
 
   def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
-    containerHead(domain,"Domain")
+    containerHead(domain, "Domain")
     emitDefDoc(domain, parents)
     toc("Subdomains", mkTocSeq(domain.domains))
     emitTypesToc(domain)
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Stories", mkTocSeq(domain.stories))
     toc("Plants", mkTocSeq(domain.plants))
+    emitUsage(domain)
     emitTerms(domain.terms)
-    emitIndex("Domain")
+    emitIndex("Domain", domain, parents)
+    this
+  }
+
+  def emitExamples(
+    examples: Seq[Example],
+    level: Int = 2
+  ): this.type = {
+    heading("Examples", level)
+    var count = 0
+    examples.foreach { example =>
+      if (example.isImplicit) {
+        count += 1
+        heading(s"Anonymous Example $count", level + 1)
+      } else { heading(example.id.format, level) }
+      emitExample(example, level + 1)
+    }
     this
   }
 
   def emitExample(
     example: Example,
-    parents: Seq[String],
     level: Int = 2
   ): this.type = {
-    val hLevel = {
-      if (example.isImplicit) { level }
-      else {
-        heading(example.id.format, level)
-        level + 1
-      }
+    emitShortDefDoc(example)
+    if (example.givens.nonEmpty) {
+      heading("GIVEN", level)
+      list(example.givens.map { given =>
+        given.scenario.map("    *" + _.s + "\n")
+      })
     }
-    emitDefDoc(example, parents, hLevel)
-    heading("GIVEN", hLevel)
-    list(example.givens.map { given =>
-          given.scenario.map("    *" + _.s + "\n")
-        }
-    )
-    heading("WHEN", hLevel)
-    list(example.whens.map { when => when.condition.format })
-    heading("THEN", hLevel)
-    list(example.thens.map { then_ => then_.action.format })
-    heading("BUT", hLevel)
-    list(example.buts.map { but => but.action.format })
+    if (example.whens.nonEmpty) {
+      heading("WHEN", level)
+      list(example.whens.map { when => when.condition.format })
+    }
+    if (example.thens.nonEmpty) {
+      heading("THEN", level)
+      list(example.thens.map { then_ => then_.action.format })
+    }
+    if (example.buts.nonEmpty) {
+      heading("BUT", level)
+      list(example.buts.map { but => but.action.format })
+    }
+    this
   }
 
   def emitInputOutput(
@@ -602,44 +722,47 @@ case class MarkdownWriter(
   }
 
   def emitFunction(function: Function, parents: Seq[String]): this.type = {
-    containerHead(function,"Function")
+    containerHead(function, "Function")
     h2(function.id.format)
     emitDefDoc(function, parents)
     emitTypesToc(function)
     emitInputOutput(function.input, function.output)
     h2("Examples")
-    val functionExampleLevel = 3
-    function.examples.foreach(emitExample(_, parents, functionExampleLevel))
+    emitExamples(function.examples)
+    emitUsage(function)
+    emitTerms(function.terms)
     this
   }
 
-  def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
-    h2("Context Map")
-    emitC4ContainerDiagram(focus, parents)
+  def emitContextMap(@unused focus: Context): this.type = {
+    // emitC4ContainerDiagram(focus, parents)
+    this
   }
 
   def emitContext(context: Context, stack: Seq[Definition]): this.type = {
-    containerHead(context,"Context")
+    containerHead(context, "Context")
     val parents = state.makeParents(stack)
     emitDefDoc(context, parents)
-    emitContextMap(context, stack)
+    emitContextMap(context)
     emitOptions(context.options)
     emitTypesToc(context)
     toc("Functions", mkTocSeq(context.functions))
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Entities", mkTocSeq(context.entities))
     toc("Sagas", mkTocSeq(context.sagas))
+    emitUsage(context)
     emitTerms(context.terms)
-    emitIndex("Context")
+    emitIndex("Context", context, parents)
     this
   }
 
   def emitState(state: State, parents: Seq[Definition]): this.type = {
-    containerHead(state,"State")
+    containerHead(state, "State")
     emitDefDoc(state, this.state.makeParents(parents))
-    emitERD(state,parents)
+    emitERD(state, parents)
     h2("Fields")
-    emitFields(state.typeEx.fields)
+    emitFields(state.aggregation.fields)
+    emitUsage(state)
   }
 
   def emitInvariants(invariants: Seq[Invariant]): this.type = {
@@ -647,9 +770,10 @@ case class MarkdownWriter(
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
-        val expr = invariant.expression.map(_.format).getOrElse("<not specified>")
+        val expr = invariant.expression.map(_.format)
+          .getOrElse("<not specified>")
         sb.append("* ").append(expr).append("\n")
-        emitDetails(invariant.description, 4)
+        emitDescription(invariant.description, 4)
       }
     }
     this
@@ -660,21 +784,20 @@ case class MarkdownWriter(
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       h3("On " + clause.msg.format)
-      emitDetails(clause.description, level = 4)
-      val clauseParents = parents :+ handler.id.format
-      emitBriefly(clause, clauseParents)
-      h4("Examples")
-      clause.examples.foreach(emitExample(_, clauseParents, 5))
+      emitShortDefDoc(clause)
+      emitExamples(clause.examples, 4)
     }
+    emitUsage(handler)
+    emitTerms(handler.terms)
     this
   }
 
-  def emitFiniteStateMachine(@unused entity: Entity): this.type = {
-    this
-  }
+  def emitFiniteStateMachine(
+    @unused entity: Entity
+  ): this.type = { this }
 
   def emitEntity(entity: Entity, parents: Seq[String]): this.type = {
-    containerHead(entity,"Entity")
+    containerHead(entity, "Entity")
     emitDefDoc(entity, parents)
     emitOptions(entity.options)
     if (entity.hasOption[EntityIsFiniteStateMachine]) {
@@ -686,23 +809,23 @@ case class MarkdownWriter(
     toc("States", mkTocSeq(entity.states))
     toc("Functions", mkTocSeq(entity.functions))
     toc("Handlers", mkTocSeq(entity.handlers))
-    emitIndex("Entity")
+    emitUsage(entity)
+    emitTerms(entity.terms)
+    emitIndex("Entity", entity, parents)
   }
 
-  def emitSagaSteps(actions: Seq[SagaStep], parents: Seq[String]): this.type = {
+  def emitSagaSteps(actions: Seq[SagaStep]): this.type = {
     h2("Saga Actions")
     actions.foreach { action =>
-      h3(action.id.format)
-      emitBriefly(action, parents, 4)
+      h3(action.identify)
+      emitShortDefDoc(action)
       h4("Messaging")
       list(Seq(
         "Do:" -> action.doAction.format,
         "Undo:" -> action.undoAction.format
       ))
       p(action.format)
-      h4("Examples")
-      action.examples.foreach(emitExample(_, parents, 5))
-      emitDetails(action.description, 4)
+      emitExamples(action.examples, 4)
     }
     this
   }
@@ -711,21 +834,35 @@ case class MarkdownWriter(
     emitDefDoc(saga, parents)
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)
-    emitSagaSteps(saga.sagaSteps, parents)
+    emitSagaSteps(saga.sagaSteps)
+    emitUsage(saga)
+    emitTerms(saga.terms)
+    emitIndex("Saga", saga, parents)
   }
 
   def emitStory(story: Story, stack: Seq[Definition]): this.type = {
     containerHead(story, "Story")
     val parents = state.makeParents(stack)
     emitDefDoc(story, parents)
-    h2("Story")
-    p(
-      s"I, as a ${story.role.s}, want ${story.capability.s}, so that ${story.benefit.s}."
-    )
+    if (story.userStory.nonEmpty) {
+      h2("User Story")
+      p(story.userStory.map(_.format).getOrElse("Unknown story"))
+    }
+    /*state.makeC4ViewFor(story) match {
+      case Some(view) =>
+        h2("Dynamic View")
+        emitMermaidDiagram(view)
+      case None => // nothing
+    }*/
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
-    list("Designs", story.designs.map { d =>
-      s"[${d.identifyWithLoc}](${state.makeDocLink(d, parents)})"
-    })
+    list(
+      "Designs",
+      story.cases.map { d =>
+        s"[${d.identifyWithLoc}](${state.makeDocLink(d)})"
+      }
+    )
+    emitUsage(story)
+    emitTerms(story.terms)
   }
 
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
@@ -736,8 +873,9 @@ case class MarkdownWriter(
     list("Pipes", mkTocSeq(plant.pipes))
     list("Input Joints", mkTocSeq(plant.inJoints))
     list("Output Joints", mkTocSeq(plant.outJoints))
+    emitUsage(plant)
     emitTerms(plant.terms)
-    emitIndex("Plant")
+    emitIndex("Plant", plant, parents)
   }
 
   def emitPipe(pipe: Pipe, parents: Seq[String]): this.type = {
@@ -746,31 +884,49 @@ case class MarkdownWriter(
     if (pipe.transmitType.nonEmpty) {
       p(s"Transmission Type: ${pipe.transmitType.get.format} ")
     }
-    this
+    emitUsage(pipe)
   }
 
-  def emitProcessor(proc: Processor, parents: Seq[String]): this.type = {
+  def emitProcessor(proc: Processor, parents: Seq[Definition]): this.type = {
     leafHead(proc, weight = 30)
-    emitDefDoc(proc, parents)
+    val parList = state.makeParents(parents)
+    emitDefDoc(proc, parList)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
-      h3(inlet.id.format + s": ${inlet.type_.format}")
-      emitBriefly(inlet, parents, 4)
-      emitDetails(inlet.description, 4)
+      val typeRef = makePathIdRef(inlet.type_.id, parents)
+      val entityRef =
+        if (inlet.entity.nonEmpty) {
+          " sunken to " + makePathIdRef(inlet.entity.get.id, parents)
+        } else ""
+      h3(inlet.id.format)
+      p(typeRef + entityRef)
+      emitShortDefDoc(inlet)
     }
     h2("Outlets")
     proc.outlets.foreach { outlet =>
-      h3(outlet.id.format + s": ${outlet.type_.format}")
-      emitBriefly(outlet, parents, 4)
-      emitDetails(outlet.description, 4)
+      val typeRef = makePathIdRef(outlet.type_.id, parents)
+      val entityRef = if (outlet.entity.nonEmpty) {
+        " sourced from " + makePathIdRef(outlet.entity.get.id, parents)
+      }
+      h3(outlet.id.format)
+      p(typeRef + entityRef)
+      emitShortDefDoc(outlet)
     }
-    this
+    emitUsage(proc)
+    emitTerms(proc.terms)
+    emitIndex("Processor", proc, parList)
   }
 
-  def emitProjection(projection: Projection, parents: Seq[String]): this.type = {
+  def emitProjection(
+    projection: Projection,
+    parents: Seq[String]
+  ): this.type = {
     containerHead(projection, "Projection")
     emitDefDoc(projection, parents)
-    emitFields(projection.fields)
+    emitFields(projection.aggregation.fields)
+    listOf("Handlers", projection.handlers)
+    emitUsage(projection)
+    emitTerms(projection.terms)
   }
 
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
@@ -778,6 +934,9 @@ case class MarkdownWriter(
     emitDefDoc(adaptor, parents)
     p(s"Applicable To: ${adaptor.ref.format}")
     toc("Adaptations", mkTocSeq(adaptor.adaptations))
+    emitUsage(adaptor)
+    emitTerms(adaptor.terms)
+    emitIndex("Adaptor", adaptor, parents)
   }
 
   def emitAdaptation(
@@ -788,23 +947,18 @@ case class MarkdownWriter(
     emitDefDoc(adaptation, parents)
     p(s"${italic(s"From event")}: ${adaptation.messageRef.format}\n")
     p(s"${italic(s"To command")}: ${adaptation.messageRef.format}\n")
-    h2("Examples")
-    adaptation.examples.foreach(emitExample(_, parents, 3))
+    emitExamples(adaptation.examples)
     this
   }
 
-  def emitTableHead(columnTitles: Seq[(String,Char)]): this.type = {
+  def emitTableHead(columnTitles: Seq[(String, Char)]): this.type = {
     sb.append(columnTitles.map(_._1).mkString("| ", " | ", " |\n"))
-    val dashes = columnTitles.map{
-      case (s,c) =>
-        c match {
-          case 'C' =>
-            ":---:" ++ " ".repeat(Math.max(s.length - 5, 0))
-          case 'L' =>
-            ":---" ++ " ".repeat(Math.max(s.length-4, 0))
-          case 'R' =>
-            " ".repeat(Math.max(s.length-4, 0)) ++ "---:"
-        }
+    val dashes = columnTitles.map { case (s, c) =>
+      c match {
+        case 'C' => ":---:" ++ " ".repeat(Math.max(s.length - 5, 0))
+        case 'L' => ":---" ++ " ".repeat(Math.max(s.length - 4, 0))
+        case 'R' => " ".repeat(Math.max(s.length - 4, 0)) ++ "---:"
+      }
     }
     sb.append(dashes.mkString("| ", " | ", " |\n"))
     this
@@ -817,17 +971,15 @@ case class MarkdownWriter(
   }
 
   def makeIconLink(id: String, title: String, link: String): String = {
-    if (link.nonEmpty) {
-      s"[{{< icon \"$id\" >}}]($link \"$title\")"
-    } else { "" }
+    if (link.nonEmpty) { s"[{{< icon \"$id\" >}}]($link \"$title\")" }
+    else { "" }
   }
 
   def emitTermRow(term: GlossaryEntry): Unit = {
-    val slink =
-      makeIconLink("gdoc_github", "GitHub Link", term.sourceLink)
+    val slink = makeIconLink("gdoc_github", "GitHub Link", term.sourceLink)
     val trm = s"[${mono(term.term)}](${term.link})$slink"
-    val typ = s"[${term.typ}](https://riddl.tech/concepts/${
-      term.typ.toLowerCase}/)"
+    val typ =
+      s"[${term.typ}](https://riddl.tech/concepts/${term.typ.toLowerCase}/)"
     emitTableRow(trm, typ, term.brief)
   }
 
@@ -837,24 +989,20 @@ case class MarkdownWriter(
   ): this.type = {
     fileHead("Glossary Of Terms", weight, Some("A generated glossary of terms"))
 
-    emitTableHead(Seq(
-      "Term" -> 'C',
-      "Type" -> 'C',
-      "Brief Description" -> 'L'
-    ))
+    emitTableHead(Seq("Term" -> 'C', "Type" -> 'C', "Brief Description" -> 'L'))
 
-    terms.sortBy(_.term).foreach { entry =>
-      emitTermRow(entry)
-    }
+    terms.sortBy(_.term).foreach { entry => emitTermRow(entry) }
     this
   }
 
-  def emitToDoList(weight: Int, map: Map[String,Seq[String]]): Unit = {
-    fileHead("To Do List", weight,
+  def emitToDoList(weight: Int, map: Map[String, Seq[String]]): Unit = {
+    fileHead(
+      "To Do List",
+      weight,
       Option("A list of definitions needing more work")
     )
     h2("Definitions With Missing Content")
-    for {(key, items) <- map} {
+    for { (key, items) <- map } {
       h3(key)
       list(items)
     }
@@ -862,22 +1010,19 @@ case class MarkdownWriter(
   }
 
   def emitStatistics(weight: Int, root: RootContainer): this.type = {
-    fileHead("Model Statistics", weight,
-      Some("Statistical information about the RIDDL model documented"))
+    fileHead(
+      "Model Statistics",
+      weight,
+      Some("Statistical information about the RIDDL model documented")
+    )
 
     Riddl.collectStats(root) match {
-      case Right(stats: SortedMap[String,String]) =>
-        emitTableHead(Seq(
-          "Measurement" -> 'R',
-          "Value" -> 'L'
-        ))
+      case Right(stats: SortedMap[String, String]) =>
+        emitTableHead(Seq("Measurement" -> 'R', "Value" -> 'L'))
 
-        stats.foreach {
-          case (k,v) => emitTableRow(k,v)
-        }
+        stats.foreach { case (k, v) => emitTableRow(k, v) }
         this
-      case Left(messages) =>
-        list(messages.format)
+      case Left(messages) => list(messages.format)
     }
   }
 }
@@ -888,5 +1033,4 @@ case class GlossaryEntry(
   brief: String,
   path: Seq[String],
   link: String = "",
-  sourceLink: String = ""
-)
+  sourceLink: String = "")

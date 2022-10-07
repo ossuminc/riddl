@@ -32,7 +32,7 @@ object CommandPlugin {
   def loadCommandNamed(
     name: String,
     commonOptions: CommonOptions = CommonOptions(),
-    pluginsDir: Path = Plugin.pluginsDir,
+    pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
     if (commonOptions.verbose) { println(s"Loading command: $name") }
     val loaded = Plugin
@@ -79,7 +79,15 @@ object CommandPlugin {
     }
     loadCommandNamed(name, commonOptions, pluginsDir).flatMap { cmd =>
       cmd.loadOptionsFrom(optionsPath, commonOptions).flatMap { opts =>
-        cmd.run(opts, commonOptions, log, outputDirOverride).map(_ => cmd)
+        cmd.run(opts, commonOptions, log, outputDirOverride) match {
+          case Left(errors) =>
+            if (commonOptions.debug) {
+              println(s"Errors after running '$name':")
+              println(errors.format)
+            }
+            Left(errors)
+          case Right(_) => Right(cmd)
+        }
       }
     }
   }
@@ -117,8 +125,15 @@ object CommandPlugin {
         .flatMap { names =>
           if (names.contains(targetCommand)) {
             CommandPlugin
-              .runCommandNamed(targetCommand, path, log, commonOptions)
-              .map(_ => ())
+              .runCommandNamed(targetCommand, path, log, commonOptions) match {
+              case Left(errors) =>
+                if (commonOptions.debug) {
+                  println(s"Errors after running `$targetCommand`:")
+                  println(errors.format)
+                }
+                Left(errors)
+              case result @ Right(_) => result.map(_ => ())
+            }
           } else {
             Left[Messages, Unit](errors(
               s"Command '$targetCommand' is not defined in $path"
@@ -159,7 +174,7 @@ object CommandPlugin {
                 0
               case Left(messages) =>
                 if (commonOptions.quiet) { highestSeverity(messages) + 1 }
-                else { Messages.logMessages(messages, log) + 1 }
+                else { Messages.logMessages(messages, log, commonOptions) + 1 }
             }
           }
         case None =>
@@ -302,8 +317,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
 
   def replaceInputFile(
     options: OPT,
-    @unused
-    inputFile: Path
+    @unused inputFile: Path
   ): OPT = options
 
   def resolveInputFileToConfigFile(

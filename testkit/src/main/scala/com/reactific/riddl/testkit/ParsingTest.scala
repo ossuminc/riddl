@@ -1,19 +1,18 @@
 package com.reactific.riddl.testkit
 
-import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
 import fastparse.*
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
-trait ParsingTestBase extends AnyWordSpec with Matchers
+
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input) with Matchers {
@@ -42,6 +41,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.OutletJoint] => joint(_)
       case x if x == classOf[AST.Saga]        => saga(_)
       case x if x == classOf[AST.Example]     => example(_)
+      case x if x == classOf[AST.Story]       => story(_)
       case _ => throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"
         )
@@ -190,8 +190,7 @@ class ParsingTest extends ParsingTestBase {
 
   def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlNode](
     cases: Map[String, TO],
-    @unused
-    extract: FROM => TO
+    @unused extract: FROM => TO
   ): Unit = {
     cases.foreach { case (statement: String, expected: TO @unchecked) =>
       val rip = RiddlParserInput(statement)
@@ -225,8 +224,7 @@ class ParsingTest extends ParsingTestBase {
       case Left(errors) =>
         val msg = errors.map(_.format).mkString("\n")
         fail(msg)
-      case Right(rc) =>
-        rc
+      case Right(rc) => rc
     }
   }
 }

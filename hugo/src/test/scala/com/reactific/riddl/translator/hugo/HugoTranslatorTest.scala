@@ -1,23 +1,23 @@
 package com.reactific.riddl.translator.hugo
 
-import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.commands.CommandOptions
+import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
 
-class HugoTranslatorTest extends
-  RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
-    commandName = "hugo"
-  ) {
+class HugoTranslatorTest
+    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
+      commandName = "hugo"
+    ) {
 
-  "HugoTranslator" should {
-    "handle all example sources" in {
-      runTests()
-    }
-  }
+  "HugoTranslator" should { "handle all example sources" in { runTests() } }
+
+  override def validate(name: String): Boolean = name == "ReactiveBBQ"
 
   override def onSuccess(
     commandName: String,
@@ -28,10 +28,8 @@ class HugoTranslatorTest extends
   ): Assertion = {
     if (commandName == "hugo") {
       command.loadOptionsFrom(configFile) match {
-        case Right(_) =>
-          runHugo(outputDir, tmpDir)
-        case Left(errors) =>
-          fail(errors.format)
+        case Right(_)     => runHugo(outputDir, tmpDir)
+        case Left(errors) => fail(errors.format)
       }
     } else fail("wrong command!")
   }
@@ -41,18 +39,14 @@ class HugoTranslatorTest extends
     val output = ArrayBuffer[String]()
     var hadErrorOutput: Boolean = output.nonEmpty
 
-    def fout(line: String): Unit = {
-      output.append(line)
-    }
+    def fout(line: String): Unit = { output.append(line) }
 
     def ferr(line: String): Unit = {
       output.append(line); hadErrorOutput = true
     }
 
     val logger = ProcessLogger(fout, ferr)
-    if (!Files.exists(outputDir)) {
-      Files.createDirectories(outputDir)
-    }
+    if (!Files.exists(outputDir)) { Files.createDirectories(outputDir) }
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
     val command = "hugo"
@@ -62,15 +56,13 @@ class HugoTranslatorTest extends
       case 0 =>
         if (hadErrorOutput) {
           fail("hugo wrote to stderr:\n  " + output.mkString("\n  "))
-        } else {
-          info("hugo issued warnings:\n  " + output.mkString("\n  "))
-        }
+        } else { info("hugo issued warnings:\n  " + output.mkString("\n  ")) }
         succeed
 
-      case rc: Int =>
-        fail(s"hugo run failed with rc=$rc:\n  " ++
-          output.mkString("\n ", "\n  ", "\n") ++
-          s"tmpDir=$tmpDir\ncwd=$cwdFile\ncommand=$command\n"
+      case rc: Int => fail(
+          s"hugo run failed with rc=$rc:\n  " ++
+            output.mkString("\n ", "\n  ", "\n") ++
+            s"tmpDir=$tmpDir\ncwd=$cwdFile\ncommand=$command\n"
         )
     }
   }

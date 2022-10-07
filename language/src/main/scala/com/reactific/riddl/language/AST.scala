@@ -29,16 +29,51 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminals {
+object AST extends ast.Expressions with parsing.Terminals {
+
+  sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
+      extends Definition
+      with WithOptions[T]
+      with WithAuthors
+      with WithIncludes[CT]
+      with WithTerms {
+
+    /** Compute the 'maturity' of a definition. Maturity is a score with no
+      * maximum but with scoring rules that target 100 points per definition.
+      * Maturity is broken down this way:
+      *   - has a description - up to 50 points depending on # of non empty
+      *     lines
+      *   - has a brief description - 5 points
+      *   - has options specified - 5 points
+      *   - has terms defined -
+      *   - has an author in or above the definition - 5 points
+      * -
+      *   - definition specific things: 0.65
+      * @return
+      */
+    def maturity(parents: Seq[Definition]): Int = {
+      var score = 0
+      if (hasOptions) score += 5
+      if (hasTerms) score += 5
+      if (description.nonEmpty) {
+        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
+      }
+      if (brief.nonEmpty) score += 5
+      if (includes.nonEmpty) score += 3
+      if (isAuthored(parents)) score += 2
+      score
+    }
+  }
+
+  final val maxMaturity = 100
 
   /** Base trait of any definition that is a container and contains types
-   */
+    */
   trait WithTypes extends Definition {
     def types: Seq[Type]
 
     override def hasTypes: Boolean = types.nonEmpty
   }
-
 
   /** The root of the containment hierarchy, corresponding roughly to a level
     * about a file.
@@ -48,8 +83,8 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     */
   case class RootContainer(
     contents: Seq[Domain] = Nil,
-    inputs: Seq[RiddlParserInput] = Nil
-  ) extends Definition {
+    inputs: Seq[RiddlParserInput] = Nil)
+      extends Definition {
 
     override def isRootContainer: Boolean = true
 
@@ -130,7 +165,6 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
 
   }
 
-
   /** A type definition which associates an identifier with a type expression.
     *
     * @param loc
@@ -150,19 +184,19 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends Definition with ContextDefinition
-      with EntityDefinition with FunctionDefinition
-      with DomainDefinition  {
-    override def contents: Seq[Definition] = {
+      extends Definition
+      with ContextDefinition
+      with EntityDefinition
+      with StateDefinition
+      with FunctionDefinition
+      with DomainDefinition {
+    override def contents: Seq[TypeDefinition] = {
       typ match {
         case Aggregation(_, fields)      => fields
         case Enumeration(_, enumerators) => enumerators
         case MessageType(_, _, fields)   => fields
-        case _                           => Seq.empty[Definition]
+        case _                           => Seq.empty[TypeDefinition]
       }
-    }
-    def isMessageKind: Boolean = {
-      typ.isInstanceOf[MessageType]
     }
     final val kind: String = "Type"
   }
@@ -182,8 +216,6 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
       extends Reference[Type] {
     override def format: String = s"type ${id.format}"
   }
-
-
 
   // /////////////////////////////////////////////////////////// Actions
 
@@ -205,25 +237,23 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     override def format: String = what.format
   }
 
-
-  /** An action that is intended to generate a runtime error in the
-   * generated application or otherwise indicate an error condition
-   *
-   * @param loc
-   * The location where the action occurs in the source
-   * @param message
-   * The error message to report
-   * @param description
-   * An optional description of the action
-   */
+  /** An action that is intended to generate a runtime error in the generated
+    * application or otherwise indicate an error condition
+    *
+    * @param loc
+    *   The location where the action occurs in the source
+    * @param message
+    *   The error message to report
+    * @param description
+    *   An optional description of the action
+    */
   case class ErrorAction(
     loc: Location,
     message: LiteralString,
     description: Option[Description])
-    extends SagaStepAction {
+      extends SagaStepAction {
     override def format: String = s"severe \"${message.format}\""
   }
-
 
   /** An action whose behavior is to set the value of a state field to some
     * expression
@@ -250,9 +280,11 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     loc: Location,
     value: Expression,
     target: PathIdentifier,
-    description: Option[Description] = None
-  ) extends Action {
-    override def format: String = { s"append ${value.format} to ${target.format}"}
+    description: Option[Description] = None)
+      extends Action {
+    override def format: String = {
+      s"append ${value.format} to ${target.format}"
+    }
   }
 
   /** A helper class for publishing messages that represents the construction of
@@ -264,7 +296,10 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     * @param args
     *   An argument list that should correspond to teh fields of the message
     */
-  case class MessageConstructor(msg: MessageRef, args: ArgList = ArgList())
+  case class MessageConstructor(
+    loc: Location,
+    msg: MessageRef,
+    args: ArgList = ArgList())
       extends RiddlNode {
     override def format: String = msg.format + {
       if (args.nonEmpty) { args.format }
@@ -272,24 +307,22 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     }
   }
 
-
   /** An action that returns a value from a function
-   *
-   * @param loc
-   * The location in the source of the publish action
-   * @param value
-   * The value to be returned
-   * @param description
-   * An optional description of the yield action
-   */
+    *
+    * @param loc
+    *   The location in the source of the publish action
+    * @param value
+    *   The value to be returned
+    * @param description
+    *   An optional description of the yield action
+    */
   case class ReturnAction(
     loc: Location,
     value: Expression,
     description: Option[Description] = None)
-    extends Action {
+      extends Action {
     override def format: String = s"return ${value.format}"
   }
-
 
   /** An action that places a message on an entity's event channel
     *
@@ -376,7 +409,8 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     handler: HandlerRef,
     description: Option[Description] = None)
       extends Action {
-    override def format: String = s"become ${entity.format} to ${handler.format}"
+    override def format: String =
+      s"become ${entity.format} to ${handler.format}"
   }
 
   /** An action that tells a message to an entity. This is very analogous to the
@@ -531,7 +565,9 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
       extends LeafDefinition
-        with ProcessorDefinition with FunctionDefinition with StoryDefinition  {
+      with ProcessorDefinition
+      with FunctionDefinition
+      with StoryDefinition {
     final val kind: String = "Example"
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
       thens.isEmpty && buts.isEmpty
@@ -593,7 +629,8 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     * @param loc
     *   The location of the option.
     */
-  case class EntityIsConsistent(loc: Location) extends EntityOption("consistent")
+  case class EntityIsConsistent(loc: Location)
+      extends EntityOption("consistent")
 
   /** A [[EntityOption]] that indicates that this entity favors availability
     * over consistency in the CAP theorem.
@@ -621,6 +658,11 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
   case class EntityMessageQueue(loc: Location)
       extends EntityOption("message queue")
 
+  case class EntityTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends EntityOption("technology")
+
   /** An [[EntityOption]] that indicates the general kind of entity being
     * defined. This option takes a value which provides the kind. Examples of
     * useful kinds are "device", "actor", "concept", "machine", and similar
@@ -643,7 +685,7 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: Location, id: PathIdentifier)
-      extends Reference[Entity] {
+      extends StoryCaseUsesRefs[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
@@ -660,14 +702,18 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
   }
 
   /** Base class of all function options
-   *
-   * @param loc
-   * The location of the function option
-   */
+    *
+    * @param name
+    *   The name of the option
+    */
   sealed abstract class FunctionOption(val name: String) extends OptionValue
 
-  case class TailRecursive(loc: Location) extends
-    FunctionOption("tail-recursive")
+  /** A function option to mark a function as being tail recursive
+    * @param loc
+    *   The location of the tail recursive option
+    */
+  case class TailRecursive(loc: Location)
+      extends FunctionOption("tail-recursive")
 
   /** A function definition which can be part of a bounded context or an entity.
     *
@@ -697,17 +743,21 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     functions: Seq[Function] = Seq.empty[Function],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[FunctionDefinition]] = Seq
+      .empty[Include[FunctionDefinition]],
     options: Seq[FunctionOption] = Seq.empty[FunctionOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[FunctionOption] with WithTypes
-      with EntityDefinition with ContextDefinition with FunctionDefinition {
+      extends VitalDefinition[FunctionOption, FunctionDefinition]
+      with WithTypes
+      with EntityDefinition
+      with ContextDefinition
+      with FunctionDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
-      output.map(_.fields).getOrElse(Seq.empty[Field]) ++
-      types ++ functions ++ examples
+      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
+        functions ++ examples
     }
 
     override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
@@ -752,7 +802,6 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     final val kind: String = "Invariant"
   }
 
-
   /** Defines the actions to be taken when a particular message is received by
     * an entity. [[OnClause]]s are used in the definition of a [[Handler]] with
     * one for each kind of message that handler deals with.
@@ -784,7 +833,8 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
 
   sealed abstract class HandlerOption(val name: String) extends OptionValue
 
-  case class PartialHandlerOption(loc: Location) extends HandlerOption("partial")
+  case class PartialHandlerOption(loc: Location)
+      extends HandlerOption("partial")
 
   /** A named handler of messages (commands, events, queries) that bundles
     * together a set of [[OnClause]] definitions and by doing so defines the
@@ -807,24 +857,28 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
   case class Handler(
     loc: Location,
     id: Identifier,
-    applicability: Option[Reference[?]] = None,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[HandlerDefinition]] = Seq
+      .empty[Include[HandlerDefinition]],
     options: Seq[HandlerOption] = Seq.empty[HandlerOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[HandlerOption] with ContextDefinition with EntityDefinition
-        with StateDefinition with ProjectionDefinition {
+      extends VitalDefinition[HandlerOption, HandlerDefinition]
+      with ContextDefinition
+      with EntityDefinition
+      with StateDefinition
+      with ProjectionDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
-    override def contents: Seq[OnClause] = clauses
+    override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
+      terms ++ authors
     final val kind: String = "Handler"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (clauses.nonEmpty)
-        score += Math.max(clauses.count(_.nonEmpty), maxMaturity)
+      if (clauses.nonEmpty) score +=
+        Math.max(clauses.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
 
@@ -849,7 +903,7 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     *   The location of the state definition
     * @param id
     *   The name of the state definition
-    * @param typeEx
+    * @param aggregation
     *   The aggregation that provides the field name and type expression
     *   associations
     * @param brief
@@ -860,14 +914,15 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
   case class State(
     loc: Location,
     id: Identifier,
-    typeEx: Aggregation,
-    // TODO: States can have Handlers too
-    // TODO: States should be able to take TypeRef for definition of content
+    aggregation: Aggregation,
+    types: Seq[Type] = Seq.empty[Type],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends EntityDefinition {
 
-    override def contents: Seq[Field] = typeEx.fields
+    override def contents: Seq[StateDefinition] = aggregation.fields ++ types ++
+      handlers
     final val kind: String = "State"
   }
 
@@ -915,17 +970,19 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[EntityDefinition]] = Seq
+      .empty[Include[EntityDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[EntityOption] with ContextDefinition
-      with WithTypes  {
+      extends VitalDefinition[EntityOption, EntityDefinition]
+      with ContextDefinition
+      with WithTypes {
 
-    lazy val contents: Seq[EntityDefinition] = {
-      states ++ types ++ handlers ++ functions ++ invariants ++ includes
-      ++ authors
+    override lazy val contents: Seq[EntityDefinition] = {
+      super.contents ++ states ++ types ++ handlers ++ functions ++ invariants
+      ++ authors ++ terms
     }
 
     final val kind: String = "Entity"
@@ -937,7 +994,8 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
       if (states.nonEmpty) score += Math.max(states.count(_.nonEmpty), 10)
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
       if (handlers.nonEmpty) score += 1
-      if (invariants.nonEmpty) score += Math.max(invariants.count(_.nonEmpty), 10)
+      if (invariants.nonEmpty) score +=
+        Math.max(invariants.count(_.nonEmpty), 10)
       if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 5)
       Math.max(score, maxMaturity)
     }
@@ -980,23 +1038,23 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
   }
 
   /** The specification of a single adaptation based on message
-   *
-   * @param loc
-   *   The location of the adaptation definition
-   * @param id
-   *   The name of the adaptation
-   * @param messageRef
-   *   The command that triggers the adaptation, inherited from [[Adaptation]]
-   * @param command
-   *   The command resulting from the adaptation of the [[messageRef]] to the
-   *   bounded context
-   * @param examples
-   *   Optional set of Gherkin [[Example]]s to define the adaptation
-   * @param brief
-   *   A brief description (one sentence) for use in documentation
-   * @param description
-   *   Optional description of the adaptation.
-   */
+    *
+    * @param loc
+    *   The location of the adaptation definition
+    * @param id
+    *   The name of the adaptation
+    * @param messageRef
+    *   The command that triggers the adaptation, inherited from [[Adaptation]]
+    * @param command
+    *   The command resulting from the adaptation of the [[messageRef]] to the
+    *   bounded context
+    * @param examples
+    *   Optional set of Gherkin [[Example]]s to define the adaptation
+    * @param brief
+    *   A brief description (one sentence) for use in documentation
+    * @param description
+    *   Optional description of the adaptation.
+    */
   case class CommandCommandA8n(
     loc: Location,
     id: Identifier,
@@ -1005,7 +1063,7 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-    extends Adaptation {
+      extends Adaptation {
     override def contents: Seq[Example] = examples
     final val kind: String = "Command Command Adaptation"
   }
@@ -1034,12 +1092,17 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description])
       extends Adaptation {
-    def contents: Seq[Definition] = examples
+    def contents: Seq[Example] = examples
     override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
     final val kind: String = "Event Action Adaptation"
   }
 
-  sealed trait AdaptorOption extends OptionValue
+  sealed abstract class AdaptorOption(val name: String) extends OptionValue
+
+  case class AdaptorTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends AdaptorOption("technology")
 
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
     * messages from another bounded context. Adaptors translate incoming
@@ -1066,67 +1129,78 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     id: Identifier,
     ref: ContextRef,
     adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[AdaptorDefinition]] = Seq
+      .empty[Include[AdaptorDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends VitalDefinition[AdaptorOption] with ContextDefinition {
-    lazy val contents: Seq[Definition] = {
-      adaptations ++ includes ++ authors ++ terms
+    description: Option[Description] = None)
+      extends VitalDefinition[AdaptorOption, AdaptorDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[AdaptorDefinition] = {
+      super.contents ++ adaptations ++ authors ++ terms
     }
     final val kind: String = "Adaptor"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (adaptations.nonEmpty)
-        score += Math.max(adaptations.count(_.nonEmpty), maxMaturity)
+      if (adaptations.nonEmpty) score +=
+        Math.max(adaptations.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
 
   case class AdaptorRef(
-    loc: Location, id: PathIdentifier
-  ) extends Reference[Adaptor] {
+    loc: Location,
+    id: PathIdentifier)
+      extends StoryCaseUsesRefs[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
-  sealed abstract class  ProjectionOption(val name: String) extends OptionValue
+  sealed abstract class ProjectionOption(val name: String) extends OptionValue
+
+  case class ProjectionTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ProjectionOption("technology")
 
   case class Projection(
     loc: Location,
     id: Identifier,
-    fields: Seq[Field],
-    // TODO: Should have a Handler to process queries and updates
+    aggregation: Aggregation,
+    handlers: Seq[Handler] = Seq.empty[Handler],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[ProjectionDefinition]] = Seq
+      .empty[Include[ProjectionDefinition]],
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends VitalDefinition[ProjectionOption] with ContextDefinition {
-    lazy val contents: Seq[Definition] = {
-      fields ++ authors ++ includes ++ terms
+    description: Option[Description] = None)
+      extends VitalDefinition[ProjectionOption, ProjectionDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[ProjectionDefinition] = {
+      super.contents ++ aggregation.fields ++ authors ++ terms
     }
     final val kind: String = "Projection"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (fields.nonEmpty) score += Math.max(fields.count(_.nonEmpty), maxMaturity)
+      if (aggregation.fields.nonEmpty) score +=
+        Math.max(aggregation.fields.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
 
   /** A reference to an context's projection definition
-   *
-   * @param loc
-   * The location of the state reference
-   * @param id
-   * The path identifier of the referenced projection definition
-   */
+    *
+    * @param loc
+    *   The location of the state reference
+    * @param id
+    *   The path identifier of the referenced projection definition
+    */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-    extends Reference[Projection] {
+      extends StoryCaseUsesRefs[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1134,9 +1208,10 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     */
   sealed abstract class ContextOption(val name: String) extends OptionValue
 
-  case class ContextPackageOption(loc: Location, override val args: Seq[LiteralString])
-    extends ContextOption("package")
-
+  case class ContextPackageOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ContextOption("package")
 
   /** A context's "wrapper" option. This option suggests the bounded context is
     * to be used as a wrapper around an external system and is therefore at the
@@ -1156,7 +1231,6 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     */
   case class ServiceOption(loc: Location) extends ContextOption("service")
 
-
   /** A context's "gateway" option that suggests the bounded context is intended
     * to be an application gateway to the model. Gateway's provide
     * authentication and authorization access to external systems, usually user
@@ -1167,17 +1241,10 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     */
   case class GatewayOption(loc: Location) extends ContextOption("gateway")
 
-  /** A reference to a bounded context
-    *
-    * @param loc
-    *   The location of the reference
-    * @param id
-    *   The path identifier for the referenced context
-    */
-  case class ContextRef(loc: Location, id: PathIdentifier)
-      extends Reference[Context] {
-    override def format: String = s"context ${id.format}"
-  }
+  case class ContextTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ContextOption("technology")
 
   /** A bounded context definition. Bounded contexts provide a definitional
     * boundary on the language used to describe some aspect of a system. They
@@ -1217,17 +1284,19 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     processors: Seq[Processor] = Seq.empty[Processor],
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[ContextDefinition]] = Seq
+      .empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
     authors: Seq[Author] = Seq.empty[Author],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[ContextOption] with DomainDefinition
+      extends VitalDefinition[ContextOption, ContextDefinition]
+      with DomainDefinition
       with WithTypes {
-    lazy val contents: Seq[ContextDefinition] = types ++ entities ++ adaptors ++
-      sagas ++ functions ++ terms ++ includes ++ authors ++ projections ++
-      handlers
+    override lazy val contents: Seq[ContextDefinition] = super.contents ++
+      types ++ entities ++ adaptors ++ sagas ++ functions ++ terms ++ authors ++
+      projections ++ handlers
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1243,6 +1312,18 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
       if (projections.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
+  }
+
+  /** A reference to a bounded context
+    *
+    * @param loc
+    *   The location of the reference
+    * @param id
+    *   The path identifier for the referenced context
+    */
+  case class ContextRef(loc: Location, id: PathIdentifier)
+      extends StoryCaseUsesRefs[Context] with StoryCaseScopeRefs {
+    override def format: String = s"context ${id.format}"
   }
 
   /** Definition of a pipe for data streaming purposes. Pipes are conduits
@@ -1356,6 +1437,11 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
 
   sealed abstract class ProcessorOption(val name: String) extends OptionValue
 
+  case class ProcessorTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ProcessorOption("technology")
+
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
     *
@@ -1383,16 +1469,18 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     inlets: Seq[Inlet],
     outlets: Seq[Outlet],
     examples: Seq[Example],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[ProcessorDefinition]] = Seq
+      .empty[Include[ProcessorDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     options: Seq[ProcessorOption] = Seq.empty[ProcessorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends VitalDefinition[ProcessorOption]
-    with PlantDefinition with ContextDefinition {
-    override def contents: Seq[ProcessorDefinition] = inlets ++ outlets ++
-      examples ++ includes ++ authors ++ terms
+    description: Option[Description] = None)
+      extends VitalDefinition[ProcessorOption, ProcessorDefinition]
+      with PlantDefinition
+      with ContextDefinition {
+    override def contents: Seq[ProcessorDefinition] = super.contents ++
+      inlets ++ outlets ++ examples ++ authors ++ terms
     final val kind: String = shape.getClass.getSimpleName
 
     override def maturity(parents: Seq[Definition]): Int = {
@@ -1402,21 +1490,51 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
       if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
-  }
 
+    shape match {
+      case Source(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.isEmpty),
+          s"Invalid Source Streamlet ins: ${outlets.size} == 1, ${inlets.size} == 0"
+        )
+      case Sink(_) => require(
+          isEmpty || (outlets.isEmpty && inlets.size == 1),
+          "Invalid Sink Streamlet"
+        )
+      case Flow(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.size == 1),
+          "Invalid Flow Streamlet"
+        )
+      case Merge(_) => require(
+          isEmpty || (outlets.size == 1 && inlets.size >= 2),
+          "Invalid Merge Streamlet"
+        )
+      case Split(_) => require(
+          isEmpty || (outlets.size >= 2 && inlets.size == 1),
+          "Invalid Split Streamlet"
+        )
+      case Multi(_) => require(
+          isEmpty || (outlets.size >= 2 && inlets.size >= 2),
+          "Invalid Multi Streamlet"
+        )
+      case Void(_) => require(
+          isEmpty || (outlets.isEmpty && inlets.isEmpty),
+          "Invalid Void Stream"
+        )
+    }
+
+  }
 
   /** A reference to an context's projection definition
-   *
-   * @param loc
-   * The location of the state reference
-   * @param id
-   * The path identifier of the referenced projection definition
-   */
+    *
+    * @param loc
+    *   The location of the state reference
+    * @param id
+    *   The path identifier of the referenced projection definition
+    */
   case class ProcessorRef(loc: Location, id: PathIdentifier)
-    extends Reference[Processor] {
+      extends StoryCaseUsesRefs[Processor] {
     override def format: String = s"${Keywords.processor} ${id.format}"
   }
-
 
   /** A reference to a pipe
     *
@@ -1463,8 +1581,11 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
 
   /** Sealed base trait for both kinds of Joint definitions
     */
-  sealed trait Joint extends LeafDefinition with AlwaysEmpty
-    with PlantDefinition with ContextDefinition
+  sealed trait Joint
+      extends LeafDefinition
+      with AlwaysEmpty
+      with PlantDefinition
+      with ContextDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *
@@ -1518,7 +1639,12 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     final val kind: String = "Outlet Joint"
   }
 
-  sealed trait PlantOption extends OptionValue
+  sealed abstract class PlantOption(val name: String) extends OptionValue
+
+  case class PlantTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends PlantOption("technology")
 
   /** The definition of a plant which brings pipes, processors and joints
     * together into a closed system of data processing.
@@ -1548,20 +1674,23 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
     outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[PlantDefinition]] = Seq
+      .empty[Include[PlantDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
     options: Seq[PlantOption] = Seq.empty[PlantOption],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends VitalDefinition[PlantOption] with DomainDefinition {
-    lazy val contents: Seq[PlantDefinition] = pipes ++ processors ++ inJoints ++
-      outJoints ++ terms ++ includes ++ authors
+    description: Option[Description] = None)
+      extends VitalDefinition[PlantOption, PlantDefinition]
+      with DomainDefinition {
+    override lazy val contents: Seq[PlantDefinition] = super.contents ++
+      pipes ++ processors ++ inJoints ++ outJoints ++ terms ++ authors
     final val kind: String = "Plant"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
       if (pipes.nonEmpty) score += Math.max(pipes.count(_.nonEmpty), 10)
-      if (processors.nonEmpty) score += Math.max(processors.count(_.nonEmpty),20)
+      if (processors.nonEmpty) score +=
+        Math.max(processors.count(_.nonEmpty), 20)
       if (inJoints.nonEmpty) score += Math.max(inJoints.count(_.nonEmpty), 10)
       if (outJoints.nonEmpty) score += Math.max(outJoints.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
@@ -1609,14 +1738,19 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     * @param loc
     *   The location of the sequential option
     */
-  case class SequentialOption(loc: Location) extends SagaOption ("sequential")
+  case class SequentialOption(loc: Location) extends SagaOption("sequential")
 
   /** A [[SagaOption]] that indicates parallel execution of the saga actions.
     *
     * @param loc
     *   The location of the parallel option
     */
-  case class ParallelOption(loc: Location) extends SagaOption ("parallel")
+  case class ParallelOption(loc: Location) extends SagaOption("parallel")
+
+  case class SagaTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends SagaOption("technology")
 
   /** The definition of a Saga based on inputs, outputs, and the set of
     * [[SagaStep]]s involved in the saga. Sagas define a computing action based
@@ -1650,15 +1784,16 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[SagaDefinition]] = Seq.empty[Include[SagaDefinition]],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[SagaOption] with ContextDefinition {
-    lazy val contents: Seq[SagaDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
-      output.map(_.fields).getOrElse(Seq.empty[Field]) ++
-        sagaSteps ++ authors ++ terms ++ includes
+      extends VitalDefinition[SagaOption, SagaDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[SagaDefinition] = {
+      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++
+        authors ++ terms
     }
     final val kind: String = "Saga"
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
@@ -1673,213 +1808,197 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     }
   }
 
-  case class SagaRef(loc: Location, id: PathIdentifier) extends Reference[Saga]
+  case class SagaRef(loc: Location, id: PathIdentifier)
+      extends StoryCaseUsesRefs[Saga]
 
-  /**
-   * C4 Object is just a namespace for the C4 classes because their names
-   * collide with things in AST object.
-   */
-  object C4 {
-
-    /**
-     * A sealed trait with the common characteristics of all elements of a
-     * C4 design used for Stories.
-     *
-     * @tparam T The kind of RIDDL element referenced by this element.
-     */
-    sealed trait DesignElement extends Definition {
-      def contents: Seq[Definition] = Seq.empty[Definition]
-    }
-
-    /**
-     * An Actor (Role
-     *
-     * @param loc
-     * @param id
-     * @param displayName
-     * @param brief
-     * @param description
-     */
-    case class Actor(
-      loc: Location,
-      id: Identifier,
-      brief: Option[LiteralString],
-      description: Option[Description] = None
-    ) extends DesignElement {
-      override def kind: String = "C4.Actor"
-    }
-
-    case class ActorRef(loc: Location, id: PathIdentifier) extends
-      Reference[Actor]
-
-    case class Interaction(
-      loc: Location,
-      id: Identifier,
-      step: Long,
-      from: Option[Reference[DesignElement]],
-      to: Option[Reference[DesignElement]],
-      brief: Option[LiteralString] = None,
-      description: Option[Description] = None
-    ) extends DesignElement {
-      override def kind: String = "C4.Interaction"
-      override def contents: Seq[Definition] = Seq.empty[Definition]
-    }
-
-    case class Context(
-      loc: Location,
-      id: Identifier,
-      ref: Option[DomainRef] = None,
-      actor: Option[Actor] = None,
-      containers: Seq[Container] = Seq.empty[Container],
-      interactions: Seq[Interaction] = Seq.empty[Interaction],
-      brief: Option[LiteralString] = None,
-      description: Option[AST.Description] = None
-    ) extends DesignElement {
-      override def kind: String = "C4.Container"
-
-      override def contents: Seq[Definition] =
-        actor.map(Seq(_)).getOrElse(Seq.empty[Definition]) ++
-          interactions ++ containers
-    }
-
-    case class ContextRef(loc: Location, id: PathIdentifier) extends
-      Reference[Context]
-
-    case class Container(
-      loc: Location,
-      id: AST.Identifier,
-      ref: Option[Reference[AST.Context]] = None,
-      components: Seq[Component] = Seq.empty[Component],
-      brief: Option[LiteralString] = None,
-      description: Option[AST.Description] = None
-    ) extends DesignElement {
-      override def kind: String = "C4.Container"
-      override def contents: Seq[Definition] = components
-    }
-
-    case class ContainerRef(loc: Location, id: PathIdentifier) extends
-      Reference[Container]
-
-    case class Component(
-      loc: Location,
-      id: Identifier,
-      ref: Option[Reference[ContextDefinition]] = None,
-      brief: Option[LiteralString] = None,
-      description: Option[AST.Description] = None
-    ) extends DesignElement {
-      override def kind: String = "C4.Component"
-    }
-
-    case class ComponentRef(loc: Location, id: PathIdentifier) extends
-      Reference[Component]
-
-    case class Design(
-      loc: Location = Location.empty,
-      id: Identifier = Identifier.empty,
-      title: Option[LiteralString] = None,
-      context: Option[C4.Context] = None,
-      brief: Option[LiteralString] = None,
-      description: Option[Description] = None
-    ) extends StoryDefinition {
-
-      override def kind: String = "C4.Design"
-
-      def name: String = id.value
-
-      override def contents: Seq[Definition] = context.toSeq
-
-      /** The location in the parse at which this RiddlValue occurs */
-    }
+  /** An StoryActor (Role) who is the initiator of the user story. Actors may be
+    * persons or machines
+    *
+    * @param loc
+    *   The location of the actor in the source
+    * @param id
+    *   The name (role) of the actor
+    * @param is_a
+    *   What kind of thing the actor is
+    * @param brief
+    *   A brief description of the actor
+    * @param description
+    *   A longer description of the actor and its role
+    */
+  case class StoryActor(
+    loc: Location,
+    id: Identifier,
+    is_a: Option[LiteralString],
+    brief: Option[LiteralString],
+    description: Option[Description] = None)
+      extends LeafDefinition with StoryDefinition {
+    override def kind: String = "StoryActor"
   }
 
-  sealed trait StoryOption extends OptionValue
+  /** A reference to an StoryActor using a path identifier
+    * @param loc
+    *   THe location of the StoryActor in the source code
+    * @param id
+    *   The path identifier that locates the references StoryActor
+    */
+  case class StoryActorRef(loc: Location, id: PathIdentifier)
+      extends StoryCaseUsesRefs[StoryActor]
+
+  case class StoryCaseScope(
+    loc: Location,
+    domainRef: DomainRef,
+    brief: Option[LiteralString] = None)
+      extends BrieflyDescribedValue
+
+  /** One step in an Interaction between things
+    * @param loc
+    *   The location of the step definition
+    * @param step
+    *   the number of the step
+    * @param from
+    *   The CaseElement for the origin of the interaction
+    * @param to
+    *   The CaseElement for the destination of the interaction
+    */
+  case class InteractionStep(
+    loc: Location,
+    from: StoryCaseUsesRefs[?],
+    to: StoryCaseUsesRefs[?],
+    relationship: String = "uses",
+    brief: Option[LiteralString] = None)
+      extends BrieflyDescribedValue
+
+  case class StoryCase(
+    loc: Location,
+    id: Identifier,
+    title: Option[LiteralString] = None,
+    scope: Option[StoryCaseScope] = None,
+    interactions: Seq[InteractionStep],
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with StoryDefinition {
+    override def kind: String = "StoryCase"
+  }
+
+  sealed abstract class StoryOption(val name: String) extends OptionValue
+
+  case class StoryTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends StoryOption("technology")
+
+  case class StorySynchronousOption(loc: Location) extends StoryOption("synch")
+
+  /** An agile user story definition
+    * @param loc
+    *   Location of the user story
+    * @param actor
+    *   The actor, or instigator, of the story
+    * @param capability
+    *   The capability the actor wishes to utilize
+    * @param benefit
+    *   The benefit of that utilization
+    */
+  case class UserStory(
+    loc: Location,
+    actor: StoryActor,
+    capability: LiteralString = LiteralString.empty,
+    benefit: LiteralString = LiteralString.empty)
+      extends RiddlValue {
+    override def format: String = {
+      s"I, as a ${actor.id.value}, want ${capability.s}, so that ${benefit.s}."
+    }
+
+  }
 
   /** The definition of an agile user story. Stories define functionality from
-   * the perspective of a certain kind of user (man or machine), interacting
-   * with the system via some role. RIDDL extends the notion of an agile user
-   * story by allowing a linkage between the story and the RIDDL features that
-   * implement it.
-   *
-   * @param loc
-   * The location of the story definition
-   * @param id
-   * The name of the story
-   * @param role
-   * The role of the actor involved in the story
-   * @param capability
-   * The capability utilized by the actor in the story
-   * @param benefit
-   * The benefit, to the user, of using the capability.
-   * @param shownBy
-   * A list of URLs to visualizations or other materials related to the story
-   * @param implementedBy
-   * A list of PathIdentifiers, presumably contexts, that implement the story
-   * @param examples
-   * Gherkin examples to specify "done" for the implementation of the user
-   * story
-   * @param brief
-   * A brief description (one sentence) for use in documentation
-   * @param description
-   * An optional description of the
-   */
+    * the perspective of a certain kind of user (man or machine), interacting
+    * with the system via some role. RIDDL extends the notion of an agile user
+    * story by allowing a linkage between the story and the RIDDL features that
+    * implement it.
+    *
+    * @param loc
+    *   The location of the story definition
+    * @param id
+    *   The name of the story
+    * @param userStory
+    *   The user story per agile and xP
+    * @param shownBy
+    *   A list of URLs to visualizations or other materials related to the story
+    * @param cases
+    *   A list of StoryCase's that define the story
+    * @param examples
+    *   Gherkin examples to specify "done" for the implementation of the user
+    *   story
+    * @param brief
+    *   A brief description (one sentence) for use in documentation
+    * @param description
+    *   An optional description of the
+    */
   case class Story(
     loc: Location,
     id: Identifier,
-    role: LiteralString = LiteralString.empty,
-    capability: LiteralString = LiteralString.empty,
-    benefit: LiteralString = LiteralString.empty,
+    userStory: Option[UserStory] = None,
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
-    designs: Seq[C4.Design] = Seq.empty[C4.Design],
+    cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[Author] = Seq.empty[Author],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[StoryDefinition]] = Seq
+      .empty[Include[StoryDefinition]],
     options: Seq[StoryOption] = Seq.empty[StoryOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-    extends VitalDefinition[StoryOption] with DomainDefinition {
+      extends VitalDefinition[StoryOption, StoryDefinition]
+      with DomainDefinition {
     override def contents: Seq[StoryDefinition] = {
-      designs ++ examples ++ authors ++ includes ++ terms
+      super.contents ++ cases ++ examples ++ authors ++ terms ++ {
+        if (userStory.nonEmpty) Seq(userStory.get.actor)
+        else Seq.empty[StoryActor]
+      }
+    }
+    override def isEmpty: Boolean = {
+      contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
     }
 
     final val kind: String = "Story"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (role.nonEmpty) score += 3
-      if (capability.nonEmpty) score += 3
-      if (benefit.nonEmpty) score += 3
+      if (userStory.nonEmpty) score += 3
       if (shownBy.nonEmpty) score += 10
-      if (designs.nonEmpty) score += Math.max(designs.count(_.nonEmpty), 25)
-      if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
+      if (cases.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
+      if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 9)
       Math.max(score, maxMaturity)
     }
   }
 
-  /** A reference to a domain definition
-    *
-    * @param loc
-    *   The location at which the domain definition occurs
-    * @param id
-    *   The path identifier for the referenced domain.
-    */
-  case class DomainRef(loc: Location, id: PathIdentifier)
-      extends Reference[Domain] {
-    override def format: String = s"domain ${id.format}"
-  }
+  case class StoryRef(loc: Location, id: PathIdentifier)
+      extends StoryCaseUsesRefs[Saga]
+
   /** Base trait for all options a Domain can have.
-   */
+    */
   sealed abstract class DomainOption(val name: String) extends OptionValue
 
   /** A context's "wrapper" option. This option suggests the bounded context is
-   * to be used as a wrapper around an external system and is therefore at the
-   * boundary of the context map
-   *
-   * @param loc
-   *   The location of the wrapper option
-   */
-  case class DomainPackageOption(loc: Location, override val args: Seq[LiteralString])
-    extends DomainOption("package")
+    * to be used as a wrapper around an external system and is therefore at the
+    * boundary of the context map
+    *
+    * @param loc
+    *   The location of the wrapper option
+    */
+  case class DomainPackageOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends DomainOption("package")
+
+  case class DomainExternalOption(loc: Location)
+      extends DomainOption("external")
+
+  case class DomainTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends DomainOption("technology")
 
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
@@ -1917,15 +2036,18 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
     stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include] = Seq.empty[Include],
+    includes: Seq[Include[DomainDefinition]] = Seq
+      .empty[Include[DomainDefinition]],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends VitalDefinition[DomainOption]
-    with WithTypes with DomainDefinition {
+    description: Option[Description] = None)
+      extends VitalDefinition[DomainOption, DomainDefinition]
+      with RootDefinition
+      with WithTypes
+      with DomainDefinition {
 
-    def contents: Seq[DomainDefinition] = {
-      domains ++ types ++ contexts ++ plants ++ stories ++ terms ++
-        includes ++ authors
+    override lazy val contents: Seq[DomainDefinition] = {
+      super.contents ++ domains ++ types ++ contexts ++ plants ++ stories ++
+        terms ++ authors
     }
     final val kind: String = "Domain"
 
@@ -1939,4 +2061,17 @@ object AST extends ast.Expressions with ast.TypeExpression with parsing.Terminal
       Math.max(score, maxMaturity)
     }
   }
+
+  /** A reference to a domain definition
+    *
+    * @param loc
+    *   The location at which the domain definition occurs
+    * @param id
+    *   The path identifier for the referenced domain.
+    */
+  case class DomainRef(loc: Location, id: PathIdentifier)
+      extends StoryCaseUsesRefs[Domain] with StoryCaseScopeRefs {
+    override def format: String = s"domain ${id.format}"
+  }
+
 }

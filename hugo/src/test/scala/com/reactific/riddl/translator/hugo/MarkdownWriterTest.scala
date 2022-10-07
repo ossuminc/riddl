@@ -1,12 +1,15 @@
 package com.reactific.riddl.translator.hugo
 
 import com.reactific.riddl.hugo.GlossaryEntry
+import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.hugo.HugoTranslatorState
 import com.reactific.riddl.hugo.MarkdownWriter
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.SymbolTable
+import com.reactific.riddl.language.Validation
 import com.reactific.riddl.testkit.ParsingTest
-
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.file.Path
@@ -34,7 +37,10 @@ class MarkdownWriterTest extends ParsingTest {
           root.contents mustNot be(empty)
           val domain = root.contents.head
           val symtab = SymbolTable(root)
-          val state = HugoTranslatorState(root, symtab)
+          val result = Validation
+            .Result(Messages.empty, root, symtab, Map.empty, Map.empty)
+          val state =
+            HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
           val mkd = MarkdownWriter(output, state)
           mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
@@ -55,7 +61,7 @@ class MarkdownWriterTest extends ParsingTest {
               || _Definition Path_ | hugo-translator.target.test-output.TestDomain |
               || _View Source Link_ | [empty(1:1)]() |
               |
-              |## *Details*
+              |## *Description*
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
               |
@@ -68,7 +74,11 @@ class MarkdownWriterTest extends ParsingTest {
               |### _Others_
               |* [MyString](mystring)
               |
-              |## *Domain Index*
+              |## *Used By None*
+              |
+              |## *Uses Nothing*
+              |
+              |## *Textual Domain Index*
               |{{< toc-tree >}}
               |""".stripMargin
           emitted mustBe expected
@@ -95,7 +105,10 @@ class MarkdownWriterTest extends ParsingTest {
       }
       val root = RootContainer.empty
       val symtab = SymbolTable(root)
-      val state = HugoTranslatorState(root, symtab)
+      val result = Validation
+        .Result(Messages.empty, root, symtab, Map.empty, Map.empty)
+      val state =
+        HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
       val mdw = MarkdownWriter(Path.of("foo.md"), state)
       mdw.emitGlossary(10, Seq(term1, term2))
       val strw = new StringWriter()

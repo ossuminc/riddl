@@ -1,16 +1,17 @@
 package docs
 
-import com.reactific.riddl.translator.hugo.HugoTranslateExamplesBase
+import com.reactific.riddl.translator.hugo.RunHugoTestBase
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.Path
 
 /** Unit Tests To Check Documentation Examples */
-class CheckDocsTest extends HugoTranslateExamplesBase {
-
-  override val directory: String = "doc/src/hugo/"
-  val output: String = "doc/src/hugo"
+class CheckDocsTest extends AnyWordSpec with RunHugoTestBase {
 
   "Docs" should {
     "run successfully with hugo" in {
-      runHugo("")
+      val srcDir = Path.of("doc/src/hugo")
+      runHugo(srcDir)
     }
   }
 }

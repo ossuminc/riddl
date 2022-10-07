@@ -49,9 +49,6 @@ Style: everything.riddl(30:5): Type 'stamp' should start with a capital letter:
 Missing: everything.riddl(48:5): Type 'oneOrMore' should have a description:
      type oneOrMore is many agg
      ^
-Missing: everything.riddl(86:7): State 'otherThingState' should have a description:
-       state otherThingState is { then: String }
-       ^
 Style: everything.riddl(25:5): Type 'num' should start with a capital letter:
      type num is Number             // Define num as a Number
      ^
@@ -163,12 +160,57 @@ Missing: everything.riddl(25:5): Type 'num' should have a description:
 Style: everything.riddl(29:5): Type 'tim' should start with a capital letter:
      type tim is Time               // Define tim as a Time
      ^
-Missing: everything.riddl(66:7): State 'someState' should have a description:
-       state someState is { someField:  SomeType }
-       ^
 Missing: everything.riddl(75:11): Example 'only' should have a description:
            example only {
            ^
 Missing: everything.riddl(59:5): Entity 'Something' should have a description:
      entity Something is {
      ^
+Error: everything.riddl(66:7): State 'someState' must define a handler:
+       state someState is { fields { someField:  SomeType } }
+       ^
+Error: everything.riddl(86:7): State 'otherThingState' must define a handler:
+       state otherThingState is { fields { then: String } }
+       ^
+Missing: everything.riddl(66:7): State 'someState' should have a description:
+       state someState is { fields { someField:  SomeType } }
+       ^
+Missing: everything.riddl(86:7): State 'otherThingState' should have a description:
+       state otherThingState is { fields { then: String } }
+       ^
+Warning: everything.riddl(24:5): Type 'str' is unused:
+     type str is String             // Define str as a String
+     ^
+Warning: everything.riddl(26:5): Type 'boo' is unused:
+     type boo is Boolean            // Define boo as a Boolean
+     ^
+Warning: everything.riddl(28:5): Type 'dat' is unused:
+     type dat is Date               // Define dat as a Date
+     ^
+Warning: everything.riddl(29:5): Type 'tim' is unused:
+     type tim is Time               // Define tim as a Time
+     ^
+Warning: everything.riddl(34:5): Type 'PeachType' is unused:
+     type PeachType is { a: Integer }
+     ^
+Warning: everything.riddl(38:5): Type 'alt' is unused:
+     type alt is one of { enum or stamp or url }
+     ^
+Warning: everything.riddl(48:5): Type 'oneOrMore' is unused:
+     type oneOrMore is many agg
+     ^
+Warning: everything.riddl(49:5): Type 'zeroOrMore' is unused:
+     type zeroOrMore is agg*
+     ^
+Warning: everything.riddl(50:5): Type 'optional' is unused:
+     type optional is agg?
+     ^
+Warning: everything.riddl(59:5): Entity 'Something' is unused:
+     entity Something is {
+     ^
+Warning: everything.riddl(62:7): Type 'somethingDate' is unused:
+       type somethingDate is Date
+       ^
+Warning: everything.riddl(68:7): Function 'whenUnderTheInfluence' is unused:
+       function whenUnderTheInfluence is {
+       ^
