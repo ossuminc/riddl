@@ -1,6 +1,9 @@
 package com.reactific.riddl.prettify
 
 import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.SymbolTable
+import com.reactific.riddl.language.Validation
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.testkit.RiddlFilesTestBase
 import com.reactific.riddl.utils.SysLogger
@@ -35,8 +38,10 @@ class PrettifyTest extends RiddlFilesTestBase {
           .Options(inputFile = Some(file.toPath), singleFile = singleFile)
         val common: CommonOptions = CommonOptions()
         val log = SysLogger()
+        val result = Validation
+          .Result(Messages.empty, root, SymbolTable(root), Map.empty, Map.empty)
         val output = PrettifyTranslator
-          .translateToString(root, log, common, options)
+          .translateToString(result, log, common, options)
         val file1 = Files.createTempFile(file.getName, ".riddl")
         Files.write(file1, output.getBytes(StandardCharsets.UTF_8))
         val input2 = RiddlParserInput(file1)
@@ -48,8 +53,9 @@ class PrettifyTest extends RiddlFilesTestBase {
                 "\nIn Source:\n" + output + "\n"
             )
           case Right(root2) =>
+            val result2 = result.copy(root = root2)
             val output2 = PrettifyTranslator
-              .translateToString(root2, log, common, options)
+              .translateToString(result2, log, common, options)
             parseTopLevelDomains(output2) match {
               case Left(errors) =>
                 val message = errors.map(_.format).mkString("\n")

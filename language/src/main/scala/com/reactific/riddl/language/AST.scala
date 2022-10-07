@@ -31,6 +31,42 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   */
 object AST extends ast.Expressions with parsing.Terminals {
 
+  sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
+      extends Definition
+      with WithOptions[T]
+      with WithAuthors
+      with WithIncludes[CT]
+      with WithTerms {
+
+    /** Compute the 'maturity' of a definition. Maturity is a score with no
+      * maximum but with scoring rules that target 100 points per definition.
+      * Maturity is broken down this way:
+      *   - has a description - up to 50 points depending on # of non empty
+      *     lines
+      *   - has a brief description - 5 points
+      *   - has options specified - 5 points
+      *   - has terms defined -
+      *   - has an author in or above the definition - 5 points
+      * -
+      *   - definition specific things: 0.65
+      * @return
+      */
+    def maturity(parents: Seq[Definition]): Int = {
+      var score = 0
+      if (hasOptions) score += 5
+      if (hasTerms) score += 5
+      if (description.nonEmpty) {
+        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
+      }
+      if (brief.nonEmpty) score += 5
+      if (includes.nonEmpty) score += 3
+      if (isAuthored(parents)) score += 2
+      score
+    }
+  }
+
+  final val maxMaturity = 100
+
   /** Base trait of any definition that is a container and contains types
     */
   trait WithTypes extends Definition {
@@ -162,7 +198,6 @@ object AST extends ast.Expressions with parsing.Terminals {
         case _                           => Seq.empty[TypeDefinition]
       }
     }
-    def isMessageKind: Boolean = { typ.isInstanceOf[MessageType] }
     final val kind: String = "Type"
   }
   type Command = Type
@@ -623,6 +658,11 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class EntityMessageQueue(loc: Location)
       extends EntityOption("message queue")
 
+  case class EntityTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends EntityOption("technology")
+
   /** An [[EntityOption]] that indicates the general kind of entity being
     * defined. This option takes a value which provides the kind. Examples of
     * useful kinds are "device", "actor", "concept", "machine", and similar
@@ -645,7 +685,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: Location, id: PathIdentifier)
-      extends Reference[Entity] with StoryCaseUsesRefs {
+      extends StoryCaseUsesRefs[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
@@ -663,11 +703,15 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   /** Base class of all function options
     *
-    * @param loc
-    *   The location of the function option
+    * @param name
+    *   The name of the option
     */
   sealed abstract class FunctionOption(val name: String) extends OptionValue
 
+  /** A function option to mark a function as being tail recursive
+    * @param loc
+    *   The location of the tail recursive option
+    */
   case class TailRecursive(loc: Location)
       extends FunctionOption("tail-recursive")
 
@@ -859,7 +903,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The location of the state definition
     * @param id
     *   The name of the state definition
-    * @param typeEx
+    * @param aggregation
     *   The aggregation that provides the field name and type expression
     *   associations
     * @param brief
@@ -1053,7 +1097,12 @@ object AST extends ast.Expressions with parsing.Terminals {
     final val kind: String = "Event Action Adaptation"
   }
 
-  sealed trait AdaptorOption extends OptionValue
+  sealed abstract class AdaptorOption(val name: String) extends OptionValue
+
+  case class AdaptorTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends AdaptorOption("technology")
 
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
     * messages from another bounded context. Adaptors translate incoming
@@ -1105,11 +1154,16 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class AdaptorRef(
     loc: Location,
     id: PathIdentifier)
-      extends Reference[Adaptor] with StoryCaseUsesRefs {
+      extends StoryCaseUsesRefs[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
   sealed abstract class ProjectionOption(val name: String) extends OptionValue
+
+  case class ProjectionTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ProjectionOption("technology")
 
   case class Projection(
     loc: Location,
@@ -1146,7 +1200,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-      extends Reference[Projection] with StoryCaseUsesRefs {
+      extends StoryCaseUsesRefs[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1186,6 +1240,11 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The location of the gateway option
     */
   case class GatewayOption(loc: Location) extends ContextOption("gateway")
+
+  case class ContextTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ContextOption("technology")
 
   /** A bounded context definition. Bounded contexts provide a definitional
     * boundary on the language used to describe some aspect of a system. They
@@ -1263,9 +1322,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: Location, id: PathIdentifier)
-      extends Reference[Context]
-      with StoryCaseScopeRefs
-      with StoryCaseUsesRefs {
+      extends StoryCaseUsesRefs[Context] with StoryCaseScopeRefs {
     override def format: String = s"context ${id.format}"
   }
 
@@ -1380,6 +1437,11 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   sealed abstract class ProcessorOption(val name: String) extends OptionValue
 
+  case class ProcessorTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends ProcessorOption("technology")
+
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
     *
@@ -1470,7 +1532,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProcessorRef(loc: Location, id: PathIdentifier)
-      extends Reference[Processor] with StoryCaseUsesRefs {
+      extends StoryCaseUsesRefs[Processor] {
     override def format: String = s"${Keywords.processor} ${id.format}"
   }
 
@@ -1577,7 +1639,12 @@ object AST extends ast.Expressions with parsing.Terminals {
     final val kind: String = "Outlet Joint"
   }
 
-  sealed trait PlantOption extends OptionValue
+  sealed abstract class PlantOption(val name: String) extends OptionValue
+
+  case class PlantTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends PlantOption("technology")
 
   /** The definition of a plant which brings pipes, processors and joints
     * together into a closed system of data processing.
@@ -1680,6 +1747,11 @@ object AST extends ast.Expressions with parsing.Terminals {
     */
   case class ParallelOption(loc: Location) extends SagaOption("parallel")
 
+  case class SagaTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends SagaOption("technology")
+
   /** The definition of a Saga based on inputs, outputs, and the set of
     * [[SagaStep]]s involved in the saga. Sagas define a computing action based
     * on a variety of related commands that must all succeed atomically or have
@@ -1737,21 +1809,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class SagaRef(loc: Location, id: PathIdentifier)
-      extends Reference[Saga] with StoryCaseUsesRefs
-
-  /** C4 Object is just a namespace for the C4 classes because their names
-    * collide with things in AST object.
-    */
-
-  /** A sealed trait with the common characteristics of all elements of a C4
-    * storyCase used for Stories.
-    *
-    * @tparam T
-    *   The kind of RIDDL element referenced by this element.
-    */
-  sealed trait CaseElement extends Definition {
-    def contents: Seq[Definition] = Seq.empty[Definition]
-  }
+      extends StoryCaseUsesRefs[Saga]
 
   /** An StoryActor (Role) who is the initiator of the user story. Actors may be
     * persons or machines
@@ -1784,17 +1842,11 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier that locates the references StoryActor
     */
   case class StoryActorRef(loc: Location, id: PathIdentifier)
-      extends Reference[StoryActor] with StoryCaseUsesRefs
+      extends StoryCaseUsesRefs[StoryActor]
 
   case class StoryCaseScope(
     loc: Location,
     domainRef: DomainRef,
-    brief: Option[LiteralString] = None)
-      extends BrieflyDescribedValue
-
-  case class StoryCaseUse(
-    loc: Location,
-    ref: StoryCaseUsesRefs,
     brief: Option[LiteralString] = None)
       extends BrieflyDescribedValue
 
@@ -1810,9 +1862,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     */
   case class InteractionStep(
     loc: Location,
-    step: Long,
-    from: StoryCaseUsesRefs,
-    to: StoryCaseUsesRefs,
+    from: StoryCaseUsesRefs[?],
+    to: StoryCaseUsesRefs[?],
+    relationship: String = "uses",
     brief: Option[LiteralString] = None)
       extends BrieflyDescribedValue
 
@@ -1821,7 +1873,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     id: Identifier,
     title: Option[LiteralString] = None,
     scope: Option[StoryCaseScope] = None,
-    uses: Seq[StoryCaseUse] = Seq.empty[StoryCaseUse],
     interactions: Seq[InteractionStep],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
@@ -1829,13 +1880,20 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def kind: String = "StoryCase"
   }
 
-  sealed trait StoryOption extends OptionValue
+  sealed abstract class StoryOption(val name: String) extends OptionValue
+
+  case class StoryTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends StoryOption("technology")
+
+  case class StorySynchronousOption(loc: Location) extends StoryOption("synch")
 
   /** An agile user story definition
     * @param loc
     *   Location of the user story
-    * @param role
-    *   Role of the actor for the story
+    * @param actor
+    *   The actor, or instigator, of the story
     * @param capability
     *   The capability the actor wishes to utilize
     * @param benefit
@@ -1846,7 +1904,12 @@ object AST extends ast.Expressions with parsing.Terminals {
     actor: StoryActor,
     capability: LiteralString = LiteralString.empty,
     benefit: LiteralString = LiteralString.empty)
-      extends RiddlValue
+      extends RiddlValue {
+    override def format: String = {
+      s"I, as a ${actor.id.value}, want ${capability.s}, so that ${benefit.s}."
+    }
+
+  }
 
   /** The definition of an agile user story. Stories define functionality from
     * the perspective of a certain kind of user (man or machine), interacting
@@ -1911,7 +1974,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class StoryRef(loc: Location, id: PathIdentifier)
-      extends Reference[Saga] with StoryCaseUsesRefs
+      extends StoryCaseUsesRefs[Saga]
 
   /** Base trait for all options a Domain can have.
     */
@@ -1928,6 +1991,14 @@ object AST extends ast.Expressions with parsing.Terminals {
     loc: Location,
     override val args: Seq[LiteralString])
       extends DomainOption("package")
+
+  case class DomainExternalOption(loc: Location)
+      extends DomainOption("external")
+
+  case class DomainTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends DomainOption("technology")
 
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
@@ -1999,7 +2070,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced domain.
     */
   case class DomainRef(loc: Location, id: PathIdentifier)
-      extends Reference[Domain] with StoryCaseUsesRefs with StoryCaseScopeRefs {
+      extends StoryCaseUsesRefs[Domain] with StoryCaseScopeRefs {
     override def format: String = s"domain ${id.format}"
   }
 

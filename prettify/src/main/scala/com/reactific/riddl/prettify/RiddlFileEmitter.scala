@@ -2,26 +2,24 @@ package com.reactific.riddl.prettify
 
 import java.nio.file.Files
 import java.nio.file.Path
-import scala.collection.mutable
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.prettify.PrettifyTranslator.keyword
+import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.charset.StandardCharsets
 
 /** Unit Tests For RiddlFileEmitter */
-case class RiddlFileEmitter(filePath: Path) {
-  private val lines: mutable.StringBuilder = new mutable.StringBuilder
-  private final val nl = System.lineSeparator()
+case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   private var indentLevel: Int = 0
-  override def toString: String = lines.toString
-  def asString: String = lines.toString()
+  override def toString: String = sb.toString
+
+  def asString: String = sb.toString()
 
   def spc: String = { " ".repeat(indentLevel) }
 
-  def addNL(): RiddlFileEmitter = { lines.append(nl); this }
 
   def add(str: String): RiddlFileEmitter = {
-    lines.append(str)
+    sb.append(str)
     this
   }
 
@@ -29,9 +27,9 @@ case class RiddlFileEmitter(filePath: Path) {
 
   def add(strings: Seq[LiteralString]): RiddlFileEmitter = {
     if (strings.sizeIs > 1) {
-      lines.append("\n")
-      strings.foreach(s => lines.append(s"""$spc"${s.s}"$nl"""))
-    } else { strings.foreach(s => lines.append(s""" "${s.s}" """)) }
+      sb.append("\n")
+      strings.foreach(s => sb.append(s"""$spc"${s.s}"$newLine"""))
+    } else { strings.foreach(s => sb.append(s""" "${s.s}" """)) }
     this
   }
 
@@ -39,23 +37,23 @@ case class RiddlFileEmitter(filePath: Path) {
     opt match {
       case None => this
       case Some(t) =>
-        lines.append(map(t))
+        sb.append(map(t))
         this
     }
   }
 
   def addIndent(): RiddlFileEmitter = {
-    lines.append(s"$spc")
+    sb.append(s"$spc")
     this
   }
 
   def addIndent(str: String): RiddlFileEmitter = {
-    lines.append(s"$spc$str")
+    sb.append(s"$spc$str")
     this
   }
 
   def addLine(str: String): RiddlFileEmitter = {
-    lines.append(s"$spc$str\n")
+    sb.append(s"$spc$str\n")
     this
   }
   def indent: RiddlFileEmitter = { indentLevel = indentLevel + 2; this }
@@ -153,7 +151,7 @@ case class RiddlFileEmitter(filePath: Path) {
       val result = of.foldLeft(this) { case (s, f) =>
         s.add(spc).emitField(f).emitDescription(f.description).add(",\n")
       }
-      result.lines.deleteCharAt(result.lines.length - 2)
+      result.sb.deleteCharAt(result.sb.length - 2)
       result.outdent.add(s"$spc} ")
     }
   }
@@ -269,7 +267,7 @@ case class RiddlFileEmitter(filePath: Path) {
       case _ =>
         add("\n").addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
         clauses.tail.foldLeft(this) { (next, clause) =>
-          next.addNL().addIndent("and ").emitAGherkinClause(clause)
+          next.nl.addIndent("and ").emitAGherkinClause(clause)
         }
     }
   }
@@ -296,7 +294,7 @@ case class RiddlFileEmitter(filePath: Path) {
   }
 
   def emit(): Path = {
-    Files.writeString(filePath, lines.toString(), StandardCharsets.UTF_8)
+    Files.writeString(filePath, sb.toString(), StandardCharsets.UTF_8)
     filePath
   }
 

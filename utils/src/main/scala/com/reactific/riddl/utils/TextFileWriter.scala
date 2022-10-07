@@ -2,43 +2,15 @@ package com.reactific.riddl.utils
 
 import com.reactific.riddl.utils.TextFileWriter.*
 
-import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 
-trait OutputFile {
-  def write(): Unit
-  def filePath: Path
-}
-
 /** Unit Tests For TextFileWriter */
 abstract class TextFileWriter extends OutputFile {
 
-  protected val sb: mutable.StringBuilder = new mutable.StringBuilder()
-
   override def toString: String = sb.toString
-
-  private def mkDirs(): Unit = {
-    val dirFile = filePath.getParent.toFile
-    if (!dirFile.exists) { dirFile.mkdirs() }
-  }
-
-  def write(writer: PrintWriter): Unit = {
-    try {
-      writer.write(sb.toString())
-      writer.flush()
-    } finally { writer.close() }
-    sb.clear() // release memory because content written to file
-  }
-
-  def write(): Unit = {
-    mkDirs()
-    val writer = new PrintWriter(filePath.toFile)
-    write(writer)
-  }
 
   val newLine = System.lineSeparator()
   def nl: this.type = { sb.append(newLine); this }

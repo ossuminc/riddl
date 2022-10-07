@@ -15,6 +15,8 @@ novel ways:
 * Fast data message streaming infrastructure
 
 
+* [_Analyses_](analyses) - Produce analytical data structures from the AST for 
+  use by translators. 
 * [_BAST_](bast) - Binary Abstract Syntax Tree. Generates files that capture the
   abstract syntax tree (AST) in a transportable binary format
 * [_Diagrams_](diagrams) - Data flow, sequence, entity, context maps, and other

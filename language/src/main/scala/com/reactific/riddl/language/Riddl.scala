@@ -33,8 +33,10 @@ case class CommonOptions(
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
+  showUnusedWarnings: Boolean = true,
   debug: Boolean = false,
-  pluginsDir: Option[Path] = None
+  pluginsDir: Option[Path] = None,
+  sortMessagesByLocation: Boolean = false
 )
 
 /** Primary Interface to Riddl Language parsing and validating */
@@ -84,7 +86,7 @@ object Riddl {
 
   def parse(
     input: RiddlParserInput,
-    options: CommonOptions
+    options: CommonOptions = CommonOptions()
   ): Either[Messages, RootContainer] = {
     timer("parse", options.showTimes) {
       TopLevelParser.parse(input)
@@ -94,14 +96,9 @@ object Riddl {
   def validate(
     root: RootContainer,
     commonOptions: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Validation.Result = {
     timer("validate", commonOptions.showTimes) {
-      Validation.validate(root, commonOptions) match {
-        case list: Messages if list.isEmpty =>
-          Right(root)
-        case list: Messages =>
-          Left(list)
-      }
+      Validation.validate(root, commonOptions)
     }
   }
 
@@ -109,16 +106,21 @@ object Riddl {
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages,Validation.Result] = {
     parse(input, commonOptions).flatMap { root =>
-      validate(root, commonOptions)
+      val result = validate(root, commonOptions)
+      if (result.messages.isOnlyWarnings) {
+        Right(result)
+      } else {
+        Left(result.messages)
+      }
     }
   }
 
   def parseAndValidate(
     path: Path,
     commonOptions: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages, Validation.Result] = {
     parseAndValidate(RiddlParserInput(path), commonOptions)
   }
 
