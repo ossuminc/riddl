@@ -176,7 +176,7 @@ case class HugoTranslatorState(
     makeSystemLandscapeView match {
       case Some(view) =>
         mdw.h2("Landscape View")
-        mdw.emitMermaidDiagram(view)
+        mdw.emitMermaidDiagram(view.split(System.lineSeparator()).toIndexedSeq)
       case None => // nothing
     }
     mdw.h2("Domains")
@@ -254,8 +254,7 @@ case class HugoTranslatorState(
 
   def makeSystemLandscapeView: Option[String] = {
     val mdp = new MermaidDiagramsPlugin
-    val diagram = mdp
-      .makeRootOverview(root)
+    val diagram = mdp.makeRootOverview(root)
     Some(diagram)
   }
 }

@@ -1,7 +1,6 @@
-package com.reactific.riddl.language
+package com.reactific.riddl.testkit
 
 import com.reactific.riddl.commands.ASimpleTestCommand
-import com.reactific.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.exceptions.TestFailedException
 
 /** Compilation Tests For Includes Examples */
