@@ -1,19 +1,18 @@
 package com.reactific.riddl.testkit
 
-import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
 import fastparse.*
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
-trait ParsingTestBase extends AnyWordSpec with Matchers
+
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input) with Matchers {
@@ -191,8 +190,7 @@ class ParsingTest extends ParsingTestBase {
 
   def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlNode](
     cases: Map[String, TO],
-    @unused
-    extract: FROM => TO
+    @unused extract: FROM => TO
   ): Unit = {
     cases.foreach { case (statement: String, expected: TO @unchecked) =>
       val rip = RiddlParserInput(statement)

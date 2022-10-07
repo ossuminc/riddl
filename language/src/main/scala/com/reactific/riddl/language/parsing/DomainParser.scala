@@ -30,8 +30,9 @@ trait DomainParser
     with TypeParser {
 
   def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](StringIn(Options.package_).!) {
-      case (loc, Options.package_, args) => DomainPackageOption(loc, args)
+    options[X, DomainOption](StringIn(Options.package_, Options.technology).!) {
+      case (loc, Options.package_, args)   => DomainPackageOption(loc, args)
+      case (loc, Options.technology, args) => DomainTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }

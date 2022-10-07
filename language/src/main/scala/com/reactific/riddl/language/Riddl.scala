@@ -33,8 +33,10 @@ case class CommonOptions(
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
+  showUnusedWarnings: Boolean = true,
   debug: Boolean = false,
-  pluginsDir: Option[Path] = None
+  pluginsDir: Option[Path] = None,
+  sortMessagesByLocation: Boolean = false
 )
 
 /** Primary Interface to Riddl Language parsing and validating */
@@ -84,7 +86,7 @@ object Riddl {
 
   def parse(
     input: RiddlParserInput,
-    options: CommonOptions
+    options: CommonOptions = CommonOptions()
   ): Either[Messages, RootContainer] = {
     timer("parse", options.showTimes) {
       TopLevelParser.parse(input)

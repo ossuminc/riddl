@@ -25,7 +25,11 @@ import fastparse.ScalaWhitespace.*
 trait ProjectionParser extends TypeParser with HandlerParser {
 
   def projectionOptions[u: P]: P[Seq[ProjectionOption]] = {
-    P("").map(_ => Seq.empty[ProjectionOption])
+    options[u, ProjectionOption](StringIn(Options.technology).!) {
+      case (loc, Options.technology, args) =>
+        ProjectionTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
   }
 
   def projectionInclude[u: P]: P[Include[ProjectionDefinition]] = {
@@ -71,7 +75,9 @@ trait ProjectionParser extends TypeParser with HandlerParser {
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-        val includes = mapTo[Include[ProjectionDefinition]](groups.get(classOf[Include[ProjectionDefinition]]))
+        val includes = mapTo[Include[ProjectionDefinition]](groups.get(
+          classOf[Include[ProjectionDefinition]]
+        ))
         val authors = mapTo[Author](groups.get(classOf[Author]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         Projection(

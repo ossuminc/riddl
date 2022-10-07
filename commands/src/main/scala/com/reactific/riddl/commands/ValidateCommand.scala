@@ -38,13 +38,14 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
   }
 
   override def replaceInputFile(
-    opts: Options, inputFile: Path
-  ): Options = {
-    opts.copy(inputFile = Some(inputFile))
-  }
+    opts: Options,
+    inputFile: Path
+  ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
-  override def loadOptionsFrom(configFile: Path, commonOptions: CommonOptions):
-  Either[Messages, Options] = {
+  override def loadOptionsFrom(
+    configFile: Path,
+    commonOptions: CommonOptions
+  ): Either[Messages, Options] = {
     super.loadOptionsFrom(configFile, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
