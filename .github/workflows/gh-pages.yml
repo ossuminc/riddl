@@ -12,16 +12,10 @@ on:
       - .github/styles/**
 
 jobs:
-  vale:
-    name: runner / vale
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
   deploy:
-    needs: vale
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout source code
       - uses: actions/checkout@v2
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
