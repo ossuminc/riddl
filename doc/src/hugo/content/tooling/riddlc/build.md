@@ -35,4 +35,3 @@ Within the cloned repository's directory (step 1 above), run this command:
 ```shell
 > sbt "clean ; compile" 
 ```
-
