@@ -6,11 +6,7 @@ on:
   push:
     branches: [main]  # Set a branch to deploy
     paths:
-      - doc/src/hugo/content/**
-      - doc/src/hugo/data/**
-      - doc/src/hugo/layouts/**
-      - doc/src/hugo/static/**
-      - doc/src/hugo/themes/**
+      - doc/src/hugo/**
       - .github/workflows/gh-pages.yml
       - .vale.ini
       - .github/styles/**
