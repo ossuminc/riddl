@@ -1,10 +1,13 @@
 package com.reactific.riddl
 
-import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.commands.CommandOptions
+import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.utils.{Logger, RiddlBuildInfo}
-import pureconfig.{ConfigCursor, ConfigReader}
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.RiddlBuildInfo
+import pureconfig.ConfigCursor
+import pureconfig.ConfigReader
 import scopt.OParser
 
 import java.nio.file.Path
@@ -14,8 +17,8 @@ object InfoCommand {
   case class Options(
     command: String = "info",
     inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None,
-  ) extends CommandOptions
+    targetCommand: Option[String] = None)
+      extends CommandOptions
 }
 
 class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
@@ -23,23 +26,17 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
-      .text("Print out build information about this program")
-      -> InfoCommand.Options()
+      .text("Print out build information about this program") ->
+      InfoCommand.Options()
   }
 
-  override def getConfigReader:
-  ConfigReader[InfoCommand.Options] = { (cur: ConfigCursor) =>
-    for {
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      cmd <- topRes.asString
-    } yield {
-      Options(
-        cmd,
-        inputFile = None,
-        targetCommand = None
-      )
-    }
+  override def getConfigReader: ConfigReader[InfoCommand.Options] = {
+    (cur: ConfigCursor) =>
+      for {
+        topCur <- cur.asObjectCursor
+        topRes <- topCur.atKey(pluginName)
+        cmd <- topRes.asString
+      } yield { Options(cmd, inputFile = None, targetCommand = None) }
   }
 
   override def run(

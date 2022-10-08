@@ -85,8 +85,9 @@ trait SagaParser
         val groups = definitions.groupBy(_.getClass)
         val steps = mapTo[SagaStep](groups.get(classOf[SagaStep]))
         val authors = mapTo[Author](groups.get(classOf[Author]))
-        val includes =
-          mapTo[Include[SagaDefinition]](groups.get(classOf[Include[SagaDefinition]]))
+        val includes = mapTo[Include[SagaDefinition]](groups.get(
+          classOf[Include[SagaDefinition]]
+        ))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         Saga(
           location,

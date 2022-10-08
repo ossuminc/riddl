@@ -234,10 +234,9 @@ case class HugoTranslatorState(
         link = makeDocLink(defn, parents)
       } yield { (item, author, path, link) }
 
-      val map = items.groupBy(_._2).view
-        .mapValues(_.map { case (item, _, path, link) =>
-          s"[$item In $path]($link)"
-        }).toMap
+      val map = items.groupBy(_._2).view.mapValues(_.map {
+        case (item, _, path, link) => s"[$item In $path]($link)"
+      }).toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
       mdw.emitToDoList(toDoWeight, map)
     }

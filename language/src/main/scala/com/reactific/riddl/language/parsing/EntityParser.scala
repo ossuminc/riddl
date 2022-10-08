@@ -47,8 +47,8 @@ trait EntityParser extends TypeParser with HandlerParser {
       case (loc, Options.available, _)    => EntityIsAvailable(loc)
       case (loc, Options.`finiteStateMachine`, _) =>
         EntityIsFiniteStateMachine(loc)
-      case (loc, Options.kind, args)      => EntityKind(loc, args)
-      case (loc, Options.messageQueue, _) => EntityMessageQueue(loc)
+      case (loc, Options.kind, args)       => EntityKind(loc, args)
+      case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
       case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
       case _ => throw new RuntimeException("Impossible case")
     }

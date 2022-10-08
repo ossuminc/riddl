@@ -37,7 +37,7 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions]
           val translator = getTranslator
           translator
             .parseValidateTranslate(logger, commonOptions, options) match {
-            case Right(_)  => succeed
+            case Right(_)       => succeed
             case Left(messages) => fail(messages.format)
           }
         }

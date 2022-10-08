@@ -481,24 +481,29 @@ object Validation {
     ): ValidationState = {
       checkDefinition(sc, parents.head).stepIf(sc.interactions.nonEmpty) {
         state =>
-          (for { interaction <- sc.interactions } yield {
+          (for {
+            interaction <- sc.interactions
+          } yield {
             state.checkPathRef[Definition](interaction.from.id, sc, parents)()()
               .checkPathRef[Definition](interaction.to.id, sc, parents)()()
-              .checkIf(interaction.relationship.isEmpty)(_.addMissing(
-                interaction.loc,
-                s"Interactions must have a non-empty relationship"
-              ))
+              .checkIf(interaction.relationship.isEmpty)(
+                _.addMissing(
+                  interaction.loc,
+                  s"Interactions must have a non-empty relationship"
+                )
+              )
           }).last
       }.stepIf(sc.nonEmpty) { vs =>
         vs.checkIf(sc.title.isEmpty)(
           _.addMissing(sc.loc, s"${sc.identify} is missing a title")
-        ).checkIf(sc.scope.isEmpty)(_.addError(
-          sc.loc,
-          s"${sc.identify} does not define a scope"
-        )).checkIf(sc.interactions.isEmpty)(_.addMissing(
-          sc.loc,
-          s"${sc.identify} doesn't define any interactions"
-        ))
+        ).checkIf(sc.scope.isEmpty)(
+          _.addError(sc.loc, s"${sc.identify} does not define a scope")
+        ).checkIf(sc.interactions.isEmpty)(
+          _.addMissing(
+            sc.loc,
+            s"${sc.identify} doesn't define any interactions"
+          )
+        )
       }.checkDescription(sc)
     }
 
@@ -973,7 +978,7 @@ object Validation {
         addError(
           definition.loc,
           s"${definition.identify} has duplicate content names:\n${duplicateNames
-            .mkString("  ", ",\n  ", "\n")}"
+              .mkString("  ", ",\n  ", "\n")}"
         )
       } else { this }
     }
@@ -1186,8 +1191,8 @@ object Validation {
             val argNames = args.args.keys.map(_.value).toSeq
             val s1 = state.check(
               argNames.size == paramNames.size,
-              s"Wrong number of arguments for ${fid
-                .format}. Expected ${paramNames.size}, but got ${argNames.size}",
+              s"Wrong number of arguments for ${fid.format}. Expected ${paramNames
+                  .size}, but got ${argNames.size}",
               Error,
               loc
             )
@@ -1348,10 +1353,11 @@ object Validation {
         addError(
           path.loc,
           s"""Setting a value requires assignment compatibility, but field:
-             |  ${path.format} (${pidType.map(_.format).getOrElse("<not found>")})
+             |  ${path.format} (${pidType.map(_.format)
+              .getOrElse("<not found>")})
              |is not assignment compatible with expression:
              |  ${expr.format} (${exprType.map(_.format)
-            .getOrElse("<not found>")})
+              .getOrElse("<not found>")})
              |""".stripMargin
         )
       } else { this }

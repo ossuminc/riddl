@@ -61,7 +61,9 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     ).map { case (loc, id, (options, definitions), briefly, description) =>
       val groups = definitions.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
-      val includes = mapTo[Include[HandlerDefinition]](groups.get(classOf[Include[HandlerDefinition]]))
+      val includes = mapTo[Include[HandlerDefinition]](groups.get(
+        classOf[Include[HandlerDefinition]]
+      ))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
 

@@ -23,7 +23,6 @@ import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
 import scala.annotation.unused
-import scala.collection.SortedMap
 
 case class MarkdownWriter(
   filePath: Path,
@@ -330,18 +329,19 @@ case class MarkdownWriter(
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
       val resourceName = "js/tree-map-hierarchy2.js"
-      val javascript = s"""
-                          |<div id="graphical-index">
-                          |  <script src="https://d3js.org/d3.v7.min.js"></script>
-                          |  <script src="/$resourceName"></script>
-                          |  <script>
-                          |    console.log('d3', d3.version)
-                          |    let data = $json ;
-                          |    let svg = treeMapHierarchy(data, 932);
-                          |    var element = document.getElementById("graphical-index");
-                          |    element.appendChild(svg);
-                          |  </script>
-                          |</div>
+      val javascript =
+        s"""
+           |<div id="graphical-index">
+           |  <script src="https://d3js.org/d3.v7.min.js"></script>
+           |  <script src="/$resourceName"></script>
+           |  <script>
+           |    console.log('d3', d3.version)
+           |    let data = $json ;
+           |    let svg = treeMapHierarchy(data, 932);
+           |    var element = document.getElementById("graphical-index");
+           |    element.appendChild(svg);
+           |  </script>
+           |</div>
           """.stripMargin
       p(javascript)
     }
@@ -987,14 +987,28 @@ case class MarkdownWriter(
       Some("Statistical information about the RIDDL model documented")
     )
 
-    Riddl.collectStats(root) match {
-      case Right(stats: SortedMap[String, String]) =>
-        emitTableHead(Seq("Measurement" -> 'R', "Value" -> 'L'))
-
-        stats.foreach { case (k, v) => emitTableRow(k, v) }
-        this
-      case Left(messages) => list(messages.format)
+    val stats = Riddl.collectStats(root)
+    emitTableHead(Seq(
+      "Category" -> 'L',
+      "count" -> 'R',
+      "% of All" -> 'R',
+      "avg. maturity" -> 'R',
+      "tot. maturity" -> 'R',
+      "% complete" -> 'R',
+      "% document" -> 'R'
+    ))
+    stats.categories.foreach { case (key, s) =>
+      emitTableRow(
+        key,
+        s.count.toString,
+        s.percentOfDefinitions.toString,
+        s.averageMaturity.toString,
+        s.totalMaturity.toString,
+        s.percentComplete.toString,
+        s.percentDocumented.toString
+      )
     }
+    this
   }
 }
 

@@ -18,6 +18,29 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 
+case class KindStats(
+  var count: Int = 0,
+  var maturitySum: Int = 0,
+  var completed: Int = 0,
+  var documented: Int = 0)
+
+case class Statistics(
+  var maximum_depth: Int = 0,
+  var terms_count: Int = 0,
+  var all_stats: KindStats = KindStats(),
+  var other_stats: KindStats = KindStats(),
+  var adaptorStats: KindStats = KindStats(),
+  var contextStats: KindStats = KindStats(),
+  var domainStats: KindStats = KindStats(),
+  var entityStats: KindStats = KindStats(),
+  var functionStats: KindStats = KindStats(),
+  var handlerStats: KindStats = KindStats(),
+  var plantStats: KindStats = KindStats(),
+  var processorStats: KindStats = KindStats(),
+  var projectionStats: KindStats = KindStats(),
+  var sagaStats: KindStats = KindStats(),
+  var storyStats: KindStats = KindStats())
+
 case class Finder(root: Definition) {
 
   def find(select: Definition => Boolean): Seq[Definition] = {
@@ -40,25 +63,16 @@ case class Finder(root: Definition) {
 
   def findEmpty: DefWithParents = findWithParents(_.isEmpty)
 
-  case class KindStats(var count: Int = 0, var maturitySum: Int = 0)
-  case class Statistics(
-    var definitions: Int = 0,
-    var incomplete: Int = 0,
-    var maximum_depth: Int = 0,
-    var missing_documentation: Int = 0,
-    var total_maturity: Int = 0,
-    var terms_count: Int = 0,
-    var adaptorStats: KindStats = KindStats(),
-    var contextStats: KindStats = KindStats(),
-    var domainStats: KindStats = KindStats(),
-    var entityStats: KindStats = KindStats(),
-    var functionStats: KindStats = KindStats(),
-    var handlerStats: KindStats = KindStats(),
-    var plantStats: KindStats = KindStats(),
-    var processorStats: KindStats = KindStats(),
-    var projectionStats: KindStats = KindStats(),
-    var sagaStats: KindStats = KindStats(),
-    var storyStats: KindStats = KindStats())
+  def makeVitalStats[T <: VitalDefinition[?, ?]](
+    v: T,
+    parents: Seq[Definition],
+    stats: => KindStats
+  ): Unit = {
+    stats.count += 1
+    stats.maturitySum += v.maturity(parents)
+    if (!v.isEmpty) stats.completed += 1
+    if (v.brief.nonEmpty && v.description.nonEmpty) stats.documented += 1
+  }
 
   def generateStatistics(): Statistics = {
     val stats = Folding.foldLeftWithStack(Statistics())(root) {
@@ -66,55 +80,37 @@ case class Finder(root: Definition) {
         if (parents.size >= state.maximum_depth) {
           state.maximum_depth = parents.size + 1
         }
-        if (definition.brief.isEmpty || definition.description.isEmpty) {
-          state.missing_documentation += 1
+        if (!definition.isEmpty) state.all_stats.completed += 1
+        if (definition.brief.nonEmpty && definition.description.nonEmpty) {
+          state.all_stats.documented += 1
         }
-        if (definition.isEmpty) { state.incomplete += 1 }
-        state.definitions += 1
+        state.all_stats.count += 1
         definition match {
           case vd: VitalDefinition[?, ?] =>
-            state.total_maturity += vd.maturity(parents)
+            state.all_stats.maturitySum += vd.maturity(parents)
             vd match {
-              case a: Adaptor =>
-                state.adaptorStats.count += 1
-                state.adaptorStats.maturitySum += a.maturity(parents)
-              case c: Context =>
-                state.contextStats.count += 1
-                state.contextStats.maturitySum += c.maturity(parents)
-              case d: Domain =>
-                state.domainStats.count += 1
-                state.domainStats.maturitySum += d.maturity(parents)
-              case e: Entity =>
-                state.entityStats.count += 1
-                state.entityStats.maturitySum += e.maturity(parents)
+              case a: Adaptor => makeVitalStats(a, parents, state.adaptorStats)
+              case c: Context => makeVitalStats(c, parents, state.contextStats)
+              case d: Domain  => makeVitalStats(d, parents, state.domainStats)
+              case e: Entity  => makeVitalStats(e, parents, state.entityStats)
               case f: Function =>
-                state.functionStats.count += 1
-                state.functionStats.maturitySum += f.maturity(parents)
-              case h: Handler =>
-                state.handlerStats.count += 1
-                state.handlerStats.maturitySum += h.maturity(parents)
-              case p: Plant =>
-                state.plantStats.count += 1
-                state.plantStats.maturitySum += p.maturity(parents)
+                makeVitalStats(f, parents, state.functionStats)
+              case h: Handler => makeVitalStats(h, parents, state.handlerStats)
+              case p: Plant   => makeVitalStats(p, parents, state.plantStats)
               case p: Processor =>
-                state.processorStats.count += 1
-                state.processorStats.maturitySum += p.maturity(parents)
+                makeVitalStats(p, parents, state.processorStats)
               case p: Projection =>
-                state.projectionStats.count += 1
-                state.projectionStats.maturitySum += p.maturity(parents)
-              case s: Saga =>
-                state.sagaStats.count += 1
-                state.sagaStats.maturitySum += s.maturity(parents)
-              case s: Story =>
-                state.storyStats.count += 1
-                state.storyStats.maturitySum += s.maturity(parents)
+                makeVitalStats(p, parents, state.projectionStats)
+              case s: Saga  => makeVitalStats(s, parents, state.sagaStats)
+              case s: Story => makeVitalStats(s, parents, state.storyStats)
             }
+          case t: Term =>
+            state.terms_count += 1
+            state.other_stats.count += 1
+            if (t.nonEmpty) state.other_stats.completed += 1
           case d: Definition =>
-            if (d.nonEmpty) { state.total_maturity += d.contents.length }
-            d match {
-              case _: Term => state.terms_count += 1
-              case _       => // ignore
-            }
+            state.other_stats.count += 1
+            if (d.nonEmpty) { state.other_stats.completed += 1 }
           case _ => // ignore
         }
         state

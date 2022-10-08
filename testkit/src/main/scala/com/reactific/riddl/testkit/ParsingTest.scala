@@ -12,8 +12,6 @@ import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
-
-
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input) with Matchers {
   push(input)
@@ -213,8 +211,7 @@ class ParsingTest extends ParsingTestBase {
   }
 
   def checkFile(
-    @unused
-    label: String,
+    @unused label: String,
     fileName: String,
     directory: String = "testkit/src/test/input/"
   ): RootContainer = {

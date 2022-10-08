@@ -17,7 +17,6 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def spc: String = { " ".repeat(indentLevel) }
 
-
   def add(str: String): RiddlFileEmitter = {
     sb.append(str)
     this

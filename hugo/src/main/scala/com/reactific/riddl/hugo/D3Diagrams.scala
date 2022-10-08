@@ -2,7 +2,8 @@ package com.reactific.riddl.hugo
 
 import com.reactific.riddl.utils.PathUtils
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 
 object D3Diagrams {
 

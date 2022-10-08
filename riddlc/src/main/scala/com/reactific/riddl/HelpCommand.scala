@@ -2,11 +2,13 @@ package com.reactific.riddl
 
 import com.reactific.riddl.commands.CommandOptions.commandOptionsParser
 import com.reactific.riddl.commands.CommonOptionsHelper.commonOptionsParser
-import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.commands.CommandOptions
+import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.utils.Logger
-import pureconfig.{ConfigCursor, ConfigReader}
+import pureconfig.ConfigCursor
+import pureconfig.ConfigReader
 import scopt.OParser
 import scopt.RenderingMode.OneColumn
 
@@ -17,8 +19,8 @@ object HelpCommand {
   case class Options(
     command: String = "help",
     inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None,
-  ) extends CommandOptions
+    targetCommand: Option[String] = None)
+      extends CommandOptions
 }
 
 class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
@@ -26,23 +28,16 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
-      .text("Print out how to use this program")
-      -> HelpCommand.Options()
+      .text("Print out how to use this program") -> HelpCommand.Options()
   }
 
-  override def getConfigReader:
-  ConfigReader[HelpCommand.Options] = { (cur: ConfigCursor) =>
-    for {
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      cmd <- topRes.asString
-    } yield {
-      Options(
-        cmd,
-        inputFile = None,
-        targetCommand = None
-      )
-    }
+  override def getConfigReader: ConfigReader[HelpCommand.Options] = {
+    (cur: ConfigCursor) =>
+      for {
+        topCur <- cur.asObjectCursor
+        topRes <- topCur.atKey(pluginName)
+        cmd <- topRes.asString
+      } yield { Options(cmd, inputFile = None, targetCommand = None) }
   }
 
   override def run(
@@ -52,7 +47,7 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
     outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
-        val usage: String = {
+      val usage: String = {
         val common = OParser.usage(commonOptionsParser, OneColumn)
         val commands = OParser.usage(commandOptionsParser, OneColumn)
         val improved_commands = commands.split(System.lineSeparator())
