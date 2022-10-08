@@ -12,6 +12,8 @@ on:
       - doc/src/hugo/static/**
       - doc/src/hugo/themes/**
       - .github/workflows/gh-pages.yml
+      - .vale.ini
+      - .github/styles/**
 
 jobs:
   vale:
