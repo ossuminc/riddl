@@ -56,7 +56,7 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
       },
       BuildInfoKey.map(startYear) { case (k, v) =>
         "copyright" -> s"© ${v.map(_.toString).getOrElse("2019")}-${Calendar
-          .getInstance().get(Calendar.YEAR)} Ossum Inc."
+            .getInstance().get(Calendar.YEAR)} Ossum Inc."
       },
       scalaVersion,
       sbtVersion,
@@ -194,7 +194,13 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
-    graalVMNativeImageOptions ++= Seq("--verbose", "--no-fallback"),
+    graalVMNativeImageOptions ++= Seq(
+      "--verbose",
+      "--no-fallback",
+      "--native-image-info",
+      "--enable-url-protocols=https,http",
+      "-H:ResourceConfigurationFiles=../../src/native-image.resources"
+    ),
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
