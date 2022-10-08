@@ -16,13 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-      - uses: actions/checkout@v2
+        uses: actions/checkout@v2
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
 
       - name: Check Docs With Vale
-      - uses: errata-ai/vale-action@reviewdog
+        uses: errata-ai/vale-action@reviewdog
         with:
           files: doc/src/hugo/content
           fail_on_error: true
@@ -35,7 +35,7 @@ jobs:
           hugo-version: 'latest'
           extended: true
 
-      - name: Build
+      - name: Generate Site With Hugo
         run: |
           cd doc/src/hugo ; \
           hugo --minify -v \
