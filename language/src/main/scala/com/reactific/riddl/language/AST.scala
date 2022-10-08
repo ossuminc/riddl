@@ -46,8 +46,7 @@ object AST extends ast.Expressions with parsing.Terminals {
       *   - has a brief description - 5 points
       *   - has options specified - 5 points
       *   - has terms defined -
-      *   - has an author in or above the definition - 5 points
-      * -
+      *   - has an author in or above the definition - 5 points \-
       *   - definition specific things: 0.65
       * @return
       */
@@ -981,8 +980,8 @@ object AST extends ast.Expressions with parsing.Terminals {
       with WithTypes {
 
     override lazy val contents: Seq[EntityDefinition] = {
-      super.contents ++ states ++ types ++ handlers ++ functions ++ invariants
-      ++ authors ++ terms
+      super.contents ++ states ++ types ++ handlers ++ functions ++
+        invariants ++ authors ++ terms
     }
 
     final val kind: String = "Entity"

@@ -78,7 +78,8 @@ trait StreamingParser
 
   def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
     options[u, ProcessorOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) => ProcessorTechnologyOption(loc, args)
+      case (loc, Options.technology, args) =>
+        ProcessorTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }

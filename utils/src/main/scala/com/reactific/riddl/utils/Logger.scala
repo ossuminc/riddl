@@ -39,10 +39,10 @@ trait Logger {
 
   final def severe(s: => String): Unit = { write(Severe, s) }
   final def severe(s: => String, xcptn: Throwable): Unit = {
-    val message = s"""$s: $xcptn
-                     |${ExceptionUtils.getRootCauseStackTrace(xcptn)
-      .mkString("\n")}
-                     |""".stripMargin
+    val message =
+      s"""$s: $xcptn
+         |${ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")}
+         |""".stripMargin
     write(Severe, message)
   }
 
@@ -61,10 +61,10 @@ trait Logger {
 
   protected def count(level: Lvl): Unit = {
     level match {
-      case Severe => nSevere += 1
-      case Error => nError += 1
+      case Severe  => nSevere += 1
+      case Error   => nError += 1
       case Warning => nWarning += 1
-      case Info => nInfo += 1
+      case Info    => nInfo += 1
     }
   }
 
@@ -89,8 +89,7 @@ case class StringLogger(capacity: Int = 512 * 2) extends Logger {
 
   override def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
-    stringBuilder.append("[")
-      .append(level).append("] ").append(s).append("\n")
+    stringBuilder.append("[").append(level).append("] ").append(s).append("\n")
   }
 
   override def toString: String = stringBuilder.toString()

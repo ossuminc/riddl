@@ -314,10 +314,10 @@ object Folding {
               this.addError(
                 pid.loc,
                 msg = s"""Path resolution encountered a loop at ${definition
-                  .identify}
+                          .identify}
                          |  for name '$soughtName' when resolving ${pid.format}
                          |  in definition context: ${parents.map(_.identify)
-                  .mkString("\n    ", "\n    ", "\n")}
+                          .mkString("\n    ", "\n    ", "\n")}
                          |""".stripMargin
               )
               // Signal we're done searching with no result

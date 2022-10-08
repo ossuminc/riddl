@@ -26,14 +26,15 @@ trait NoWhiteSpaceParsers extends ParsingContext with Terminals {
   def markdownLine[u: P]: P[LiteralString] = {
     P(
       location ~ Punctuation.verticalBar ~~
-        CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
-        ("\n" | "\r").rep(min = 1, max = 2)
+        CharsWhile(ch => ch != '\n' && ch != '\r').! ~~ ("\n" | "\r")
+          .rep(min = 1, max = 2)
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
 
   def hexDigit[u: P]: P[Unit] = P(CharIn("0-9a-fA-F").!)
 
-  def unicodeEscape[u: P]: P[Unit] = P("u" ~ hexDigit ~ hexDigit ~ hexDigit ~ hexDigit).!
+  def unicodeEscape[u: P]: P[Unit] =
+    P("u" ~ hexDigit ~ hexDigit ~ hexDigit ~ hexDigit).!
 
   def escape[u: P]: P[Unit] = P("\\" ~ (CharIn("\"/\\\\bfnrt") | unicodeEscape))
 
@@ -42,7 +43,10 @@ trait NoWhiteSpaceParsers extends ParsingContext with Terminals {
   def strChars[u: P]: P[Unit] = P(CharsWhile(stringChars))
 
   def literalString[u: P]: P[LiteralString] = {
-    P(location ~ Punctuation.quote ~/ (strChars | escape).rep.! ~ Punctuation.quote)
+    P(
+      location ~ Punctuation.quote ~/ (strChars | escape).rep.! ~
+        Punctuation.quote
+    )
   }.map { tpl => (LiteralString.apply _).tupled(tpl) }
 
 }

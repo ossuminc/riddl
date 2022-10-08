@@ -18,12 +18,18 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.utils.{Logger, SysLogger}
+import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.parsing.FileParserInput
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.TopLevelParser
+import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.SysLogger
+import org.apache.commons.lang3.exception.ExceptionUtils
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Clock
-import scala.collection.SortedMap
+import scala.util.control.NonFatal
 
 case class CommonOptions(
   showTimes: Boolean = false,
@@ -36,39 +42,37 @@ case class CommonOptions(
   showUnusedWarnings: Boolean = true,
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
-  sortMessagesByLocation: Boolean = false
-)
+  sortMessagesByLocation: Boolean = false)
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
   /** Runs a code block and returns its result, and prints its execution time to
-   * stdout. Execution time is only written if `show` is set to `true`.
-   *
-   * e.g.
-   *
-   * timer("my-stage", true) { 1 + 1 } // 2
-   *
-   * prints: Stage 'my-stage': 0.000 seconds
-   *
-   * @param stage
-   * The name of the stage, is included in output message
-   * @param show
-   * if `true`, then message is printed, otherwise not
-   * @param logger
-   * The logger to which timing messages should be put out.
-   * @param f
-   * the code block to execute
-   * @return
-   * The result of running `f`
-   */
+    * stdout. Execution time is only written if `show` is set to `true`.
+    *
+    * e.g.
+    *
+    * timer("my-stage", true) { 1 + 1 } // 2
+    *
+    * prints: Stage 'my-stage': 0.000 seconds
+    *
+    * @param stage
+    *   The name of the stage, is included in output message
+    * @param show
+    *   if `true`, then message is printed, otherwise not
+    * @param logger
+    *   The logger to which timing messages should be put out.
+    * @param f
+    *   the code block to execute
+    * @return
+    *   The result of running `f`
+    */
   def timer[T](
     stage: String,
     show: Boolean = true,
     logger: Logger = SysLogger()
-  )(
-    f: => T
-  ): T = {RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f)}
+  )(f: => T
+  ): T = { RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f) }
 
   def parse(
     path: Path,
@@ -78,9 +82,9 @@ object Riddl {
       val input = new FileParserInput(path)
       parse(input, options)
     } else {
-      Left(List(
-        Messages.error(s"Input file `${path.toString} does not exist.")
-      ))
+      Left(
+        List(Messages.error(s"Input file `${path.toString} does not exist."))
+      )
     }
   }
 
@@ -88,9 +92,7 @@ object Riddl {
     input: RiddlParserInput,
     options: CommonOptions = CommonOptions()
   ): Either[Messages, RootContainer] = {
-    timer("parse", options.showTimes) {
-      TopLevelParser.parse(input)
-    }
+    timer("parse", options.showTimes) { TopLevelParser.parse(input) }
   }
 
   def validate(
@@ -102,18 +104,14 @@ object Riddl {
     }
   }
 
-
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions
-  ): Either[Messages,Validation.Result] = {
+  ): Either[Messages, Validation.Result] = {
     parse(input, commonOptions).flatMap { root =>
       val result = validate(root, commonOptions)
-      if (result.messages.isOnlyWarnings) {
-        Right(result)
-      } else {
-        Left(result.messages)
-      }
+      if (result.messages.isOnlyWarnings) { Right(result) }
+      else { Left(result.messages) }
     }
   }
 
@@ -124,139 +122,109 @@ object Riddl {
     parseAndValidate(RiddlParserInput(path), commonOptions)
   }
 
-  type Stats = SortedMap[String, String]
+  case class CategoryStats(
+    count: Integer = 0,
+    percentOfDefinitions: Double = 0.0d,
+    averageMaturity: Double = 0.0d,
+    totalMaturity: Integer = 0,
+    percentComplete: Double = 0.0d,
+    percentDocumented: Double = 0.0d) {
+    override def toString: String = {
+      s"#:$count($percentOfDefinitions%), maturity:$totalMaturity($averageMaturity%), complete: $percentComplete%, " +
+        s"documented: $percentDocumented%"
+    }
+  }
+  case class Stats(
+    count: Long,
+    term_count: Long,
+    maximum_depth: Int,
+    categories: Map[String, CategoryStats])
 
-  def collectStats(inputFile: Path, commonOptions: CommonOptions):
-  Either[Messages, Stats] = {
+  def collectStats(
+    inputFile: Path,
+    commonOptions: CommonOptions
+  ): Either[Messages, Stats] = {
     parse(inputFile, commonOptions).flatMap { root =>
-      collectStats(root)
+      try { Right(collectStats(root)) }
+      catch {
+        case NonFatal(x) => Left(errors(
+            ExceptionUtils.getRootCauseStackTrace(x)
+              .mkString(System.lineSeparator()),
+            Location(RiddlParserInput(inputFile), offset = 0)
+          ))
+      }
     }
   }
 
-  def collectStats(root: RootContainer):
-  Either[Messages, Stats] = {
-    val stats = Finder(root).generateStatistics()
-    val completed = stats.definitions - stats.incomplete
-    val documented = stats.definitions - stats.missing_documentation
-    val empty = SortedMap.empty[String, String]
-    Right(SortedMap(
-      "Definitions" -> stats.definitions.toString,
-      "Incomplete" -> stats.incomplete.toString,
-      "Maximum Depth" -> stats.maximum_depth.toString,
-      "Missing Documentation" -> stats.missing_documentation.toString,
-      "Total Maturity" -> stats.total_maturity.toString
-    ) ++ (if (stats.definitions > 0) {
-      val percent_complete =
-        (completed.toFloat / stats.definitions.toFloat) * 100.0F
+  def makeCategoryStats(
+    stats: KindStats,
+    all_stats: KindStats
+  ): CategoryStats = {
+    if (stats.count > 0) {
+      val average_maturity = (stats.maturitySum.toFloat / stats.count)
+      val percent_of_all = (stats.count.toDouble / all_stats.count) * 100.0d
+      val percent_completed = (stats.completed.toDouble / stats.count) * 100.0d
       val percent_documented =
-        (documented.toFloat / stats.definitions.toFloat) * 100.0F
-      val average_maturity =
-        (stats.total_maturity.toFloat / stats.definitions.toFloat)
-      SortedMap(
-        "Percent Complete" -> percent_complete.toString,
-        "Percent Documented" -> percent_documented.toString,
-        "Average Maturity" -> average_maturity.toString,
+        (stats.documented.toDouble / stats.count) * 100.0d
+      CategoryStats(
+        stats.count,
+        percent_of_all,
+        average_maturity,
+        stats.maturitySum,
+        percent_completed,
+        percent_documented
       )
-    } else {empty}) ++
-      (if (stats.adaptorStats.count > 0) {
-        val average_maturity =
-          (stats.adaptorStats.maturitySum.toFloat / stats.adaptorStats.count)
-        SortedMap(
-          "Adaptor Count" -> stats.adaptorStats.count.toString,
-          "Adaptor Total Maturity" -> stats.adaptorStats.maturitySum.toString,
-          "Adaptor Average Maturity" -> average_maturity.toString
-        )
-      } else {empty}) ++
-      (if (stats.contextStats.count > 0) {
-        val average_maturity =
-          (stats.contextStats.maturitySum.toFloat / stats.contextStats.count)
-        SortedMap(
-          "Context Count" -> stats.contextStats.count.toString,
-          "Context Total Maturity" -> stats.contextStats.maturitySum.toString,
-          "Context Average Maturity" -> average_maturity.toString
-        )
-      } else {empty}) ++
-      (if (stats.domainStats.count > 0) {
-        val average_maturity =
-          (stats.domainStats.maturitySum.toFloat / stats.domainStats.count)
-        SortedMap(
-          "Domain Count" -> stats.domainStats.count.toString,
-          "Domain Total Maturity" -> stats.domainStats.maturitySum.toString,
-          "Domain Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.entityStats.count > 0) {
-        val average_maturity =
-          (stats.entityStats.maturitySum.toFloat / stats.entityStats.count)
-        SortedMap(
-          "Entity Count" -> stats.entityStats.count.toString,
-          "Entity Total Maturity" -> stats.entityStats.maturitySum.toString,
-          "Entity Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.functionStats.count > 0) {
-        val average_maturity =
-          (stats.functionStats.maturitySum.toFloat / stats.functionStats.count)
-        SortedMap(
-          "Function Count" -> stats.functionStats.count.toString,
-          "Function Total Maturity" -> stats.functionStats.maturitySum.toString,
-          "Function Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.handlerStats.count > 0) {
-        val average_maturity =
-          (stats.handlerStats.maturitySum.toFloat / stats.handlerStats.count)
-        SortedMap(
-          "Handler Count" -> stats.handlerStats.count.toString,
-          "Handler Total Maturity" -> stats.handlerStats.maturitySum.toString,
-          "Handler Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.plantStats.count > 0) {
-        val average_maturity =
-          (stats.plantStats.maturitySum.toFloat / stats.plantStats.count)
-        SortedMap(
-          "Plant Count" -> stats.plantStats.count.toString,
-          "Plant Total Maturity" -> stats.plantStats.maturitySum.toString,
-          "Plant Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.processorStats.count > 0) {
-        val average_maturity =
-          (stats.processorStats.maturitySum.toFloat / stats.processorStats.count)
-        SortedMap(
-          "Processor Count" -> stats.processorStats.count.toString,
-          "Processor Total Maturity" -> stats.processorStats.maturitySum.toString,
-          "Processor Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.projectionStats.count > 0) {
-        val average_maturity =
-          (stats.projectionStats.maturitySum.toFloat / stats.projectionStats.count)
-        SortedMap(
-          "Projection Count" -> stats.projectionStats.count.toString,
-          "Projection Total Maturity" -> stats.projectionStats.maturitySum.toString,
-          "Projection Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.sagaStats.count > 0) {
-        val average_maturity =
-          (stats.sagaStats.maturitySum.toFloat / stats.sagaStats.count)
-        SortedMap(
-          "Saga Count" -> stats.sagaStats.count.toString,
-          "Saga Total Maturity" -> stats.sagaStats.maturitySum.toString,
-          "Saga Average Maturity" -> average_maturity.toString
-        )
-      } else empty) ++
-      (if (stats.storyStats.count > 0) {
-        val average_maturity =
-          (stats.storyStats.maturitySum.toFloat / stats.storyStats.count)
-        SortedMap(
-          "Story Count" -> stats.storyStats.count.toString,
-          "Story Total Maturity" -> stats.storyStats.maturitySum.toString,
-          "Story Average Maturity" -> average_maturity.toString
-        )
-      } else empty))
+    } else CategoryStats()
+  }
+
+  def collectStats(root: RootContainer): Stats = {
+    val stats = Finder(root).generateStatistics()
+    val count = stats.all_stats.count
+    val percent_complete = (stats.all_stats.completed.toDouble / count) * 100.0d
+    val averageMaturity =
+      (stats.all_stats.maturitySum.toDouble / count) * 100.0d
+    val percent_documented =
+      (stats.all_stats.documented.toDouble / count) * 100.0d
+    val all = CategoryStats(
+      count,
+      100.0d,
+      averageMaturity,
+      stats.all_stats.maturitySum,
+      percent_complete,
+      percent_documented
+    )
+    val adaptor = makeCategoryStats(stats.adaptorStats, stats.all_stats)
+    val context = makeCategoryStats(stats.contextStats, stats.all_stats)
+    val domain = makeCategoryStats(stats.domainStats, stats.all_stats)
+    val entity = makeCategoryStats(stats.entityStats, stats.all_stats)
+    val function = makeCategoryStats(stats.functionStats, stats.all_stats)
+    val handler = makeCategoryStats(stats.handlerStats, stats.all_stats)
+    val plant = makeCategoryStats(stats.plantStats, stats.all_stats)
+    val processor = makeCategoryStats(stats.processorStats, stats.all_stats)
+    val projection = makeCategoryStats(stats.projectionStats, stats.all_stats)
+    val saga = makeCategoryStats(stats.sagaStats, stats.all_stats)
+    val story = makeCategoryStats(stats.storyStats, stats.all_stats)
+    val other = makeCategoryStats(stats.other_stats, stats.all_stats)
+    Stats(
+      count,
+      stats.terms_count,
+      stats.maximum_depth,
+      categories = Map(
+        "All" -> all,
+        "Adaptor" -> adaptor,
+        "Context" -> context,
+        "Domain" -> domain,
+        "Entity" -> entity,
+        "Function" -> function,
+        "Handler" -> handler,
+        "Plant" -> plant,
+        "Processor" -> processor,
+        "Projection" -> projection,
+        "Saga" -> saga,
+        "Story" -> story,
+        "Other" -> other
+      )
+    )
   }
 }
 

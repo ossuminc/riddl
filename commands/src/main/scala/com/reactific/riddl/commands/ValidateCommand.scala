@@ -17,7 +17,8 @@
 package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -29,7 +30,7 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
   override def run(
     options: Options,
     @unused commonOptions: CommonOptions,
-    log:Logger,
+    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = {
     options.withInputFile { inputFile: Path =>
