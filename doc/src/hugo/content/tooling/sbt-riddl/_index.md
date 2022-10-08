@@ -9,7 +9,7 @@ weight: 30
 RIDDL provides an  
 [SBT plugin](https://www.scala-sbt.org/1.x/docs/Using-Plugins.html) for 
 convenience in other projects that want to run 
-[`riddlc`]({{< relref "../riddlc" >}}) easily.
+[`riddlc`]({{< relref "../riddlc" >}}) easily from SBT.
 
 To install the SBT plugin all you need to do is add the following to your 
 `project/plugins.sbt` file:
@@ -34,3 +34,8 @@ riddlcOptions := Seq(
 // Specify the minimum riddlc version to processor you RIDDL specification
 riddlcMinVersion := "0.14.0"
 ```
+
+The `riddlcOptions` setting provides all the options to `riddlc` 
+that you want to run during `compile`. You would specify in this setting
+all the needed options to cause riddlc to generate your sources, presumably
+used in subsequent compilation steps.
