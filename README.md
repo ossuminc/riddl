@@ -1,5 +1,6 @@
 ![Code Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
 ![Documentation Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
+[![CLA assistant](https://cla-assistant.io/readme/badge/reactific/riddl)](https://cla-assistant.io/reactific/riddl)
 
 # RIDDL
 
@@ -8,18 +9,29 @@ Is here: https://riddl.tech
 
 
 ## Introduction
-RIDDL, the Reactive Interface to Domain Definition Language, is a tool for
-eliminating the boilerplate from reactive systems designed with Domain
-Driven Design (DDD).   
-It uses a DDD inspired specification language to allow subject matter experts 
-and developers alike to work at a higher level of specification than they would
-if they were coding directly in a programming language. It aims to relieve 
-developers of the burden of maintaining infrastructural code through evolution 
-of the domain abstractions.
+RIDDL, the Reactive Interface to Domain Definition Language, is a specification
+lanugage and tooling to help capture requirements and specify designs for the
+class of systems that can be designed with DDD and utilize a distributed, reactive
+cloud native architecture.  
 
-## Getting Started Locally
-To use `riddlc` locally and be able to update it with new changes, use this 
-approach:
+
+RIDDL allows subject matter experts, business analysts, and system architects to
+work at a higher level of abstraction than they would if they were coding directly
+in a programming language. RIDDL aims to relieve developers of the burden of 
+maintaining infrastructural code through evolution of the system abstractions.
+
+## Important Documentation Sections
+
+* [Introduction](https://riddl.tech/introduction/) - answer the important initial questions
+* [Concepts](https://riddl.tech/concepts/) - provides a conceptual understanding of RIDDL before diving into the details
+* [Guides](https://riddl.tech/guides/) - four guides for different kinds of RIDDL audiences.
+* [riddlc](https://riddl.tech/tooling/riddlc/) - various ways to obtain the RIDDL compiler
+
+## Install With `brew`
+TBD
+
+## Quickly Use On Your Computer
+To use `riddlc` locally and be able to update it with new changes, use this approach:
 * `git clone` the latest content and change directory to that cloned repository
 * Put the `.../riddl/riddlc/target/universal/stage/bin` directory in your PATH 
   variable
@@ -57,37 +69,12 @@ addSbtPlugin("com.reactific" % "sbt-riddl" % "<version>")
 ```
 
 ## Usage
-To get the most recent options, run `riddlc --help`. That command will give you
+To get the most recent options, run `riddlc help`. That command will give you
 the syntax for doing various things with the riddl compiler (`riddlc`)
 
-## Goals
-This project is currently nascent. It doesn't do anything yet, but eventually
-we hope it will do all the following things:
-
-* Generate Kalix Protobuffers 
-* Generate Swagger (OpenAPI) YAML files containing API documentation for 
- REST APIs
-* Generate Akka Serverless based microservices to implement bounded contexts
-* Generate Akka/HTTP server stubs
-* Generate Akka/HTTP client library
-* Generate Kafka server stubs
-* Generate Kafka client library
-* Generate graphQL based on domain model  
-* Supporting a SaaS system for the generation of the above items working
- something like https://www.websequencediagrams.com/ by allowing direct
-  typing and immediate feedback   
-* Serve as the de facto (or real) standard for defining business domains and
-  reactive systems.
-* Be designed to be used with event storming
-* Designed for a fully reactive implementation with messaging between
-  contexts
-* Support pluggable code generators for targeting different execution
- environments.
-* Potential executors:  Akka Data Pipelines, Akka Serverless, Akka/Scala
-* Incorporate the best interface language ideas from CORBA, Reactive
- Architecture, DDD, REST, DCOM, gRPC, etc. 
-* Support for Read Projections and Read Models (plugins for databases)
-* Support for graphQL and gRPC
+## Version / Info
+The `riddlc` compiler has two command, `info` and `version` that just print
+out information and the version number, respectively, and then exit. 
 
 ## Dependencies
 
