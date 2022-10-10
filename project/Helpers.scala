@@ -1,12 +1,8 @@
 import com.typesafe.sbt.packager.Keys.maintainer
-
 import sbt.Keys._
 import sbt._
 import sbt.io.Path.allSubpaths
-import scoverage.ScoverageKeys.coverageEnabled
-import scoverage.ScoverageKeys.coverageFailOnMinimum
-import scoverage.ScoverageKeys.coverageMinimumBranchTotal
-import scoverage.ScoverageKeys.coverageMinimumStmtTotal
+import scoverage.ScoverageKeys._
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
@@ -109,12 +105,15 @@ object C {
     )
   }
 
-  def withCoverage(enabled: Boolean = false)(p: Project): Project = {
+  def withCoverage(percent: Int = 50)(p: Project): Project = {
     p.settings(
-      coverageEnabled := enabled,
       coverageFailOnMinimum := true,
-      coverageMinimumStmtTotal := 50,
-      coverageMinimumBranchTotal := 50
+      coverageMinimumStmtTotal := percent,
+      coverageMinimumBranchTotal := percent,
+      coverageMinimumStmtPerPackage := percent,
+      coverageMinimumBranchPerPackage := percent,
+      coverageMinimumStmtPerFile := percent,
+      coverageMinimumBranchPerFile := percent
     )
   }
 
