@@ -6,13 +6,22 @@ import sbtbuildinfo.BuildInfoOption.BuildTime
 import java.util.Calendar
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-(Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
+(Global / excludeLintKeys) ++= Set(
+  buildInfoPackage,
+  buildInfoKeys,
+  buildInfoOptions,
+  dynverVTagPrefix,
+  mainClass,
+  maintainer,
+  headerLicense
+)
 
-maintainer := "reid@ossumin.com"
+// NEVER  SET  THIS: version := "0.1"
+// IT IS HANDLED BY: sbt-dynver
+ThisBuild / dynverSeparator := "-"
 
 lazy val riddl = (project in file(".")).disablePlugins(ScoverageSbtPlugin)
-  .settings(
+  .enablePlugins(AutomateHeaderPlugin).configure(C.withInfo).settings(
     publish := {},
     publishLocal := {},
     pgpSigner / skip := true,
@@ -150,7 +159,6 @@ lazy val doc = project.in(file("doc"))
   .configure(C.withScalaCompile).settings(scaladocSiteSettings).settings(
     name := "riddl-doc",
     publishTo := Option(Resolver.defaultLocal),
-    maintainer := "reid@ossuminc.com",
     // Hugo / baseURL := uri("https://riddl.tech"),
     SiteScaladoc / siteSubdirName := "api",
     ScalaUnidoc / unidoc / unidocProjectFilter :=
