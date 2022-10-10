@@ -1,10 +1,6 @@
 name: Scala CI
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -22,12 +18,22 @@ jobs:
       with:
         hugo-version: 'latest'
         extended: true
+    - name: Set up GraalVM Native Image toolchain
+      uses: helpermethod/graalvm-native-image-toolchain@0.0.2
+      with:
+        graalvm-version: 22.2.0
+        java-version: 17
     - name: Coursier Caching
       uses: coursier/cache-action@v6
     - name: Build, Run Tests, Generate Packages
       run: |
-        which hugo
         sbt -v clean Test/compile test
+    - name: Generate Native Image
+      run: |  
+        sbt -v "project riddlc ; graalvm-native-image:packageBin"
+    - name: Generate Universal Package
+      run: |
+        sbt -v "project riddlc ; Universal/packageBin"
     - name: Cleanup Before Caching
       shell: bash
       run: |
