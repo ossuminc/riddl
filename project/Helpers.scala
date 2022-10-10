@@ -40,7 +40,8 @@ object Dep {
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val structurizr = "com.structurizr" % "structurizr-client" % V.structurizr
-  val structurizr_export = "com.structurizr" % "structurizr-export" % V.structurizr_export
+  val structurizr_export = "com.structurizr" % "structurizr-export" %
+    V.structurizr_export
 
   val testing: Seq[ModuleID] =
     Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
@@ -112,8 +113,8 @@ object C {
     p.settings(
       coverageEnabled := enabled,
       coverageFailOnMinimum := true,
-      coverageMinimumStmtTotal := 80,
-      coverageMinimumBranchTotal := 80
+      coverageMinimumStmtTotal := 50,
+      coverageMinimumBranchTotal := 50
     )
   }
 
