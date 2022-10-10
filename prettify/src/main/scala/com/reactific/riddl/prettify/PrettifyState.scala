@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.prettify
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Folding
