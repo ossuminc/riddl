@@ -229,7 +229,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
-          case sa: StoryActor => state.addToGlossary(sa, stack)
+          case sa: Actor => state.addToGlossary(sa, stack)
           case sc: StoryCase  => state.addToGlossary(sc, stack)
           case _ =>
             require(requirement = false, "Failed to handle LeafDefinition")

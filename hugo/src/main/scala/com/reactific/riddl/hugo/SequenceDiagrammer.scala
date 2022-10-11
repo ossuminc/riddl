@@ -14,7 +14,7 @@ case class SequenceDiagrammer(
       interaction <- cs.interactions
 
     } yield { Seq(interaction.from, interaction.to) }
-  }.flatten.distinctBy(_.id.value).map { ref: StoryCaseUsesRefs[?] =>
+  }.flatten.distinctBy(_.id.value).map { ref: StoryCaseRefs[?] =>
     state.resolvePath(ref.id, parents)()().headOption match {
       case Some(definition) => ref.id.value -> definition
       case None => ref.id.value ->
@@ -26,7 +26,7 @@ case class SequenceDiagrammer(
     val name = definition.id.value
     val link = state.makeDocLink(definition)
     definition match {
-      case _: StoryActor =>
+      case _: Actor =>
         sb.append(s"  actor ${name}"); nl
         sb.append(s"  link ${name}: Definition @ $link"); nl
       case _: Definition =>

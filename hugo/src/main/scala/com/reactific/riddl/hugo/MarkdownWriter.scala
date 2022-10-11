@@ -810,7 +810,14 @@ case class MarkdownWriter(
     emitDefDoc(story, parents)
     if (story.userStory.nonEmpty) {
       h2("User Story")
-      p(italic(story.userStory.get.format))
+      val actor: Actor = state.resolvePath(story.userStory.actor.id, stack)()()
+        .head.asInstanceOf[Actor]
+      val role = actor.is_a
+      val benefit = story.userStory.benefit.s
+      val capability = story.userStory.capability.s
+      val storyText =
+        s"I, ${actor.id.value}, as a $role, want $capability so that $benefit"
+      p(italic(storyText))
     }
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
     h2("Sequence Diagram")

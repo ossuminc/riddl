@@ -150,7 +150,7 @@ object Validation {
             case ij: InletJoint  => validateInletJoint(ij, parents)
             case oj: OutletJoint => validateOutletJoint(oj, parents)
             case ai: Author      => validateAuthorInfo(ai, parents)
-            case sa: StoryActor  => validateStoryActor(sa, parents)
+            case sa: Actor       => validateActor(sa, parents)
             case sc: StoryCase   => validateStoryCase(sc, parents)
           }
         case ed: EntityDefinition => ed match {
@@ -455,12 +455,15 @@ object Validation {
       }.checkExamples(s.examples, parents).checkDescription(s)
     }
 
-    def validateStoryActor(
-      @unused sa: StoryActor,
+    def validateActor(
+      @unused sa: Actor,
       @unused parents: Seq[Definition]
     ): ValidationState = {
       checkDefinition(sa, parents.head).checkIf(sa.is_a.isEmpty) { vs =>
-        vs.addMissing(sa.loc, s"${sa.identify} is missing its kind")
+        vs.addMissing(
+          sa.loc,
+          s"${sa.identify} is missing its role kind ('is a')"
+        )
       }.checkDescription(sa)
       this
     }

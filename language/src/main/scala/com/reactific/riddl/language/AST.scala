@@ -674,7 +674,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Entity] {
+      extends StoryCaseRefs[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
@@ -1143,7 +1143,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class AdaptorRef(
     loc: Location,
     id: PathIdentifier)
-      extends StoryCaseUsesRefs[Adaptor] {
+      extends StoryCaseRefs[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
@@ -1189,7 +1189,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Projection] {
+      extends StoryCaseRefs[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1311,7 +1311,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Context] with StoryCaseScopeRefs {
+      extends StoryCaseRefs[Context] with StoryCaseScopeRefs {
     override def format: String = s"context ${id.format}"
   }
 
@@ -1521,7 +1521,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProcessorRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Processor] {
+      extends StoryCaseRefs[Processor] {
     override def format: String = s"${Keywords.processor} ${id.format}"
   }
 
@@ -1798,7 +1798,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class SagaRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Saga]
+      extends StoryCaseRefs[Saga]
 
   /** An StoryActor (Role) who is the initiator of the user story. Actors may be
     * persons or machines
@@ -1814,14 +1814,14 @@ object AST extends ast.Expressions with parsing.Terminals {
     * @param description
     *   A longer description of the actor and its role
     */
-  case class StoryActor(
+  case class Actor(
     loc: Location,
     id: Identifier,
     is_a: LiteralString,
     brief: Option[LiteralString],
     description: Option[Description] = None)
-      extends LeafDefinition with StoryDefinition {
-    override def kind: String = "StoryActor"
+      extends LeafDefinition with DomainDefinition {
+    override def kind: String = "Actor"
   }
 
   /** A reference to an StoryActor using a path identifier
@@ -1830,8 +1830,8 @@ object AST extends ast.Expressions with parsing.Terminals {
     * @param id
     *   The path identifier that locates the references StoryActor
     */
-  case class StoryActorRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[StoryActor]
+  case class ActorRef(loc: Location, id: PathIdentifier)
+      extends StoryCaseRefs[Actor]
 
   case class StoryCaseScope(
     loc: Location,
@@ -1851,8 +1851,8 @@ object AST extends ast.Expressions with parsing.Terminals {
     */
   case class InteractionStep(
     loc: Location,
-    from: StoryCaseUsesRefs[?],
-    to: StoryCaseUsesRefs[?],
+    from: StoryCaseRefs[?],
+    to: StoryCaseRefs[?],
     relationship: String = "uses",
     brief: Option[LiteralString] = None)
       extends BrieflyDescribedValue
@@ -1860,7 +1860,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class StoryCase(
     loc: Location,
     id: Identifier,
-    title: Option[LiteralString] = None,
+    title: LiteralString = LiteralString.empty,
     scope: Option[StoryCaseScope] = None,
     interactions: Seq[InteractionStep],
     brief: Option[LiteralString] = None,
@@ -1890,16 +1890,10 @@ object AST extends ast.Expressions with parsing.Terminals {
     */
   case class UserStory(
     loc: Location,
-    actor: StoryActor,
-    capability: LiteralString = LiteralString.empty,
-    benefit: LiteralString = LiteralString.empty)
-      extends RiddlValue {
-    override def format: String = {
-      s"I, ${actor.id.value}, as a ${actor.is_a.s}, want ${capability
-          .s}, so that ${benefit.s}."
-    }
-
-  }
+    actor: ActorRef,
+    capability: LiteralString,
+    benefit: LiteralString)
+      extends RiddlValue
 
   /** The definition of an agile user story. Stories define functionality from
     * the perspective of a certain kind of user (man or machine), interacting
@@ -1928,7 +1922,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class Story(
     loc: Location,
     id: Identifier,
-    userStory: Option[UserStory] = None,
+    userStory: UserStory,
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],
@@ -1942,10 +1936,7 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends VitalDefinition[StoryOption, StoryDefinition]
       with DomainDefinition {
     override def contents: Seq[StoryDefinition] = {
-      super.contents ++ cases ++ examples ++ authors ++ terms ++ {
-        if (userStory.nonEmpty) Seq(userStory.get.actor)
-        else Seq.empty[StoryActor]
-      }
+      super.contents ++ cases ++ examples ++ authors ++ terms
     }
     override def isEmpty: Boolean = {
       contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
@@ -1964,7 +1955,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class StoryRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Saga]
+      extends StoryCaseRefs[Saga]
 
   /** Base trait for all options a Domain can have.
     */
@@ -2023,6 +2014,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
     plants: Seq[Plant] = Seq.empty[Plant],
+    actors: Seq[Actor] = Seq.empty[Actor],
     stories: Seq[Story] = Seq.empty[Story],
     domains: Seq[Domain] = Seq.empty[Domain],
     terms: Seq[Term] = Seq.empty[Term],
@@ -2060,7 +2052,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced domain.
     */
   case class DomainRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseUsesRefs[Domain] with StoryCaseScopeRefs {
+      extends StoryCaseRefs[Domain] with StoryCaseScopeRefs {
     override def format: String = s"domain ${id.format}"
   }
 

@@ -419,7 +419,7 @@ trait AbstractDefinitions extends Terminals {
   trait StoryCaseScopeRefs
 
   /** Base trait of definitions that can be used in a Story */
-  trait StoryCaseUsesRefs[T <: Definition] extends Reference[T]
+  trait StoryCaseRefs[T <: Definition] extends Reference[T]
 
   trait VitalDefinitionDefinition
       extends AdaptorDefinition
