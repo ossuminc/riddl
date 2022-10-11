@@ -1,6 +1,13 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.utils
 
-import java.io.{OutputStream, PrintStream}
+import java.io.OutputStream
+import java.io.PrintStream
 import scala.collection.mutable
 
 /** A PrintStream that captures any output into a String */

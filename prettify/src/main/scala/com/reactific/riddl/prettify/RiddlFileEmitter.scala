@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.prettify
 
 import java.nio.file.Files
@@ -16,7 +22,6 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def asString: String = sb.toString()
 
   def spc: String = { " ".repeat(indentLevel) }
-
 
   def add(str: String): RiddlFileEmitter = {
     sb.append(str)

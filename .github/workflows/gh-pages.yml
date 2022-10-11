@@ -6,21 +6,28 @@ on:
   push:
     branches: [main]  # Set a branch to deploy
     paths:
-      - doc/src/hugo/content/**
-      - doc/src/hugo/data/**
-      - doc/src/hugo/layouts/**
-      - doc/src/hugo/static/**
-      - doc/src/hugo/themes/**
+      - doc/src/hugo/**
       - .github/workflows/gh-pages.yml
+      - .vale.ini
+      - .github/styles/**
 
 jobs:
   deploy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout source code
+        uses: actions/checkout@v2
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+
+      - name: Check Docs With Vale
+        uses: errata-ai/vale-action@reviewdog
+        with:
+          files: doc/src/hugo/content
+          fail_on_error: true
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
@@ -28,7 +35,7 @@ jobs:
           hugo-version: 'latest'
           extended: true
 
-      - name: Build
+      - name: Generate Site With Hugo
         run: |
           cd doc/src/hugo ; \
           hugo --minify -v \

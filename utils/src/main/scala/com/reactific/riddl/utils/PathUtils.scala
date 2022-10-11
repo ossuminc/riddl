@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.utils
 
 import java.io.File
@@ -17,6 +23,7 @@ object PathUtils {
     */
   def copyResource(resourceName: String, destination: Path): Unit = {
     val src = this.getClass.getClassLoader.getResourceAsStream(resourceName)
+    require(src != null, s"Failed to open resource ${resourceName}")
     Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
   }
 

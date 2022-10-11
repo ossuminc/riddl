@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.utils
 
 import java.io.BufferedInputStream
@@ -9,9 +15,9 @@ import org.apache.commons.compress.utils.IOUtils
 
 object Tar {
 
-  final val bufferSize: Int = 1024*1024 // 1 MB
+  final val bufferSize: Int = 1024 * 1024 // 1 MB
 
-  def untar(tarFile: Path, destDir: Path) : Either[String,Int] = {
+  def untar(tarFile: Path, destDir: Path): Either[String, Int] = {
     val fname = tarFile.getFileName.toString
     val fi = Files.newInputStream(tarFile)
     val bis = new BufferedInputStream(fi, bufferSize)
@@ -20,9 +26,8 @@ object Tar {
       if (fname.endsWith(".tar.gz")) {
         val gzis = new GzipCompressorInputStream(bis)
         new TarArchiveInputStream(gzis)
-      } else if (fname.endsWith(".tar")) {
-        new TarArchiveInputStream(bis)
-      } else {
+      } else if (fname.endsWith(".tar")) { new TarArchiveInputStream(bis) }
+      else {
         return Left(s"Tar file name ${tarFile} must end in .tar.gz or .tar")
       }
     }
@@ -33,16 +38,13 @@ object Tar {
       if (taris.canReadEntryData(tae)) {
         val path = destDir.resolve(Path.of(tae.getName))
         if (tae.isDirectory) {
-          if (!Files.isDirectory(path)) {
-            Files.createDirectories(path)
-          }
+          if (!Files.isDirectory(path)) { Files.createDirectories(path) }
         } else {
           val parent = path.getParent
-          if (!Files.isDirectory(parent)) {
-            Files.createDirectories(parent)
-          }
+          if (!Files.isDirectory(parent)) { Files.createDirectories(parent) }
           val o = Files.newOutputStream(path)
-          try { IOUtils.copy(taris, o) } finally {o.close()}
+          try { IOUtils.copy(taris, o) }
+          finally { o.close() }
           counter += 1
         }
       }

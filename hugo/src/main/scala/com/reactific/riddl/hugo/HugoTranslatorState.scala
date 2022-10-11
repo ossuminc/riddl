@@ -1,17 +1,7 @@
 /*
- * Copyright 2019 Reactific Software LLC
+ * Copyright 2019 Ossum, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.reactific.riddl.hugo
@@ -176,7 +166,7 @@ case class HugoTranslatorState(
     makeSystemLandscapeView match {
       case Some(view) =>
         mdw.h2("Landscape View")
-        mdw.emitMermaidDiagram(view)
+        mdw.emitMermaidDiagram(view.split(System.lineSeparator()).toIndexedSeq)
       case None => // nothing
     }
     mdw.h2("Domains")
@@ -234,10 +224,9 @@ case class HugoTranslatorState(
         link = makeDocLink(defn, parents)
       } yield { (item, author, path, link) }
 
-      val map = items.groupBy(_._2).view
-        .mapValues(_.map { case (item, _, path, link) =>
-          s"[$item In $path]($link)"
-        }).toMap
+      val map = items.groupBy(_._2).view.mapValues(_.map {
+        case (item, _, path, link) => s"[$item In $path]($link)"
+      }).toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
       mdw.emitToDoList(toDoWeight, map)
     }
@@ -253,10 +242,8 @@ case class HugoTranslatorState(
   }
 
   def makeSystemLandscapeView: Option[String] = {
-    import com.reactific.riddl.diagrams.MermaidDiagramsPlugin
     val mdp = new MermaidDiagramsPlugin
-    val diagram = mdp
-      .makeRootOverview(root, options.enterpriseName.getOrElse("No Name"))
+    val diagram = mdp.makeRootOverview(root)
     Some(diagram)
   }
 }

@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.language.ast
 
 import com.reactific.riddl.language.parsing.Terminals
@@ -408,7 +414,6 @@ trait AbstractDefinitions extends Terminals {
 
   /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
-
 
   /** Base trait of definitions that can bound scope of a Story */
   trait StoryCaseScopeRefs

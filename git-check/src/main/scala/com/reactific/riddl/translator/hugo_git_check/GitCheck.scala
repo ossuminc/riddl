@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.translator.hugo_git_check
 
 import com.reactific.riddl.language.Messages.Messages
@@ -18,8 +24,7 @@ import java.time.Instant
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters.*
 
-
-object GitCheck  {
+object GitCheck {
 
   private def creds(options: GitCheckCommand.Options) =
     new UsernamePasswordCredentialsProvider(
@@ -33,8 +38,12 @@ object GitCheck  {
     commonOptions: CommonOptions,
     options: GitCheckCommand.Options
   )(doit: (
-    AST.RootContainer, Logger, CommonOptions, GitCheckCommand.Options
-  ) => Either[Messages,Unit]): Either[Messages,Unit] = {
+      AST.RootContainer,
+      Logger,
+      CommonOptions,
+      GitCheckCommand.Options
+    ) => Either[Messages, Unit]
+  ): Either[Messages, Unit] = {
     require(
       options.gitCloneDir.nonEmpty,
       s"Option 'gitCloneDir' must have a value."
@@ -104,7 +113,7 @@ object GitCheck  {
   def pullCommits(
     log: Logger,
     commonOptions: CommonOptions,
-    options: GitCheckCommand.Options ,
+    options: GitCheckCommand.Options,
     git: Git
   ): Boolean = {
     try {

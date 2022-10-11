@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.*
@@ -37,7 +43,7 @@ abstract class TranslatingTestBase[OPTS <: TranslatingOptions]
           val translator = getTranslator
           translator
             .parseValidateTranslate(logger, commonOptions, options) match {
-            case Right(_)  => succeed
+            case Right(_)       => succeed
             case Left(messages) => fail(messages.format)
           }
         }

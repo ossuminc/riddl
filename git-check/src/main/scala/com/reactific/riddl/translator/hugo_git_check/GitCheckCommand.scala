@@ -1,10 +1,19 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.translator.hugo_git_check
 import com.reactific.riddl.commands.CommandOptions.optional
-import com.reactific.riddl.commands.{CommandOptions, CommandPlugin}
+import com.reactific.riddl.commands.CommandOptions
+import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Messages.{Messages, errors}
+import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.Messages.errors
 import com.reactific.riddl.utils.Logger
-import pureconfig.{ConfigCursor, ConfigReader}
+import pureconfig.ConfigCursor
+import pureconfig.ConfigReader
 import scopt.OParser
 
 import java.io.File
@@ -15,40 +24,33 @@ object GitCheckCommand {
     gitCloneDir: Option[Path] = None,
     relativeDir: Option[Path] = None,
     userName: String = "",
-    accessToken: String = ""
-  ) extends CommandOptions {
+    accessToken: String = "")
+      extends CommandOptions {
     def command: String = "hugo-git-check"
     def inputFile: Option[Path] = None
   }
 }
+
 /** HugoGitCheck Command */
-class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
-  "hugo-git-check"
-) {
+class GitCheckCommand
+    extends CommandPlugin[GitCheckCommand.Options]("hugo-git-check") {
   import GitCheckCommand.Options
 
-  override def getOptions
-  : (OParser[Unit, Options], Options) = {
+  override def getOptions: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
-    OParser.sequence(cmd("git-check")
-      .children(
-        opt[File]("git-clone-dir")
-          .required()
-          .action( (f,opts) => opts.copy(gitCloneDir = Some(f.toPath)))
-          .text(
-            """Provides the top directory of a git repo clone that
-              |contains the <input-file> to be processed.""".stripMargin
-          ),
-        opt[String]("user-name")
-          .optional()
-          .action( (n,opts) => opts.copy(userName = n))
+    OParser.sequence(
+      cmd("git-check").children(
+        opt[File]("git-clone-dir").required()
+          .action((f, opts) => opts.copy(gitCloneDir = Some(f.toPath)))
+          .text("""Provides the top directory of a git repo clone that
+                  |contains the <input-file> to be processed.""".stripMargin),
+        opt[String]("user-name").optional()
+          .action((n, opts) => opts.copy(userName = n))
           .text("Name of the git user for pulling from remote"),
-        opt[String]("access-token")
-          .optional()
-          .action( (t,opts) => opts.copy(accessToken = t))
-      )
-      .text(
+        opt[String]("access-token").optional()
+          .action((t, opts) => opts.copy(accessToken = t))
+      ).text(
         """This command checks the <git-clone-dir> directory for new commits
           |and does a `git pull" command there if it finds some; otherwise
           |it does nothing. If commits were pulled from the repository, then
@@ -99,7 +101,5 @@ class GitCheckCommand extends CommandPlugin[GitCheckCommand.Options](
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
-    Left(errors("Not Implemented"))
-  }
+  ): Either[Messages, Unit] = { Left(errors("Not Implemented")) }
 }

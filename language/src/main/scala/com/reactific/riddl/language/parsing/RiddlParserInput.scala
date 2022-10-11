@@ -1,17 +1,7 @@
 /*
- * Copyright 2019 Reactific Software LLC
+ * Copyright 2019 Ossum, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.reactific.riddl.language.parsing
@@ -43,17 +33,12 @@ abstract class RiddlParserInput extends ParserInput {
 
   def checkTraceable(): Unit = ()
 
-  private lazy val lineNumberLookup: Array[Int] =
-    Util.lineNumberLookup(data)
+  private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
   private[language] def offsetOf(line: Int): Int = {
-    if (line < 0) {
-      lineNumberLookup(line)
-    } else if (line < lineNumberLookup.length) {
-      lineNumberLookup(line)
-    } else {
-      lineNumberLookup(lineNumberLookup.length-1)
-    }
+    if (line < 0) { lineNumberLookup(line) }
+    else if (line < lineNumberLookup.length) { lineNumberLookup(line) }
+    else { lineNumberLookup(lineNumberLookup.length - 1) }
   }
 
   private[language] def lineOf(index: Int): Int = {
@@ -85,7 +70,7 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  @inline final def location(index: Int): Location = { Location(this,index) }
+  @inline final def location(index: Int): Location = { Location(this, index) }
 
   def prettyIndex(index: Int): String = { location(index).toString }
 
@@ -136,7 +121,8 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   def this(path: Path) = this(path.toFile)
 }
 
-case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
+case class SourceParserInput(source: Source, origin: String)
+    extends RiddlParserInput {
 
   val data: String =
     try { source.mkString }
@@ -152,8 +138,12 @@ object RiddlParserInput {
     data: String
   ): RiddlParserInput = { StringParserInput(data) }
 
-  implicit def apply(source: Source): RiddlParserInput = { SourceParserInput(source, source.descr) }
+  implicit def apply(source: Source): RiddlParserInput = {
+    SourceParserInput(source, source.descr)
+  }
   implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
 
-  implicit def apply(path: Path): RiddlParserInput = { FileParserInput(path.toFile) }
+  implicit def apply(path: Path): RiddlParserInput = {
+    FileParserInput(path.toFile)
+  }
 }

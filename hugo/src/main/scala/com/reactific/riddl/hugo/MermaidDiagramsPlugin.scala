@@ -1,21 +1,28 @@
-package com.reactific.riddl.diagrams
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.reactific.riddl.hugo
+
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
 
 import scala.collection.mutable
 
 object MermaidDiagramsPlugin {
-  val containerStyles = Array(
-    "font-size:1pc,fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:3pc",
-    "font-size:1pc,fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:3pc",
-    "font-size:1pc,fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white,margin-top:3pc",
-    "font-size:1pc,fill:#6666EE,stroke:black,stroke-width:3,border:solid,color:black,margin-top:3pc",
-    "font-size:1pc,fill:#8888FF,stroke:black,stroke-width:2,border:solid,color:black,margin-top:3pc",
-    "font-size:1pc,fill:#AAAAFF,stroke:black,stroke-width:1,border:solid,color:black,margin-top:3pc"
+  val containerStyles: Seq[String] = Seq(
+    "font-size:1pc,fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:36px",
+    "font-size:1pc,fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:36px",
+    "font-size:1pc,fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white,margin-top:36px",
+    "font-size:1pc,fill:#6666EE,stroke:black,stroke-width:3,border:solid,color:black,margin-top:36px",
+    "font-size:1pc,fill:#8888FF,stroke:black,stroke-width:2,border:solid,color:black,margin-top:36px",
+    "font-size:1pc,fill:#AAAAFF,stroke:black,stroke-width:1,border:solid,color:black,margin-top:36px"
   )
 }
 
-class MermaidDiagramsPlugin extends DiagramMakerPlugin {
+class MermaidDiagramsPlugin {
   import MermaidDiagramsPlugin.*
 
   def getTechnology(definition: Definition): String = {
@@ -56,9 +63,8 @@ class MermaidDiagramsPlugin extends DiagramMakerPlugin {
 
   // def traverseDomainsAndContexts
 
-  override def makeRootOverview(
-    root: AST.RootContainer,
-    rootName: String
+  def makeRootOverview(
+    root: AST.RootContainer
   ): String = {
     val sb = new mutable.StringBuilder()
     sb.append("flowchart TB\n")
@@ -77,25 +83,4 @@ class MermaidDiagramsPlugin extends DiagramMakerPlugin {
   style 2 fill:#1168bd,stroke:#0b4884,color:#ffffff
 
    */
-
-  override def makeDomainOverview(
-    root: AST.RootContainer,
-    domain: AST.Domain
-  ): String = ???
-  override def makeContextOverview(
-    root: AST.RootContainer,
-    context: AST.Context
-  ): String = ???
-  override def makeEntityOverview(
-    root: AST.RootContainer,
-    entity: AST.Entity
-  ): String = ???
-  override def makeStateDetail(
-    root: AST.RootContainer,
-    state: AST.State
-  ): String = ???
-  override def makeStoryDiagram(
-    root: AST.RootContainer,
-    story: AST.Story
-  ): String = ???
 }

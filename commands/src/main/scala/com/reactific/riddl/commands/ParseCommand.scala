@@ -1,14 +1,20 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
 
-/**
- * A Command for Parsing RIDDL input
- */
+/** A Command for Parsing RIDDL input
+  */
 class ParseCommand extends InputFileCommandPlugin("parse") {
   import InputFileCommandPlugin.Options
   override def run(
@@ -16,7 +22,7 @@ class ParseCommand extends InputFileCommandPlugin("parse") {
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages,Unit] = {
+  ): Either[Messages, Unit] = {
     options.withInputFile { (inputFile: Path) =>
       Riddl.parse(inputFile, commonOptions).map(_ => ())
     }

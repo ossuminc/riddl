@@ -1,12 +1,12 @@
 import com.typesafe.sbt.packager.Keys.maintainer
-
+import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
+import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
+import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
+import sbt.Keys.organizationName
 import sbt.Keys._
 import sbt._
 import sbt.io.Path.allSubpaths
-import scoverage.ScoverageKeys.coverageEnabled
-import scoverage.ScoverageKeys.coverageFailOnMinimum
-import scoverage.ScoverageKeys.coverageMinimumBranchTotal
-import scoverage.ScoverageKeys.coverageMinimumStmtTotal
+import scoverage.ScoverageKeys._
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
@@ -40,7 +40,8 @@ object Dep {
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val structurizr = "com.structurizr" % "structurizr-client" % V.structurizr
-  val structurizr_export = "com.structurizr" % "structurizr-export" % V.structurizr_export
+  val structurizr_export = "com.structurizr" % "structurizr-export" %
+    V.structurizr_export
 
   val testing: Seq[ModuleID] =
     Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
@@ -51,22 +52,23 @@ object Dep {
 object C {
   def withInfo(p: Project): Project = {
     p.settings(
-      ThisBuild / maintainer := "reid@ossum.biz",
-      ThisBuild / organization := "com.reactific",
-      ThisBuild / organizationHomepage :=
-        Some(new URL("https://reactific.com/")),
-      ThisBuild / organizationName := "Ossum Inc.",
-      ThisBuild / startYear := Some(2019),
-      ThisBuild / licenses +=
+      maintainer := "reid@ossum.biz",
+      organizationName := "Ossum Inc.",
+      organization := "com.reactific",
+      organizationHomepage := Some(new URL("https://reactific.com/")),
+      startYear := Some(2019),
+      licenses +=
         (
           "Apache-2.0",
           new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
         ),
-      ThisBuild / versionScheme := Option("semver-spec"),
-      ThisBuild / dynverVTagPrefix := false,
-      // NEVER  SET  THIS: version := "0.1"
-      // IT IS HANDLED BY: sbt-dynver
-      ThisBuild / dynverSeparator := "-"
+      versionScheme := Option("semver-spec"),
+      dynverVTagPrefix := false,
+      headerLicense := Some(HeaderLicense.ALv2(
+        startYear.value.get.toString,
+        "Ossum, Inc.",
+        HeaderLicenseStyle.SpdxSyntax
+      ))
     )
   }
 
@@ -108,12 +110,15 @@ object C {
     )
   }
 
-  def withCoverage(enabled: Boolean = false)(p: Project): Project = {
+  def withCoverage(percent: Int = 50)(p: Project): Project = {
     p.settings(
-      coverageEnabled := enabled,
       coverageFailOnMinimum := true,
-      coverageMinimumStmtTotal := 80,
-      coverageMinimumBranchTotal := 80
+      coverageMinimumStmtTotal := percent,
+      coverageMinimumBranchTotal := percent,
+      coverageMinimumStmtPerPackage := percent,
+      coverageMinimumBranchPerPackage := percent,
+      coverageMinimumStmtPerFile := percent,
+      coverageMinimumBranchPerFile := percent
     )
   }
 
@@ -146,10 +151,6 @@ object C {
     p.configure(withScalaCompile).settings(
       ThisBuild / dynverSonatypeSnapshots := true,
       ThisBuild / dynverSeparator := "-",
-      maintainer := "reid@ossum.biz",
-      organization := "com.reactific",
-      organizationName := "Ossum Inc.",
-      organizationHomepage := Some(url("https://riddl.tech")),
       scmInfo := Some(ScmInfo(
         url("https://github.com/reactific/riddl"),
         "scm:git:git://github.com/reactific/riddl.git"

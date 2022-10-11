@@ -79,14 +79,14 @@ class UsageSpec extends AnyWordSpec with Matchers {
       val input = """domain foo {
                     |  context Bar is {
                     |    command ACommand is { ??? } described as "AC"
-                    |    entity fooBar is { 
-                    |      state AState { 
+                    |    entity fooBar is {
+                    |      state AState {
                     |        { field: Number }
-                    |        handler fooBarHandlerForAState is { 
+                    |        handler fooBarHandlerForAState is {
                     |          on command ACommand {
                     |            ???
                     |          } described as "inconsequential"
-                    |        } described as "inconsequential" 
+                    |        } described as "inconsequential"
                     |      } described as "inconsequential"
                     |    } described as "unused"
                     |  } described as "inconsequential"

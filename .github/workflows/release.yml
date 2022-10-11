@@ -1,0 +1,44 @@
+name: Scala CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set Up JDK 17
+      uses: actions/setup-java@v2
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - name: Setup Hugo
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: 'latest'
+        extended: true
+    - name: Set up GraalVM Native Image toolchain
+      uses: helpermethod/graalvm-native-image-toolchain@0.0.2
+      with:
+        graalvm-version: 22.2.0
+        java-version: 17
+    - name: Coursier Caching
+      uses: coursier/cache-action@v6
+    - name: Build, Run Tests, Generate Packages
+      run: |
+        sbt -v clean Test/compile test
+    - name: Generate Native Image
+      run: |  
+        sbt -v "project riddlc ; graalvm-native-image:packageBin"
+    - name: Generate Universal Package
+      run: |
+        sbt -v "project riddlc ; Universal/packageBin"
+    - name: Cleanup Before Caching
+      shell: bash
+      run: |
+        rm -rf "$HOME/.ivy2/local" || true
+        find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
+        find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
+        find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
+        find $HOME/.sbt                              -name "*.lock"               -delete || true

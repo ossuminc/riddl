@@ -9,9 +9,7 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Set Up JDK 17
@@ -26,10 +24,10 @@ jobs:
         extended: true
     - name: Coursier Caching
       uses: coursier/cache-action@v6
-    - name: Build & Run Tests
+    - name: Build, Run Tests, Generate Packages
       run: |
         which hugo
-        sbt -v clean Test/compile packageBin test
+        sbt -v clean Test/compile test
     - name: Cleanup Before Caching
       shell: bash
       run: |

@@ -6,29 +6,38 @@ import sbtbuildinfo.BuildInfoOption.BuildTime
 import java.util.Calendar
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-(Global / excludeLintKeys) ++=
-  Set(buildInfoPackage, buildInfoKeys, buildInfoOptions, mainClass, maintainer)
-
-maintainer := "reid@ossumin.com"
-
-lazy val riddl = (project in file(".")).settings(
-  publish := {},
-  publishLocal := {},
-  pgpSigner / skip := true,
-  publishTo := Some(Resolver.defaultLocal)
-).aggregate(
-  utils,
-  language,
-  commands,
-  testkit,
-  prettify,
-  diagrams,
-  hugo,
-  `git-check`,
-  doc,
-  riddlc,
-  plugin
+(Global / excludeLintKeys) ++= Set(
+  buildInfoPackage,
+  buildInfoKeys,
+  buildInfoOptions,
+  dynverVTagPrefix,
+  mainClass,
+  maintainer,
+  headerLicense
 )
+
+// NEVER  SET  THIS: version := "0.1"
+// IT IS HANDLED BY: sbt-dynver
+ThisBuild / dynverSeparator := "-"
+
+lazy val riddl = (project in file(".")).disablePlugins(ScoverageSbtPlugin)
+  .enablePlugins(AutomateHeaderPlugin).configure(C.withInfo).settings(
+    publish := {},
+    publishLocal := {},
+    pgpSigner / skip := true,
+    publishTo := Some(Resolver.defaultLocal)
+  ).aggregate(
+    utils,
+    language,
+    commands,
+    testkit,
+    prettify,
+    hugo,
+    `git-check`,
+    doc,
+    riddlc,
+    plugin
+  )
 
 lazy val Utils = config("utils")
 lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
@@ -57,7 +66,7 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
       },
       BuildInfoKey.map(startYear) { case (k, v) =>
         "copyright" -> s"© ${v.map(_.toString).getOrElse("2019")}-${Calendar
-          .getInstance().get(Calendar.YEAR)} Ossum Inc."
+            .getInstance().get(Calendar.YEAR)} Ossum Inc."
       },
       scalaVersion,
       sbtVersion,
@@ -82,8 +91,8 @@ lazy val language = project.in(file("language")).configure(C.withCoverage())
 
 val Commands = config("commands")
 
-lazy val commands = project.in(file("commands")).configure(C.mavenPublish)
-  .settings(
+lazy val commands = project.in(file("commands")).configure(C.withCoverage())
+  .configure(C.mavenPublish).settings(
     name := "riddl-commands",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   ).dependsOn(utils % "compile->compile;test->test", language)
@@ -92,24 +101,17 @@ val TestKit = config("testkit")
 
 lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
-  .dependsOn(commands)
+  .dependsOn(commands % "compile->compile;test->test")
 
 val Prettify = config("prettify")
-lazy val prettify = project.in(file("prettify")).configure(C.mavenPublish)
+lazy val prettify = project.in(file("prettify")).configure(C.withCoverage())
+  .configure(C.mavenPublish)
   .settings(name := "riddl-prettify", libraryDependencies ++= Dep.testing)
   .dependsOn(commands, testkit % "test->compile").dependsOn(utils)
 
-val Diagrams = config("diagrams")
-lazy val diagrams: Project = project.in(file("diagrams"))
-  .configure(C.mavenPublish).settings(
-    name := "riddl-diagrams",
-    libraryDependencies ++= Dep.testing ++
-      Seq(Dep.structurizr, Dep.structurizr_export)
-  ).dependsOn(utils, commands, testkit % "test->compile")
-
 val HugoTrans = config("hugo")
-lazy val hugo: Project = project.in(file("hugo")).configure(C.mavenPublish)
-  .settings(
+lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage())
+  .configure(C.mavenPublish).settings(
     name := "riddl-hugo",
     Compile / unmanagedResourceDirectories += {
       baseDirectory.value / "resources"
@@ -118,11 +120,11 @@ lazy val hugo: Project = project.in(file("hugo")).configure(C.mavenPublish)
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
   .dependsOn(language % "compile->compile", commands, testkit % "test->compile")
-  .dependsOn(utils, diagrams)
+  .dependsOn(utils)
 
 lazy val GitCheck = config("git-check")
 lazy val `git-check`: Project = project.in(file("git-check"))
-  .configure(C.mavenPublish).settings(
+  .configure(C.withCoverage()).configure(C.mavenPublish).settings(
     name := "riddl-git-check",
     Compile / unmanagedResourceDirectories += {
       baseDirectory.value / "resources"
@@ -130,19 +132,6 @@ lazy val `git-check`: Project = project.in(file("git-check"))
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
   ).dependsOn(commands, testkit % "test->compile")
-
-//lazy val examples = project.in(file("examples")).configure(C.withScalaCompile)
-//  .settings(
-//    name := "riddl-examples",
-//    Compile / packageBin / publishArtifact := false,
-//    Compile / packageDoc / publishArtifact := false,
-//    Compile / packageSrc / publishArtifact := false,
-//    publishTo := Option(Resolver.defaultLocal),
-//    libraryDependencies ++=
-//      Seq("org.scalatest" %% "scalatest" % "3.2.13" % "test")
-//  ).dependsOn(hugo % "test->test", riddlc)
-
-// Define a `Configuration` for each project.
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),
@@ -166,11 +155,10 @@ lazy val scaladocSiteSettings = scaladocSiteProjects
 
 lazy val doc = project.in(file("doc"))
   .enablePlugins(ScalaUnidocPlugin, SitePlugin, SiteScaladocPlugin, HugoPlugin)
-  .configure(C.withInfo) // .configure(C.zipResource("hugo"))
+  .disablePlugins(ScoverageSbtPlugin).configure(C.withInfo)
   .configure(C.withScalaCompile).settings(scaladocSiteSettings).settings(
     name := "riddl-doc",
     publishTo := Option(Resolver.defaultLocal),
-    maintainer := "reid@ossuminc.com",
     // Hugo / baseURL := uri("https://riddl.tech"),
     SiteScaladoc / siteSubdirName := "api",
     ScalaUnidoc / unidoc / unidocProjectFilter :=
@@ -178,8 +166,8 @@ lazy val doc = project.in(file("doc"))
     ScalaUnidoc / scalaVersion := (compile / scalaVersion).value,
 
     /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
-  mkdir -p themes/hugo-geekdoc/
-  curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
+    mkdir -p themes/hugo-geekdoc/
+    curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
      */
     // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
     // siteSubdirName / ScalaUnidoc := "api",
@@ -203,12 +191,19 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   ).settings(
     name := "riddlc",
     mainClass := Option("com.reactific.riddl.RIDDLC"),
-    graalVMNativeImageOptions ++= Seq("--verbose", "--no-fallback"),
+    graalVMNativeImageOptions ++= Seq(
+      "--verbose",
+      "--no-fallback",
+      "--native-image-info",
+      "--enable-url-protocols=https,http",
+      "-H:ResourceConfigurationFiles=../../src/native-image.resources"
+    ),
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
 lazy val `plugin` = (project in file("sbt-riddl"))
-  .enablePlugins(SbtPlugin, BuildInfoPlugin).configure(C.mavenPublish).settings(
+  .enablePlugins(SbtPlugin, BuildInfoPlugin).disablePlugins(ScoverageSbtPlugin)
+  .configure(C.mavenPublish).settings(
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.17",

@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.utils
 
 import java.io.IOException
@@ -29,9 +35,7 @@ case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
   ): FileVisitResult = {
     val resolve = target.resolve(source.relativize(file))
     if (!file.getFileName.startsWith(".")) {
-      if (Files.exists(resolve)) {
-        Files.delete(resolve)
-      }
+      if (Files.exists(resolve)) { Files.delete(resolve) }
       Files.copy(file, resolve, StandardCopyOption.REPLACE_EXISTING)
     }
     FileVisitResult.CONTINUE

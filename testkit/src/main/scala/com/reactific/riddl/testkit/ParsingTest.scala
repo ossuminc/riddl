@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.AST.*
@@ -11,8 +17,6 @@ import org.scalatest.matchers.must.Matchers
 import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
-
-
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input) with Matchers {
@@ -213,8 +217,7 @@ class ParsingTest extends ParsingTestBase {
   }
 
   def checkFile(
-    @unused
-    label: String,
+    @unused label: String,
     fileName: String,
     directory: String = "testkit/src/test/input/"
   ): RootContainer = {

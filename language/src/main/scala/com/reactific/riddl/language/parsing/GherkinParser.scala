@@ -1,17 +1,7 @@
 /*
- * Copyright 2019 Reactific Software LLC
+ * Copyright 2019 Ossum, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.reactific.riddl.language.parsing
@@ -20,7 +10,8 @@ import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-/** Parsing rules for feature definitions This is based on Cucumber's Gherkin language.
+/** Parsing rules for feature definitions This is based on Cucumber's Gherkin
+  * language.
   *
   * @see
   *   https://cucumber.io/docs/gherkin/reference/
@@ -56,8 +47,8 @@ trait GherkinParser extends ActionParser {
 
   def buts[u: P]: P[Seq[ButClause]] = {
     P(
-      (location ~ (IgnoreCase(Keywords.else_) | IgnoreCase(Keywords.but)) ~/ anyAction)
-        .map(tpl => (ButClause.apply _).tupled(tpl)) ~
+      (location ~ (IgnoreCase(Keywords.else_) | IgnoreCase(Keywords.but)) ~/
+        anyAction).map(tpl => (ButClause.apply _).tupled(tpl)) ~
         (location ~ IgnoreCase(Readability.and) ~/ anyAction)
           .map(tpl => (ButClause.apply _).tupled(tpl)).rep(0)
     ).?.map {
@@ -66,21 +57,29 @@ trait GherkinParser extends ActionParser {
     }
   }
 
-  def exampleBody[u: P]: P[(Seq[GivenClause], Seq[WhenClause], Seq[ThenClause], Seq[ButClause])] = {
+  def exampleBody[
+    u: P
+  ]: P[(Seq[GivenClause], Seq[WhenClause], Seq[ThenClause], Seq[ButClause])] = {
     P(
       (givens.?.map(_.getOrElse(Seq.empty[GivenClause])) ~
         whens.?.map(_.getOrElse(Seq.empty[WhenClause])) ~ thens ~
-        buts.?.map(_.getOrElse(Seq.empty[ButClause]))) | undefined(
-        (Seq.empty[GivenClause], Seq.empty[WhenClause], Seq.empty[ThenClause], Seq.empty[ButClause])
-      )
+        buts.?.map(_.getOrElse(Seq.empty[ButClause]))) | undefined((
+        Seq.empty[GivenClause],
+        Seq.empty[WhenClause],
+        Seq.empty[ThenClause],
+        Seq.empty[ButClause]
+      ))
     )
   }
 
   def example[u: P]: P[Example] = {
     P(
-      location ~ (IgnoreCase(Keywords.example) | IgnoreCase(Keywords.scenario)) ~/ identifier ~
-        is.? ~ open ~/ exampleBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, (g, w, t, e), brief, desc) => Example(loc, id, g, w, t, e, brief, desc) }
+      location ~
+        (IgnoreCase(Keywords.example) | IgnoreCase(Keywords.scenario)) ~/
+        identifier ~ is.? ~ open ~/ exampleBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (g, w, t, e), brief, desc) =>
+      Example(loc, id, g, w, t, e, brief, desc)
+    }
   }
 
   def testedWithExamples[u: P]: P[Seq[Example]] = {
