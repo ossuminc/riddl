@@ -7,10 +7,8 @@
 package com.reactific.riddl.utils
 import java.io.PrintWriter
 import java.nio.file.Path
-import scala.collection.mutable
 
-trait OutputFile {
-  protected val sb: mutable.StringBuilder = new mutable.StringBuilder()
+trait OutputFile extends FileBuilder {
 
   def filePath: Path
 

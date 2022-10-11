@@ -54,7 +54,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def actor[u: P]: P[StoryActor] = {
     P(
-      location ~ Keywords.actor ~ identifier ~ is ~ literalString.? ~ briefly ~
+      location ~ Keywords.actor ~ identifier ~ is ~ literalString ~ briefly ~
         description
     ).map { case (loc, id, is_a, brief, description) =>
       StoryActor(loc, id, is_a, brief, description)

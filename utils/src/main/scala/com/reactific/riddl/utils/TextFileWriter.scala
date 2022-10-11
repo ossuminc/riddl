@@ -18,9 +18,6 @@ abstract class TextFileWriter extends OutputFile {
 
   override def toString: String = sb.toString
 
-  val newLine = System.lineSeparator()
-  def nl: this.type = { sb.append(newLine); this }
-
   def fillTemplateFromResource(
     resourceName: String,
     substitutions: Map[String, String]

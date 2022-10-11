@@ -66,6 +66,11 @@ case class HugoTranslatorState(
     this
   }
 
+  def makeFullName(definition: Definition): String = {
+    val defs = symbolTable.parentsOf(definition).reverse :+ definition
+    defs.map(_.id.format).mkString(".")
+  }
+
   def makeParents(stack: Seq[Definition]): Seq[String] = {
     // The stack goes from most nested to highest. We don't want to change the
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then

@@ -1817,7 +1817,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class StoryActor(
     loc: Location,
     id: Identifier,
-    is_a: Option[LiteralString],
+    is_a: LiteralString,
     brief: Option[LiteralString],
     description: Option[Description] = None)
       extends LeafDefinition with StoryDefinition {
@@ -1895,7 +1895,8 @@ object AST extends ast.Expressions with parsing.Terminals {
     benefit: LiteralString = LiteralString.empty)
       extends RiddlValue {
     override def format: String = {
-      s"I, as a ${actor.id.value}, want ${capability.s}, so that ${benefit.s}."
+      s"I, ${actor.id.value}, as a ${actor.is_a.s}, want ${capability
+          .s}, so that ${benefit.s}."
     }
 
   }

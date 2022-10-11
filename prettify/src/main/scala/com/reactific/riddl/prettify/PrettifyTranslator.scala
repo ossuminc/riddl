@@ -204,9 +204,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           val us = story.userStory.get
           val actor = us.actor
           st.openDef(story).add(Keywords.actor).add(actor.id.format).add(" is ")
-            .add(actor.is_a.map(_.format).getOrElse("\"\"")).nl
-            .add(Keywords.capability).add(" is ").add(us.capability.format).nl
-            .add(Keywords.benefit).add(" is ").add(us.benefit.format).nl
+            .add(actor.is_a.format).nl.add(Keywords.capability).add(" is ")
+            .add(us.capability.format).nl.add(Keywords.benefit).add(" is ")
+            .add(us.benefit.format).nl
         }
       }
     }

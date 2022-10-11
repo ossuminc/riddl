@@ -117,8 +117,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     )
     resources.foreach { resource =>
       val resourcePath = resourceDir + resource
-      val destination = path
-        .resolve(resource.replaceAll("/", File.pathSeparator))
+      val destination =
+        path.resolve(resource) // .replaceAll("/", File.pathSeparator))
       Files.createDirectories(destination.getParent)
       PathUtils.copyResource(resourcePath, destination)
     }
