@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package docs
 
 import com.reactific.riddl.translator.hugo.RunHugoTestBase
