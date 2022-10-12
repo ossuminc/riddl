@@ -17,20 +17,15 @@ import org.scalatest.wordspec.AnyWordSpec
 class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationMessage#format" should {
     "produce a correct string" in {
-      val msg = Message(
-        Location(1, 2, RiddlParserInput.empty),
-        "the_message",
-        Warning
-      )
+      val msg =
+        Message(Location(1, 2, RiddlParserInput.empty), "the_message", Warning)
       msg.format mustBe s"Warning: empty(1:2): the_message"
     }
     "compare based on locations" in {
-      val v1 =
-        Message(Location(1, 2, "the_source"), "the_message", Warning)
-      val v2 =
-        Message(Location(2, 3, "the_source"), "the_message", Warning)
+      val v1 = Message(Location(1, 2, "the_source"), "the_message", Warning)
+      val v2 = Message(Location(2, 3, "the_source"), "the_message", Warning)
       v1 < v2 mustBe true
-      v1 == v1 mustBe true
+      v1 == v2 mustBe false
     }
   }
 
@@ -76,11 +71,8 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
             EntityIsAggregate(Location())
           ),
           Location()
-        ).messages mustBe List(Message(
-          Location(),
-          "Options should not be repeated",
-          Error
-        ))
+        ).messages mustBe
+          List(Message(Location(), "Options should not be repeated", Error))
         case class IntOption(loc: Location, name: String) extends OptionValue
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
           List(

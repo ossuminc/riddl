@@ -139,6 +139,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           )
         case pipe: Pipe   => doPipe(state, pipe)
         case joint: Joint => doJoint(state, joint)
+        case actor: Actor => doActor(state, actor)
         case _: Field     => state // was handled by Type case in openContainer
         case _            =>
           // inlets and outlets handled by openProcessor
@@ -201,12 +202,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         if (story.userStory.isEmpty) {
           st.openDef(story, withBrace = false).add(" ??? ")
         } else {
-          val us = story.userStory.get
-          val actor = us.actor
-          st.openDef(story).add(Keywords.actor).add(actor.id.format).add(" is ")
-            .add(actor.is_a.map(_.format).getOrElse("\"\"")).nl
-            .add(Keywords.capability).add(" is ").add(us.capability.format).nl
-            .add(Keywords.benefit).add(" is ").add(us.benefit.format).nl
+          val us = story.userStory
+          val actor = us.actor.id
+          st.openDef(story).addIndent("actor").add(actor.format).add(" ")
+            .add(Readability.wants).add(" ").add(Readability.to)
+            .add(s"\"${us.capability.s}\" so that \"${us.benefit.s}\"").nl
         }
       }
     }
@@ -284,6 +284,13 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
 
     def closeOnClause(state: PrettifyState): PrettifyState = {
       state.withCurrent(_.outdent.addIndent("}\n"))
+    }
+
+    def doActor(state: PrettifyState, actor: Actor): PrettifyState = {
+      state.withCurrent(
+        _.add(s"actor ${actor.id.value} is \"${actor.is_a.s}\"")
+          .emitBrief(actor.brief).emitDescription(actor.description).nl
+      )
     }
 
     def doPipe(state: PrettifyState, pipe: Pipe): PrettifyState = {

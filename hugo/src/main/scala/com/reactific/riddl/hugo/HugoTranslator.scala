@@ -117,8 +117,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     )
     resources.foreach { resource =>
       val resourcePath = resourceDir + resource
-      val destination = path
-        .resolve(resource.replaceAll("/", File.pathSeparator))
+      val destination =
+        path.resolve(resource) // .replaceAll("/", File.pathSeparator))
       Files.createDirectories(destination.getParent)
       PathUtils.copyResource(resourcePath, destination)
     }
@@ -229,7 +229,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
-          case sa: StoryActor => state.addToGlossary(sa, stack)
+          case sa: Actor => state.addToGlossary(sa, stack)
           case sc: StoryCase  => state.addToGlossary(sc, stack)
           case _ =>
             require(requirement = false, "Failed to handle LeafDefinition")

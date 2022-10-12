@@ -16,10 +16,10 @@ domain Everything is {
     joint output is inlet Sink.Commands from pipe AChannel
   }
 
+  actor Author is "human" briefly "A scoundrel"
+
   story WritingABook is {
-    actor Author is "human" briefly "A scoundrel"
-    capability is "edit on the screen"
-    benefit is "revise content more easily"
+    actor ^Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
     example one {
       given "I need to write a book"

@@ -12,7 +12,7 @@ import fastparse.ScalaWhitespace.*
 
 trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
-  def storyDefRef[u: P]: P[StoryCaseUsesRefs[?]] = {
+  def storyDefRef[u: P]: P[StoryCaseRefs[?]] = {
     P(
       adaptorRef | entityRef | projectionRef | processorRef | sagaRef |
         storyRef | actorRef | contextRef
@@ -44,26 +44,18 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ Readability.is ~ open ~
-        (undefined((None, None, Seq.empty[InteractionStep])) |
-          ((Keywords.title ~ is ~ literalString).? ~ storyCaseScope.? ~
+        (undefined((LiteralString.empty, None, Seq.empty[InteractionStep])) |
+          (Keywords.title ~ is ~ literalString ~ storyCaseScope.? ~
             interactionSteps)) ~ close ~ briefly ~ description
     ).map { case (loc, id, (title, scope, steps), brief, description) =>
       StoryCase(loc, id, title, scope, steps, brief, description)
     }
   }
 
-  def actor[u: P]: P[StoryActor] = {
-    P(
-      location ~ Keywords.actor ~ identifier ~ is ~ literalString.? ~ briefly ~
-        description
-    ).map { case (loc, id, is_a, brief, description) =>
-      StoryActor(loc, id, is_a, brief, description)
-    }
-  }
   def userStory[u: P]: P[UserStory] = {
     P(
-      location ~ actor ~ Keywords.capability ~ is ~ literalString ~
-        Keywords.benefit ~ is ~ literalString
+      location ~ actorRef ~ Readability.wants ~ Readability.to.? ~
+        literalString ~ Readability.so ~ Readability.that.? ~ is ~ literalString
     ).map { case (loc, actor, capability, benefit) =>
       UserStory(loc, actor, capability, benefit)
     }
@@ -93,13 +85,8 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   }
 
   def storyBody[u: P]: P[
-    (
-      Seq[StoryOption],
-      Option[UserStory],
-      Seq[java.net.URL],
-      Seq[StoryDefinition]
-    )
-  ] = { P(storyOptions ~ userStory.? ~ shownBy ~ storyDefinitions)./ }
+    (Seq[StoryOption], UserStory, Seq[java.net.URL], Seq[StoryDefinition])
+  ] = { P(storyOptions ~ userStory ~ shownBy ~ storyDefinitions)./ }
 
   def story[u: P]: P[Story] = {
     P(

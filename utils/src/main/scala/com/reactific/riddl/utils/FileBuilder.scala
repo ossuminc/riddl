@@ -1,0 +1,13 @@
+package com.reactific.riddl.utils
+import scala.collection.mutable
+
+trait FileBuilder {
+
+  protected val sb: mutable.StringBuilder = new mutable.StringBuilder()
+
+  val newLine = System.lineSeparator()
+  def nl: this.type = { sb.append(newLine); this }
+
+  override def toString: String = sb.toString
+  def toLines: Seq[String]= sb.toString.split(newLine).toIndexedSeq
+}
