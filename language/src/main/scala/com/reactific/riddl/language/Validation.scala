@@ -485,54 +485,11 @@ object Validation {
                     step.loc,
                     s"Interactions must have a non-empty relationship"
                   )
-                ).step { vs =>
-                  step.relationship match {
-                    case AbstractInteraction(loc, how) => vs.checkThat(
-                        how.s.isEmpty
-                      )(_.addMissing(loc, s"Abstract relationship is empty"))
-                    case TellMessageInteraction(loc, message) =>
-                      vs.checkThat(message.isEmpty)(
-                        _.addMissing(loc, s"Message to tell is empty")
-                      ).checkThat(step.to.isInstanceOf[EntityRef])(
-                        _.addError(
-                          step.to.loc,
-                          s"${step.to.identify} should be an entity reference. "
-                        )
-                      )
-                    case PublishMessageInteraction(loc, message) => vs
-                        .checkThat(message.isEmpty)(
-                          _.addMissing(loc, s"Message to publish is empty")
-                        ).step { vs =>
-                          step.to match {
-                            case ProcessorRef(_, id) =>
-                              val proc = vs.resolvePath(id, parents)()().head
-                                .asInstanceOf[Processor]
-                              proc.shape match {
-                                case Source(_) => vs
-                                case other: ProcessorShape => vs.addError(
-                                    other.loc,
-                                    "Wrong kind of processor shape referenced"
-                                  )
-                              }
-                          }
-                        }.checkThat(step.to.isInstanceOf[ProcessorRef])(
-                          _.addError(
-                            step.to.loc,
-                            s"${step.to.identify} should be an processor reference. "
-                          )
-                        )
-                    case _ => vs.addError(step.loc, "Unknown interaction type!")
-                  }
-
-                }
+                )
             }
           ).last
       }.stepIf(sc.nonEmpty) { vs =>
-        vs.checkThat(sc.title.isEmpty)(
-          _.addMissing(sc.loc, s"${sc.identify} is missing a title")
-        ).checkThat(sc.scope.isEmpty)(
-          _.addError(sc.loc, s"${sc.identify} does not define a scope")
-        ).checkThat(sc.interactions.isEmpty)(
+        vs.checkThat(sc.interactions.isEmpty)(
           _.addMissing(
             sc.loc,
             s"${sc.identify} doesn't define any interactions"

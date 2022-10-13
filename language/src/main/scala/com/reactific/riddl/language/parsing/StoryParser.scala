@@ -12,71 +12,73 @@ import fastparse.ScalaWhitespace.*
 
 trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
-  def storyDefRef[u: P]: P[StoryCaseRefs[?]] = {
+  def storyCaseRef[u: P]: P[StoryCaseRef[Definition]] = {
     P(
-      adaptorRef | entityRef | projectionRef | processorRef | sagaRef |
-        storyRef | actorRef | contextRef
+      actorRef | adaptorRef | contextRef | entityRef | pipeRef | projectionRef |
+        sagaRef
     )
   }
 
-  def storyCaseScope[u: P]: P[StoryCaseScope] = {
-    P(location ~ Keywords.scope ~ domainRef ~ briefly).map {
-      case (loc, dr, br) => StoryCaseScope(loc, dr, br)
+  def arbitraryStep[u: P]: P[ArbitraryStep] = {
+    P(
+      location ~ Readability.from ~ storyCaseRef ~ literalString ~
+        Readability.to ~ storyCaseRef ~ briefly
+    ).map { case (loc, from, ls, to, brief) =>
+      ArbitraryStep(loc, from, ls, to, brief)
     }
   }
 
-  def abstractInteraction[u: P]: P[(AbstractInteraction, StoryCaseRefs[?])] = {
-    P(location ~ literalString ~ Readability.to.? ~ storyDefRef).map {
-      case (loc, ls, sdr) => AbstractInteraction(loc, ls) -> sdr
+  def tellMessageStep[u: P]: P[TellMessageStep] = {
+    P(
+      location ~ Readability.from ~ storyCaseRef ~ Keywords.tell ~
+        messageConstructor ~ Readability.to ~ storyCaseRef ~ briefly
+    )./.map { case (loc, from, mc, to, brief) =>
+      TellMessageStep(loc, from, mc, to, brief)
     }
   }
 
-  def tellInteraction[u: P]: P[(TellMessageInteraction, StoryCaseRefs[?])] = {
+  def publishMessageStep[u: P]: P[PublishMessageStep] = {
     P(
-      location ~ Keywords.tell ~ messageConstructor ~ Readability.to.? ~
-        entityRef
-    ).map { case (loc, mc, sdr) => TellMessageInteraction(loc, mc) -> sdr }
+      location ~ Readability.from ~ storyCaseRef ~ Keywords.publish ~
+        messageConstructor ~ Readability.to ~ pipeRef ~ briefly
+    )./.map { case (loc, msr, mc, pipe, brief) =>
+      PublishMessageStep(loc, msr, mc, pipe, brief)
+    }
   }
 
-  def publishInteraction[
-    u: P
-  ]: P[(PublishMessageInteraction, StoryCaseRefs[?])] = {
+  def subscribeToPipeStep[u: P]: P[SubscribeToPipeStep] = {
     P(
-      location ~ Keywords.publish ~ messageConstructor ~ Readability.to.? ~
-        processorRef
-    ).map { case (loc, mc, pr) => PublishMessageInteraction(loc, mc) -> pr }
+      location ~ Readability.from ~ storyCaseRef ~ literalString ~
+        Keywords.subscribe ~ Readability.to.? ~ pipeRef ~ briefly
+    )./.map { case (loc, from, lit, pipeRef, brief) =>
+      SubscribeToPipeStep(loc, from, lit, pipeRef, brief)
+    }
   }
 
-  def interactionRelationship[
-    u: P
-  ]: P[(InteractionRelationship, StoryCaseRefs[?])] = {
-    P(abstractInteraction./ | tellInteraction./ | publishInteraction./)
-  }
-
-  def interactionStep[u: P]: P[InteractionStep] = {
+  def sagaInitiationStep[u: P]: P[SagaInitiationStep] = {
     P(
-      location ~ Keywords.step ~ Readability.from.? ~ storyDefRef ~
-        interactionRelationship ~ briefly
-    )./.map { case (loc, from, ir, brief) =>
-      InteractionStep(loc, from, ir._1, ir._2, brief)
+      location ~ Readability.from ~ storyCaseRef ~ literalString ~ sagaRef ~
+        briefly
+    )./.map { case (loc, from, ls, to, brief) =>
+      SagaInitiationStep(loc, from, ls, to, brief)
     }
   }
 
   def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
     P(
-      Keywords.interaction ~ is ~ open ~
-        interactionStep.rep(0, Punctuation.comma) ~ close
-    )./
+      Keywords.step./ ~
+        (arbitraryStep | tellMessageStep | publishMessageStep |
+          subscribeToPipeStep | sagaInitiationStep)
+    ).rep(0, Punctuation.comma.?)
   }
 
   def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ Readability.is ~ open ~
-        (undefined((LiteralString.empty, None, Seq.empty[InteractionStep])) |
-          (Keywords.title ~ is ~ literalString ~ storyCaseScope.? ~
-            interactionSteps)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (title, scope, steps), brief, description) =>
-      StoryCase(loc, id, title, scope, steps, brief, description)
+        (undefined(Seq.empty[InteractionStep]) | interactionSteps) ~ close ~
+        briefly ~ description
+    ).map { case (loc, id, steps, brief, description) =>
+      StoryCase(loc, id, steps, brief, description)
     }
   }
 

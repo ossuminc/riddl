@@ -79,19 +79,14 @@ class StoryTest extends ValidatingTest {
           |  } briefly "nada" described as "nada"
           |  term 'conduct business' briefly "Any legal business activity supported by the terms of use."
           |  case primary is {
-          |    title: "Creating An Organization"
-          |    scope domain ImprovingApp briefly
-          |      "This domain is the smallest encapsulating domain that contains everything referenced by interactions"
-          |    interaction is {
-          |      step from actor ^^Owner "creates an Organization" to context OrganizationContext
-          |        briefly "initial invocation",
-          |      step from context OrganizationContext "send creation message" to entity Organization
-          |        briefly "send creation message",
-          |      step from entity Organization "add new organization" to projection OrganizationViews
-          |        briefly "add new organization",
-          |      step from entity Organization "organizationAdded" to actor ^^Owner
-          |        briefly "organization added"
-          |    }
+          |    step from actor ^^Owner "creates an Organization" to context OrganizationContext
+          |      briefly "initial invocation"
+          |    step from context OrganizationContext "send creation message" to entity Organization
+          |      briefly "send creation message"
+          |    step from entity Organization "add new organization" to projection OrganizationViews
+          |      briefly "add new organization"
+          |    step from entity Organization "organizationAdded" to actor ^^Owner
+          |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
@@ -107,5 +102,9 @@ class StoryTest extends ValidatingTest {
           succeed
       }
     }
+    "handle tell relationship" in { pending }
+    "handle publish relationship" in { pending }
+    "handle saga start relationship" in { pending }
+    "handle subscribe to pipe relationship" in { pending }
   }
 }
