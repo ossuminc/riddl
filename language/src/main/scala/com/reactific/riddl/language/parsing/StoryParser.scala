@@ -25,12 +25,40 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
+  def abstractInteraction[u: P]: P[(AbstractInteraction, StoryCaseRefs[?])] = {
+    P(location ~ literalString ~ Readability.to.? ~ storyDefRef).map {
+      case (loc, ls, sdr) => AbstractInteraction(loc, ls) -> sdr
+    }
+  }
+
+  def tellInteraction[u: P]: P[(TellMessageInteraction, StoryCaseRefs[?])] = {
+    P(
+      location ~ Keywords.tell ~ messageConstructor ~ Readability.to.? ~
+        entityRef
+    ).map { case (loc, mc, sdr) => TellMessageInteraction(loc, mc) -> sdr }
+  }
+
+  def publishInteraction[
+    u: P
+  ]: P[(PublishMessageInteraction, StoryCaseRefs[?])] = {
+    P(
+      location ~ Keywords.publish ~ messageConstructor ~ Readability.to.? ~
+        processorRef
+    ).map { case (loc, mc, pr) => PublishMessageInteraction(loc, mc) -> pr }
+  }
+
+  def interactionRelationship[
+    u: P
+  ]: P[(InteractionRelationship, StoryCaseRefs[?])] = {
+    P(abstractInteraction./ | tellInteraction./ | publishInteraction./)
+  }
+
   def interactionStep[u: P]: P[InteractionStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ storyDefRef ~
-        literalString ~ Readability.to.? ~ storyDefRef ~ briefly
-    )./.map { case (loc, from, how, to, brief) =>
-      InteractionStep(loc, from, to, how.s, brief)
+        interactionRelationship ~ briefly
+    )./.map { case (loc, from, ir, brief) =>
+      InteractionStep(loc, from, ir._1, ir._2, brief)
     }
   }
 

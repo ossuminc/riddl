@@ -103,7 +103,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): PrettifyState = {
       container match {
-        case s: Story           => openStory(state, s)
+        case story: Story => openStory(state, story)
+        // FIXME: Implement StoryCase, Interactions, etc.
         case domain: Domain     => openDomain(state, domain)
         case adaptor: Adaptor   => openAdaptor(state, adaptor)
         case typ: Type          => state.current.emitType(typ); state

@@ -1839,6 +1839,17 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = None)
       extends BrieflyDescribedValue
 
+  sealed trait InteractionRelationship extends RiddlValue
+
+  case class AbstractInteraction(loc: Location, how: LiteralString)
+      extends InteractionRelationship
+  case class TellMessageInteraction(loc: Location, message: MessageConstructor)
+      extends InteractionRelationship
+  case class PublishMessageInteraction(
+    loc: Location,
+    message: MessageConstructor)
+      extends InteractionRelationship
+
   /** One step in an Interaction between things
     * @param loc
     *   The location of the step definition
@@ -1852,8 +1863,8 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class InteractionStep(
     loc: Location,
     from: StoryCaseRefs[?],
+    relationship: InteractionRelationship,
     to: StoryCaseRefs[?],
-    relationship: String = "uses",
     brief: Option[LiteralString] = None)
       extends BrieflyDescribedValue
 
@@ -2028,8 +2039,8 @@ object AST extends ast.Expressions with parsing.Terminals {
       with DomainDefinition {
 
     override lazy val contents: Seq[DomainDefinition] = {
-      super.contents ++ domains ++ types ++ contexts ++ plants ++ stories ++
-        terms ++ authors
+      super.contents ++ domains ++ types ++ contexts ++ plants ++ actors ++
+        stories ++ terms ++ authors
     }
     final val kind: String = "Domain"
 
