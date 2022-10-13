@@ -75,7 +75,7 @@ object C {
   lazy val scala3_2_Options: Seq[String] =
     Seq("-deprecation", "-feature", "-Werror")
   lazy val scala2_13_Options: Seq[String] = Seq(
-    "-target:17",
+    "-release:17",
     // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
     "-Xsource:3",
     "-Wdead-code",
@@ -101,7 +101,7 @@ object C {
 
   def withScalaCompile(p: Project): Project = {
     p.configure(withInfo).settings(
-      scalaVersion := "2.13.8",
+      scalaVersion := "2.13.10",
       scalacOptions := {
         if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
         else if (scalaVersion.value.startsWith("2.13")) { scala2_13_Options }
