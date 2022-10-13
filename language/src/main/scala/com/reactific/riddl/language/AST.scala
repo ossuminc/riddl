@@ -89,7 +89,7 @@ object AST extends ast.Expressions with parsing.Terminals {
 
     override def brief: Option[LiteralString] = None
     final val kind: String = "Root"
-
+    def format: String = ""
   }
 
   object RootContainer {
@@ -188,6 +188,7 @@ object AST extends ast.Expressions with parsing.Terminals {
       }
     }
     final val kind: String = "Type"
+    def format: String = ""
   }
   type Command = Type
   type Event = Type
@@ -350,6 +351,15 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def format: String = s"publish ${msg.format} to ${pipe.format}"
   }
 
+  case class SubscribeAction(
+    loc: Location,
+    msgs: MessageConstructor,
+    pipe: PipeRef,
+    description: Option[Description] = None)
+      extends Action {
+    def format: String = ""
+  }
+
   case class FunctionCallAction(
     loc: Location,
     function: PathIdentifier,
@@ -489,7 +499,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The strings that define the scenario
     */
   case class GivenClause(loc: Location, scenario: Seq[LiteralString])
-      extends GherkinClause
+      extends GherkinClause {
+    def format: String = ""
+  }
 
   /** A [[GherkinClause]] for the When part of a Gherkin [[Example]]
     *
@@ -499,7 +511,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The condition expression that defines the trigger for the [[Example]]
     */
   case class WhenClause(loc: Location, condition: Condition)
-      extends GherkinClause
+      extends GherkinClause {
+    def format: String = ""
+  }
 
   /** A [[GherkinClause]] for the Then part of a Gherkin [[Example]]. This part
     * specifies what should be done if the [[WhenClause]] evaluates to true.
@@ -509,7 +523,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     * @param action
     *   The action to be performed
     */
-  case class ThenClause(loc: Location, action: Action) extends GherkinClause
+  case class ThenClause(loc: Location, action: Action) extends GherkinClause {
+    def format: String = ""
+  }
 
   /** A [[GherkinClause]] for the But part of a Gherkin [[Example]]. This part
     * specifies what should be done if the [[WhenClause]] evaluates to false.
@@ -519,7 +535,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     * @param action
     *   The action to be performed
     */
-  case class ButClause(loc: Location, action: Action) extends GherkinClause
+  case class ButClause(loc: Location, action: Action) extends GherkinClause {
+    def format: String = ""
+  }
 
   /** A Gherkin example. Examples have names, [[id]], and a sequence of each of
     * the four kinds of Gherkin clauses: [[GivenClause]], [[WhenClause]],
@@ -558,6 +576,7 @@ object AST extends ast.Expressions with parsing.Terminals {
       with FunctionDefinition
       with StoryDefinition {
     final val kind: String = "Example"
+    def format: String = ""
     override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
       thens.isEmpty && buts.isEmpty
   }
@@ -674,7 +693,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Entity] {
+      extends StoryCaseRef[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
@@ -788,6 +807,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     description: Option[Description] = None)
       extends LeafDefinition with EntityDefinition {
     override def isEmpty: Boolean = expression.isEmpty
+    def format: String = ""
     final val kind: String = "Invariant"
   }
 
@@ -816,8 +836,8 @@ object AST extends ast.Expressions with parsing.Terminals {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
     override def isEmpty: Boolean = examples.isEmpty
     override def contents: Seq[Example] = examples
+    def format: String = ""
     final val kind: String = "On Clause"
-
   }
 
   sealed abstract class HandlerOption(val name: String) extends OptionValue
@@ -912,6 +932,7 @@ object AST extends ast.Expressions with parsing.Terminals {
 
     override def contents: Seq[StateDefinition] = aggregation.fields ++ types ++
       handlers
+    def format: String = ""
     final val kind: String = "State"
   }
 
@@ -1022,8 +1043,8 @@ object AST extends ast.Expressions with parsing.Terminals {
     description: Option[Description] = None)
       extends Adaptation {
     override def contents: Seq[Example] = examples
+    def format: String = ""
     final val kind: String = "Event Command Adaptation"
-
   }
 
   /** The specification of a single adaptation based on message
@@ -1054,6 +1075,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     description: Option[Description] = None)
       extends Adaptation {
     override def contents: Seq[Example] = examples
+    def format: String = ""
     final val kind: String = "Command Command Adaptation"
   }
 
@@ -1083,6 +1105,7 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends Adaptation {
     def contents: Seq[Example] = examples
     override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
+    def format: String = ""
     final val kind: String = "Event Action Adaptation"
   }
 
@@ -1143,7 +1166,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class AdaptorRef(
     loc: Location,
     id: PathIdentifier)
-      extends StoryCaseRefs[Adaptor] {
+      extends StoryCaseRef[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
@@ -1189,7 +1212,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Projection] {
+      extends StoryCaseRef[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1311,7 +1334,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Context] with StoryCaseScopeRefs {
+      extends StoryCaseRef[Context] {
     override def format: String = s"context ${id.format}"
   }
 
@@ -1337,6 +1360,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     description: Option[Description] = None)
       extends LeafDefinition with PlantDefinition with ContextDefinition {
     override def isEmpty: Boolean = transmitType.isEmpty
+    def format: String = ""
     final val kind: String = "Pipe"
   }
 
@@ -1365,6 +1389,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends Streamlet with AlwaysEmpty {
+    def format: String = ""
     final val kind: String = "Inlet"
   }
 
@@ -1389,6 +1414,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends Streamlet with AlwaysEmpty {
+    def format: String = ""
     final val kind: String = "Outlet"
   }
 
@@ -1397,30 +1423,37 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class Source(loc: Location) extends ProcessorShape {
+    def format: String = ""
     def keyword: String = Keywords.source
   }
 
   case class Sink(loc: Location) extends ProcessorShape {
+    def format: String = ""
     def keyword: String = Keywords.sink
   }
 
   case class Flow(loc: Location) extends ProcessorShape {
+    def format: String = ""
     def keyword: String = Keywords.flow
   }
 
   case class Merge(loc: Location) extends ProcessorShape {
+    def format: String = ""
     def keyword: String = Keywords.merge
   }
 
   case class Split(loc: Location) extends ProcessorShape {
+    def format: String = ""
     def keyword: String = Keywords.split
   }
 
   case class Multi(loc: Location) extends ProcessorShape {
+    def format: String = ""
     def keyword: String = Keywords.multi
   }
 
   case class Void(loc: Location) extends ProcessorShape {
+    def format: String = ""
     override def keyword: String = Keywords.void
   }
 
@@ -1521,7 +1554,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProcessorRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Processor] {
+      extends Reference[Processor] {
     override def format: String = s"${Keywords.processor} ${id.format}"
   }
 
@@ -1533,7 +1566,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced pipe.
     */
   case class PipeRef(loc: Location, id: PathIdentifier)
-      extends Reference[Pipe] {
+      extends StoryCaseRef[Pipe] {
     override def format: String = s"pipe ${id.format}"
   }
 
@@ -1599,6 +1632,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Joint {
+    def format: String = ""
     final val kind: String = "Inlet Joint"
   }
 
@@ -1625,6 +1659,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Joint {
+    def format: String = ""
     final val kind: String = "Outlet Joint"
   }
 
@@ -1714,6 +1749,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     description: Option[Description] = None)
       extends SagaDefinition {
     def contents: Seq[Example] = examples
+    def format: String = ""
     final val kind: String = "SagaStep"
   }
 
@@ -1798,7 +1834,9 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class SagaRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Saga]
+      extends StoryCaseRef[Saga] {
+    def format: String = ""
+  }
 
   /** An StoryActor (Role) who is the initiator of the user story. Actors may be
     * persons or machines
@@ -1821,6 +1859,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString],
     description: Option[Description] = None)
       extends LeafDefinition with DomainDefinition {
+    def format: String = ""
     override def kind: String = "Actor"
   }
 
@@ -1831,42 +1870,92 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier that locates the references StoryActor
     */
   case class ActorRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Actor]
+      extends StoryCaseRef[Actor] {
+    override def format: String = ""
+  }
 
-  case class StoryCaseScope(
-    loc: Location,
-    domainRef: DomainRef,
-    brief: Option[LiteralString] = None)
-      extends BrieflyDescribedValue
-
-  /** One step in an Interaction between things
-    * @param loc
-    *   The location of the step definition
-    * @param step
-    *   the number of the step
-    * @param from
-    *   The CaseElement for the origin of the interaction
-    * @param to
-    *   The CaseElement for the destination of the interaction
+  /** One abstract step in an Interaction between things. The set of case
+    * classes associated with this sealed trait provide more type specificity to
+    * these three fields.
     */
-  case class InteractionStep(
+  sealed trait InteractionStep extends RiddlValue with BrieflyDescribedValue {
+    def from: Reference[Definition]
+    def relationship: RiddlNode
+    def to: Reference[Definition]
+  }
+
+  /** An arbitrary interaction step. The abstract nature of the relationship is
+    *
+    * @param loc
+    *   The location of the step
+    * @param from
+    *   A reference to the source of the interaction
+    * @param relationship
+    *   A literal spring that specifies the arbitrary relationship
+    * @param to
+    *   A reference to the destination of the interaction
+    * @param brief
+    *   A brief description of the interaction
+    */
+  case class ArbitraryStep(
     loc: Location,
-    from: StoryCaseRefs[?],
-    to: StoryCaseRefs[?],
-    relationship: String = "uses",
+    from: StoryCaseRef[Definition],
+    relationship: LiteralString,
+    to: StoryCaseRef[Definition],
     brief: Option[LiteralString] = None)
-      extends BrieflyDescribedValue
+      extends InteractionStep {
+    override def format: String = ""
+  }
+
+  case class TellMessageStep(
+    loc: Location,
+    from: StoryCaseRef[Definition],
+    relationship: MessageConstructor,
+    to: StoryCaseRef[Definition],
+    brief: Option[LiteralString] = None)
+      extends InteractionStep {
+    override def format: String = ""
+  }
+
+  case class PublishMessageStep(
+    loc: Location,
+    from: StoryCaseRef[Definition],
+    relationship: MessageConstructor,
+    to: PipeRef,
+    brief: Option[LiteralString] = None)
+      extends InteractionStep {
+    override def format: String = ""
+  }
+
+  case class SubscribeToPipeStep(
+    loc: Location,
+    from: StoryCaseRef[Definition],
+    relationship: LiteralString,
+    to: PipeRef,
+    brief: Option[LiteralString] = None)
+      extends InteractionStep {
+    override def format: String = ""
+
+  }
+  case class SagaInitiationStep(
+    loc: Location,
+    from: StoryCaseRef[Definition],
+    relationship: LiteralString,
+    to: SagaRef,
+    brief: Option[LiteralString] = None)
+      extends InteractionStep {
+    override def format: String = ""
+  }
 
   case class StoryCase(
     loc: Location,
     id: Identifier,
-    title: LiteralString = LiteralString.empty,
-    scope: Option[StoryCaseScope] = None,
     interactions: Seq[InteractionStep],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with StoryDefinition {
     override def kind: String = "StoryCase"
+    override def format: String = ""
   }
 
   sealed abstract class StoryOption(val name: String) extends OptionValue
@@ -1893,7 +1982,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     actor: ActorRef,
     capability: LiteralString,
     benefit: LiteralString)
-      extends RiddlValue
+      extends RiddlValue {
+    def format: String = ""
+  }
 
   /** The definition of an agile user story. Stories define functionality from
     * the perspective of a certain kind of user (man or machine), interacting
@@ -1955,7 +2046,9 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class StoryRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Saga]
+      extends Reference[Story] {
+    def format: String = ""
+  }
 
   /** Base trait for all options a Domain can have.
     */
@@ -2028,8 +2121,8 @@ object AST extends ast.Expressions with parsing.Terminals {
       with DomainDefinition {
 
     override lazy val contents: Seq[DomainDefinition] = {
-      super.contents ++ domains ++ types ++ contexts ++ plants ++ stories ++
-        terms ++ authors
+      super.contents ++ domains ++ types ++ contexts ++ plants ++ actors ++
+        stories ++ terms ++ authors
     }
     final val kind: String = "Domain"
 
@@ -2052,7 +2145,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced domain.
     */
   case class DomainRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRefs[Domain] with StoryCaseScopeRefs {
+      extends Reference[Domain] {
     override def format: String = s"domain ${id.format}"
   }
 

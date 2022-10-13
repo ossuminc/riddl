@@ -145,4 +145,5 @@ trait ReferenceParser extends CommonParser {
         projectionRef.asInstanceOf[P[Reference[K]]]
     }
   }
+
 }

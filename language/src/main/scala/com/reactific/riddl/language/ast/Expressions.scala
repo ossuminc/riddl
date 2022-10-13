@@ -436,19 +436,25 @@ trait Expressions extends TypeExpression {
     loc: Location,
     name: String,
     args: Seq[Expression])
-      extends TimeExpression(loc)
+      extends TimeExpression(loc) {
+    def format: String = ""
+  }
 
   case class DateFunction(loc: Location, name: String, args: Seq[Expression])
       extends TimeExpression(loc) {
     override def expressionType: TypeExpression = Date(loc)
+    def format: String = ""
   }
 
   case class NumberFunction(loc: Location, name: String, args: Seq[Expression])
-      extends NumericExpression(loc)
+      extends NumericExpression(loc) {
+    def format: String = ""
+  }
 
   case class StringFunction(loc: Location, name: String, args: Seq[Expression])
       extends Expression {
     override def expressionType: TypeExpression = Strng(loc)
+    def format: String = ""
   }
 
 }
