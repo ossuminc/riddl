@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
@@ -220,10 +226,8 @@ class ParsingTest extends ParsingTestBase {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
     TopLevelParser.parse(rpi) match {
-      case Left(errors) =>
-        val msg = errors.map(_.format).mkString("\n")
-        fail(msg)
-      case Right(rc) => rc
+      case Left(errors) => fail(errors.format)
+      case Right(root)  => root
     }
   }
 

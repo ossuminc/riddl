@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
@@ -20,6 +26,7 @@ class TopLevelParserTest extends ParsingTestBase {
     Identifier(Location(1, 8, rip), "foo"),
     Seq.empty[DomainOption],
     Seq.empty[Author],
+    List(),
     List(),
     List(),
     List(),

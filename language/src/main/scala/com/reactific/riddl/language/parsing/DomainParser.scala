@@ -33,9 +33,18 @@ trait DomainParser
 
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (author | typeDef | context | plant | story | domain | term | importDef |
-        domainInclude).rep(0)
+      (author | typeDef | context | plant | actor | story | domain | term |
+        importDef | domainInclude).rep(0)
     )
+  }
+
+  def actor[u: P]: P[Actor] = {
+    P(
+      location ~ Keywords.actor ~ identifier ~/ is ~ literalString ~ briefly ~
+        description
+    ).map { case (loc, id, is_a, brief, description) =>
+      Actor(loc, id, is_a, brief, description)
+    }
   }
 
   def domain[u: P]: P[Domain] = {
@@ -52,6 +61,7 @@ trait DomainParser
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
+      val actors = mapTo[Actor](groups.get(classOf[Actor]))
       val includes = mapTo[Include[DomainDefinition]](groups.get(
         classOf[Include[DomainDefinition]]
       ))
@@ -63,6 +73,7 @@ trait DomainParser
         types,
         contexts,
         plants,
+        actors,
         stories,
         subdomains,
         terms,

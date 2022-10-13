@@ -237,7 +237,10 @@ trait Terminals {
     final val is = "is"
     final val of = "of"
     final val on = "on"
+    final val so = "so"
+    final val that = "that"
     final val to = "to"
+    final val wants = "wants"
     final val with_ = "with"
   }
 

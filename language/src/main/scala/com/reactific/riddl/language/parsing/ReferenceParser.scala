@@ -125,9 +125,9 @@ trait ReferenceParser extends CommonParser {
       .map(tpl => (StoryRef.apply _).tupled(tpl))
   }
 
-  def actorRef[u: P]: P[StoryActorRef] = {
+  def actorRef[u: P]: P[ActorRef] = {
     P(location ~ Keywords.actor ~ pathIdentifier)
-      .map(tpl => (StoryActorRef.apply _).tupled(tpl))
+      .map(tpl => (ActorRef.apply _).tupled(tpl))
   }
 
   def reference[u: P, K <: Definition: ClassTag]: P[Reference[K]] = {
