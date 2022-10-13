@@ -21,7 +21,7 @@ trait AbstractDefinitions extends Terminals {
   trait RiddlNode {
 
     /** Format the node to a string */
-    def format: String = ""
+    def format: String
 
     /** Determine if this node is a container or not */
     def isContainer: Boolean = false
@@ -43,8 +43,6 @@ trait AbstractDefinitions extends Terminals {
 
     /** The location in the parse at which this RiddlValue occurs */
     def loc: Location
-
-    def format: String
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -119,7 +117,9 @@ trait AbstractDefinitions extends Terminals {
   case class BlockDescription(
     loc: Location = Location.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends Description {}
+      extends Description {
+    def format: String = ""
+  }
 
   case class FileDescription(
     loc: Location,
@@ -129,6 +129,7 @@ trait AbstractDefinitions extends Terminals {
       val src = scala.io.Source.fromFile(file.toFile)
       src.getLines().toSeq.map(LiteralString(loc, _))
     }
+    def format: String = ""
   }
 
   trait BrieflyDescribedValue extends RiddlValue {
@@ -284,7 +285,7 @@ trait AbstractDefinitions extends Terminals {
     description: Option[Description] = None)
       extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = description.isEmpty
-
+    def format: String = ""
     final val kind: String = "Term"
   }
 
@@ -315,7 +316,7 @@ trait AbstractDefinitions extends Terminals {
     def description: Option[Description] = None
 
     override def isRootContainer: Boolean = true
-
+    def format: String = ""
     final val kind: String = "Include"
 
   }
@@ -357,6 +358,7 @@ trait AbstractDefinitions extends Terminals {
     }
 
     final val kind: String = "Author"
+    def format: String = ""
   }
 
   trait WithAuthors extends Definition {
@@ -415,11 +417,8 @@ trait AbstractDefinitions extends Terminals {
   /** Base trait of definitions that are in the body of a Story definition */
   trait StoryDefinition extends Definition
 
-  /** Base trait of definitions that can bound scope of a Story */
-  trait StoryCaseScopeRefs
-
   /** Base trait of definitions that can be used in a Story */
-  trait StoryCaseRefs[T <: Definition] extends Reference[T]
+  trait StoryCaseRef[+T <: Definition] extends Reference[T]
 
   trait VitalDefinitionDefinition
       extends AdaptorDefinition

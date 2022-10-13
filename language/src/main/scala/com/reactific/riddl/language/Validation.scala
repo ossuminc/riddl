@@ -293,7 +293,7 @@ object Validation {
         s"${t.identify} should start with a capital letter",
         StyleWarning,
         t.loc
-      ).checkIf(!t.typ.isInstanceOf[AggregateTypeExpression]) { vs =>
+      ).checkThat(!t.typ.isInstanceOf[AggregateTypeExpression]) { vs =>
         vs.checkTypeExpression(t.typ, t, parents)
       }.checkDescription(t)
     }
@@ -330,7 +330,7 @@ object Validation {
       oc: OnClause,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkIf(oc.msg.nonEmpty) { st =>
+      checkThat(oc.msg.nonEmpty) { st =>
         st.checkMessageRef(oc.msg, oc, parents, oc.msg.messageKind)
       }.checkDescription(oc)
     }
@@ -449,7 +449,7 @@ object Validation {
       s: Story,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, s).checkIf(s.userStory.isEmpty) {
+      checkContainer(parents.headOption, s).checkThat(s.userStory.isEmpty) {
         vs: ValidationState =>
           vs.addMissing(s.loc, s"${s.identify} is missing a user story")
       }.checkExamples(s.examples, parents).checkDescription(s)
@@ -459,7 +459,7 @@ object Validation {
       @unused sa: Actor,
       @unused parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(sa, parents.head).checkIf(sa.is_a.isEmpty) { vs =>
+      checkDefinition(sa, parents.head).checkThat(sa.is_a.isEmpty) { vs =>
         vs.addMissing(
           sa.loc,
           s"${sa.identify} is missing its role kind ('is a')"
@@ -474,24 +474,22 @@ object Validation {
     ): ValidationState = {
       checkDefinition(sc, parents.head).stepIf(sc.interactions.nonEmpty) {
         state =>
-          (for {
-            interaction <- sc.interactions
-          } yield {
-            state.checkPathRef[Definition](interaction.from.id, sc, parents)()()
-              .checkPathRef[Definition](interaction.to.id, sc, parents)()()
-              .checkIf(interaction.relationship.isEmpty)(
-                _.addMissing(
-                  interaction.loc,
-                  s"Interactions must have a non-empty relationship"
+          (
+            for {
+              step <- sc.interactions
+            } yield {
+              state.checkPathRef[Definition](step.from.id, sc, parents)()()
+                .checkPathRef[Definition](step.to.id, sc, parents)()()
+                .checkThat(step.relationship.isEmpty)(
+                  _.addMissing(
+                    step.loc,
+                    s"Interactions must have a non-empty relationship"
+                  )
                 )
-              )
-          }).last
+            }
+          ).last
       }.stepIf(sc.nonEmpty) { vs =>
-        vs.checkIf(sc.title.isEmpty)(
-          _.addMissing(sc.loc, s"${sc.identify} is missing a title")
-        ).checkIf(sc.scope.isEmpty)(
-          _.addError(sc.loc, s"${sc.identify} does not define a scope")
-        ).checkIf(sc.interactions.isEmpty)(
+        vs.checkThat(sc.interactions.isEmpty)(
           _.addMissing(
             sc.loc,
             s"${sc.identify} doesn't define any interactions"
@@ -581,7 +579,7 @@ object Validation {
       else { this }
     }
 
-    def checkIf(
+    def checkThat(
       predicate: Boolean = true
     )(f: ValidationState => ValidationState
     ): ValidationState = {
@@ -1141,7 +1139,7 @@ object Validation {
         }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
       }.checkSequence(whens) { (st, when) =>
         st.checkExpression(when.condition, example, parents)
-      }.checkIf(example.id.nonEmpty) { st =>
+      }.checkThat(example.id.nonEmpty) { st =>
         st.checkNonEmpty(thens, "Thens", example, required = true)
       }.checkActions(thens.map(_.action), example, parents)
         .checkActions(buts.map(_.action), example, parents)
