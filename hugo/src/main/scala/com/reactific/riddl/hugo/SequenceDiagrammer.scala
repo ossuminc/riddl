@@ -20,15 +20,19 @@ case class SequenceDiagrammer(
       interaction <- cs.interactions
     } yield { Seq(interaction.from, interaction.to) }
   }.flatten.distinctBy(_.id.value).map { ref: Reference[?] =>
-    val definition = state.resolvePath(ref.id, parents)()().head
-    ref.id.value -> definition
+    state.pathIdToDefinition(ref.id, parents) match {
+      case Some(definition) => ref.id.value -> definition
+      case None => throw new IllegalStateException(
+          s"Pre-validated PathId not found: ${ref.identify}"
+        )
+    }
   }.toMap
 
   def makeParticipant(definition: Definition): Unit = {
     val name = definition.id.value
     definition match {
-      case _: Actor      => sb.append(s"  actor ${name}"); nl
-      case _: Definition => sb.append(s"  participant ${name}"); nl
+      case _: Actor      => sb.append(s"  actor $name"); nl
+      case _: Definition => sb.append(s"  participant $name"); nl
     }
   }
 
@@ -36,15 +40,16 @@ case class SequenceDiagrammer(
     val name = definition.id.value
     val link = state.makeDocLink(definition)
     definition match {
-      case _: Actor      => sb.append(s"  link ${name}: Definition @ $link"); nl
-      case _: Definition => sb.append(s"  link ${name}: Definition @ $link"); nl
+      case _: Actor      => sb.append(s"  link $name: Definition @ $link"); nl
+      case _: Definition => sb.append(s"  link $name: Definition @ $link"); nl
     }
   }
 
   sb.append("sequenceDiagram"); nl
   sb.append("  autonumber"); nl
-  participants.foreach(x => makeParticipant(x._2))
-  participants.foreach(x => makeLink(x._2))
+  val parts: Seq[Definition] = participants.values.toSeq.sortBy(_.kind)
+  parts.foreach(x => makeParticipant(x))
+  parts.foreach(x => makeLink(x))
 
   for { cse <- story.cases } {
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl

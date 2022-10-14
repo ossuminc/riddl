@@ -809,15 +809,18 @@ case class MarkdownWriter(
     val parents = state.makeParents(stack)
     emitDefDoc(story, parents)
     if (story.userStory.nonEmpty) {
-      h2("User Story")
-      val actor: Actor = state.resolvePath(story.userStory.actor.id, stack)()()
-        .head.asInstanceOf[Actor]
-      val role = actor.is_a
-      val benefit = story.userStory.benefit.s
-      val capability = story.userStory.capability.s
-      val storyText =
-        s"I, ${actor.id.value}, as a $role, want $capability so that $benefit"
-      p(italic(storyText))
+      val defs = state.resolvePath(story.userStory.actor.id, stack)()()
+      if (defs.nonEmpty) {
+        h2("User Story")
+        val actor: Actor = defs.head.asInstanceOf[Actor]
+        val name = actor.id.value
+        val role = actor.is_a
+        val benefit = story.userStory.benefit.s
+        val capability = story.userStory.capability.s
+        val storyText =
+          s"I, $name, as a $role, want $capability so that $benefit"
+        p(italic(storyText))
+      }
     }
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
     h2("Sequence Diagram")
