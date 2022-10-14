@@ -10,7 +10,7 @@ runs:
         distribution: 'temurin'
         java-version: '17'
     - run: |
-        version="0.15.3"
+        version="0.16.1"
         wget --quiet https://github.com/reactific/riddl/releases/download/${version}/riddlc-${version}.zip
         unzip riddlc-${version}.zip
         export RIDDLC="$(pwd)/riddlc-${version}/bin"
