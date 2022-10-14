@@ -804,6 +804,24 @@ case class MarkdownWriter(
     emitIndex("Saga", saga, parents)
   }
 
+  def emitApplication(
+    application: Application,
+    stack: Seq[Definition]
+  ): this.type = {
+    containerHead(application, "Applicaiton")
+    val parents = state.makeParents(stack)
+    emitDefDoc(application, parents)
+    if (application.displays.nonEmpty) {
+      h2("Displays")
+      list(application.displays.map(_.format))
+    }
+    if (application.forms.nonEmpty) {
+      h2("Forms")
+      list(application.forms.map(_.format))
+    }
+    emitUsage(application)
+    emitTerms(application.terms)
+  }
   def emitStory(story: Story, stack: Seq[Definition]): this.type = {
     containerHead(story, "Story")
     val parents = state.makeParents(stack)
