@@ -296,7 +296,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = $themes
-       |       
+       |
        |# Author information from config
        |[author]
        |    name = "${auth.name.s}"

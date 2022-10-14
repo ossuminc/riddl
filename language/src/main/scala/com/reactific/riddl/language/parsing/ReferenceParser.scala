@@ -130,6 +130,21 @@ trait ReferenceParser extends CommonParser {
       .map(tpl => (ActorRef.apply _).tupled(tpl))
   }
 
+  def applicationRef[u: P]: P[ApplicationRef] = {
+    P(location ~ Keywords.application ~ pathIdentifier)
+      .map(tpl => (ApplicationRef.apply _).tupled(tpl))
+  }
+
+  def displayRef[u: P]: P[DisplayRef] = {
+    P(location ~ Keywords.display ~ pathIdentifier)
+      .map(tpl => (DisplayRef.apply _).tupled(tpl))
+  }
+
+  def formRef[u: P]: P[FormRef] = {
+    P(location ~ Keywords.form ~ pathIdentifier)
+      .map(tpl => (FormRef.apply _).tupled(tpl))
+  }
+
   def reference[u: P, K <: Definition: ClassTag]: P[Reference[K]] = {
     val clazz = classTag[K].runtimeClass
     val context = classOf[Context]

@@ -88,6 +88,7 @@ trait Terminals {
     final val append = "append"
     final val application = "application"
     final val ask = "ask"
+    final val arbitrary = "arbitrary"
     final val author = "author"
     final val background = "background"
     final val become = "become"

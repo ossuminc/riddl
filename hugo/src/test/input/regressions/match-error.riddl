@@ -1,0 +1,26 @@
+domain PersonalBanking is {
+  actor Member is "A person holding an account at Personal Bank"
+
+  story CreateAccount is {
+    actor Member wants to "establish an account" so that "they can apply for a loan"
+    case HappyPath {
+      display step actor PersonalBanking.Member "loads the"
+        display PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
+    }
+  }
+
+  domain PersonalBankingApp is {
+    application Test is {
+        option is technology("react.js")
+        type Title is String
+        type Name is String
+        display AccountDetailsPage is {
+            presents Title
+        } described as "Show a blank page with a title"
+        form Two is {
+            presents Title
+            collects Name
+        } described as "Show a blank page with a title, collect a Name"
+    } described as "A very simple app for testing"
+  } briefly "The user interface for the Personal Banking Application"
+}
