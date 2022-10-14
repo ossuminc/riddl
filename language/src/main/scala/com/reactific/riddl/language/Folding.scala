@@ -239,7 +239,14 @@ object Folding {
                 // Any other type expression can't be descended into
                 Seq.empty[Definition]
             }
-          case d: Definition => d.contents
+          case f: Function if f.input.nonEmpty =>
+            // If we're at a Function node, the functions input parameters
+            // are the candidates to search next
+            f.input.get.fields
+          case d: Definition => d.contents.flatMap {
+              case Include(_, contents, _) => contents
+              case d: Definition           => Seq(d)
+            }
         }
       }
     }

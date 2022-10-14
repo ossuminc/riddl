@@ -472,22 +472,17 @@ object Validation {
       sc: StoryCase,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(sc, parents.head).stepIf(sc.interactions.nonEmpty) {
-        state =>
-          (
-            for {
-              step <- sc.interactions
-            } yield {
-              state.checkPathRef[Definition](step.from.id, sc, parents)()()
-                .checkPathRef[Definition](step.to.id, sc, parents)()()
-                .checkThat(step.relationship.isEmpty)(
-                  _.addMissing(
-                    step.loc,
-                    s"Interactions must have a non-empty relationship"
-                  )
-                )
-            }
-          ).last
+      checkDefinition(sc, parents.head).stepIf(sc.interactions.nonEmpty) { st =>
+        sc.interactions.foldLeft(st) { (st, step) =>
+          st.checkPathRef[Definition](step.from.id, sc, parents)()()
+            .checkPathRef[Definition](step.to.id, sc, parents)()()
+            .checkThat(step.relationship.isEmpty)(
+              _.addMissing(
+                step.loc,
+                s"Interactions must have a non-empty relationship"
+              )
+            )
+        }
       }.stepIf(sc.nonEmpty) { vs =>
         vs.checkThat(sc.interactions.isEmpty)(
           _.addMissing(
