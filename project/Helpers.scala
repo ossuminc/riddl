@@ -47,18 +47,22 @@ object Dep {
 object C {
   def withInfo(p: Project): Project = {
     p.settings(
-      maintainer := "reid@ossum.biz",
-      organizationName := "Ossum Inc.",
-      organization := "com.reactific",
-      organizationHomepage := Some(new URL("https://reactific.com/")),
-      startYear := Some(2019),
-      licenses +=
+      ThisBuild / maintainer := "reid@ossum.biz",
+      ThisBuild / organization := "com.reactific",
+      ThisBuild / organizationHomepage :=
+        Some(new URL("https://reactific.com/")),
+      ThisBuild / organizationName := "Ossum Inc.",
+      ThisBuild / startYear := Some(2019),
+      ThisBuild / licenses +=
         (
           "Apache-2.0",
           new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
         ),
-      versionScheme := Option("semver-spec"),
-      dynverVTagPrefix := false,
+      ThisBuild / versionScheme := Option("semver-spec"),
+      ThisBuild / dynverVTagPrefix := false,
+      // NEVER  SET  THIS: version := "0.1"
+      // IT IS HANDLED BY: sbt-dynver
+      ThisBuild / dynverSeparator := "-",
       headerLicense := Some(HeaderLicense.ALv2(
         startYear.value.get.toString,
         "Ossum, Inc.",
@@ -146,6 +150,10 @@ object C {
     p.configure(withScalaCompile).settings(
       ThisBuild / dynverSonatypeSnapshots := true,
       ThisBuild / dynverSeparator := "-",
+      maintainer := "reid@ossum.biz",
+      organization := "com.reactific",
+      organizationName := "Ossum Inc.",
+      organizationHomepage := Some(url("https://riddl.tech")),
       scmInfo := Some(ScmInfo(
         url("https://github.com/reactific/riddl"),
         "scm:git:git://github.com/reactific/riddl.git"
