@@ -174,6 +174,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends Definition
+      with ApplicationDefinition
       with ContextDefinition
       with EntityDefinition
       with StateDefinition
@@ -2050,6 +2051,59 @@ object AST extends ast.Expressions with parsing.Terminals {
     def format: String = ""
   }
 
+  sealed abstract class ApplicationOption(val name: String) extends OptionValue
+
+  case class ApplicationTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString] = Seq.empty[LiteralString])
+      extends ApplicationOption("technology")
+
+  case class Display( // TODO: needs a better name? Display = visual only
+    loc: Location,
+    id: Identifier,
+    types: Seq[Type],
+    displayed: TypeRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with ApplicationDefinition {
+    override def kind: String = "Display"
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  case class Form( // TODO: needs a better name? Form = very Interwebz
+    loc: Location,
+    id: Identifier,
+    types: Seq[Type],
+    displayed: TypeRef,
+    collected: TypeRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with ApplicationDefinition {
+    override def kind: String = "Form"
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  case class Application(
+    loc: Location,
+    id: Identifier,
+    options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
+    types: Seq[Type] = Seq.empty[Type],
+    displays: Seq[Display] = Seq.empty[Display],
+    forms: Seq[Form] = Seq.empty[Form],
+    authors: Seq[Author] = Seq.empty[Author],
+    terms: Seq[Term] = Seq.empty[Term],
+    includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends VitalDefinition[ApplicationOption, ApplicationDefinition]
+      with DomainDefinition {
+    override def kind: String = "Application"
+  }
+
   /** Base trait for all options a Domain can have.
     */
   sealed abstract class DomainOption(val name: String) extends OptionValue
@@ -2109,6 +2163,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     plants: Seq[Plant] = Seq.empty[Plant],
     actors: Seq[Actor] = Seq.empty[Actor],
     stories: Seq[Story] = Seq.empty[Story],
+    applications: Seq[Application] = Seq.empty[Application],
     domains: Seq[Domain] = Seq.empty[Domain],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[DomainDefinition]] = Seq
@@ -2122,7 +2177,7 @@ object AST extends ast.Expressions with parsing.Terminals {
 
     override lazy val contents: Seq[DomainDefinition] = {
       super.contents ++ domains ++ types ++ contexts ++ plants ++ actors ++
-        stories ++ terms ++ authors
+        stories ++ applications ++ terms ++ authors
     }
     final val kind: String = "Domain"
 
@@ -2132,6 +2187,7 @@ object AST extends ast.Expressions with parsing.Terminals {
       if (contexts.nonEmpty) score += Math.max(contexts.count(_.nonEmpty), 15)
       if (plants.nonEmpty) score += Math.max(plants.count(_.nonEmpty), 10)
       if (stories.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 15)
+      if (applications.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 5)
       if (domains.nonEmpty) score += Math.max(domains.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }

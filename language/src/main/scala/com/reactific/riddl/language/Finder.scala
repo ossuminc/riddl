@@ -60,7 +60,7 @@ case class Finder(root: Definition) {
   ): Unit = {
     stats.count += 1
     stats.maturitySum += v.maturity(parents)
-    if (!v.isEmpty) stats.completed += 1
+    if (v.nonEmpty) stats.completed += 1
     if (v.brief.nonEmpty && v.description.nonEmpty) stats.documented += 1
   }
 
@@ -80,6 +80,8 @@ case class Finder(root: Definition) {
             state.all_stats.maturitySum += vd.maturity(parents)
             vd match {
               case a: Adaptor => makeVitalStats(a, parents, state.adaptorStats)
+              case a: Application =>
+                makeVitalStats(a, parents, state.contextStats)
               case c: Context => makeVitalStats(c, parents, state.contextStats)
               case d: Domain  => makeVitalStats(d, parents, state.domainStats)
               case e: Entity  => makeVitalStats(e, parents, state.entityStats)

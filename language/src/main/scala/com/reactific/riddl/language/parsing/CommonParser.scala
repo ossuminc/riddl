@@ -168,8 +168,8 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
         Punctuation.roundClose).map(_.map { case (loc, opt, arg) =>
         mapper(loc, opt, arg)
       }) |
-        (Keywords.option ~/ Readability.is ~ maybeOptionWithArgs(validOptions))
-          .map(tpl => Seq(mapper.tupled(tpl)))
+        (Keywords.option ~/ Readability.is.? ~
+          maybeOptionWithArgs(validOptions)).map(tpl => Seq(mapper.tupled(tpl)))
     ).?.map {
       case Some(seq) => seq
       case None      => Seq.empty[TY]

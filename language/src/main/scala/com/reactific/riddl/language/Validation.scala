@@ -177,13 +177,14 @@ object Validation {
             case i: Include[Definition] @unchecked => validateInclude(i)
           }
         case dd: DomainDefinition => dd match {
-            case t: Type    => validateType(t, parents)
-            case c: Context => validateContext(c, parents)
-            case d: Domain  => validateDomain(d, parents)
-            case s: Story   => validateStory(s, parents)
-            case p: Plant   => validatePlant(p, parents)
-            case t: Term    => validateTerm(t, parents)
-            case ai: Author => validateAuthorInfo(ai, parents)
+            case a: Application => validateApplication(a, parents)
+            case t: Type        => validateType(t, parents)
+            case c: Context     => validateContext(c, parents)
+            case d: Domain      => validateDomain(d, parents)
+            case s: Story       => validateStory(s, parents)
+            case p: Plant       => validatePlant(p, parents)
+            case t: Term        => validateTerm(t, parents)
+            case ai: Author     => validateAuthorInfo(ai, parents)
             case i: Include[Definition] @unchecked => validateInclude(i)
           }
         case hd: HandlerDefinition =>
@@ -453,6 +454,16 @@ object Validation {
         vs: ValidationState =>
           vs.addMissing(s.loc, s"${s.identify} is missing a user story")
       }.checkExamples(s.examples, parents).checkDescription(s)
+    }
+
+    def validateApplication(
+      app: Application,
+      parents: Seq[AST.Definition]
+    ): ValidationState = {
+      checkContainer(parents.headOption, app).checkThat(app.forms.isEmpty) {
+        vs: ValidationState =>
+          vs.addMissing(app.loc, s"${app.identify} should have a form")
+      }.checkDescription(app)
     }
 
     def validateActor(
