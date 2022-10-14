@@ -17,8 +17,8 @@ trait ApplicationParser
 
   def display[u: P]: P[Display] = {
     P(
-      location ~ Keywords.display ~/ identifier ~ Readability.is.? ~ open ~
-        types ~ Keywords.presents ~ typeRef ~ close ~ briefly ~ description
+      location ~ Keywords.display ~/ identifier ~ is ~ open ~ types ~
+        Keywords.presents ~ typeRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, present, brief, description) =>
       Display(loc, id, types, present, brief, description)
     }
@@ -26,7 +26,7 @@ trait ApplicationParser
 
   def form[u: P]: P[Form] = {
     P(
-      location ~ Keywords.form ~/ identifier ~ Readability.is.? ~ open ~ types ~
+      location ~ Keywords.form ~/ identifier ~ is ~ open ~ types ~
         Keywords.presents ~ typeRef ~ Keywords.collects ~ typeRef ~ close ~
         briefly ~ description
     ).map { case (loc, id, types, present, collect, brief, description) =>
@@ -55,7 +55,7 @@ trait ApplicationParser
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ Readability.is.? ~ open ~
+      location ~ Keywords.application ~/ identifier ~ is ~ open ~
         (emptyApplication | (applicationOptions ~ applicationDefinitions)) ~
         close ~ briefly ~ description
     ).map { case (loc, id, (options, content), brief, desc) =>

@@ -12,17 +12,19 @@ import fastparse.ScalaWhitespace.*
 
 trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
-  def storyCaseRef[u: P]: P[StoryCaseRef[Definition]] = {
-    P(
-      actorRef | adaptorRef | contextRef | entityRef | pipeRef | projectionRef |
-        sagaRef
-    )
+  def messageTakingRef[u: P]: P[MessageTakingRef[Definition]] = {
+    P(adaptorRef | contextRef | entityRef | pipeRef | projectionRef)
+  }
+
+  def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
+    messageTakingRef | sagaRef | actorRef | applicationRef
   }
 
   def arbitraryStep[u: P]: P[ArbitraryStep] = {
     P(
-      location ~ Readability.from ~ storyCaseRef ~ literalString ~
-        Readability.to ~ storyCaseRef ~ briefly
+      Keywords.arbitrary ~ Keywords.step ~/ location ~ Readability.from.? ~
+        arbitraryStoryRef ~ literalString ~ Readability.to.? ~
+        arbitraryStoryRef ~ briefly
     ).map { case (loc, from, ls, to, brief) =>
       ArbitraryStep(loc, from, ls, to, brief)
     }
@@ -30,8 +32,9 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def tellMessageStep[u: P]: P[TellMessageStep] = {
     P(
-      location ~ Readability.from ~ storyCaseRef ~ Keywords.tell ~
-        messageConstructor ~ Readability.to ~ storyCaseRef ~ briefly
+      Keywords.tell ~ Keywords.step ~/ location ~ Readability.from.? ~
+        messageTakingRef ~ Keywords.tell ~ messageConstructor ~
+        Readability.to.? ~ messageTakingRef ~ briefly
     )./.map { case (loc, from, mc, to, brief) =>
       TellMessageStep(loc, from, mc, to, brief)
     }
@@ -39,8 +42,9 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def publishMessageStep[u: P]: P[PublishMessageStep] = {
     P(
-      location ~ Readability.from ~ storyCaseRef ~ Keywords.publish ~
-        messageConstructor ~ Readability.to ~ pipeRef ~ briefly
+      Keywords.publish ~ Keywords.step ~/ location ~ Readability.from.? ~
+        messageTakingRef ~ Keywords.publish ~ messageConstructor ~
+        Readability.to.? ~ pipeRef ~ briefly
     )./.map { case (loc, msr, mc, pipe, brief) =>
       PublishMessageStep(loc, msr, mc, pipe, brief)
     }
@@ -48,8 +52,9 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def subscribeToPipeStep[u: P]: P[SubscribeToPipeStep] = {
     P(
-      location ~ Readability.from ~ storyCaseRef ~ literalString ~
-        Keywords.subscribe ~ Readability.to.? ~ pipeRef ~ briefly
+      Keywords.subscribe ~ Keywords.step ~/ location ~ Readability.from.? ~
+        messageTakingRef ~ literalString ~ Keywords.subscribe ~
+        Readability.to.? ~ pipeRef ~ briefly
     )./.map { case (loc, from, lit, pipeRef, brief) =>
       SubscribeToPipeStep(loc, from, lit, pipeRef, brief)
     }
@@ -57,24 +62,40 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def sagaInitiationStep[u: P]: P[SagaInitiationStep] = {
     P(
-      location ~ Readability.from ~ storyCaseRef ~ literalString ~ sagaRef ~
-        briefly
+      Keywords.saga ~ Keywords.step ~/ location ~ Readability.from.? ~
+        arbitraryStoryRef ~ literalString ~ Readability.to.? ~ sagaRef ~ briefly
     )./.map { case (loc, from, ls, to, brief) =>
       SagaInitiationStep(loc, from, ls, to, brief)
     }
   }
 
-  def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
+  def applicationDisplayStep[u: P]: P[ApplicationDisplayStep] = {
     P(
-      Keywords.step./ ~
-        (arbitraryStep | tellMessageStep | publishMessageStep |
-          subscribeToPipeStep | sagaInitiationStep)
-    ).rep(0, Punctuation.comma.?)
+      Keywords.display ~ Keywords.step ~/ location ~ Readability.from.? ~
+        actorRef ~ literalString ~ Readability.to.? ~ displayRef ~ briefly
+    )./.map { case (loc, actor, rel, display, brief) =>
+      ApplicationDisplayStep(loc, actor, rel, display, brief)
+    }
+  }
+
+  def applicationFormStep[u: P]: P[ApplicationFormStep] = {
+    P(
+      Keywords.form ~ Keywords.step ~/ location ~ Readability.from.? ~
+        actorRef ~ literalString ~ Readability.to.? ~ formRef ~ briefly
+    )./.map { case (loc, actor, rel, form, brief) =>
+      ApplicationFormStep(loc, actor, rel, form, brief)
+    }
+  }
+
+  def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
+    P((tellMessageStep | publishMessageStep | subscribeToPipeStep |
+      sagaInitiationStep | applicationDisplayStep | applicationFormStep |
+      arbitraryStep)).rep(0, Punctuation.comma.?)
   }
 
   def storyCase[u: P]: P[StoryCase] = {
     P(
-      location ~ Keywords.case_ ~/ identifier ~ Readability.is ~ open ~
+      location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
         (undefined(Seq.empty[InteractionStep]) | interactionSteps) ~ close ~
         briefly ~ description
     ).map { case (loc, id, steps, brief, description) =>
@@ -120,7 +141,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def story[u: P]: P[Story] = {
     P(
-      location ~ Keywords.story ~ identifier ~ is ~ open ~ storyBody ~ close ~
+      location ~ Keywords.story ~/ identifier ~ is ~ open ~ storyBody ~ close ~
         briefly ~ description
     ).map {
       case (

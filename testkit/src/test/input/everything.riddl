@@ -16,7 +16,7 @@ domain Everything is {
     joint output is inlet Sink.Commands from pipe AChannel
   }
 
-  actor Author is "human" briefly "A scoundrel"
+  actor Author is "human" briefly "An exemplar"
 
   story WritingABook is {
     actor ^Author wants "to edit on the screen" so that "he can revise content more easily"

@@ -229,10 +229,12 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitPipe(p, parents)
             state.addToGlossary(p, stack)
-          case sa: Actor => state.addToGlossary(sa, stack)
-          case sc: StoryCase  => state.addToGlossary(sc, stack)
-          case _ =>
-            require(requirement = false, "Failed to handle LeafDefinition")
+          case sa: Actor     => state.addToGlossary(sa, stack)
+          case sc: StoryCase => state.addToGlossary(sc, stack)
+          case ds: Display   => state.addToGlossary(ds, stack)
+          case fm: Form      => state.addToGlossary(fm, stack)
+          case unknown =>
+            require(requirement = false, s"Failed to handle Leaf: $unknown")
             state
         }
       case container: Definition =>
@@ -240,20 +242,28 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         // and glossary entry.
         val (mkd, parents) = setUpContainer(container, state, stack)
         container match {
-          case t: Type       => mkd.emitType(t, stack)
-          case s: State      => mkd.emitState(s, stack)
-          case h: Handler    => mkd.emitHandler(h, parents)
-          case f: Function   => mkd.emitFunction(f, parents)
-          case e: Entity     => mkd.emitEntity(e, parents)
-          case c: Context    => mkd.emitContext(c, stack)
-          case d: Domain     => mkd.emitDomain(d, parents)
-          case a: Adaptor    => mkd.emitAdaptor(a, parents)
-          case p: Processor  => mkd.emitProcessor(p, stack)
-          case p: Projection => mkd.emitProjection(p, parents)
-          case s: Saga       => mkd.emitSaga(s, parents)
-          case s: Story      => mkd.emitStory(s, stack)
-          case p: Plant      => mkd.emitPlant(p, parents)
-          case a: Adaptation => mkd.emitAdaptation(a, parents)
+          case a: Application => mkd.emitApplication(a, stack)
+          case t: Type        => mkd.emitType(t, stack)
+          case s: State       => mkd.emitState(s, stack)
+          case h: Handler     => mkd.emitHandler(h, parents)
+          case f: Function    => mkd.emitFunction(f, parents)
+          case e: Entity      => mkd.emitEntity(e, parents)
+          case c: Context     => mkd.emitContext(c, stack)
+          case d: Domain      => mkd.emitDomain(d, parents)
+          case a: Adaptor     => mkd.emitAdaptor(a, parents)
+          case p: Processor   => mkd.emitProcessor(p, stack)
+          case p: Projection  => mkd.emitProjection(p, parents)
+          case s: Saga        => mkd.emitSaga(s, parents)
+          case s: Story       => mkd.emitStory(s, stack)
+          case p: Plant       => mkd.emitPlant(p, parents)
+          case a: Adaptation  => mkd.emitAdaptation(a, parents)
+          case unknown =>
+            require(
+              requirement = false,
+              s"Failed to handle Definition: $unknown"
+            )
+            state
+
         }
         state.addToGlossary(container, stack)
     }
@@ -296,7 +306,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
        |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
        |min_version = "0.83.0"
        |theme = $themes
-       |       
+       |
        |# Author information from config
        |[author]
        |    name = "${auth.name.s}"

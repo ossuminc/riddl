@@ -694,7 +694,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRef[Entity] {
+      extends MessageTakingRef[Entity] {
     override def format: String = s"${Keywords.entity} ${id.format}"
   }
 
@@ -1167,7 +1167,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class AdaptorRef(
     loc: Location,
     id: PathIdentifier)
-      extends StoryCaseRef[Adaptor] {
+      extends MessageTakingRef[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
@@ -1213,7 +1213,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRef[Projection] {
+      extends MessageTakingRef[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
 
@@ -1335,7 +1335,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRef[Context] {
+      extends MessageTakingRef[Context] {
     override def format: String = s"context ${id.format}"
   }
 
@@ -1567,7 +1567,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier for the referenced pipe.
     */
   case class PipeRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRef[Pipe] {
+      extends MessageTakingRef[Pipe] {
     override def format: String = s"pipe ${id.format}"
   }
 
@@ -1835,7 +1835,7 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
 
   case class SagaRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRef[Saga] {
+      extends Reference[Saga] {
     def format: String = ""
   }
 
@@ -1871,7 +1871,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   The path identifier that locates the references StoryActor
     */
   case class ActorRef(loc: Location, id: PathIdentifier)
-      extends StoryCaseRef[Actor] {
+      extends Reference[Actor] {
     override def format: String = ""
   }
 
@@ -1900,9 +1900,9 @@ object AST extends ast.Expressions with parsing.Terminals {
     */
   case class ArbitraryStep(
     loc: Location,
-    from: StoryCaseRef[Definition],
+    from: Reference[Definition],
     relationship: LiteralString,
-    to: StoryCaseRef[Definition],
+    to: Reference[Definition],
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -1910,9 +1910,9 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   case class TellMessageStep(
     loc: Location,
-    from: StoryCaseRef[Definition],
+    from: MessageTakingRef[Definition],
     relationship: MessageConstructor,
-    to: StoryCaseRef[Definition],
+    to: MessageTakingRef[Definition],
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -1920,7 +1920,7 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   case class PublishMessageStep(
     loc: Location,
-    from: StoryCaseRef[Definition],
+    from: MessageTakingRef[Definition],
     relationship: MessageConstructor,
     to: PipeRef,
     brief: Option[LiteralString] = None)
@@ -1930,7 +1930,7 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   case class SubscribeToPipeStep(
     loc: Location,
-    from: StoryCaseRef[Definition],
+    from: MessageTakingRef[Definition],
     relationship: LiteralString,
     to: PipeRef,
     brief: Option[LiteralString] = None)
@@ -1940,9 +1940,29 @@ object AST extends ast.Expressions with parsing.Terminals {
   }
   case class SagaInitiationStep(
     loc: Location,
-    from: StoryCaseRef[Definition],
+    from: Reference[Definition],
     relationship: LiteralString,
     to: SagaRef,
+    brief: Option[LiteralString] = None)
+      extends InteractionStep {
+    override def format: String = ""
+  }
+
+  case class ApplicationDisplayStep(
+    loc: Location,
+    from: ActorRef,
+    relationship: LiteralString,
+    to: DisplayRef,
+    brief: Option[LiteralString] = None)
+      extends InteractionStep {
+    override def format: String = ""
+  }
+
+  case class ApplicationFormStep(
+    loc: Location,
+    from: ActorRef,
+    relationship: LiteralString,
+    to: FormRef,
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -2072,6 +2092,17 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def format: String = ""
   }
 
+  /** A reference to an Display using a path identifier
+    * @param loc
+    *   THe location of the StoryActor in the source code
+    * @param id
+    *   The path identifier that refers to the Display
+    */
+  case class DisplayRef(loc: Location, id: PathIdentifier)
+      extends Reference[Display] {
+    override def format: String = ""
+  }
+
   case class Form( // TODO: needs a better name? Form = very Interwebz
     loc: Location,
     id: Identifier,
@@ -2084,6 +2115,17 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def kind: String = "Form"
 
     /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  /** A reference to a Form using a path identifier
+    * @param loc
+    *   THe location of the StoryActor in the source code
+    * @param id
+    *   The path identifier that refers to the Form
+    */
+  case class FormRef(loc: Location, id: PathIdentifier)
+      extends Reference[Form] {
     override def format: String = ""
   }
 
@@ -2102,6 +2144,17 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends VitalDefinition[ApplicationOption, ApplicationDefinition]
       with DomainDefinition {
     override def kind: String = "Application"
+  }
+
+  /** A reference to an Application using a path identifier
+    * @param loc
+    *   THe location of the StoryActor in the source code
+    * @param id
+    *   The path identifier that refers to the Application
+    */
+  case class ApplicationRef(loc: Location, id: PathIdentifier)
+      extends Reference[Application] {
+    override def format: String = ""
   }
 
   /** Base trait for all options a Domain can have.

@@ -39,13 +39,18 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     P(literalString).map(ls => ArbitraryCondition(ls.loc, ls))
   }
 
+  def emptyArgList[u: P]: P[ArgList] = { undefined[u, ArgList](ArgList()) }
   def arguments[u: P]: P[ArgList] = {
-    P(identifier ~ Punctuation.equalsSign ~ expression)
-      .rep(min = 0, Punctuation.comma).map { s: Seq[(Identifier, Expression)] =>
-        s.foldLeft(ListMap.empty[Identifier, Expression]) {
-          case (b, (id, exp)) => b + (id -> exp)
-        }
-      }.map { lm => ArgList(lm) }
+    P(
+      emptyArgList |
+        ((identifier ~ Punctuation.equalsSign ~ expression)
+          .rep(min = 0, Punctuation.comma)
+          .map { s: Seq[(Identifier, Expression)] =>
+            s.foldLeft(ListMap.empty[Identifier, Expression]) {
+              case (b, (id, exp)) => b + (id -> exp)
+            }
+          }.map { lm => ArgList(lm) })
+    )
   }
 
   def argList[u: P]: P[ArgList] = {
