@@ -23,8 +23,6 @@ object V {
   val scalacheck = "1.17.0"
   val scalatest = "3.2.12"
   val scopt = "4.1.0"
-  val structurizr = "1.14.1"
-  val structurizr_export = "1.6.1"
 }
 
 object Dep {
@@ -39,9 +37,6 @@ object Dep {
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
-  val structurizr = "com.structurizr" % "structurizr-client" % V.structurizr
-  val structurizr_export = "com.structurizr" % "structurizr-export" %
-    V.structurizr_export
 
   val testing: Seq[ModuleID] =
     Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
