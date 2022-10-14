@@ -375,6 +375,10 @@ trait AbstractDefinitions extends Terminals {
     */
   trait AdaptorDefinition extends Definition
 
+  /** Base trait of any definition that is in the content of an Application
+    */
+  trait ApplicationDefinition extends Definition
+
   /** Base trait of any definition that is in the content of a context
     */
   trait ContextDefinition extends Definition
@@ -422,6 +426,7 @@ trait AbstractDefinitions extends Terminals {
 
   trait VitalDefinitionDefinition
       extends AdaptorDefinition
+      with ApplicationDefinition
       with ContextDefinition
       with DomainDefinition
       with EntityDefinition

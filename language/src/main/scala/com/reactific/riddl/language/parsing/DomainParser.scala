@@ -13,7 +13,7 @@ import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for domains. */
 trait DomainParser
-    extends CommonParser
+    extends ApplicationParser
     with ContextParser
     with StoryParser
     with StreamingParser
@@ -34,7 +34,7 @@ trait DomainParser
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
       (author | typeDef | context | plant | actor | story | domain | term |
-        importDef | domainInclude).rep(0)
+        application | importDef | domainInclude).rep(0)
     )
   }
 
@@ -60,6 +60,7 @@ trait DomainParser
       val contexts = mapTo[Context](groups.get(classOf[Context]))
       val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
+      val apps = mapTo[Application](groups.get(classOf[Application]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val actors = mapTo[Actor](groups.get(classOf[Actor]))
       val includes = mapTo[Include[DomainDefinition]](groups.get(
@@ -75,6 +76,7 @@ trait DomainParser
         plants,
         actors,
         stories,
+        apps,
         subdomains,
         terms,
         includes,
