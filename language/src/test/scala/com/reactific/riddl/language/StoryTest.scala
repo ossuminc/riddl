@@ -79,13 +79,14 @@ class StoryTest extends ValidatingTest {
           |  } briefly "nada" described as "nada"
           |  term 'conduct business' briefly "Any legal business activity supported by the terms of use."
           |  case primary is {
-          |    step from actor ^^Owner "creates an Organization" to context OrganizationContext
+          |    arbitrary step from actor ^^Owner "creates an Organization" to context OrganizationContext
           |      briefly "initial invocation"
-          |    step from context OrganizationContext "send creation message" to entity Organization
+          |    tell step from context OrganizationContext tell command EstablishOrganization(???) to entity Organization
           |      briefly "send creation message"
-          |    step from entity Organization "add new organization" to projection OrganizationViews
+          |    tell step from entity Organization tell event OrganizationEstablished(???) to projection
+          |    OrganizationViews
           |      briefly "add new organization"
-          |    step from entity Organization "organizationAdded" to actor ^^Owner
+          |    arbitrary step from entity Organization "organizationAdded" to actor ^^Owner
           |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"

@@ -233,8 +233,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case sc: StoryCase => state.addToGlossary(sc, stack)
           case ds: Display   => state.addToGlossary(ds, stack)
           case fm: Form      => state.addToGlossary(fm, stack)
-          case _ =>
-            require(requirement = false, "Failed to handle LeafDefinition")
+          case unknown =>
+            require(requirement = false, s"Failed to handle Leaf: $unknown")
             state
         }
       case container: Definition =>
@@ -257,6 +257,13 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case s: Story       => mkd.emitStory(s, stack)
           case p: Plant       => mkd.emitPlant(p, parents)
           case a: Adaptation  => mkd.emitAdaptation(a, parents)
+          case unknown =>
+            require(
+              requirement = false,
+              s"Failed to handle Definition: $unknown"
+            )
+            state
+
         }
         state.addToGlossary(container, stack)
     }
