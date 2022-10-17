@@ -6,8 +6,10 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Field, *}
+import com.reactific.riddl.language.AST.Field
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {
 

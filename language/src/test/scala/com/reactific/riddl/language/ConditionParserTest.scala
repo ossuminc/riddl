@@ -8,7 +8,8 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.Location
-import com.reactific.riddl.language.parsing.{RiddlParserInput, StringParser}
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.StringParser
 import org.scalatest.Assertion
 
 import scala.collection.immutable.ListMap
@@ -133,7 +134,10 @@ class ConditionParserTest extends ParsingTest {
                   Comparison(
                     1 -> 12,
                     AST.eq,
-                    ArbitraryCondition(1->15, LiteralString(1 -> 15, "sooth")),
+                    ArbitraryCondition(
+                      1 -> 15,
+                      LiteralString(1 -> 15, "sooth")
+                    ),
                     False(1 -> 24)
                   )
                 ),
