@@ -2,7 +2,7 @@
 title: "Who Made RIDDL Possible?"
 date: 2022-02-25T10:07:32-07:00
 draft: false
-weight: 40
+weight: 50
 ---
 
 ## Originator
