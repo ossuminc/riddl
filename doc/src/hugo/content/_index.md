@@ -4,7 +4,7 @@ date: "2021-12-01T15:34:22-05:00"
 draft: "false" 
 weight: 1 
 creatordisplayname: "Reid Spencer"
-creatoremail: "reid@ossuminc.com"
+creatoremail: "reid@ossum.biz"
 ---
 
 <img src="/images/RIDDL-Logo.svg" align="left" width="100px"/>IDDL is a language and toolset for specifying a system design. RIDDL is not

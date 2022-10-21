@@ -1,13 +1,14 @@
 ---
-title: "Reactive Summit Links"
-date: 2022-10-25T10:07:32-07:00
-draft: false
-weight: 90
+title: "Reactive Summit"
+draft: "false"
+weight: 10
+creatordisplayname: "Reid Spencer"
 ---
 
+{{< img name="forest-1" size="large" lazy=false >}}
 Welcome, Reactive Summit 2022 attendees!
 
-## Important Links Shown At Reactive Summit
+## Important Links Shown At Reactive Summit 2022
 
 * Documentation (here): https://riddl.tech
 * Source Code: https://github.com/reactific/riddl
@@ -15,6 +16,7 @@ Welcome, Reactive Summit 2022 attendees!
 * Example: https://github.com/improving-app/riddl
 * Contact: reid.spencer@improving.com
 
-## Slide From Reactive Summit
+## Full Slide Deck
+ TBD
 
-![Reactive Summit Last Slide]( {{< relref "/images/ReactiveSummit.png" >}} )
+
