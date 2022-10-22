@@ -16,7 +16,7 @@ RIDDL supports several predefined types that just "exist" because they are
 fundamental and well understood in any targeted computing environment. These 
 predefined type names can be used anywhere that a type definition is needed,
 for example in a field of an entity's state definition 
-[see here](../root/domain/context/entity/state)
+[see here]({{< relref "../root/domain/context/entity/state" >}})
 
 The predefined  types are: 
 * **String** - a sequence of characters of any length 
@@ -88,8 +88,8 @@ type NATelephoneNumber = pattern("\(?([0-9]{3})\)?-?([0-9]{3})-?([0-9]{4})")
 The predefined types allow the use of unbounded integers but when you want 
 to constrict the range of values, you need a `Range` type expression.  The 
 expression `Range(<min>,<max>)` will define an integer value whose range is 
-restricted to the `<min>` and `<max>` values provided.  As with [bounded 
-strings](#Bounded Strings), the `<min>` and `<max>` values are 
+restricted to the `<min>` and `<max>` values provided.  As with
+[bounded strings](#Bounded Strings), the `<min>` and `<max>` values are 
 optional and default to 0 and infinity respectively. For example:
 ```riddl
 type Percent = range(,100) // only value 0 to 100 inclusive

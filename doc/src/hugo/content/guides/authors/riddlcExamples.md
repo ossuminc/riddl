@@ -5,7 +5,10 @@ draft: true
 weight: 20
 ---
 
-Because riddlc is a very rich command, we thought it might be useful to provide some examples. We use these commands in our day to day work and hope that these examples give you ideas on how to adapt riddlc to your particular work style and needs.
+Because riddlc is a very rich command, we thought it might be useful to provide
+some examples. We use these commands in our day to day work and hope that these
+examples give you ideas on how to adapt riddlc to your particular work style
+and needs.
 
 riddlc can be invoked in two ways (both from the command line):
 1. Install riddl via the provided installer for your operating system. 
@@ -13,7 +16,8 @@ riddlc can be invoked in two ways (both from the command line):
 
         ```riddlc from /path/to/config/file/for/your/project```
 2. Clone the riddl project and run via sbt
-    * Open a command prompt and navigate to the root directory of the cloned riddl project
+    * Open a command prompt and navigate to the root directory of the cloned 
+      riddl project
     * launch sbt
     * at the sbt shell prompt change to the riddlc project
     * run riddlc
@@ -27,23 +31,28 @@ riddlc can be invoked in two ways (both from the command line):
         sbt:riddlc> run from /path/to/config/file/for/your/project
         ```
 
-Generally, if you have a need to be on the cutting edge of riddl features and functions you will want to use the SBT option. Otherwise, it would be best to install riddl by using the installer for your operating system.
+Generally, if you have a need to be on the cutting edge of riddl features and
+functions you will want to use the SBT option. Otherwise, it would be best to
+install riddl by using the installer for your operating system.
 
-The process I use when creating a RIDDL specification can be summarized as follows: Initialize, Establish, Evolve, Refine
+The process I use when creating a RIDDL specification can be summarized as
+follows: Initialize, Establish, Evolve, Refine
 
 ## Initialize
-In the initialize phase I am setting up my work environment. I establish a git repo for the project, I create my main RIDDL file there, and I create a config file that I will use through the rest of the process.
+In the initialize phase I am setting up my work environment. I establish a git
+repo for the project, I create my main RIDDL file there, and I create a config
+file that I will use through the rest of the process.
 
 ### riddlc config file
-riddlc can take a config file as an argument that will save you _a lot_ of typing. Here is how you provide a config file to riddlc:
+riddlc can take a config file as an argument that will save you _a lot_ of
+typing. Here is how you provide a config file to riddlc:
 ```
 riddlc from /path/to/config/file/for/your/project
 ```
-
-The next page in this tutorial ([riddlc Config File](../riddlcconfigfile)) will provide you with an example of what this config file looks like so you can create your own.
-
+ 
 ### from command
-Once you have a config file in place you can execute riddlc by providing the path to this config file as an argument to the from command. This greatly simplifies the typing needed to get just what you want.
+Once you have a config file in place you can execute riddlc by providing the
+path to this config file as an argument to the from command. This greatly simplifies the typing needed to get just what you want.
 
 TODO: When using an installed version of RIDDL, can you provide a relative path to the config file?
 

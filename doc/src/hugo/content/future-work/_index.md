@@ -15,18 +15,20 @@ novel ways:
 * Fast data message streaming infrastructure
 
 
-* [_Analyses_](analyses) - Produce analytical data structures from the AST for 
-  use by translators. 
-* [_BAST_](bast) - Binary Abstract Syntax Tree. Generates files that capture the
-  abstract syntax tree (AST) in a transportable binary format
-* [_Diagrams_](diagrams) - Data flow, sequence, entity, context maps, and other
-* [_OpenAPI_](openapi) - OpenAPI (formerly called Swagger) specifications for APIs
-  implied in the RIDDL model
-* [_Kalix_](kalix) - Kalix protobuffers source generation as input to the Kalix
-  code generator.
-* [_Akka_](akka) - Akka, protobuffers, Alpakka infrastructure code & skeleton
-* [_Others_](others) - plugins can be written to convert the AST into any other
-  kind of needed data
+* [_Analyses_]({{< relref "analyses" >}}) - Produce analytical data structures 
+  from the AST for use by translators. 
+* [_BAST_]({{< relref "bast" >}}) - Binary Abstract Syntax Tree. Generates files
+  that capture the abstract syntax tree (AST) in a transportable binary format
+* [_Diagrams_]({{< relref "diagrams" >}}) - Data flow, sequence, entity, context
+  maps, and others
+* [_OpenAPI_]({{< relref "openapi" >}}) - OpenAPI (formerly called Swagger)
+  specifications for APIs implied in the RIDDL model
+* [_Kalix_]({{< relref "kalix" >}}) - Kalix protobuffers source generation 
+  as input to the Kalix code generator.
+* [_Akka_]({{< relref "akka" >}}) - Akka, protobuffers, Alpakka 
+  infrastructure  code & skeleton
+* [_Others_]({{< relref "others" >}}) - plugins can be written to convert 
+  the AST into any other kind of needed data
 
 ## Goals
 This project is currently nascent. It doesn't do anything yet, but eventually

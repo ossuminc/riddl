@@ -9,7 +9,7 @@ A `Saga` defines a way for an external application to invoke a distributed
 transaction via the 
 [Saga Pattern](https://microservices.io/patterns/data/saga.html). Sagas are 
 necessary in distributed services that use the 
-[Database per Service Pattern](), like RIDDL. The Saga Pattern definition 
+[Database per Service Pattern](https://microservices.io/patterns/data/database-per-service.html), like RIDDL. The Saga Pattern definition 
 describes the context in which Sagas are used:
 > You have applied the Database per Service pattern. Each service has its own
 > database. Some business transactions, however, span multiple service so you
@@ -56,3 +56,9 @@ saga AllOrNothing is {
 ```
 defines saga, `AllOrNothing`, with two input parameters, an output string, and two steps to be done
 in parallel. 
+
+## Further Reading
+
+* [IBM: Saga Pattern](https://www.ibm.com/cloud/architecture/architectures/event-driven-saga-pattern/)
+* [Microsoft: Saga Distributed Transaction Pattern](https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/saga/saga)
+* [Chris Richardson](https://microservices.io/patterns/data/saga.html)

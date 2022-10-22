@@ -7,9 +7,11 @@ summary: "RIDDL Example: Reactive BBQ"
 ---
 
 Some people can learn RIDDL faster by looking at examples than by reading 
-the informal definitions in the [language guide](../language) or the 
-formal definitions in the [grammar section](../guides/developers/grammar). To support that 
-mode of learning, this section decomposes the domain of a restaurant, 
+the informal definitions in the 
+[language guide]({{< relref "../../language" >}}) or the 
+formal definitions in the 
+[grammar section]({{< relref "../../guides/developers/grammar" >}}). To support 
+that mode of learning, this section decomposes the domain of a restaurant, 
 Reactive BBQ. 
 
 This section provides some examples of how RIDDL can be used.
@@ -28,14 +30,14 @@ doesn't exist of course, even if some people may or may not have mistaken
 version in 2018.
 
 The Reactive BBQ case study in the LRA-P course included interviews with 
-several fictitious employees. 
-[Those interviews and the case study material have been replicated here](scenario) 
+several fictitious employees. [Those interviews and the case study material 
+have been replicated [in this scenario description]({{< relref "scenario" >}}) 
 with thanks to Lightbend; and we recommend that you read that scenario first.
 
 The RIDDL files for Reactive BBQ are arranged into a directory structure, 
 each with an explanation page as follows:
 
-- [Reactive BBQ Domain](reactivebbq)
-    - [Restaurant](restaurant)
-    - [BackOffice](backoffice)
-    - [Corporate](corporate)
+- [Reactive BBQ Domain]({{< relref "reactivebbq" >}})
+    - [Restaurant]({{< relref "restaurant" >}})
+    - [BackOffice]({{< relref "backoffice" >}})
+    - [Corporate]({{< relref "corporate" >}})

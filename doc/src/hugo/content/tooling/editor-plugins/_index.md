@@ -6,7 +6,7 @@ weight: 40
 ---
 
 Plugins for popular editors are planned for common IDEs to assist
-authors to write RIDDL:
+authors in writing RIDDL:
 
-* [IntelliJ IDEA Plugin](intellij-plugin)
-* [VS Code Plugin](vs-code-plugin)
+* [IntelliJ IDEA Plugin]({{< relref "intellij-plugin.md" >}})
+* [VS Code Plugin]({{< relref "vs-code-plugin.md" >}})

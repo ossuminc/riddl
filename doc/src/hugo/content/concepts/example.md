@@ -25,7 +25,7 @@ circumstance if that thing does not happen take some other actions (ELSE).
 Since three of those things are optional, it often just comes down to THEN. 
 
 ## Occurs In
-All [vital definitions](vital)
+All [vital definitions]({{< relref "vital.md" >}})
 
 ## Contains
 * [Conditional Expressions]({{< relref "expression.md" >}})
