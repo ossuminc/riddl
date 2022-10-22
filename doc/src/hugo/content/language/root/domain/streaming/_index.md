@@ -15,13 +15,14 @@ visualize as something like this:
 ![Visualization Of Pipeline](chemical-plant.jpg)
 
 All you have to do is remember the 3 _P_'s: 
-* [Pipes](pipe) - Pipes are conduits for reliably transmitting messages of a 
-  particular type of data between processors that are connected to the pipe.
-* [Processors](processor) - While pipes reliably transport data from its 
-  producers to its consumers, processors are the producers, consumers, and 
-  transformers of data. Notably, [entities](../context/entity) are 
-  processors of pipes too.
-* [Plants](plant) - Plants combine pipes and processors together with 
-  support for rich semantics so that arbitrarily complex streams can be 
-  modeled in RIDDL.
+* [Pipes]({{< relref "pipe.md" >}}) - Pipes are conduits for reliably 
+  transmitting messages of a particular type of data between processors that
+  are connected to the pipe.
+* [Processors]({{< relref "processor.md" >}}) - While pipes reliably transport 
+  data from its producers to its consumers, processors are the producers,
+  consumers, and transformers of data. Notably,
+  [entities]({{< relref "../context/entity" >}}) are processors of pipes too.
+* [Plants]({{< relref "plant" >}}) - Plants combine pipes and processors 
+  together with support for rich semantics so that arbitrarily complex streams
+  can be modeled in RIDDL.
 
