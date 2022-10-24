@@ -112,7 +112,7 @@ it is time to
 > project riddlc
 > Universal/packageBin
 > Universal/packageOsxDmg
-> graalvm-native-image/packageBin
+> graalvm-native-image:packageBin
 > 
 ```
 
