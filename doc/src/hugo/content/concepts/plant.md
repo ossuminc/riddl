@@ -13,23 +13,25 @@ which you can visualize as something like this:
 ![Visualization Of Pipeline](../chemical-plant.jpg)
 
 All you have to do is remember the 3 _P_'s:
-* [Pipes](pipe) - Pipes are conduits for reliably transmitting messages of a
+* [Pipes]({{< relref "pipe" >}}) - Pipes are conduits for reliably transmitting 
+  messages of a
   particular type of data between processors that are connected to the pipe.
-* [Processors](processor) - While pipes reliably transport data from its
+* [Processors]({{< relref "processor" >}}) - While pipes reliably transport
+  data from its
   producers to its consumers, processors are the producers, consumers, and
-  transformers of data. Notably, [entities](../context/entity) are
-  processors of pipes too.
-* [Plants](plant) - Plants combine pipes and processors together with
-  support for rich semantics so that arbitrarily complex streams can be
-  modeled in RIDDL.
+  transformers of data. Notably, [entities]({{< relref "entity.md" >}})
+  are processors of pipes too.
+* [Plants]({{< relref "plant" >}}) - Plants combine pipes and processors
+  together with  support for rich semantics so that arbitrarily complex 
+  streams can be modeled in RIDDL.
 
 
-A RIDDL `plant` is a definition that combines [pipes](pipe) with
-[processors](processor) to specify a model of how data should flow. You may
-define as many plants as needed but each plant is a closed system without
-the ability of the RIDDL model to express the sharing of data between the
-plants. This is done deliberately to prevent unintentional contamination of
-data in large models.
+A RIDDL `plant` is a definition that combines [pipes]({{< relref "pipe" >}}) with
+[processors]({{< relref "processor" >}}) to specify a model of how data 
+should flow. You may define as many plants as needed but each plant is a 
+closed system without the ability of the RIDDL model to express the sharing 
+of data between the plants. This is done deliberately to prevent
+unintentional contamination of data in large models.
 
 ## Joints
 The purpose of a plant definition is to provide the blueprint for how a set
@@ -48,7 +50,7 @@ a plant specification, it ensures that all the inlet and outlet data types
 match the data types of the connected pipes.
 
 ## Entities as Processors
-An [entity](entity) may also be used as a processor under some
+An [entity]({{< relref "entity" >}}) may also be used as a processor under some
 special circumstances:
 * _as a source_ - An entity may be used as a source of events if a command handler
   is defined for the entity.

@@ -8,7 +8,8 @@ A `context` definition in RIDDL represents the notion of a
 from 
 [Domain Driven Design (DDD)](https://martinfowler.com/bliki/DomainDrivenDesign.html).
 A bounded context is an isolated portion of some knowledge domain. 
-Consequently, in RIDDL we defined a `context` inside a [`domain`](domain). 
+Consequently, in RIDDL we defined a [`context`]({{< relref "context.md" >}}) 
+inside a [`domain`]({{< relref "domain.md" >}}). 
 DDD uses *bounded contexts* to divide complexity in large knowledge domains
 into manageable portions. Since large knowledge domains are difficult for a 
 single human to comprehend in its entirety, DDD uses bounded contexts as a 

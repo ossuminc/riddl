@@ -5,12 +5,12 @@ draft: "false"
 weight: 40
 ---
 
-A RIDDL `plant` is a definition that combines [pipes](pipe) with 
-[processors](processor) to specify a model of how data should flow. You may 
-define as many plants as needed but each plant is a closed system without 
-the ability of the RIDDL model to express the sharing of data between the 
-plants. This is done deliberately to prevent unintentional contamination of 
-data in large models.  
+A RIDDL `plant` is a definition that combines [pipes]({{< relref "pipe.md" >}}) 
+with [processors]({{< relref "processor.md" >}}) to specify a model of how data 
+should flow. You may define as many plants as needed but each plant is a closed
+system without the ability of the RIDDL model to express the sharing of data
+between the plants. This is done deliberately to prevent unintentional
+contamination of data in large models.  
 
 ## Joints
 The purpose of a plant definition is to provide the blueprint for how a set
@@ -61,14 +61,14 @@ In the above example, note that each inlet/outlet pair has the same type
 name (`Weather` and `CurrentTemperature`).
 
 ## Entities as Processors
-An [entity](../context/entity) may also be used as a processor under some 
-special circumstances:
-* _as a source_ - An entity may be used as a source of events if a command handler 
-  is defined for the entity.   
+An [entity]({{< relref "../context/entity" >}}) may also be used as a processor 
+under some special circumstances:
+* _as a source_ - An entity may be used as a source of events if a command
+  handler is defined for the entity.   
 * _as a sink_ - An entity may be used as a sink for events if a reaction handler 
   is defined for the entity.
 * _as a flow_ - An entity may be used as a flow to convert commands into events
 
 ## Bulkheads
-
+TBD
 
