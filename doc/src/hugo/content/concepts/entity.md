@@ -21,7 +21,7 @@ and
 {{% /hint %}}
 
 There are three main aspects to this definition of entity:
-* Entities are in the software implementation of the model are objects, 
+* Entities in the software implementation of the model are objects, 
   containing both state and function. They can both _be_ and _do_.  
   This means they can represent any physical object, a concept, etc. 
 * Entities have an identity;  they are identified by some unique value
@@ -36,17 +36,20 @@ these techniques:
 * object-oriented programming which also encapsulate states and defines 
   functions to manipulate that state. 
 * functional programming where a collection of functions process messages or 
-  function calls using exclusive access to some data.  
+  function calls using exclusive access to some data and a queue of messages;
+  this simulates the actor model.  
 
 ## Identity
-Entities have a unique immutable persistent identifier, much like people have names except our
-personal names are not unique. The unique identifier is used to locate the entity in a computing
-system and for other computing purposes. These immutable and unique identifiers convey
-equivalence. That is when two values of an identifier are the same, then by definition, they
-must refer to the same entity.  Changing the state of the entity does not break this equivalence.
-type `Id`, which provides the means to reference the entity in its context or
-between contexts. an Entity's immutable identity conveys equivalence.
-Individual pieces of attribute of entity can change.
+Entities have a unique immutable persistent identifier, much like people have 
+names except our personal names are not unique. The unique identifier is 
+used to locate the entity in a computing system and for other computing 
+purposes. These immutable and unique identifiers convey equivalence. That 
+is when two values of an identifier are the same, then by definition, they
+must refer to the same entity.  Changing the state of the entity does not 
+break this equivalence. [Type `Id`]({{< relref "type.md#parameterized" >}}), 
+which provides the means to reference the entity in its context or between
+contexts. An Entity's immutable identity conveys equivalence. Individual pieces
+of data of an entity can change their values (mutable).
 
 ## Equality
 Entities hold state, whether that state is persistent or not. However, for
@@ -76,6 +79,12 @@ if all their other attributes are the same.
 ## Options
 Entities can have various optional characteristics as shown in the sections 
 below
+
+### technology
+*Arguments*: Multiple, a list of the names of technologies intended to be 
+used in the implementation.
+*Implication*: This does not impact the behavior of the entity except in the 
+differences provided by various implementation technologies. 
 
 ### event sourced
 *Arguments*: None
@@ -134,7 +143,7 @@ log of change events
 
 * [Authors]({{< relref "author.md" >}}) - define who the authors of the
   entity are
-* [Function]({{< relref "function.md" >}}) - named definitions of processing
+* [Functions]({{< relref "function.md" >}}) - named definitions of processing
 * [Handler]({{< relref "handler.md" >}}) - how to handle messages sent to an
   entity
 * [Includes]({{< relref "include.md" >}}) - inclusion of entity content from a 
