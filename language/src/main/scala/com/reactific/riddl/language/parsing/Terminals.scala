@@ -213,6 +213,7 @@ trait Terminals {
   object Predefined {
     final val Abstract = "Abstract"
     final val Boolean = "Boolean"
+    final val Current = "Current" // in amperes
     final val Date = "Date"
     final val DateTime = "DateTime"
     final val Decimal = "Decimal"
@@ -220,11 +221,17 @@ trait Terminals {
     final val Id = "Id"
     final val Integer = "Integer"
     final val LatLong = "LatLong"
+    final val Length = "Length" // in meters
+    final val Luminosity = "Luminosity" // in candelas
+    final val Mass = "Mass" // in kilograms
+    final val Mole = "Mole" // in mol (amount of substance)
     final val Nothing = "Nothing"
     final val Number = "Number"
     final val Pattern = "Pattern"
+    final val Range = "Range"
     final val Real = "Real"
     final val String = "String"
+    final val Temperature = "Temperature" // in Kelvin
     final val Time = "Time"
     final val TimeStamp = "TimeStamp"
     final val UniqueId = "UniqueId"
