@@ -8,19 +8,27 @@ weight: 30
 The RIDDL specification language borrows concepts from:
 * [Domain Driven Design (DDD)](https://en.wikipedia.org/wiki/Domain-driven_design)
 * [Reactive System Architecture (RSA)](https://www.reactivemanifesto.org/)
-* [Unified Modeling Language (UML)](https://en.wikipedia.org/wiki/Unified_Modeling_Language) 
+* [C4 Model Of Software Architecture](https://c4model.com)
+* [Akka](https://akka.io)
 * [Agile User Stories](https://en.wikipedia.org/wiki/User_story)
 * [Behavior Driven Development (BDD)](https://en.wikipedia.org/wiki/Behavior-driven_development)
-* [C4 Model Of Software Architecture](https://c4model.com)
+* [Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine)
+* [Command/Query Separation](https://en.wikipedia.org/wiki/Command%E2%80%93query_separation)
+* [CQRS](https://martinfowler.com/bliki/CQRS.html)
+* [Event Sourcing](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing)
+* [Saga Pattern](https://microservices.io/patterns/data/saga.html)
+* [Unified Modeling Language (UML)](https://en.wikipedia.org/wiki/Unified_Modeling_Language)
 
-RIDDL aims to capture business concepts and architectural details in a way that
-is consumable by business professionals yet can also be directly
-translated into various technical and non-technical artifacts, including: 
+RIDDL aims to capture business concepts, system designs and architectural 
+details in a way that is consumable by business professionals yet can also
+be directly translated into various technical and non-technical artifacts,
+including: 
 * a documentation web-site 
 * various architectural diagrams (context maps, sequence diagrams, and so on)
 * design input to code generators (e.g. Kalix, protobuffers)
 * Kubernetes deployment descriptors
-* code scaffolding that implements the design captured in the RIDDL specification 
+* code scaffolding and templates that implement the design captured in the 
+  RIDDL specification 
 * and more; please see the 
   [future projects section]({{< relref "../future-work" >}})
 
@@ -28,9 +36,6 @@ Using these outputs, delivery teams are well-equipped to quickly begin
 the task of implementation. Regeneration of the model in subsequent 
 iterations of the design are accommodated and continue to provide value through
 the evolution of the design without interrupting the implementation.
-
-RIDDL gets its name from an acronym that stands for "Reactive Interface to Domain
-Definition Language". 
 
 ## Domain Driven Design (DDD)
 RIDDL is based on concepts from 

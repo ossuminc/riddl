@@ -5,7 +5,12 @@ draft: false
 weight: 10
 ---
 
-RIDDL is a specification language with a specific niche for large, distributed,
+RIDDL gets its name from an acronym that stands for *Reactive Interface with
+Domain Definition Language*.
+
+
+
+RIDDL is a specification language for the niche of large, distributed,
 reactive, concurrent systems such as required for modern internet-scale 
 applications or corporate back office infrastructure. 
 

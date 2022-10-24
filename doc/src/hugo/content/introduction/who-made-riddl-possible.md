@@ -24,7 +24,10 @@ RIDDL wouldn't be where it is today without James' contributions.
 An early implementor of a `hugo` translator that inspired much of the current 
 implementation. 
 
-## Foundational Creators
+## Foundational Work
+
+### [Bertrand Meyer](https://www.linkedin.com/in/bertrandmeyer/)
+For the notion of [command/query separation](https://en.wikipedia.org/wiki/Command%E2%80%93query_separation) which led to [CQRS](https://martinfowler.com/bliki/CQRS.html)
 
 ### [Bjørn Erik Pedersen](https://github.com/bep)
 Creator of [hugo](https://github.com/gohugo/)
