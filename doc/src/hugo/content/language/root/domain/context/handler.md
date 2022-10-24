@@ -5,14 +5,21 @@ weight: 50
 draft: "false"
 ---
 
-A `handler` definition in a [context](_index.md) specifies how that 
-bounded context should handle messages sent to it. 
+{{< hint warning Warning >}}
+This page is stale and no longer accurately reflects context handlers. Please
+refer to the 
+[handler concept]({{< relref "../../../../concepts/handler.md" >}}) 
+for further clarity. 
+{{< /hint >}}
+ß
+A `handler` definition in a [context]({{< relref "_index.md" >}}) specifies how 
+that bounded context should handle messages sent to it. 
 
 {{% hint info %}}
 Note that an
-[Entity](entity/) can define a handler too, but they are different than
-the handlers defined in a context. See [Entity Handler](entity/handler.md) for 
-more details.
+[Entity]({{< relref "entity" >}}) can define a handler too, but they are 
+different than the handlers defined in a context. See 
+[Entity Handler]({{< relref "entity/handler.md" >}}) for more details.
 {{% /hint %}}
 
 There are two kinds of handlers as described in the following sections. They

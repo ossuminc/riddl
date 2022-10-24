@@ -14,7 +14,8 @@ specify portions of it in RIDDL.
 
 As you might guess from the name, Reactive BBQ is a restaurant chain that 
 serves spicy (reactive!) BBQ dishes.  It doesn't exist of course, even if 
-we may or may not have mistaken [R&R BBQ in Salt Lake City](https://randrbbq.com/) 
+we may or may not have mistaken 
+[R&R BBQ in Salt Lake City](https://randrbbq.com/) 
 for the _Reactive_ version in 2018.
 
 The Reactive BBQ case study in the LRA-P course included interviews with several
@@ -25,10 +26,10 @@ this case study first.
 The RIDDL files for Reactive BBQ are arranged into a directory structure, each
 with an explanation page as follows:
 
-- [Reactive BBQ Domain](reactivebbq)
-    - [Restaurant](restaurant)
-    - [BackOffice](backoffice)
-    - [Corporate](corporate)
+- [Reactive BBQ Domain]({{< relref "reactivebbq" >}})
+    - [Restaurant]({{< relref "restaurant" >}})
+    - [BackOffice]({{< relref "backoffice" >}})
+    - [Corporate]({{< relref "corporate" >}})
 
 ## Case Study
 The Reactive BBQ restaurant chain has determined that their existing restaurant
@@ -39,12 +40,12 @@ can improve their customer service, tracking, and reliability.
 What follows are the interviews conducted with key personnel at Reactive BBQ
 in order to identify the issues. 
 
-- [Reactive BBQ CEO](ceo)
-- [Corporate Head Chef](headchef)
-- [Host](host)
-- [Server](server)
-- [Bartender](bartender)
-- [Chef](chef)
-- [Cook](cook)
-- [Delivery Driver](deliverydriver)
-- [Online Customer](onlinecustomer)
+- [Reactive BBQ CEO]({{< relref "ceo" >}})
+- [Corporate Head Chef]({{< relref "headchef" >}})
+- [Host]({{< relref "host" >}})
+- [Server]({{< relref "server" >}})
+- [Bartender]({{< relref "bartender" >}})
+- [Chef]({{< relref "chef" >}})
+- [Cook]({{< relref "cook" >}})
+- [Delivery Driver]({{< relref "deliverydriver" >}})
+- [Online Customer]({{< relref "onlinecustomer" >}})

@@ -34,14 +34,15 @@ and user interface ideas are also included.
 
 ## Prerequisites
 
-We recommend that you first read the [Language Conventions](common/lang-conventions.md) 
+We recommend that you first read the 
+[Language Conventions]({{< relref "common/lang-conventions.md" >}}) 
 (not documentation conventions!) to which RIDDL adheres. These conventions
 are aimed at making RIDDL models consistent, simple, and free of special cases
 and exceptions.
 
 Next, there are several concepts that are used in a variety of places 
-in the language. The [Common](common) section describes these concepts 
-in preparation for looking at the major definitions in the language.  
+in the language. The [Common]({{< relref "common" >}}) section describes these 
+concepts in preparation for looking at the major definitions in the language.  
 
 
 ## Definitional Hierarchy 
@@ -54,6 +55,6 @@ So, we can explore and learn the RIDDL language by examining each level of the
 definitional hierarchy like peeling the layers of an onion to discover what is
 hidden at each level. 
 
-Start with the [Root](root).
+Start with the [Root]({{< relref "root" >}}).
 
 
