@@ -19,13 +19,16 @@ quoted string =  '"', { all characters - '"' }, '"';
 ```
 This form can be quite technical and is intended for those who are familiar with
 EBNF format and lexical parsing.  For a more descriptive introduction to the 
-language, please refer to the [Audience](../../../guides) section.
+language, please refer to the [Guides]({{< relref "../../_index.md" >}}) 
+section.
 
 
 The RIDDL syntax grammar is broken down into the following portions:
-* [terminals](terminals) - Terminal symbols used in the grammar
-* [common](common) - Common grammar productions used in other files
-* [root](root) - Top level root level ("file scope").
-* [domain](domain) - Defining domains
-* [context](context) - Defining contexts
-* [entity](entity) - Defining entities
+* [terminals]({{< relref "terminals.md" >}}) - Terminal symbols used in the 
+  grammar
+* [common]({{< relref "common.md" >}}) - Common grammar productions used in 
+  other files
+* [root]({{< relref "root.md" >}}) - Top level root level ("file scope").
+* [domain]({{< relref "domain.md" >}}) - Defining domains
+* [context]({{< relref "context.md" >}}) - Defining contexts
+* [entity]({{< relref "entity.mid" >}}) - Defining entities

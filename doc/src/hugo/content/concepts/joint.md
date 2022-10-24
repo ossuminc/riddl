@@ -11,14 +11,12 @@ Joints join [Processor]({{< relref "processor.md" >}})
 * OutletJoint - connects and Outlet to a Pipe
 
 Joints are necessary to set up a pipeline in a Plant which must flow data 
-from 
-[source]() to 
-sink. 
+from [source]({{< relref "processor.md" >}}) to 
+[sink]({{< relref "processor.md" >}}]. 
 
 ## Occurs In
 
 * [Plants]({{< relref "domain.md" >}})
-
 
 ## Contains
 Nothing

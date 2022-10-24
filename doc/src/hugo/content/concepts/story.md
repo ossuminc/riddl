@@ -10,29 +10,29 @@ concept as the idea
 RIDDL, a story gets a little more involved than the 
 [usual formulations](https://en.wikipedia.org/wiki/User_story#Common_templates) 
 of a user story:
-> As an {actor}, I would like {capability}, so that {benefit}
+> As an _{actor}_, I would like _{capability}_, so that _{benefit}_
 
 or
  
-> In order to {receive benefit}, as an {actor}, I can {capability}
+> In order to receive _{benefit}_, as an _{actor}_, I can _{capability}_
 
 which have these three ideas:
-* An `actor` specification giving the role played by the narrator of the story
-* A `capability` specification giving the capability used by the narrator
-* A `benefit` specification providing the reason why the narrator wants to 
+* An `actor` that provides the role played by the narrator of the story
+* A `capability` that provides the capability used by the narrator
+* A `benefit` that provides the reason why the narrator wants to 
   use the `capability`
 
-A RIDDL Story provides two more definitional clauses that relate the story to 
-other RIDDL components:
-* The `scope` clause identifies the domain that bounds the set of definitions 
-  used by the story. This helps locate the story in the nested hierarchy of 
-  domains. 
-* The `interactions` define and label the interactions between components. 
-* Some [examples](example), expressed as Gherkin statements, define the 
-  test cases that should be used to test the story, as a definition of "done".
+A RIDDL Story also provides a set of cases that relate the story to 
+other RIDDL components through the steps taken for each [`case`]({{< relref 
+"case.md" >}}. Each case specifies a set of `interactions` that define and label
+the interactions between other RIDDL definitions such as 
+[application views]({{< relref "view.md" >}}), 
+[entities]({{< relref "entity.md" >}}), and 
+[projections]({{< relref "projection.md" >}}). Cases can also define  
+[examples]({{<relref "example" >}}), to outline user acceptance testing.
 
 Stories are designed to produce sequence diagrams. This allows the intended 
-interaction of some actor with the system being 
+interaction of some actor (human or not) with the system being 
 designed in RIDDL to support a detailed definition of a
 [user story](https://en.wikipedia.org/wiki/User_story).
 

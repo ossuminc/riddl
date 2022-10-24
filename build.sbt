@@ -201,7 +201,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
-lazy val `plugin` = (project in file("sbt-riddl"))
+lazy val plugin = (project in file("sbt-riddl"))
   .enablePlugins(SbtPlugin, BuildInfoPlugin).disablePlugins(ScoverageSbtPlugin)
   .configure(C.mavenPublish).settings(
     name := "sbt-riddl",

@@ -5,8 +5,8 @@ weight: 20
 draft: "false"
 ---
 
-A `projection` can be defined in a [context](../_index.md) to improve
-query performance across a large number of entities by providing 
+A `projection` can be defined in a [context]({{< relref "../_index.md" >}})
+to improve query performance across a large number of entities by providing 
 a read-only view of persistent state across a set of entities.
 
 ## Necessity
@@ -23,7 +23,8 @@ that query quickly. Otherwise, a complete scan of all the entities and the
 reconstruction of each of them would be needed.
 
 Because of the foregoing, projections may only be defined in a 
-[context](../../context/_index.md) or a [domain](../../../domain/_index.md). 
+[context]({{< relref "../../context/_index.md" >}}) or a 
+[domain]({{< relref "../../../domain/_index.md" >}}). 
 This requirement limits the set of entities over which the projection is
 defined to the set reachable as descendents of that context or domain.
 
@@ -58,4 +59,4 @@ Here's the projection process. Usually, events are logged as they are kept appen
 the log file. Logs are string and text. To retrieving meaningful information out of logs, logs are
 transformed into a more query-friendly format and stored in queriable repository or DB.
 
-![CQRS/ES](../../../../../../static/images/cqrs-es.png "CQRS/ES")
+![CQRS/ES](/images/cqrs-es.png)
