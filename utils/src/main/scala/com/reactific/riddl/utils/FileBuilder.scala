@@ -15,5 +15,5 @@ trait FileBuilder {
   def nl: this.type = { sb.append(newLine); this }
 
   override def toString: String = sb.toString
-  def toLines: Seq[String]= sb.toString.split(newLine).toIndexedSeq
+  def toLines: Seq[String] = sb.toString.split(newLine).toIndexedSeq
 }

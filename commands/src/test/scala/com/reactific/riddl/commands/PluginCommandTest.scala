@@ -36,7 +36,7 @@ class PluginCommandTest
       val (parser, default) = plugin.getOptions
       OParser.parse(parser, args, default) match {
         case Some(to) => to.arg1 must be("Success!")
-        case None => fail("No options returned from OParser.parse")
+        case None     => fail("No options returned from OParser.parse")
       }
     }
     "get options from config file" in {
@@ -51,7 +51,7 @@ class PluginCommandTest
       ConfigSource.file(path.toFile)
         .load[ASimpleTestCommand.Options](reader) match {
         case Right(loadedOptions) => loadedOptions.arg1 mustBe "Success!"
-        case Left(failures) => fail(failures.prettyPrint())
+        case Left(failures)       => fail(failures.prettyPrint())
       }
     }
 

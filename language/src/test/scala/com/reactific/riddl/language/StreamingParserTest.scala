@@ -8,6 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {
 

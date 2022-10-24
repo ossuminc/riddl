@@ -8,12 +8,15 @@ package com.reactific.riddl.utils
 
 import java.nio.file.Path
 
-/** Unit Tests For a plugin with a future version*/
+/** Unit Tests For a plugin with a future version */
 
-class FuturePluginSpec extends PluginSpecBase (
-  svcClassPath = Path.of("com/reactific/riddl/utils/FutureTestPlugin.class"),
-  implClassPath = Path.of("com/reactific/riddl/utils/FutureTestPlugin.class")
-)  {
+class FuturePluginSpec
+    extends PluginSpecBase(
+      svcClassPath =
+        Path.of("com/reactific/riddl/utils/FutureTestPlugin.class"),
+      implClassPath = Path
+        .of("com/reactific/riddl/utils/FutureTestPlugin.class")
+    ) {
   "FuturePlugin" should {
     "not load" in {
 

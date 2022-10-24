@@ -6,7 +6,9 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{Context, Entity}
+import com.reactific.riddl.language.AST.Context
+import com.reactific.riddl.language.AST.Entity
+
 /** Unit Tests For Handler */
 class HandlerTest extends ParsingTest {
   "Handlers" should {

@@ -7,6 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Example
+
 /** Unit Tests For Handler */
 class GherkinTest extends ParsingTest {
   "Gherkin" should {

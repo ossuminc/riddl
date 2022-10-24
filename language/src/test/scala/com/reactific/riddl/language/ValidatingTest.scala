@@ -8,7 +8,8 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
 
 import java.io.File

@@ -6,7 +6,10 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term}
+import com.reactific.riddl.language.AST.BlockDescription
+import com.reactific.riddl.language.AST.Identifier
+import com.reactific.riddl.language.AST.LiteralString
+import com.reactific.riddl.language.AST.Term
 import com.reactific.riddl.language.ast.Location
 class TermTest extends ParsingTest {
 
