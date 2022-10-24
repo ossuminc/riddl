@@ -6,14 +6,16 @@ draft: "false"
 ---
 
 ## Concept
-See [the handler concept page](../../../../../concepts/handlers.md) for 
-general information about handlers. 
+See 
+[the handler concept page]({{< relref "../../../../../concepts/handler.md" >}})
+for general information about handlers. 
 
 {{% hint info %}}
 Note that a
-[context](../_index.md) can define a [handler](../handler.md) too, but they are 
+[context]({{< relref "../_index.md" >}}) can define a 
+[handler]({{< relref "../handler.md" >}})too, but they are 
 different compared to the handlers defined in an `entity`. 
-See [Context Handler](../handler.md) for details on *context handlers*.
+See [Context Handler]({{< relref "../handler.md" >}}) for details on them.
 {{% /hint %}}
 
 Handlers are specified with the `handler` keyword and enclose a set of `on` 
@@ -72,7 +74,7 @@ domain Foo {
 ```
 Notes:
 * `Path.To.Context.ThingThatHappend` is known as a
-  [path identifier](../../../../common/identifiers).
+  [path identifier]({{< relref "../../../../common/identifiers" >}}).
 
 ## Query Handler
 

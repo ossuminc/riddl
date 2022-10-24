@@ -7,8 +7,10 @@ weight: 80
 ---
 
 Some people can learn RIDDL faster by looking at examples than they can by 
-reading the informal definitions in the [language guide](../language) or the 
-formal definitions in the [grammar section](../guides/developers/grammar). 
+reading the informal definitions in the 
+[language guide]({{< relref "../language" >}}) or the 
+formal definitions in the 
+[grammar section]({{< relref "../guides/developers/grammar" >}}). 
 To support that mode of learning, this tutorial decomposes the domain of a 
 fictitious restaurant, The Reactive BBQ.
 
@@ -21,4 +23,4 @@ references to guide you. You can find the fully implemented
 Reactive BBQ RIDDL specification here. The language reference can be 
 found here.
 
-[Read more here](rbbq) 
+[Read more here]({{< relref "rbbq" >}}) 

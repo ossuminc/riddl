@@ -15,10 +15,10 @@ The RIDDL compiler must emit clear feedback on errors, warnings, and other
 details that would improve the overall correctness and outputs from RIDDL.
 
 RIDDL sources are intended to be kept in version control along with the source 
-code. The RIDDL compiler, [riddlc](../../tooling/riddlc), has utilities that 
-will automate the process of generating RIDDL outputs from source control or 
-in local environments. These will be discussed further when we dive into riddlc
-in depth.
+code. The RIDDL compiler, [riddlc]({{< relref "../../tooling/riddlc" >}}), has 
+utilities that will automate the process of generating RIDDL outputs from 
+source control or in local environments. These will be discussed further when
+we dive into riddlc in depth.
 
 Authors are the individuals who create system specifications. Such work is
 greatly aided by using a clear, concise, precise, and intuitive language
@@ -50,16 +50,3 @@ of work. The RIDDL compiler emits clear feedback on errors, warnings, and an
 author must be able to interpret those messages and use them to adjust the 
 RIDDL sources to improve the overall correctness in the outputs from RIDDL.
 
-Finally, the author should have broad control to influence the look and feel,
-as well as the content of the outputs. For
-[specification outputs](../riddloutputs/), examples might include fonts,
-colors, logos, and even layout of the specification web site.
-For [implementation artifacts](../riddloutputs/), these customizations could
-include license, copyright, and trademark information that serve as a preamble
-in code artifacts.
-
-RIDDL sources are intended to be kept in version control along with the source
-code. The RIDDL compiler, [riddlc](../essentialutitlies/riddlc/), has
-utilities that will automate the process of generating RIDDL outputs from
-source control or in local environments. These will be discussed further when
-we dive into riddlc in depth.

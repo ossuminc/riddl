@@ -2,7 +2,7 @@
 title: "Who Made RIDDL Possible?"
 date: 2022-02-25T10:07:32-07:00
 draft: false
-weight: 40
+weight: 50
 ---
 
 ## Originator
@@ -44,11 +44,17 @@ on DDD:
 * [Domain-Driven Design: Tackling Complexity In The Heart Of Software](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215/ref=pd_lpo_1?pd_rd_i=0321125215&psc=1)
 * [Domain-Driven Design References: Definitions and Pattern Summaries](https://www.amazon.com/Domain-Driven-Design-Reference-Definitions-Summaries/dp/1457501198/ref=sr_1_1?crid=10W7DZB0JRODX&keywords=Domain+driven+design+reference&qid=1662835260&s=books&sprefix=domain+driven+design+reference%2Cstripbooks%2C58&sr=1-1) 
 
+### [Hector Garcia-Molina](https://en.wikipedia.org/wiki/H%C3%A9ctor_Garc%C3%ADa-Molina) & [Ken Salem](https://www.linkedin.com/in/kensalem/?originalSubdomain=ca)
+Creators of the [Saga Pattern](https://microservices.io/patterns/data/saga.html)
+
 ### [Jonas Bonér](https://www.linkedin.com/in/jonasboner/) {#jonas-boner}
 Creator of [Akka](https://akka.io) and many distributed system patterns
 
 ### [Kent Beck](https://www.linkedin.com/in/kentbeck/)
 Creator of [eXtreme Programming](http://www.extremeprogramming.org/)
+
+### [Li Haoyi](http://www.lihaoyi.com/)
+Creator of [fastparse](https://www.lihaoyi.com/fastparse/) used to parse RIDDL.
 
 ### [Robert Kaussow](https://github.com/xoxys)
 Creator of the [Geekdoc theme](https://geekdoc.de) for 
