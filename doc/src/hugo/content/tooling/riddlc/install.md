@@ -8,7 +8,7 @@ weight: 30
 
 This guide helps you to install the `riddlc` tool on your
 local computer. Before installation, you will need to follow
-the steps defined on the [build page](build).
+the steps defined on the [build page]({{< relref "build.md" >}}).
 
 ## Universal Installer
 RIDDL's build system can generate a universal installation

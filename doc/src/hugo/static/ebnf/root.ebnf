@@ -1,0 +1,3 @@
+(* RIDDL Grammar For Root - TBD *)
+
+root = domain | domain include

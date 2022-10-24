@@ -1,7 +1,7 @@
 ---
 title: "How Can I Get Help?"
 draft: false
-weight: 90
+weight: 70
 ---
 
 How you will get help depends on what you want to get help with. Pick the 

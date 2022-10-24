@@ -5,12 +5,12 @@ draft: "false"
 weight: 10
 ---
 
-The state definitions of an entity define the structure of the information that the entity 
-retains as its current state.  
+The state definitions of an entity define the structure of the information that 
+the entity retains as its current state.  
 
 ## Syntax Example
-The state of an entity is defined with the `state` keyword within the content of an `entity` 
-definition, like this:
+The state of an entity is defined with the `state` keyword within the content of
+an `entity`definition, like this:
 ```riddl
 entity Car {
   type Propulsion = any of { ICE, Electric, Steam, Diesel, EMDrive }
@@ -38,7 +38,8 @@ The above example definition associates a `state`, named `Static` with the
 It is entirely possible to specify multiple named state definitions for a
 single entity. This is provided in the language to support finite state
 machines which are frequently used with entities. The state of an entity can
-be modelled as simply transitions of states as each [handler](ref(handler.md))
+be modelled as simply transitions of states as each 
+[handler]({{< relref "handler.md" >}})
 processes a command. Multiple state values are useful when the state of the
 entity has different modes of operation where different sets of state values
 are needed.

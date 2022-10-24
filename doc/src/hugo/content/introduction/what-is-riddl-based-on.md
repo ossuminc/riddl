@@ -21,7 +21,8 @@ translated into various technical and non-technical artifacts, including:
 * design input to code generators (e.g. Kalix, protobuffers)
 * Kubernetes deployment descriptors
 * code scaffolding that implements the design captured in the RIDDL specification 
-* and more; please see the [future projects section](/extensions)
+* and more; please see the 
+  [future projects section]({{< relref "../future-work" >}})
 
 Using these outputs, delivery teams are well-equipped to quickly begin
 the task of implementation. Regeneration of the model in subsequent 
