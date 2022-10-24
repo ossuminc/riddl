@@ -25,18 +25,20 @@ makes learning the language easier since there are no exceptions to fundamental 
 The sections below define the consistent language features.
 
 ### Declarative Definitions
-The language is declarative. You don't say how to do something, you specify the end
-result you want to see. The language aims to capture a detailed and concise definition
-of the abstractions that a complex system will require. It does not specify how those
-abstractions should be built. RIDDL is not a programming language, but its compiler 
-can generate structurally sound code that can be implemented by a software engineer.
+The language is declarative. You don't say how to do something, you specify 
+the end result you want to see. The language aims to capture a detailed and
+concise definition of the abstractions that a complex system will require. It
+does not specify how those abstractions should be built. RIDDL is not a
+programming language, but its compiler can generate structurally sound code
+that can be completed by a software engineer.
 
 ### Every Definition Can Be Documented
 Every thing you can define can have a `described by`, `described in file`, or 
 `explained by` suffix which lets you document the definition using markdown. 
 
 ### Hierarchy Of Definitions
-Definitions are specified in a [strict containment hierarchy](../root). Definitions that can 
+Definitions are specified in a 
+[strict containment hierarchy]({{< relref "../root" >}}). Definitions that can 
 contain other definitions are known as _containers_. For example, 
 a domain definition is a recursively nested definition, as follows:
 ```riddl
@@ -118,25 +120,32 @@ cat Smudge is { ??? }
 If we aren't sure of the characteristics of the cat named "Smudge"
  
 ### Directives
-RIDDL supports the notion of directives that are specified as a complete line whose first 
-character is the hash mark. The directive extends to the end of that line. Hash marks at other 
-locations on a line are not recognized as directives.  The sub-sections below define the kinds 
-of directives supported by RIDDL's compiler.
+RIDDL supports the notion of directives that are specified as a complete line
+whose first character is the hash mark. The directive extends to the end of that
+line. Hash marks at other locations on a line are not recognized as directives.
+The subsections below define the kinds of directives supported by RIDDL's 
+compiler.
 
 #### Substitutions
 For example:
 ```riddl
 #define x = expialidocious
 ```
-defines a symbol x that has the value `expialidocious` . Wherever `$x` is seen in the input it will be replaced
-with `expialidocious` before being lexically interpreted by the compiler.
+defines a symbol x that has the value `expialidocious` . Wherever `$x` is seen
+in the input it will be replaced with `expialidocious` before being lexically
+interpreted by the compiler.
+
+{{< hint type=warning title="Warning" >}}
+Substitutions have not yet been implemented in RIDDL
+{{< /hint >}}
 
 #### File Inclusion
-RIDDL allows source input to be included, inline, from other files. That is, the parser
-will substitute the text of an included file, replacing the `include` directive. This is much 
-like the C preprocessor `#include` directive. RIDDL always parses the entire specification but 
-the `include` directive allows you to organize that specification into many (even nested) files. 
-Note that include directives only permitted within container definitions. Doing so prevents 
+RIDDL allows source input to be included, inline, from other files. That is, 
+the parser will substitute the text of an included file, replacing the `include`
+directive. This is much like the C preprocessor `#include` directive. RIDDL
+always parses the entire specification but the `include` directive allows you to
+organize that specification into many (even nested) files. Note that include
+directives are only permitted within container definitions. Doing so prevents 
 fragments of definitions from being separated into individual files.
 
 For example, this is allowed:
@@ -152,9 +161,10 @@ while this is not:
 domain
 #include "ThingAmaJig-domain"
 ```
-because it is not specified within the contained portion of a container. A `domain` is a 
-container, but it needs a name and that name cannot be buried in an include file. As a rule of 
-thumb, you can always use `#include` right after an opening curly brace of a container definition.  
+because it is not specified within the contained portion of a container. A
+`domain` is a container, but it needs a name and that name cannot be buried in
+an include file. As a rule of thumb, you can always use `#include` right after
+an opening curly brace of a container definition.   
 
 ### Descriptions (Explanations)
 A definition may also be accompanied by some text or markup at its end to
@@ -210,6 +220,9 @@ domain SomeDomain is { ??? } explained as {
 ```
 
 #### Separate Sections
+{{< hint type=warning title="Warning" >}}
+The documentation in this section is stale and needs to be revised.
+{{< /hint >}}
 When more formal documentation is required for major definitions (domains,
 contexts, entities), then you should use the sectioned style to group
 your documentation into standard sections, like this: 

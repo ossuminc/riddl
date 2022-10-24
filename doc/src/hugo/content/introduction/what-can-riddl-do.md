@@ -2,7 +2,7 @@
 title: "What can RIDDL do?"
 date: 2022-02-25T10:07:32-07:00
 draft: false
-weight: 30
+weight: 20
 ---
 
 RIDDL is a software specification language. As a consequence of it being

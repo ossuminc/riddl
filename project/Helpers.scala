@@ -21,7 +21,7 @@ object V {
   val lang3 = "3.12.0"
   val pureconfig = "0.17.1"
   val scalacheck = "1.17.0"
-  val scalatest = "3.2.12"
+  val scalatest = "3.2.14"
   val scopt = "4.1.0"
 }
 

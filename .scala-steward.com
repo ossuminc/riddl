@@ -1,4 +1,4 @@
-pullRequests.frequency = "@monthly"
+pullRequests.frequency = "@weekly"
 
 dependencyOverrides = [
   { groupId = "com.github.sbt", artifactId = "sbt-native-packager" }

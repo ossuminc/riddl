@@ -28,6 +28,7 @@ can only be `domain` definitions.  This example also abstractly defines a `domai
 named `foo`. 
 
 Now, you can use the tree below to navigate the definitional hierarchy. We 
-recommend you start with [Domain](domain) and work your way down from there.
+recommend you start with [Domain]({{< relref "domain" >}}) and work your way 
+down from there.
 
 {{< toc-tree >}}

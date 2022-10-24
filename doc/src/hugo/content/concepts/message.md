@@ -5,7 +5,8 @@ draft: false
 
 Messages are just [aggregate type]({{< relref "type.md#aggregation" >}})
 definitions that have special significance in RIDDL.  Messages make up the
-_lingua franca_ of the API of a [`context`](context) or [`entity`](entity).
+_lingua franca_ of the API of a [`context`]({{< relref "context.md" >}}) or 
+[`entity`]({{< relref "entity" >}}).
 That is, these are the fundamental building blocks of a 
 [message-driven system](https://developer.lightbend.com/docs/akka-platform-guide/concepts/message-driven-event-driven.html)
 
@@ -47,6 +48,7 @@ message and how it is handled by an entity. This does not apply to messages
 
 
 ## Implications Of Messages On Contexts
+TBD
 
 ## Occurs In
 
