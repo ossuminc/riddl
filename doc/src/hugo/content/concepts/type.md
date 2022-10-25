@@ -33,20 +33,20 @@ simple predefined types:
 | Abstract    | An unspecified, arbitrary type, compatible with any other type    |
 | Nothing     | A type that cannot hold any value, commonly used as a placeholder |
 | Boolean     | A Boolean value, with values true or false                        |
-| Number      | An arbitrary number, integer, decimal or floating point           |
+| Current     | An SI unit of electric current, measured in Amperes               |
 | Date        | A date value comprising a day, month and year                     |
-| Time        | A time value comprising an hour, minute, second and millisecond   |
 | DateTime    | A combination of Date and Time                                    |
-| TimeStamp   | A fixed point in time                                             |
-| UUID        | A randomly unique identifier with low likeliness of collision     |
-| String      | A sequence of Unicode characters                                  |
 | Duration    | An amount of time, measured in SI units of seconds                |
 | Length      | An SI unit of distance measured in meters                         |
-| Mass        | An SI unit of mass measured in kilograms                          |
-| Current     | An SI unit of electric current, measured in Amperes               |
-| Temperature | An SI unit of thermodynamic temperature, measured in Kelvin       |
-| Mole        | An SI unit of an amount of substance, measured in mol             |
 | Luminosity  | An SI unit of luminous intensity, measured in candelas            |
+| Mass        | An SI unit of mass measured in kilograms                          |
+| Mole        | An SI unit of an amount of substance, measured in mol             |
+| Number      | An arbitrary number, integer, decimal or floating point           |
+| String      | A sequence of Unicode characters                                  |
+| Temperature | An SI unit of thermodynamic temperature, measured in Kelvin       |
+| Time        | A time value comprising an hour, minute, second and millisecond   |
+| TimeStamp   | A fixed point in time                                             |
+| UUID        | A randomly unique identifier with low likeliness of collision     |
 
 ### Parameterized Predefined Types {#parameterized}
 Some predefined types take parameters to customize their content, we 
@@ -153,10 +153,7 @@ The prefixes allowed have a similar meaning to the suffixes:
 | many required | One or more instances of the preceding type               |
 
 ## Occurs In
-* [Domains]({{< relref "domain.md" >}})
-* [Contexts]({{< relref "context.md" >}})
-* [Entities]({{< relref "entity.md" >}})
-* [Functions]({< relref "fieldunction.md" >)
+All [Vital Definitions]({{< relref vital.md >}}) 
 
 ## Contains
-* [Fields]({{< relref "field.md" >}})
+* [Fields]({{< relref "field.md" >}}) (in aggregations only)

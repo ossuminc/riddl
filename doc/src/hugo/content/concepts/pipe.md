@@ -58,7 +58,8 @@ same as running it once. To counteract this assumption a pipe can be use the
 `lossy` option which reduces the guarantee to merely _best reasonable effort_,
 which could mean loss of data. This may increase throughput and lower overhead
 and is warranted in situations where data loss is not catastrophic to the
-system. Some IoT systems can have this characteristic.
+system. For example, some IoT systems permit this kind of data loss because 
+the next transmission is imminent.
 
 ## Producers & Consumers
 
@@ -81,6 +82,10 @@ _partitioned consumption_ principle, there can be multiple groups of consumers,
 each group getting each data item from the pipe.
 
 ## Subscriptions
+
+{{< hint type=warning icon=gdoc_dangerous title="Not Implemented" >}}
+This feature is not implemented as of 0.16.1
+{{< /hint >}}
 
 When a pipe has multiple consumers, they are organized into subscriptions. 
 Each subscription gets every datum the pipe carries. Consumers attach to a

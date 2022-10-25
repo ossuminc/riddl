@@ -127,9 +127,9 @@ With those clarifying simplifications, here's the hierarchy:
         * [Inlet]({{< relref "inlet.md" >}})
         * [Outlet]({{< relref "outlet.md" >}})
         * [Example]({{< relref "example.md" >}})
-        * [InletJoint]({{< relref "joint.md" >}})
-        * [OutletJoint]({{< relref "joint.md" >}})
-        * [Pipe]({{< relref "pipe.md" >}})
+      * [InletJoint]({{< relref "joint.md" >}})
+      * [OutletJoint]({{< relref "joint.md" >}})
+      * [Pipe]({{< relref "pipe.md" >}})
 
 ## Next
 When you're done exploring all the concepts, check out our 

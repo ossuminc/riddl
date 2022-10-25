@@ -8,7 +8,8 @@ projection. A field is a simple mapping of a name to a type. For example:
 
 ```name: Number```
 
-specifies that the field named `name` has type `Number`. Fields are used in 
+specifies that the field named `name` has type `Number`. Fields are most often
+referenced in 
 [actions]({{< relref "action" >}}) and 
 [expressions]({{< relref "expression" >}}) to supply values over which 
 computations are performed. 
@@ -17,7 +18,6 @@ computations are performed.
 * [Types]({{< relref "type.md" >}}) 
 * [States]({{< relref "state.md" >}})
 * [Projections]({{< relref "projection.md" >}})
-
 
 # Contains
 Nothing

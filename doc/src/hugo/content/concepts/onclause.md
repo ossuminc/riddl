@@ -4,7 +4,9 @@ draft: false
 ---
 
 An On clause specifies how to handle a particular kind of message
-for a [handler]({{< relref "handler.md" >}})
+for a [handler]({{< relref "handler.md" >}}. They are associated with a 
+specific message definition and contain an [example]({{< relref example.md >}})
+that defines the handling of that message.
 
 ## Occurs In
 

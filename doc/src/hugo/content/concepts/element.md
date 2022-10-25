@@ -9,6 +9,10 @@ with a data [type]({{< relref type.md >}}) for either input or output.
 Actors using an application are either sending information
 
 ## Element Kinds
+{{< hint type=warning icon=gdoc_dangerous title="Not Implemented" >}}
+This feature is not implemented as of 0.16.1
+{{< /hint >}}
+
 There are several kinds of elements, broken into three types: input, output,
 and grouping. Here are the input types of elements: 
 * *select* - input of a choice from a list of items
