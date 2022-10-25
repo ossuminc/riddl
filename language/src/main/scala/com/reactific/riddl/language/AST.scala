@@ -1666,6 +1666,9 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   sealed abstract class PlantOption(val name: String) extends OptionValue
 
+  case class PlantPackageOption( loc: Location, override val
+  args: Seq[LiteralString]) extends PlantOption("package")
+
   case class PlantTechnologyOption(
     loc: Location,
     override val args: Seq[LiteralString])

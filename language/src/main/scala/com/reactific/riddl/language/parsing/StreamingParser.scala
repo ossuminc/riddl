@@ -206,8 +206,18 @@ trait StreamingParser
   }
 
   def plantOptions[x: P]: P[Seq[PlantOption]] = {
-    P("").map(_ => Seq.empty[PlantOption]) // TODO: Need PlantOptions
+    options[x, PlantOption](
+      StringIn(
+        Options.package_,
+        Options.technology
+      ).!
+    ) {
+      case (loc, Options.package_, args)   => PlantPackageOption(loc, args)
+      case (loc, Options.technology, args) => PlantTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
   }
+
   def plantInclude[X: P]: P[Include[PlantDefinition]] = {
     include[PlantDefinition, X](plantDefinitions(_))
   }
