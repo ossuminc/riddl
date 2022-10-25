@@ -36,6 +36,43 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(1 -> 1, Identifier(1 -> 6, "boo"), Bool(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
+    "allow rename of Current" in {
+      val input = "type cur = Current"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "cur"), Current(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Currency(US)" in {
+      val input = "type cur = Currency(US)"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "cur"),
+        Currency(1 -> 12, "US"))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Length" in {
+      val input = "type len = Length"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "len"), Length(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Luminosity" in {
+      val input = "type lum = Luminosity"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "lum"), Luminosity(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Mass" in {
+      val input = "type mas = Mass"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "mas"), Mass(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Mole" in {
+      val input = "type mol = Mole"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "mol"), Mole(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
+    "allow rename of Temperature" in {
+      val input = "type tmp = Temperature"
+      val expected = Type(1 -> 1, Identifier(1 -> 6, "tmp"),
+        Temperature(1 -> 12))
+      checkDefinition[Type, Type](input, expected, identity)
+    }
     "allow renames of Id(path)" in {
       val input = "type ident = Id()"
       val expected = Type(
@@ -220,8 +257,8 @@ class TypeParserTest extends ParsingTest {
         RangeType((1, 11, rip), 21, 42)
       )
       checkDefinition[Type, Type](rip, expected, identity)
-
     }
+
     "allow one or more in word style" in {
       val rip = RiddlParserInput("type oneOrMoreA = many agg")
       val expected = Type(
@@ -237,6 +274,7 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+
     "allow one or more in regex style" in {
       val rip = RiddlParserInput("type oneOrMoreB = agg+")
       val expected = Type(
@@ -252,6 +290,7 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+
     "allow zero or more" in {
       val rip = RiddlParserInput("type zeroOrMore = many optional agg")
       val expected = Type(
@@ -267,6 +306,7 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+
     "allow optionality" in {
       val rip = RiddlParserInput("type optional = optional agg")
       val expected = Type(
@@ -282,6 +322,7 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+
     "allow messages defined with more natural syntax" in {
       val rip = RiddlParserInput("command foo is { a: Integer }")
       val expected = Type(
@@ -299,6 +340,7 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+
     "allow complex nested type definitions" in {
       val rip = RiddlParserInput("""
                                    |domain foo is {

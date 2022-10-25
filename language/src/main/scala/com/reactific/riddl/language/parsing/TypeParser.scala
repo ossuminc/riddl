@@ -33,6 +33,16 @@ trait TypeParser extends CommonParser {
     }
   }
 
+  def isoCountryCode[u:P]: P[String] = {
+    P(CharIn("A-Z").rep(2, "",2 ).!)
+  }
+
+  def currencyType[u:P]: P[Currency] = {
+    P( location ~ Predefined.Currency ~/
+      (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
+    ).map { tpl => (Currency.apply _).tupled(tpl) }
+  }
+
   def urlType[u: P]: P[URL] = {
     P(
       location ~ Predefined.URL ~/
@@ -42,7 +52,7 @@ trait TypeParser extends CommonParser {
 
   def simplePredefinedTypes[u: P]: P[TypeExpression] = {
     P(
-      stringType | urlType |
+      stringType | currencyType | urlType |
         (location ~ Predefined.Abstract).map(AST.Abstract) |
         (location ~ Predefined.Boolean).map(AST.Bool) |
         (location ~ Predefined.Number).map(AST.Number) |
@@ -56,6 +66,12 @@ trait TypeParser extends CommonParser {
         (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
         (location ~ Predefined.Time).map(AST.Time) |
         (location ~ Predefined.UUID).map(AST.UUID) |
+        (location ~ Predefined.Length).map(AST.Length) |
+        (location ~ Predefined.Luminosity).map(AST.Luminosity) |
+        (location ~ Predefined.Mass).map(AST.Mass) |
+        (location ~ Predefined.Mole).map(AST.Mole) |
+        (location ~ Predefined.Temperature).map(AST.Temperature) |
+        (location ~ Predefined.Current).map(AST.Current) |
         (location ~ Predefined.Nothing).map(AST.Nothing) |
         (location ~ Punctuation.undefinedMark).map(AST.Abstract)
     )./
