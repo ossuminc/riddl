@@ -5,7 +5,6 @@ weight: 10
 creatordisplayname: "Reid Spencer"
 ---
 
-{{< img name="forest-1" size="large" lazy=false >}}
 Welcome, Reactive Summit 2022 attendees!
 
 ## Important Links Shown At Reactive Summit 2022
@@ -16,7 +15,11 @@ Welcome, Reactive Summit 2022 attendees!
 * Example: https://github.com/improving-app/riddl
 * Contact: reid.spencer@improving.com
 
-## Full Slide Deck
- TBD
+## Other Information
+
+[Full Slide Deck](/decks/ReactiveSummit2022.pptx)
+
+[Reid's LinkedIn Profile](https://www.linkedin.com/in/reidspencer/)
+* Please send a link request and a note mentioning Reactive Summit
 
 

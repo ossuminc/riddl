@@ -10,8 +10,9 @@ language uses and how they relate to each other.
 
 ## Common Attributes
 
-Everything you can define in RIDDL is a definition. All definitions share common
-attributes:
+RIDDL is a declarative language that consists of various types of definitions
+in a hierarchy. A definition is anything that has a unique name that we call
+its *identifier*. All definitions have some common attributes:
 
 * _loc_: The location of the definition in its input file. (line & column)
 * _id_: The name, or identifier, of the definition. 
@@ -25,7 +26,7 @@ attributes:
 These attributes merely provide supplemental information about the 
 definition but are not part of the definition.  
 
-## Attributes of Vital Definitions
+## Vital Definitions
 The [vital definitions]({{< relref "vital.md" >}}) share a set of 
 common attributes that, like the [Common Attributes](#common-attributes),
 are informational rather than definitional. 
@@ -42,21 +43,24 @@ These are the common attributes that
 
 ## Definitional Hierarchy
 
-RIDDL uses a hierarchy of nested definitions as its primary structure. This 
-is done simply by having an attribute that lists the contents of any 
+Definitions in RIDDL are arranged in a hierarchy. Definitions that contain other
+definitions are known as *containers* or *parents*. Definitions that do not
+contain other definitions are known as *leaves* or *children*.
+
+This is done simply by having an attribute that lists the contents of any 
 definition:
 
 * _contents_: The contained definitions that define the container. Not all 
   definitions can contain other ones so sometimes this is empty.
 
-Consequently, a hierarchical structure is used below as well. However, to 
-make this hierarchy shorter and easier to comprehend, we've taken some 
-short-cuts :
+### Simplifications
+The valid hierarchy structure is shown below, but to make this hierarchy 
+shorter and easier to comprehend, we've taken some short-cuts :
 
 1. All the common attributes and the Vital Definition attributes 
 are not shown in the hierarchy but implied by the above sections.
 2. We only descend as far as an [Example]({{< relref "example.md" >}}) 
-   definition. Whenever you see one, you should infer this hierarchy:
+   definition; but you should infer this extended hierarchy:
   * [Examples]({{< relref "example.md" >}})
     * [Actions]({{< relref "action.md" >}})
       * [Expressions]({{< relref "expression.md" >}})
@@ -65,13 +69,14 @@ are not shown in the hierarchy but implied by the above sections.
   * [Types]({{< relref "type.md" >}})
     * [Fields]({{< relref "field.md" >}})
 
+### Hierarchy
 With those clarifying simplifications, here's the hierarchy:
 * [Root]({{< relref "root.md" >}})
   * [Domain]({{< relref "domain.md" >}})
     * [Type]({{< relref "type.md" >}})
     * [Application]({{< relref "application.md" >}})
       * [Type]({{< relref "type.md" >}})
-      * [View]({{< relref "view.md" >}})
+      * [Element]({{< relref "element.md" >}})
     * [Story]({{< relref "story.md" >}})
       * [Case]({{< relref "case.md" >}})
         * [Example]({{< relref "example.md" >}})
@@ -122,9 +127,9 @@ With those clarifying simplifications, here's the hierarchy:
         * [Inlet]({{< relref "inlet.md" >}})
         * [Outlet]({{< relref "outlet.md" >}})
         * [Example]({{< relref "example.md" >}})
-        * [InletJoint]({{< relref "joint.md" >}})
-        * [OutletJoint]({{< relref "joint.md" >}})
-        * [Pipe]({{< relref "pipe.md" >}})
+      * [InletJoint]({{< relref "joint.md" >}})
+      * [OutletJoint]({{< relref "joint.md" >}})
+      * [Pipe]({{< relref "pipe.md" >}})
 
 ## Next
 When you're done exploring all the concepts, check out our 

@@ -26,7 +26,7 @@ A RIDDL Story also provides a set of cases that relate the story to
 other RIDDL components through the steps taken for each [`case`]({{< relref 
 "case.md" >}}. Each case specifies a set of `interactions` that define and label
 the interactions between other RIDDL definitions such as 
-[application views]({{< relref "view.md" >}}), 
+[elements]({{< relref "element.md" >}}), 
 [entities]({{< relref "entity.md" >}}), and 
 [projections]({{< relref "projection.md" >}}). Cases can also define  
 [examples]({{<relref "example" >}}), to outline user acceptance testing.
@@ -39,5 +39,5 @@ designed in RIDDL to support a detailed definition of a
 ## Occurs In
 * [Domains]({{< relref "domain.md" >}})
 
-## Contains
-* [Examples]({{< relref "example.md" >}})
+## Contains)
+* [Cases]({{< relref "case.md" >}})

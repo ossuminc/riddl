@@ -6,9 +6,9 @@ weight: 20
 ---
 
 RIDDL is a software specification language. As a consequence of it being
-a language, it has a software tool, `riddlc`, that can be used to do a
-variety of things. Most of those things involve reading riddl input files
-checking them, and producing some output file(s). 
+a language, it has a software tool, `riddlc` (riddl compiler), that can be 
+used to do a variety of things. Most of those things involve reading riddl 
+input files, checking them, and producing some output file(s). 
 
 ## Input
 

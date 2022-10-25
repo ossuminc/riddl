@@ -6,10 +6,10 @@ weight: 40
 ---
 
 RIDDL is technology-agnostic, but not design-agnostics. It is purposefully 
-aimed at the design of large scale, web-sized, distributed systems based on 
-reactive architecture. It allows specification of the design of a system, without
-regard to programming language, cloud vendor choice, or specific technology 
-choices. Using RIDDL allows a living design to evolve through
+aimed at the design of large scale, distributed systems based on 
+reactive architecture. It allows specification of the design of a system, 
+without regard to programming language, cloud vendor choice, or specific 
+technology choices. Using RIDDL allows a living design to evolve through
 every stage of the development process and then through continuing
 maintenance and evolution of the system designed.
 

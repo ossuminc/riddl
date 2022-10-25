@@ -3,7 +3,7 @@ title: "Expression"
 draft: false
 ---
 
-TBD
+TBD - This part of RIDDL may change significantly in the future.
 
 ## Literal Expressions (#literal)
 TBD

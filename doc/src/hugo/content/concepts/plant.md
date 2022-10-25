@@ -59,6 +59,9 @@ special circumstances:
 * _as a flow_ - An entity may be used as a flow to convert commands into events
 
 ## Bulkheads
+{{< hint type=warning icon=gdoc_dangerous title="Not Implemented" >}}
+This section has not been completed. 
+{{< /hint >}}
 TBD
 
 
