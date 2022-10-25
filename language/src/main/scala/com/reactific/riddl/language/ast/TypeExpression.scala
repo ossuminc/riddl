@@ -406,6 +406,10 @@ trait TypeExpression extends AbstractDefinitions {
     }
   }
 
+  case class Currency(loc: Location, country: String) extends PredefinedType {
+    def kind: String = Predefined.Currency
+  }
+
   /** The simplest type expression: Abstract An abstract type expression is one
     * that is not defined explicitly. It is treated as a concrete type but
     * without any structural or type information. This is useful for types that
@@ -507,16 +511,22 @@ trait TypeExpression extends AbstractDefinitions {
 
   /** A predefined type expression for the SI Base unit for Length (meters)
     * @param loc
-    *   \- The location of the current type expression
+    *   The location of the current type expression
     */
   case class Length(loc: Location) extends NumericType {
     def kind: String = Predefined.Length
   }
 
-  /** A predefined type expression fro the SI Base unit for Mass (kilograms)
-    * @param loc
-    *   \- The location of the mass type expression
-    */
+  /**
+   * A predefined type expression for the SI Base Unit for
+   * Luminosity (candela0
+   * @param loc
+   *   The location of the luminosity expression
+   */
+  case class Luminosity(loc: Location) extends NumericType {
+    def kind: String = Predefined.Luminosity
+  }
+
   case class Mass(loc: Location) extends NumericType {
     def kind: String = Predefined.Mass
   }
