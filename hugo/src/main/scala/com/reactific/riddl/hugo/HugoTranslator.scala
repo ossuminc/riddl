@@ -256,7 +256,6 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case s: Saga        => mkd.emitSaga(s, parents)
           case s: Story       => mkd.emitStory(s, stack)
           case p: Plant       => mkd.emitPlant(p, parents)
-          case a: Adaptation  => mkd.emitAdaptation(a, parents)
           case unknown =>
             require(
               requirement = false,

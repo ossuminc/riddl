@@ -877,6 +877,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     description: Option[Description] = None)
       extends VitalDefinition[HandlerOption, HandlerDefinition]
       with ContextDefinition
+      with AdaptorDefinition
       with EntityDefinition
       with StateDefinition
       with ProjectionDefinition {
@@ -1012,104 +1013,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     }
   }
 
-  sealed trait Adaptation extends AdaptorDefinition {
-    def messageRef: MessageRef
-    def examples: Seq[Example]
-  }
-
-  /** The specification of a single adaptation based on message
-    *
-    * @param loc
-    *   The location of the adaptation definition
-    * @param id
-    *   The name of the adaptation
-    * @param messageRef
-    *   The event that triggers the adaptation, inherited from [[Adaptation]]
-    * @param command
-    *   The command that adapts the event to the bounded context
-    * @param examples
-    *   Optional set of Gherkin [[Example]]s to define the adaptation
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   Optional description of the adaptation.
-    */
-  case class EventCommandA8n(
-    loc: Location,
-    id: Identifier,
-    messageRef: EventRef,
-    command: CommandRef,
-    examples: Seq[Example] = Seq.empty[Example],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Adaptation {
-    override def contents: Seq[Example] = examples
-    def format: String = ""
-    final val kind: String = "Event Command Adaptation"
-  }
-
-  /** The specification of a single adaptation based on message
-    *
-    * @param loc
-    *   The location of the adaptation definition
-    * @param id
-    *   The name of the adaptation
-    * @param messageRef
-    *   The command that triggers the adaptation, inherited from [[Adaptation]]
-    * @param command
-    *   The command resulting from the adaptation of the [[messageRef]] to the
-    *   bounded context
-    * @param examples
-    *   Optional set of Gherkin [[Example]]s to define the adaptation
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   Optional description of the adaptation.
-    */
-  case class CommandCommandA8n(
-    loc: Location,
-    id: Identifier,
-    messageRef: CommandRef,
-    command: CommandRef,
-    examples: Seq[Example] = Seq.empty[Example],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Adaptation {
-    override def contents: Seq[Example] = examples
-    def format: String = ""
-    final val kind: String = "Command Command Adaptation"
-  }
-
-  /** An adaptation that takes an action on event receipt
-    *
-    * @param loc
-    *   The location of the ActionAdaptation
-    * @param id
-    *   The identifier for this ActionAdaptation
-    * @param messageRef
-    *   The event to which this adaptation adapts, inherited from [[Adaptation]]
-    * @param actions
-    *   The actions to be taken when [[messageRef]] is received
-    * @param brief
-    *   The brief description of this adaptation
-    * @param description
-    *   The full description of this adaptation
-    */
-  case class EventActionA8n(
-    loc: Location,
-    id: Identifier,
-    messageRef: EventRef,
-    actions: Seq[Action] = Seq.empty[Action],
-    examples: Seq[Example] = Seq.empty[Example],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = Option.empty[Description])
-      extends Adaptation {
-    def contents: Seq[Example] = examples
-    override def isEmpty: Boolean = examples.isEmpty && actions.isEmpty
-    def format: String = ""
-    final val kind: String = "Event Action Adaptation"
-  }
-
   sealed abstract class AdaptorOption(val name: String) extends OptionValue
 
   case class AdaptorTechnologyOption(
@@ -1141,7 +1044,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     loc: Location,
     id: Identifier,
     ref: ContextRef,
-    adaptations: Seq[Adaptation] = Seq.empty[Adaptation],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
@@ -1152,14 +1055,14 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends VitalDefinition[AdaptorOption, AdaptorDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[AdaptorDefinition] = {
-      super.contents ++ adaptations ++ authors ++ terms
+      super.contents ++ handlers ++ authors ++ terms
     }
     final val kind: String = "Adaptor"
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
-      if (adaptations.nonEmpty) score +=
-        Math.max(adaptations.count(_.nonEmpty), maxMaturity)
+      if (handlers.nonEmpty) score +=
+        Math.max(handlers.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
@@ -1666,8 +1569,10 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   sealed abstract class PlantOption(val name: String) extends OptionValue
 
-  case class PlantPackageOption( loc: Location, override val
-  args: Seq[LiteralString]) extends PlantOption("package")
+  case class PlantPackageOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends PlantOption("package")
 
   case class PlantTechnologyOption(
     loc: Location,

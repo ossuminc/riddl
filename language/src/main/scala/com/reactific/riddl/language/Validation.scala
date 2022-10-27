@@ -159,7 +159,7 @@ object Validation {
             case h: Handler   => validateHandler(h, parents)
             case f: Function  => validateFunction(f, parents)
             case i: Invariant => validateInvariant(i, parents)
-            case i: Include[Definition] @unchecked => validateInclude(i)
+            case i: Include[EntityDefinition] @unchecked => validateInclude(i)
           }
         case cd: ContextDefinition => cd match {
             case t: Type         => validateType(t, parents)
@@ -174,7 +174,7 @@ object Validation {
             case ij: InletJoint  => validateInletJoint(ij, parents)
             case oj: OutletJoint => validateOutletJoint(oj, parents)
             case s: Saga         => validateSaga(s, parents)
-            case i: Include[Definition] @unchecked => validateInclude(i)
+            case i: Include[ContextDefinition] @unchecked => validateInclude(i)
           }
         case dd: DomainDefinition => dd match {
             case a: Application => validateApplication(a, parents)
@@ -185,13 +185,13 @@ object Validation {
             case p: Plant       => validatePlant(p, parents)
             case t: Term        => validateTerm(t, parents)
             case ai: Author     => validateAuthorInfo(ai, parents)
-            case i: Include[Definition] @unchecked => validateInclude(i)
+            case i: Include[DomainDefinition] @unchecked => validateInclude(i)
           }
         case hd: HandlerDefinition =>
           hd match { case oc: OnClause => validateOnClause(oc, parents) }
         case ad: AdaptorDefinition => ad match {
-            case i: Include[Definition] @unchecked => validateInclude(i)
-            case a: Adaptation => validateAdaptation(a, parents)
+            case h: Handler => validateHandler(h, parents)
+            case i: Include[AdaptorDefinition] @unchecked => validateInclude(i)
           }
         case ss: SagaStep     => validateSagaStep(ss, parents)
         case _: RootContainer => this // ignore
@@ -386,27 +386,6 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       checkContainer(parents.headOption, a).checkDescription(a)
-    }
-
-    def validateAdaptation(
-      a: Adaptation,
-      parents: Seq[Definition]
-    ): ValidationState = {
-      val maybeParent = parents.headOption
-      checkContainer(maybeParent, a).step { st =>
-        val parent = maybeParent.getOrElse(RootContainer.empty)
-        a match {
-          case cca: CommandCommandA8n => st
-              .checkPathRef[Command](cca.messageRef.id, a, parents)()()
-              .checkPathRef[Command](cca.command.id, a, parents)()()
-          case eca: EventCommandA8n => st.checkDefinition(parent, eca)
-              .checkPathRef[Event](eca.messageRef.id, a, parents)()()
-              .checkPathRef[Command](eca.command.id, a, parents)()()
-          case eaa: EventActionA8n => st.checkDefinition(parent, eaa)
-              .checkPathRef[Event](eaa.messageRef.id, a, parents)()()
-              .checkActions(eaa.actions, a, parents)
-        }
-      }.checkDescription(a)
     }
 
     def validateProcessor(

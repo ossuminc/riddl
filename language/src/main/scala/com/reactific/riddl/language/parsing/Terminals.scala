@@ -81,7 +81,7 @@ trait Terminals {
     final val accepted = "accepted"
     final val action = "action"
     final val actor = "actor"
-    final val adapt = "adapt"
+    final val adaptation = "adaptation"
     final val adaptor = "adaptor"
     final val all = "all"
     final val any = "any"
