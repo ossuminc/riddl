@@ -385,7 +385,24 @@ object Validation {
       a: Adaptor,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, a).checkDescription(a)
+      parents.headOption match {
+        case Some(c: Context) =>
+          val s1 = checkContainer(parents.headOption, a)
+          val targetContext = resolvePath(a.context.id, parents)()()
+          val s2 = targetContext.headOption match {
+            case Some(target: Context) =>
+              if (target == c) {
+                val message =
+                  s"${a.identify} may not specify a target context that is " +
+                    s"the same as the containing ${c.identify}"
+                s1.add(error(message, a.loc))
+              } else { s1 }
+            case None | Some(_) => s1
+          }
+          s2.checkDescription(a)
+        case None | Some(_) =>
+          add(error("Adaptor not contained within Context", a.loc))
+      }
     }
 
     def validateProcessor(

@@ -1013,6 +1013,16 @@ object AST extends ast.Expressions with parsing.Terminals {
     }
   }
 
+  sealed trait AdaptorDirection extends RiddlValue
+
+  case class InboundAdaptor(loc: Location) extends AdaptorDirection {
+    def format: String = "from"
+  }
+
+  case class OutboundAdaptor(loc: Location) extends AdaptorDirection {
+    def format: String = "to"
+  }
+
   sealed abstract class AdaptorOption(val name: String) extends OptionValue
 
   case class AdaptorTechnologyOption(
@@ -1043,7 +1053,8 @@ object AST extends ast.Expressions with parsing.Terminals {
   case class Adaptor(
     loc: Location,
     id: Identifier,
-    ref: ContextRef,
+    direction: AdaptorDirection,
+    context: ContextRef,
     handlers: Seq[Handler] = Seq.empty[Handler],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],

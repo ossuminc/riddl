@@ -39,7 +39,7 @@ class FoldingTest extends ParsingTest {
       |      function one is { ??? }
       |      invariant one is { ??? }
       |    }
-      |    adaptor one for context over.consumption is { ??? }
+      |    adaptor one to context over.consumption is { ??? }
       |  }
       |  type AString = String
       |}
