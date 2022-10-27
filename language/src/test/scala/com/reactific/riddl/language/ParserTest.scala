@@ -318,7 +318,7 @@ class ParserTest extends ParsingTest {
               (1, 18, rpi),
               PathIdentifier((1, 26, rpi), Seq("foo", "bar"))
             ),
-            Seq.empty[Adaptation]
+            Seq.empty[Handler]
           )
       }
     }

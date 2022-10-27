@@ -29,12 +29,11 @@ class AdaptorTest extends ValidatingTest {
       val input =
         """domain ignore is { context Foo is {
           |type ItHappened = event { abc: String described as "abc" } described as "?"
-          |type LetsDoIt = command { bcd: String described as "abc" } described as "?"
           |adaptor PaymentAdapter for context Foo is {
-          |  adapt sendAMessage is {
-          |    from event ItHappened to command LetsDoIt as {
+          |  handler sendAMessage is {
+          |    on event ItHappened {
           |      example one is { then error "foo" } described as "eno"
-          |    }
+          |    } described as "?"
           |  } explained as "?"
           |} explained as "?"
           |} explained as "?"
@@ -50,18 +49,21 @@ class AdaptorTest extends ValidatingTest {
         """domain ignore is { context Foo is {
           |type ItWillHappen = command { abc: String described as "abc" } described as "?"
           |type LetsDoIt = command { bcd: String described as "abc" } described as "?"
+          |entity MyEntity is { ??? }
           |adaptor PaymentAdapter for context Foo is {
-          |  adapt sendAMessage is {
-          |    from command ItWillHappen to command LetsDoIt as {
-          |      example one is { then error "foo" } described as "eno"
-          |    }
+          |  handler sendAMessage is {
+          |    on command ItWillHappen  {
+          |      example one is { then tell command LetsDoIt(bcd="foo") to
+          |        entity MyEntity
+          |      } described as "eno"
+          |    } described as "?"
           |  } explained as "?"
           |} explained as "?"
           |} explained as "?"
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input) { (_, _, messages) =>
-        messages mustBe empty
+        messages.filterNot(_.kind == Messages.MissingWarning) mustBe empty
       }
     }
 

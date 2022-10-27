@@ -917,22 +917,10 @@ case class MarkdownWriter(
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)
     p(s"Applicable To: ${adaptor.ref.format}")
-    toc("Adaptations", mkTocSeq(adaptor.adaptations))
+    toc("Handlers", mkTocSeq(adaptor.handlers))
     emitUsage(adaptor)
     emitTerms(adaptor.terms)
     emitIndex("Adaptor", adaptor, parents)
-  }
-
-  def emitAdaptation(
-    adaptation: Adaptation,
-    parents: Seq[String]
-  ): this.type = {
-    leafHead(adaptation, 20)
-    emitDefDoc(adaptation, parents)
-    p(s"${italic(s"From event")}: ${adaptation.messageRef.format}\n")
-    p(s"${italic(s"To command")}: ${adaptation.messageRef.format}\n")
-    emitExamples(adaptation.examples)
-    this
   }
 
   def emitTableHead(columnTitles: Seq[(String, Char)]): this.type = {

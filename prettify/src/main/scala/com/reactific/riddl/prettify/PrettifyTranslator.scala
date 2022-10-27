@@ -31,33 +31,30 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptor           => Keywords.adaptor
-      case _: EventActionA8n    => Keywords.adapt
-      case _: EventCommandA8n   => Keywords.adapt
-      case _: CommandCommandA8n => Keywords.adapt
-      case _: Context           => Keywords.context
-      case _: Domain            => Keywords.domain
-      case _: Entity            => Keywords.entity
-      case _: Enumerator        => ""
-      case _: Example           => Keywords.example
-      case _: Field             => ""
-      case _: Function          => Keywords.function
-      case _: Handler           => Keywords.handler
-      case _: Inlet             => Keywords.inlet
-      case _: Invariant         => Keywords.invariant
-      case _: Joint             => Keywords.joint
-      case _: Outlet            => Keywords.outlet
-      case _: Pipe              => Keywords.pipe
-      case _: Plant             => Keywords.plant
-      case p: Processor         => p.shape.keyword
-      case _: RootContainer     => "root"
-      case _: Saga              => Keywords.saga
-      case _: SagaStep          => Keywords.step
-      case _: State             => Keywords.state
-      case _: Story             => Keywords.story
-      case _: Term              => Keywords.term
-      case _: Type              => Keywords.`type`
-      case _                    => "unknown"
+      case _: Adaptor       => Keywords.adaptor
+      case _: Context       => Keywords.context
+      case _: Domain        => Keywords.domain
+      case _: Entity        => Keywords.entity
+      case _: Enumerator    => ""
+      case _: Example       => Keywords.example
+      case _: Field         => ""
+      case _: Function      => Keywords.function
+      case _: Handler       => Keywords.handler
+      case _: Inlet         => Keywords.inlet
+      case _: Invariant     => Keywords.invariant
+      case _: Joint         => Keywords.joint
+      case _: Outlet        => Keywords.outlet
+      case _: Pipe          => Keywords.pipe
+      case _: Plant         => Keywords.plant
+      case p: Processor     => p.shape.keyword
+      case _: RootContainer => "root"
+      case _: Saga          => Keywords.saga
+      case _: SagaStep      => Keywords.step
+      case _: State         => Keywords.state
+      case _: Story         => Keywords.story
+      case _: Term          => Keywords.term
+      case _: Type          => Keywords.`type`
+      case _                => "unknown"
     }
   }
 
@@ -114,9 +111,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case step: SagaStep     => openSagaStep(state, step)
         case include: Include[Definition] @unchecked =>
           openInclude(state, include)
-        case adaptation: Adaptation => openAdaptation(state, adaptation)
-        case processor: Processor   => openProcessor(state, processor)
-        case _: RootContainer       =>
+        case processor: Processor => openProcessor(state, processor)
+        case _: RootContainer     =>
           // ignore
           state
         case container: Definition with WithOptions[?] =>
@@ -164,8 +160,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case _: OnClause  => closeOnClause(state)
         case include: Include[Definition] @unchecked =>
           closeInclude(state, include)
-        case adaptation: AdaptorDefinition => closeAdaptation(state, adaptation)
-        case _: RootContainer              =>
+        case _: RootContainer =>
           // ignore
           state
         case container: Definition =>
@@ -227,41 +222,6 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         if (adaptor.isEmpty) { s2.withCurrent(_.emitUndefined().add(" }\n")) }
         else s2.withCurrent(_.add("\n").indent)
       }
-    }
-
-    def openAdaptation(
-      state: PrettifyState,
-      adaptation: Adaptation
-    ): PrettifyState = {
-      adaptation match {
-        case ec8: EventCommandA8n => state.withCurrent(
-            _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
-              .addIndent("from ").emitMessageRef(ec8.messageRef).add(" to ")
-              .emitMessageRef(ec8.command).add(" as {\n").indent
-          )
-
-        case cc8: CommandCommandA8n => state.withCurrent(
-            _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
-              .addIndent("from ").emitMessageRef(cc8.messageRef).add(" to ")
-              .emitMessageRef(cc8.command).add(" as {\n").indent
-          )
-
-        case ea8: EventActionA8n => state.withCurrent(
-            _.addIndent(s"adapt ${adaptation.id.format} is {\n").indent
-              .addIndent("from ").emitMessageRef(ea8.messageRef).add(" to ")
-              .emitActions(ea8.actions).add(" as {\n").indent
-          )
-      }
-    }
-
-    def closeAdaptation(
-      state: PrettifyState,
-      adaptation: AdaptorDefinition
-    ): PrettifyState = {
-      state.withCurrent(
-        _.outdent.addIndent("}\n").outdent.addIndent("}\n")
-          .emitBrief(adaptation.brief).emitDescription(adaptation.description)
-      )
     }
 
     def openProcessor(
