@@ -31,12 +31,22 @@ trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
     )
   }
 
+  def adaptorDirection[u: P]: P[AdaptorDirection] = {
+    P(location ~ (Readability.from.! | Readability.to.!)).map {
+      case (loc, "from") => InboundAdaptor(loc)
+      case (loc, "to")   => OutboundAdaptor(loc)
+      case (loc, _) =>
+        error("Impossible condition at $loc")
+        InboundAdaptor(loc)
+    }
+  }
+
   def adaptor[u: P]: P[Adaptor] = {
     P(
-      location ~ Keywords.adaptor ~/ identifier ~ Readability.for_ ~
+      location ~ Keywords.adaptor ~/ identifier ~ adaptorDirection ~
         contextRef ~ is ~ open ~ adaptorOptions ~ adaptorDefinitions ~ close ~
         briefly ~ description
-    ).map { case (loc, id, cref, options, defs, briefly, description) =>
+    ).map { case (loc, id, dir, cref, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val includes = mapTo[Include[AdaptorDefinition]](groups.get(
         classOf[Include[AdaptorDefinition]]
@@ -48,6 +58,7 @@ trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
       Adaptor(
         loc,
         id,
+        dir,
         cref,
         handlers,
         includes,

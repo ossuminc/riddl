@@ -7,13 +7,14 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Adaptor
+import com.reactific.riddl.language.Messages.MissingWarning
 
 /** Unit Tests For ConsumerTest */
 class AdaptorTest extends ValidatingTest {
 
   "Adaptors" should {
     "handle undefined body" in {
-      val input = """adaptor PaymentAdapter for context Foo is {
+      val input = """adaptor PaymentAdapter from context Foo is {
                     |  ???
                     |}
                     |""".stripMargin
@@ -27,9 +28,9 @@ class AdaptorTest extends ValidatingTest {
 
     "allow message actions" in {
       val input =
-        """domain ignore is { context Foo is {
+        """domain ignore is { context Target is {???}  context Foo is {
           |type ItHappened = event { abc: String described as "abc" } described as "?"
-          |adaptor PaymentAdapter for context Foo is {
+          |adaptor PaymentAdapter to context Target is {
           |  handler sendAMessage is {
           |    on event ItHappened {
           |      example one is { then error "foo" } described as "eno"
@@ -40,17 +41,17 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input) { (_, _, messages) =>
-        messages mustBe empty
+        messages.filterNot(_.kind == MissingWarning) mustBe empty
       }
     }
 
     "allow wrapper adaptations" in {
       val input =
-        """domain ignore is { context Foo is {
+        """domain ignore is { context Target is {???}  context Foo is {
           |type ItWillHappen = command { abc: String described as "abc" } described as "?"
           |type LetsDoIt = command { bcd: String described as "abc" } described as "?"
           |entity MyEntity is { ??? }
-          |adaptor PaymentAdapter for context Foo is {
+          |adaptor PaymentAdapter to context Target is {
           |  handler sendAMessage is {
           |    on command ItWillHappen  {
           |      example one is { then tell command LetsDoIt(bcd="foo") to

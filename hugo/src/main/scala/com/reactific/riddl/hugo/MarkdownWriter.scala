@@ -916,7 +916,7 @@ case class MarkdownWriter(
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)
-    p(s"Applicable To: ${adaptor.ref.format}")
+    p(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
     toc("Handlers", mkTocSeq(adaptor.handlers))
     emitUsage(adaptor)
     emitTerms(adaptor.terms)

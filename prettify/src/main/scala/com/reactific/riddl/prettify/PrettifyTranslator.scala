@@ -216,8 +216,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       adaptor: Adaptor
     ): PrettifyState = {
       state.withCurrent(
-        _.addIndent(keyword(adaptor)).add(" ").add(adaptor.id.format)
-          .add(" for ").add(adaptor.ref.format).add(" is {")
+        _.addIndent(keyword(adaptor)).add(" ").add(adaptor.id.format).add(" ")
+          .add(adaptor.direction.format).add(" ").add(adaptor.context.format)
+          .add(" is {")
       ).step { s2 =>
         if (adaptor.isEmpty) { s2.withCurrent(_.emitUndefined().add(" }\n")) }
         else s2.withCurrent(_.add("\n").indent)
