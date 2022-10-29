@@ -237,46 +237,6 @@ trait AbstractDefinitions extends Terminals {
     */
   trait GherkinClause extends GherkinValue
 
-  /** Base trait for option values for any option of a definition.
-    */
-  trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name + args.map(_.format)
-      .mkString("(", ", ", ")")
-  }
-
-  /** Base trait that can be used in any definition that takes options and
-    * ensures the options are defined, can be queried, and formatted.
-    *
-    * @tparam T
-    *   The sealed base trait of the permitted options for this definition
-    */
-  trait WithOptions[T <: OptionValue] extends Definition {
-    def options: Seq[T]
-
-    def hasOption[OPT <: T: ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-
-    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] = options
-      .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass).map(_.args)
-
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 =>
-          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
-
-    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
-
-    override def hasOptions: Boolean = true
-  }
-
   /** A term definition for the glossary */
   case class Term(
     loc: Location,

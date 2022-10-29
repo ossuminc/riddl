@@ -456,9 +456,9 @@ object Validation {
       app: Application,
       parents: Seq[AST.Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, app).checkThat(app.forms.isEmpty) {
+      checkContainer(parents.headOption, app).checkThat(app.groups.isEmpty) {
         vs: ValidationState =>
-          vs.addMissing(app.loc, s"${app.identify} should have a form")
+          vs.addMissing(app.loc, s"${app.identify} should have a group")
       }.checkDescription(app)
     }
 

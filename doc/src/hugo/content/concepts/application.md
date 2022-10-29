@@ -21,15 +21,21 @@ application that can be implemented as any of the following:
 * Virtual Reality with Haptics
 * and other things yet to be invented. 
 
-Applications are composed of [elements]({{< relref element.md >}}]]) that 
-further maintain the abstract design of actor interfaces. Elements are 
-always designed with regard to a data structure 
-([type]({{< relref type.md >}})). For more details on that read the 
-[elements]({{< relref element.md >}}) page.
+## Group Elements
+Applications are composed of 
+[group elements]({{< relref "element.md#group" >}}]]) that abstract away the 
+design of a user interface. Each group is composed of various 
+[elements]({{< relref element.md >}}) including nested groups. Each element 
+is designed with regard to a 
+([message type]({{< relref message.md >}}))
 
+These groups contain both a 
+
+## Handlers
+Applications 
 ## Occurs In
 * [Domain]({{< relref "domain.md" >}})
 
 ## Contains
 * [Type]({{< relref "type.md" >}})
-* [Element]({{< relref "element.md" >}})
+* [Group]({{< relref "element.md" >}})

@@ -3,8 +3,11 @@ title: "Messages"
 draft: false
 ---
 
-Messages are just [aggregate type]({{< relref "type.md#aggregation" >}})
-definitions that have special significance in RIDDL.  Messages make up the
+Messages are a foundational concept in RIDDL because a RIDDL model has the 
+intention of being implemented as a message-driven system per the 
+[Reactive Manifesto](https://reactivemanifesto.org). Messages are 
+a special case of an [aggregate type]({{< relref "type.md#aggregation" >}}) 
+Messages make up the
 _lingua franca_ of the API of a [`context`]({{< relref "context.md" >}}) or 
 [`entity`]({{< relref "entity" >}}).
 That is, these are the fundamental building blocks of a 
@@ -19,10 +22,11 @@ which states, in the context of object-oriented programming (Eiffel) that:
 > that returns data to the caller, but not both. In other words, asking a
 > question should not change the answer.[^1]
 
-Consequently, RIDDL adheres to this principal and employs the notion in message
-definitions since RIDDL is message-oriented not object-oriented. 
-
 [^1]: Meyer, Bertrand. "Eiffel: a language for software engineering". p. 22
+
+Consequently, RIDDL adheres to this principal and employs the notion in message
+definitions since RIDDL is message-oriented not object-oriented.
+
 
 |  Kind   | Request? | Response? | Cancellable? |     Relationship      |
 |:-------:|:--------:|:---------:|:------------:|:---------------------:|
@@ -32,10 +36,26 @@ definitions since RIDDL is message-oriented not object-oriented.
 | Result  |    No    |    Yes    |      No      | Consequent Of Result  |
 
 The truth table above helps you understand the relationship between the kind of
-message and how it is handled by an entity. This does not apply to messages
+message and how it is handled by a model component. The sections below get 
+even more specific.
+
+## How Messages Are Handled By Adaptors
+|  Kind   | In Regard To Handling By Projection |
+|:-------:|:-----------------------------------:|
+| Command |   Intent To Translate For Context   |
+|  Event  |   Intent To Translate For Context   |
+|  Query  |   Intent to Translate For Context   |
+| Result  |   Intent to Translate For Context   |
+
+## How Messages Are Handled By Applications
+|  Kind   | In Regard To Handling By Projection |
+|:-------:|:-----------------------------------:|
+| Command | Data given from user to application |
+|  Event  |  Data selected by user from a list  |
+|  Query  | A User Request for application info |
+| Result  |   Application response to a query   |
 
 ## How Messages Are Handled By Entities
-
 |  Kind   | In Regard To Handling By  Entity |   
 |:-------:|:--------------------------------:|
 | Command |  Intent To Modify Entity State   |
@@ -59,21 +79,8 @@ message and how it is handled by an entity. This does not apply to messages
 |  Query  |    Intent to Read From The Context    |
 | Result  |    Result Of Reading From Context     |
 
-## How Messages Are Handled By Adaptors
-|  Kind   | In Regard To Handling By Projection |
-|:-------:|:-----------------------------------:|
-| Command |   Intent To Translate For Context   |
-|  Event  |   Intent To Translate For Context   |
-|  Query  |   Intent to Translate For Context   |
-| Result  |   Intent to Translate For Context   |
-
-
-
 ## Occurs In
-
-* [Domains]({{< relref "domain.md" >}})
-* [Plants]({{< relref "plant.md" >}})
-
+All [Vital Definitions]({{< relref vital.md >}})
 
 ## Contains
-Nothing
+[Fields]({{< relref field.md >}})

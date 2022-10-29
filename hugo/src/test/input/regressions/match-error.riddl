@@ -4,8 +4,8 @@ domain PersonalBanking is {
   story CreateAccount is {
     actor Member wants to "establish an account" so that "they can apply for a loan"
     case HappyPath {
-      display step actor PersonalBanking.Member "loads the"
-        display PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
+      arbitrary step actor PersonalBanking.Member "loads the"
+        view PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
     }
   }
 

@@ -69,18 +69,18 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def applicationDisplayStep[u: P]: P[ApplicationDisplayStep] = {
+  def activateViewStep[u: P]: P[ActivateViewStep] = {
     P(
-      Keywords.display ~ Keywords.step ~/ location ~ Readability.from.? ~
-        actorRef ~ literalString ~ Readability.to.? ~ displayRef ~ briefly
+      Keywords.action ~ Keywords.step ~/ location ~ Readability.from.? ~
+        actorRef ~ literalString ~ Readability.to.? ~ viewRef ~ briefly
     )./.map { case (loc, actor, rel, display, brief) =>
-      ApplicationDisplayStep(loc, actor, rel, display, brief)
+      ActivateViewStep(loc, actor, rel, display, brief)
     }
   }
 
   def applicationFormStep[u: P]: P[ApplicationFormStep] = {
     P(
-      Keywords.form ~ Keywords.step ~/ location ~ Readability.from.? ~
+      location ~ Readability.from.? ~
         actorRef ~ literalString ~ Readability.to.? ~ formRef ~ briefly
     )./.map { case (loc, actor, rel, form, brief) =>
       ApplicationFormStep(loc, actor, rel, form, brief)
@@ -89,7 +89,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
     P((tellMessageStep | publishMessageStep | subscribeToPipeStep |
-      sagaInitiationStep | applicationDisplayStep | applicationFormStep |
+      sagaInitiationStep | activateViewStep | applicationFormStep |
       arbitraryStep)).rep(0, Punctuation.comma.?)
   }
 

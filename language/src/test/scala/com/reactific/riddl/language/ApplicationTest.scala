@@ -17,15 +17,16 @@ class ApplicationTest extends ValidatingTest {
         """domain foo is {
           |  application Test is {
           |    option is technology("react.js")
-          |    type Title = String
-          |    type Name = String
-          |    display One is {
-          |      presents Title
-          |    } described as "Show a blank page with title"
-          |    form Two is {
-          |      presents Title
-          |      collects Name
-          |    } described as "Show a blank page with title, collect a Name"
+          |    result Title { content: String }
+          |    command Name { content: String }
+          |    group Together is {
+          |      view One is {
+          |        presents result Title
+          |      } described as "Show a blank page with title"
+          |      give Two is {
+          |        yields command Name
+          |      } described as "yield  a Name"
+          |    } described as "Show a title, collect a Name"
           |  } described as "A very simple app just for testing"
           |} described as "Just a parsing convenience"
           |""".stripMargin
