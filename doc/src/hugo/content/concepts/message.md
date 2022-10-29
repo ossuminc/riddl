@@ -48,12 +48,12 @@ even more specific.
 | Result  |   Intent to Translate For Context   |
 
 ## How Messages Are Handled By Applications
-|  Kind   | In Regard To Handling By Projection |
-|:-------:|:-----------------------------------:|
-| Command | Data given from user to application |
-|  Event  |  Data selected by user from a list  |
-|  Query  | A User Request for application info |
-| Result  |   Application response to a query   |
+|  Kind   |  In Regard To Handling By Projection   |
+|:-------:|:--------------------------------------:|
+| Command |  Data given from user to application   |
+|  Event  |             Not Applicable             |
+|  Query  |             Not Applicable             |
+| Result  | Data provided to user from application |
 
 ## How Messages Are Handled By Entities
 |  Kind   | In Regard To Handling By  Entity |   

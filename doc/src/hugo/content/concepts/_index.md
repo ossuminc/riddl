@@ -5,47 +5,18 @@ weight: 5
 ---
 
 In this section we will explore the concepts and ideas that RIDDL uses. This is
-not about the RIDDL language or syntax, but about the concepts that the
+not about the RIDDL language syntax, but about the concepts that the
 language uses and how they relate to each other.
 
-## Common Attributes
-
-RIDDL is a declarative language that consists of various types of definitions
-in a hierarchy. A definition is anything that has a unique name that we call
-its *identifier*. All definitions have some common attributes:
-
-* _loc_: The location of the definition in its input file. (line & column)
-* _id_: The name, or identifier, of the definition. 
-* _briefly_: A string to briefly describe the definition. These are used in 
-  the documentation output and the glossary. 
-* _description_: A block of 
-   [Markdown](https://www.markdownguide.org/getting-started/) that 
-  fully describes the definition. All the facilities provided by the  
-  [hugo-geekdoc](https://geekdocs.de/) template for hugo are supported.
-
-These attributes merely provide supplemental information about the 
-definition but are not part of the definition.  
-
-## Vital Definitions
-The [vital definitions]({{< relref "vital.md" >}}) share a set of 
-common attributes that, like the [Common Attributes](#common-attributes),
-are informational rather than definitional. 
-
-These are the common attributes that 
-[vital definitions]({{< relref "vital.md" >}}) share:
-* [_includes_]({{< relref "include.md" >}}) - include content from another file
-* [_options_]({{< relref "option.md" >}}) - define translation options for the
-  definition
-* [_authors_]({{< relref "author.md" >}}) - define who the authors of the
-  definition are
-* [_terms_]({{< relref "term.md" >}}) - define a term as part of the
-  ubiquitous language for the definition.
+## Definitions
+RIDDL consists only of [definitions]({{< relref definition.md >}}) that 
+define the design of the desired system.  
 
 ## Definitional Hierarchy
 
 Definitions in RIDDL are arranged in a hierarchy. Definitions that contain other
 definitions are known as *containers* or *parents*. Definitions that do not
-contain other definitions are known as *leaves* or *children*.
+contain other definitions are known as *leaves*.
 
 This is done simply by having an attribute that lists the contents of any 
 definition:
@@ -55,12 +26,14 @@ definition:
 
 ### Simplifications
 The valid hierarchy structure is shown below, but to make this hierarchy 
-shorter and easier to comprehend, we've taken some short-cuts :
+easier to comprehend, we've taken some short-cuts :
 
-1. All the common attributes and the Vital Definition attributes 
-are not shown in the hierarchy but implied by the above sections.
+1. All the [common attributes]({{< relref "definition.md#common-attributes">}}) 
+   have been omitted for brevity but are implied on each line of the 
+   hierarchy.
 2. We only descend as far as an [Example]({{< relref "example.md" >}}) 
-   definition; but you should infer this extended hierarchy:
+   definition; but you should infer this extended hierarchy wherever an Example
+   occurs:
   * [Examples]({{< relref "example.md" >}})
     * [Actions]({{< relref "action.md" >}})
       * [Expressions]({{< relref "expression.md" >}})
@@ -76,7 +49,10 @@ With those clarifying simplifications, here's the hierarchy:
     * [Type]({{< relref "type.md" >}})
     * [Application]({{< relref "application.md" >}})
       * [Type]({{< relref "type.md" >}})
-      * [Element]({{< relref "element.md" >}})
+      * [Group]({{< relref "element.md#group" >}})
+        * [Output]({{< relref "output.md" >}})
+        * [Input]({{< relref "input.md" >}})
+      * [Handler]({{< relref handler.md >}})
     * [Story]({{< relref "story.md" >}})
       * [Case]({{< relref "case.md" >}})
         * [Example]({{< relref "example.md" >}})
