@@ -71,7 +71,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def activateViewStep[u: P]: P[ActivateViewStep] = {
     P(
-      Keywords.action ~ Keywords.step ~/ location ~ Readability.from.? ~
+      Keywords.activate ~ Keywords.step ~/ location ~ Readability.from.? ~
         actorRef ~ literalString ~ Readability.to.? ~ viewRef ~ briefly
     )./.map { case (loc, actor, rel, display, brief) =>
       ActivateViewStep(loc, actor, rel, display, brief)
