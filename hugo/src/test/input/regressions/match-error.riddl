@@ -6,7 +6,6 @@ domain PersonalBanking is {
     case HappyPath {
       activate step actor PersonalBanking.Member "loads the"
         output PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
-        view PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
     }
   }
 
