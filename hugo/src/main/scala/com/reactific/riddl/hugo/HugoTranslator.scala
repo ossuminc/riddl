@@ -231,8 +231,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             state.addToGlossary(p, stack)
           case sa: Actor     => state.addToGlossary(sa, stack)
           case sc: StoryCase => state.addToGlossary(sc, stack)
-          case ds: View      => state.addToGlossary(ds, stack)
-          case gv: Give      => state.addToGlossary(gv, stack)
+          case out: Output   => state.addToGlossary(out, stack)
+          case in: Input     => state.addToGlossary(in, stack)
           case grp: Group    => state.addToGlossary(grp, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")

@@ -133,7 +133,6 @@ trait Terminals {
     final val form = "form"
     final val function = "function"
     final val given_ = "given"
-    final val give = "give"
     final val group = "group"
     final val handler = "handler"
     final val handles = "handles"

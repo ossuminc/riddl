@@ -69,27 +69,27 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def activateViewStep[u: P]: P[ActivateViewStep] = {
+  def activateOutputStep[u: P]: P[ActivateOutputStep] = {
     P(
       Keywords.activate ~ Keywords.step ~/ location ~ Readability.from.? ~
-        actorRef ~ literalString ~ Readability.to.? ~ viewRef ~ briefly
+        actorRef ~ literalString ~ Readability.to.? ~ outputRef ~ briefly
     )./.map { case (loc, actor, rel, display, brief) =>
-      ActivateViewStep(loc, actor, rel, display, brief)
+      ActivateOutputStep(loc, actor, rel, display, brief)
     }
   }
 
-  def applicationFormStep[u: P]: P[ApplicationFormStep] = {
+  def provideInputStep[u: P]: P[ProvideInputStep] = {
     P(
-      location ~ Readability.from.? ~
-        actorRef ~ literalString ~ Readability.to.? ~ formRef ~ briefly
+      location ~ Readability.from.? ~ actorRef ~ literalString ~
+        Readability.to.? ~ inputRef ~ briefly
     )./.map { case (loc, actor, rel, form, brief) =>
-      ApplicationFormStep(loc, actor, rel, form, brief)
+      ProvideInputStep(loc, actor, rel, form, brief)
     }
   }
 
   def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
     P((tellMessageStep | publishMessageStep | subscribeToPipeStep |
-      sagaInitiationStep | activateViewStep | applicationFormStep |
+      sagaInitiationStep | activateOutputStep | provideInputStep |
       arbitraryStep)).rep(0, Punctuation.comma.?)
   }
 

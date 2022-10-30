@@ -1647,21 +1647,22 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = ""
   }
 
-  case class ActivateViewStep(
+  case class ActivateOutputStep(
     loc: Location,
     from: ActorRef,
     relationship: LiteralString,
-    to: ViewRef,
+    to: OutputRef,
+
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
   }
 
-  case class ApplicationFormStep(
+  case class ProvideInputStep(
     loc: Location,
     from: ActorRef,
     relationship: LiteralString,
-    to: GiveRef,
+    to: InputRef,
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -1796,15 +1797,15 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param description
     *   A detailed description of the view
     */
-  case class View(
+  case class Output(
     loc: Location,
     id: Identifier,
     types: Seq[Type],
-    viewed: ResultRef,
+    putOut: ResultRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with UIElement {
-    override def kind: String = "View"
+    override def kind: String = "Output"
 
     /** Format the node to a string */
     override def format: String = ""
@@ -1816,8 +1817,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the View
     */
-  case class ViewRef(loc: Location, id: PathIdentifier)
-      extends Reference[View] {
+  case class OutputRef(loc: Location, id: PathIdentifier)
+      extends Reference[Output] {
     override def format: String = ""
   }
 
@@ -1836,15 +1837,15 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param description
     *   a detailed description of the Give
     */
-  case class Give(
+  case class Input(
     loc: Location,
     id: Identifier,
     types: Seq[Type],
-    content: CommandRef,
+    putIn: CommandRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with UIElement {
-    override def kind: String = "Give"
+    override def kind: String = "Input"
 
     /** Format the node to a string */
     override def format: String = ""
@@ -1856,89 +1857,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the Give
     */
-  case class GiveRef(loc: Location, id: PathIdentifier)
-      extends Reference[Give] {
-    override def format: String = ""
-  }
-
-  /** A Select is a UI Element to allow the user to select some items from a
-    * list of items.
-    * @param loc
-    *   Location of the Select
-    * @param id
-    *   Name of the Select
-    * @param types
-    *   type definitions needed for the Select
-    * @param selected
-    *   An event reference of the list's element type selected by the user
-    * @param brief
-    *   A brief description of the Select
-    * @param description
-    *   a detailed description of the select
-    */
-  case class Select(
-    loc: Location,
-    id: Identifier,
-    types: Seq[Type],
-    selected: EventRef,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None)
-      extends LeafDefinition with ApplicationDefinition {
-    override def kind: String = "Select"
-
-    /** Format the node to a string */
-    override def format: String = ""
-  }
-
-  /** A reference to a Select using a path identifier
-    * @param loc
-    *   THe location of the SelectRef in the source code
-    * @param id
-    *   The path identifier that refers to the Select
-    */
-  case class SelectRef(loc: Location, id: PathIdentifier)
-      extends Reference[Give] {
-    override def format: String = ""
-  }
-
-  /** An Activate is a UI Element that represents a user's direction to the
-    * application to go to a new group (page, screen, ...). This is what most
-    * menus are made from
-    * @param loc
-    *   Location of the Activate
-    * @param id
-    *   Name of the Activate
-    * @param types
-    *   type definitions needed for the Activate
-    * @param group
-    *   A reference to the Group that should be activated
-    * @param brief
-    *   A brief description of the Activate
-    * @param description
-    *   a detailed description of the Activate
-    */
-  case class Activate(
-    loc: Location,
-    id: Identifier,
-    types: Seq[Type],
-    selected: EventRef,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None)
-      extends LeafDefinition with UIElement {
-    override def kind: String = "Activate"
-
-    /** Format the node to a string */
-    override def format: String = ""
-  }
-
-  /** A reference to a Activate using a path identifier
-    * @param loc
-    *   THe location of the Activate in the source code
-    * @param id
-    *   The path identifier that refers to the Activate
-    */
-  case class ActivateRef(loc: Location, id: PathIdentifier)
-      extends Reference[Give] {
+  case class InputRef(loc: Location, id: PathIdentifier)
+      extends Reference[Input] {
     override def format: String = ""
   }
 

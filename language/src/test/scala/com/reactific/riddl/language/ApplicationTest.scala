@@ -20,10 +20,10 @@ class ApplicationTest extends ValidatingTest {
           |    result Title { content: String }
           |    command Name { content: String }
           |    group Together is {
-          |      view One is {
+          |      output One is {
           |        presents result Title
           |      } described as "Show a blank page with title"
-          |      give Two is {
+          |      input Two is {
           |        yields command Name
           |      } described as "yield  a Name"
           |    } described as "Show a title, collect a Name"

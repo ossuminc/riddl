@@ -135,14 +135,14 @@ trait ReferenceParser extends CommonParser {
       .map(tpl => (ApplicationRef.apply _).tupled(tpl))
   }
 
-  def viewRef[u: P]: P[ViewRef] = {
-    P(location ~ Keywords.view ~ pathIdentifier)
-      .map(tpl => (ViewRef.apply _).tupled(tpl))
+  def outputRef[u: P]: P[OutputRef] = {
+    P(location ~ Keywords.output ~ pathIdentifier)
+      .map(tpl => (OutputRef.apply _).tupled(tpl))
   }
 
-  def formRef[u: P]: P[GiveRef] = {
-    P(location ~ Keywords.give ~ pathIdentifier)
-      .map(tpl => (GiveRef.apply _).tupled(tpl))
+  def inputRef[u: P]: P[InputRef] = {
+    P(location ~ Keywords.input ~ pathIdentifier)
+      .map(tpl => (InputRef.apply _).tupled(tpl))
   }
 
   def reference[u: P, K <: Definition: ClassTag]: P[Reference[K]] = {
