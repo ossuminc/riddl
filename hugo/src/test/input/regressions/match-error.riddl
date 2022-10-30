@@ -5,7 +5,7 @@ domain PersonalBanking is {
     actor Member wants to "establish an account" so that "they can apply for a loan"
     case HappyPath {
       activate step actor PersonalBanking.Member "loads the"
-        view PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
+        output PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
     }
   }
 
@@ -15,10 +15,10 @@ domain PersonalBanking is {
         result Title is { value: String }
         command Name is { value: String }
         group HomePage is {
-          view AccountDetailsPage is {
+          output AccountDetailsPage is {
             presents result Title
           } described as "Show a blank page with a title"
-          give Two is {
+          input Two is {
             yields command Name
           } described as "Show a blank page with a title, collect a Name"
         }

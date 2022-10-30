@@ -24,28 +24,28 @@ trait ApplicationParser
   def group[u: P]: P[Group] = {
     P(
       location ~ Keywords.group ~/ identifier ~ is ~ open ~ types ~
-        (group | view | give).rep(0) ~ close ~ briefly ~ description
+        (group | appOutput | appInput).rep(0) ~ close ~ briefly ~ description
     ).map { case (loc, id, types, elements, brief, description) =>
       Group(loc, id, types, elements, brief, description)
     }
   }
 
   // def select[u:P]: P[Select]
-  def view[u: P]: P[View] = {
+  def appOutput[u: P]: P[Output] = {
     P(
-      location ~ Keywords.view ~/ identifier ~ is ~ open ~ types ~
+      location ~ Keywords.output ~/ identifier ~ is ~ open ~ types ~
         Keywords.presents ~/ resultRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, result, brief, description) =>
-      View(loc, id, types, result, brief, description)
+      Output(loc, id, types, result, brief, description)
     }
   }
 
-  def give[u: P]: P[Give] = {
+  def appInput[u: P]: P[Input] = {
     P(
-      location ~ Keywords.give ~/ identifier ~ is ~ open ~ types ~
+      location ~ Keywords.input ~/ identifier ~ is ~ open ~ types ~
         Keywords.yields ~ commandRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, yields, brief, description) =>
-      Give(loc, id, types, yields, brief, description)
+      Input(loc, id, types, yields, brief, description)
     }
   }
 
