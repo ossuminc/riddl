@@ -1652,6 +1652,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     from: ActorRef,
     relationship: LiteralString,
     to: OutputRef,
+
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""

@@ -205,6 +205,7 @@ trait Terminals {
     final val `type` = "type"
     final val url = "url"
     final val value = "value"
+    final val view = "view"
     final val void = "void"
     final val when = "when"
     final val yields = "yields"
