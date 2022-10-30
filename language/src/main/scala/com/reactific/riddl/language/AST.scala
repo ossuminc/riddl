@@ -1649,10 +1649,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
   case class ActivateOutputStep(
     loc: Location,
-    from: ActorRef,
+    from: OutputRef,
     relationship: LiteralString,
-    to: OutputRef,
-
+    to: ActorRef,
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -1771,8 +1770,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     elements: Seq[UIElement] = Seq.empty[UIElement],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with UIElement {
+      extends UIElement {
     override def kind: String = "Group"
+
+    override lazy val contents: Seq[ApplicationDefinition] = {
+      types ++ elements
+    }
 
     /** Format the node to a string */
     override def format: String = ""
@@ -1804,8 +1807,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     putOut: ResultRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with UIElement {
+      extends UIElement {
     override def kind: String = "Output"
+
+    override lazy val contents: Seq[ApplicationDefinition] = types
 
     /** Format the node to a string */
     override def format: String = ""
@@ -1844,8 +1849,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     putIn: CommandRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with UIElement {
+      extends UIElement {
     override def kind: String = "Input"
+
+    override lazy val contents: Seq[Definition] = types
 
     /** Format the node to a string */
     override def format: String = ""
@@ -1876,6 +1883,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends VitalDefinition[ApplicationOption, ApplicationDefinition]
       with DomainDefinition {
     override def kind: String = "Application"
+
+    override lazy val contents: Seq[ApplicationDefinition] = {
+      super.contents ++ types ++ groups ++ authors ++ terms ++ includes
+    }
   }
 
   /** A reference to an Application using a path identifier

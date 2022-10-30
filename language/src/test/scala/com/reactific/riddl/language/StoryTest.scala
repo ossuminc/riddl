@@ -66,27 +66,51 @@ class StoryTest extends ValidatingTest {
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
           |context OrganizationContext {
+          |  command CreateOrganization is {
+          |    id: Id(OrganizationContext.Organization),
+          |    name: String
+          |  }
+          |  result OrganizationInfo is {
+          |    name: String,
+          |    createdAt: TimeStamp
+          |  }
+          |
           |  entity Organization is { ??? } described as "nada"
+          |
           |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
           |} described as "nada"
+          |
+          |application Improving_app is {
+          |  group OrganizationPage is {
+          |    input accept is {
+          |      yields command
+          |        ImprovingApp.OrganizationContext.CreateOrganization
+          |    }
+          |    output show is {
+          |      presents result
+          |        ImprovingApp.OrganizationContext.OrganizationInfo
+          |    }
+          |  }
+          |}
+          |
           |actor Owner is "a person"
+          |
           |story EstablishOrganization is {
           |  actor ^^Owner wants "to establish an organization" so that
-          |  "I can conduct business as that organization"
+          |  "they can conduct business as that organization"
           |  author reid is {
           |    name: "Reid Spencer"
           |    email: "reid.spencer@ossum.biz"
           |  } briefly "nada" described as "nada"
-          |  term 'conduct business' briefly "Any legal business activity supported by the terms of use."
+          |  term 'conduct business' briefly
+          |  "Any legal business activity supported by the terms of use."
+          |
           |  case primary is {
-          |    arbitrary step from actor ^^Owner "creates an Organization" to context OrganizationContext
-          |      briefly "initial invocation"
-          |    tell step from context OrganizationContext tell command EstablishOrganization(???) to entity Organization
-          |      briefly "send creation message"
-          |    tell step from entity Organization tell event OrganizationEstablished(???) to projection
-          |    OrganizationViews
-          |      briefly "add new organization"
-          |    arbitrary step from entity Organization "organizationAdded" to actor ^^Owner
+          |    step from actor ^^Owner "creates an Organization" to
+          |      input ImprovingApp.Improving_app.OrganizationPage.accept
+          |      briefly "create org",
+          |    step from output ImprovingApp.Improving_app.OrganizationPage.show
+          |      "presented" to actor ^^Owner
           |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"

@@ -153,6 +153,12 @@ object Validation {
             case sa: Actor       => validateActor(sa, parents)
             case sc: StoryCase   => validateStoryCase(sc, parents)
           }
+        case ad: ApplicationDefinition => ad match {
+            case typ: Type   => validateType(typ, parents)
+            case grp: Group  => validateGroup(grp, parents)
+            case in: Input   => validateInput(in, parents)
+            case out: Output => validateOutput(out, parents)
+          }
         case ed: EntityDefinition => ed match {
             case t: Type      => validateType(t, parents)
             case s: State     => validateState(s, parents)
@@ -460,6 +466,30 @@ object Validation {
         vs: ValidationState =>
           vs.addMissing(app.loc, s"${app.identify} should have a group")
       }.checkDescription(app)
+    }
+
+    def validateGroup(
+      grp: Group,
+      parents: Seq[AST.Definition]
+    ): ValidationState = { checkDefinition(parents.head, grp) }
+
+    def validateInput(
+      in: Input,
+      parents: Seq[AST.Definition]
+    ): ValidationState = {
+      checkDefinition(parents.head, in)
+        .checkMessageRef(in.putIn, in, parents, CommandKind)
+        .checkDescription(in)
+    }
+
+    def validateOutput(
+      out: Output,
+      parents: Seq[AST.Definition]
+    ): ValidationState = {
+      checkDefinition(parents.head, out)
+        .checkMessageRef(out.putOut, out, parents, ResultKind)
+        .checkDescription(out)
+
     }
 
     def validateActor(

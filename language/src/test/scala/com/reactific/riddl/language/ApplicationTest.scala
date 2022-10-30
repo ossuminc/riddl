@@ -39,7 +39,7 @@ class ApplicationTest extends ValidatingTest {
             ) =>
           domain.applications mustNot be(empty)
           domain.applications.head.types.size mustBe (2)
-          messages mustBe (empty)
+          messages.isIgnorable mustBe true
       }
     }
   }
