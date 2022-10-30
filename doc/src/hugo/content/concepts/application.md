@@ -12,8 +12,8 @@ This gives free latitude to the user interface
 designer to manage the entire interaction between human and machine. 
 
 There are also no assumptions about the technology used for the 
-implementation of an application. RIDDL offers an abstract notion of an 
-application that can be implemented as any of the following:
+implementation of an application. RIDDL's notion of an application is general 
+and abstract, but they can be implemented as any of the following:
 * Mobile Application On Any Platform
 * Web Application
 * Native Operating System Application (graphical or command line)
@@ -21,15 +21,28 @@ application that can be implemented as any of the following:
 * Virtual Reality with Haptics
 * and other things yet to be invented. 
 
-Applications are composed of [elements]({{< relref element.md >}}]]) that 
-further maintain the abstract design of actor interfaces. Elements are 
-always designed with regard to a data structure 
-([type]({{< relref type.md >}})). For more details on that read the 
-[elements]({{< relref element.md >}}) page.
+This means a RIDDL application specification can be used as the basis for 
+creating multiple implementations of the specification using a variety of 
+technologies.     
+
+## Groups
+Applications abstractly design a user interface by containing a set of 
+[groups]({{< relref "group.md" >}}]]). Groups can be nested which allows them
+to define the structure of a user interface. 
+
+## Handlers
+Applications have message 
+[handlers]({{< relref handler.md >}}) like many other RIDDL definitions. 
+However, application handler's only receive their messages from 
+[actors]({{< relref actor.md >}}), unlike other handlers. Typically, the 
+handling of messages in handlers will ultimately send further messages to 
+other components, like a [context]({{< relref context.md >}}) or
+[entity]({{< relref entity.md >}})
 
 ## Occurs In
 * [Domain]({{< relref "domain.md" >}})
 
 ## Contains
 * [Type]({{< relref "type.md" >}})
-* [Element]({{< relref "element.md" >}})
+* [Group]({{< relref "element.md" >}})
+* [Handler]({{< relref "handler.md" >}})

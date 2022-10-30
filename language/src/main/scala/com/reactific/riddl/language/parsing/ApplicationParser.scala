@@ -21,28 +21,36 @@ trait ApplicationParser
     }
   }
 
-  def display[u: P]: P[Display] = {
+  def group[u: P]: P[Group] = {
     P(
-      location ~ Keywords.display ~/ identifier ~ is ~ open ~ types ~
-        Keywords.presents ~ typeRef ~ close ~ briefly ~ description
-    ).map { case (loc, id, types, present, brief, description) =>
-      Display(loc, id, types, present, brief, description)
+      location ~ Keywords.group ~/ identifier ~ is ~ open ~ types ~
+        (group | view | give).rep(0) ~ close ~ briefly ~ description
+    ).map { case (loc, id, types, elements, brief, description) =>
+      Group(loc, id, types, elements, brief, description)
     }
   }
 
-  def form[u: P]: P[Form] = {
+  // def select[u:P]: P[Select]
+  def view[u: P]: P[View] = {
     P(
-      location ~ Keywords.form ~/ identifier ~ is ~ open ~ types ~
-        Keywords.presents ~ typeRef ~ Keywords.collects ~ typeRef ~ close ~
-        briefly ~ description
-    ).map { case (loc, id, types, present, collect, brief, description) =>
-      Form(loc, id, types, present, collect, brief, description)
+      location ~ Keywords.view ~/ identifier ~ is ~ open ~ types ~
+        Keywords.presents ~/ resultRef ~ close ~ briefly ~ description
+    ).map { case (loc, id, types, result, brief, description) =>
+      View(loc, id, types, result, brief, description)
     }
+  }
 
+  def give[u: P]: P[Give] = {
+    P(
+      location ~ Keywords.give ~/ identifier ~ is ~ open ~ types ~
+        Keywords.yields ~ commandRef ~ close ~ briefly ~ description
+    ).map { case (loc, id, types, yields, brief, description) =>
+      Give(loc, id, types, yields, brief, description)
+    }
   }
 
   def applicationDefinition[u: P]: P[ApplicationDefinition] = {
-    P(display | form | author | term | typeDef | applicationInclude)
+    P(group | author | term | typeDef | applicationInclude)
   }
 
   def applicationDefinitions[u: P]: P[Seq[ApplicationDefinition]] = {
@@ -68,8 +76,7 @@ trait ApplicationParser
       val groups = content.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val types = mapTo[Type](groups.get(classOf[Type]))
-      val displays = mapTo[Display](groups.get(classOf[Display]))
-      val forms = mapTo[Form](groups.get(classOf[Form]))
+      val grps = mapTo[Group](groups.get(classOf[Group]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[ApplicationDefinition]](groups.get(
         classOf[Include[ApplicationDefinition]]
@@ -80,8 +87,7 @@ trait ApplicationParser
         id,
         options,
         types,
-        displays,
-        forms,
+        grps,
         authors,
         terms,
         includes,

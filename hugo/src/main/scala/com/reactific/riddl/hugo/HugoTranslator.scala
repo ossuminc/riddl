@@ -23,7 +23,7 @@ import scala.collection.mutable
 
 object HugoTranslator extends Translator[HugoCommand.Options] {
 
-  val geekDoc_version = "v0.35.6"
+  val geekDoc_version = "v0.35.8"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -231,8 +231,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             state.addToGlossary(p, stack)
           case sa: Actor     => state.addToGlossary(sa, stack)
           case sc: StoryCase => state.addToGlossary(sc, stack)
-          case ds: Display   => state.addToGlossary(ds, stack)
-          case fm: Form      => state.addToGlossary(fm, stack)
+          case ds: View      => state.addToGlossary(ds, stack)
+          case gv: Give      => state.addToGlossary(gv, stack)
+          case grp: Group    => state.addToGlossary(grp, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")
             state

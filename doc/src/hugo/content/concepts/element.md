@@ -8,28 +8,31 @@ draft: "false"
 with a data [type]({{< relref type.md >}}) for either input or output. 
 Actors using an application are either sending information
 
-## Element Kinds
-{{< hint type=warning icon=gdoc_dangerous title="Not Implemented" >}}
-This feature is not implemented as of 0.16.1
-{{< /hint >}}
+## Element Types
+There is one RIDDL definition for each of the four typical categories of 
+User Interface elements[^1] as shown in the table below
 
-There are several kinds of elements, broken into three types: input, output,
-and grouping. Here are the input types of elements: 
-* *select* - input of a choice from a list of items
-* *provide* - input of data items to fill an 
-  [aggregate type]({{< relref "type.md#aggregation" >}})
+[^1]: See [Critical UI Elements of Remarkable Interfaces](https://www.peppersquare.com/blog/4-critical-ui-elements-of-remarkable-interfaces/) 
 
-Here is the output type of element:
-* *present* - present data type to actor
 
-Here are the grouping type of elements:
-* *group* - groups together a set of elements so they can be referenced 
-  collectively
+| UI Element | RIDDL    | Description                                  |
+|------------|----------|----------------------------------------------|
+| Input      | Give     | input of data items to fill an aggregate     |
+| Input      | Select   | select item(s) from a list                   |
+| Output     | View     | presents a data value for consideration      |
+| Navigation | Activate | cause the application to change its context  |
+| Container  | Group    | groups elements together                     |
+
+
+
+# Activate
+An Activate definition instructs the application to change context to a 
+different group of elements.
 
 ## Occurs In
 * [Applications]({{< relref "application.md" >}})
 
 ## Contains
 * [Elements]({{< relref "element.md" >}})
-* [Examples]({{< relref "example.md" >}})
+* [Handlers]({{< relref handler.md >}})
 

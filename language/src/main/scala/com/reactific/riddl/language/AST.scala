@@ -19,7 +19,7 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST extends ast.Expressions with parsing.Terminals {
+object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
   sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
@@ -584,108 +584,6 @@ object AST extends ast.Expressions with parsing.Terminals {
 
   // ////////////////////////////////////////////////////////// Entities
 
-  /** Base trait of any value used in the definition of an entity
-    */
-  sealed trait EntityValue extends RiddlValue
-
-  /** Abstract base class of options for entities
-    *
-    * @param name
-    *   the name of the option
-    */
-  sealed abstract class EntityOption(val name: String)
-      extends EntityValue with OptionValue
-
-  /** An [[EntityOption]] that indicates that this entity should store its state
-    * in an event sourced fashion.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityEventSourced(loc: Location)
-      extends EntityOption("event sourced")
-
-  /** An [[EntityOption]] that indicates that this entity should store only the
-    * latest value without using event sourcing. In other words, the history of
-    * changes is not stored.
-    *
-    * @param loc
-    *   The location of the option
-    */
-  case class EntityValueOption(loc: Location) extends EntityOption("value")
-
-  /** An [[EntityOption]] that indicates that this entity should not persist its
-    * state and is only available in transient memory. All entity values will be
-    * lost when the service is stopped.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityTransient(loc: Location) extends EntityOption("transient")
-
-  /** An [[EntityOption]] that indicates that this entity is an aggregate root
-    * entity through which all commands and queries are sent on behalf of the
-    * aggregated entities.
-    *
-    * @param loc
-    *   The location of the option
-    */
-  case class EntityIsAggregate(loc: Location) extends EntityOption("aggregate")
-
-  /** An [[EntityOption]] that indicates that this entity favors consistency
-    * over availability in the CAP theorem.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsConsistent(loc: Location)
-      extends EntityOption("consistent")
-
-  /** A [[EntityOption]] that indicates that this entity favors availability
-    * over consistency in the CAP theorem.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsAvailable(loc: Location) extends EntityOption("available")
-
-  /** An [[EntityOption]] that indicates that this entity is intended to
-    * implement a finite state machine.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsFiniteStateMachine(loc: Location)
-      extends EntityOption("finite state machine")
-
-  /** An [[EntityOption]] that indicates that this entity should allow receipt
-    * of commands and queries via a message queue.
-    *
-    * @param loc
-    *   The location at which this option occurs.
-    */
-  case class EntityMessageQueue(loc: Location)
-      extends EntityOption("message queue")
-
-  case class EntityTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends EntityOption("technology")
-
-  /** An [[EntityOption]] that indicates the general kind of entity being
-    * defined. This option takes a value which provides the kind. Examples of
-    * useful kinds are "device", "actor", "concept", "machine", and similar
-    * kinds of entities. This entity option may be used by downstream AST
-    * processors, especially code generators.
-    *
-    * @param loc
-    *   The location of the entity kind option
-    * @param args
-    *   The argument to the option
-    */
-  case class EntityKind(loc: Location, override val args: Seq[LiteralString])
-      extends EntityOption("kind")
-
   /** A reference to an entity
     *
     * @param loc
@@ -709,20 +607,6 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends Reference[Function] {
     override def format: String = s"${Keywords.function} ${id.format}"
   }
-
-  /** Base class of all function options
-    *
-    * @param name
-    *   The name of the option
-    */
-  sealed abstract class FunctionOption(val name: String) extends OptionValue
-
-  /** A function option to mark a function as being tail recursive
-    * @param loc
-    *   The location of the tail recursive option
-    */
-  case class TailRecursive(loc: Location)
-      extends FunctionOption("tail-recursive")
 
   /** A function definition which can be part of a bounded context or an entity.
     *
@@ -840,11 +724,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     def format: String = ""
     final val kind: String = "On Clause"
   }
-
-  sealed abstract class HandlerOption(val name: String) extends OptionValue
-
-  case class PartialHandlerOption(loc: Location)
-      extends HandlerOption("partial")
 
   /** A named handler of messages (commands, events, queries) that bundles
     * together a set of [[OnClause]] definitions and by doing so defines the
@@ -1023,13 +902,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     def format: String = "to"
   }
 
-  sealed abstract class AdaptorOption(val name: String) extends OptionValue
-
-  case class AdaptorTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends AdaptorOption("technology")
-
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
     * messages from another bounded context. Adaptors translate incoming
     * messages into corresponding messages using the ubiquitous language of the
@@ -1040,11 +912,11 @@ object AST extends ast.Expressions with parsing.Terminals {
     *   Location in the parsing input
     * @param id
     *   Name of the adaptor
-    * @param ref
+    * @param direction
+    * @param context
     *   A reference to the bounded context from which messages are adapted
-    * @param adaptations
-    *   A set of [[AdaptorDefinition]]s that indicate what to do when messages
-    *   occur.
+    * @param handlers
+    *   A set of [[Handler]]s that indicate what to do when messages occur.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1085,13 +957,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
-  sealed abstract class ProjectionOption(val name: String) extends OptionValue
-
-  case class ProjectionTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends ProjectionOption("technology")
-
   case class Projection(
     loc: Location,
     id: Identifier,
@@ -1130,48 +995,6 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends MessageTakingRef[Projection] {
     override def format: String = s"${Keywords.projection} ${id.format}"
   }
-
-  /** Base trait for all options a Context can have.
-    */
-  sealed abstract class ContextOption(val name: String) extends OptionValue
-
-  case class ContextPackageOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends ContextOption("package")
-
-  /** A context's "wrapper" option. This option suggests the bounded context is
-    * to be used as a wrapper around an external system and is therefore at the
-    * boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class WrapperOption(loc: Location) extends ContextOption("wrapper")
-
-  /** A context's "service" option. This option suggests the bounded context is
-    * intended to be a DDD service, similar to a wrapper but without any
-    * persistent state and more of a stateless service aspect to its nature
-    *
-    * @param loc
-    *   The location at which the option occurs
-    */
-  case class ServiceOption(loc: Location) extends ContextOption("service")
-
-  /** A context's "gateway" option that suggests the bounded context is intended
-    * to be an application gateway to the model. Gateway's provide
-    * authentication and authorization access to external systems, usually user
-    * applications.
-    *
-    * @param loc
-    *   The location of the gateway option
-    */
-  case class GatewayOption(loc: Location) extends ContextOption("gateway")
-
-  case class ContextTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends ContextOption("technology")
 
   /** A bounded context definition. Bounded contexts provide a definitional
     * boundary on the language used to describe some aspect of a system. They
@@ -1372,13 +1195,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def keyword: String = Keywords.void
   }
 
-  sealed abstract class ProcessorOption(val name: String) extends OptionValue
-
-  case class ProcessorTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends ProcessorOption("technology")
-
   /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
     * processor's processing is specified by Gherkin [[Example]]s
     *
@@ -1578,18 +1394,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     final val kind: String = "Outlet Joint"
   }
 
-  sealed abstract class PlantOption(val name: String) extends OptionValue
-
-  case class PlantPackageOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends PlantOption("package")
-
-  case class PlantTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends PlantOption("technology")
-
   /** The definition of a plant which brings pipes, processors and joints
     * together into a closed system of data processing.
     *
@@ -1672,30 +1476,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     def format: String = ""
     final val kind: String = "SagaStep"
   }
-
-  /** Base trait for all options applicable to a saga.
-    */
-  sealed abstract class SagaOption(val name: String) extends OptionValue
-
-  /** A [[SagaOption]] that indicates sequential (serial) execution of the saga
-    * actions.
-    *
-    * @param loc
-    *   The location of the sequential option
-    */
-  case class SequentialOption(loc: Location) extends SagaOption("sequential")
-
-  /** A [[SagaOption]] that indicates parallel execution of the saga actions.
-    *
-    * @param loc
-    *   The location of the parallel option
-    */
-  case class ParallelOption(loc: Location) extends SagaOption("parallel")
-
-  case class SagaTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends SagaOption("technology")
 
   /** The definition of a Saga based on inputs, outputs, and the set of
     * [[SagaStep]]s involved in the saga. Sagas define a computing action based
@@ -1867,11 +1647,11 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def format: String = ""
   }
 
-  case class ApplicationDisplayStep(
+  case class ActivateViewStep(
     loc: Location,
     from: ActorRef,
     relationship: LiteralString,
-    to: DisplayRef,
+    to: ViewRef,
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -1881,7 +1661,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     loc: Location,
     from: ActorRef,
     relationship: LiteralString,
-    to: FormRef,
+    to: GiveRef,
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
@@ -1897,15 +1677,6 @@ object AST extends ast.Expressions with parsing.Terminals {
     override def kind: String = "StoryCase"
     override def format: String = ""
   }
-
-  sealed abstract class StoryOption(val name: String) extends OptionValue
-
-  case class StoryTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends StoryOption("technology")
-
-  case class StorySynchronousOption(loc: Location) extends StoryOption("synch")
 
   /** An agile user story definition
     * @param loc
@@ -1990,61 +1761,184 @@ object AST extends ast.Expressions with parsing.Terminals {
     def format: String = ""
   }
 
-  sealed abstract class ApplicationOption(val name: String) extends OptionValue
+  sealed trait UIElement extends ApplicationDefinition
 
-  case class ApplicationTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends ApplicationOption("technology")
-
-  case class Display( // TODO: needs a better name? Display = visual only
+  case class Group(
     loc: Location,
     id: Identifier,
-    types: Seq[Type],
-    displayed: TypeRef,
+    types: Seq[Type] = Seq.empty[Type],
+    elements: Seq[UIElement] = Seq.empty[UIElement],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with ApplicationDefinition {
-    override def kind: String = "Display"
+      extends LeafDefinition with UIElement {
+    override def kind: String = "Group"
 
     /** Format the node to a string */
     override def format: String = ""
   }
 
-  /** A reference to an Display using a path identifier
-    * @param loc
-    *   THe location of the StoryActor in the source code
-    * @param id
-    *   The path identifier that refers to the Display
-    */
-  case class DisplayRef(loc: Location, id: PathIdentifier)
-      extends Reference[Display] {
+  case class GroupRef(loc: Location, id: PathIdentifier)
+      extends Reference[Group] {
     override def format: String = ""
   }
 
-  case class Form( // TODO: needs a better name? Form = very Interwebz
+  /** A UI Element that presents some information to the user
+    * @param loc
+    *   Location of the view in the source
+    * @param id
+    *   unique identifier oof the view
+    * @param types
+    *   any type definitions the view needs
+    * @param viewed
+    *   A result reference for the data too be presented
+    * @param brief
+    *   A brief description of the view
+    * @param description
+    *   A detailed description of the view
+    */
+  case class View(
     loc: Location,
     id: Identifier,
     types: Seq[Type],
-    displayed: TypeRef,
-    collected: TypeRef,
+    viewed: ResultRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with ApplicationDefinition {
-    override def kind: String = "Form"
+      extends LeafDefinition with UIElement {
+    override def kind: String = "View"
 
     /** Format the node to a string */
     override def format: String = ""
   }
 
-  /** A reference to a Form using a path identifier
+  /** A reference to an View using a path identifier
     * @param loc
-    *   THe location of the StoryActor in the source code
+    *   The location of the ViewRef in the source code
     * @param id
-    *   The path identifier that refers to the Form
+    *   The path identifier that refers to the View
     */
-  case class FormRef(loc: Location, id: PathIdentifier)
-      extends Reference[Form] {
+  case class ViewRef(loc: Location, id: PathIdentifier)
+      extends Reference[View] {
+    override def format: String = ""
+  }
+
+  /** A Give is a UI Element to allow the user to 'give' some data to the
+    * application. It is analogous to a form in HTML
+    * @param loc
+    *   Location of the Give
+    * @param id
+    *   Name of the give
+    * @param types
+    *   type definitions needed for the Give
+    * @param given
+    *   a Type reference of the type given by the user
+    * @param brief
+    *   A brief description of the Give
+    * @param description
+    *   a detailed description of the Give
+    */
+  case class Give(
+    loc: Location,
+    id: Identifier,
+    types: Seq[Type],
+    content: CommandRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with UIElement {
+    override def kind: String = "Give"
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  /** A reference to a Give using a path identifier
+    * @param loc
+    *   THe location of the GiveRef in the source code
+    * @param id
+    *   The path identifier that refers to the Give
+    */
+  case class GiveRef(loc: Location, id: PathIdentifier)
+      extends Reference[Give] {
+    override def format: String = ""
+  }
+
+  /** A Select is a UI Element to allow the user to select some items from a
+    * list of items.
+    * @param loc
+    *   Location of the Select
+    * @param id
+    *   Name of the Select
+    * @param types
+    *   type definitions needed for the Select
+    * @param selected
+    *   An event reference of the list's element type selected by the user
+    * @param brief
+    *   A brief description of the Select
+    * @param description
+    *   a detailed description of the select
+    */
+  case class Select(
+    loc: Location,
+    id: Identifier,
+    types: Seq[Type],
+    selected: EventRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with ApplicationDefinition {
+    override def kind: String = "Select"
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  /** A reference to a Select using a path identifier
+    * @param loc
+    *   THe location of the SelectRef in the source code
+    * @param id
+    *   The path identifier that refers to the Select
+    */
+  case class SelectRef(loc: Location, id: PathIdentifier)
+      extends Reference[Give] {
+    override def format: String = ""
+  }
+
+  /** An Activate is a UI Element that represents a user's direction to the
+    * application to go to a new group (page, screen, ...). This is what most
+    * menus are made from
+    * @param loc
+    *   Location of the Activate
+    * @param id
+    *   Name of the Activate
+    * @param types
+    *   type definitions needed for the Activate
+    * @param group
+    *   A reference to the Group that should be activated
+    * @param brief
+    *   A brief description of the Activate
+    * @param description
+    *   a detailed description of the Activate
+    */
+  case class Activate(
+    loc: Location,
+    id: Identifier,
+    types: Seq[Type],
+    selected: EventRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with UIElement {
+    override def kind: String = "Activate"
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  /** A reference to a Activate using a path identifier
+    * @param loc
+    *   THe location of the Activate in the source code
+    * @param id
+    *   The path identifier that refers to the Activate
+    */
+  case class ActivateRef(loc: Location, id: PathIdentifier)
+      extends Reference[Give] {
     override def format: String = ""
   }
 
@@ -2053,8 +1947,7 @@ object AST extends ast.Expressions with parsing.Terminals {
     id: Identifier,
     options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     types: Seq[Type] = Seq.empty[Type],
-    displays: Seq[Display] = Seq.empty[Display],
-    forms: Seq[Form] = Seq.empty[Form],
+    groups: Seq[Group] = Seq.empty[Group],
     authors: Seq[Author] = Seq.empty[Author],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
@@ -2075,30 +1968,6 @@ object AST extends ast.Expressions with parsing.Terminals {
       extends Reference[Application] {
     override def format: String = ""
   }
-
-  /** Base trait for all options a Domain can have.
-    */
-  sealed abstract class DomainOption(val name: String) extends OptionValue
-
-  /** A context's "wrapper" option. This option suggests the bounded context is
-    * to be used as a wrapper around an external system and is therefore at the
-    * boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class DomainPackageOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends DomainOption("package")
-
-  case class DomainExternalOption(loc: Location)
-      extends DomainOption("external")
-
-  case class DomainTechnologyOption(
-    loc: Location,
-    override val args: Seq[LiteralString])
-      extends DomainOption("technology")
 
   /** The definition of a domain. Domains are the highest building block in
     * RIDDL and may be nested inside each other to form a hierarchy of domains.
