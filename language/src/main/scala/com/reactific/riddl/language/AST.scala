@@ -224,7 +224,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: Location,
     what: LiteralString,
     description: Option[Description])
-      extends SagaStepAction {
+      extends Action {
     override def format: String = what.format
   }
 
@@ -242,7 +242,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: Location,
     message: LiteralString,
     description: Option[Description])
-      extends SagaStepAction {
+      extends Action {
     override def format: String = s"severe \"${message.format}\""
   }
 
@@ -644,6 +644,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     description: Option[Description] = None)
       extends VitalDefinition[FunctionOption, FunctionDefinition]
       with WithTypes
+      with SagaDefinition
       with EntityDefinition
       with ContextDefinition
       with FunctionDefinition {
@@ -1508,6 +1509,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
+    functions: Seq[Function] = Seq.empty[Function],
     authors: Seq[Author] = Seq.empty[Author],
     includes: Seq[Include[SagaDefinition]] = Seq.empty[Include[SagaDefinition]],
     terms: Seq[Term] = Seq.empty[Term],
@@ -1574,11 +1576,49 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = ""
   }
 
+  sealed trait InteractionExpression
+      extends RiddlValue with BrieflyDescribedValue
+
+  /** An interaction expression that specifies that each contained expression
+    * should be executed in parallel
+    * @param loc
+    *   Location of the parallel group
+    * @param contents
+    *   The expressions to execute in parallel
+    * @param brief
+    *   A brief description of the parallel group
+    */
+  case class ParallelGroup(
+    loc: Location,
+    contents: Seq[InteractionExpression],
+    brief: Option[LiteralString])
+      extends InteractionExpression {
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
+  /** An interaction expression that specifies that its contents are optional
+    * @param loc
+    *   The location of the optional group
+    * @param contents
+    *   The optional expressions
+    * @param brief
+    *   A brief description of the optional group
+    */
+  case class OptionalGroup(
+    loc: Location,
+    contents: Seq[InteractionExpression],
+    brief: Option[LiteralString])
+      extends InteractionExpression {
+    override def format: String = ""
+  }
+
   /** One abstract step in an Interaction between things. The set of case
     * classes associated with this sealed trait provide more type specificity to
     * these three fields.
     */
-  sealed trait InteractionStep extends RiddlValue with BrieflyDescribedValue {
+  sealed trait InteractionStep extends InteractionExpression {
     def from: Reference[Definition]
     def relationship: RiddlNode
     def to: Reference[Definition]
@@ -1607,44 +1647,14 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = ""
   }
 
-  case class TellMessageStep(
-    loc: Location,
-    from: MessageTakingRef[Definition],
-    relationship: MessageConstructor,
-    to: MessageTakingRef[Definition],
-    brief: Option[LiteralString] = None)
-      extends InteractionStep {
-    override def format: String = ""
-  }
-
-  case class PublishMessageStep(
-    loc: Location,
-    from: MessageTakingRef[Definition],
-    relationship: MessageConstructor,
-    to: PipeRef,
-    brief: Option[LiteralString] = None)
-      extends InteractionStep {
-    override def format: String = ""
-  }
-
-  case class SubscribeToPipeStep(
-    loc: Location,
-    from: MessageTakingRef[Definition],
-    relationship: LiteralString,
-    to: PipeRef,
-    brief: Option[LiteralString] = None)
-      extends InteractionStep {
-    override def format: String = ""
-
-  }
-  case class SagaInitiationStep(
+  case class SelfProcessingStep(
     loc: Location,
     from: Reference[Definition],
     relationship: LiteralString,
-    to: SagaRef,
     brief: Option[LiteralString] = None)
       extends InteractionStep {
     override def format: String = ""
+    override def to: Reference[Definition] = from
   }
 
   case class ActivateOutputStep(
@@ -1670,7 +1680,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class StoryCase(
     loc: Location,
     id: Identifier,
-    interactions: Seq[InteractionStep],
+    interactions: Seq[InteractionExpression],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with StoryDefinition {

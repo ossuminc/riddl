@@ -15,16 +15,22 @@ case class SequenceDiagrammer(
     extends FileBuilder {
 
   val participants: Map[Seq[String], Definition] = {
-    for {
+    (for {
       cs <- story.cases
       interaction <- cs.interactions
-    } yield { Seq(interaction.from, interaction.to) }
-  }.flatten.distinctBy(_.id.value).map { ref: Reference[?] =>
-    state.pathIdToDefinition(ref.id, parents) match {
-      case Some(definition) => ref.id.value -> definition
-      case None => throw new IllegalStateException(
-          s"Pre-validated PathId not found: ${ref.identify}"
-        )
+    } yield {
+      interaction match {
+        case is: InteractionStep => Seq[Reference[Definition]](is.from, is.to)
+        case _                   => Seq.empty[Reference[Definition]]
+      }
+    }).filterNot(_.isEmpty).flatten.distinctBy(_.id.value).map {
+      ref: Reference[Definition] =>
+        state.pathIdToDefinition(ref.id, parents) match {
+          case Some(definition) => ref.id.value -> definition
+          case None => throw new IllegalStateException(
+              s"Pre-validated PathId not found: ${ref.identify}"
+            )
+        }
     }
   }.toMap
 
@@ -37,10 +43,10 @@ case class SequenceDiagrammer(
   }
 
   def makeLink(definition: Definition): Unit = {
-    val name = definition.id.value
+    val name = definition.identify
     val link = state.makeDocLink(definition)
     definition match {
-      case _: Actor      => sb.append(s"  link $name: Definition @ $link"); nl
+      case _: Actor      => sb.append(s"  link $name:  @ $link"); nl
       case _: Definition => sb.append(s"  link $name: Definition @ $link"); nl
     }
   }
@@ -53,13 +59,14 @@ case class SequenceDiagrammer(
 
   for { cse <- story.cases } {
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl
-    for { ntrctn <- cse.interactions } {
-      val from = participants(ntrctn.from.id.value)
-      val to = participants(ntrctn.to.id.value)
-      sb.append(
-        s"    ${from.id.value}->>${to.id.value}: ${ntrctn.relationship}"
-      )
-      nl
+    for { ntrctn <- cse.interactions } ntrctn match {
+      case is: InteractionStep =>
+        val from = participants(is.from.id.value)
+        val to = participants(is.to.id.value)
+        sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
+        nl
+      case _: ParallelGroup => // TODO: include parallel groups
+      case _: OptionalGroup => // TODO: include optional groups
     }
     sb.append("  end opt"); nl
   }

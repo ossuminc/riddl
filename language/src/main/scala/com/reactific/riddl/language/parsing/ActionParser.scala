@@ -109,16 +109,14 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def sagaStepAction[u: P]: P[SagaStepAction] = {
-    P(
-      arbitraryAction | errorAction | publishAction | tellAction | askAction |
-        replyAction | functionCallAction
-    )
+    P(publishAction | tellAction | askAction | functionCallAction)
   }
 
   def anyAction[u: P]: P[Action] = {
     P(
       replyAction | setAction | appendAction | morphAction | becomeAction |
-        yieldAction | returnAction | sagaStepAction | compoundAction
+        yieldAction | returnAction | arbitraryAction | errorAction |
+        sagaStepAction | compoundAction
     )
   }
 

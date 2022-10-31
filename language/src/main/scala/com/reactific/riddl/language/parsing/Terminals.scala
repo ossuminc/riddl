@@ -163,6 +163,7 @@ trait Terminals {
     final val outlet = "outlet"
     final val outlets = "outlets"
     final val output = "output"
+    final val parallel = "parallel"
     final val pipe = "pipe"
     final val plant = "plant"
     final val processor = "processor"

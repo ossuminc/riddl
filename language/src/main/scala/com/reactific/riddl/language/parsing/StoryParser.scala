@@ -17,15 +17,24 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   }
 
   def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
-    messageTakingRef | sagaRef | actorRef | applicationRef
+    messageTakingRef | sagaRef | functionRef
   }
 
   def arbitraryStep[u: P]: P[ArbitraryStep] = {
     P(
       Keywords.step ~ location ~ Readability.from.? ~ arbitraryStoryRef ~
-        literalString ~ Readability.to.? ~ applicationRef ~ briefly
+        literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly
     )./.map { case (loc, from, ls, to, brief) =>
       ArbitraryStep(loc, from, ls, to, brief)
+    }
+  }
+
+  def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
+    P(
+      Keywords.step ~ location ~ Readability.from.? ~ arbitraryStoryRef ~
+        literalString ~ briefly
+    )./.map { case (loc, ref, proc, brief) =>
+      SelfProcessingStep(loc, ref, proc, brief)
     }
   }
 
@@ -47,16 +56,30 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
-    P(viewOutputStep | provideInputStep | arbitraryStep)
-      .rep(0, Punctuation.comma./)
+  def optionalGroup[u: P]: P[OptionalGroup] = {
+    P(location ~ Keywords.optional ~ interactionExpressions ~ briefly)./.map {
+      case (loc, steps, brief) => OptionalGroup(loc, steps, brief)
+    }
+  }
+
+  def parallelGroup[u: P]: P[ParallelGroup] = {
+    P(location ~ Keywords.parallel ~ interactionExpressions ~ briefly)./.map {
+      case (loc, steps, brief) => ParallelGroup(loc, steps, brief)
+    }
+  }
+
+  def interactionExpressions[u: P]: P[Seq[InteractionExpression]] = {
+    P(
+      parallelGroup | optionalGroup | viewOutputStep | provideInputStep |
+        arbitraryStep | selfProcessingStep
+    ).rep(0, Punctuation.comma./)
   }
 
   def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
-        (undefined(Seq.empty[InteractionStep]) | interactionSteps) ~ close ~
-        briefly ~ description
+        (undefined(Seq.empty[InteractionStep]) | interactionExpressions) ~
+        close ~ briefly ~ description
     ).map { case (loc, id, steps, brief, description) =>
       StoryCase(loc, id, steps, brief, description)
     }
