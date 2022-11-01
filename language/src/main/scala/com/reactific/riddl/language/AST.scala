@@ -1302,6 +1302,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       .empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
+    repositories: Seq[Repository] = Seq.empty[Repository],
     authors: Seq[Author] = Seq.empty[Author],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
