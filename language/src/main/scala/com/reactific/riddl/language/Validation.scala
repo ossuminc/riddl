@@ -153,6 +153,12 @@ object Validation {
             case sa: Actor       => validateActor(sa, parents)
             case sc: StoryCase   => validateStoryCase(sc, parents)
           }
+        case ad: ApplicationDefinition => ad match {
+            case typ: Type   => validateType(typ, parents)
+            case grp: Group  => validateGroup(grp, parents)
+            case in: Input   => validateInput(in, parents)
+            case out: Output => validateOutput(out, parents)
+          }
         case ed: EntityDefinition => ed match {
             case t: Type      => validateType(t, parents)
             case s: State     => validateState(s, parents)
@@ -462,6 +468,30 @@ object Validation {
       }.checkDescription(app)
     }
 
+    def validateGroup(
+      grp: Group,
+      parents: Seq[AST.Definition]
+    ): ValidationState = { checkDefinition(parents.head, grp) }
+
+    def validateInput(
+      in: Input,
+      parents: Seq[AST.Definition]
+    ): ValidationState = {
+      checkDefinition(parents.head, in)
+        .checkMessageRef(in.putIn, in, parents, CommandKind)
+        .checkDescription(in)
+    }
+
+    def validateOutput(
+      out: Output,
+      parents: Seq[AST.Definition]
+    ): ValidationState = {
+      checkDefinition(parents.head, out)
+        .checkMessageRef(out.putOut, out, parents, ResultKind)
+        .checkDescription(out)
+
+    }
+
     def validateActor(
       @unused sa: Actor,
       @unused parents: Seq[Definition]
@@ -481,14 +511,31 @@ object Validation {
     ): ValidationState = {
       checkDefinition(sc, parents.head).stepIf(sc.interactions.nonEmpty) { st =>
         sc.interactions.foldLeft(st) { (st, step) =>
-          st.checkPathRef[Definition](step.from.id, sc, parents)()()
-            .checkPathRef[Definition](step.to.id, sc, parents)()()
-            .checkThat(step.relationship.isEmpty)(
-              _.addMissing(
-                step.loc,
-                s"Interactions must have a non-empty relationship"
-              )
-            )
+          step match {
+            case par: ParallelGroup => st
+                .stepIf(par.contents.isEmpty) { vs: ValidationState =>
+                  vs.addMissing(
+                    par.loc,
+                    "Parallel interaction should not be empty"
+                  )
+                }
+            case opt: OptionalGroup => st
+                .stepIf(opt.contents.isEmpty) { vs: ValidationState =>
+                  vs.addMissing(
+                    opt.loc,
+                    "Optional interaction should not be empty"
+                  )
+                }
+            case is: InteractionStep => st
+                .checkPathRef[Definition](is.from.id, sc, parents)()()
+                .checkPathRef[Definition](is.to.id, sc, parents)()()
+                .checkThat(is.relationship.isEmpty)(
+                  _.addMissing(
+                    step.loc,
+                    s"Interactions must have a non-empty relationship"
+                  )
+                )
+          }
         }
       }.stepIf(sc.nonEmpty) { vs =>
         vs.checkThat(sc.interactions.isEmpty)(

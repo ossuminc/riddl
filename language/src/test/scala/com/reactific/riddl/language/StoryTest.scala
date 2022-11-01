@@ -12,7 +12,7 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 
 class StoryTest extends ValidatingTest {
 
-  "Story" should { // TODO: validate designs
+  "Story" should {
     "parse and validate a case-less example " in {
       val rpi = RiddlParserInput(
         """domain foo is {
@@ -58,7 +58,9 @@ class StoryTest extends ValidatingTest {
           story.shownBy.head.toString mustBe
             "http://example.com:80/path/to/WritingABook"
           story.cases mustNot be(empty)
-        // FIXME: story.cases... mustBe "..."
+          val sc = story.cases.head
+          sc.id.value mustBe "perfection"
+          story.examples mustNot be(empty)
       }
     }
 
@@ -66,27 +68,187 @@ class StoryTest extends ValidatingTest {
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
           |context OrganizationContext {
+          |  command CreateOrganization is {
+          |    id: Id(OrganizationContext.Organization),
+          |    name: String
+          |  }
+          |  result OrganizationInfo is {
+          |    name: String,
+          |    createdAt: TimeStamp
+          |  }
+          |
           |  entity Organization is { ??? } described as "nada"
+          |
           |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
           |} described as "nada"
+          |
+          |application Improving_app is {
+          |  group OrganizationPage is {
+          |    input accept is {
+          |      yields command
+          |        ImprovingApp.OrganizationContext.CreateOrganization
+          |    }
+          |    output show is {
+          |      presents result
+          |        ImprovingApp.OrganizationContext.OrganizationInfo
+          |    }
+          |  }
+          |}
+          |
           |actor Owner is "a person"
+          |
           |story EstablishOrganization is {
           |  actor ^^Owner wants "to establish an organization" so that
-          |  "I can conduct business as that organization"
+          |  "they can conduct business as that organization"
           |  author reid is {
           |    name: "Reid Spencer"
           |    email: "reid.spencer@ossum.biz"
           |  } briefly "nada" described as "nada"
-          |  term 'conduct business' briefly "Any legal business activity supported by the terms of use."
+          |  term 'conduct business' briefly
+          |  "Any legal business activity supported by the terms of use."
+          |
           |  case primary is {
-          |    arbitrary step from actor ^^Owner "creates an Organization" to context OrganizationContext
-          |      briefly "initial invocation"
-          |    tell step from context OrganizationContext tell command EstablishOrganization(???) to entity Organization
-          |      briefly "send creation message"
-          |    tell step from entity Organization tell event OrganizationEstablished(???) to projection
-          |    OrganizationViews
-          |      briefly "add new organization"
-          |    arbitrary step from entity Organization "organizationAdded" to actor ^^Owner
+          |    optional {
+          |      step from actor ^^Owner "creates an Organization" to
+          |        input ImprovingApp.Improving_app.OrganizationPage.accept
+          |        briefly "create org",
+          |      step from output ImprovingApp.Improving_app.OrganizationPage.show
+          |        "presented" to actor ^^Owner
+          |        briefly "organization added"
+          |    }  
+          |  }
+          |} briefly "A story about establishing an organization in Improving.app"
+          |  described as "TBD"
+          |} briefly "A placeholder" described by "Not important"
+          |""".stripMargin
+      )
+      parseAndValidateDomain(rpi) {
+        case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+          domain mustNot be(empty)
+          domain.stories mustNot be(empty)
+          if (msgs.nonEmpty) { info(msgs.format) }
+          msgs.isIgnorable mustBe true
+          succeed
+      }
+    }
+    "handle parallel group" in {
+      val rpi = RiddlParserInput(
+        """domain ImprovingApp is {
+          |context OrganizationContext {
+          |  command CreateOrganization is {
+          |    id: Id(OrganizationContext.Organization),
+          |    name: String
+          |  }
+          |  result OrganizationInfo is {
+          |    name: String,
+          |    createdAt: TimeStamp
+          |  }
+          |
+          |  entity Organization is { ??? } described as "nada"
+          |
+          |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
+          |} described as "nada"
+          |
+          |application Improving_app is {
+          |  group OrganizationPage is {
+          |    input accept is {
+          |      yields command
+          |        ImprovingApp.OrganizationContext.CreateOrganization
+          |    }
+          |    output show is {
+          |      presents result
+          |        ImprovingApp.OrganizationContext.OrganizationInfo
+          |    }
+          |  }
+          |}
+          |
+          |actor Owner is "a person"
+          |
+          |story EstablishOrganization is {
+          |  actor ^^Owner wants "to establish an organization" so that
+          |  "they can conduct business as that organization"
+          |  author reid is {
+          |    name: "Reid Spencer"
+          |    email: "reid.spencer@ossum.biz"
+          |  } briefly "nada" described as "nada"
+          |  term 'conduct business' briefly
+          |  "Any legal business activity supported by the terms of use."
+          |
+          |  case primary is {
+          |    parallel { 
+          |      step from actor ^^Owner "creates an Organization" to
+          |        input ImprovingApp.Improving_app.OrganizationPage.accept
+          |        briefly "create org",
+          |      step from output ImprovingApp.Improving_app.OrganizationPage.show
+          |        "presented" to actor ^^Owner
+          |        briefly "organization added"
+          |     }   
+          |  }
+          |} briefly "A story about establishing an organization in Improving.app"
+          |  described as "TBD"
+          |} briefly "A placeholder" described by "Not important"
+          |""".stripMargin
+      )
+      parseAndValidateDomain(rpi) {
+        case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+          domain mustNot be(empty)
+          domain.stories mustNot be(empty)
+          if (msgs.nonEmpty) { info(msgs.format) }
+          msgs.isIgnorable mustBe true
+          succeed
+      }
+    }
+    "handle optional group" in {
+      val rpi = RiddlParserInput(
+        """domain ImprovingApp is {
+          |context OrganizationContext {
+          |  command CreateOrganization is {
+          |    id: Id(OrganizationContext.Organization),
+          |    name: String
+          |  }
+          |  result OrganizationInfo is {
+          |    name: String,
+          |    createdAt: TimeStamp
+          |  }
+          |
+          |  entity Organization is { ??? } described as "nada"
+          |
+          |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
+          |} described as "nada"
+          |
+          |application Improving_app is {
+          |  group OrganizationPage is {
+          |    input accept is {
+          |      yields command
+          |        ImprovingApp.OrganizationContext.CreateOrganization
+          |    }
+          |    output show is {
+          |      presents result
+          |        ImprovingApp.OrganizationContext.OrganizationInfo
+          |    }
+          |  }
+          |}
+          |
+          |actor Owner is "a person"
+          |
+          |story EstablishOrganization is {
+          |  actor ^^Owner wants "to establish an organization" so that
+          |  "they can conduct business as that organization"
+          |  author reid is {
+          |    name: "Reid Spencer"
+          |    email: "reid.spencer@ossum.biz"
+          |  } briefly "nada" described as "nada"
+          |  term 'conduct business' briefly
+          |  "Any legal business activity supported by the terms of use."
+          |
+          |  case primary is {
+          |    step from actor ^^Owner "creates an Organization" to
+          |      input ImprovingApp.Improving_app.OrganizationPage.accept
+          |      briefly "create org",
+          |    step for actor ^^Owner "contemplates his navel" 
+          |      briefly "self-processing",  
+          |    step from output ImprovingApp.Improving_app.OrganizationPage.show
+          |      "presented" to actor ^^Owner
           |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
@@ -103,9 +265,5 @@ class StoryTest extends ValidatingTest {
           succeed
       }
     }
-    "handle tell relationship" in { pending }
-    "handle publish relationship" in { pending }
-    "handle saga start relationship" in { pending }
-    "handle subscribe to pipe relationship" in { pending }
   }
 }

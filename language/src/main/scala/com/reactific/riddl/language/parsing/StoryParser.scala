@@ -17,87 +17,71 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   }
 
   def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
-    messageTakingRef | sagaRef | actorRef | applicationRef
+    messageTakingRef | sagaRef | functionRef
   }
 
   def arbitraryStep[u: P]: P[ArbitraryStep] = {
     P(
-      Keywords.arbitrary ~ Keywords.step ~/ location ~ Readability.from.? ~
-        arbitraryStoryRef ~ literalString ~ Readability.to.? ~
-        arbitraryStoryRef ~ briefly
-    ).map { case (loc, from, ls, to, brief) =>
+      Keywords.step ~ location ~ Readability.from.? ~ arbitraryStoryRef ~
+        literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly
+    )./.map { case (loc, from, ls, to, brief) =>
       ArbitraryStep(loc, from, ls, to, brief)
     }
   }
 
-  def tellMessageStep[u: P]: P[TellMessageStep] = {
+  def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
     P(
-      Keywords.tell ~ Keywords.step ~/ location ~ Readability.from.? ~
-        messageTakingRef ~ Keywords.tell ~ messageConstructor ~
-        Readability.to.? ~ messageTakingRef ~ briefly
-    )./.map { case (loc, from, mc, to, brief) =>
-      TellMessageStep(loc, from, mc, to, brief)
+      Keywords.step ~ location ~ Readability.for_.? ~
+        (arbitraryStoryRef | actorRef) ~ literalString ~ briefly
+    )./.map { case (loc, ref, proc, brief) =>
+      SelfProcessingStep(loc, ref, proc, brief)
     }
   }
 
-  def publishMessageStep[u: P]: P[PublishMessageStep] = {
+  def viewOutputStep[u: P]: P[ActivateOutputStep] = {
     P(
-      Keywords.publish ~ Keywords.step ~/ location ~ Readability.from.? ~
-        messageTakingRef ~ Keywords.publish ~ messageConstructor ~
-        Readability.to.? ~ pipeRef ~ briefly
-    )./.map { case (loc, msr, mc, pipe, brief) =>
-      PublishMessageStep(loc, msr, mc, pipe, brief)
-    }
-  }
-
-  def subscribeToPipeStep[u: P]: P[SubscribeToPipeStep] = {
-    P(
-      Keywords.subscribe ~ Keywords.step ~/ location ~ Readability.from.? ~
-        messageTakingRef ~ literalString ~ Keywords.subscribe ~
-        Readability.to.? ~ pipeRef ~ briefly
-    )./.map { case (loc, from, lit, pipeRef, brief) =>
-      SubscribeToPipeStep(loc, from, lit, pipeRef, brief)
-    }
-  }
-
-  def sagaInitiationStep[u: P]: P[SagaInitiationStep] = {
-    P(
-      Keywords.saga ~ Keywords.step ~/ location ~ Readability.from.? ~
-        arbitraryStoryRef ~ literalString ~ Readability.to.? ~ sagaRef ~ briefly
-    )./.map { case (loc, from, ls, to, brief) =>
-      SagaInitiationStep(loc, from, ls, to, brief)
-    }
-  }
-
-  def activateOutputStep[u: P]: P[ActivateOutputStep] = {
-    P(
-      Keywords.activate ~ Keywords.step ~/ location ~ Readability.from.? ~
-        actorRef ~ literalString ~ Readability.to.? ~ outputRef ~ briefly
-    )./.map { case (loc, actor, rel, display, brief) =>
-      ActivateOutputStep(loc, actor, rel, display, brief)
+      Keywords.step ~ location ~ Readability.from.? ~ outputRef ~
+        literalString ~ Readability.to.? ~ actorRef ~ briefly
+    )./.map { case (loc, output, rel, actor, brief) =>
+      ActivateOutputStep(loc, output, rel, actor, brief)
     }
   }
 
   def provideInputStep[u: P]: P[ProvideInputStep] = {
     P(
-      location ~ Readability.from.? ~ actorRef ~ literalString ~
+      Keywords.step ~ location ~ Readability.from.? ~ actorRef ~ literalString ~
         Readability.to.? ~ inputRef ~ briefly
     )./.map { case (loc, actor, rel, form, brief) =>
       ProvideInputStep(loc, actor, rel, form, brief)
     }
   }
 
-  def interactionSteps[u: P]: P[Seq[InteractionStep]] = {
-    P((tellMessageStep | publishMessageStep | subscribeToPipeStep |
-      sagaInitiationStep | activateOutputStep | provideInputStep |
-      arbitraryStep)).rep(0, Punctuation.comma.?)
+  def optionalGroup[u: P]: P[OptionalGroup] = {
+    P(
+      location ~ Keywords.optional./ ~ open ~ interactionExpressions ~ close ~
+        briefly
+    )./.map { case (loc, steps, brief) => OptionalGroup(loc, steps, brief) }
+  }
+
+  def parallelGroup[u: P]: P[ParallelGroup] = {
+    P(
+      location ~ Keywords.parallel./ ~ open ~ interactionExpressions ~ close ~
+        briefly
+    )./.map { case (loc, steps, brief) => ParallelGroup(loc, steps, brief) }
+  }
+
+  def interactionExpressions[u: P]: P[Seq[InteractionExpression]] = {
+    P(
+      parallelGroup | optionalGroup | viewOutputStep | provideInputStep |
+        arbitraryStep | selfProcessingStep
+    ).rep(0, Punctuation.comma./)
   }
 
   def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
-        (undefined(Seq.empty[InteractionStep]) | interactionSteps) ~ close ~
-        briefly ~ description
+        (undefined(Seq.empty[InteractionStep]) | interactionExpressions) ~
+        close ~ briefly ~ description
     ).map { case (loc, id, steps, brief, description) =>
       StoryCase(loc, id, steps, brief, description)
     }
