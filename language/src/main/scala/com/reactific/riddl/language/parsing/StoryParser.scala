@@ -31,8 +31,8 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
     P(
-      Keywords.step ~ location ~ Readability.from.? ~ arbitraryStoryRef ~
-        literalString ~ briefly
+      Keywords.step ~ location ~ Readability.for_.? ~
+        (arbitraryStoryRef | actorRef) ~ literalString ~ briefly
     )./.map { case (loc, ref, proc, brief) =>
       SelfProcessingStep(loc, ref, proc, brief)
     }
@@ -57,15 +57,17 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   }
 
   def optionalGroup[u: P]: P[OptionalGroup] = {
-    P(location ~ Keywords.optional ~ interactionExpressions ~ briefly)./.map {
-      case (loc, steps, brief) => OptionalGroup(loc, steps, brief)
-    }
+    P(
+      location ~ Keywords.optional./ ~ open ~ interactionExpressions ~ close ~
+        briefly
+    )./.map { case (loc, steps, brief) => OptionalGroup(loc, steps, brief) }
   }
 
   def parallelGroup[u: P]: P[ParallelGroup] = {
-    P(location ~ Keywords.parallel ~ interactionExpressions ~ briefly)./.map {
-      case (loc, steps, brief) => ParallelGroup(loc, steps, brief)
-    }
+    P(
+      location ~ Keywords.parallel./ ~ open ~ interactionExpressions ~ close ~
+        briefly
+    )./.map { case (loc, steps, brief) => ParallelGroup(loc, steps, brief) }
   }
 
   def interactionExpressions[u: P]: P[Seq[InteractionExpression]] = {
