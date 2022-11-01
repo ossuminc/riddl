@@ -7,7 +7,6 @@
 package com.reactific.riddl.language.ast
 
 import com.reactific.riddl.language.parsing.Terminals
-import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
 import scala.reflect.ClassTag
@@ -237,140 +236,9 @@ trait AbstractDefinitions extends Terminals {
     */
   trait GherkinClause extends GherkinValue
 
-  /** A term definition for the glossary */
-  case class Term(
-    loc: Location,
-    id: Identifier,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None)
-      extends LeafDefinition with VitalDefinitionDefinition {
-    override def isEmpty: Boolean = description.isEmpty
-    def format: String = ""
-    final val kind: String = "Term"
-  }
-
-  /** Added to definitions that support a list of term definitions */
-  trait WithTerms {
-    def terms: Seq[Term]
-    def hasTerms: Boolean = terms.nonEmpty
-  }
-
-  /** A [[RiddlValue]] to record an inclusion of a file while parsing.
-    * @param loc
-    *   The location of the include statement in the source
-    * @param contents
-    *   The Vital Definitions read from the file
-    * @param path
-    *   The [[java.nio.file.Path]] to the file included.
-    */
-  case class Include[T <: Definition](
-    loc: Location = Location(RiddlParserInput.empty),
-    contents: Seq[T] = Seq.empty[T],
-    path: Option[Path] = None)
-      extends Definition with VitalDefinitionDefinition with RootDefinition {
-
-    def id: Identifier = Identifier.empty
-
-    def brief: Option[LiteralString] = Option.empty[LiteralString]
-
-    def description: Option[Description] = None
-
-    override def isRootContainer: Boolean = true
-    def format: String = ""
-    final val kind: String = "Include"
-
-  }
-
-  /** Added to definitions that support includes */
-  trait WithIncludes[T <: Definition] extends Container[T] {
-    def includes: Seq[Include[T]]
-    def contents: Seq[T] = { includes.flatMap(_.contents) }
-  }
-
-  /** A [[RiddlValue]] that holds the author's information
-    *
-    * @param loc
-    *   The location of the author information
-    * @param name
-    *   The full name of the author
-    * @param email
-    *   The author's email address
-    * @param organization
-    *   The name of the organization the author is associated with
-    * @param title
-    *   The author's title within the organization
-    * @param url
-    *   A URL associated with the author
-    */
-  case class Author(
-    loc: Location,
-    id: Identifier,
-    name: LiteralString,
-    email: LiteralString,
-    organization: Option[LiteralString] = None,
-    title: Option[LiteralString] = None,
-    url: Option[java.net.URL] = None,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None)
-      extends LeafDefinition with VitalDefinitionDefinition {
-    override def isEmpty: Boolean = {
-      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
-    }
-
-    final val kind: String = "Author"
-    def format: String = ""
-  }
-
-  trait WithAuthors extends Definition {
-    def authors: Seq[Author]
-
-    override def hasAuthors: Boolean = authors.nonEmpty
-
-    def isAuthored(parents: Seq[Definition]): Boolean = {
-      findAuthors(this, parents).nonEmpty
-    }
-  }
-
-  /** Base trait of any definition that is in the content of an adaptor
-    */
-  trait AdaptorDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an Application
-    */
-  trait ApplicationDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a context
-    */
-  trait ContextDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a domain
-    */
-  trait DomainDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an entity.
-    */
-  trait EntityDefinition extends Definition
-
   /** Base trait of any definition that is in the content of a function.
     */
   trait FunctionDefinition extends Definition
-
-  /** Base trait of definitions that are part of a Handler Definition */
-  trait HandlerDefinition extends Definition
-
-  /** Base trait of any definition that occurs in the body of a plant
-    */
-  trait PlantDefinition extends Definition
-
-  /** Base trait of any definition that occurs in the body of a projection */
-  trait ProjectionDefinition extends Definition
-
-  /** Base trait of definitions defined in a processor
-    */
-  trait ProcessorDefinition extends Definition
-
-  /** Base trait of definitions defined at root scope */
-  trait RootDefinition extends Definition
 
   /** Base trait of definitions that are part of a Saga Definition */
   trait SagaDefinition extends Definition
@@ -378,53 +246,7 @@ trait AbstractDefinitions extends Terminals {
   /** Base trait of definitions that are part of a Saga Definition */
   trait StateDefinition extends Definition
 
-  /** Base trait of definitions that are in the body of a Story definition */
-  trait StoryDefinition extends Definition
+  /** Base trait of any definition that occurs in the body of a projection */
+  trait ProjectionDefinition extends Definition
 
-  /** Base trait of definitions that can be used in a Story */
-  trait MessageTakingRef[+T <: Definition] extends Reference[T]
-
-  trait VitalDefinitionDefinition
-      extends AdaptorDefinition
-      with ApplicationDefinition
-      with ContextDefinition
-      with DomainDefinition
-      with EntityDefinition
-      with FunctionDefinition
-      with HandlerDefinition
-      with PlantDefinition
-      with ProcessorDefinition
-      with ProjectionDefinition
-      with SagaDefinition
-      with StoryDefinition
-
-  // ////////////////////////////////////////////////// UTILITY FUNCTIONS
-
-  private def authorsOfInclude(includes: Seq[Include[?]]): Seq[Author] = {
-    for {
-      include <- includes
-      ai <- include.contents if ai.isInstanceOf[Author]
-      authInfo = ai.asInstanceOf[Author]
-    } yield { authInfo }
-  }
-
-  def authorsOf(defn: Definition): Seq[Author] = {
-    defn match {
-      case wa: WithAuthors => wa.authors ++
-          (wa match {
-            case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
-            case _                              => Seq.empty[Author]
-          })
-      case _ => Seq.empty[Author]
-    }
-  }
-
-  def findAuthors(defn: Definition, parents: Seq[Definition]): Seq[Author] = {
-    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthors].authors }
-    else {
-      parents.find(d =>
-        d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors
-      ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[Author])
-    }
-  }
 }

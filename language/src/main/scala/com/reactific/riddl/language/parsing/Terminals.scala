@@ -175,6 +175,7 @@ trait Terminals {
     final val reference = "reference"
     final val remove = "remove"
     final val reply = "reply"
+    final val repository = "repository"
     final val requires = "requires"
     final val required = "required"
     final val result = "result"

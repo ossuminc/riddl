@@ -22,7 +22,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def arbitraryStep[u: P]: P[ArbitraryStep] = {
     P(
-      Keywords.step ~ location ~ Readability.from.? ~ arbitraryStoryRef ~
+      location ~ Keywords.step ~ Readability.from.? ~ arbitraryStoryRef ~
         literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly
     )./.map { case (loc, from, ls, to, brief) =>
       ArbitraryStep(loc, from, ls, to, brief)
@@ -31,7 +31,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
     P(
-      Keywords.step ~ location ~ Readability.for_.? ~
+      location ~ Keywords.step ~ Readability.for_.? ~
         (arbitraryStoryRef | actorRef) ~ literalString ~ briefly
     )./.map { case (loc, ref, proc, brief) =>
       SelfProcessingStep(loc, ref, proc, brief)
@@ -40,7 +40,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def viewOutputStep[u: P]: P[ActivateOutputStep] = {
     P(
-      Keywords.step ~ location ~ Readability.from.? ~ outputRef ~
+      location ~ Keywords.step ~ Readability.from.? ~ outputRef ~
         literalString ~ Readability.to.? ~ actorRef ~ briefly
     )./.map { case (loc, output, rel, actor, brief) =>
       ActivateOutputStep(loc, output, rel, actor, brief)
@@ -49,7 +49,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def provideInputStep[u: P]: P[ProvideInputStep] = {
     P(
-      Keywords.step ~ location ~ Readability.from.? ~ actorRef ~ literalString ~
+      location ~ Keywords.step ~ Readability.from.? ~ actorRef ~ literalString ~
         Readability.to.? ~ inputRef ~ briefly
     )./.map { case (loc, actor, rel, form, brief) =>
       ProvideInputStep(loc, actor, rel, form, brief)

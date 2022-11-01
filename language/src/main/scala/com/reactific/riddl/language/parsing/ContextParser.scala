@@ -16,6 +16,7 @@ trait ContextParser
     with AdaptorParser
     with EntityParser
     with ProjectionParser
+    with RepositoryParser
     with SagaParser
     with StreamingParser
     with TypeParser {
@@ -47,7 +48,8 @@ trait ContextParser
     P(
       undefined(Seq.empty[ContextDefinition]) |
         (author | typeDef | handler | entity | adaptor | function | saga |
-          plantDefinition | projection | term | contextInclude).rep(0)
+          plantDefinition | projection | repository | term | contextInclude)
+          .rep(0)
     )
   }
 
@@ -70,6 +72,7 @@ trait ContextParser
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val projections = mapTo[Projection](groups.get(classOf[Projection]))
+      val repos = mapTo[Repository](groups.get(classOf[Repository]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       Context(
         loc,
@@ -85,6 +88,7 @@ trait ContextParser
         includes,
         handlers,
         projections,
+        repos,
         authors,
         briefly,
         description

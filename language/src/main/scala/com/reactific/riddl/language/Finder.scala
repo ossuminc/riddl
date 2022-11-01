@@ -28,6 +28,7 @@ case class Statistics(
   var plantStats: KindStats = KindStats(),
   var processorStats: KindStats = KindStats(),
   var projectionStats: KindStats = KindStats(),
+  var repositoryStats: KindStats = KindStats(),
   var sagaStats: KindStats = KindStats(),
   var storyStats: KindStats = KindStats())
 
@@ -93,6 +94,8 @@ case class Finder(root: Definition) {
                 makeVitalStats(p, parents, state.processorStats)
               case p: Projection =>
                 makeVitalStats(p, parents, state.projectionStats)
+              case r: Repository =>
+                makeVitalStats(r, parents, state.repositoryStats)
               case s: Saga  => makeVitalStats(s, parents, state.sagaStats)
               case s: Story => makeVitalStats(s, parents, state.storyStats)
             }

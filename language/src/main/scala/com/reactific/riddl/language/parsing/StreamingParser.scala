@@ -206,12 +206,7 @@ trait StreamingParser
   }
 
   def plantOptions[x: P]: P[Seq[PlantOption]] = {
-    options[x, PlantOption](
-      StringIn(
-        Options.package_,
-        Options.technology
-      ).!
-    ) {
+    options[x, PlantOption](StringIn(Options.package_, Options.technology).!) {
       case (loc, Options.package_, args)   => PlantPackageOption(loc, args)
       case (loc, Options.technology, args) => PlantTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")

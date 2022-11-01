@@ -9,6 +9,8 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.ast.Location
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
+import java.nio.file.Path
+
 // scalastyle:off number.of.methods
 
 /** Abstract Syntax Tree This object defines the model for processing RIDDL and
@@ -20,6 +22,186 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
   * error).
   */
 object AST extends ast.Expressions with ast.Options with parsing.Terminals {
+
+  /** Base trait of any definition that is in the content of an adaptor
+    */
+  sealed trait AdaptorDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an Application
+    */
+  sealed trait ApplicationDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a context
+    */
+  sealed trait ContextDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a domain
+    */
+  sealed trait DomainDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an entity.
+    */
+  sealed trait EntityDefinition extends Definition
+
+  /** Base trait of definitions that are part of a Handler Definition */
+  sealed trait HandlerDefinition extends Definition
+
+  /** Base trait of any definition that occurs in the body of a plant
+    */
+  sealed trait PlantDefinition extends Definition
+
+  /** Base trait of definitions defined in a processor
+    */
+  sealed trait ProcessorDefinition extends Definition
+
+  /** Base trait of definitions defined in a repository */
+  sealed trait RepositoryDefinition extends Definition
+
+  /** Base trait of definitions defined at root scope */
+  sealed trait RootDefinition extends Definition
+
+  /** Base trait of definitions that are in the body of a Story definition */
+  sealed trait StoryDefinition extends Definition
+
+  sealed trait VitalDefinitionDefinition
+      extends AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with DomainDefinition
+      with EntityDefinition
+      with FunctionDefinition
+      with HandlerDefinition
+      with PlantDefinition
+      with ProcessorDefinition
+      with ProjectionDefinition
+      with RepositoryDefinition
+      with SagaDefinition
+      with StoryDefinition
+
+  /** Base trait of definitions that can be used in a Story */
+  sealed trait MessageTakingRef[+T <: Definition] extends Reference[T]
+
+  /** A term definition for the glossary */
+  case class Term(
+    loc: Location,
+    id: Identifier,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with VitalDefinitionDefinition {
+    override def isEmpty: Boolean = description.isEmpty
+    def format: String = ""
+    final val kind: String = "Term"
+  }
+
+  /** Added to definitions that support a list of term definitions */
+  trait WithTerms {
+    def terms: Seq[Term]
+    def hasTerms: Boolean = terms.nonEmpty
+  }
+
+  /** A [[RiddlValue]] to record an inclusion of a file while parsing.
+    * @param loc
+    *   The location of the include statement in the source
+    * @param contents
+    *   The Vital Definitions read from the file
+    * @param path
+    *   The [[java.nio.file.Path]] to the file included.
+    */
+  case class Include[T <: Definition](
+    loc: Location = Location(RiddlParserInput.empty),
+    contents: Seq[T] = Seq.empty[T],
+    path: Option[Path] = None)
+      extends Definition with VitalDefinitionDefinition with RootDefinition {
+
+    def id: Identifier = Identifier.empty
+
+    def brief: Option[LiteralString] = Option.empty[LiteralString]
+
+    def description: Option[Description] = None
+
+    override def isRootContainer: Boolean = true
+    def format: String = ""
+    final val kind: String = "Include"
+
+  }
+
+  /** Added to definitions that support includes */
+  trait WithIncludes[T <: Definition] extends Container[T] {
+    def includes: Seq[Include[T]]
+    def contents: Seq[T] = { includes.flatMap(_.contents) }
+  }
+
+  /** A [[RiddlValue]] that holds the author's information
+    *
+    * @param loc
+    *   The location of the author information
+    * @param name
+    *   The full name of the author
+    * @param email
+    *   The author's email address
+    * @param organization
+    *   The name of the organization the author is associated with
+    * @param title
+    *   The author's title within the organization
+    * @param url
+    *   A URL associated with the author
+    */
+  case class Author(
+    loc: Location,
+    id: Identifier,
+    name: LiteralString,
+    email: LiteralString,
+    organization: Option[LiteralString] = None,
+    title: Option[LiteralString] = None,
+    url: Option[java.net.URL] = None,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None)
+      extends LeafDefinition with VitalDefinitionDefinition {
+    override def isEmpty: Boolean = {
+      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
+    }
+
+    final val kind: String = "Author"
+    def format: String = ""
+  }
+
+  trait WithAuthors extends Definition {
+    def authors: Seq[Author]
+
+    override def hasAuthors: Boolean = authors.nonEmpty
+
+    def isAuthored(parents: Seq[Definition]): Boolean = {
+      findAuthors(this, parents).nonEmpty
+    }
+  }
+
+  private def authorsOfInclude(includes: Seq[Include[?]]): Seq[Author] = {
+    for {
+      include <- includes
+      ai <- include.contents if ai.isInstanceOf[Author]
+      authInfo = ai.asInstanceOf[Author]
+    } yield { authInfo }
+  }
+
+  def authorsOf(defn: Definition): Seq[Author] = {
+    defn match {
+      case wa: WithAuthors => wa.authors ++
+          (wa match {
+            case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
+            case _                              => Seq.empty[Author]
+          })
+      case _ => Seq.empty[Author]
+    }
+  }
+
+  def findAuthors(defn: Definition, parents: Seq[Definition]): Seq[Author] = {
+    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthors].authors }
+    else {
+      parents.find(d =>
+        d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors
+      ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[Author])
+    }
+  }
 
   sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
@@ -179,6 +361,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with EntityDefinition
       with StateDefinition
       with FunctionDefinition
+      with RepositoryDefinition
       with DomainDefinition {
     override def contents: Seq[TypeDefinition] = {
       typ match {
@@ -760,6 +943,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with AdaptorDefinition
       with EntityDefinition
       with StateDefinition
+      with RepositoryDefinition
       with ProjectionDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
@@ -958,6 +1142,85 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = s"${Keywords.adaptor} ${id.format}"
   }
 
+  /** A RIDDL repository is an abstraction for anything that can retain
+    * information(e.g. messages for retrieval at a later time. This might be a
+    * relational database, NoSQL database, data lake, API, or something not yet
+    * invented. There is no specific technology implied other than the retention
+    * and retrieval of information. You should think of repositories more like a
+    * message-oriented version of the Java Repository Pattern than any
+    * particular kind ofdatabase.
+    * @see
+    *   https://java-design-patterns.com/patterns/repository/#explanation
+    *
+    * @param loc
+    *   Location in the source of the Repository
+    * @param id
+    *   The unique identifier for this Repository
+    * @param types
+    *   The types, typically messages, that the Repository uses
+    * @param handlers
+    *   The handler for specifying how messages should be handled by the
+    *   repository
+    * @param authors
+    *   The author(s) who wrote this repository specification.
+    * @param includes
+    *   Included files
+    * @param options
+    *   Options that can be used by the translators
+    * @param terms
+    *   Definitions of terms about this repository
+    * @param brief
+    *   A brief description of this repository
+    * @param description
+    *   A detailed description of this repository
+    */
+  case class Repository(
+    loc: Location,
+    id: Identifier,
+    types: Seq[Type] = Seq.empty[Type],
+    handlers: Seq[Handler] = Seq.empty[Handler],
+    authors: Seq[Author] = Seq.empty[Author],
+    includes: Seq[Include[RepositoryDefinition]] = Seq
+      .empty[Include[RepositoryDefinition]],
+    options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
+    terms: Seq[Term] = Seq.empty[Term],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None)
+      extends VitalDefinition[RepositoryOption, RepositoryDefinition]
+      with ContextDefinition {
+    override def kind: String = "Repository"
+    override lazy val contents: Seq[RepositoryDefinition] = {
+      super.contents ++ types ++ handlers ++ authors ++ terms
+    }
+  }
+
+  /** Projections get their name from Euclidean Geometry but are probably more
+    * analogous to a relational database view. The concept is very simple in
+    * RIDDL: projections gather data from entities and other sources, transform
+    * that data into a specific record type, and support querying that data
+    * arbitrarily.
+    * @see
+    *   https://en.wikipedia.org/wiki/View_(SQL)).
+    * @see
+    *   https://en.wikipedia.org/wiki/Projection_(mathematics)
+    *
+    * @param loc
+    *   Location in the source of the Projection
+    * @param id
+    *   The unique identifier for this Projection
+    * @param aggregation
+    *   The projected type
+    * @param handlers
+    *   Specifies how to handle
+    * @param options
+    *   Options that can be used by the translators
+    * @param terms
+    *   Definitions of terms about this Projection
+    * @param brief
+    *   A brief description of this Projection
+    * @param description
+    *   A detailed description of this Projection
+    */
   case class Projection(
     loc: Location,
     id: Identifier,
@@ -1039,6 +1302,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       .empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
+    repositories: Seq[Repository] = Seq.empty[Repository],
     authors: Seq[Author] = Seq.empty[Author],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
