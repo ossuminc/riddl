@@ -81,14 +81,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   /** Base trait of definitions that can be used in a Story */
   sealed trait MessageTakingRef[+T <: Definition] extends Reference[T]
 
-
   /** A term definition for the glossary */
   case class Term(
     loc: Location,
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-    extends LeafDefinition with VitalDefinitionDefinition {
+      extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = description.isEmpty
     def format: String = ""
     final val kind: String = "Term"
@@ -101,18 +100,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** A [[RiddlValue]] to record an inclusion of a file while parsing.
-   * @param loc
-   *   The location of the include statement in the source
-   * @param contents
-   *   The Vital Definitions read from the file
-   * @param path
-   *   The [[java.nio.file.Path]] to the file included.
-   */
+    * @param loc
+    *   The location of the include statement in the source
+    * @param contents
+    *   The Vital Definitions read from the file
+    * @param path
+    *   The [[java.nio.file.Path]] to the file included.
+    */
   case class Include[T <: Definition](
     loc: Location = Location(RiddlParserInput.empty),
     contents: Seq[T] = Seq.empty[T],
     path: Option[Path] = None)
-    extends Definition with VitalDefinitionDefinition with RootDefinition {
+      extends Definition with VitalDefinitionDefinition with RootDefinition {
 
     def id: Identifier = Identifier.empty
 
@@ -133,20 +132,20 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** A [[RiddlValue]] that holds the author's information
-   *
-   * @param loc
-   *   The location of the author information
-   * @param name
-   *   The full name of the author
-   * @param email
-   *   The author's email address
-   * @param organization
-   *   The name of the organization the author is associated with
-   * @param title
-   *   The author's title within the organization
-   * @param url
-   *   A URL associated with the author
-   */
+    *
+    * @param loc
+    *   The location of the author information
+    * @param name
+    *   The full name of the author
+    * @param email
+    *   The author's email address
+    * @param organization
+    *   The name of the organization the author is associated with
+    * @param title
+    *   The author's title within the organization
+    * @param url
+    *   A URL associated with the author
+    */
   case class Author(
     loc: Location,
     id: Identifier,
@@ -157,7 +156,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-    extends LeafDefinition with VitalDefinitionDefinition {
+      extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
@@ -187,10 +186,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   def authorsOf(defn: Definition): Seq[Author] = {
     defn match {
       case wa: WithAuthors => wa.authors ++
-        (wa match {
-          case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
-          case _                              => Seq.empty[Author]
-        })
+          (wa match {
+            case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
+            case _                              => Seq.empty[Author]
+          })
       case _ => Seq.empty[Author]
     }
   }
@@ -203,7 +202,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[Author])
     }
   }
-
 
   sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
