@@ -75,6 +75,15 @@ trait Options extends AbstractDefinitions {
     override val args: Seq[LiteralString])
       extends ProjectionOption("technology")
 
+  /////////////////////////////////////////////////////////////////// PROJECTION
+
+  sealed abstract class RepositoryOption(val name: String) extends OptionValue
+
+  case class RepositoryTechnologyOption(
+    loc: Location,
+    override val args: Seq[LiteralString])
+      extends RepositoryOption("technology")
+
   //////////////////////////////////////////////////////////////////// ENTITY
 
   /** Base trait of any value used in the definition of an entity

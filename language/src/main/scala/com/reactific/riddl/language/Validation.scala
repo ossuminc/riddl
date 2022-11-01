@@ -149,7 +149,7 @@ object Validation {
             case o: Outlet       => validateOutlet(o, parents)
             case ij: InletJoint  => validateInletJoint(ij, parents)
             case oj: OutletJoint => validateOutletJoint(oj, parents)
-            case ai: Author      => validateAuthorInfo(ai, parents)
+            case a: Author       => validateAuthorInfo(a, parents)
             case sa: Actor       => validateActor(sa, parents)
             case sc: StoryCase   => validateStoryCase(sc, parents)
           }
@@ -158,6 +158,10 @@ object Validation {
             case grp: Group  => validateGroup(grp, parents)
             case in: Input   => validateInput(in, parents)
             case out: Output => validateOutput(out, parents)
+            case t: Term     => validateTerm(t, parents)
+            case a: Author   => validateAuthorInfo(a, parents)
+            case i: Include[ApplicationDefinition] @unchecked =>
+              validateInclude(i)
           }
         case ed: EntityDefinition => ed match {
             case t: Type      => validateType(t, parents)
@@ -165,6 +169,8 @@ object Validation {
             case h: Handler   => validateHandler(h, parents)
             case f: Function  => validateFunction(f, parents)
             case i: Invariant => validateInvariant(i, parents)
+            case t: Term      => validateTerm(t, parents)
+            case a: Author    => validateAuthorInfo(a, parents)
             case i: Include[EntityDefinition] @unchecked => validateInclude(i)
           }
         case cd: ContextDefinition => cd match {
@@ -175,7 +181,9 @@ object Validation {
             case a: Adaptor      => validateAdaptor(a, parents)
             case p: Processor    => validateProcessor(p, parents)
             case p: Projection   => validateProjection(p, parents)
+            case r: Repository   => validateRepository(r, parents)
             case t: Term         => validateTerm(t, parents)
+            case a: Author       => validateAuthorInfo(a, parents)
             case p: Pipe         => validatePipe(p, parents)
             case ij: InletJoint  => validateInletJoint(ij, parents)
             case oj: OutletJoint => validateOutletJoint(oj, parents)
@@ -190,13 +198,20 @@ object Validation {
             case s: Story       => validateStory(s, parents)
             case p: Plant       => validatePlant(p, parents)
             case t: Term        => validateTerm(t, parents)
-            case ai: Author     => validateAuthorInfo(ai, parents)
+            case a: Author      => validateAuthorInfo(a, parents)
+            case a: Actor       => validateActor(a, parents)
             case i: Include[DomainDefinition] @unchecked => validateInclude(i)
           }
-        case hd: HandlerDefinition =>
-          hd match { case oc: OnClause => validateOnClause(oc, parents) }
+        case hd: HandlerDefinition => hd match {
+            case oc: OnClause => validateOnClause(oc, parents)
+            case t: Term      => validateTerm(t, parents)
+            case a: Author    => validateAuthorInfo(a, parents)
+            case i: Include[HandlerDefinition] @unchecked => validateInclude(i)
+          }
         case ad: AdaptorDefinition => ad match {
             case h: Handler => validateHandler(h, parents)
+            case t: Term    => validateTerm(t, parents)
+            case a: Author  => validateAuthorInfo(a, parents)
             case i: Include[AdaptorDefinition] @unchecked => validateInclude(i)
           }
         case ss: SagaStep     => validateSagaStep(ss, parents)
@@ -387,6 +402,12 @@ object Validation {
         .checkDescription(p)
     }
 
+    def validateRepository(
+      r: Repository,
+      parents: Seq[Definition]
+    ): ValidationState = {
+      checkContainer(parents.headOption, r).checkDescription(r)
+    }
     def validateAdaptor(
       a: Adaptor,
       parents: Seq[Definition]
