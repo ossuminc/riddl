@@ -115,6 +115,13 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     }
   }
 
+  def invariant[u: P]: P[Invariant] = {
+    P(
+      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
+        (undefined(None) | condition.?) ~ close ~ briefly ~ description
+    ).map(tpl => (Invariant.apply _).tupled(tpl))
+  }
+
   // //////////////////////////////////////// Expressions == Any Type
 
   def arbitraryExpression[u: P]: P[ArbitraryExpression] = {

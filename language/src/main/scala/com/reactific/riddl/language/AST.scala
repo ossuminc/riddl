@@ -874,7 +874,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends LeafDefinition with EntityDefinition {
+      extends LeafDefinition
+      with EntityDefinition
+      with ProjectionDefinition
+      with StateDefinition {
     override def isEmpty: Boolean = expression.isEmpty
     def format: String = ""
     final val kind: String = "Invariant"
@@ -992,6 +995,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     aggregation: Aggregation,
     types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends EntityDefinition {
@@ -1226,6 +1230,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     aggregation: Aggregation,
     handlers: Seq[Handler] = Seq.empty[Handler],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     authors: Seq[Author] = Seq.empty[Author],
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
