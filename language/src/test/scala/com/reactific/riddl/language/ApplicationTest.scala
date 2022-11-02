@@ -24,7 +24,7 @@ class ApplicationTest extends ValidatingTest {
           |        presents result Title
           |      } described as "Show a blank page with title"
           |      input Two is {
-          |        yields command Name
+          |        acquires command Name
           |      } described as "yield  a Name"
           |    } described as "Show a title, collect a Name"
           |  } described as "A very simple app just for testing"

@@ -85,7 +85,7 @@ class StoryTest extends ValidatingTest {
           |application Improving_app is {
           |  group OrganizationPage is {
           |    input accept is {
-          |      yields command
+          |      acquires command
           |        ImprovingApp.OrganizationContext.CreateOrganization
           |    }
           |    output show is {
@@ -115,7 +115,7 @@ class StoryTest extends ValidatingTest {
           |      step from output ImprovingApp.Improving_app.OrganizationPage.show
           |        "presented" to actor ^^Owner
           |        briefly "organization added"
-          |    }  
+          |    }
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
@@ -152,7 +152,7 @@ class StoryTest extends ValidatingTest {
           |application Improving_app is {
           |  group OrganizationPage is {
           |    input accept is {
-          |      yields command
+          |      acquires command
           |        ImprovingApp.OrganizationContext.CreateOrganization
           |    }
           |    output show is {
@@ -175,14 +175,14 @@ class StoryTest extends ValidatingTest {
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
-          |    parallel { 
+          |    parallel {
           |      step from actor ^^Owner "creates an Organization" to
           |        input ImprovingApp.Improving_app.OrganizationPage.accept
           |        briefly "create org",
           |      step from output ImprovingApp.Improving_app.OrganizationPage.show
           |        "presented" to actor ^^Owner
           |        briefly "organization added"
-          |     }   
+          |     }
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
@@ -219,7 +219,7 @@ class StoryTest extends ValidatingTest {
           |application Improving_app is {
           |  group OrganizationPage is {
           |    input accept is {
-          |      yields command
+          |      acquires command
           |        ImprovingApp.OrganizationContext.CreateOrganization
           |    }
           |    output show is {
@@ -245,8 +245,8 @@ class StoryTest extends ValidatingTest {
           |    step from actor ^^Owner "creates an Organization" to
           |      input ImprovingApp.Improving_app.OrganizationPage.accept
           |      briefly "create org",
-          |    step for actor ^^Owner "contemplates his navel" 
-          |      briefly "self-processing",  
+          |    step for actor ^^Owner "contemplates his navel"
+          |      briefly "self-processing",
           |    step from output ImprovingApp.Improving_app.OrganizationPage.show
           |      "presented" to actor ^^Owner
           |      briefly "organization added"

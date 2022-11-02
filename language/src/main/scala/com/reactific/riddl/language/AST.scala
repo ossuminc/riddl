@@ -891,6 +891,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The location of the "on" clause
     * @param msg
     *   A reference to the message type that is handled
+    * @param from
+    *   Optional message generating
     * @param examples
     *   A set of examples that define the behavior when the [[msg]] is received.
     * @param brief
@@ -901,6 +903,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class OnClause(
     loc: Location,
     msg: MessageRef,
+    from: Option[Reference[Definition]],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
