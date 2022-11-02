@@ -19,7 +19,7 @@ domain PersonalBanking is {
             presents result Title
           } described as "Show a blank page with a title"
           input Two is {
-            yields command Name
+            acquires command Name
           } described as "Show a blank page with a title, collect a Name"
         }
     } described as "A very simple app for testing"
