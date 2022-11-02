@@ -79,6 +79,7 @@ trait Terminals {
 
   object Keywords {
     final val accepted = "accepted"
+    final val acquires = "acquires"
     final val action = "action"
     final val activate = "activate"
     final val actor = "actor"

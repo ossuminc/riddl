@@ -44,7 +44,7 @@ trait ApplicationParser
   def appInput[u: P]: P[Input] = {
     P(
       location ~ Keywords.input ~/ identifier ~ is ~ open ~ types ~
-        Keywords.yields ~ commandRef ~ close ~ briefly ~ description
+        Keywords.acquires ~ commandRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, yields, brief, description) =>
       Input(loc, id, types, yields, brief, description)
     }
