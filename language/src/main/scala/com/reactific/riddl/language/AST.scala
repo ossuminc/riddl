@@ -944,6 +944,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with EntityDefinition
       with StateDefinition
       with RepositoryDefinition
+      with ProcessorDefinition
       with ProjectionDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
@@ -1484,9 +1485,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: Location,
     id: Identifier,
     shape: ProcessorShape,
-    inlets: Seq[Inlet],
-    outlets: Seq[Outlet],
-    examples: Seq[Example],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     includes: Seq[Include[ProcessorDefinition]] = Seq
       .empty[Include[ProcessorDefinition]],
     authors: Seq[Author] = Seq.empty[Author],
@@ -1498,14 +1499,14 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with PlantDefinition
       with ContextDefinition {
     override def contents: Seq[ProcessorDefinition] = super.contents ++
-      inlets ++ outlets ++ examples ++ authors ++ terms
+      inlets ++ outlets ++ handlers ++ authors ++ terms
     final val kind: String = shape.getClass.getSimpleName
 
     override def maturity(parents: Seq[Definition]): Int = {
       var score = super.maturity(parents)
       if (inlets.nonEmpty) score += Math.max(inlets.count(_.nonEmpty), 5)
       if (outlets.nonEmpty) score += Math.max(outlets.count(_.nonEmpty), 5)
-      if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 40)
+      if (handlers.nonEmpty) score += Math.max(handlers.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
 

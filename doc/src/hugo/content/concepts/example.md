@@ -27,7 +27,11 @@ that context, if that thing does not happen take some other action (ELSE).
 Since four of those things are optional, it often just comes down to THEN. 
 
 ## Occurs In
-All [vital definitions]({{< relref "vital.md" >}})
+* [Functions]({{< relref "function.md" >}}),
+* [Handlers]({{< relref "handler.md" >}}),
+* [SagaSteps]({{< relref "sagastep.md" >}}),
+* [Stories]({{< relref "story.md" >}}).
+
 
 ## Contains
 * [Actions]({{< relref "action.md" >}})

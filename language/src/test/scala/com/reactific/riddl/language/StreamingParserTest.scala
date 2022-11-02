@@ -31,7 +31,7 @@ class StreamingParserTest extends ParsingTest {
           PathIdentifier((row + 2, 21, rpi), List("Forecast"))
         )
       )),
-      List.empty[Example],
+      List.empty[Handler],
       Seq.empty[Include[ProcessorDefinition]],
       Seq.empty[Author],
       Seq.empty[ProcessorOption],
@@ -195,7 +195,7 @@ class StreamingParserTest extends ParsingTest {
               ),
               None
             )),
-            List.empty[Example],
+            List.empty[Handler],
             Seq.empty[Include[ProcessorDefinition]],
             Seq.empty[Author],
             Seq.empty[ProcessorOption],
@@ -231,7 +231,7 @@ class StreamingParserTest extends ParsingTest {
               ),
               None
             )),
-            List.empty[Example],
+            List.empty[Handler],
             Seq.empty[Include[ProcessorDefinition]],
             Seq.empty[Author],
             Seq.empty[ProcessorOption],
@@ -259,7 +259,7 @@ class StreamingParserTest extends ParsingTest {
               None
             )),
             List.empty[Outlet],
-            List.empty[Example],
+            List.empty[Handler],
             Seq.empty[Include[ProcessorDefinition]],
             Seq.empty[Author],
             Seq.empty[ProcessorOption],

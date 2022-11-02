@@ -25,7 +25,9 @@ definition, as shown in this table:
  | Application | Handling the messages received from the user                   |
 | Context     | Implements API of the stateless context                        |
 | Entity      | Handler to use on new entity before any morph action           |
+| Processor   | Provide ETL logic for moving inputs to outputs                 |
 | Projection  | Handle updates and queries on the projection                   |
+| Repository  | Handle updates and queries on the repository                   |
 | State       | Handle messages while entity is in that state                  |
 
 The types of definition in which Handlers occur are known as the 
@@ -67,7 +69,9 @@ events from commands.
 * [Applications]({{< relref "application.md" >}})
 * [Contexts]({{< relref "context.md" >}})
 * [Entities]({{< relref "entity.md" >}}) 
+* [Processors]({{< relref "processor.md" >}})
 * [Projections]({{< relref "projection.md" >}})
+* [Repositories]({{< relref "repository.md" >}})
 * [State]({{< relref "state.md" >}})
 
 ## Contains
