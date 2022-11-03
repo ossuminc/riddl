@@ -611,7 +611,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class TellAction(
     loc: Location,
     msg: MessageConstructor,
-    entity: EntityRef,
+    entity: MessageTakingRef[Definition],
     description: Option[Description] = None)
       extends SagaStepAction {
     override def format: String = s"tell ${msg.format} to ${entity.format}"
@@ -945,8 +945,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[HandlerOption, HandlerDefinition]
-      with ContextDefinition
       with AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
       with EntityDefinition
       with StateDefinition
       with RepositoryDefinition
@@ -2157,6 +2158,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     types: Seq[Type] = Seq.empty[Type],
     groups: Seq[Group] = Seq.empty[Group],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     authors: Seq[Author] = Seq.empty[Author],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
@@ -2178,7 +2180,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The path identifier that refers to the Application
     */
   case class ApplicationRef(loc: Location, id: PathIdentifier)
-      extends Reference[Application] {
+      extends MessageTakingRef[Application] {
     override def format: String = ""
   }
 

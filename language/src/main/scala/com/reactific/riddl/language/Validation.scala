@@ -156,6 +156,7 @@ object Validation {
         case ad: ApplicationDefinition => ad match {
             case typ: Type   => validateType(typ, parents)
             case grp: Group  => validateGroup(grp, parents)
+            case h: Handler  => validateHandler(h, parents)
             case in: Input   => validateInput(in, parents)
             case out: Output => validateOutput(out, parents)
             case t: Term     => validateTerm(t, parents)
@@ -1163,7 +1164,7 @@ object Validation {
             .checkRef[Entity](entity, defn, parents)
             .checkRef[State](entityState, defn, parents)
         case TellAction(_, msg, entity, _) => this
-            .checkRef[Entity](entity, defn, parents)
+            .checkRef[Definition](entity, defn, parents)
             .checkMessageConstructor(msg, defn, parents)
         case AskAction(_, entity, msg, _) => this
             .checkRef[Entity](entity, defn, parents)

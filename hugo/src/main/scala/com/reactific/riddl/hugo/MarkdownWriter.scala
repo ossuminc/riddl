@@ -462,9 +462,10 @@ case class MarkdownWriter(
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    val resolved = state.resolvePath(pid, parents)()()
-    if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
-    else { resolved.head.id.format }
+    state.resolvePathIdentifier[Definition](pid, parents) match {
+      case None       => s"unresolved path: ${pid.format}"
+      case Some(defn) => defn.id.format
+    }
   }
 
   private def makeTypeName(
@@ -823,19 +824,22 @@ case class MarkdownWriter(
   def emitStory(story: Story, stack: Seq[Definition]): this.type = {
     containerHead(story, "Story")
     val parents = state.makeParents(stack)
-    emitDefDoc(story, parents)
+    emitBriefly(story, parents)
     if (story.userStory.nonEmpty) {
-      val defs = state.resolvePath(story.userStory.actor.id, stack)()()
-      if (defs.nonEmpty) {
-        h2("User Story")
-        val actor: Actor = defs.head.asInstanceOf[Actor]
-        val name = actor.id.value
-        val role = actor.is_a
-        val benefit = story.userStory.benefit.s
-        val capability = story.userStory.capability.s
-        val storyText =
-          s"I, $name, as a $role, want $capability so that $benefit"
-        p(italic(storyText))
+      val maybeActor = state
+        .resolvePathIdentifier[Actor](story.userStory.actor.id, stack)
+      h2("User Story")
+      maybeActor match {
+        case None =>
+          p(s"Unresolvable Actor id: ${story.userStory.actor.id.format}")
+        case Some(actor) =>
+          val name = actor.id.value
+          val role = actor.is_a.s
+          val benefit = story.userStory.benefit.s
+          val capability = story.userStory.capability.s
+          val storyText =
+            s"I, $name, as $role, wants $capability, so that $benefit"
+          p(italic(storyText))
       }
     }
     list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
@@ -845,6 +849,7 @@ case class MarkdownWriter(
     emitMermaidDiagram(lines)
     emitUsage(story)
     emitTerms(story.terms)
+    emitDescription(story.description)
   }
 
   def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
