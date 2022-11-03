@@ -56,8 +56,12 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   }
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
-    P(location ~ messageRef ~ argList)
-      .map(tpl => (MessageConstructor.apply _).tupled(tpl))
+    P(location ~ messageRef ~ argList.?).map { case (loc, ref, args) =>
+      args match {
+        case Some(args) => MessageConstructor(loc, ref, args)
+        case None       => MessageConstructor(loc, ref)
+      }
+    }
   }
 
   def returnAction[u: P]: P[ReturnAction] = {
@@ -85,7 +89,7 @@ trait ActionParser extends ReferenceParser with ExpressionParser {
   def tellAction[u: P]: P[TellAction] = {
     P(
       Keywords.tell ~/ location ~ messageConstructor ~ Readability.to.? ~/
-        entityRef ~ description
+        messageTakingRef ~ description
     ).map { t => (TellAction.apply _).tupled(t) }
   }
 

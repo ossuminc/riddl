@@ -161,4 +161,10 @@ trait ReferenceParser extends CommonParser {
     }
   }
 
+  def messageTakingRef[u: P]: P[MessageTakingRef[Definition]] = {
+    P(
+      adaptorRef | applicationRef | contextRef | entityRef | pipeRef |
+        projectionRef
+    )
+  }
 }

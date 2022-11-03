@@ -14,6 +14,8 @@ import com.reactific.riddl.utils.SeqHelpers.*
 import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 
 object Folding {
 
@@ -397,9 +399,45 @@ object Folding {
     def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
       defStack
     }
+
     def doNothingMultiple(
       @unused list: List[(Definition, Seq[Definition])]
     ): Seq[Definition] = { Seq.empty[Definition] }
+
+    def resolvePathIdentifier[DEF <: Definition: ClassTag](
+      pid: PathIdentifier,
+      parents: Seq[Definition]
+    ): Option[DEF] = {
+      def isSameDef(d: Definition): Boolean = {
+        val clazz = classTag[DEF].runtimeClass
+        d.getClass == clazz
+      }
+
+      if (pid.value.isEmpty) { None }
+      else if (pid.value.exists(_.isEmpty)) {
+        resolveRelativePath(pid, parents).headOption match {
+          case Some(head) if isSameDef(head) => Some(head.asInstanceOf[DEF])
+          case _                             => None
+        }
+      } else {
+        resolvePathFromHierarchy(pid, parents).headOption match {
+          case Some(head) if isSameDef(head) => Some(head.asInstanceOf[DEF])
+          case _ =>
+            val symTabCompatibleNameSearch = pid.value.reverse
+            val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
+            list match {
+              case Nil => // nothing found
+                // We couldn't find the path in the hierarchy or the symbol table
+                // so let's signal this by returning an empty sequence
+                None
+              case (d, _) :: Nil if isSameDef(d) => // exact match
+                // Give caller an option to do something or morph the results
+                Some(d.asInstanceOf[DEF])
+              case _ => None
+            }
+        }
+      }
+    }
 
     def resolvePath(
       pid: PathIdentifier,

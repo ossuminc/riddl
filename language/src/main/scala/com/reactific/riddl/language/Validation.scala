@@ -1164,7 +1164,7 @@ object Validation {
             .checkRef[Entity](entity, defn, parents)
             .checkRef[State](entityState, defn, parents)
         case TellAction(_, msg, entity, _) => this
-            .checkRef[Entity](entity, defn, parents)
+            .checkRef[Definition](entity, defn, parents)
             .checkMessageConstructor(msg, defn, parents)
         case AskAction(_, entity, msg, _) => this
             .checkRef[Entity](entity, defn, parents)
