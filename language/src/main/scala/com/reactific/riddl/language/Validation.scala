@@ -156,6 +156,7 @@ object Validation {
         case ad: ApplicationDefinition => ad match {
             case typ: Type   => validateType(typ, parents)
             case grp: Group  => validateGroup(grp, parents)
+            case h: Handler  => validateHandler(h, parents)
             case in: Input   => validateInput(in, parents)
             case out: Output => validateOutput(out, parents)
             case t: Term     => validateTerm(t, parents)
