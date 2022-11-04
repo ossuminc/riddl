@@ -6,7 +6,13 @@ weight: 30
 ---
 
 This section presents the RIDDL source language syntax, one definition at a
-time according to their typical arrangement. 
+time according to their typical arrangement.
+
+{{< hint type=warning icon=gdoc_error_outline title=Warning >}}
+This section of the documentation has not been maintained well and is due
+for re-synchronization with the 
+[concepts section]({{< relref "../concepts/_index.md" >}})
+{{< /hint >}}
 
 {{< toc >}}
 

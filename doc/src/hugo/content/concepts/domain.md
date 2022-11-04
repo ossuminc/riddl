@@ -35,6 +35,8 @@ might devise a domain hierarchy like this:
 ## Occurs In
 
 * [Root]({{< relref "root.md" >}})
+* [Domains]({{< relref "domain.md" >}}) {{< icon "rotate-left" >}} - domains
+  can be nested in a super-domain.
 
 ## Contains
 

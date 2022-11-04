@@ -12,8 +12,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For StreamingParser */
-trait StreamingParser
-    extends ReferenceParser with TypeParser with GherkinParser {
+trait StreamingParser extends ReferenceParser with HandlerParser {
 
   def pipeDefinition[u: P]: P[Pipe] = {
     location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
@@ -59,8 +58,9 @@ trait StreamingParser
     P(
       (inlet.rep(minInlets, "", maxInlets) ~/
         outlet.rep(minOutlets, "", maxOutlets) ~/
-        (term | processorInclude(minInlets, maxInlets, minOutlets, maxOutlets) |
-          author | example).rep(0)).map { case (inlets, outlets, definitions) =>
+        (handler | term | author |
+          processorInclude(minInlets, maxInlets, minOutlets, maxOutlets))
+          .rep(0)).map { case (inlets, outlets, definitions) =>
         inlets ++ outlets ++ definitions
       }
     )
@@ -114,7 +114,7 @@ trait StreamingParser
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val examples = mapTo[Example](groups.get(classOf[Example]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val includes = mapTo[Include[ProcessorDefinition]](groups.get(
@@ -126,7 +126,7 @@ trait StreamingParser
         keywordToKind(keyword, location),
         inlets,
         outlets,
-        examples,
+        handlers,
         includes,
         authors,
         options,

@@ -11,6 +11,7 @@ hierarchy.
 
 These are the vital definitions:
 * [Adaptors]({{< relref "adaptor.md" >}}),
+* [Applications]{{< relref "application.md" >}}),
 * [Contexts]({{< relref "context.md" >}}),
 * [Domains]({{< relref "domain.md" >}}),
 * [Functions]({{< relref "function.md" >}}),
@@ -19,5 +20,6 @@ These are the vital definitions:
 * [Plants]({{< relref "plant.md" >}}),
 * [Processors]({{< relref "processor.md" >}}),
 * [Projections]({{< relref "projection.md" >}}),
+* [Repositories]({{< relref "repository.md" >}})
 * [Sagas]({{< relref "saga.md" >}}), and
 * [Stories]({{< relref "story.md" >}}).

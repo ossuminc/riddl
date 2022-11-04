@@ -10,14 +10,14 @@ data to its [outlet(s)]({{> relref outlet >}}).
 
 
 ## Inlets
-An (inlet)[{{< relref inlet >}}] provides the name and data type for an 
+An [inlet]({{< relref inlet.md >}}) provides the name and data type for an 
 input to the processor. There can be multiple inlets to the processor or none. 
 A processor with no inlets defined is called a _source_ since it originates data
 by itself. 
 
 ## Outlets
 
-An (outlet)[{{< relref outlet >}}] provides the name and data type for an 
+An [outlet]({{< relref outlet.md >}}) provides the name and data type for an 
 output from the processor. There can be multiple outlets defined by the 
 processor or none. A processor with no outlets is called a _sink_ since it 
 terminates data flow.
@@ -37,6 +37,12 @@ shown in the table:
 | any      | 1         | Merge  | Merges their data from multiple intles to a single outlet   |
 | any      | any       | Multi  | Any other combination is a many-to-many flow                |
 
+## Handlers
+A processor contains handlers that specify how the business logic should
+proceed. For sources, sinks, and flows, this is trivial. But for splits,
+merges and multis, there is a need to specify how the messages received on
+inlets are processed (transformed) and then put out to the outlets.
+
 
 ## Occurs In
 * [Contexts]({{< relref "domain.md" >}})
@@ -45,4 +51,4 @@ shown in the table:
 # Contains
 * [Inlets]({{< relref "inlet.md" >}})
 * [Outlets]({{< relref "outlet.md" >}})
-* [Examples]({{< relref "example.md" >}})
+* [Handlers]({{< relref "handler.md" >}})
