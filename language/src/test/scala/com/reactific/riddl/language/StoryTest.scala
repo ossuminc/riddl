@@ -49,7 +49,7 @@ class StoryTest extends ValidatingTest {
           val story = domain.stories.head
           story.id.format mustBe "WritingABook"
           story.userStory mustNot be(empty)
-          story.userStory.actor.id.value mustBe Seq("foo", "Author")
+          story.userStory.actor.pathId.value mustBe Seq("foo", "Author")
           story.userStory.capability mustBe
             LiteralString((4, 26, rpi), "edit on the screen")
           story.userStory.benefit mustBe
@@ -95,15 +95,16 @@ class StoryTest extends ValidatingTest {
           |  }
           |}
           |
+          |author reid is {
+          |  name: "Reid Spencer"
+          |  email: "reid.spencer@ossum.biz"
+          |} briefly "nada" described as "nada"
+          |
           |actor Owner is "a person"
           |
-          |story EstablishOrganization is {
+          |story EstablishOrganization by author reid is {
           |  actor ^^Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  author reid is {
-          |    name: "Reid Spencer"
-          |    email: "reid.spencer@ossum.biz"
-          |  } briefly "nada" described as "nada"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
@@ -162,15 +163,16 @@ class StoryTest extends ValidatingTest {
           |  }
           |}
           |
+          |author reid is {
+          |  name: "Reid Spencer"
+          |  email: "reid.spencer@ossum.biz"
+          |} briefly "nada" described as "nada"
+          |
           |actor Owner is "a person"
           |
-          |story EstablishOrganization is {
+          |story EstablishOrganization by author reid is {
           |  actor ^^Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  author reid is {
-          |    name: "Reid Spencer"
-          |    email: "reid.spencer@ossum.biz"
-          |  } briefly "nada" described as "nada"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
@@ -234,10 +236,6 @@ class StoryTest extends ValidatingTest {
           |story EstablishOrganization is {
           |  actor ^^Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  author reid is {
-          |    name: "Reid Spencer"
-          |    email: "reid.spencer@ossum.biz"
-          |  } briefly "nada" described as "nada"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |

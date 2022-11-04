@@ -31,7 +31,7 @@ Missing: everything.riddl(38:5): Type 'alt' should have a description:
 Style: everything.riddl(26:5): Type 'boo' should start with a capital letter:
      type boo is Boolean            // Define boo as a Boolean
      ^
-Missing: everything.riddl(88:12): On Clause 'On event ItHappened' should have a description:
+Missing: everything.riddl(88:12): OnMessageClause 'On event ItHappened' should have a description:
          on event ItHappened {
             ^
 Missing: everything.riddl(30:5): Type 'stamp' should have a description:
@@ -127,7 +127,7 @@ Missing: everything.riddl(11:3): Plant 'APlant' should have a description:
 Missing: everything.riddl(62:7): Type 'somethingDate' should have a description:
        type somethingDate is Date
        ^
-Missing: everything.riddl(74:12): On Clause 'On command ACommand' should have a description:
+Missing: everything.riddl(74:12): OnMessageClause 'On command ACommand' should have a description:
          on command ACommand {
             ^
 Style: everything.riddl(70:19): Field identifier 'b' is too short. The minimum length is 3:

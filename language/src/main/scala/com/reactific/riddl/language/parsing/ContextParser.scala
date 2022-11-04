@@ -47,7 +47,7 @@ trait ContextParser
   def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (author | typeDef | handler | entity | adaptor | function | saga |
+        (typeDef | handler | entity | adaptor | function | saga |
           plantDefinition | projection | repository | term | contextInclude)
           .rep(0)
     )
@@ -55,12 +55,11 @@ trait ContextParser
 
   def context[u: P]: P[Context] = {
     P(
-      location ~ Keywords.context ~/ identifier ~ is ~ open ~
+      location ~ Keywords.context ~/ identifier ~ authorRefs ~ is ~ open ~
         (undefined(Seq.empty[ContextOption] -> Seq.empty[ContextDefinition]) |
           (contextOptions ~ contextDefinitions)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (options, definitions), briefly, description) =>
+    ).map { case (loc, id, authorRefs, (options, definitions), briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
@@ -89,9 +88,9 @@ trait ContextParser
         handlers,
         projections,
         repos,
-        authors,
+        authorRefs,
         briefly,
-        description
+        desc
       )
     }
   }

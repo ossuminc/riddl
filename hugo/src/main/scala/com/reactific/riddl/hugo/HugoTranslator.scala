@@ -189,7 +189,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     makeDirectoryStructure(options.inputFile.get, log, options, commonOptions)
     val root = result.root
     val someAuthors = root.contents.headOption match {
-      case Some(domain) => domain.authors
+      case Some(domain) => domain.authorDefs
       case None         => Seq.empty[Author]
     }
     writeConfigToml(options, someAuthors.headOption)
@@ -215,8 +215,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
       case _: Example | _: Inlet | _: Outlet | _: InletJoint | _: OutletJoint |
-          _: Author | _: OnClause | _: Include[Definition] @unchecked |
-          _: RootContainer =>
+           _: Author | _: OnMessageClause | _: Include[Definition] @unchecked |
+           _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
