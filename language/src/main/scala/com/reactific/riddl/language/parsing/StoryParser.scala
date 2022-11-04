@@ -12,10 +12,6 @@ import fastparse.ScalaWhitespace.*
 
 trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
-  def messageTakingRef[u: P]: P[MessageTakingRef[Definition]] = {
-    P(adaptorRef | contextRef | entityRef | pipeRef | projectionRef)
-  }
-
   def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
     messageTakingRef | sagaRef | functionRef
   }

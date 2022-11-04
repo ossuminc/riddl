@@ -44,26 +44,10 @@ trait EntityParser extends TypeParser with HandlerParser {
     }
   }
 
-  /** Parses an invariant of an entity, i.e.
-    *
-    * {{{
-    *   invariant large is { "x is greater or equal to 10" }
-    * }}}
-    */
-  def invariant[u: P]: P[Invariant] = {
-    P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
-        (undefined(None) | condition.?) ~ close ~ briefly ~ description
-    ).map(tpl => (Invariant.apply _).tupled(tpl))
-  }
-
-  type StateThings = (Aggregation, Seq[Type], Seq[Handler])
+  type StateThings = (Aggregation, Seq[StateDefinition])
   def stateDefinition[u: P]: P[StateThings] = {
-    P(aggregation ~ (typeDef | handler).rep(0)).map { case (agg, stateDefs) =>
-      val groups = stateDefs.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      (agg, types, handlers)
+    P(aggregation ~ (typeDef | handler | invariant).rep(0)).map {
+      case (agg, stateDefs) => (agg, stateDefs)
     }
   }
 
@@ -71,8 +55,7 @@ trait EntityParser extends TypeParser with HandlerParser {
     P(
       undefined((
         Aggregation(Location.empty, Seq.empty[Field]),
-        Seq.empty[Type],
-        Seq.empty[Handler]
+        Seq.empty[StateDefinition]
       )) | stateDefinition
     )
   }
@@ -81,8 +64,12 @@ trait EntityParser extends TypeParser with HandlerParser {
     P(
       location ~ Keywords.state ~/ identifier ~ is ~ open ~ stateBody ~ close ~
         briefly ~ description
-    ).map { case (loc, id, (agg, types, handlers), brief, desc) =>
-      State(loc, id, agg, types, handlers, brief, desc)
+    ).map { case (loc, id, (agg, things), brief, desc) =>
+      val groups = things.groupBy(_.getClass)
+      val types = mapTo[Type](groups.get(classOf[Type]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+      State(loc, id, agg, types, handlers, invariants, brief, desc)
     }
   }
 

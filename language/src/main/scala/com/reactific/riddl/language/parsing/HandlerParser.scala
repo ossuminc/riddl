@@ -19,8 +19,16 @@ trait HandlerParser extends GherkinParser with FunctionParser {
       } | nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
   }
 
+  def fromClause[u: P]: P[Reference[Definition]] = {
+    P(
+      Readability.from./ ~
+        (actorRef | entityRef | pipeRef | adaptorRef | contextRef)
+    )
+  }
+
   def onClause[u: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ onClauseBody ~ briefly ~ description
+    Keywords.on ~/ location ~ messageRef ~ fromClause.? ~ onClauseBody ~
+      briefly ~ description
   }.map(t => (OnClause.apply _).tupled(t))
 
   def handlerOptions[u: P]: P[Seq[HandlerOption]] = {

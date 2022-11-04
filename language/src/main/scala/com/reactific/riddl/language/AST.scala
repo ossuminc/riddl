@@ -611,7 +611,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class TellAction(
     loc: Location,
     msg: MessageConstructor,
-    entity: EntityRef,
+    entity: MessageTakingRef[Definition],
     description: Option[Description] = None)
       extends SagaStepAction {
     override def format: String = s"tell ${msg.format} to ${entity.format}"
@@ -874,7 +874,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends LeafDefinition with EntityDefinition {
+      extends LeafDefinition
+      with EntityDefinition
+      with ProjectionDefinition
+      with StateDefinition {
     override def isEmpty: Boolean = expression.isEmpty
     def format: String = ""
     final val kind: String = "Invariant"
@@ -888,6 +891,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The location of the "on" clause
     * @param msg
     *   A reference to the message type that is handled
+    * @param from
+    *   Optional message generating
     * @param examples
     *   A set of examples that define the behavior when the [[msg]] is received.
     * @param brief
@@ -898,6 +903,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class OnClause(
     loc: Location,
     msg: MessageRef,
+    from: Option[Reference[Definition]],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -939,8 +945,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[HandlerOption, HandlerDefinition]
-      with ContextDefinition
       with AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
       with EntityDefinition
       with StateDefinition
       with RepositoryDefinition
@@ -993,6 +1000,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     aggregation: Aggregation,
     types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends EntityDefinition {
@@ -1227,6 +1235,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     aggregation: Aggregation,
     handlers: Seq[Handler] = Seq.empty[Handler],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     authors: Seq[Author] = Seq.empty[Author],
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
@@ -2150,6 +2159,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     types: Seq[Type] = Seq.empty[Type],
     groups: Seq[Group] = Seq.empty[Group],
+    handlers: Seq[Handler] = Seq.empty[Handler],
     authors: Seq[Author] = Seq.empty[Author],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
@@ -2171,7 +2181,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The path identifier that refers to the Application
     */
   case class ApplicationRef(loc: Location, id: PathIdentifier)
-      extends Reference[Application] {
+      extends MessageTakingRef[Application] {
     override def format: String = ""
   }
 

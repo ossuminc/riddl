@@ -11,7 +11,10 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 trait ApplicationParser
-    extends CommonParser with ReferenceParser with TypeParser {
+    extends CommonParser
+    with ReferenceParser
+    with HandlerParser
+    with TypeParser {
 
   def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](StringIn(Options.technology).!) {
@@ -44,14 +47,14 @@ trait ApplicationParser
   def appInput[u: P]: P[Input] = {
     P(
       location ~ Keywords.input ~/ identifier ~ is ~ open ~ types ~
-        Keywords.yields ~ commandRef ~ close ~ briefly ~ description
+        Keywords.acquires ~ commandRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, yields, brief, description) =>
       Input(loc, id, types, yields, brief, description)
     }
   }
 
   def applicationDefinition[u: P]: P[ApplicationDefinition] = {
-    P(group | author | term | typeDef | applicationInclude)
+    P(group | handler | author | term | typeDef | applicationInclude)
   }
 
   def applicationDefinitions[u: P]: P[Seq[ApplicationDefinition]] = {
@@ -78,6 +81,7 @@ trait ApplicationParser
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val grps = mapTo[Group](groups.get(classOf[Group]))
+      val handlers = mapTo[Handler](groups.get(classOf[Group]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[ApplicationDefinition]](groups.get(
         classOf[Include[ApplicationDefinition]]
@@ -89,6 +93,7 @@ trait ApplicationParser
         options,
         types,
         grps,
+        handlers,
         authors,
         terms,
         includes,

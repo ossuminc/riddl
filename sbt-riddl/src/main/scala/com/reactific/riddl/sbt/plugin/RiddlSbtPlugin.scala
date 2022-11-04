@@ -100,7 +100,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       throw new IllegalArgumentException(
         s"riddlc version $actualVersion is below minimum required: $minVersion"
       )
-    }
+    } else { println(s"riddlc version = $actualVersion") }
   }
 
   def runRiddlc(

@@ -17,7 +17,7 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
   val config = "src/main/riddl/ImprovingApp.conf"
 
   "riddlc" should {
-    s"run from $config" in {
+    s"run --show-times from $config hugo" in {
       if (Files.isDirectory(Path.of(cwd))) {
         val fullPath = Path.of(cwd, config)
         if (Files.isReadable(fullPath)) {
