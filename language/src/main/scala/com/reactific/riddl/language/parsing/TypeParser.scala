@@ -33,13 +33,12 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def isoCountryCode[u:P]: P[String] = {
-    P(CharIn("A-Z").rep(2, "",2 ).!)
-  }
+  def isoCountryCode[u: P]: P[String] = { P(CharIn("A-Z").rep(2, "", 2).!) }
 
-  def currencyType[u:P]: P[Currency] = {
-    P( location ~ Predefined.Currency ~/
-      (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
+  def currencyType[u: P]: P[Currency] = {
+    P(
+      location ~ Predefined.Currency ~/
+        (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
     ).map { tpl => (Currency.apply _).tupled(tpl) }
   }
 
