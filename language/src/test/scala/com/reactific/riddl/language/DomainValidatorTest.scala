@@ -64,8 +64,8 @@ class DomainValidatorTest extends ValidatingTest {
           )
           domain.authorDefs mustNot be(empty)
           domain.authorDefs.head must be(expectedAuthor)
-          val expectedAuthorRef = AuthorRef((1,12,rpi),
-            PathIdentifier((1,22,rpi), Seq("Reid")))
+          val expectedAuthorRef =
+            AuthorRef((1, 12, rpi), PathIdentifier((1, 22, rpi), Seq("Reid")))
           domain.authors mustNot be(empty)
           domain.authors.head must be(expectedAuthorRef)
           messages mustBe empty

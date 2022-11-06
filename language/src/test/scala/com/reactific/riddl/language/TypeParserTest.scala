@@ -43,8 +43,8 @@ class TypeParserTest extends ParsingTest {
     }
     "allow rename of Currency(US)" in {
       val input = "type cur = Currency(US)"
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "cur"),
-        Currency(1 -> 12, "US"))
+      val expected =
+        Type(1 -> 1, Identifier(1 -> 6, "cur"), Currency(1 -> 12, "US"))
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow rename of Length" in {
@@ -54,7 +54,8 @@ class TypeParserTest extends ParsingTest {
     }
     "allow rename of Luminosity" in {
       val input = "type lum = Luminosity"
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "lum"), Luminosity(1 -> 12))
+      val expected =
+        Type(1 -> 1, Identifier(1 -> 6, "lum"), Luminosity(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow rename of Mass" in {
@@ -69,8 +70,8 @@ class TypeParserTest extends ParsingTest {
     }
     "allow rename of Temperature" in {
       val input = "type tmp = Temperature"
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "tmp"),
-        Temperature(1 -> 12))
+      val expected =
+        Type(1 -> 1, Identifier(1 -> 6, "tmp"), Temperature(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow renames of Id(path)" in {

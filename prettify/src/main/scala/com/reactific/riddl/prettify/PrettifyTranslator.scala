@@ -102,13 +102,13 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       container match {
         case story: Story => openStory(state, story)
         // FIXME: Implement StoryCase, Interactions, etc.
-        case domain: Domain     => openDomain(state, domain)
-        case adaptor: Adaptor   => openAdaptor(state, adaptor)
-        case typ: Type          => state.current.emitType(typ); state
-        case function: Function => openFunction(state, function)
-        case st: State          => openState(state, st)
-        case oc: OnMessageClause       => openOnClause(state, oc)
-        case step: SagaStep     => openSagaStep(state, step)
+        case domain: Domain      => openDomain(state, domain)
+        case adaptor: Adaptor    => openAdaptor(state, adaptor)
+        case typ: Type           => state.current.emitType(typ); state
+        case function: Function  => openFunction(state, function)
+        case st: State           => openState(state, st)
+        case oc: OnMessageClause => openOnClause(state, oc)
+        case step: SagaStep      => openSagaStep(state, step)
         case include: Include[Definition] @unchecked =>
           openInclude(state, include)
         case processor: Processor => openProcessor(state, processor)
@@ -154,10 +154,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): PrettifyState = {
       container match {
-        case _: Type      => state // openContainer did all of it
-        case story: Story => closeStory(state, story)
-        case st: State    => state.withCurrent(_.closeDef(st))
-        case _: OnMessageClause  => closeOnClause(state)
+        case _: Type            => state // openContainer did all of it
+        case story: Story       => closeStory(state, story)
+        case st: State          => state.withCurrent(_.closeDef(st))
+        case _: OnMessageClause => closeOnClause(state)
         case include: Include[Definition] @unchecked =>
           closeInclude(state, include)
         case _: RootContainer =>

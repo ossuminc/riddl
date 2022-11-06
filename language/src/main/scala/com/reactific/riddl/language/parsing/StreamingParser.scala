@@ -234,8 +234,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
   def plant[u: P]: P[Plant] = {
     P(
       location ~ Keywords.plant ~/ identifier ~ is ~ authorRefs ~ open ~/
-        plantBody ~ close ~
-        briefly ~ description
+        plantBody ~ close ~ briefly ~ description
     ).map { case (loc, id, auths, (options, definitions), briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))

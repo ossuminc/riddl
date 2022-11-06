@@ -27,8 +27,10 @@ trait HandlerParser extends GherkinParser with FunctionParser {
   }
 
   def onOtherClause[u: P]: P[OnClause] = {
-    P( Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
-      description ).map( t => (OnOtherClause.apply _).tupled(t))
+    P(
+      Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
+        description
+    ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   def onMessageClause[u: P]: P[OnClause] = {
@@ -60,8 +62,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
   def handler[u: P]: P[Handler] = {
     P(
       Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
-        handlerBody ~
-        close ~ briefly ~ description
+        handlerBody ~ close ~ briefly ~ description
     ).map { case (loc, id, authors, (options, definitions), briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val includes = mapTo[Include[HandlerDefinition]](groups.get(

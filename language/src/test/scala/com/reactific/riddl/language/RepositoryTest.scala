@@ -28,7 +28,7 @@ class RepositoryTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain (input) {
+      parseAndValidateDomain(input) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.contexts.headOption match {
@@ -37,8 +37,7 @@ class RepositoryTest extends ValidatingTest {
               if (msgs.nonEmpty) { info(msgs.format) }
               msgs.isIgnorable mustBe true
               succeed
-            case _ =>
-              fail("Did not parse a context!")
+            case _ => fail("Did not parse a context!")
           }
 
       }

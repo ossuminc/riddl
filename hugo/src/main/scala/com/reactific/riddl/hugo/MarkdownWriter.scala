@@ -292,7 +292,8 @@ case class MarkdownWriter(
       children = {
         val newParents = container.id.value +: parents
         container.contents.filter(d =>
-          d.nonEmpty && !d.isInstanceOf[OnMessageClause] && !d.isInstanceOf[Example]
+          d.nonEmpty && !d.isInstanceOf[OnMessageClause] &&
+            !d.isInstanceOf[Example]
         ).map(makeData(_, newParents))
       }
     )
@@ -749,10 +750,8 @@ case class MarkdownWriter(
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       clause match {
-        case omc: OnMessageClause =>
-          h3(clause.kind + " " + omc.msg.format  )
-        case ooc: OnOtherClause =>
-          h3(ooc.kind)
+        case omc: OnMessageClause => h3(clause.kind + " " + omc.msg.format)
+        case ooc: OnOtherClause   => h3(ooc.kind)
       }
       emitShortDefDoc(clause)
       emitExamples(clause.examples, 4)

@@ -122,8 +122,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   def story[u: P]: P[Story] = {
     P(
       location ~ Keywords.story ~/ identifier ~ authorRefs ~ is ~ open ~
-        storyBody ~ close ~
-        briefly ~ description
+        storyBody ~ close ~ briefly ~ description
     ).map {
       case (
             loc,

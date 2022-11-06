@@ -79,24 +79,19 @@ case class Finder(root: Definition) {
           case vd: VitalDefinition[?, ?] =>
             state.all_stats.maturitySum += vd.maturity
             vd match {
-              case a: Adaptor => makeVitalStats(a, state.adaptorStats)
-              case a: Application =>
-                makeVitalStats(a, state.contextStats)
-              case c: Context => makeVitalStats(c, state.contextStats)
-              case d: Domain  => makeVitalStats(d, state.domainStats)
-              case e: Entity  => makeVitalStats(e, state.entityStats)
-              case f: Function =>
-                makeVitalStats(f, state.functionStats)
-              case h: Handler => makeVitalStats(h, state.handlerStats)
-              case p: Plant   => makeVitalStats(p, state.plantStats)
-              case p: Processor =>
-                makeVitalStats(p, state.processorStats)
-              case p: Projection =>
-                makeVitalStats(p, state.projectionStats)
-              case r: Repository =>
-                makeVitalStats(r, state.repositoryStats)
-              case s: Saga  => makeVitalStats(s, state.sagaStats)
-              case s: Story => makeVitalStats(s, state.storyStats)
+              case a: Adaptor     => makeVitalStats(a, state.adaptorStats)
+              case a: Application => makeVitalStats(a, state.contextStats)
+              case c: Context     => makeVitalStats(c, state.contextStats)
+              case d: Domain      => makeVitalStats(d, state.domainStats)
+              case e: Entity      => makeVitalStats(e, state.entityStats)
+              case f: Function    => makeVitalStats(f, state.functionStats)
+              case h: Handler     => makeVitalStats(h, state.handlerStats)
+              case p: Plant       => makeVitalStats(p, state.plantStats)
+              case p: Processor   => makeVitalStats(p, state.processorStats)
+              case p: Projection  => makeVitalStats(p, state.projectionStats)
+              case r: Repository  => makeVitalStats(r, state.repositoryStats)
+              case s: Saga        => makeVitalStats(s, state.sagaStats)
+              case s: Story       => makeVitalStats(s, state.storyStats)
             }
           case t: Term =>
             state.terms_count += 1
