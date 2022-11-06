@@ -49,25 +49,6 @@ class ContextValidationTest extends ValidatingTest {
     }
     "allow functions" in { pending } // TODO: write this case
     "allow entities" in { pending } // TODO: write this case
-    "allow authors" in {
-      val input = """author John is {
-                    |  name is "John Hopkins"
-                    |  email is "john.hopkins@johnshopkins.org"
-                    |}
-        """.stripMargin
-      parseAndValidateContext(input) {
-        case (context: Context, rpi, msgs: Messages) =>
-          msgs.filter(_.kind.isError) mustBe (empty)
-          context.authors.size mustBe (1)
-          context.authors.head mustBe
-            (Author(
-              (2, 2, rpi),
-              Identifier((2, 9, rpi), "John"),
-              LiteralString((3, 11, rpi), "John Hopkins"),
-              LiteralString((4, 12, rpi), "john.hopkins@johnshopkins.org")
-            ))
-      }
-    }
     "allow terms" in { pending } // TODO: write this case
     "allow includes" in { pending } // TODO: write this case
     "allow processors" in { pending } // TODO: write this case

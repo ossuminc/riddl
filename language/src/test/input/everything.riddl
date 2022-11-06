@@ -1,6 +1,8 @@
 // #everything
 // RIDDL is about defining domains so ...
-domain Everything is {
+domain Everything by author Reid is {
+
+  author Reid is { ??? }
 
   type SomeType is String
   command DoAThing is { thingField: Integer }

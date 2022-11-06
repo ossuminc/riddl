@@ -27,7 +27,7 @@ trait ProjectionParser extends TypeParser with HandlerParser {
   }
 
   def projectionDefinitions[u: P]: P[Seq[ProjectionDefinition]] = {
-    P(term | author | projectionInclude | handler | invariant).rep(0)
+    P(term | projectionInclude | handler | invariant).rep(0)
   }
 
   def projectionBody[
@@ -53,12 +53,13 @@ trait ProjectionParser extends TypeParser with HandlerParser {
     */
   def projection[u: P]: P[Projection] = {
     P(
-      location ~ Keywords.projection ~/ identifier ~ is ~ open ~
+      location ~ Keywords.projection ~/ identifier ~ authorRefs ~ is ~ open ~
         projectionBody ~ close ~ briefly ~ description
     ).map {
       case (
             loc,
             id,
+            authors,
             (options, aggregation, definitions),
             briefly,
             description
@@ -69,7 +70,6 @@ trait ProjectionParser extends TypeParser with HandlerParser {
         val includes = mapTo[Include[ProjectionDefinition]](groups.get(
           classOf[Include[ProjectionDefinition]]
         ))
-        val authors = mapTo[Author](groups.get(classOf[Author]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         Projection(
           loc,

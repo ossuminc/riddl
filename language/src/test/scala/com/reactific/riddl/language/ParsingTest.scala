@@ -226,7 +226,8 @@ class ParsingTest extends ParsingTestBase {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
     TopLevelParser.parse(rpi) match {
-      case Left(errors) => fail(errors.format)
+      case Left(errors) =>
+        fail(errors.format)
       case Right(root)  => root
     }
   }

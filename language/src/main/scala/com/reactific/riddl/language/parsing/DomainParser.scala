@@ -8,6 +8,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
+import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -31,6 +32,25 @@ trait DomainParser
     include[DomainDefinition, X](domainContent(_))
   }
 
+  def author[u: P]: P[Author] = {
+    P(
+      location ~ Keywords.author ~/ identifier ~ is ~ open ~
+        (undefined((
+          LiteralString(Location(), ""),
+          LiteralString(Location(), ""),
+          Option.empty[LiteralString],
+          Option.empty[LiteralString],
+          Option.empty[java.net.URL]
+        )) |
+          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+            (Keywords.title ~ is ~ literalString).? ~
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
+      Author(loc, id, name, email, org, title, url, brief, desc)
+    }
+  }
+
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
       (author | typeDef | context | plant | actor | story | domain | term |
@@ -49,10 +69,11 @@ trait DomainParser
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~ is ~ open ~/ domainOptions ~
+      location ~ Keywords.domain ~/ identifier ~ authorRefs ~ is ~ open ~/
+        domainOptions ~
         (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/
         briefly ~ description
-    ).map { case (loc, id, options, defs, briefly, description) =>
+    ).map { case (loc, id, authorRefs, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
       val authors = mapTo[AST.Author](groups.get(classOf[AST.Author]))
       val subdomains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
@@ -70,6 +91,7 @@ trait DomainParser
         loc,
         id,
         options,
+        authorRefs,
         authors,
         types,
         contexts,

@@ -25,6 +25,7 @@ class TopLevelParserTest extends ParsingTestBase {
     Location(1, 1, rip),
     Identifier(Location(1, 8, rip), "foo"),
     Seq.empty[DomainOption],
+    Seq.empty[AuthorRef],
     Seq.empty[Author],
     List(),
     List(),

@@ -56,11 +56,10 @@ case class Finder(root: Definition) {
 
   def makeVitalStats[T <: VitalDefinition[?, ?]](
     v: T,
-    parents: Seq[Definition],
     stats: => KindStats
   ): Unit = {
     stats.count += 1
-    stats.maturitySum += v.maturity(parents)
+    stats.maturitySum += v.maturity
     if (v.nonEmpty) stats.completed += 1
     if (v.brief.nonEmpty && v.description.nonEmpty) stats.documented += 1
   }
@@ -78,26 +77,26 @@ case class Finder(root: Definition) {
         state.all_stats.count += 1
         definition match {
           case vd: VitalDefinition[?, ?] =>
-            state.all_stats.maturitySum += vd.maturity(parents)
+            state.all_stats.maturitySum += vd.maturity
             vd match {
-              case a: Adaptor => makeVitalStats(a, parents, state.adaptorStats)
+              case a: Adaptor => makeVitalStats(a, state.adaptorStats)
               case a: Application =>
-                makeVitalStats(a, parents, state.contextStats)
-              case c: Context => makeVitalStats(c, parents, state.contextStats)
-              case d: Domain  => makeVitalStats(d, parents, state.domainStats)
-              case e: Entity  => makeVitalStats(e, parents, state.entityStats)
+                makeVitalStats(a, state.contextStats)
+              case c: Context => makeVitalStats(c, state.contextStats)
+              case d: Domain  => makeVitalStats(d, state.domainStats)
+              case e: Entity  => makeVitalStats(e, state.entityStats)
               case f: Function =>
-                makeVitalStats(f, parents, state.functionStats)
-              case h: Handler => makeVitalStats(h, parents, state.handlerStats)
-              case p: Plant   => makeVitalStats(p, parents, state.plantStats)
+                makeVitalStats(f, state.functionStats)
+              case h: Handler => makeVitalStats(h, state.handlerStats)
+              case p: Plant   => makeVitalStats(p, state.plantStats)
               case p: Processor =>
-                makeVitalStats(p, parents, state.processorStats)
+                makeVitalStats(p, state.processorStats)
               case p: Projection =>
-                makeVitalStats(p, parents, state.projectionStats)
+                makeVitalStats(p, state.projectionStats)
               case r: Repository =>
-                makeVitalStats(r, parents, state.repositoryStats)
-              case s: Saga  => makeVitalStats(s, parents, state.sagaStats)
-              case s: Story => makeVitalStats(s, parents, state.storyStats)
+                makeVitalStats(r, state.repositoryStats)
+              case s: Saga  => makeVitalStats(s, state.sagaStats)
+              case s: Story => makeVitalStats(s, state.storyStats)
             }
           case t: Term =>
             state.terms_count += 1

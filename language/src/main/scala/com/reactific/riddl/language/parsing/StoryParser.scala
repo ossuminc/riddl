@@ -112,7 +112,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
   }
 
   def storyDefinitions[u: P]: P[Seq[StoryDefinition]] = {
-    P(storyCase | example | term | author | storyInclude).rep(0)
+    P(storyCase | example | term | storyInclude).rep(0)
   }
 
   def storyBody[u: P]: P[
@@ -121,18 +121,19 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   def story[u: P]: P[Story] = {
     P(
-      location ~ Keywords.story ~/ identifier ~ is ~ open ~ storyBody ~ close ~
+      location ~ Keywords.story ~/ identifier ~ authorRefs ~ is ~ open ~
+        storyBody ~ close ~
         briefly ~ description
     ).map {
       case (
             loc,
             id,
+            authors,
             (options, userStory, shownBy, definitions),
             briefly,
             description
           ) =>
         val groups = definitions.groupBy(_.getClass)
-        val authors = mapTo[Author](groups.get(classOf[Author]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         val includes = mapTo[Include[StoryDefinition]](groups.get(
           classOf[Include[StoryDefinition]]

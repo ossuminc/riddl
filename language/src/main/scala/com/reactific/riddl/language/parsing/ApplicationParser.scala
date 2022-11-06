@@ -54,7 +54,7 @@ trait ApplicationParser
   }
 
   def applicationDefinition[u: P]: P[ApplicationDefinition] = {
-    P(group | handler | author | term | typeDef | applicationInclude)
+    P(group | handler | term | typeDef | applicationInclude)
   }
 
   def applicationDefinitions[u: P]: P[Seq[ApplicationDefinition]] = {
@@ -73,12 +73,11 @@ trait ApplicationParser
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~
+      location ~ Keywords.application ~/ identifier ~ authorRefs ~ is ~ open ~
         (emptyApplication | (applicationOptions ~ applicationDefinitions)) ~
         close ~ briefly ~ description
-    ).map { case (loc, id, (options, content), brief, desc) =>
+    ).map { case (loc, id, authorRefs, (options, content), brief, desc) =>
       val groups = content.groupBy(_.getClass)
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val grps = mapTo[Group](groups.get(classOf[Group]))
       val handlers = mapTo[Handler](groups.get(classOf[Group]))
@@ -94,7 +93,7 @@ trait ApplicationParser
         types,
         grps,
         handlers,
-        authors,
+        authorRefs,
         terms,
         includes,
         brief,

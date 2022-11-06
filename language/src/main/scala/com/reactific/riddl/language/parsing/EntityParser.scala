@@ -78,10 +78,8 @@ trait EntityParser extends TypeParser with HandlerParser {
   }
 
   def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(
-      author | handler | function | invariant | typeDef | state |
-        entityInclude | term
-    ).rep
+    P(handler | function | invariant | typeDef | state | entityInclude | term)
+      .rep
   }
 
   type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
@@ -94,11 +92,10 @@ trait EntityParser extends TypeParser with HandlerParser {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
+      location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
         (noEntityBody | entityBody) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (options, entityDefs), briefly, description) =>
+    ).map { case (loc, id, authorRefs, (options, entityDefs), briefly, desc) =>
       val groups = entityDefs.groupBy(_.getClass)
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val states = mapTo[State](groups.get(classOf[State]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
@@ -118,10 +115,10 @@ trait EntityParser extends TypeParser with HandlerParser {
         functions,
         invariants,
         includes,
-        authors,
+        authorRefs,
         terms,
         briefly,
-        description
+        desc
       )
     }
   }

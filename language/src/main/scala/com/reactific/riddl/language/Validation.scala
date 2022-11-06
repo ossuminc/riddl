@@ -261,7 +261,7 @@ object Validation {
     def validatePipe(p: Pipe, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents.head, p)
         .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
-          st.checkPathRef[Type](typeRef.id, p, parents)()()
+          st.checkPathRef[Type](typeRef.pathId, p, parents)()()
         }.checkDescription(p)
     }
 
@@ -284,8 +284,8 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       checkDefinition(parents.head, ij)
-        .checkPathRef[Pipe](ij.pipe.id, ij, parents)()()
-        .checkPathRef[Inlet](ij.inletRef.id, ij, parents)()()
+        .checkPathRef[Pipe](ij.pipe.pathId, ij, parents)()()
+        .checkPathRef[Inlet](ij.inletRef.pathId, ij, parents)()()
         .checkDescription(ij)
     }
 
@@ -294,8 +294,8 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       checkDefinition(parents.head, oj)
-        .checkPathRef[Pipe](oj.pipe.id, oj, parents)()()
-        .checkPathRef[Outlet](oj.outletRef.id, oj, parents)()()
+        .checkPathRef[Pipe](oj.pipe.pathId, oj, parents)()()
+        .checkPathRef[Outlet](oj.outletRef.pathId, oj, parents)()()
         .checkDescription(oj)
     }
 
@@ -353,9 +353,15 @@ object Validation {
       oc: OnClause,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkThat(oc.msg.nonEmpty) { st =>
-        st.checkMessageRef(oc.msg, oc, parents, oc.msg.messageKind)
-      }.checkDescription(oc)
+      (oc match {
+        case ooc: OnOtherClause => this.checkDefinition(parents.head, ooc)
+        case omc @ OnMessageClause(_, msg, from, _, _, _) => this
+            .checkDefinition(parents.head, omc).checkThat(msg.nonEmpty) { st =>
+              st.checkMessageRef(msg, oc, parents, msg.messageKind)
+            }.checkThat(from.nonEmpty) { st =>
+              st.checkRef(from.get, oc, parents)
+            }
+      }).checkDescription(oc)
     }
 
     def validateInclude[T <: Definition](i: Include[T]): ValidationState = {
@@ -416,7 +422,7 @@ object Validation {
       parents.headOption match {
         case Some(c: Context) =>
           val s1 = checkContainer(parents.headOption, a)
-          val targetContext = resolvePath(a.context.id, parents)()()
+          val targetContext = resolvePath(a.context.pathId, parents)()()
           val s2 = targetContext.headOption match {
             case Some(target: Context) =>
               if (target == c) {
@@ -549,8 +555,8 @@ object Validation {
                   )
                 }
             case is: InteractionStep => st
-                .checkPathRef[Definition](is.from.id, sc, parents)()()
-                .checkPathRef[Definition](is.to.id, sc, parents)()()
+                .checkPathRef[Definition](is.from.pathId, sc, parents)()()
+                .checkPathRef[Definition](is.to.pathId, sc, parents)()()
                 .checkThat(is.relationship.isEmpty)(
                   _.addMissing(
                     step.loc,
@@ -930,7 +936,7 @@ object Validation {
       parents: Seq[Definition],
       kind: Option[String] = None
     ): ValidationState = {
-      checkPathRef[T](reference.id, defn, parents, kind)()()
+      checkPathRef[T](reference.pathId, defn, parents, kind)()()
     }
 
     def checkMessageRef(
@@ -939,9 +945,9 @@ object Validation {
       parents: Seq[Definition],
       kind: MessageKind
     ): ValidationState = {
-      if (ref.isEmpty) { addError(ref.id.loc, s"${ref.identify} is empty") }
+      if (ref.isEmpty) { addError(ref.pathId.loc, s"${ref.identify} is empty") }
       else {
-        checkPathRef[Type](ref.id, topDef, parents, Some(kind.kind)) {
+        checkPathRef[Type](ref.pathId, topDef, parents, Some(kind.kind)) {
           (state, _, _, _, defn) =>
             defn match {
               case Type(_, _, typ, _, _) => typ match {
@@ -950,15 +956,15 @@ object Validation {
                       s"'${ref.identify} should be ${article(kind.kind)} type" +
                         s" but is ${article(mk.kind)} type instead",
                       Error,
-                      ref.id.loc
+                      ref.pathId.loc
                     )
                   case te: TypeExpression => state.addError(
-                      ref.id.loc,
+                      ref.pathId.loc,
                       s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST.kind(te)} type instead"
                     )
                 }
               case _ => state.addError(
-                  ref.id.loc,
+                  ref.pathId.loc,
                   s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(defn.kind)} instead"
                 )
             }
@@ -1339,12 +1345,12 @@ object Validation {
           case Some(f: Field)    => Some(f.typeEx)
           case Some(s: State)    => Some(s.aggregation)
           case Some(Pipe(_, _, tt, _, _)) =>
-            val te = tt.map(x => AliasedTypeExpression(x.loc, x.id))
+            val te = tt.map(x => AliasedTypeExpression(x.loc, x.pathId))
             Some(te.getOrElse(Abstract(pid.loc)))
           case Some(Inlet(_, _, typ, _, _, _)) =>
-            Some(AliasedTypeExpression(typ.loc, typ.id))
+            Some(AliasedTypeExpression(typ.loc, typ.pathId))
           case Some(Outlet(_, _, typ, _, _, _)) =>
-            Some(AliasedTypeExpression(typ.loc, typ.id))
+            Some(AliasedTypeExpression(typ.loc, typ.pathId))
           case Some(_) => Option.empty[TypeExpression]
         }
         candidate match {
@@ -1440,7 +1446,7 @@ object Validation {
       defn: Definition,
       parents: Seq[Definition]
     ): ValidationState = {
-      val id = messageConstructor.msg.id
+      val id = messageConstructor.msg.pathId
       val kind = messageConstructor.msg.messageKind.kind
       checkPathRef[Type](id, defn, parents, Some(kind)) {
         (state, _, id, _, defn) =>

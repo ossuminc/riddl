@@ -43,7 +43,7 @@ trait SagaParser
   }
 
   def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
-    P(sagaStep | function | author | term | sagaInclude).rep(2)
+    P(sagaStep | function | term | sagaInclude).rep(2)
   }
 
   type SagaBodyType = (
@@ -62,12 +62,13 @@ trait SagaParser
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~
-        briefly ~ description
+      location ~ Keywords.saga ~ identifier ~ authorRefs ~ is ~ open ~
+        sagaBody ~ close ~ briefly ~ description
     ).map {
       case (
             location,
             identifier,
+            authors,
             (options, input, output, definitions),
             briefly,
             description
@@ -75,7 +76,6 @@ trait SagaParser
         val groups = definitions.groupBy(_.getClass)
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val steps = mapTo[SagaStep](groups.get(classOf[SagaStep]))
-        val authors = mapTo[Author](groups.get(classOf[Author]))
         val includes = mapTo[Include[SagaDefinition]](groups.get(
           classOf[Include[SagaDefinition]]
         ))

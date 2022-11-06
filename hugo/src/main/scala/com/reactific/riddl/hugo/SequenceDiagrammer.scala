@@ -23,10 +23,10 @@ case class SequenceDiagrammer(
         case is: InteractionStep => Seq[Reference[Definition]](is.from, is.to)
         case _                   => Seq.empty[Reference[Definition]]
       }
-    }).filterNot(_.isEmpty).flatten.distinctBy(_.id.value).map {
+    }).filterNot(_.isEmpty).flatten.distinctBy(_.pathId.value).map {
       ref: Reference[Definition] =>
-        state.pathIdToDefinition(ref.id, parents) match {
-          case Some(definition) => ref.id.value -> definition
+        state.pathIdToDefinition(ref.pathId, parents) match {
+          case Some(definition) => ref.pathId.value -> definition
           case None => throw new IllegalStateException(
               s"Pre-validated PathId not found: ${ref.identify}"
             )
@@ -61,8 +61,8 @@ case class SequenceDiagrammer(
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl
     for { ntrctn <- cse.interactions } ntrctn match {
       case is: InteractionStep =>
-        val from = participants(is.from.id.value)
-        val to = participants(is.to.id.value)
+        val from = participants(is.from.pathId.value)
+        val to = participants(is.to.pathId.value)
         sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
         nl
       case _: ParallelGroup => // TODO: include parallel groups

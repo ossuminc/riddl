@@ -35,7 +35,7 @@ class DomainValidatorTest extends ValidatingTest {
     }
 
     "allow author information" in {
-      val input = """domain foo is {
+      val input = """domain foo by author Reid is {
                     |  author Reid is {
                     |    name: "Reid Spencer"
                     |    email: "reid@reactific.com"
@@ -62,8 +62,12 @@ class DomainValidatorTest extends ValidatingTest {
               Seq(LiteralString((7, 18, rpi), "identifying"))
             ))
           )
+          domain.authorDefs mustNot be(empty)
+          domain.authorDefs.head must be(expectedAuthor)
+          val expectedAuthorRef = AuthorRef((1,12,rpi),
+            PathIdentifier((1,22,rpi), Seq("Reid")))
           domain.authors mustNot be(empty)
-          domain.authors.head must be(expectedAuthor)
+          domain.authors.head must be(expectedAuthorRef)
           messages mustBe empty
       }
     }

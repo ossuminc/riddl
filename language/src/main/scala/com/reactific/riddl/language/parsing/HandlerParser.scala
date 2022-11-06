@@ -26,10 +26,15 @@ trait HandlerParser extends GherkinParser with FunctionParser {
     )
   }
 
-  def onClause[u: P]: P[OnClause] = {
-    Keywords.on ~/ location ~ messageRef ~ fromClause.? ~ onClauseBody ~
+  def onOtherClause[u: P]: P[OnClause] = {
+    P( Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
+      description ).map( t => (OnOtherClause.apply _).tupled(t))
+  }
+
+  def onMessageClause[u: P]: P[OnClause] = {
+    Keywords.on ~ location ~ messageRef ~/ fromClause.? ~ onClauseBody ~
       briefly ~ description
-  }.map(t => (OnClause.apply _).tupled(t))
+  }.map(t => (OnMessageClause.apply _).tupled(t))
 
   def handlerOptions[u: P]: P[Seq[HandlerOption]] = {
     options[u, HandlerOption](StringIn("partial").!) {
@@ -43,7 +48,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
   }
 
   def handlerDefinitions[u: P]: P[Seq[HandlerDefinition]] = {
-    P(onClause | term | author | handlerInclude).rep(0)
+    P(onMessageClause | onOtherClause | term | handlerInclude).rep(0)
   }
 
   def handlerBody[u: P]: P[(Seq[HandlerOption], Seq[HandlerDefinition])] = {
@@ -54,16 +59,16 @@ trait HandlerParser extends GherkinParser with FunctionParser {
 
   def handler[u: P]: P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~ is ~ open ~ handlerBody ~
+      Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
+        handlerBody ~
         close ~ briefly ~ description
-    ).map { case (loc, id, (options, definitions), briefly, description) =>
+    ).map { case (loc, id, authors, (options, definitions), briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val includes = mapTo[Include[HandlerDefinition]](groups.get(
         classOf[Include[HandlerDefinition]]
       ))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val clauses = mapTo[OnClause](groups.get(classOf[OnClause]))
+      val clauses = mapTo[OnMessageClause](groups.get(classOf[OnMessageClause]))
 
       Handler(
         loc,
@@ -74,7 +79,7 @@ trait HandlerParser extends GherkinParser with FunctionParser {
         options,
         terms,
         briefly,
-        description
+        desc
       )
     }
   }

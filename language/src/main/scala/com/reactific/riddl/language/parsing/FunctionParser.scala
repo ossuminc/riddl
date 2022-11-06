@@ -37,7 +37,7 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
   ]: P[(Option[Aggregation], Option[Aggregation])] = { P(input.? ~ output.?) }
 
   def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
-    P(typeDef | example | function | term | author | functionInclude).rep(0)
+    P(typeDef | example | function | term | functionInclude).rep(0)
   }
 
   def functionBody[u: P]: P[
@@ -64,12 +64,13 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
     */
   def function[u: P]: P[Function] = {
     P(
-      location ~ Keywords.function ~/ identifier ~ is ~ open ~ functionBody ~
-        close ~ briefly ~ description
+      location ~ Keywords.function ~/ identifier ~ authorRefs ~ is ~ open ~
+        functionBody ~ close ~ briefly ~ description
     ).map {
       case (
             loc,
             id,
+            authors,
             (options, input, output, definitions),
             briefly,
             description
@@ -79,7 +80,6 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
         val examples = mapTo[Example](groups.get(classOf[Example]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        val authors = mapTo[Author](groups.get(classOf[Author]))
         val includes = mapTo[Include[FunctionDefinition]](groups.get(
           classOf[Include[FunctionDefinition]]
         ))

@@ -58,7 +58,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     P(
       (inlet.rep(minInlets, "", maxInlets) ~/
         outlet.rep(minOutlets, "", maxOutlets) ~/
-        (handler | term | author |
+        (handler | term |
           processorInclude(minInlets, maxInlets, minOutlets, maxOutlets))
           .rep(0)).map { case (inlets, outlets, definitions) =>
         inlets ++ outlets ++ definitions
@@ -107,16 +107,15 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     maxOutlets: Int = 0
   ): P[Processor] = {
     P(
-      location ~ keyword ~/ identifier ~ is ~ open ~
+      location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
         processorBody(minInlets, maxInlets, minOutlets, maxOutlets) ~ close ~
         briefly ~ description
-    ).map { case (location, id, (options, definitions), brief, description) =>
+    ).map { case (location, id, auths, (options, definitions), brief, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val includes = mapTo[Include[ProcessorDefinition]](groups.get(
         classOf[Include[ProcessorDefinition]]
       ))
@@ -128,11 +127,11 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
         outlets,
         handlers,
         includes,
-        authors,
+        auths,
         options,
         terms,
         brief,
-        description
+        desc
       )
     }
   }
@@ -222,7 +221,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
   }
 
   def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {
-    P(plantDefinition | term | author | plantInclude).rep(0)
+    P(plantDefinition | term | plantInclude).rep(0)
   }
 
   def plantBody[u: P]: P[(Seq[PlantOption], Seq[PlantDefinition])] = {
@@ -234,11 +233,11 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
 
   def plant[u: P]: P[Plant] = {
     P(
-      location ~ Keywords.plant ~/ identifier ~ is ~ open ~/ plantBody ~ close ~
+      location ~ Keywords.plant ~/ identifier ~ is ~ authorRefs ~ open ~/
+        plantBody ~ close ~
         briefly ~ description
-    ).map { case (loc, id, (options, definitions), briefly, description) =>
+    ).map { case (loc, id, auths, (options, definitions), briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val inJoints = mapTo[InletJoint](groups.get(classOf[InletJoint]))
@@ -256,10 +255,10 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
         outJoints,
         terms,
         includes,
-        authors,
+        auths,
         options,
         briefly,
-        description
+        desc
       )
     }
   }
