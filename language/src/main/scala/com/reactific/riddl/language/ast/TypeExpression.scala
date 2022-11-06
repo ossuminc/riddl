@@ -269,9 +269,9 @@ trait TypeExpression extends AbstractDefinitions {
       extends AggregateTypeExpression {}
 
   object Aggregation {
-    val empty: Aggregation = { Aggregation(Location.empty, Seq.empty[Field]) }
+    val empty: Aggregation = { Aggregation(Location.empty) }
     def empty(loc: Location = Location.empty): Aggregation = {
-      Aggregation(loc, Seq.empty[Field])
+      Aggregation(loc)
     }
   }
 
@@ -517,12 +517,10 @@ trait TypeExpression extends AbstractDefinitions {
     def kind: String = Predefined.Length
   }
 
-  /**
-   * A predefined type expression for the SI Base Unit for
-   * Luminosity (candela0
-   * @param loc
-   *   The location of the luminosity expression
-   */
+  /** A predefined type expression for the SI Base Unit for Luminosity (candela)
+    * @param loc
+    *   The location of the luminosity expression
+    */
   case class Luminosity(loc: Location) extends NumericType {
     def kind: String = Predefined.Luminosity
   }
