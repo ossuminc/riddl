@@ -23,23 +23,23 @@ class HandlerValidatorTest extends ValidatingTest {
           |    handler foo is {
           |      on command EntityCommand { example only { then set field1 to 445 } }
           |      on event EntityEvent { example only { then set field1 to 678 } }
-          |    }
-          |  }
-          |}
-          |}
-          |}
+          |    } described as "Irrelevant"
+          |  } described as "Irrelevant"
+          |} described as "Irrelevant"
+          |} described as "Irrelevant"
+          |} described as "Irrelevant"
           |""".stripMargin
       parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
-          "Path 'EntityCommand' was not resolved, in On Clause" +
+          "Path 'EntityCommand' was not resolved, in OnMessageClause" +
             " 'On command EntityCommand', but should refer to a command"
         )
         assertValidationMessage(
           msgs,
           Error,
-          "Path 'EntityEvent' was not resolved, in On Clause " +
+          "Path 'EntityEvent' was not resolved, in OnMessageClause " +
             "'On event EntityEvent', but should refer to an event"
         )
       }
@@ -64,7 +64,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Error,
-          "Path 'Incoming' was not resolved, in On Clause " +
+          "Path 'Incoming' was not resolved, in OnMessageClause " +
             "'On event Incoming', but should refer to an event"
         )
       }

@@ -184,6 +184,8 @@ trait AbstractDefinitions extends Terminals {
 
     def isImplicit: Boolean = id.value.isEmpty
 
+    def isVital: Boolean = false
+
     def hasOptions: Boolean = false
 
     def hasAuthors: Boolean = false
@@ -210,11 +212,11 @@ trait AbstractDefinitions extends Terminals {
     *   The type of definition to which the references refers.
     */
   abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
-    def id: PathIdentifier
+    def pathId: PathIdentifier
     def identify: String = {
-      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${id.format}'${loc.toShort}"
+      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${pathId.format}'${loc.toShort}"
     }
-    override def isEmpty: Boolean = id.isEmpty
+    override def isEmpty: Boolean = pathId.isEmpty
   }
 
   /** Base class for all actions. Actions are used in the "then" and "but"

@@ -107,7 +107,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case typ: Type          => state.current.emitType(typ); state
         case function: Function => openFunction(state, function)
         case st: State          => openState(state, st)
-        case oc: OnClause       => openOnClause(state, oc)
+        case oc: OnMessageClause       => openOnClause(state, oc)
         case step: SagaStep     => openSagaStep(state, step)
         case include: Include[Definition] @unchecked =>
           openInclude(state, include)
@@ -157,7 +157,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         case _: Type      => state // openContainer did all of it
         case story: Story => closeStory(state, story)
         case st: State    => state.withCurrent(_.closeDef(st))
-        case _: OnClause  => closeOnClause(state)
+        case _: OnMessageClause  => closeOnClause(state)
         case include: Include[Definition] @unchecked =>
           closeInclude(state, include)
         case _: RootContainer =>
@@ -175,7 +175,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       domain: Domain
     ): PrettifyState = {
       state.withCurrent(_.openDef(domain)).step { s1: PrettifyState =>
-        domain.authors.foldLeft(s1) { (st, author) =>
+        domain.authorDefs.foldLeft(s1) { (st, author) =>
           st.withCurrent(
             _.addIndent(s"author is {\n").indent
               .addIndent(s"name = ${author.name.format}\n")
@@ -199,7 +199,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           st.openDef(story, withBrace = false).add(" ??? ")
         } else {
           val us = story.userStory
-          val actor = us.actor.id
+          val actor = us.actor.pathId
           st.openDef(story).addIndent("actor").add(actor.format).add(" ")
             .add(Readability.wants).add(" ").add(Readability.to)
             .add(s"\"${us.capability.s}\" so that \"${us.benefit.s}\"").nl
@@ -237,7 +237,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     }
     def openOnClause(
       state: PrettifyState,
-      onClause: OnClause
+      onClause: OnMessageClause
     ): PrettifyState = {
       state.withCurrent(
         _.addIndent("on ").emitMessageRef(onClause.msg).add(" {\n").indent
@@ -270,12 +270,12 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         .withCurrent(_.addIndent(s"${keyword(joint)} ${joint.id.format} is "))
       joint match {
         case InletJoint(_, _, inletRef, pipeRef, _, _) => s.withCurrent(
-            _.addIndent(s"inlet ${inletRef.id.format} from")
-              .add(s" pipe ${pipeRef.id.format}\n")
+            _.addIndent(s"inlet ${inletRef.pathId.format} from")
+              .add(s" pipe ${pipeRef.pathId.format}\n")
           )
         case OutletJoint(_, _, outletRef, pipeRef, _, _) => s.withCurrent(
-            _.addIndent(s"outlet ${outletRef.id.format} to")
-              .add(s" pipe ${pipeRef.id.format}\n")
+            _.addIndent(s"outlet ${outletRef.pathId.format} to")
+              .add(s" pipe ${pipeRef.pathId.format}\n")
           )
       }
     }

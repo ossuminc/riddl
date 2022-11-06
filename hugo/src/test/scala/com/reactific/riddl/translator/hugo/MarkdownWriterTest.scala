@@ -64,16 +64,13 @@ class MarkdownWriterTest extends ParsingTest {
               || Item | Value |
               || :---: | :---  |
               || _Briefly_ | Just For Testing |
+              || _Authors_ |  |
               || _Definition Path_ | hugo-translator.target.test-output.TestDomain |
               || _View Source Link_ | [empty(1:1)]() |
               |
               |## *Description*
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
-              |
-              |## *Author*
-              |* _Name_: Reid Spencer
-              |* _Email_: reid@reactific.com
               |
               |## *Types*
               |

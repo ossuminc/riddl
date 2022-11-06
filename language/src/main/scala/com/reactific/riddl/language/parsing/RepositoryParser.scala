@@ -20,20 +20,19 @@ trait RepositoryParser extends HandlerParser {
   }
 
   def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
-    P(typeDef | handler | author | term | repositoryInclude).rep(0)
+    P(typeDef | handler | term | repositoryInclude).rep(0)
   }
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~ identifier ~ is ~ open ~
+      location ~ Keywords.repository ~ identifier ~ authorRefs ~ is ~ open ~
         repositoryOptions ~ repositoryDefinitions ~ close ~ briefly ~
         description
-    ).map { case (loc, id, opts, defs, brief, desc) =>
+    ).map { case (loc, id, authors, opts, defs, brief, desc) =>
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val authors = mapTo[Author](groups.get(classOf[Author]))
       val includes = mapTo[Include[RepositoryDefinition]](groups.get(
         classOf[Include[RepositoryDefinition]]
       ))

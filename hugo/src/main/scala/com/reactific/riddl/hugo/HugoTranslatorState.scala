@@ -152,7 +152,7 @@ case class HugoTranslatorState(
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
-      case _: OnClause | _: Example | _: Inlet | _: Outlet => pars + "#" +
+      case _: OnMessageClause | _: Example | _: Inlet | _: Outlet => pars + "#" +
           definition.id.value.toLowerCase
       case _: Field | _: Enumerator | _: Invariant | _: InletJoint |
           _: OutletJoint | _: Author | _: SagaStep |
@@ -222,7 +222,10 @@ case class HugoTranslatorState(
         author =
           if (authors.isEmpty) { "Unspecified Author" }
           else {
-            authors.map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
+            authors.map { ref: AuthorRef =>
+              resolvePathIdentifier[Author](ref.pathId, pars)
+            }.filterNot(_.isEmpty).map(_.get)
+              .map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
           }
         parents = makeParents(pars)
         path = parents.mkString(".")

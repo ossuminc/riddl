@@ -141,6 +141,8 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
     )).?
   }
 
+  def by[u: P]: P[Unit] = { P(StringIn(Readability.by, Readability.from)).? }
+
   def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
   def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
@@ -203,25 +205,6 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   def term[u: P]: P[Term] = {
     P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
       .map(tpl => (Term.apply _).tupled(tpl))
-  }
-
-  def author[u: P]: P[Author] = {
-    P(
-      location ~ Keywords.author ~/ identifier ~ is ~ open ~
-        (undefined((
-          LiteralString(Location(), ""),
-          LiteralString(Location(), ""),
-          Option.empty[LiteralString],
-          Option.empty[LiteralString],
-          Option.empty[java.net.URL]
-        )) |
-          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-            (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
-      Author(loc, id, name, email, org, title, url, brief, desc)
-    }
   }
 
 }

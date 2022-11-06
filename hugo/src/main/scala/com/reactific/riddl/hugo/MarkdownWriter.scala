@@ -292,7 +292,7 @@ case class MarkdownWriter(
       children = {
         val newParents = container.id.value +: parents
         container.contents.filter(d =>
-          d.nonEmpty && !d.isInstanceOf[OnClause] && !d.isInstanceOf[Example]
+          d.nonEmpty && !d.isInstanceOf[OnMessageClause] && !d.isInstanceOf[Example]
         ).map(makeData(_, newParents))
       }
     )
@@ -400,6 +400,10 @@ case class MarkdownWriter(
     val brief: String = d.brief.map(_.s).getOrElse("Brief description missing.")
       .trim
     emitTableRow(italic("Briefly"), brief)
+    if (d.isVital) {
+      val authors = d.asInstanceOf[VitalDefinition[?, ?]].authors
+      emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
+    }
     val path = (parents :+ d.id.format).mkString(".")
     emitTableRow(italic("Definition Path"), path)
     val link = state.makeSourceLink(d)
@@ -430,10 +434,6 @@ case class MarkdownWriter(
   ): this.type = {
     emitBriefly(definition, parents, level)
     emitDescription(definition.description, level)
-    if (definition.hasAuthors) {
-      emitAuthorInfo(definition.asInstanceOf[WithAuthors].authors)
-    }
-    this
   }
 
   def emitShortDefDoc(
@@ -748,7 +748,12 @@ case class MarkdownWriter(
     containerHead(handler, "Handler")
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
-      h3("On " + clause.msg.format)
+      clause match {
+        case omc: OnMessageClause =>
+          h3(clause.kind + " " + omc.msg.format  )
+        case ooc: OnOtherClause =>
+          h3(ooc.kind)
+      }
       emitShortDefDoc(clause)
       emitExamples(clause.examples, 4)
     }
@@ -827,11 +832,11 @@ case class MarkdownWriter(
     emitBriefly(story, parents)
     if (story.userStory.nonEmpty) {
       val maybeActor = state
-        .resolvePathIdentifier[Actor](story.userStory.actor.id, stack)
+        .resolvePathIdentifier[Actor](story.userStory.actor.pathId, stack)
       h2("User Story")
       maybeActor match {
         case None =>
-          p(s"Unresolvable Actor id: ${story.userStory.actor.id.format}")
+          p(s"Unresolvable Actor id: ${story.userStory.actor.pathId.format}")
         case Some(actor) =>
           val name = actor.id.value
           val role = actor.is_a.s
@@ -880,10 +885,10 @@ case class MarkdownWriter(
     emitDefDoc(proc, parList)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
-      val typeRef = makePathIdRef(inlet.type_.id, parents)
+      val typeRef = makePathIdRef(inlet.type_.pathId, parents)
       val entityRef =
         if (inlet.entity.nonEmpty) {
-          " sunken to " + makePathIdRef(inlet.entity.get.id, parents)
+          " sunken to " + makePathIdRef(inlet.entity.get.pathId, parents)
         } else ""
       h3(inlet.id.format)
       p(typeRef + entityRef)
@@ -891,9 +896,9 @@ case class MarkdownWriter(
     }
     h2("Outlets")
     proc.outlets.foreach { outlet =>
-      val typeRef = makePathIdRef(outlet.type_.id, parents)
+      val typeRef = makePathIdRef(outlet.type_.pathId, parents)
       val entityRef = if (outlet.entity.nonEmpty) {
-        " sourced from " + makePathIdRef(outlet.entity.get.id, parents)
+        " sourced from " + makePathIdRef(outlet.entity.get.pathId, parents)
       }
       h3(outlet.id.format)
       p(typeRef + entityRef)

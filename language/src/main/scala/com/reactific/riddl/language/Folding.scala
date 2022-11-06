@@ -208,10 +208,10 @@ object Folding {
         Seq.empty[Definition]
       } else {
         parentStack.head match {
-          case oc: OnClause =>
+          case oc: OnMessageClause =>
             // if we're at an onClause that references a message then we
             // need to push that message's path on the name stack
-            adjustStacksForPid(searchFor, oc.msg.id, parentStack, nameStack)
+            adjustStacksForPid(searchFor, oc.msg.pathId, parentStack, nameStack)
           case f: Field => f.typeEx match {
               case Aggregation(_, fields) =>
                 // if we're at a field composed of more fields, then those fields

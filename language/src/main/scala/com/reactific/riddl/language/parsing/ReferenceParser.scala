@@ -40,12 +40,8 @@ trait ReferenceParser extends CommonParser {
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
-  def otherRef[u: P]: P[OtherRef] = {
-    P(location ~ Keywords.other).map(OtherRef)
-  }
-
   def messageRef[u: P]: P[MessageRef] = {
-    P(commandRef | eventRef | queryRef | resultRef | otherRef)
+    P(commandRef | eventRef | queryRef | resultRef)
   }
 
   def entityRef[u: P]: P[EntityRef] = {
@@ -143,6 +139,11 @@ trait ReferenceParser extends CommonParser {
   def inputRef[u: P]: P[InputRef] = {
     P(location ~ Keywords.input ~ pathIdentifier)
       .map(tpl => (InputRef.apply _).tupled(tpl))
+  }
+
+  def authorRefs[u: P]: P[Seq[AuthorRef]] = {
+    P(location ~ by ~ Keywords.author ~ pathIdentifier)
+      .map(tpl => (AuthorRef.apply _).tupled(tpl)).rep(0, ",", 3)
   }
 
   def reference[u: P, K <: Definition: ClassTag]: P[Reference[K]] = {

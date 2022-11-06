@@ -26,7 +26,7 @@ trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
 
   def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      (handler | adaptorInclude | term | author).rep(1) |
+      (handler | adaptorInclude | term).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }
@@ -43,31 +43,41 @@ trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
 
   def adaptor[u: P]: P[Adaptor] = {
     P(
-      location ~ Keywords.adaptor ~/ identifier ~ adaptorDirection ~
-        contextRef ~ is ~ open ~ adaptorOptions ~ adaptorDefinitions ~ close ~
-        briefly ~ description
-    ).map { case (loc, id, dir, cref, options, defs, briefly, description) =>
-      val groups = defs.groupBy(_.getClass)
-      val includes = mapTo[Include[AdaptorDefinition]](groups.get(
-        classOf[Include[AdaptorDefinition]]
-      ))
-      val authors = mapTo[Author](groups.get(classOf[Author]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val handlers: Seq[Handler] = defs.filter(_.isInstanceOf[Handler])
-        .map(_.asInstanceOf[Handler])
-      Adaptor(
-        loc,
-        id,
-        dir,
-        cref,
-        handlers,
-        includes,
-        authors,
-        options,
-        terms,
-        briefly,
-        description
-      )
+      location ~ Keywords.adaptor ~/ identifier ~ authorRefs ~
+        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
+        adaptorDefinitions ~ close ~ briefly ~ description
+    ).map {
+      case (
+            loc,
+            id,
+            authorRefs,
+            dir,
+            cref,
+            options,
+            defs,
+            briefly,
+            description
+          ) =>
+        val groups = defs.groupBy(_.getClass)
+        val includes = mapTo[Include[AdaptorDefinition]](groups.get(
+          classOf[Include[AdaptorDefinition]]
+        ))
+        val terms = mapTo[Term](groups.get(classOf[Term]))
+        val handlers: Seq[Handler] = defs.filter(_.isInstanceOf[Handler])
+          .map(_.asInstanceOf[Handler])
+        Adaptor(
+          loc,
+          id,
+          dir,
+          cref,
+          handlers,
+          includes,
+          authorRefs,
+          options,
+          terms,
+          briefly,
+          description
+        )
     }
   }
 }

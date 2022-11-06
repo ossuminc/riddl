@@ -165,48 +165,35 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     def format: String = ""
   }
 
-  trait WithAuthors extends Definition {
-    def authors: Seq[Author]
+  case class AuthorRef(loc: Location, pathId: PathIdentifier)
+      extends Reference[Author] {
+    override def format: String = s"${Keywords.author} ${pathId.format}"
+    def kind: String = ""
+  }
 
+  trait WithAuthorRefs extends Definition {
+    def authors: Seq[AuthorRef]
     override def hasAuthors: Boolean = authors.nonEmpty
-
-    def isAuthored(parents: Seq[Definition]): Boolean = {
-      findAuthors(this, parents).nonEmpty
-    }
   }
 
-  private def authorsOfInclude(includes: Seq[Include[?]]): Seq[Author] = {
-    for {
-      include <- includes
-      ai <- include.contents if ai.isInstanceOf[Author]
-      authInfo = ai.asInstanceOf[Author]
-    } yield { authInfo }
-  }
-
-  def authorsOf(defn: Definition): Seq[Author] = {
-    defn match {
-      case wa: WithAuthors => wa.authors ++
-          (wa match {
-            case wi: WithIncludes[?] @unchecked => authorsOfInclude(wi.includes)
-            case _                              => Seq.empty[Author]
-          })
-      case _ => Seq.empty[Author]
-    }
-  }
-
-  def findAuthors(defn: Definition, parents: Seq[Definition]): Seq[Author] = {
-    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthors].authors }
+  def findAuthors(
+    defn: Definition,
+    parents: Seq[Definition]
+  ): Seq[AuthorRef] = {
+    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthorRefs].authors }
     else {
       parents.find(d =>
-        d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors
-      ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[Author])
+        d.isInstanceOf[WithAuthorRefs] &&
+          d.asInstanceOf[WithAuthorRefs].hasAuthors
+      ).map(_.asInstanceOf[WithAuthorRefs].authors)
+        .getOrElse(Seq.empty[AuthorRef])
     }
   }
 
   sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
       with WithOptions[T]
-      with WithAuthors
+      with WithAuthorRefs
       with WithIncludes[CT]
       with WithTerms {
 
@@ -222,7 +209,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       *   - definition specific things: 0.65
       * @return
       */
-    def maturity(parents: Seq[Definition]): Int = {
+    def maturity: Int = {
       var score = 0
       if (hasOptions) score += 5
       if (hasTerms) score += 5
@@ -231,9 +218,11 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       }
       if (brief.nonEmpty) score += 5
       if (includes.nonEmpty) score += 3
-      if (isAuthored(parents)) score += 2
+      score += authors.size
       score
     }
+
+    override def isVital: Boolean = true
   }
 
   final val maxMaturity = 100
@@ -283,7 +272,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   sealed trait MessageRef extends Reference[Type] {
     def messageKind: MessageKind
 
-    override def format: String = s"${messageKind.kind} ${id.format}"
+    override def format: String = s"${messageKind.kind} ${pathId.format}"
   }
 
   /** A Reference to a command type
@@ -293,7 +282,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class CommandRef(loc: Location, id: PathIdentifier) extends MessageRef {
+  case class CommandRef(loc: Location, pathId: PathIdentifier)
+      extends MessageRef {
     def messageKind: MessageKind = CommandKind
   }
 
@@ -304,7 +294,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class EventRef(loc: Location, id: PathIdentifier) extends MessageRef {
+  case class EventRef(loc: Location, pathId: PathIdentifier)
+      extends MessageRef {
     def messageKind: MessageKind = EventKind
   }
 
@@ -315,7 +306,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the query type
     */
-  case class QueryRef(loc: Location, id: PathIdentifier) extends MessageRef {
+  case class QueryRef(loc: Location, pathId: PathIdentifier)
+      extends MessageRef {
     def messageKind: MessageKind = QueryKind
   }
 
@@ -326,14 +318,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the result type
     */
-  case class ResultRef(loc: Location, id: PathIdentifier) extends MessageRef {
+  case class ResultRef(loc: Location, pathId: PathIdentifier)
+      extends MessageRef {
     def messageKind: MessageKind = ResultKind
-  }
-
-  case class OtherRef(loc: Location) extends MessageRef {
-    def id: PathIdentifier = PathIdentifier(loc, Seq.empty[String])
-    def messageKind: MessageKind = OtherKind
-
   }
 
   /** A type definition which associates an identifier with a type expression.
@@ -386,9 +373,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the reference type
     */
-  case class TypeRef(loc: Location, id: PathIdentifier)
+  case class TypeRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Type] {
-    override def format: String = s"type ${id.format}"
+    override def format: String = s"${Keywords.`type`} ${pathId.format}"
   }
 
   // /////////////////////////////////////////////////////////// Actions
@@ -774,9 +761,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced entity.
     */
-  case class EntityRef(loc: Location, id: PathIdentifier)
+  case class EntityRef(loc: Location, pathId: PathIdentifier)
       extends MessageTakingRef[Entity] {
-    override def format: String = s"${Keywords.entity} ${id.format}"
+    override def format: String = s"${Keywords.entity} ${pathId.format}"
   }
 
   /** A reference to a function.
@@ -786,9 +773,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced function.
     */
-  case class FunctionRef(loc: Location, id: PathIdentifier)
+  case class FunctionRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Function] {
-    override def format: String = s"${Keywords.function} ${id.format}"
+    override def format: String = s"${Keywords.function} ${pathId.format}"
   }
 
   /** A function definition which can be part of a bounded context or an entity.
@@ -818,7 +805,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
     examples: Seq[Example] = Seq.empty[Example],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[FunctionDefinition]] = Seq
       .empty[Include[FunctionDefinition]],
     options: Seq[FunctionOption] = Seq.empty[FunctionOption],
@@ -842,8 +829,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     final val kind: String = "Function"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (input.nonEmpty) score += 2
       if (output.nonEmpty) score += 3
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 13)
@@ -883,8 +870,25 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     final val kind: String = "Invariant"
   }
 
+  trait OnClause extends HandlerDefinition {
+    def examples: Seq[Example]
+  }
+
+  case class OnOtherClause(
+    loc: Location,
+    examples: Seq[Example] = Seq.empty[Example],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None)
+      extends OnClause {
+    def id: Identifier = Identifier(loc, s"Other")
+    override def isEmpty: Boolean = examples.isEmpty
+    override def kind: String = "On Other"
+    override def contents: Seq[Example] = examples
+    override def format: String = ""
+  }
+
   /** Defines the actions to be taken when a particular message is received by
-    * an entity. [[OnClause]]s are used in the definition of a [[Handler]] with
+    * an entity. [[OnMessageClause]]s are used in the definition of a [[Handler]] with
     * one for each kind of message that handler deals with.
     *
     * @param loc
@@ -900,23 +904,23 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param description
     *   An optional description of the on clause.
     */
-  case class OnClause(
+  case class OnMessageClause(
     loc: Location,
     msg: MessageRef,
     from: Option[Reference[Definition]],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends HandlerDefinition {
+      extends OnClause {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
     override def isEmpty: Boolean = examples.isEmpty
     override def contents: Seq[Example] = examples
     def format: String = ""
-    final val kind: String = "On Clause"
+    final val kind: String = "OnMessageClause"
   }
 
   /** A named handler of messages (commands, events, queries) that bundles
-    * together a set of [[OnClause]] definitions and by doing so defines the
+    * together a set of [[OnMessageClause]] definitions and by doing so defines the
     * behavior of an entity. Note that entities may define multiple handlers and
     * switch between them to change how it responds to messages over time or in
     * response to changing conditions
@@ -926,7 +930,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The name of the handler.
     * @param clauses
-    *   The set of [[OnClause]] definitions that define how the entity responds
+    *   The set of [[OnMessageClause]] definitions that define how the entity responds
     *   to received messages.
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -937,7 +941,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: Location,
     id: Identifier,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[HandlerDefinition]] = Seq
       .empty[Include[HandlerDefinition]],
     options: Seq[HandlerOption] = Seq.empty[HandlerOption],
@@ -955,11 +959,11 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with ProjectionDefinition {
     override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
     override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
-      terms ++ authors
+      terms
     final val kind: String = "Handler"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (clauses.nonEmpty) score +=
         Math.max(clauses.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
@@ -974,9 +978,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced handler
     */
-  case class HandlerRef(loc: Location, id: PathIdentifier)
+  case class HandlerRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Handler] {
-    override def format: String = s"${Keywords.handler} ${id.format}"
+    override def format: String = s"${Keywords.handler} ${pathId.format}"
   }
 
   /** Represents the state of an entity. The [[MorphAction]] can cause the state
@@ -1018,9 +1022,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced state definition
     */
-  case class StateRef(loc: Location, id: PathIdentifier)
+  case class StateRef(loc: Location, pathId: PathIdentifier)
       extends Reference[State] {
-    override def format: String = s"${Keywords.state} ${id.format}"
+    override def format: String = s"${Keywords.state} ${pathId.format}"
   }
 
   /** Definition of an Entity
@@ -1057,7 +1061,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include[EntityDefinition]] = Seq
       .empty[Include[EntityDefinition]],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -1067,15 +1071,15 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     override lazy val contents: Seq[EntityDefinition] = {
       super.contents ++ states ++ types ++ handlers ++ functions ++
-        invariants ++ authors ++ terms
+        invariants ++ terms
     }
 
     final val kind: String = "Entity"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (states.nonEmpty) score += Math.max(states.count(_.nonEmpty), 10)
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
       if (handlers.nonEmpty) score += 1
@@ -1124,7 +1128,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     handlers: Seq[Handler] = Seq.empty[Handler],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -1132,12 +1136,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends VitalDefinition[AdaptorOption, AdaptorDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[AdaptorDefinition] = {
-      super.contents ++ handlers ++ authors ++ terms
+      super.contents ++ handlers ++ terms
     }
     final val kind: String = "Adaptor"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (handlers.nonEmpty) score +=
         Math.max(handlers.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
@@ -1146,9 +1150,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
   case class AdaptorRef(
     loc: Location,
-    id: PathIdentifier)
+    pathId: PathIdentifier)
       extends MessageTakingRef[Adaptor] {
-    override def format: String = s"${Keywords.adaptor} ${id.format}"
+    override def format: String = s"${Keywords.adaptor} ${pathId.format}"
   }
 
   /** A RIDDL repository is an abstraction for anything that can retain
@@ -1188,7 +1192,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[RepositoryDefinition]] = Seq
       .empty[Include[RepositoryDefinition]],
     options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
@@ -1199,7 +1203,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with ContextDefinition {
     override def kind: String = "Repository"
     override lazy val contents: Seq[RepositoryDefinition] = {
-      super.contents ++ types ++ handlers ++ authors ++ terms
+      super.contents ++ types ++ handlers ++ terms
     }
   }
 
@@ -1236,7 +1240,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     aggregation: Aggregation,
     handlers: Seq[Handler] = Seq.empty[Handler],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
@@ -1246,12 +1250,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends VitalDefinition[ProjectionOption, ProjectionDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[ProjectionDefinition] = {
-      super.contents ++ aggregation.fields ++ authors ++ terms
+      super.contents ++ aggregation.fields ++ terms
     }
     final val kind: String = "Projection"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (aggregation.fields.nonEmpty) score +=
         Math.max(aggregation.fields.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
@@ -1265,9 +1269,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced projection definition
     */
-  case class ProjectionRef(loc: Location, id: PathIdentifier)
+  case class ProjectionRef(loc: Location, pathId: PathIdentifier)
       extends MessageTakingRef[Projection] {
-    override def format: String = s"${Keywords.projection} ${id.format}"
+    override def format: String = s"${Keywords.projection} ${pathId.format}"
   }
 
   /** A bounded context definition. Bounded contexts provide a definitional
@@ -1313,21 +1317,21 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
     repositories: Seq[Repository] = Seq.empty[Repository],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[ContextOption, ContextDefinition]
       with DomainDefinition
       with WithTypes {
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
-      types ++ entities ++ adaptors ++ sagas ++ functions ++ terms ++ authors ++
+      types ++ entities ++ adaptors ++ sagas ++ functions ++ terms ++
       projections ++ handlers
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       if (adaptors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
       if (sagas.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
@@ -1346,9 +1350,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier for the referenced context
     */
-  case class ContextRef(loc: Location, id: PathIdentifier)
+  case class ContextRef(loc: Location, pathId: PathIdentifier)
       extends MessageTakingRef[Context] {
-    override def format: String = s"context ${id.format}"
+    override def format: String = s"context ${pathId.format}"
   }
 
   /** Definition of a pipe for data streaming purposes. Pipes are conduits
@@ -1499,7 +1503,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     handlers: Seq[Handler] = Seq.empty[Handler],
     includes: Seq[Include[ProcessorDefinition]] = Seq
       .empty[Include[ProcessorDefinition]],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[ProcessorOption] = Seq.empty[ProcessorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -1508,11 +1512,11 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with PlantDefinition
       with ContextDefinition {
     override def contents: Seq[ProcessorDefinition] = super.contents ++
-      inlets ++ outlets ++ handlers ++ authors ++ terms
+      inlets ++ outlets ++ handlers ++ terms
     final val kind: String = shape.getClass.getSimpleName
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (inlets.nonEmpty) score += Math.max(inlets.count(_.nonEmpty), 5)
       if (outlets.nonEmpty) score += Math.max(outlets.count(_.nonEmpty), 5)
       if (handlers.nonEmpty) score += Math.max(handlers.count(_.nonEmpty), 40)
@@ -1559,9 +1563,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced projection definition
     */
-  case class ProcessorRef(loc: Location, id: PathIdentifier)
+  case class ProcessorRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Processor] {
-    override def format: String = s"${Keywords.processor} ${id.format}"
+    override def format: String = s"${Keywords.processor} ${pathId.format}"
   }
 
   /** A reference to a pipe
@@ -1571,9 +1575,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier for the referenced pipe.
     */
-  case class PipeRef(loc: Location, id: PathIdentifier)
+  case class PipeRef(loc: Location, pathId: PathIdentifier)
       extends MessageTakingRef[Pipe] {
-    override def format: String = s"pipe ${id.format}"
+    override def format: String = s"${Keywords.pipe} ${pathId.format}"
   }
 
   /** Sealed base trait of references to [[Inlet]]s or [[Outlet]]s
@@ -1590,9 +1594,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced [[Inlet]]
     */
-  case class InletRef(loc: Location, id: PathIdentifier)
+  case class InletRef(loc: Location, pathId: PathIdentifier)
       extends StreamletRef[Inlet] {
-    override def format: String = s"inlet ${id.format}"
+    override def format: String = s"${Keywords.inlet} ${pathId.format}"
   }
 
   /** A reference to an [[Outlet]]
@@ -1602,9 +1606,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced [[Outlet]]
     */
-  case class OutletRef(loc: Location, id: PathIdentifier)
+  case class OutletRef(loc: Location, pathId: PathIdentifier)
       extends StreamletRef[Outlet] {
-    override def format: String = s"outlet ${id.format}"
+    override def format: String = s"${Keywords.outlet} ${pathId.format}"
   }
 
   /** Sealed base trait for both kinds of Joint definitions
@@ -1699,18 +1703,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[PlantDefinition]] = Seq
       .empty[Include[PlantDefinition]],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[PlantOption] = Seq.empty[PlantOption],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[PlantOption, PlantDefinition]
       with DomainDefinition {
     override lazy val contents: Seq[PlantDefinition] = super.contents ++
-      pipes ++ processors ++ inJoints ++ outJoints ++ terms ++ authors
+      pipes ++ processors ++ inJoints ++ outJoints ++ terms
     final val kind: String = "Plant"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (pipes.nonEmpty) score += Math.max(pipes.count(_.nonEmpty), 10)
       if (processors.nonEmpty) score +=
         Math.max(processors.count(_.nonEmpty), 20)
@@ -1784,7 +1788,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     functions: Seq[Function] = Seq.empty[Function],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[SagaDefinition]] = Seq.empty[Include[SagaDefinition]],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -1793,15 +1797,14 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with ContextDefinition {
     override lazy val contents: Seq[SagaDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
-        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++
-        authors ++ terms
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++ terms
     }
     final val kind: String = "Saga"
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (input.nonEmpty) score += 10
       if (output.nonEmpty) score += 10
       if (sagaSteps.nonEmpty) score += Math.max(sagaSteps.count(_.nonEmpty), 40)
@@ -1809,9 +1812,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
-  case class SagaRef(loc: Location, id: PathIdentifier)
+  case class SagaRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Saga] {
-    def format: String = ""
+    def format: String = s"${Keywords.saga} ${pathId.format}"
   }
 
   /** An StoryActor (Role) who is the initiator of the user story. Actors may be
@@ -1845,9 +1848,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that locates the references StoryActor
     */
-  case class ActorRef(loc: Location, id: PathIdentifier)
+  case class ActorRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Actor] {
-    override def format: String = ""
+    def format: String = s"${Keywords.actor} ${pathId.format}"
   }
 
   sealed trait InteractionExpression
@@ -2012,7 +2015,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[StoryDefinition]] = Seq
       .empty[Include[StoryDefinition]],
     options: Seq[StoryOption] = Seq.empty[StoryOption],
@@ -2022,7 +2025,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends VitalDefinition[StoryOption, StoryDefinition]
       with DomainDefinition {
     override def contents: Seq[StoryDefinition] = {
-      super.contents ++ cases ++ examples ++ authors ++ terms
+      super.contents ++ cases ++ examples ++ terms
     }
     override def isEmpty: Boolean = {
       contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
@@ -2030,8 +2033,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     final val kind: String = "Story"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (userStory.nonEmpty) score += 3
       if (shownBy.nonEmpty) score += 10
       if (cases.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
@@ -2040,9 +2043,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
-  case class StoryRef(loc: Location, id: PathIdentifier)
+  case class StoryRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Story] {
-    def format: String = ""
+    def format: String = s"${Keywords.story} ${pathId.format}"
   }
 
   sealed trait UIElement extends ApplicationDefinition
@@ -2065,9 +2068,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = ""
   }
 
-  case class GroupRef(loc: Location, id: PathIdentifier)
+  case class GroupRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Group] {
-    override def format: String = ""
+    def format: String = s"${Keywords.group} ${pathId.format}"
   }
 
   /** A UI Element that presents some information to the user
@@ -2106,9 +2109,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the View
     */
-  case class OutputRef(loc: Location, id: PathIdentifier)
+  case class OutputRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Output] {
-    override def format: String = ""
+    def format: String = s"${Keywords.output} ${pathId.format}"
   }
 
   /** A Give is a UI Element to allow the user to 'give' some data to the
@@ -2148,9 +2151,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the Give
     */
-  case class InputRef(loc: Location, id: PathIdentifier)
+  case class InputRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Input] {
-    override def format: String = ""
+    def format: String = s"${Keywords.input} ${pathId.format}"
   }
 
   case class Application(
@@ -2160,7 +2163,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     types: Seq[Type] = Seq.empty[Type],
     groups: Seq[Group] = Seq.empty[Group],
     handlers: Seq[Handler] = Seq.empty[Handler],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
     brief: Option[LiteralString] = None,
@@ -2170,7 +2173,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def kind: String = "Application"
 
     override lazy val contents: Seq[ApplicationDefinition] = {
-      super.contents ++ types ++ groups ++ authors ++ terms ++ includes
+      super.contents ++ types ++ groups ++ terms ++ includes
     }
   }
 
@@ -2180,9 +2183,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the Application
     */
-  case class ApplicationRef(loc: Location, id: PathIdentifier)
+  case class ApplicationRef(loc: Location, pathId: PathIdentifier)
       extends MessageTakingRef[Application] {
-    override def format: String = ""
+    def format: String = s"${Keywords.application} ${pathId.format}"
   }
 
   /** The definition of a domain. Domains are the highest building block in
@@ -2214,7 +2217,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: Location,
     id: Identifier,
     options: Seq[DomainOption] = Seq.empty[DomainOption],
-    authors: Seq[Author] = Seq.empty[Author],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    authorDefs: Seq[Author] = Seq.empty[Author],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
     plants: Seq[Plant] = Seq.empty[Plant],
@@ -2234,12 +2238,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     override lazy val contents: Seq[DomainDefinition] = {
       super.contents ++ domains ++ types ++ contexts ++ plants ++ actors ++
-        stories ++ applications ++ terms ++ authors
+        stories ++ applications ++ terms ++ authorDefs
     }
     final val kind: String = "Domain"
 
-    override def maturity(parents: Seq[Definition]): Int = {
-      var score = super.maturity(parents)
+    override def maturity: Int = {
+      var score = super.maturity
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 15)
       if (contexts.nonEmpty) score += Math.max(contexts.count(_.nonEmpty), 15)
       if (plants.nonEmpty) score += Math.max(plants.count(_.nonEmpty), 10)
@@ -2257,9 +2261,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier for the referenced domain.
     */
-  case class DomainRef(loc: Location, id: PathIdentifier)
+  case class DomainRef(loc: Location, pathId: PathIdentifier)
       extends Reference[Domain] {
-    override def format: String = s"domain ${id.format}"
+    override def format: String = s"${Keywords.domain} ${pathId.format}"
   }
 
 }
