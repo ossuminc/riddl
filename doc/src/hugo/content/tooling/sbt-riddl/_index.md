@@ -18,7 +18,7 @@ To install the SBT plugin all you need to do is add the following to your
 addSbtPlugin("com.reactific" %% "sbt-riddl" % "{version}")
 ```
 Make sure to replace `{version}` with an 
-[appropriate version](https;//github.com/reactific/riddl/releases)
+[appropriate version](https://github.com/reactific/riddl/releases)
  
 
 Then, specify options in your `build.sbt` file like this:
