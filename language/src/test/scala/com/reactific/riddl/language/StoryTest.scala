@@ -45,14 +45,15 @@ class StoryTest extends ValidatingTest {
               messages: Messages.Messages
             ) =>
           domain.stories mustNot be(empty)
-          messages mustBe empty
+          messages.isIgnorable mustBe true
           val story = domain.stories.head
           story.id.format mustBe "WritingABook"
           story.userStory mustNot be(empty)
-          story.userStory.actor.pathId.value mustBe Seq("foo", "Author")
-          story.userStory.capability mustBe
-            LiteralString((4, 26, rpi), "edit on the screen")
-          story.userStory.benefit mustBe
+          val us = story.userStory.get
+          us mustNot be(empty)
+          us.actor.pathId.value mustBe Seq("foo", "Author")
+          us.capability mustBe LiteralString((4, 26, rpi), "edit on the screen")
+          us.benefit mustBe
             LiteralString((5, 3, rpi), "revise content more easily")
           story.shownBy mustNot be(empty)
           story.shownBy.head.toString mustBe

@@ -1,5 +1,9 @@
-domain foo is {
+domain foo by author foo.Nada is {
   term Fum described by "A Fum Description"
+  author Nada is {
+    name: "Anil Nada"
+    email: "anil.nada@nowhere.org"
+  } described as "Nothing"
 } brief "this is the brief description"
 described as {
     "this is the detailed description"

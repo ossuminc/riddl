@@ -86,6 +86,14 @@ object Messages {
     kind: KindOfMessage = Error,
     context: String = "")
       extends Ordered[Message] {
+
+    def isInfo: Boolean = kind.isInfo
+    def isMissing: Boolean = kind.isMissing
+    def isWarning: Boolean = kind.isWarning
+    def isStyle: Boolean = kind.isStyle
+    def isError: Boolean = kind.isError
+    def isSevere: Boolean = kind.isSevereError
+
     override def compare(that: Message): Int = {
       val comparison = this.loc.compare(that.loc)
       if (comparison == 0) { this.kind.compare(that.kind) }
@@ -140,6 +148,9 @@ object Messages {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
+    def justMissing: Messages = msgs.filter(_.isMissing)
+    def justWarnings: Messages = msgs.filter(x => x.isWarning && !x.isMissing)
+    def justErrors: Messages = msgs.filter(_.isError)
   }
 
   val empty: Messages = List.empty[Message]

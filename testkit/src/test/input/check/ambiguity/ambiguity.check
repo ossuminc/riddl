@@ -36,3 +36,18 @@ Warning: ambiguity.riddl(6:5): Entity 'Product' is unused:
 Warning: ambiguity.riddl(9:3): Type 'Alias' is unused:
    type Alias = Id(Product)
    ^
+Missing: ambiguity.riddl(1:1): Vital definitions should have an author reference:
+ domain Inventory is {
+ ^
+Missing: ambiguity.riddl(2:3): Vital definitions should have an author reference:
+   context ProductInventory is {
+   ^
+Missing: ambiguity.riddl(3:5): Vital definitions should have an author reference:
+     entity Product is {???}
+     ^
+Missing: ambiguity.riddl(5:3): Vital definitions should have an author reference:
+   context Vendor is {
+   ^
+Missing: ambiguity.riddl(6:5): Vital definitions should have an author reference:
+     entity Product is {???}
+     ^
