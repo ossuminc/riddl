@@ -105,9 +105,10 @@ class UsageSpec extends AnyWordSpec with Matchers {
           val result = Validation.validate(model, commonOptions)
           info(result.messages.format)
           result.messages.isIgnorable mustBe (false)
-          result.messages.size mustBe (1)
-          val error = result.messages.head.format
-          error must include("Entity 'fooBar' is unused")
+          val warnings = result.messages.justWarnings
+          warnings.size mustBe (1)
+          val warnMessage = warnings.head.format
+          warnMessage must include("Entity 'fooBar' is unused")
       }
 
     }
@@ -120,8 +121,11 @@ class UsageSpec extends AnyWordSpec with Matchers {
         case Left(messages) => fail(messages.format)
         case Right(model) =>
           val result = Validation.validate(model, CommonOptions())
-          result.messages.size mustBe (1)
-          result.messages.head.format must include("Type 'Bar' is unused")
+          result.messages.isIgnorable mustBe (false)
+          val warnings = result.messages.justWarnings
+          warnings.size mustBe (1)
+          val warnMessage = warnings.head.format
+          warnMessage must include("Type 'Bar' is unused")
       }
     }
   }

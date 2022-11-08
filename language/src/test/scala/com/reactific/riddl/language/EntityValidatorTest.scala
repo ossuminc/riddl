@@ -24,7 +24,9 @@ class EntityValidatorTest extends ValidatingTest {
           info(msgs.format)
           msgs.count(_.kind.isError) mustBe 1
           // msgs.count(_.kind.isWarning) mustBe 1
-          msgs.count(_.kind.isMissing) mustBe 2
+          val numMissing =
+          msgs.count(_.kind.isMissing)
+          numMissing mustBe 3
           entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
           entity.options must contain(EntityIsAggregate((3, 19, rpi)))

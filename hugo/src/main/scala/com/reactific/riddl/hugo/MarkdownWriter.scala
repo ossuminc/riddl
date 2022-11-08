@@ -830,19 +830,20 @@ case class MarkdownWriter(
     val parents = state.makeParents(stack)
     emitBriefly(story, parents)
     if (story.userStory.nonEmpty) {
-      val maybeActor = state
-        .resolvePathIdentifier[Actor](story.userStory.actor.pathId, stack)
+      val actorPid = story.userStory.get.actor.pathId
+      val maybeActor = state.resolvePathIdentifier[Actor](actorPid, stack)
       h2("User Story")
       maybeActor match {
         case None =>
-          p(s"Unresolvable Actor id: ${story.userStory.actor.pathId.format}")
+          p(s"Unresolvable Actor id: ${actorPid.format}")
         case Some(actor) =>
           val name = actor.id.value
           val role = actor.is_a.s
-          val benefit = story.userStory.benefit.s
-          val capability = story.userStory.capability.s
+          val us = story.userStory.get
+          val benefit = us.benefit.s
+          val capability = us.capability.s
           val storyText =
-            s"I, $name, as $role, wants $capability, so that $benefit"
+            s"I, $name, as $role, want $capability, so that $benefit"
           p(italic(storyText))
       }
     }

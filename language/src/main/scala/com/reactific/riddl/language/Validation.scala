@@ -221,18 +221,18 @@ object Validation {
     }
 
     def validateTerm(t: Term, parents: Seq[Definition]): ValidationState = {
-      this.checkDefinition(parents.head, t).checkDescription(t)
+      this.checkDefinition(parents, t).checkDescription(t)
     }
 
     def validateEnumerator(
       e: Enumerator,
       parents: Seq[Definition]
     ): ValidationState = {
-      this.checkDefinition(parents.head, e).checkDescription(e)
+      this.checkDefinition(parents, e).checkDescription(e)
     }
 
     def validateField(f: Field, parents: Seq[Definition]): ValidationState = {
-      checkDefinition(parents.head, f)
+      checkDefinition(parents, f)
         .addIf(f.id.value.matches("^[^a-z].*"))(Message(
           f.id.loc,
           "Field names should begin with a lower case letter",
@@ -244,36 +244,34 @@ object Validation {
       e: Example,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, e).checkExample(e, parents)
-        .checkDescription(e)
+      checkDefinition(parents, e).checkExample(e, parents).checkDescription(e)
     }
 
     def validateInvariant(
       i: Invariant,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, i)
-        .checkOption(i.expression, "condition", i) { (st, expr) =>
-          st.checkExpression(expr, i, parents)
-        }.checkDescription(i)
+      checkDefinition(parents, i).checkOption(i.expression, "condition", i) {
+        (st, expr) => st.checkExpression(expr, i, parents)
+      }.checkDescription(i)
     }
 
     def validatePipe(p: Pipe, parents: Seq[Definition]): ValidationState = {
-      checkDefinition(parents.head, p)
+      checkDefinition(parents, p)
         .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
           st.checkPathRef[Type](typeRef.pathId, p, parents)()()
         }.checkDescription(p)
     }
 
     def validateInlet(i: Inlet, parents: Seq[Definition]): ValidationState = {
-      checkDefinition(parents.head, i).checkRef[Type](i.type_, i, parents)
+      checkDefinition(parents, i).checkRef[Type](i.type_, i, parents)
         .checkOption(i.entity, "entity reference", i) { (st, er) =>
           st.checkRef[Entity](er, i, parents)
         }.checkDescription(i)
     }
 
     def validateOutlet(o: Outlet, parents: Seq[Definition]): ValidationState = {
-      checkDefinition(parents.head, o).checkRef[Type](o.type_, o, parents)
+      checkDefinition(parents, o).checkRef[Type](o.type_, o, parents)
         .checkOption(o.entity, "entity reference", o) { (st, er) =>
           st.checkRef[Entity](er, o, parents)
         }.checkDescription(o)
@@ -283,7 +281,7 @@ object Validation {
       ij: InletJoint,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, ij)
+      checkDefinition(parents, ij)
         .checkPathRef[Pipe](ij.pipe.pathId, ij, parents)()()
         .checkPathRef[Inlet](ij.inletRef.pathId, ij, parents)()()
         .checkDescription(ij)
@@ -293,7 +291,7 @@ object Validation {
       oj: OutletJoint,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, oj)
+      checkDefinition(parents, oj)
         .checkPathRef[Pipe](oj.pipe.pathId, oj, parents)()()
         .checkPathRef[Outlet](oj.outletRef.pathId, oj, parents)()()
         .checkDescription(oj)
@@ -303,7 +301,7 @@ object Validation {
       ai: Author,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, ai)
+      checkDefinition(parents, ai)
         .checkNonEmptyValue(ai.name, "name", ai, Error, required = true)
         .checkNonEmptyValue(ai.email, "email", ai, Error, required = true)
         .checkDescription(ai)
@@ -311,7 +309,7 @@ object Validation {
 
     def validateType(t: Type, parents: Seq[Definition]): ValidationState = {
       types = types :+ t
-      checkDefinition(parents.head, t).check(
+      checkDefinition(parents, t).check(
         t.id.value.head.isUpper,
         s"${t.identify} should start with a capital letter",
         StyleWarning,
@@ -322,7 +320,7 @@ object Validation {
     }
 
     def validateState(s: State, parents: Seq[Definition]): ValidationState = {
-      checkDefinition(parents.head, s).checkContainer(parents.headOption, s)
+      checkContainer(parents, s)
         .addIf(s.aggregation.fields.isEmpty && !s.isEmpty) {
           Message(
             s.aggregation.loc,
@@ -338,25 +336,23 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       functions = functions :+ f
-      checkContainer(parents.headOption, f)
-        .checkOptions[FunctionOption](f.options, f.loc).checkDescription(f)
+      checkContainer(parents, f).checkOptions[FunctionOption](f.options, f.loc)
+        .checkDescription(f)
     }
 
     def validateHandler(
       h: Handler,
       parents: Seq[Definition]
-    ): ValidationState = {
-      checkContainer(parents.headOption, h).checkDescription(h)
-    }
+    ): ValidationState = { checkContainer(parents, h).checkDescription(h) }
 
     def validateOnClause(
       oc: OnClause,
       parents: Seq[Definition]
     ): ValidationState = {
       (oc match {
-        case ooc: OnOtherClause => this.checkDefinition(parents.head, ooc)
+        case ooc: OnOtherClause => this.checkDefinition(parents, ooc)
         case omc @ OnMessageClause(_, msg, from, _, _, _) => this
-            .checkDefinition(parents.head, omc).checkThat(msg.nonEmpty) { st =>
+            .checkDefinition(parents, omc).checkThat(msg.nonEmpty) { st =>
               st.checkMessageRef(msg, oc, parents, msg.messageKind)
             }.checkThat(from.nonEmpty) { st =>
               st.checkRef(from.get, oc, parents)
@@ -381,47 +377,48 @@ object Validation {
 
     def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {
       this.entities = this.entities :+ e
-      checkContainer(parents.headOption, e).checkOptions[EntityOption](
-        e.options,
-        e.loc
-      ).addIf(e.states.isEmpty && !e.isEmpty) {
-        Message(
-          e.loc,
-          s"${e.identify} must define at least one state",
-          MissingWarning
-        )
-      }.addIf(e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty)) {
-        Message(e.loc, s"${e.identify} has only empty handlers", MissingWarning)
-      }.addIf(e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2) {
-        Message(
-          e.loc,
-          s"${e.identify} is declared as an fsm, but doesn't have at least two states",
-          Error
-        )
-      }.checkDescription(e)
+      checkContainer(parents, e).checkOptions[EntityOption](e.options, e.loc)
+        .addIf(e.states.isEmpty && !e.isEmpty) {
+          Message(
+            e.loc,
+            s"${e.identify} must define at least one state",
+            MissingWarning
+          )
+        }.addIf(e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty)) {
+          Message(
+            e.loc,
+            s"${e.identify} has only empty handlers",
+            MissingWarning
+          )
+        }
+        .addIf(e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2) {
+          Message(
+            e.loc,
+            s"${e.identify} is declared as an fsm, but doesn't have at least two states",
+            Error
+          )
+        }.checkDescription(e)
     }
 
     def validateProjection(
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, p).checkAggregation(p.aggregation)
+      checkContainer(parents, p).checkAggregation(p.aggregation)
         .checkDescription(p)
     }
 
     def validateRepository(
       r: Repository,
       parents: Seq[Definition]
-    ): ValidationState = {
-      checkContainer(parents.headOption, r).checkDescription(r)
-    }
+    ): ValidationState = { checkContainer(parents, r).checkDescription(r) }
     def validateAdaptor(
       a: Adaptor,
       parents: Seq[Definition]
     ): ValidationState = {
       parents.headOption match {
         case Some(c: Context) =>
-          val s1 = checkContainer(parents.headOption, a)
+          val s1 = checkContainer(parents, a)
           val targetContext = resolvePath(a.context.pathId, parents)()()
           val s2 = targetContext.headOption match {
             case Some(target: Context) =>
@@ -443,23 +440,22 @@ object Validation {
       p: Processor,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, p).checkProcessorKind(p)
-        .checkDescription(p)
+      checkContainer(parents, p).checkProcessorKind(p).checkDescription(p)
     }
 
     def validateDomain(d: Domain, parents: Seq[Definition]): ValidationState = {
-      checkContainer(parents.headOption, d).checkDescription(d)
+      checkContainer(parents, d).checkDescription(d)
     }
 
     def validateSaga(s: Saga, parents: Seq[Definition]): ValidationState = {
-      checkContainer(parents.headOption, s).checkDescription(s)
+      checkContainer(parents, s).checkDescription(s)
     }
 
     def validateSagaStep(
       s: SagaStep,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, s).check(
+      checkContainer(parents, s).check(
         s.doAction.getClass == s.undoAction.getClass,
         "The primary action and revert action must be the same shape",
         Error,
@@ -472,15 +468,15 @@ object Validation {
       c: Context,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, c)
-        .checkOptions[ContextOption](c.options, c.loc).checkDescription(c)
+      checkContainer(parents, c).checkOptions[ContextOption](c.options, c.loc)
+        .checkDescription(c)
     }
 
     def validateStory(
       s: Story,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, s).checkThat(s.userStory.isEmpty) {
+      checkContainer(parents, s).checkThat(s.userStory.isEmpty) {
         vs: ValidationState =>
           vs.addMissing(s.loc, s"${s.identify} is missing a user story")
       }.checkExamples(s.examples, parents).checkDescription(s)
@@ -490,7 +486,7 @@ object Validation {
       app: Application,
       parents: Seq[AST.Definition]
     ): ValidationState = {
-      checkContainer(parents.headOption, app).checkThat(app.groups.isEmpty) {
+      checkContainer(parents, app).checkThat(app.groups.isEmpty) {
         vs: ValidationState =>
           vs.addMissing(app.loc, s"${app.identify} should have a group")
       }.checkDescription(app)
@@ -499,13 +495,13 @@ object Validation {
     def validateGroup(
       grp: Group,
       parents: Seq[AST.Definition]
-    ): ValidationState = { checkDefinition(parents.head, grp) }
+    ): ValidationState = { checkDefinition(parents, grp) }
 
     def validateInput(
       in: Input,
       parents: Seq[AST.Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, in)
+      checkDefinition(parents, in)
         .checkMessageRef(in.putIn, in, parents, CommandKind)
         .checkDescription(in)
     }
@@ -514,22 +510,22 @@ object Validation {
       out: Output,
       parents: Seq[AST.Definition]
     ): ValidationState = {
-      checkDefinition(parents.head, out)
+      checkDefinition(parents, out)
         .checkMessageRef(out.putOut, out, parents, ResultKind)
         .checkDescription(out)
 
     }
 
     def validateActor(
-      @unused sa: Actor,
+      @unused actor: Actor,
       @unused parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(sa, parents.head).checkThat(sa.is_a.isEmpty) { vs =>
+      checkDefinition(parents, actor).checkThat(actor.is_a.isEmpty) { vs =>
         vs.addMissing(
-          sa.loc,
-          s"${sa.identify} is missing its role kind ('is a')"
+          actor.loc,
+          s"${actor.identify} is missing its role kind ('is a')"
         )
-      }.checkDescription(sa)
+      }.checkDescription(actor)
       this
     }
 
@@ -537,7 +533,7 @@ object Validation {
       sc: StoryCase,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkDefinition(sc, parents.head).stepIf(sc.interactions.nonEmpty) { st =>
+      checkDefinition(parents, sc).stepIf(sc.interactions.nonEmpty) { st =>
         sc.interactions.foldLeft(st) { (st, step) =>
           step match {
             case par: ParallelGroup => st
@@ -578,9 +574,7 @@ object Validation {
     def validatePlant(
       p: Plant,
       parents: Seq[Definition]
-    ): ValidationState = {
-      checkContainer(parents.headOption, p).checkDescription(p)
-    }
+    ): ValidationState = { checkContainer(parents, p).checkDescription(p) }
 
     def checkUnused(): ValidationState = {
       if (commonOptions.showUnusedWarnings) {
@@ -1052,7 +1046,7 @@ object Validation {
     }
 
     def checkDefinition(
-      parent: Definition,
+      parents: Seq[Definition],
       definition: Definition
     ): ValidationState = {
       var result = this.check(
@@ -1060,9 +1054,24 @@ object Validation {
         "Definitions may not have empty names",
         Error,
         definition.loc
-      )
-      result = result.checkIdentifierLength(definition)
-      result = result.checkUniqueContent(definition)
+      ).checkIdentifierLength(definition).checkUniqueContent(definition).check(
+        !definition.isVital || definition.hasAuthors,
+        "Vital definitions should have an author reference",
+        MissingWarning,
+        definition.loc
+      ).stepIf(definition.isVital) { vs: ValidationState =>
+        definition.asInstanceOf[WithAuthors].authors
+          .foldLeft(vs) { case (vs, authorRef) =>
+            pathIdToDefinition(authorRef.pathId, parents) match {
+              case None => vs.addError(
+                  authorRef.loc,
+                  s"${authorRef.format} is not defined"
+                )
+              case _ => vs
+            }
+          }
+      }
+
       val path = symbolTable.pathOf(definition)
       if (!definition.id.isEmpty) {
         val matches = result.lookup[Definition](path)
@@ -1073,11 +1082,12 @@ object Validation {
           )
         } else if (matches.sizeIs >= 2) {
           val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
-          parentGroups.get(Option(parent)) match {
+          parentGroups.get(parents.headOption) match {
             case Some(head :: tail) if tail.nonEmpty =>
               result = result.addWarning(
                 head.id.loc,
-                s"${definition.identify} has same name as other definitions in ${parent.identifyWithLoc}:  " +
+                s"${definition.identify} has same name as other definitions " +
+                  s"in ${head.identifyWithLoc}:  " +
                   tail.map(x => x.identifyWithLoc).mkString(",  ")
               )
             case Some(head :: tail) if tail.isEmpty =>
@@ -1093,6 +1103,19 @@ object Validation {
         }
       }
       result
+    }
+
+    def checkContainer(
+      parents: Seq[Definition],
+      container: Definition
+    ): ValidationState = {
+      val parent: Definition = parents.headOption.getOrElse(RootContainer.empty)
+      checkDefinition(parents, container).check(
+        container.nonEmpty || container.isInstanceOf[Field],
+        s"${container.identify} in ${parent.identify} should have content",
+        MissingWarning,
+        container.loc
+      )
     }
 
     def checkDescription[TD <: DescribedValue](
@@ -1125,19 +1148,6 @@ object Validation {
     def checkDescription[TD <: Definition](
       definition: TD
     ): ValidationState = { checkDescription(definition.identify, definition) }
-
-    def checkContainer(
-      maybeParent: Option[Definition],
-      container: Definition
-    ): ValidationState = {
-      val parent = maybeParent.getOrElse(RootContainer.empty)
-      checkDefinition(parent, container).check(
-        container.nonEmpty || container.isInstanceOf[Field],
-        s"${container.identify} in ${parent.identify} should have content",
-        MissingWarning,
-        container.loc
-      )
-    }
 
     def checkAction(
       action: Action,

@@ -171,7 +171,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     def kind: String = ""
   }
 
-  trait WithAuthorRefs extends Definition {
+  trait WithAuthors extends Definition {
     def authors: Seq[AuthorRef]
     override def hasAuthors: Boolean = authors.nonEmpty
   }
@@ -180,20 +180,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     defn: Definition,
     parents: Seq[Definition]
   ): Seq[AuthorRef] = {
-    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthorRefs].authors }
+    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthors].authors }
     else {
       parents.find(d =>
-        d.isInstanceOf[WithAuthorRefs] &&
-          d.asInstanceOf[WithAuthorRefs].hasAuthors
-      ).map(_.asInstanceOf[WithAuthorRefs].authors)
-        .getOrElse(Seq.empty[AuthorRef])
+        d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors
+      ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[AuthorRef])
     }
   }
 
   sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
       with WithOptions[T]
-      with WithAuthorRefs
+      with WithAuthors
       with WithIncludes[CT]
       with WithTerms {
 
@@ -2011,7 +2009,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class Story(
     loc: Location,
     id: Identifier,
-    userStory: UserStory,
+    userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],

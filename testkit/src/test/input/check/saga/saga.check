@@ -49,3 +49,21 @@ Style: saga.riddl(6:57): Field identifier 'b' is too short. The minimum length i
 Missing: saga.riddl(26:7): SagaStep 'Two' should have a description:
        step Two is {
        ^
+Missing: saga.riddl(12:5): Vital definitions should have an author reference:
+     entity blah is { ??? }
+     ^
+Missing: saga.riddl(13:5): Vital definitions should have an author reference:
+     saga name is {
+     ^
+Missing: saga.riddl(1:1): Vital definitions should have an author reference:
+ domain ignore1 is {
+ ^
+Missing: saga.riddl(2:3): Vital definitions should have an author reference:
+   context ignore2 is {
+   ^
+Missing: saga.riddl(5:5): Vital definitions should have an author reference:
+     function AnotherThing {
+     ^
+Missing: saga.riddl(8:5): Vital definitions should have an author reference:
+     function UndoAnotherThing {
+     ^

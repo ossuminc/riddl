@@ -198,7 +198,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         if (story.userStory.isEmpty) {
           st.openDef(story, withBrace = false).add(" ??? ")
         } else {
-          val us = story.userStory
+          val us = story.userStory.get
           val actor = us.actor.pathId
           st.openDef(story).addIndent("actor").add(actor.format).add(" ")
             .add(Readability.wants).add(" ").add(Readability.to)
