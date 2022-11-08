@@ -25,9 +25,10 @@ trait RepositoryParser extends HandlerParser {
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~ identifier ~ authorRefs ~ is ~ open ~
-        repositoryOptions ~ repositoryDefinitions ~ close ~ briefly ~
-        description
+      location ~ Keywords.repository ~/ identifier ~ authorRefs ~ is ~ open ~
+        repositoryOptions ~
+        (undefined(Seq.empty[RepositoryDefinition]) | repositoryDefinitions) ~
+          close ~ briefly ~ description
     ).map { case (loc, id, authors, opts, defs, brief, desc) =>
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))

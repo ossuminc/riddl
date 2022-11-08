@@ -115,9 +115,16 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     P(storyCase | example | term | storyInclude).rep(0)
   }
 
-  def storyBody[u: P]: P[
-    (Seq[StoryOption], UserStory, Seq[java.net.URL], Seq[StoryDefinition])
-  ] = { P(storyOptions ~ userStory ~ shownBy ~ storyDefinitions)./ }
+  type StoryBody = (
+    Seq[StoryOption],
+    Option[UserStory],
+    Seq[java.net.URL],
+    Seq[StoryDefinition]
+  )
+  def storyBody[u: P]: P[StoryBody] = { P(
+    undefined((Seq.empty[StoryOption], Option.empty[UserStory],
+      Seq.empty[java.net.URL], Seq.empty[StoryDefinition])) |
+      (storyOptions ~ userStory.? ~ shownBy ~ storyDefinitions))./ }
 
   def story[u: P]: P[Story] = {
     P(

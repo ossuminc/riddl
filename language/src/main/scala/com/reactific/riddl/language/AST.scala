@@ -171,7 +171,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     def kind: String = ""
   }
 
-  trait WithAuthorRefs extends Definition {
+  trait WithAuthors extends Definition {
     def authors: Seq[AuthorRef]
     override def hasAuthors: Boolean = authors.nonEmpty
   }
@@ -180,20 +180,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     defn: Definition,
     parents: Seq[Definition]
   ): Seq[AuthorRef] = {
-    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthorRefs].authors }
+    if (defn.hasAuthors) { defn.asInstanceOf[WithAuthors].authors }
     else {
       parents.find(d =>
-        d.isInstanceOf[WithAuthorRefs] &&
-          d.asInstanceOf[WithAuthorRefs].hasAuthors
-      ).map(_.asInstanceOf[WithAuthorRefs].authors)
-        .getOrElse(Seq.empty[AuthorRef])
+        d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors
+      ).map(_.asInstanceOf[WithAuthors].authors).getOrElse(Seq.empty[AuthorRef])
     }
   }
 
   sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
       extends Definition
       with WithOptions[T]
-      with WithAuthorRefs
+      with WithAuthors
       with WithIncludes[CT]
       with WithTerms {
 
@@ -888,8 +886,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** Defines the actions to be taken when a particular message is received by
-    * an entity. [[OnMessageClause]]s are used in the definition of a [[Handler]] with
-    * one for each kind of message that handler deals with.
+    * an entity. [[OnMessageClause]]s are used in the definition of a
+    * [[Handler]] with one for each kind of message that handler deals with.
     *
     * @param loc
     *   The location of the "on" clause
@@ -920,18 +918,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** A named handler of messages (commands, events, queries) that bundles
-    * together a set of [[OnMessageClause]] definitions and by doing so defines the
-    * behavior of an entity. Note that entities may define multiple handlers and
-    * switch between them to change how it responds to messages over time or in
-    * response to changing conditions
+    * together a set of [[OnMessageClause]] definitions and by doing so defines
+    * the behavior of an entity. Note that entities may define multiple handlers
+    * and switch between them to change how it responds to messages over time or
+    * in response to changing conditions
     *
     * @param loc
     *   The location of the handler definition
     * @param id
     *   The name of the handler.
     * @param clauses
-    *   The set of [[OnMessageClause]] definitions that define how the entity responds
-    *   to received messages.
+    *   The set of [[OnMessageClause]] definitions that define how the entity
+    *   responds to received messages.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2011,7 +2009,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class Story(
     loc: Location,
     id: Identifier,
-    userStory: UserStory,
+    userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     cases: Seq[StoryCase] = Seq.empty[StoryCase],
     examples: Seq[Example] = Seq.empty[Example],

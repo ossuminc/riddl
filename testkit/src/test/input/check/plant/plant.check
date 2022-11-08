@@ -28,3 +28,18 @@ Missing: plant.riddl(5:5): entity reference in Outlet 'WeatherSink' should not b
 Missing: plant.riddl(9:5): entity reference in Inlet 'WeatherSource' should not be empty:
      inlet WeatherSource is Forecast
      ^
+Missing: plant.riddl(13:3): Vital definitions should have an author reference:
+   sink AttenuateSensor is {
+   ^
+Missing: plant.riddl(1:1): Vital definitions should have an author reference:
+ domain AnyDomain is {
+ ^
+Missing: plant.riddl(2:1): Vital definitions should have an author reference:
+ plant SensorMaintenance is {
+ ^
+Missing: plant.riddl(4:3): Vital definitions should have an author reference:
+   source GetWeatherForecast is {
+   ^
+Missing: plant.riddl(8:3): Vital definitions should have an author reference:
+   flow GetCurrentTemperature is {
+   ^
