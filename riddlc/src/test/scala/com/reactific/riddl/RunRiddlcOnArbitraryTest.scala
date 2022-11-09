@@ -13,7 +13,7 @@ import java.nio.file.Path
 /** Run a "from" command on a specific .conf file */
 class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
 
-  val cwd = "/Users/reid/Code/Improving/improving-app/riddl"
+  val cwd = "/Users/reid/Code/improving.app/riddl"
   val config = "src/main/riddl/KalixStudy.conf"
 
   "riddlc" should {

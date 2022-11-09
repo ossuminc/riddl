@@ -61,6 +61,9 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
     log.info(s"   organization: ${RiddlBuildInfo.organizationName}")
     log.info(s"  scala version: ${RiddlBuildInfo.scalaVersion}")
     log.info(s"    sbt version: ${RiddlBuildInfo.sbtVersion}")
+    log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
+    log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
+    log.info(s"  operating sys: ${System.getProperty("os.name")}")
     Right(())
   }
 }

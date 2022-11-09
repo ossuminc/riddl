@@ -202,7 +202,6 @@ trait Expressions extends TypeExpression {
     expr1: Expression,
     expr2: Expression)
       extends Expression {
-    require(expr1.expressionType.isAssignmentCompatible(expr2.expressionType))
     override def format: String =
       s"if(${condition.format},${expr1.format},${expr2.format})"
 

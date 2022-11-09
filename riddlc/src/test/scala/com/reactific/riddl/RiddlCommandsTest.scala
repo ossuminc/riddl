@@ -19,7 +19,7 @@ class RiddlCommandsTest extends RunCommandSpecBase {
     (name: String) => s"riddlc/target/test/$name"
 
   "Riddlc Commands" should {
-    "generate info" in { runCommand(Array("--quiet", "info")) }
+    "generate info" in { runCommand(Array("info")) }
     "provide help" in { runCommand(Array("--quiet", "help")) }
     "print version" in { runCommand(Array("--quiet", "version")) }
     "handle parse" in {
