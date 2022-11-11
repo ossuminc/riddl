@@ -77,7 +77,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
   }
 
   def description[u: P]: P[Option[Description]] = P(
-    StringIn(Keywords.described, Keywords.explained) ~
+    StringIn(Keywords.described, Keywords.explained) ~/
       ((as ~ blockDescription) | (Readability.in ~ fileDescription))
   ).?
 

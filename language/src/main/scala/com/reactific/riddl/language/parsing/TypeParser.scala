@@ -242,16 +242,25 @@ trait TypeParser extends CommonParser {
     ))
   }
 
+  def defOfMessage[u:P]: P[Type] = {
+    P(location ~ messageKind ~/ identifier ~ is ~ aggregation ~ briefly ~
+      description
+    ).map { case (loc, mk, id, agg, b, d) =>
+      val mt = makeMessageType(loc, mk, agg)
+      Type(loc, id, mt, b, d)
+    }
+  }
+
+  def defOfType[u:P]: P[Type] = {
+    P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~
+      description
+    ).map { case (loc, id, typEx, b, d) =>
+      Type(loc, id, typEx, b, d)
+    }
+  }
+
   def typeDef[u: P]: P[Type] = {
-    P(
-      (location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~
-        briefly ~ description).map { tpl => (Type.apply _).tupled(tpl) } |
-        (location ~ messageKind ~/ identifier ~ is ~ location ~ aggregation ~
-          briefly ~ description).map { case (loc, mk, id, loc2, agg, b, d) =>
-          val mt = makeMessageType(loc2, mk, agg)
-          Type(loc, id, mt, b, d)
-        }
-    )
+    defOfType | defOfMessage
   }
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
