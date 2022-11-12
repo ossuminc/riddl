@@ -243,10 +243,11 @@ trait TypeParser extends CommonParser {
   }
 
   def defOfMessage[u:P]: P[Type] = {
-    P(location ~ messageKind ~/ identifier ~ is ~ aggregation ~ briefly ~
+    P(location ~ messageKind ~/ identifier ~ is  ~ aggregation ~
+      briefly ~
       description
     ).map { case (loc, mk, id, agg, b, d) =>
-      val mt = makeMessageType(loc, mk, agg)
+      val mt =  MessageType(agg.loc, mk, agg.fields)
       Type(loc, id, mt, b, d)
     }
   }
