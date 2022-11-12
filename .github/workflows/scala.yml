@@ -1,4 +1,4 @@
-name: Scala CI
+name: Scala Build
 
 on:
   push:
@@ -24,10 +24,14 @@ jobs:
         extended: true
     - name: Coursier Caching
       uses: coursier/cache-action@v6
-    - name: Build, Run Tests, Generate Packages
+    - name: Build, Run Test, Coverage
       run: |
         which hugo
-        sbt -v clean Test/compile test
+        sbt -v clean coverage Test/compile test coverageAggregate coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
+
     - name: Cleanup Before Caching
       shell: bash
       run: |

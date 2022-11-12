@@ -1,5 +1,6 @@
-![Code Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
-![Documentation Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
+[![Code Build Status](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)](https://github.com/reactific/riddl/actions/workflows/scala.yml/badge.svg)
+[![Documentation Build Status](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/reactific/riddl/actions/workflows/gh-pages.yml/badge.svg)
+[![Coverage](https://coveralls.io/repos/github/reactific/riddl/badge.svg?branch=coverage)](https://coveralls.io/github/reactific/riddl?branch=coverage)
 [![CLA assistant](https://cla-assistant.io/readme/badge/reactific/riddl)](https://cla-assistant.io/reactific/riddl)
 
 # RIDDL

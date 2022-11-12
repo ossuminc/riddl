@@ -58,7 +58,7 @@ object C {
           "Apache-2.0",
           new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
         ),
-      ThisBuild / versionScheme := Option("semver-spec"),
+      ThisBuild / versionScheme := Option("early-semver"),
       ThisBuild / dynverVTagPrefix := false,
       // NEVER  SET  THIS: version := "0.1"
       // IT IS HANDLED BY: sbt-dynver
@@ -117,7 +117,8 @@ object C {
       coverageMinimumStmtPerPackage := percent,
       coverageMinimumBranchPerPackage := percent,
       coverageMinimumStmtPerFile := percent,
-      coverageMinimumBranchPerFile := percent
+      coverageMinimumBranchPerFile := percent,
+      coverageExcludedPackages := "<empty>"
     )
   }
 
@@ -184,8 +185,7 @@ object C {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
         }
       },
-      publishMavenStyle := true,
-      versionScheme := Some("early-semver")
+      publishMavenStyle := true
     )
   }
 }
