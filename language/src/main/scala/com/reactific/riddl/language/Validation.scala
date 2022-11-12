@@ -1324,17 +1324,29 @@ object Validation {
           Error,
           loc
         ).checkExpressions(operands, defn, parents)
-      case Comparison(_, _, arg1, arg2) => checkExpression(arg1, defn, parents)
-          .checkExpression(arg2, defn, parents)
+      case Comparison(loc, comp, arg1, arg2) =>
+        checkExpression(arg1, defn, parents)
+          .checkExpression(arg2, defn, parents).check(
+            arg1.expressionType.isAssignmentCompatible(arg2.expressionType),
+            s"Incompatible expression types in ${comp.format} expression",
+            Messages.Error,
+            loc
+          )
       case AggregateConstructionExpression(_, pid, args) =>
         checkPathRef[Type](pid, defn, parents)()()
           .checkArgList(args, defn, parents)
       case EntityIdExpression(_, entityRef) =>
         checkPathRef[Entity](entityRef, defn, parents)()()
-      case Ternary(_, condition, expr1, expr2) =>
+      case Ternary(loc, condition, expr1, expr2) =>
         checkExpression(condition, defn, parents)
           .checkExpression(expr1, defn, parents)
-          .checkExpression(expr2, defn, parents)
+          .checkExpression(expr2, defn, parents).check(
+            expr1.expressionType.isAssignmentCompatible(expr2.expressionType),
+            "Incompatible expression types in Ternary expression",
+            Messages.Error,
+            loc
+          )
+
       case NotCondition(_, cond1) => checkExpression(cond1, defn, parents)
       case condition: MultiCondition =>
         checkExpressions(condition.conditions, defn, parents)
