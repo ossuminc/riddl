@@ -31,7 +31,21 @@ import java.nio.file.Path
 import scala.annotation.unused
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
-/** Test Setup for running a command on the examples */
+/** Test Setup for running a command on the riddl-examples repos.
+  *
+  * This testkit helper allows you to create a test that runs a command on all
+  * the examples in the riddl-examples repo. It will download the riddl-examples
+  * repo, unzip it, and run the command on each example. The command is run in a
+  * temporary directory, and the output is compared to the expected output in
+  * the example.
+  *
+  * @tparam OPT
+  *   The class for the Options of the command
+  * @tparam CMD
+  *   The class for the Command
+  * @param commandName
+  *   The name of the command to run.
+  */
 abstract class RunCommandOnExamplesTest[
   OPT <: CommandOptions,
   CMD <: CommandPlugin[OPT]
@@ -71,7 +85,9 @@ abstract class RunCommandOnExamplesTest[
 
   def validate(@unused name: String): Boolean = true
 
-  def forEachConfigFile[T](f: (String, Path) => T): Seq[Either[Messages, T]] = {
+  def forEachConfigFile[T](
+    f: (String, Path) => T
+  ): Seq[Either[(String, Messages), T]] = {
     val configs = FileUtils
       .iterateFiles(srcDir.toFile, Array[String](suffix), true).asScala.toSeq
     for {
@@ -79,12 +95,17 @@ abstract class RunCommandOnExamplesTest[
       name = config.getName.dropRight(suffix.length + 1)
     } yield {
       if (validate(name)) {
-        val commands = CommandPlugin.loadCandidateCommands(config.toPath)
-        if (commands.contains(commandName)) { Right(f(name, config.toPath)) }
-        else { Left(errors(s"Command $commandName not found in $config")) }
+        CommandPlugin.loadCandidateCommands(config.toPath) match {
+          case Right(commands) =>
+            if (commands.contains(commandName)) {
+              Right(f(name, config.toPath))
+            } else {
+              Left(name -> errors(s"Command $commandName not found in $config"))
+            }
+          case Left(messages) => Left(name -> messages)
+        }
       } else {
-        info(s"Skipping $name")
-        Left(warnings(s"Command $commandName skipped for $name"))
+        Left(name -> warnings(s"Command $commandName skipped for $name"))
       }
     }
   }
@@ -128,7 +149,7 @@ abstract class RunCommandOnExamplesTest[
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTests(): Unit = {
-    forEachConfigFile { case (name, path) =>
+    val results = forEachConfigFile { case (name, path) =>
       val outputDir = outDir.resolve(name)
 
       val result = CommandPlugin.runCommandNamed(
@@ -139,8 +160,20 @@ abstract class RunCommandOnExamplesTest[
         outputDirOverride = Some(outputDir)
       )
       result match {
-        case Right(cmd) => onSuccess(commandName, name, path, cmd, outputDir)
-        case Left(messages) => fail(messages.format)
+        case Right(command) =>
+          onSuccess(commandName, name, path, command, outputDir) -> name
+        case Left(messages) =>
+          onFailure(commandName, name, path, messages, outputDir) -> name
+      }
+    }
+    for { result <- results } {
+      result match {
+        case Right(_) => // do nothing
+        case Left((name, messages)) =>
+          val errors = messages.justErrors
+          if (errors.nonEmpty) {
+            fail(s"Test case $name failed:\n${errors.format}")
+          } else { info(messages.format) }
       }
     }
   }
@@ -159,8 +192,11 @@ abstract class RunCommandOnExamplesTest[
         outputDirOverride = Some(outputDir)
       )
       result match {
-        case Right(cmd) => onSuccess(commandName, name, path, cmd, outputDir)
-        case Left(messages) => fail(messages.format)
+        case Right(command) =>
+          onSuccess(commandName, name, path, command, outputDir)
+        case Left(messages) =>
+          onFailure(commandName, name, path, messages, outputDir)
+
       }
     }
   }
@@ -181,4 +217,13 @@ abstract class RunCommandOnExamplesTest[
     @unused command: CommandPlugin[CommandOptions],
     @unused tempDir: Path
   ): Assertion = { succeed }
+
+  def onFailure(
+    @unused commandName: String,
+    @unused caseName: String,
+    @unused configFile: Path,
+    @unused messages: Messages,
+    @unused tempDir: Path
+  ): Assertion = { fail(messages.format) }
+
 }

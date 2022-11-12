@@ -33,7 +33,7 @@ lazy val riddl = (project in file(".")).enablePlugins(ScoverageSbtPlugin)
     testkit,
     prettify,
     hugo,
-    `git-check`,
+    onchange,
     doc,
     riddlc,
     plugin
@@ -122,10 +122,10 @@ lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage(0))
   .dependsOn(language % "compile->compile", commands, testkit % "test->compile")
   .dependsOn(utils)
 
-lazy val GitCheck = config("git-check")
-lazy val `git-check`: Project = project.in(file("git-check"))
+lazy val OnChange = config("onchange")
+lazy val onchange: Project = project.in(file("onchange"))
   .configure(C.withCoverage(0)).configure(C.mavenPublish).settings(
-    name := "riddl-git-check",
+    name := "riddl-onchange",
     Compile / unmanagedResourceDirectories += {
       baseDirectory.value / "resources"
     },
@@ -139,7 +139,7 @@ lazy val scaladocSiteProjects = List(
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
-  (`git-check`, GitCheck),
+  (onchange, OnChange),
   (hugo, HugoTrans),
   (riddlc, Riddlc)
 )
@@ -186,7 +186,7 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     commands,
     language,
     hugo,
-    `git-check`,
+    onchange,
     testkit % "test->compile"
   ).settings(
     name := "riddlc",

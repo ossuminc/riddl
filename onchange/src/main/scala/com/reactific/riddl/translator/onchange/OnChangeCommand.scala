@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.translator.hugo_git_check
+package com.reactific.riddl.translator.onchange
+
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.CommandPlugin
@@ -19,28 +20,30 @@ import scopt.OParser
 import java.io.File
 import java.nio.file.Path
 
-object GitCheckCommand {
+object OnChangeCommand {
+  final val cmdName: String = "onchange"
   case class Options(
     gitCloneDir: Option[Path] = None,
     relativeDir: Option[Path] = None,
     userName: String = "",
     accessToken: String = "")
       extends CommandOptions {
-    def command: String = "hugo-git-check"
+    def command: String = cmdName
     def inputFile: Option[Path] = None
   }
 }
 
 /** HugoGitCheck Command */
-class GitCheckCommand
-    extends CommandPlugin[GitCheckCommand.Options]("hugo-git-check") {
-  import GitCheckCommand.Options
+class OnChangeCommand
+    extends CommandPlugin[OnChangeCommand.Options](OnChangeCommand.cmdName)
+ {
+  import OnChangeCommand.Options
 
   override def getOptions: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
     OParser.sequence(
-      cmd("git-check").children(
+      cmd("onchange").children(
         opt[File]("git-clone-dir").required()
           .action((f, opts) => opts.copy(gitCloneDir = Some(f.toPath)))
           .text("""Provides the top directory of a git repo clone that
@@ -59,7 +62,7 @@ class GitCheckCommand
     ) -> Options()
   }
 
-  implicit val hugoGitCheckReader: ConfigReader[Options] = {
+  implicit val onChangeReader: ConfigReader[Options] = {
     (cur: ConfigCursor) =>
       {
         for {
@@ -73,7 +76,7 @@ class GitCheckCommand
           accessTokenRes <- objCur.atKey("access-token")
           accessTokenStr <- accessTokenRes.asString
         } yield {
-          GitCheckCommand.Options(
+          OnChangeCommand.Options(
             gitCloneDir = Some(gitCloneDir.toPath),
             userName = userNameStr,
             accessToken = accessTokenStr
@@ -82,7 +85,7 @@ class GitCheckCommand
       }
   }
 
-  override def getConfigReader: ConfigReader[Options] = hugoGitCheckReader
+  override def getConfigReader: ConfigReader[Options] = onChangeReader
 
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug

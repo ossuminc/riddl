@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.translator.hugo_git_check
+package com.reactific.riddl.translator.onchange
 
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.*
 import com.reactific.riddl.utils.Logger
 import org.eclipse.jgit.api.*
 import org.eclipse.jgit.api.errors.GitAPIException
-import org.eclipse.jgit.lib.ProgressMonitor
 import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.submodule.SubmoduleWalk
@@ -24,9 +23,9 @@ import java.time.Instant
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters.*
 
-object GitCheck {
+object OnChange {
 
-  private def creds(options: GitCheckCommand.Options) =
+  private def creds(options: OnChangeCommand.Options) =
     new UsernamePasswordCredentialsProvider(
       options.userName,
       options.accessToken
@@ -36,12 +35,12 @@ object GitCheck {
     root: AST.RootContainer,
     log: Logger,
     commonOptions: CommonOptions,
-    options: GitCheckCommand.Options
+    options: OnChangeCommand.Options
   )(doit: (
       AST.RootContainer,
       Logger,
       CommonOptions,
-      GitCheckCommand.Options
+      OnChangeCommand.Options
     ) => Either[Messages, Unit]
   ): Either[Messages, Unit] = {
     require(
@@ -81,7 +80,7 @@ object GitCheck {
   def gitHasChanges(
     log: Logger,
     commonOptions: CommonOptions,
-    options: GitCheckCommand.Options,
+    options: OnChangeCommand.Options,
     git: Git,
     minTime: FileTime
   ): Boolean = {
@@ -93,9 +92,9 @@ object GitCheck {
         val relativized = top.relativize(relativeDir)
         if (relativized.getNameCount > 1) relativized.toString else "."
       } else { "." }
-    val status = git.status()
-      .setProgressMonitor(DotWritingProgressMonitor(log, commonOptions))
-      .setIgnoreSubmodules(SubmoduleWalk.IgnoreSubmoduleMode.ALL)
+    val status = git.status().setProgressMonitor(
+      DotWritingProgressMonitor(System.out, log, commonOptions)
+    ).setIgnoreSubmodules(SubmoduleWalk.IgnoreSubmoduleMode.ALL)
       .addPath(subPath).call()
 
     val potentiallyChangedFiles =
@@ -113,7 +112,7 @@ object GitCheck {
   def pullCommits(
     log: Logger,
     commonOptions: CommonOptions,
-    options: GitCheckCommand.Options,
+    options: OnChangeCommand.Options,
     git: Git
   ): Boolean = {
     try {
@@ -133,8 +132,8 @@ object GitCheck {
   }
 
   def prepareOptions(
-    options: GitCheckCommand.Options
-  ): GitCheckCommand.Options = {
+    options: OnChangeCommand.Options
+  ): OnChangeCommand.Options = {
     require(options.inputFile.isEmpty, "inputFile not used by this command")
     options
   }
@@ -175,30 +174,4 @@ object GitCheck {
     }
   }
 
-  case class DotWritingProgressMonitor(log: Logger, options: CommonOptions)
-      extends ProgressMonitor {
-    override def start(totalTasks: Int): Unit = {
-      if (options.verbose) {
-        log.info(s"Starting Fetch with $totalTasks tasks.")
-      } else { System.out.print("\n.") }
-    }
-
-    override def beginTask(title: String, totalWork: Int): Unit = {
-      if (options.verbose) {
-        log.info(s"Starting Task '$title', $totalWork remaining.")
-      } else { System.out.print(".") }
-    }
-
-    override def update(completed: Int): Unit = {
-      if (options.verbose) { log.info(s"$completed tasks completed.") }
-      else { System.out.print(".") }
-    }
-
-    override def endTask(): Unit = {
-      if (options.verbose) { log.info(s"Task completed.") }
-      else { System.out.println(".") }
-    }
-
-    override def isCancelled: Boolean = false
-  }
 }
