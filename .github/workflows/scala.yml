@@ -29,7 +29,7 @@ jobs:
         which hugo
         sbt -v clean coverage Test/compile test coverageAggregate coveralls
       env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
 
     - name: Cleanup Before Caching
