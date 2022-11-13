@@ -42,8 +42,6 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
     * been parsed and validated already so the job is to translate the root
     * argument into the directory of files.
     *
-    * @param root
-    *   The RootContainer providing the parsed/validated input
     * @param log
     *   A Logger to use for messages. Use sparingly, not for errors
     * @param commonOptions
@@ -62,6 +60,44 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
 
   def overrideOptions(options: OPT, newOutputDir: Path): OPT
 
+  private final def checkOptions(options: OPT): Messages = {
+    val msgs1: Messages =
+      if (options.inputFile.isEmpty) {
+        Messages.errors("An input path was not provided.")
+      } else { Messages.empty }
+    val msgs2: Messages =
+      if (options.outputDir.isEmpty) {
+        Messages.errors("An output path was not provided.")
+      } else { Messages.empty }
+    msgs1 ++ msgs2
+  }
+
+  private final def doRun(
+    options: OPT,
+    commonOptions: CommonOptions,
+    log: Logger
+  ): Either[Messages, Unit] = {
+    options.withInputFile { inputFile: Path =>
+      Riddl.parse(inputFile, commonOptions).flatMap { root: RootContainer =>
+        Riddl.validate(root, commonOptions) match {
+          case result: Result =>
+            if (result.messages.hasErrors) {
+              if (commonOptions.debug) {
+                println("Errors after running validation:")
+                println(result.messages.format)
+              }
+              Left[Messages, Unit](result.messages)
+            } else {
+              val showTimes = commonOptions.showTimes
+              Riddl.timer(stage = "translate", showTimes) {
+                translateImpl(result, log, commonOptions, options)
+              }
+            }
+        }
+      }
+    }
+  }
+
   override final def run(
     originalOptions: OPT,
     commonOptions: CommonOptions,
@@ -73,41 +109,12 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
         overrideOptions(originalOptions, outputDirOverride.get)
       } else { originalOptions }
 
-    val msgs1 =
-      if (options.inputFile.isEmpty) {
-        Messages.errors("An input path was not provided.")
-      } else { Messages.empty }
-    val msgs2 =
-      if (options.outputDir.isEmpty) {
-        Messages.errors("An output path was not provided.")
-      } else { Messages.empty }
-
-    val messages = msgs1 ++ msgs2
+    val messages = checkOptions(options)
 
     if (messages.nonEmpty) {
       Left[Messages, Unit](
         messages
       ) // no point even parsing if there are option errors
-    } else {
-      options.withInputFile { inputFile: Path =>
-        Riddl.parse(inputFile, commonOptions).flatMap { root: RootContainer =>
-          Riddl.validate(root, commonOptions) match {
-            case result: Result =>
-              if (result.messages.hasErrors) {
-                if (commonOptions.debug) {
-                  println("Errors after running validation:")
-                  println(result.messages.format)
-                }
-                Left[Messages, Unit](result.messages)
-              } else {
-                val showTimes = commonOptions.showTimes
-                Riddl.timer(stage = "translate", showTimes) {
-                  translateImpl(result, log, commonOptions, options)
-                }
-              }
-          }
-        }
-      }
-    }
+    } else { doRun(options, commonOptions, log) }
   }
 }
