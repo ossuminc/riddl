@@ -33,7 +33,6 @@ lazy val riddl = (project in file(".")).enablePlugins(ScoverageSbtPlugin)
     testkit,
     prettify,
     hugo,
-    onchange,
     doc,
     riddlc,
     plugin
@@ -91,15 +90,17 @@ lazy val language = project.in(file("language")).configure(C.withCoverage(0))
 
 val Commands = config("commands")
 
-lazy val commands = project.in(file("commands")).configure(C.withCoverage(0))
-  .configure(C.mavenPublish).settings(
+lazy val commands: Project = project.in(file("commands"))
+  .configure(C.withCoverage(0)).configure(C.mavenPublish).settings(
     name := "riddl-commands",
-    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig, Dep.jgit) ++
+      Dep.testing
   ).dependsOn(utils % "compile->compile;test->test", language)
 
 val TestKit = config("testkit")
 
-lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
+lazy val testkit: Project = project.in(file("testkit"))
+  .configure(C.mavenPublish)
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
   .dependsOn(commands % "compile->compile;test->test")
 
@@ -122,24 +123,12 @@ lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage(0))
   .dependsOn(language % "compile->compile", commands, testkit % "test->compile")
   .dependsOn(utils)
 
-lazy val OnChange = config("onchange")
-lazy val onchange: Project = project.in(file("onchange"))
-  .configure(C.withCoverage(0)).configure(C.mavenPublish).settings(
-    name := "riddl-onchange",
-    Compile / unmanagedResourceDirectories += {
-      baseDirectory.value / "resources"
-    },
-    Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
-  ).dependsOn(commands, testkit % "test->compile")
-
 lazy val scaladocSiteProjects = List(
   (utils, Utils),
   (language, Language),
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
-  (onchange, OnChange),
   (hugo, HugoTrans),
   (riddlc, Riddlc)
 )
@@ -186,7 +175,6 @@ lazy val riddlc: Project = project.in(file("riddlc"))
     commands,
     language,
     hugo,
-    onchange,
     testkit % "test->compile"
   ).settings(
     name := "riddlc",

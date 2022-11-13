@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.translator.onchange
+package com.reactific.riddl.commands
+
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.utils.StringBuildingPrintStream
-import com.reactific.riddl.utils.StringLogger
+import com.reactific.riddl.utils.{StringBuildingPrintStream, StringLogger}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

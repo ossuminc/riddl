@@ -27,6 +27,7 @@ import scala.util.Success
 
 object RepeatCommand {
 
+  final val cmdName = "repeat"
   val defaultMaxLoops: Int = 1024
 
   case class Options(
@@ -36,11 +37,11 @@ object RepeatCommand {
     maxCycles: Int = defaultMaxLoops,
     interactive: Boolean = false)
       extends CommandOptions {
-    def command: String = "repeat"
+    def command: String = cmdName
   }
 }
 
-class RepeatCommand extends CommandPlugin[RepeatCommand.Options]("repeat") {
+class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.cmdName) {
   import RepeatCommand.Options
 
   /** Provide an scopt OParser for the commands options type, OPT
@@ -50,7 +51,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options]("repeat") {
     */
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd("repeat")
+    cmd(RepeatCommand.cmdName)
       .text("""This command supports the edit-build-check cycle. It doesn't end
               |until <max-cycles> has completed or EOF is reached on standard
               |input. During that time, the selected subcommands are repeated.
