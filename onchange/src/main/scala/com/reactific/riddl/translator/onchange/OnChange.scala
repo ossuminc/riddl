@@ -20,7 +20,6 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
-import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters.*
 
 object OnChange {
@@ -138,40 +137,17 @@ object OnChange {
     options
   }
 
-  def runHugo(source: Path, log: Logger): Boolean = {
-    import scala.sys.process._
-    val srcDir = source.toFile
-    require(srcDir.isDirectory, "Source directory is not a directory!")
-    val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
-    var hadErrorOutput: Boolean = false
-    var hadWarningOutput: Boolean = false
-
-    def fout(line: String): Unit = {
-      lineBuffer.append(line)
-      if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
-    }
-
-    def ferr(line: String): Unit = {
-      lineBuffer.append(line); hadErrorOutput = true
-    }
-
-    val logger = ProcessLogger(fout, ferr)
-    val proc = Process("hugo", cwd = Option(srcDir))
-    proc.!(logger) match {
-      case 0 =>
-        if (hadErrorOutput) {
-          log.error("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  "))
-          false
-        } else if (hadWarningOutput) {
-          log.warn("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
-          true
-        } else { true }
-      case rc: Int =>
-        log.error(
-          s"hugo run failed with rc=$rc:\n  " + lineBuffer.mkString("\n  ")
-        )
-        false
-    }
+  def dirHasChangedSince(
+    dir: Path,
+    minTime: FileTime
+  ): Boolean = {
+    val potentiallyChangedFiles = dir.toFile.listFiles().map(_.toPath)
+    val maybeModified = for {
+      fName <- potentiallyChangedFiles
+      timestamp = Files.getLastModifiedTime(fName)
+      isModified = timestamp.compareTo(minTime) > 0
+    } yield { isModified }
+    maybeModified.exists(x => x)
   }
 
 }
