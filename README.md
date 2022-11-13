@@ -3,6 +3,13 @@
 [![Coverage](https://coveralls.io/repos/github/reactific/riddl/badge.svg?branch=coverage)](https://coveralls.io/github/reactific/riddl?branch=coverage)
 [![CLA assistant](https://cla-assistant.io/readme/badge/reactific/riddl)](https://cla-assistant.io/reactific/riddl)
 
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+
 # RIDDL
 
 ## Full Documentation
