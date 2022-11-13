@@ -1,9 +1,3 @@
-/*
- * Copyright 2019 Ossum, Inc.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 package com.reactific.riddl.commands
 
 import com.reactific.riddl.commands.CommandOptions.optional
@@ -23,27 +17,31 @@ import org.eclipse.jgit.api.errors.GitAPIException
 import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.submodule.SubmoduleWalk
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import pureconfig.error.CannotParse
 
 import java.nio.file.attribute.FileTime
 import java.nio.file.Files
 import java.time.Instant
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters.*
 
 object OnChangeCommand {
   final val cmdName: String = "onchange"
+  final val defaultMaxLoops = 1024
   case class Options(
-    gitCloneDir: Option[Path] = None,
-    relativeDir: Option[Path] = None,
-    userName: String = "",
-    accessToken: String = "")
+    inputFile: Option[Path] = None,
+    watchDirectory: Option[Path] = None,
+    targetCommand: String = ParseCommand.cmdName,
+    refreshRate: FiniteDuration = 10.seconds,
+    maxCycles: Int = defaultMaxLoops,
+    interactive: Boolean = false)
       extends CommandOptions {
     def command: String = cmdName
-    def inputFile: Option[Path] = None
   }
 }
 
-/** HugoGitCheck Command */
 class OnChangeCommand
     extends CommandPlugin[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
@@ -54,14 +52,28 @@ class OnChangeCommand
     OParser.sequence(
       cmd("onchange").children(
         opt[File]("git-clone-dir").required()
-          .action((f, opts) => opts.copy(gitCloneDir = Some(f.toPath)))
+          .action((f, opts) => opts.copy(watchDirectory = Some(f.toPath)))
           .text("""Provides the top directory of a git repo clone that
                   |contains the <input-file> to be processed.""".stripMargin),
-        opt[String]("user-name").optional()
-          .action((n, opts) => opts.copy(userName = n))
-          .text("Name of the git user for pulling from remote"),
-        opt[String]("access-token").optional()
-          .action((t, opts) => opts.copy(accessToken = t))
+        arg[String]("target-command").required().action { (cmd, opt) =>
+          opt.copy(targetCommand = cmd)
+        }.text("The name of the command to select from the configuration file"),
+        arg[FiniteDuration]("refresh-rate").optional().validate {
+          case r if r.toMillis < 1000 =>
+            Left("<refresh-rate> is too fast, minimum is 1 seconds")
+          case r if r.toDays > 1 =>
+            Left("<refresh-rate> is too slow, maximum is 1 day")
+          case _ => Right(())
+        }.action((r, c) => c.copy(refreshRate = r))
+          .text("""Specifies the rate at which the <git-clone-dir> is checked
+                  |for updates so the process to regenerate the hugo site is
+                  |started""".stripMargin),
+        arg[Int]("max-cycles").optional().validate {
+          case x if x < 1           => Left("<max-cycles> can't be less than 1")
+          case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
+          case _                    => Right(())
+        }.action((m, c) => c.copy(maxCycles = m))
+          .text("""Limit the number of check cycles that will be repeated.""")
       ).text(
         """This command checks the <git-clone-dir> directory for new commits
           |and does a `git pull" command there if it finds some; otherwise
@@ -75,18 +87,30 @@ class OnChangeCommand
     {
       for {
         objCur <- cur.asObjectCursor
-        gitCloneDir <- optional[File](objCur, "git-clone-dir", new File(".")) {
+        watchDir <- optional[File](objCur, "git-clone-dir", new File(".")) {
           cc => cc.asString.map(s => new File(s))
         }
-        userNameRes <- objCur.atKey("user-name")
-        userNameStr <- userNameRes.asString
-        accessTokenRes <- objCur.atKey("access-token")
-        accessTokenStr <- accessTokenRes.asString
+        targetCommand <- optional(objCur, "target-command", "")(_.asString)
+        refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString)
+          .flatMap { rr =>
+            val dur = Duration.create(rr)
+            if (dur.isFinite) { Right(dur.asInstanceOf[FiniteDuration]) }
+            else {
+              ConfigReader.Result.fail[FiniteDuration](CannotParse(
+                s"'refresh-rate' must be a finite duration, not $rr",
+                None
+              ))
+            }
+          }
+        maxCycles <- optional(objCur, "max-cycles", 100)(_.asInt)
+        interactive <- optional(objCur, "interactive", true)(_.asBoolean)
       } yield {
         OnChangeCommand.Options(
-          gitCloneDir = Some(gitCloneDir.toPath),
-          userName = userNameStr,
-          accessToken = accessTokenStr
+          watchDirectory = Some(watchDir.toPath),
+          targetCommand = targetCommand,
+          refreshRate = refreshRate,
+          maxCycles = maxCycles,
+          interactive = interactive
         )
       }
     }
@@ -113,12 +137,6 @@ class OnChangeCommand
     outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = { Left(errors("Not Implemented")) }
 
-  private def creds(options: OnChangeCommand.Options) =
-    new UsernamePasswordCredentialsProvider(
-      options.userName,
-      options.accessToken
-    )
-
   def runWhenGitChanges(
     root: AST.RootContainer,
     log: Logger,
@@ -132,10 +150,10 @@ class OnChangeCommand
     ) => Either[Messages, Unit]
   ): Either[Messages, Unit] = {
     require(
-      options.gitCloneDir.nonEmpty,
-      s"Option 'gitCloneDir' must have a value."
+      options.watchDirectory.nonEmpty,
+      s"Option 'watchDirectory' must have a value."
     )
-    val gitCloneDir = options.gitCloneDir.get
+    val gitCloneDir = options.watchDirectory.get
     require(Files.isDirectory(gitCloneDir), s"$gitCloneDir is not a directory.")
     val builder = new FileRepositoryBuilder
     val repository =
@@ -147,7 +165,7 @@ class OnChangeCommand
     val opts = prepareOptions(options)
 
     if (gitHasChanges(log, commonOptions, opts, git, when)) {
-      pullCommits(log, commonOptions, opts, git)
+      pullCommits(log, commonOptions, git)
       doit(root, log, commonOptions, opts)
     } else { Right(()) }
   }
@@ -175,8 +193,8 @@ class OnChangeCommand
     val repo = git.getRepository
     val top = repo.getDirectory.getParentFile.toPath.toAbsolutePath
     val subPath =
-      if (options.relativeDir.nonEmpty) {
-        val relativeDir = options.relativeDir.get.toAbsolutePath
+      if (options.watchDirectory.nonEmpty) {
+        val relativeDir = options.watchDirectory.get.toAbsolutePath
         val relativized = top.relativize(relativeDir)
         if (relativized.getNameCount > 1) relativized.toString else "."
       } else { "." }
@@ -200,7 +218,6 @@ class OnChangeCommand
   def pullCommits(
     log: Logger,
     commonOptions: CommonOptions,
-    options: OnChangeCommand.Options,
     git: Git
   ): Boolean = {
     try {
@@ -208,8 +225,7 @@ class OnChangeCommand
         log.info("Pulling latest changes from remote")
       }
       val pullCommand = git.pull
-      pullCommand.setCredentialsProvider(creds(options))
-        .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
+      pullCommand.setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
         .setStrategy(MergeStrategy.THEIRS)
       pullCommand.call.isSuccessful
     } catch {

@@ -14,8 +14,7 @@ import scala.concurrent.duration.Duration
 class FileWatcherTest extends AnyWordSpec with Matchers {
   "FileWatcher" should {
     "notice changes in a directory" in {
-      val dir = Path.of(".").resolve("onchange").resolve("target")
-        .toAbsolutePath
+      val dir = Path.of("utils").resolve("target").toAbsolutePath
       def onEvents(events: Seq[WatchEvent[?]]): Boolean = {
         events.foreach { ev => info(s"Event: ${ev.kind()}: ${ev.count()}") }
         false
@@ -32,8 +31,9 @@ class FileWatcherTest extends AnyWordSpec with Matchers {
       val f = Future[Boolean] {
         FileWatcher.watchForChanges(dir, 2, 10)(onEvents)(notOnEvents)
       }
-      Thread.sleep(1000)
+      Thread.sleep(800)
       Files.createFile(changeFile)
+      Thread.sleep(100)
       require(Files.exists(changeFile), "File should exist")
       Thread.sleep(200)
       Files.delete(changeFile)
