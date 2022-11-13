@@ -41,7 +41,8 @@ object RepeatCommand {
   }
 }
 
-class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.cmdName) {
+class RepeatCommand
+    extends CommandPlugin[RepeatCommand.Options](RepeatCommand.cmdName) {
   import RepeatCommand.Options
 
   /** Provide an scopt OParser for the commands options type, OPT

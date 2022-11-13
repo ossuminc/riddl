@@ -7,7 +7,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -30,15 +29,13 @@ trait ProjectionParser extends TypeParser with HandlerParser {
     P(term | projectionInclude | handler | invariant).rep(0)
   }
 
-  def projectionBody[
-    u: P
-  ]: P[(Seq[ProjectionOption], Aggregation, Seq[ProjectionDefinition])] = {
+  type ProjectionBody =
+    (Seq[ProjectionOption], Option[Aggregation], Seq[ProjectionDefinition])
+  def projectionBody[u: P]: P[ProjectionBody] = {
     P(
-      undefined((
-        Seq.empty[ProjectionOption],
-        Aggregation(Location.empty, Seq.empty[Field]),
-        Seq.empty[ProjectionDefinition]
-      )) | (projectionOptions ~ aggregation ~ projectionDefinitions)
+      undefined(
+        (Seq.empty[ProjectionOption], None, Seq.empty[ProjectionDefinition])
+      ) | (projectionOptions ~ aggregation.? ~ projectionDefinitions)
     )
   }
 
@@ -74,12 +71,12 @@ trait ProjectionParser extends TypeParser with HandlerParser {
         Projection(
           loc,
           id,
+          authors,
+          options,
+          includes,
           aggregation,
           handlers,
           invariants,
-          authors,
-          includes,
-          options,
           terms,
           briefly,
           description
