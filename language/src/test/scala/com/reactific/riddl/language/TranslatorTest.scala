@@ -53,19 +53,21 @@ class TranslatorTest extends ValidatingTest {
     }
   }
 
-  val directory = "examples/src/riddl/"
-  val output = "examples/target/translator/"
-  val roots = Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
+  val directory = "language/src/test/input/"
+  val output = "language/target/translator-test/"
+  val roots = Seq(
+    "domains/simpleDomain.riddl",
+    "everything.riddl"
+  )
 
   "Translator" should {
-    pending // this needs to move to riddl-examples repository
-    for { (name, fileName) <- roots } {
-      s"translate $name" in {
+    for { fileName <- roots } {
+      s"translate $fileName" in {
         val tt = new TestTranslator
         val logger = StringLogger()
         val inputPath = Path.of(directory).resolve(fileName)
         val options = TestTranslatingOptions(outputDir =
-          Some(Path.of(s"language/target/translator-test").resolve(fileName))
+          Some(Path.of(output).resolve(fileName))
         )
         tt.parseValidateTranslate(
           inputPath,
@@ -73,8 +75,13 @@ class TranslatorTest extends ValidatingTest {
           CommonOptions(showStyleWarnings = false, showMissingWarnings = false),
           options
         ) match {
-          case Right(_)       => succeed
-          case Left(messages) => fail(messages.format)
+          case Right(_) => succeed
+          case Left(messages) =>
+            val errors = messages.justErrors
+            if (errors.isEmpty) {
+              info(messages.format)
+              succeed
+            } else { fail(messages.format) }
         }
       }
     }
