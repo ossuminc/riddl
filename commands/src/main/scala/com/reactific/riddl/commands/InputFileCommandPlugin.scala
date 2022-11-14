@@ -14,10 +14,9 @@ import java.nio.file.Path
 
 object InputFileCommandPlugin {
   case class Options(
-    inputFile: Option[Path] = None)
-      extends CommandOptions {
-    def command: String = "unspecified"
-  }
+    inputFile: Option[Path] = None,
+    command: String = "unspecified")
+      extends CommandOptions
 }
 
 /** An abstract command definition helper class for commands that only take a
@@ -32,7 +31,7 @@ abstract class InputFileCommandPlugin(
   def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(name).children(arg[File]("input-file").action((f, opt) =>
-      opt.copy(inputFile = Some(f.toPath))
+      opt.copy(command = name, inputFile = Some(f.toPath))
     )) -> InputFileCommandPlugin.Options()
   }
 
@@ -44,7 +43,7 @@ abstract class InputFileCommandPlugin(
         objCur <- topRes.asObjectCursor
         inFileRes <- objCur.atKey("input-file").map(_.asString)
         inFile <- inFileRes
-      } yield { Options(inputFile = Some(Path.of(inFile))) }
+      } yield { Options(command = name, inputFile = Some(Path.of(inFile))) }
     }
   }
 }

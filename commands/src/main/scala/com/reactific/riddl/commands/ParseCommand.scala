@@ -31,4 +31,19 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
       Riddl.parse(inputFile, commonOptions).map(_ => ())
     }
   }
+
+  override def loadOptionsFrom(
+    configFile: Path,
+    commonOptions: CommonOptions
+  ): Either[Messages, Options] = {
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    }
+  }
+
+  override def replaceInputFile(
+    opts: Options,
+    inputFile: Path
+  ): Options = { opts.copy(inputFile = Some(inputFile)) }
+
 }

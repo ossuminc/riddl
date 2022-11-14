@@ -31,14 +31,15 @@ object OnChangeCommand {
   final val cmdName: String = "onchange"
   final val defaultMaxLoops = 1024
   case class Options(
-    inputFile: Option[Path] = None,
-    watchDirectory: Option[Path] = None,
+    configFile: Path = Path.of("."),
+    watchDirectory: Path = Path.of("."),
     targetCommand: String = ParseCommand.cmdName,
     refreshRate: FiniteDuration = 10.seconds,
     maxCycles: Int = defaultMaxLoops,
     interactive: Boolean = false)
       extends CommandOptions {
     def command: String = cmdName
+    def inputFile: Option[Path] = None
   }
 }
 
@@ -51,8 +52,13 @@ class OnChangeCommand
     import builder.*
     OParser.sequence(
       cmd("onchange").children(
-        opt[File]("git-clone-dir").required()
-          .action((f, opts) => opts.copy(watchDirectory = Some(f.toPath)))
+        arg[File]("config-file").required()
+          .action((f, opts) => opts.copy(configFile = f.toPath))
+          .text("""Provides the top directory of a git repo clone that
+                  |contains the <input-file> to be processed.""".stripMargin),
+
+        arg[File]("watch-directory").required()
+          .action((f, opts) => opts.copy(watchDirectory = f.toPath))
           .text("""Provides the top directory of a git repo clone that
                   |contains the <input-file> to be processed.""".stripMargin),
         arg[String]("target-command").required().action { (cmd, opt) =>
@@ -83,14 +89,36 @@ class OnChangeCommand
     ) -> Options()
   }
 
-  implicit val onChangeReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
     {
       for {
-        objCur <- cur.asObjectCursor
-        watchDir <- optional[File](objCur, "git-clone-dir", new File(".")) {
-          cc => cc.asString.map(s => new File(s))
+        topCur <- cur.asObjectCursor
+        topRes <- topCur.atKey(OnChangeCommand.cmdName)
+        objCur <- topRes.asObjectCursor
+        configFileRes <- objCur.atKey("config-file")
+        configFile <- configFileRes.asString.flatMap { inputPath =>
+          if (inputPath.isEmpty) {
+            ConfigReader.Result.fail[String](
+              CannotParse("'config-filew' requires a non-empty value", None)
+            )
+          } else Right(inputPath)
         }
-        targetCommand <- optional(objCur, "target-command", "")(_.asString)
+        watchDirRes <- objCur.atKey("watch-directory")
+        watchDir <- watchDirRes.asString.flatMap { watchDir =>
+          if (watchDir.isEmpty) {
+            ConfigReader.Result.fail[String](
+              CannotParse("'watch-directory' requires a non-empty value", None)
+            )
+          } else Right(watchDir)
+        }
+        targetCommandRes <- objCur.atKey("target-command")
+        targetCmd <- targetCommandRes.asString.flatMap { targetCmd =>
+          if (targetCmd.isEmpty) {
+            ConfigReader.Result.fail[String](
+              CannotParse("'target-command' requires a non-empty value", None)
+            )
+          } else Right(targetCmd)
+        }
         refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString)
           .flatMap { rr =>
             val dur = Duration.create(rr)
@@ -102,12 +130,16 @@ class OnChangeCommand
               ))
             }
           }
-        maxCycles <- optional(objCur, "max-cycles", 100)(_.asInt)
+        maxCycles <-
+          optional(objCur, "max-cycles", OnChangeCommand.defaultMaxLoops)(
+            _.asInt
+          )
         interactive <- optional(objCur, "interactive", true)(_.asBoolean)
       } yield {
         OnChangeCommand.Options(
-          watchDirectory = Some(watchDir.toPath),
-          targetCommand = targetCommand,
+          configFile = Path.of(configFile),
+          watchDirectory = Path.of(watchDir),
+          targetCommand = targetCmd,
           refreshRate = refreshRate,
           maxCycles = maxCycles,
           interactive = interactive
@@ -116,7 +148,19 @@ class OnChangeCommand
     }
   }
 
-  override def getConfigReader: ConfigReader[Options] = onChangeReader
+  override def replaceInputFile(
+    opts: Options,
+    inputFile: Path
+  ): Options = { opts.copy(configFile = inputFile) }
+
+  override def loadOptionsFrom(
+    configFile: Path,
+    commonOptions: CommonOptions
+  ): Either[Messages, Options] = {
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    }
+  }
 
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug
@@ -149,11 +193,7 @@ class OnChangeCommand
       OnChangeCommand.Options
     ) => Either[Messages, Unit]
   ): Either[Messages, Unit] = {
-    require(
-      options.watchDirectory.nonEmpty,
-      s"Option 'watchDirectory' must have a value."
-    )
-    val gitCloneDir = options.watchDirectory.get
+    val gitCloneDir = options.watchDirectory
     require(Files.isDirectory(gitCloneDir), s"$gitCloneDir is not a directory.")
     val builder = new FileRepositoryBuilder
     val repository =
@@ -193,8 +233,8 @@ class OnChangeCommand
     val repo = git.getRepository
     val top = repo.getDirectory.getParentFile.toPath.toAbsolutePath
     val subPath =
-      if (options.watchDirectory.nonEmpty) {
-        val relativeDir = options.watchDirectory.get.toAbsolutePath
+      if (options.watchDirectory.getNameCount > 0) {
+        val relativeDir = options.watchDirectory.toAbsolutePath
         val relativized = top.relativize(relativeDir)
         if (relativized.getNameCount > 1) relativized.toString else "."
       } else { "." }

@@ -14,9 +14,13 @@ import com.reactific.riddl.utils.StringHelpers.toPrettyString
 
 import java.nio.file.Path
 
+object DumpCommand {
+  final val cmdName = "dump"
+}
+
 /** A Command for Parsing RIDDL input
   */
-class DumpCommand extends InputFileCommandPlugin("dump") {
+class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
   import InputFileCommandPlugin.Options
   override def run(
     options: Options,

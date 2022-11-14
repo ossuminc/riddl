@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.commands
+package com.reactific.riddl.utils
 
 import java.util.concurrent.CancellationException
 import scala.concurrent.*
+import scala.concurrent.ExecutionContext.Implicits.global
 
 final class Interrupt extends (() => Boolean) {
 
@@ -15,7 +16,8 @@ final class Interrupt extends (() => Boolean) {
   // It can have the following states:
   // a null reference means execution has not started.
   // a Thread reference means that the execution has started but is not done.
-  // a this reference means that it is already cancelled or is already too late.
+  // an Interrupt reference means that it is already cancelled or is already
+  // too late.
   sealed trait State
   case object NotStarted extends State
   case class Started(onThread: Thread) extends State
@@ -61,16 +63,27 @@ final class Interrupt extends (() => Boolean) {
     }
   }
 
-  /** Executes the suplied block of logic and returns the result. Throws
+  private var thread: Option[Thread] = None
+
+  def ready: Boolean = thread.nonEmpty
+
+  def cancel: Unit = {
+    if (thread.nonEmpty) thread.get.interrupt()
+    else throw new IllegalStateException("Thread not obtained yet.")
+  }
+
+  /** Executes the supplied block of code and returns the result. Throws
     * CancellationException if the block was interrupted.
     */
   def interruptibly[T](block: => T): T = {
     if (enter()) {
+      thread = Some(Thread.currentThread())
       try block
       catch {
         case i: InterruptedException =>
           throw new CancellationException().initCause(i)
       } finally {
+        thread = None
         // If we were interrupted and flag was not cleared
         if (!exit() && Thread.interrupted()) { () }
       }
@@ -83,8 +96,23 @@ object Interrupt {
   def aFuture[T](
     block: => T
   )(implicit ec: ExecutionContext
-  ): (Future[T], () => Boolean) = {
+  ): (Future[T], Interrupt) = {
     val interrupt = new Interrupt()
-    Future(interrupt.interruptibly(block))(ec) -> interrupt
+    Future { interrupt.interruptibly(block) }(ec) -> interrupt
+  }
+
+  def allowCancel(
+    isInteractive: Boolean
+  ): (Future[Boolean], Option[Interrupt]) = {
+    if (!isInteractive) { Future.successful(false) -> None }
+    else {
+      val result = aFuture[Boolean] {
+        while (
+          Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
+        ) {}
+        true
+      }
+      result._1 -> Some(result._2)
+    }
   }
 }

@@ -36,6 +36,7 @@ class CommandsTest extends AnyWordSpec with Matchers {
       runCommand(args)
     }
     "handle from" in {
+      FromCommand.Options().command mustBe "from"
       val args = common ++ Seq("from", validateConfig, "validate")
       runCommand(args)
     }
@@ -44,8 +45,8 @@ class CommandsTest extends AnyWordSpec with Matchers {
       runCommand(args)
     }
     "handle repeat" in {
-      val args = common ++
-        Seq("repeat", validateConfig, "validate", "1s", "2")
+      RepeatCommand.Options().command mustBe "repeat"
+      val args = common ++ Seq("repeat", validateConfig, "validate", "1s", "2")
       runCommand(args)
     }
     "handle stats" in {
