@@ -32,10 +32,6 @@ class HugoCommandTest extends RunCommandSpecBase {
         "hugo"
       )
       runWith(args)
-      // runHugo(path)
-      // val root = Path.of(output).resolve(path)
-      // val img = root.resolve("static/images/RBBQ.png")
-      // Files.exists(img) mustBe true
     }
   }
 }

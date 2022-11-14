@@ -36,6 +36,33 @@ object FileWatcher {
     Files.walkFileTree(root, sfv)
   }
 
+  private def handlePolledEvents(
+    key: WatchKey,
+    events: Seq[WatchEvent[?]],
+    interval: Int
+  )(onEvents: Seq[WatchEvent[?]] => Boolean
+  )(notOnEvents: => Boolean
+  ): Unit = {
+    events match {
+      case x: Seq[WatchEvent[?]] if x.isEmpty =>
+        if (notOnEvents) {
+          key.reset()
+          Thread.sleep(interval)
+        } else {
+          // they want to stop
+          key.cancel()
+        }
+      case events =>
+        if (onEvents(events)) {
+          // reset the key for the next trip around
+          key.reset()
+        } else {
+          // they want to stop
+          key.cancel()
+        }
+    }
+  }
+
   def watchForChanges(
     path: Path,
     periodInSeconds: Int,
@@ -54,24 +81,9 @@ object FileWatcher {
           case key: WatchKey if key != null =>
             saveKey = key
             val events = key.pollEvents().asScala.toSeq
-            events match {
-              case x: Seq[WatchEvent[?]] if x.isEmpty =>
-                if (notOnEvents) {
-                  key.reset()
-                  Thread.sleep(intervalInMillis)
-                } else {
-                  // they want to stop
-                  key.cancel()
-                }
-              case events =>
-                if (onEvents(events)) {
-                  // reset the key for the next trip around
-                  key.reset()
-                } else {
-                  // they want to stop
-                  key.cancel()
-                }
-            }
+            handlePolledEvents(key, events, intervalInMillis)(onEvents)(
+              notOnEvents
+            )
         }
       } while (saveKey.isValid && Instant.now().toEpochMilli < deadline)
       System.currentTimeMillis() < deadline

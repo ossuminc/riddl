@@ -151,6 +151,21 @@ object CommandPlugin {
     result
   }
 
+  private def handleCommandResult(
+    result: Either[Messages, Unit],
+    commonOptions: CommonOptions,
+    log: Logger
+  ): Int = {
+    result match {
+      case Right(_) =>
+        if (commonOptions.quiet) { System.out.println(log.summary) }
+        0
+      case Left(messages) =>
+        if (commonOptions.quiet) { highestSeverity(messages) + 1 }
+        else { Messages.logMessages(messages, log, commonOptions) + 1 }
+    }
+  }
+
   private def handleCommandRun(
     remaining: Array[String],
     commonOptions: CommonOptions
@@ -172,14 +187,7 @@ object CommandPlugin {
       if (commonOptions.quiet) { log = StringLogger() }
       val result = CommandPlugin
         .runCommandWithArgs(name, remaining, log, commonOptions)
-      result match {
-        case Right(_) =>
-          if (commonOptions.quiet) { System.out.println(log.summary) }
-          0
-        case Left(messages) =>
-          if (commonOptions.quiet) { highestSeverity(messages) + 1 }
-          else { Messages.logMessages(messages, log, commonOptions) + 1 }
-      }
+      handleCommandResult(result, commonOptions, log)
     }
   }
 
@@ -255,15 +263,6 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
           errors("Errors while reading ${configFile}:\n" + fails.prettyPrint(1))
         )
     }
-  }
-
-  def runFrom(
-    configFile: Path,
-    commonOptions: CommonOptions,
-    log: Logger
-  ): Either[Messages, Unit] = {
-    loadOptionsFrom(configFile, commonOptions)
-      .flatMap(run(_, commonOptions, log, None))
   }
 
   /** Execute the command given the options. Error should be returned as

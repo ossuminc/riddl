@@ -269,7 +269,6 @@ trait TypeExpression extends AbstractDefinitions {
       extends AggregateTypeExpression {}
 
   object Aggregation {
-    // val empty: Aggregation = { Aggregation(Location.empty) }
     def empty(loc: Location = Location.empty): Aggregation = {
       Aggregation(loc)
     }
