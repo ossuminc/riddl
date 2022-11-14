@@ -13,9 +13,13 @@ import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
 
+object ParseCommand {
+  val cmdName = "parse"
+}
+
 /** A Command for Parsing RIDDL input
   */
-class ParseCommand extends InputFileCommandPlugin("parse") {
+class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
   import InputFileCommandPlugin.Options
   override def run(
     options: Options,

@@ -834,8 +834,7 @@ case class MarkdownWriter(
       val maybeActor = state.resolvePathIdentifier[Actor](actorPid, stack)
       h2("User Story")
       maybeActor match {
-        case None =>
-          p(s"Unresolvable Actor id: ${actorPid.format}")
+        case None => p(s"Unresolvable Actor id: ${actorPid.format}")
         case Some(actor) =>
           val name = actor.id.value
           val role = actor.is_a.s
@@ -915,7 +914,9 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(projection, "Projection")
     emitDefDoc(projection, parents)
-    emitFields(projection.aggregation.fields)
+    if (projection.aggregation.nonEmpty) {
+      emitFields(projection.aggregation.get.fields)
+    }
     listOf("Handlers", projection.handlers)
     emitUsage(projection)
     emitTerms(projection.terms)

@@ -1,5 +1,5 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
-
+import org.scoverage.coveralls.Imports.CoverallsKeys._
 import sbtbuildinfo.BuildInfoOption.ToJson
 import sbtbuildinfo.BuildInfoOption.ToMap
 import sbtbuildinfo.BuildInfoOption.BuildTime
@@ -20,7 +20,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator := "-"
 
-lazy val riddl = (project in file(".")).disablePlugins(ScoverageSbtPlugin)
+lazy val riddl = (project in file(".")).enablePlugins(ScoverageSbtPlugin)
   .enablePlugins(AutomateHeaderPlugin).configure(C.withInfo).settings(
     publish := {},
     publishLocal := {},
@@ -33,7 +33,6 @@ lazy val riddl = (project in file(".")).disablePlugins(ScoverageSbtPlugin)
     testkit,
     prettify,
     hugo,
-    `git-check`,
     doc,
     riddlc,
     plugin
@@ -41,7 +40,7 @@ lazy val riddl = (project in file(".")).disablePlugins(ScoverageSbtPlugin)
 
 lazy val Utils = config("utils")
 lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
-  .configure(C.withCoverage()).enablePlugins(BuildInfoPlugin).settings(
+  .configure(C.withCoverage(0)).enablePlugins(BuildInfoPlugin).settings(
     name := "riddl-utils",
     coverageExcludedPackages := "<empty>",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
@@ -80,7 +79,7 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
   )
 
 val Language = config("language")
-lazy val language = project.in(file("language")).configure(C.withCoverage())
+lazy val language = project.in(file("language")).configure(C.withCoverage(0))
   .configure(C.mavenPublish).settings(
     name := "riddl-language",
     coverageExcludedPackages :=
@@ -91,26 +90,28 @@ lazy val language = project.in(file("language")).configure(C.withCoverage())
 
 val Commands = config("commands")
 
-lazy val commands = project.in(file("commands")).configure(C.withCoverage())
-  .configure(C.mavenPublish).settings(
+lazy val commands: Project = project.in(file("commands"))
+  .configure(C.withCoverage(0)).configure(C.mavenPublish).settings(
     name := "riddl-commands",
-    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig, Dep.jgit) ++
+      Dep.testing
   ).dependsOn(utils % "compile->compile;test->test", language)
 
 val TestKit = config("testkit")
 
-lazy val testkit = project.in(file("testkit")).configure(C.mavenPublish)
+lazy val testkit: Project = project.in(file("testkit"))
+  .configure(C.mavenPublish)
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
   .dependsOn(commands % "compile->compile;test->test")
 
 val Prettify = config("prettify")
-lazy val prettify = project.in(file("prettify")).configure(C.withCoverage())
+lazy val prettify = project.in(file("prettify")).configure(C.withCoverage(0))
   .configure(C.mavenPublish)
   .settings(name := "riddl-prettify", libraryDependencies ++= Dep.testing)
   .dependsOn(commands, testkit % "test->compile").dependsOn(utils)
 
 val HugoTrans = config("hugo")
-lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage())
+lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage(0))
   .configure(C.mavenPublish).settings(
     name := "riddl-hugo",
     Compile / unmanagedResourceDirectories += {
@@ -122,24 +123,12 @@ lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage())
   .dependsOn(language % "compile->compile", commands, testkit % "test->compile")
   .dependsOn(utils)
 
-lazy val GitCheck = config("git-check")
-lazy val `git-check`: Project = project.in(file("git-check"))
-  .configure(C.withCoverage()).configure(C.mavenPublish).settings(
-    name := "riddl-git-check",
-    Compile / unmanagedResourceDirectories += {
-      baseDirectory.value / "resources"
-    },
-    Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig, Dep.jgit) ++ Dep.testing
-  ).dependsOn(commands, testkit % "test->compile")
-
 lazy val scaladocSiteProjects = List(
   (utils, Utils),
   (language, Language),
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
-  (`git-check`, GitCheck),
   (hugo, HugoTrans),
   (riddlc, Riddlc)
 )
@@ -181,15 +170,15 @@ val Riddlc = config("riddlc")
 lazy val riddlc: Project = project.in(file("riddlc"))
   .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
   .enablePlugins(MiniDependencyTreePlugin, GraalVMNativeImagePlugin)
-  .configure(C.mavenPublish).configure(C.withCoverage()).dependsOn(
+  .configure(C.mavenPublish).configure(C.withCoverage(0)).dependsOn(
     utils % "compile->compile;test->test",
     commands,
     language,
     hugo,
-    `git-check`,
     testkit % "test->compile"
   ).settings(
     name := "riddlc",
+    coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     mainClass := Option("com.reactific.riddl.RIDDLC"),
     graalVMNativeImageOptions ++= Seq(
       "--verbose",

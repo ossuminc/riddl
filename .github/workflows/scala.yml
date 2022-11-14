@@ -1,4 +1,4 @@
-name: Scala CI
+name: Scala Build
 
 on:
   push:
@@ -24,10 +24,14 @@ jobs:
         extended: true
     - name: Coursier Caching
       uses: coursier/cache-action@v6
-    - name: Build, Run Tests, Generate Packages
+    - name: Build, Run Test, Coverage
       run: |
         which hugo
-        sbt -v clean Test/compile test
+        sbt -v clean coverage Test/compile test coverageAggregate coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
+
     - name: Cleanup Before Caching
       shell: bash
       run: |
@@ -36,3 +40,10 @@ jobs:
         find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
         find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
         find $HOME/.sbt                              -name "*.lock"               -delete || true
+
+
+#    - name: SonarCloud Scan
+#      uses: SonarSource/sonarcloud-github-action@master
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # for PR information, if any
+#        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

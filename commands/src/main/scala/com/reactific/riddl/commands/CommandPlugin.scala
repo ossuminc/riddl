@@ -151,39 +151,54 @@ object CommandPlugin {
     result
   }
 
-  def runMain(args: Array[String]): Int = {
+  private def handleCommandResult(
+    result: Either[Messages, Unit],
+    commonOptions: CommonOptions,
+    log: Logger
+  ): Int = {
+    result match {
+      case Right(_) =>
+        if (commonOptions.quiet) { System.out.println(log.summary) }
+        0
+      case Left(messages) =>
+        if (commonOptions.quiet) { highestSeverity(messages) + 1 }
+        else { Messages.logMessages(messages, log, commonOptions) + 1 }
+    }
+  }
+
+  private def handleCommandRun(
+    remaining: Array[String],
+    commonOptions: CommonOptions
+  ): Int = {
     var log: Logger = SysLogger()
 
+    if (remaining.isEmpty) {
+      if (!commonOptions.quiet) {
+        log.error("No command argument was provided")
+      }
+      1
+    } else {
+      val name = remaining.head
+      if (commonOptions.dryRun) {
+        if (!commonOptions.quiet) {
+          log.info(s"Would have executed: ${remaining.mkString(" ")}")
+        }
+      }
+      if (commonOptions.quiet) { log = StringLogger() }
+      val result = CommandPlugin
+        .runCommandWithArgs(name, remaining, log, commonOptions)
+      handleCommandResult(result, commonOptions, log)
+    }
+  }
+
+  def runMain(args: Array[String]): Int = {
+    val log = SysLogger()
     try {
       val (common, remaining) = com.reactific.riddl.commands.CommonOptionsHelper
         .parseCommonOptions(args)
       common match {
-        case Some(commonOptions) =>
-          if (remaining.isEmpty) {
-            if (!commonOptions.quiet) {
-              log.error("No command argument was provided")
-            }
-            1
-          } else {
-            val name = remaining.head
-            if (commonOptions.dryRun) {
-              if (!commonOptions.quiet) {
-                log.info(s"Would have executed: ${remaining.mkString(" ")}")
-              }
-            }
-            if (commonOptions.quiet) { log = StringLogger() }
-            val result = CommandPlugin
-              .runCommandWithArgs(name, remaining, log, commonOptions)
-            result match {
-              case Right(_) =>
-                if (commonOptions.quiet) { System.out.println(log.summary) }
-                0
-              case Left(messages) =>
-                if (commonOptions.quiet) { highestSeverity(messages) + 1 }
-                else { Messages.logMessages(messages, log, commonOptions) + 1 }
-            }
-          }
-        case None =>
+        case Some(commonOptions) => handleCommandRun(remaining, commonOptions)
+        case None                =>
           // arguments are bad, error message will have been displayed
           log.info("Option parsing failed, terminating.")
           1
@@ -194,7 +209,6 @@ object CommandPlugin {
         SevereError.severity + 1
     }
   }
-
 }
 
 /** The service interface for Riddlc command plugins */
@@ -249,15 +263,6 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
           errors("Errors while reading ${configFile}:\n" + fails.prettyPrint(1))
         )
     }
-  }
-
-  def runFrom(
-    configFile: Path,
-    commonOptions: CommonOptions,
-    log: Logger
-  ): Either[Messages, Unit] = {
-    loadOptionsFrom(configFile, commonOptions)
-      .flatMap(run(_, commonOptions, log, None))
   }
 
   /** Execute the command given the options. Error should be returned as

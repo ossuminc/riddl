@@ -23,6 +23,7 @@ object V {
   val scalacheck = "1.17.0"
   val scalatest = "3.2.14"
   val scopt = "4.1.0"
+  val slf4j = "2.0.3"
 }
 
 object Dep {
@@ -37,9 +38,14 @@ object Dep {
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
+  val slf4j = "org.slf4j" % "slf4j-nop" % V.slf4j
 
-  val testing: Seq[ModuleID] =
-    Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
+  val testing: Seq[ModuleID] = Seq(
+    scalactic % "test",
+    scalatest % "test",
+    scalacheck % "test",
+    slf4j % "test"
+  )
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)
 
 }
@@ -58,7 +64,7 @@ object C {
           "Apache-2.0",
           new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
         ),
-      ThisBuild / versionScheme := Option("semver-spec"),
+      ThisBuild / versionScheme := Option("early-semver"),
       ThisBuild / dynverVTagPrefix := false,
       // NEVER  SET  THIS: version := "0.1"
       // IT IS HANDLED BY: sbt-dynver
@@ -117,7 +123,8 @@ object C {
       coverageMinimumStmtPerPackage := percent,
       coverageMinimumBranchPerPackage := percent,
       coverageMinimumStmtPerFile := percent,
-      coverageMinimumBranchPerFile := percent
+      coverageMinimumBranchPerFile := percent,
+      coverageExcludedPackages := "<empty>"
     )
   }
 
@@ -184,8 +191,7 @@ object C {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
         }
       },
-      publishMavenStyle := true,
-      versionScheme := Some("early-semver")
+      publishMavenStyle := true
     )
   }
 }

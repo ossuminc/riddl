@@ -24,7 +24,9 @@ class RunHugoOnExamplesTest
 
   override val outDir: Path = Path.of("riddlc/target/test/hugo-examples")
 
-  "Run Hugo On Examples" should { "work " in { runTests() } }
+  override def validate(name: String): Boolean = name == "ReactiveBBQ"
+
+  "Run Hugo On Examples" should { "should work" in { runTests() } }
 
   override def onSuccess(
     @unused commandName: String,

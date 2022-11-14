@@ -721,6 +721,15 @@ object Validation {
     }
 
     def checkAggregation(
+      aggregation: Option[Aggregation]
+    ): ValidationState = {
+      aggregation match {
+        case None              => this
+        case Some(aggregation) => checkAggregation(aggregation)
+      }
+    }
+
+    def checkAggregation(
       agg: Aggregation
     ): ValidationState = {
       checkSequence(agg.fields) { case (state, field) =>

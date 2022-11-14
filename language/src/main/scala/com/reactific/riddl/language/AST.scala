@@ -1235,27 +1235,29 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class Projection(
     loc: Location,
     id: Identifier,
-    aggregation: Aggregation,
-    handlers: Seq[Handler] = Seq.empty[Handler],
-    invariants: Seq[Invariant] = Seq.empty[Invariant],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
-    options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
+    aggregation: Option[Aggregation] = None,
+    handlers: Seq[Handler] = Seq.empty[Handler],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[ProjectionOption, ProjectionDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[ProjectionDefinition] = {
-      super.contents ++ aggregation.fields ++ terms
+      super.contents ++ aggregation.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        handlers ++ invariants ++ terms
     }
     final val kind: String = "Projection"
 
     override def maturity: Int = {
       var score = super.maturity
-      if (aggregation.fields.nonEmpty) score +=
-        Math.max(aggregation.fields.count(_.nonEmpty), maxMaturity)
+      val fields: Seq[Field] = aggregation.map(_.fields).getOrElse(Seq.empty)
+      if (fields.nonEmpty) score +=
+        Math.max(fields.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
