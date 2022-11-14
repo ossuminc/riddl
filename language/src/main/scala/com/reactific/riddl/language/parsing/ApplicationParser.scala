@@ -33,8 +33,6 @@ trait ApplicationParser
     }
   }
 
-  // def select[u:P]: P[Select]
-
   def appOutput[u: P]: P[Output] = {
     P(
       location ~ Keywords.output ~/ identifier ~ is ~ open ~ types ~

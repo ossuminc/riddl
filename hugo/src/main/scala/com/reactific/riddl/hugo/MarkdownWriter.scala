@@ -813,14 +813,13 @@ case class MarkdownWriter(
     application: Application,
     stack: Seq[Definition]
   ): this.type = {
-    containerHead(application, "Applicaiton")
+    containerHead(application, "Application")
     val parents = state.makeParents(stack)
     emitDefDoc(application, parents)
     for { group <- application.groups } {
       h2(group.identify)
       list(group.elements.map(_.format))
     }
-    // emitHandler(application.handlers)
     emitUsage(application)
     emitTerms(application.terms)
   }
