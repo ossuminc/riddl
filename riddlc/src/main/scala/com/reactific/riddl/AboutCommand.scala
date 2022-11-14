@@ -40,8 +40,8 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
       for {
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
-        cmd <- topRes.asString
-      } yield { Options(cmd, inputFile = None, targetCommand = None) }
+        cmd <- topRes.asObjectCursor
+      } yield { Options(cmd.path) }
   }
 
   override def run(

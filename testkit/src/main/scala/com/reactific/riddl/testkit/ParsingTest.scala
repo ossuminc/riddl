@@ -18,6 +18,7 @@ import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
+object TestParser {}
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input) with Matchers {
   push(input)
@@ -36,10 +37,12 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Context]     => context(_)
       case x if x == classOf[AST.Entity]      => entity(_)
       case x if x == classOf[AST.Adaptor]     => adaptor(_)
+      case x if x == classOf[AST.Application] => application(_)
       case x if x == classOf[AST.Invariant]   => invariant(_)
       case x if x == classOf[AST.Function]    => function(_)
       case x if x == classOf[AST.Plant]       => plant(_)
       case x if x == classOf[AST.Processor]   => processor(_)
+      case x if x == classOf[AST.Projection]  => projection(_)
       case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
       case x if x == classOf[AST.InletJoint]  => joint(_)
       case x if x == classOf[AST.OutletJoint] => joint(_)
@@ -63,19 +66,18 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     expect[RootContainer](fileRoot(_)).map(x => extract(x._1) -> x._2)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
-    extract: FROM => TO
-  ): Either[Messages, (TO, RiddlParserInput)] = {
-    val parser = parserFor[FROM]
-    val result = expect[FROM](parser)
-    result.map(x => extract(x._1) -> x._2)
-  }
-
   def parseDefinition[
     FROM <: Definition: ClassTag
   ]: Either[Messages, (FROM, RiddlParserInput)] = {
     val parser = parserFor[FROM]
     expect[FROM](parser)
+  }
+
+  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+    extract: FROM => TO
+  ): Either[Messages, (TO, RiddlParserInput)] = {
+    val result = parseDefinition[FROM]
+    result.map(x => extract(x._1) -> x._2)
   }
 
   def parseDomainDefinition[TO <: RiddlNode](
@@ -126,30 +128,6 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDomainDefinition[TO](extract)
   }
 
-  def checkDomainDefinitions[TO <: RiddlNode](
-    cases: Map[String, TO],
-    extract: Domain => TO
-  ): Unit = {
-    cases foreach { case (statement, expected) =>
-      val input = s"domain foo {\n$statement\n}"
-      val tp = TestParser(RiddlParserInput(input))
-      tp.parseDomainDefinition(extract) match {
-        case Right(content) => content mustBe expected
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-      }
-    }
-  }
-
-  def parseContextDefinition[TO <: RiddlNode](
-    input: RiddlParserInput,
-    extract: Context => TO
-  ): Either[Messages, (TO, RiddlParserInput)] = {
-    val tp = TestParser(input)
-    tp.parseContextDefinition[TO](extract)
-  }
-
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
     input: RiddlParserInput,
     extract: FROM => TO
@@ -162,8 +140,7 @@ class ParsingTest extends ParsingTestBase {
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    val tp = TestParser(RiddlParserInput(input))
-    tp.parseDefinition[FROM, TO](extract)
+    parseDefinition[FROM,TO](RiddlParserInput(input), extract)
   }
 
   def parseDefinition[FROM <: Definition: ClassTag](
@@ -179,33 +156,6 @@ class ParsingTest extends ParsingTestBase {
     parseDefinition(RiddlParserInput(input))
   }
 
-  def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
-    rip: RiddlParserInput,
-    expected: TO,
-    extract: FROM => TO
-  ): Unit = {
-    TestParser(rip).parseDefinition[FROM, TO](extract) match {
-      case Left(errors) =>
-        val msg = errors.map(_.format).mkString
-        fail(msg)
-      case Right((content, _)) => content mustBe expected
-    }
-  }
-
-  def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlNode](
-    cases: Map[String, TO],
-    @unused extract: FROM => TO
-  ): Unit = {
-    cases.foreach { case (statement: String, expected: TO @unchecked) =>
-      val rip = RiddlParserInput(statement)
-      TestParser(rip).parseDefinition[FROM] match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right((content, _)) => content mustBe expected
-      }
-    }
-  }
 
   def parseInContext[TO <: RiddlNode](
     input: RiddlParserInput,

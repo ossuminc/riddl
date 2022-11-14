@@ -259,9 +259,9 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
           println(toPrettyString(value, 1))
         }
         Right(value)
-      case Left(fails) => Left(
-          errors("Errors while reading ${configFile}:\n" + fails.prettyPrint(1))
-        )
+      case Left(fails) => Left(errors(
+          s"Errors while reading ${configFile}:\n" + fails.prettyPrint(1)
+        ))
     }
   }
 
