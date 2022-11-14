@@ -7,6 +7,7 @@
 package com.reactific.riddl
 
 import com.reactific.riddl.testkit.RunCommandSpecBase
+import org.scalatest.Assertion
 
 class RiddlcCommandsTest extends RunCommandSpecBase {
 
@@ -22,7 +23,7 @@ class RiddlcCommandsTest extends RunCommandSpecBase {
       runWith(args)
     }
     "provide help" in {
-      val args = Seq("--quiet", "help")
+      val args = Seq("help")
       runWith(args)
     }
     "generate info" in {
@@ -33,5 +34,10 @@ class RiddlcCommandsTest extends RunCommandSpecBase {
       val args = Seq("version")
       runWith(args)
     }
+  }
+
+  override def runWith(args: Seq[String]): Assertion = {
+    RIDDLC.main(args.toArray)
+    succeed
   }
 }
