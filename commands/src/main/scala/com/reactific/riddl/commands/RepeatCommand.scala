@@ -9,7 +9,7 @@ package com.reactific.riddl.commands
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.utils.{Interrupt, Logger}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import pureconfig.ConfigReader.Result
@@ -18,11 +18,9 @@ import scopt.OParser
 
 import java.io.File
 import java.nio.file.Path
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 
 object RepeatCommand {
@@ -132,17 +130,6 @@ class RepeatCommand
   }
   override def getConfigReader: ConfigReader[Options] = { new OptionsReader }
 
-  def allowCancel(options: Options): (Future[Boolean], () => Boolean) = {
-    if (!options.interactive) { Future.successful(false) -> (() => false) }
-    else {
-      Interrupt.aFuture[Boolean] {
-        while (
-          Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
-        ) {}
-        true
-      }
-    }
-  }
 
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug
@@ -166,7 +153,7 @@ class RepeatCommand
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate
     val sleepTime = refresh.toMillis
-    val (shouldQuit, cancel) = allowCancel(options)
+    val (shouldQuit, cancel) = Interrupt.allowCancel(options.interactive)
 
     def userHasCancelled: Boolean = shouldQuit.isCompleted &&
       shouldQuit.value == Option(Success(true))
@@ -182,7 +169,7 @@ class RepeatCommand
         pluginName
       ).map { _ =>
         if (!userHasCancelled) {
-          cancel()
+          cancel.map(_.apply())
           shouldContinue = false
         } else {
           i += 1

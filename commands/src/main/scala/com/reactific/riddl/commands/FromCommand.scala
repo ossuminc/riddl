@@ -18,15 +18,16 @@ import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
 object FromCommand {
+  final val cmdName = "from"
   case class Options(
     inputFile: Option[Path] = None,
     targetCommand: String = "")
       extends CommandOptions {
-    def command: String = "from"
+    def command: String = cmdName
   }
 }
 
-class FromCommand extends CommandPlugin[FromCommand.Options]("from") {
+class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName) {
   import FromCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
