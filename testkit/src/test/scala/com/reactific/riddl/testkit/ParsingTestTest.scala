@@ -12,22 +12,70 @@ class ParsingTestTest extends ParsingTest {
 
   "ParsingTest" should {
 
-    "parse[LiteralString]" in {
-      val input = RiddlParserInput(""""Hello World"""")
-      val testParser = TestParser(input)
-      testParser.parse[LiteralString, LiteralString](
-        testParser.parserFor[LiteralString],
-        identity
-      ) match {
-        case Right((actual, _)) =>
-          val expected =
-            LiteralString((1, 1, RiddlParserInput.empty), "Hello World")
-          actual mustBe expected
+    "parse[Pipe]" in {
+      val rpi = RiddlParserInput("""pipe foo is { ??? }""")
+      parseDefinition[Pipe](rpi) match {
+        case Right((pipe, _)) =>
+          val expected = Pipe((1, 1, rpi), Identifier((1, 6, rpi), "foo"))
+          pipe mustBe expected
         case Left(errors) => fail(errors.format)
       }
     }
 
-    "parseTopLevelDomain[Domain]" in {
+    "parse[InletJoint]" in {
+      val rpi = RiddlParserInput("""joint foo is inlet bar from pipe baz""")
+      parseDefinition[InletJoint](rpi) match {
+        case Right((ij, _)) =>
+          val expected = InletJoint(
+            (1, 1, rpi),
+            Identifier((1, 7, rpi), "foo"),
+            InletRef((1, 14, rpi), PathIdentifier((1, 20, rpi), Seq("bar"))),
+            PipeRef((1, 29, rpi), PathIdentifier((1, 34, rpi), Seq("baz")))
+          )
+          ij mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[OutletJoint]" in {
+      val rpi = RiddlParserInput("""joint foo is outlet bar to pipe baz""")
+      parseDefinition[OutletJoint](rpi) match {
+        case Right((oj, _)) =>
+          val expected = OutletJoint(
+            (1, 1, rpi),
+            Identifier((1, 7, rpi), "foo"),
+            OutletRef((1, 14, rpi), PathIdentifier((1, 21, rpi), Seq("bar"))),
+            PipeRef((1, 28, rpi), PathIdentifier((1, 33, rpi), Seq("baz")))
+          )
+          oj mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[Example]" in {
+      val rpi = RiddlParserInput("""example foo is { ??? }""")
+      parseDefinition[Example](rpi) match {
+        case Right((oj, _)) =>
+          val expected = Example(
+            (1, 1, rpi),
+            Identifier((1, 9, rpi), "foo")
+          )
+          oj mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[Saga]" in {
+      val rpi = RiddlParserInput("""saga foo is { ??? }""")
+      parseDefinition[Saga](rpi) match {
+        case Right((saga, _)) =>
+          val expected = Saga((1, 1, rpi), Identifier((1, 6, rpi), "foo"))
+          saga mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+      "parseTopLevelDomain[Domain]" in {
       parseTopLevelDomain[Domain](
         "domain foo is { ??? }",
         _.contents.head
