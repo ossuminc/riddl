@@ -6,10 +6,26 @@
 
 package com.reactific.riddl.testkit
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 class ParsingTestTest extends ParsingTest {
 
   "ParsingTest" should {
+
+    "parse[LiteralString]" in {
+      val input = RiddlParserInput(""""Hello World"""")
+      val testParser = TestParser(input)
+      testParser.parse[LiteralString, LiteralString](
+        testParser.parserFor[LiteralString],
+        identity
+      ) match {
+        case Right((actual, _)) =>
+          val expected =
+            LiteralString((1, 1, RiddlParserInput.empty), "Hello World")
+          actual mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
 
     "parseTopLevelDomain[Domain]" in {
       parseTopLevelDomain[Domain](
