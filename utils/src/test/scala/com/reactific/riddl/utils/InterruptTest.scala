@@ -23,6 +23,7 @@ class InterruptTest extends AnyWordSpec with Matchers {
       future.value mustBe Some(Success(false))
     }
     "work interactively" in {
+      pending
       val (future, cancel) = Interrupt.allowCancel(true)
       cancel match {
         case Some(interrupt) =>
