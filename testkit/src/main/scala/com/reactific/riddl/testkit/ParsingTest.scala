@@ -30,7 +30,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     expect(parser).map(x => extract(x._1) -> x._2)
   }
 
-  protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
+  def parserFor[T <: RiddlValue: ClassTag]: P[?] => P[T] = {
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
       case x if x == classOf[AST.Type]        => typeDef(_)
       case x if x == classOf[AST.Domain]      => domain(_)
@@ -140,7 +140,7 @@ class ParsingTest extends ParsingTestBase {
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    parseDefinition[FROM,TO](RiddlParserInput(input), extract)
+    parseDefinition[FROM, TO](RiddlParserInput(input), extract)
   }
 
   def parseDefinition[FROM <: Definition: ClassTag](
@@ -155,7 +155,6 @@ class ParsingTest extends ParsingTestBase {
   ): Either[Messages, (FROM, RiddlParserInput)] = {
     parseDefinition(RiddlParserInput(input))
   }
-
 
   def parseInContext[TO <: RiddlNode](
     input: RiddlParserInput,
