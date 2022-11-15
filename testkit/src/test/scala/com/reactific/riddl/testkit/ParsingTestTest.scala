@@ -111,16 +111,25 @@ class ParsingTestTest extends ParsingTest {
       }
     }
 
-    /*
+    "parseTopLevelDomain[Processor]" in {
+      parseTopLevelDomain[Processor](
+        "domain foo is { context C is { source X is { ??? } } }",
+        _.contents.head.contexts.head.processors.head
+      ) match {
+        case Left(messages)  => fail(messages.format)
+        case Right((src, _)) => src.id.value mustBe ("X")
+      }
+    }
 
-case x if x == classOf[AST.Invariant]   => invariant(_)
-case x if x == classOf[AST.Processor]   => processor(_)
-case x if x == classOf[AST.Projection]  => projection(_)
-case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
-case x if x == classOf[AST.InletJoint]  => joint(_)
-case x if x == classOf[AST.OutletJoint] => joint(_)
-case x if x == classOf[AST.Example]     => example(_)
-     */
+    "parseTopLevelDomain[Projection]" in {
+      parseTopLevelDomain[Projection](
+        "domain foo is { context C is { projection X is { ??? } } }",
+        _.contents.head.contexts.head.projections.head
+      ) match {
+        case Left(messages)  => fail(messages.format)
+        case Right((src, _)) => src.id.value mustBe ("X")
+      }
+    }
 
     "parseTopLevelDomains" in {
       parseTopLevelDomains("domain foo is { ??? }") match {
@@ -156,23 +165,17 @@ case x if x == classOf[AST.Example]     => example(_)
       }
     }
     "parseDefinition[Function]" in {
-      parseDefinition[Function](
-        "function foo { ??? }"
-      ) match {
+      parseDefinition[Function]("function foo { ??? }") match {
         case Left(messages)  => fail(messages.format)
         case Right((fun, _)) => fun.id.value must be("foo")
 
       }
     }
     "parseInContext[Term]" in {
-      parseInContext[Term](
-        "term X is briefly \"X\"",
-        _.terms.head
-      ) match {
+      parseInContext[Term]("term X is briefly \"X\"", _.terms.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value must be("X")
       }
     }
   }
 }
-
