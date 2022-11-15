@@ -1372,7 +1372,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class Pipe(
     loc: Location,
     id: Identifier,
-    transmitType: Option[TypeRef],
+    transmitType: Option[TypeRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with PlantDefinition with ContextDefinition {

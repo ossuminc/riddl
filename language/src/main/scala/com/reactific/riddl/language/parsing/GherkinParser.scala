@@ -57,9 +57,9 @@ trait GherkinParser extends ActionParser {
     }
   }
 
-  def exampleBody[
-    u: P
-  ]: P[(Seq[GivenClause], Seq[WhenClause], Seq[ThenClause], Seq[ButClause])] = {
+  type ExampleBody =
+    (Seq[GivenClause], Seq[WhenClause], Seq[ThenClause], Seq[ButClause])
+  def exampleBody[u: P]: P[ExampleBody] = {
     P(
       (givens.?.map(_.getOrElse(Seq.empty[GivenClause])) ~
         whens.?.map(_.getOrElse(Seq.empty[WhenClause])) ~ thens ~
@@ -72,11 +72,21 @@ trait GherkinParser extends ActionParser {
     )
   }
 
+  def undefinedBody[u: P]: P[ExampleBody] = {
+    P(undefined((
+      Seq.empty[GivenClause],
+      Seq.empty[WhenClause],
+      Seq.empty[ThenClause],
+      Seq.empty[ButClause]
+    )))
+  }
+
   def example[u: P]: P[Example] = {
     P(
       location ~
         (IgnoreCase(Keywords.example) | IgnoreCase(Keywords.scenario)) ~/
-        identifier ~ is.? ~ open ~/ exampleBody ~ close ~ briefly ~ description
+        identifier ~ is.? ~ open ~/ (undefinedBody | exampleBody) ~ close ~
+        briefly ~ description
     ).map { case (loc, id, (g, w, t, e), brief, desc) =>
       Example(loc, id, g, w, t, e, brief, desc)
     }

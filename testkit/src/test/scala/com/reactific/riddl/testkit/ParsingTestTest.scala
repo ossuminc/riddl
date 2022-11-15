@@ -6,12 +6,76 @@
 
 package com.reactific.riddl.testkit
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 class ParsingTestTest extends ParsingTest {
 
   "ParsingTest" should {
 
-    "parseTopLevelDomain[Domain]" in {
+    "parse[Pipe]" in {
+      val rpi = RiddlParserInput("""pipe foo is { ??? }""")
+      parseDefinition[Pipe](rpi) match {
+        case Right((pipe, _)) =>
+          val expected = Pipe((1, 1, rpi), Identifier((1, 6, rpi), "foo"))
+          pipe mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[InletJoint]" in {
+      val rpi = RiddlParserInput("""joint foo is inlet bar from pipe baz""")
+      parseDefinition[InletJoint](rpi) match {
+        case Right((ij, _)) =>
+          val expected = InletJoint(
+            (1, 1, rpi),
+            Identifier((1, 7, rpi), "foo"),
+            InletRef((1, 14, rpi), PathIdentifier((1, 20, rpi), Seq("bar"))),
+            PipeRef((1, 29, rpi), PathIdentifier((1, 34, rpi), Seq("baz")))
+          )
+          ij mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[OutletJoint]" in {
+      val rpi = RiddlParserInput("""joint foo is outlet bar to pipe baz""")
+      parseDefinition[OutletJoint](rpi) match {
+        case Right((oj, _)) =>
+          val expected = OutletJoint(
+            (1, 1, rpi),
+            Identifier((1, 7, rpi), "foo"),
+            OutletRef((1, 14, rpi), PathIdentifier((1, 21, rpi), Seq("bar"))),
+            PipeRef((1, 28, rpi), PathIdentifier((1, 33, rpi), Seq("baz")))
+          )
+          oj mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[Example]" in {
+      val rpi = RiddlParserInput("""example foo is { ??? }""")
+      parseDefinition[Example](rpi) match {
+        case Right((oj, _)) =>
+          val expected = Example(
+            (1, 1, rpi),
+            Identifier((1, 9, rpi), "foo")
+          )
+          oj mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+    "parse[Saga]" in {
+      val rpi = RiddlParserInput("""saga foo is { ??? }""")
+      parseDefinition[Saga](rpi) match {
+        case Right((saga, _)) =>
+          val expected = Saga((1, 1, rpi), Identifier((1, 6, rpi), "foo"))
+          saga mustBe expected
+        case Left(errors) => fail(errors.format)
+      }
+    }
+
+      "parseTopLevelDomain[Domain]" in {
       parseTopLevelDomain[Domain](
         "domain foo is { ??? }",
         _.contents.head
@@ -111,16 +175,25 @@ class ParsingTestTest extends ParsingTest {
       }
     }
 
-    /*
+    "parseTopLevelDomain[Processor]" in {
+      parseTopLevelDomain[Processor](
+        "domain foo is { context C is { source X is { ??? } } }",
+        _.contents.head.contexts.head.processors.head
+      ) match {
+        case Left(messages)  => fail(messages.format)
+        case Right((src, _)) => src.id.value mustBe ("X")
+      }
+    }
 
-case x if x == classOf[AST.Invariant]   => invariant(_)
-case x if x == classOf[AST.Processor]   => processor(_)
-case x if x == classOf[AST.Projection]  => projection(_)
-case x if x == classOf[AST.Pipe]        => pipeDefinition(_)
-case x if x == classOf[AST.InletJoint]  => joint(_)
-case x if x == classOf[AST.OutletJoint] => joint(_)
-case x if x == classOf[AST.Example]     => example(_)
-     */
+    "parseTopLevelDomain[Projection]" in {
+      parseTopLevelDomain[Projection](
+        "domain foo is { context C is { projection X is { ??? } } }",
+        _.contents.head.contexts.head.projections.head
+      ) match {
+        case Left(messages)  => fail(messages.format)
+        case Right((src, _)) => src.id.value mustBe ("X")
+      }
+    }
 
     "parseTopLevelDomains" in {
       parseTopLevelDomains("domain foo is { ??? }") match {
@@ -156,23 +229,17 @@ case x if x == classOf[AST.Example]     => example(_)
       }
     }
     "parseDefinition[Function]" in {
-      parseDefinition[Function](
-        "function foo { ??? }"
-      ) match {
+      parseDefinition[Function]("function foo { ??? }") match {
         case Left(messages)  => fail(messages.format)
         case Right((fun, _)) => fun.id.value must be("foo")
 
       }
     }
     "parseInContext[Term]" in {
-      parseInContext[Term](
-        "term X is briefly \"X\"",
-        _.terms.head
-      ) match {
+      parseInContext[Term]("term X is briefly \"X\"", _.terms.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value must be("X")
       }
     }
   }
 }
-
