@@ -1,5 +1,6 @@
 package com.reactific.riddl.commands
 import org.scalatest.Assertion
+import org.scalatest.exceptions.TestFailedException
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -13,9 +14,10 @@ class ReadOptionsTest extends AnyWordSpec with Matchers {
 
   def check[OPTS <: CommandOptions](
     cmd: CommandPlugin[?],
-    expected: OPTS
+    expected: OPTS,
+    file: Path = Path.of(confFile)
   ): Assertion = {
-    cmd.loadOptionsFrom(Path.of(confFile)) match {
+    cmd.loadOptionsFrom(file) match {
       case Left(errors)   => fail(errors.format)
       case Right(options) => options must be(expected)
     }
@@ -27,6 +29,12 @@ class ReadOptionsTest extends AnyWordSpec with Matchers {
         .Options(Some(Path.of(s"$inputDir/dump.riddl")), "dump")
       check(new DumpCommand, expected)
     }
+    "read for from" in {
+      val expected = FromCommand
+        .Options(Some(Path.of(s"$inputDir/file.conf")), "dump")
+      check(new FromCommand, expected)
+    }
+
     "read for onchange" in {
       val expected = OnChangeCommand.Options(
         configFile = Path.of(s"$inputDir/onchange.riddl"),
@@ -37,6 +45,17 @@ class ReadOptionsTest extends AnyWordSpec with Matchers {
       expected.command must be(OnChangeCommand.cmdName)
       check(new OnChangeCommand, expected)
     }
+
+    "make sure onchange doesn't accept empty strings" in {
+      val expected = OnChangeCommand.Options()
+      intercept[TestFailedException](check(
+        new OnChangeCommand,
+        expected,
+        Path.of(s"$inputDir/onchangevalidation.conf")
+      ))
+
+    }
+
     "read for parse" in {
       val expected = InputFileCommandPlugin
         .Options(Some(Path.of(s"$inputDir/parse.riddl")), "parse")
