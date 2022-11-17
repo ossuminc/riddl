@@ -17,9 +17,10 @@ class ValidateExamplesTest extends ValidatingTest {
     "all validate with no errors or warnings" in {
       for ((label, fileName) <- files) yield {
         validateFile(label, fileName) { case (_, messages) =>
-          val errors = messages.filter(_.kind.isError)
-          val warnings = messages.iterator
-            .filter(m => m.kind.isWarning && !m.kind.isIgnorable).toList
+          val errors = messages.justErrors
+          val warnings = messages
+            .justWarnings
+            .filterNot(_.message.contains("unused"))
           info(s"Errors:\n${errors.format}")
           info(s"Warnings:\n${warnings.format}")
           errors mustBe empty

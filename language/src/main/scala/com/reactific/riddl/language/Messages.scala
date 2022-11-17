@@ -153,7 +153,8 @@ object Messages {
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
     def justMissing: Messages = msgs.filter(_.isMissing)
-    def justWarnings: Messages = msgs.filter(x => x.isWarning && !x.isMissing)
+    def justWarnings: Messages = msgs
+      .filter(x => x.isWarning && !x.isMissing && !x.isStyle)
     def justErrors: Messages = msgs.filter(_.isError)
   }
 
@@ -169,11 +170,8 @@ object Messages {
     options: CommonOptions
   ): Int = {
     val list = if (options.sortMessagesByLocation) messages.sorted else messages
-    if (options.groupMessagesByKind) {
-      logMessagesByGroup(list, options, log)
-    } else {
-      logMessagesRetainingOrder(list, log)
-    }
+    if (options.groupMessagesByKind) { logMessagesByGroup(list, options, log) }
+    else { logMessagesRetainingOrder(list, log) }
     highestSeverity(list)
   }
 
