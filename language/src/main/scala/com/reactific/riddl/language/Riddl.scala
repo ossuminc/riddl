@@ -32,7 +32,8 @@ case class CommonOptions(
   showUnusedWarnings: Boolean = true,
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
-  sortMessagesByLocation: Boolean = false)
+  sortMessagesByLocation: Boolean = false,
+  groupMessagesByKind: Boolean = true)
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {

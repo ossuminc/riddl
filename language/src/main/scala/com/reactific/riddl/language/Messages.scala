@@ -26,8 +26,8 @@ object Messages {
 
     def severity: Int
 
-    def isIgnorable: Boolean = severity <= Warning.severity
-    def isActionable: Boolean = severity >= Error.severity
+    def isIgnorable: Boolean = severity < Warning.severity
+    def isActionable: Boolean = severity >= Warning.severity
 
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
@@ -112,14 +112,18 @@ object Messages {
     }
   }
 
-  def error(
-    message: String,
-    loc: Location = Location.empty
-  ): Message = { Message(loc, message) }
+  def info(message: String, loc: Location = Location.empty): Message = {
+    Message(loc, message, Info)
+  }
 
   def warning(message: String, loc: Location = Location.empty): Message = {
     Message(loc, message, Warning)
   }
+
+  def error(
+    message: String,
+    loc: Location = Location.empty
+  ): Message = { Message(loc, message) }
 
   def severe(message: String, loc: Location = Location.empty): Message = {
     Message(loc, message, SevereError)
@@ -165,6 +169,15 @@ object Messages {
     options: CommonOptions
   ): Int = {
     val list = if (options.sortMessagesByLocation) messages.sorted else messages
+    if (options.groupMessagesByKind) {
+      logMessagesByGroup(list, options, log)
+    } else {
+      logMessagesRetainingOrder(list, log)
+    }
+    highestSeverity(list)
+  }
+
+  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
     list.foreach { msg =>
       msg.kind match {
         case Info           => log.info(msg.format)
@@ -175,9 +188,9 @@ object Messages {
         case SevereError    => log.severe(msg.format)
       }
     }
-    highestSeverity(messages)
   }
-  def logMessages(
+
+  def logMessagesByGroup(
     messages: Messages,
     commonOptions: CommonOptions,
     log: Logger
