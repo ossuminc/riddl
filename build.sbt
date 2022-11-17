@@ -81,7 +81,7 @@ val Language = config("language")
 lazy val language = project.in(file("language")).configure(C.withCoverage(0))
   .configure(C.mavenPublish).settings(
     name := "riddl-language",
-    coverageExcludedPackages := "<empty>;.*BuildInfo",
+    coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++
       Dep.testing
   ).dependsOn(utils)
