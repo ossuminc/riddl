@@ -15,210 +15,253 @@ import com.reactific.riddl.language.ast.At
 /** Unit Tests For TypeExpressions */
 class TypeExpressionTest extends AnyWordSpec with Matchers {
 
+  val abstract_ = Abstract(At.empty)
+  val bool = Bool(At.empty)
+  val current = Current(At.empty)
+  val currency = Currency(At.empty, "CA")
+  val date = Date(At.empty)
+  val dateTime = DateTime(At.empty)
+  val decimal = Decimal(At.empty)
+  val duration = Duration(At.empty)
+  val integer = Integer(At.empty)
+  val length_ = Length(At.empty)
+  val location = Location(At.empty)
+  val luminosity = Luminosity(At.empty)
+  val mass = Mass(At.empty)
+  val mole = Mole(At.empty)
+  val nothing = Nothing(At.empty)
+  val number = Number(At.empty)
+  val real = Real(At.empty)
+  val temperature = Temperature(At.empty)
+  val time = Time(At.empty)
+  val timestamp = TimeStamp(At.empty)
+  val url = URL(At.empty)
+  val uuid = UUID(At.empty)
+
+  val pattern = Pattern(At.empty, Seq(LiteralString(At.empty, "^$")))
+  val range = RangeType(At.empty, 2, 4)
+  val string = Strng(At.empty, Some(42), None)
+  val id = UniqueId(At.empty, PathIdentifier(At.empty, Seq("a", "b")))
+
   "Simple Predefined Types" must {
     "support Abstract" in {
-      val a = Abstract(At.empty)
-      a.kind mustBe Predefined.Abstract
-      AST.kind(a) mustBe Predefined.Abstract
+      abstract_.kind mustBe Predefined.Abstract
+      AST.kind(abstract_) mustBe Predefined.Abstract
     }
     "support Boolean" in {
-      val b = Bool(At.empty)
-      b.kind mustBe Predefined.Boolean
-      AST.kind(b) mustBe Predefined.Boolean
-      b.isEmpty mustBe true
-      b.isContainer mustBe false
+      bool.kind mustBe Predefined.Boolean
+      AST.kind(bool) mustBe Predefined.Boolean
+      bool.isEmpty mustBe true
+      bool.isContainer mustBe false
     }
     "support Current" in {
-      val c = Current(At.empty)
-      c.kind mustBe Predefined.Current
-      AST.kind(c) mustBe Predefined.Current
-      c.isEmpty mustBe true
-      c.isContainer mustBe false
+      current.kind mustBe Predefined.Current
+      AST.kind(current) mustBe Predefined.Current
+      current.isEmpty mustBe true
+      current.isContainer mustBe false
     }
     "support Currency" in {
-      val c = Currency(At.empty, "CA")
-      c.kind mustBe Predefined.Currency
-      AST.kind(c) mustBe Predefined.Currency
-      c.isEmpty mustBe true
-      c.isContainer mustBe false
+      currency.kind mustBe Predefined.Currency
+      AST.kind(currency) mustBe Predefined.Currency
+      currency.isEmpty mustBe true
+      currency.isContainer mustBe false
     }
     "support Date" in {
-      val d = Date(At.empty)
-      d.kind mustBe Predefined.Date
-      AST.kind(d) mustBe Predefined.Date
-      d.isEmpty mustBe true
-      d.isContainer mustBe false
+      date.kind mustBe Predefined.Date
+      AST.kind(date) mustBe Predefined.Date
+      date.isEmpty mustBe true
+      date.isContainer mustBe false
     }
     "support DateTime" in {
-      val d = DateTime(At.empty)
-      d.kind mustBe Predefined.DateTime
-      AST.kind(d) mustBe Predefined.DateTime
-      d.isEmpty mustBe true
-      d.isContainer mustBe false
+      dateTime.kind mustBe Predefined.DateTime
+      AST.kind(dateTime) mustBe Predefined.DateTime
+      dateTime.isEmpty mustBe true
+      dateTime.isContainer mustBe false
     }
     "support Decimal" in {
-      val d = Decimal(At.empty)
-      d.kind mustBe Predefined.Decimal
-      AST.kind(d) mustBe Predefined.Decimal
-      d.isEmpty mustBe true
-      d.isContainer mustBe false
-      d.format mustBe Predefined.Decimal
+      decimal.kind mustBe Predefined.Decimal
+      AST.kind(decimal) mustBe Predefined.Decimal
+      decimal.isEmpty mustBe true
+      decimal.isContainer mustBe false
+      decimal.format mustBe Predefined.Decimal
     }
     "support Duration" in {
-      val d = Duration(At.empty)
-      d.kind mustBe Predefined.Duration
-      AST.kind(d) mustBe Predefined.Duration
-      d.isEmpty mustBe true
-      d.isContainer mustBe false
-      d.format mustBe Predefined.Duration
+      duration.kind mustBe Predefined.Duration
+      AST.kind(duration) mustBe Predefined.Duration
+      duration.isEmpty mustBe true
+      duration.isContainer mustBe false
+      duration.format mustBe Predefined.Duration
     }
     "support Integer" in {
-      val i = Integer(At.empty)
-      i.kind mustBe Predefined.Integer
-      AST.kind(i) mustBe Predefined.Integer
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Integer
+      integer.kind mustBe Predefined.Integer
+      AST.kind(integer) mustBe Predefined.Integer
+      integer.isEmpty mustBe true
+      integer.isContainer mustBe false
+      integer.format mustBe Predefined.Integer
     }
     "support Length" in {
-      val i = Length(At.empty)
-      i.kind mustBe Predefined.Length
-      AST.kind(i) mustBe Predefined.Length
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Length
+      length_.kind mustBe Predefined.Length
+      AST.kind(length_) mustBe Predefined.Length
+      length_.isEmpty mustBe true
+      length_.isContainer mustBe false
+      length_.format mustBe Predefined.Length
     }
     "support Location" in {
-      val i = Location(At.empty)
-      i.kind mustBe Predefined.Location
-      AST.kind(i) mustBe Predefined.Location
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Location
+      location.kind mustBe Predefined.Location
+      AST.kind(location) mustBe Predefined.Location
+      location.isEmpty mustBe true
+      location.isContainer mustBe false
+      location.format mustBe Predefined.Location
     }
     "support Luminosity" in {
-      val i = Luminosity(At.empty)
-      i.kind mustBe Predefined.Luminosity
-      AST.kind(i) mustBe Predefined.Luminosity
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Luminosity
+      luminosity.kind mustBe Predefined.Luminosity
+      AST.kind(luminosity) mustBe Predefined.Luminosity
+      luminosity.isEmpty mustBe true
+      luminosity.isContainer mustBe false
+      luminosity.format mustBe Predefined.Luminosity
     }
     "support Mass" in {
-      val i = Mass(At.empty)
-      i.kind mustBe Predefined.Mass
-      AST.kind(i) mustBe Predefined.Mass
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Mass
+      mass.kind mustBe Predefined.Mass
+      AST.kind(mass) mustBe Predefined.Mass
+      mass.isEmpty mustBe true
+      mass.isContainer mustBe false
+      mass.format mustBe Predefined.Mass
     }
     "support Mole" in {
-      val i = Mole(At.empty)
-      i.kind mustBe Predefined.Mole
-      AST.kind(i) mustBe Predefined.Mole
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Mole
+      mole.kind mustBe Predefined.Mole
+      AST.kind(mole) mustBe Predefined.Mole
+      mole.isEmpty mustBe true
+      mole.isContainer mustBe false
+      mole.format mustBe Predefined.Mole
     }
     "support Nothing" in {
-      val i = Nothing(At.empty)
-      i.kind mustBe Predefined.Nothing
-      AST.kind(i) mustBe Predefined.Nothing
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Nothing
+      nothing.kind mustBe Predefined.Nothing
+      AST.kind(nothing) mustBe Predefined.Nothing
+      nothing.isEmpty mustBe true
+      nothing.isContainer mustBe false
+      nothing.format mustBe Predefined.Nothing
     }
     "support Number" in {
-      val i = Number(At.empty)
-      i.kind mustBe Predefined.Number
-      AST.kind(i) mustBe Predefined.Number
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Number
+      number.kind mustBe Predefined.Number
+      AST.kind(number) mustBe Predefined.Number
+      number.isEmpty mustBe true
+      number.isContainer mustBe false
+      number.format mustBe Predefined.Number
     }
     "support Real" in {
-      val i = Real(At.empty)
-      i.kind mustBe Predefined.Real
-      AST.kind(i) mustBe Predefined.Real
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Real
+      real.kind mustBe Predefined.Real
+      AST.kind(real) mustBe Predefined.Real
+      real.isEmpty mustBe true
+      real.isContainer mustBe false
+      real.format mustBe Predefined.Real
     }
     "support Temperature" in {
-      val i = Temperature(At.empty)
-      i.kind mustBe Predefined.Temperature
-      AST.kind(i) mustBe Predefined.Temperature
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Temperature
+      temperature.kind mustBe Predefined.Temperature
+      AST.kind(temperature) mustBe Predefined.Temperature
+      temperature.isEmpty mustBe true
+      temperature.isContainer mustBe false
+      temperature.format mustBe Predefined.Temperature
     }
     "support Time" in {
-      val i = Time(At.empty)
-      i.kind mustBe Predefined.Time
-      AST.kind(i) mustBe Predefined.Time
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.Time
+      time.kind mustBe Predefined.Time
+      AST.kind(time) mustBe Predefined.Time
+      time.isEmpty mustBe true
+      time.isContainer mustBe false
+      time.format mustBe Predefined.Time
     }
     "support TimeStamp" in {
-      val i = TimeStamp(At.empty)
-      i.kind mustBe Predefined.TimeStamp
-      AST.kind(i) mustBe Predefined.TimeStamp
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.TimeStamp
+      timestamp.kind mustBe Predefined.TimeStamp
+      AST.kind(timestamp) mustBe Predefined.TimeStamp
+      timestamp.isEmpty mustBe true
+      timestamp.isContainer mustBe false
+      timestamp.format mustBe Predefined.TimeStamp
     }
     "support URL" in {
-      val i = URL(At.empty)
-      i.kind mustBe Predefined.URL
-      AST.kind(i) mustBe Predefined.URL
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.URL
+      url.kind mustBe Predefined.URL
+      AST.kind(url) mustBe Predefined.URL
+      url.isEmpty mustBe true
+      url.isContainer mustBe false
+      url.format mustBe Predefined.URL
     }
     "support UUID" in {
-      val i = UUID(At.empty)
-      i.kind mustBe Predefined.UUID
-      AST.kind(i) mustBe Predefined.UUID
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.format mustBe Predefined.UUID
+      uuid.kind mustBe Predefined.UUID
+      AST.kind(uuid) mustBe Predefined.UUID
+      uuid.isEmpty mustBe true
+      uuid.isContainer mustBe false
+      uuid.format mustBe Predefined.UUID
     }
   }
 
   "Constructed Predefined Types" must {
     "support Pattern" in {
-      val i = Pattern(At.empty, Seq(LiteralString(At.empty, "^$")))
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
-      i.kind mustBe Predefined.Pattern
-      AST.kind(i) mustBe Predefined.Pattern
-      i.format mustBe "Pattern(\"^$\")"
+      pattern.isEmpty mustBe true
+      pattern.isContainer mustBe false
+      pattern.kind mustBe Predefined.Pattern
+      AST.kind(pattern) mustBe Predefined.Pattern
+      pattern.format mustBe "Pattern(\"^$\")"
     }
     "support Range" in {
-      val r = RangeType(At.empty, 2, 4)
-      r.isEmpty mustBe true
-      r.isContainer mustBe false
-      r.kind mustBe Predefined.Range
-      AST.kind(r) mustBe Predefined.Range
-      r.format mustBe "Range(2,4)"
+      range.isEmpty mustBe true
+      range.isContainer mustBe false
+      range.kind mustBe Predefined.Range
+      AST.kind(range) mustBe Predefined.Range
+      range.format mustBe "Range(2,4)"
     }
     "support String" in {
-      val s = Strng(At.empty, Some(42), None)
-      s.kind mustBe Predefined.String
-      AST.kind(s) mustBe Predefined.String
-      s.format mustBe "String(42,)"
-      s.isEmpty mustBe true
-      s.isContainer mustBe false
+      string.kind mustBe Predefined.String
+      AST.kind(string) mustBe Predefined.String
+      string.format mustBe "String(42,)"
+      string.isEmpty mustBe true
+      string.isContainer mustBe false
     }
 
     "support UniqueId" in {
-      val i = UniqueId(At.empty, PathIdentifier(At.empty, Seq("a", "b")))
-      i.format mustBe "Id(a.b)"
-      i.kind mustBe Predefined.Id
-      i.isEmpty mustBe true
-      i.isContainer mustBe false
+      id.format mustBe "Id(a.b)"
+      id.kind mustBe Predefined.Id
+      id.isEmpty mustBe true
+      id.isContainer mustBe false
     }
+  }
 
+  "Assignment Compatibility" must {
+    "support abstract equality" in {
+      val abs = Abstract(At.empty)
+      abs.isAssignmentCompatible(abstract_) mustBe true
+      abs.isAssignmentCompatible(bool) mustBe true
+      abs.isAssignmentCompatible(current) mustBe true
+      abs.isAssignmentCompatible(currency) mustBe true
+      abs.isAssignmentCompatible(date) mustBe true
+      abs.isAssignmentCompatible(dateTime) mustBe true
+      abs.isAssignmentCompatible(decimal) mustBe true
+      abs.isAssignmentCompatible(duration) mustBe true
+      abs.isAssignmentCompatible(id) mustBe true
+      abs.isAssignmentCompatible(integer) mustBe true
+      abs.isAssignmentCompatible(location) mustBe true
+      abs.isAssignmentCompatible(length_) mustBe true
+      abs.isAssignmentCompatible(luminosity) mustBe true
+      abs.isAssignmentCompatible(mass) mustBe true
+      abs.isAssignmentCompatible(mole) mustBe true
+      abs.isAssignmentCompatible(nothing) mustBe true
+      abs.isAssignmentCompatible(number) mustBe true
+      abs.isAssignmentCompatible(pattern) mustBe true
+      abs.isAssignmentCompatible(range) mustBe true
+      abs.isAssignmentCompatible(real) mustBe true
+      abs.isAssignmentCompatible(string) mustBe true
+      abs.isAssignmentCompatible(temperature) mustBe true
+      abs.isAssignmentCompatible(time) mustBe true
+      abs.isAssignmentCompatible(timestamp) mustBe true
+      abs.isAssignmentCompatible(url) mustBe true
+      abs.isAssignmentCompatible(uuid) mustBe true
+    }
+    "support TimeStamp equality" in {
+      val ts = TimeStamp(At.empty)
+      ts.isAssignmentCompatible(DateTime(At.empty)) mustBe true
+      ts.isAssignmentCompatible(Date(At.empty)) mustBe true
+      ts.isAssignmentCompatible(Strng(At.empty)) mustBe true
+      ts.isAssignmentCompatible(
+        Pattern(At.empty, Seq(LiteralString(At.empty, "")))
+      ) mustBe true
+      ts.isAssignmentCompatible(TimeStamp(At.empty)) mustBe true
+    }
   }
 }
