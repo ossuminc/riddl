@@ -8,7 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
@@ -32,7 +32,8 @@ case class CommonOptions(
   showUnusedWarnings: Boolean = true,
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
-  sortMessagesByLocation: Boolean = false)
+  sortMessagesByLocation: Boolean = false,
+  groupMessagesByKind: Boolean = true)
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
@@ -140,7 +141,7 @@ object Riddl {
         case NonFatal(x) => Left(errors(
             ExceptionUtils.getRootCauseStackTrace(x)
               .mkString(System.lineSeparator()),
-            Location(RiddlParserInput(inputFile), offset = 0)
+            At(RiddlParserInput(inputFile), offset = 0)
           ))
       }
     }

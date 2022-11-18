@@ -6,8 +6,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.AST.Type
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 /** Unit Tests For RegressionTests */
@@ -68,46 +67,79 @@ class RegressionTests extends ParsingTest {
     }
     "catch types with predefined expression with a suffix" in {
       val input = """domain foo {
-                    |  type Bug is IntegerRange briefly "oops"
+                    |  type Bug is IntegerRange
                     |}""".stripMargin
 
       def extract(root: AST.RootContainer): Type = {
         root.contents.head.types.head
       }
       parseTopLevelDomain[Type](input, extract) match {
-        case Left(messages) =>
-          messages mustNot be(empty)
-          messages.size mustBe (1)
-          val msg = messages.head
-          msg.kind mustBe (Messages.Error)
-          msg.format.contains("IntegerRange") mustBe (true)
-          succeed
-        case _ => fail("should have generated an error")
+        case Left(messages) => fail(messages.format)
+        case Right((typ, rpi)) =>
+          val expected: Type = Type(
+            (2, 3, rpi),
+            Identifier((2, 8, rpi), "Bug"),
+            AliasedTypeExpression(
+              (2, 15, rpi),
+              PathIdentifier((2, 15, rpi), List("IntegerRange"))
+            )
+          )
+          typ mustBe expected
+
       }
     }
 
-    "case types with predefined expression in an aggregation" in {
+    "catch types with bad predefined expression in an aggregation" in {
       val input = """domain foo {
                     |  type DateRange = Duration
+                    |  type SomePlace = Location
                     |  type Thing is {
-                    |    locationId: LocationId,
+                    |    locationId: SomePlace,
                     |    schedule: DateRange+
                     |  }
                     |}
                     |""".stripMargin
       def extract(root: AST.RootContainer): Type = {
-        root.contents.head.types.head
+        root.contents.head.types(2)
       }
       parseTopLevelDomain[Type](input, extract) match {
-        case Left(messages) =>
-          messages mustNot be(empty)
-          messages.size mustBe (1)
-          val msg = messages.head
-          msg.kind mustBe (Messages.Error)
-          msg.format.contains("DateRange+") mustBe (true)
-          succeed
-        case _ => fail("should have generated an error")
-
+        case Left(messages) => fail(messages.format)
+        case Right((typ, rpi)) =>
+          val expected: Type = Type(
+            (4, 3, rpi),
+            Identifier((4, 8, rpi), "Thing"),
+            Aggregation(
+              (4, 17, rpi),
+              List(
+                Field(
+                  (5, 5, rpi),
+                  Identifier((5, 5, rpi), "locationId"),
+                  AliasedTypeExpression(
+                    (5, 17, rpi),
+                    PathIdentifier((5, 17, rpi), List("SomePlace"))
+                  ),
+                  None,
+                  None
+                ),
+                Field(
+                  (6, 5, rpi),
+                  Identifier((6, 5, rpi), "schedule"),
+                  OneOrMore(
+                    (6, 15, rpi),
+                    AliasedTypeExpression(
+                      (6, 15, rpi),
+                      PathIdentifier((6, 15, rpi), List("DateRange"))
+                    )
+                  ),
+                  None,
+                  None
+                )
+              )
+            ),
+            None,
+            None
+          )
+          typ mustBe expected
       }
     }
   }

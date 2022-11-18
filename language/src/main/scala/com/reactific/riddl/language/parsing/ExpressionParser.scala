@@ -8,7 +8,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -204,7 +204,7 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
 
   def functionCall[u: P](
     names: => P[String]
-  ): P[(Location, String, Seq[Expression])] = {
+  ): P[(At, String, Seq[Expression])] = {
     P(
       location ~ names ~ Punctuation.roundOpen ~
         expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose

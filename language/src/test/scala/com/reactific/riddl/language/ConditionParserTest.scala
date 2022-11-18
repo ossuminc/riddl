@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.StringParser
 import org.scalatest.Assertion
@@ -37,59 +37,59 @@ class ConditionParserTest extends ParsingTest {
   "ConditionParser" should {
     "accept true" in {
       parseCondition("true") { cond: Condition =>
-        cond mustBe True(Location(1 -> 1))
+        cond mustBe True(At(1 -> 1))
       }
     }
     "accept false" in {
       parseCondition("false") { cond: Condition =>
-        cond mustBe False(Location(1 -> 1))
+        cond mustBe False(At(1 -> 1))
       }
     }
     "accept literal string" in {
       parseCondition("\"decide\"") { cond: Condition =>
         cond mustBe ArbitraryCondition(
-          Location(1 -> 1),
-          LiteralString(Location(1 -> 1), "decide")
+          At(1 -> 1),
+          LiteralString(At(1 -> 1), "decide")
         )
       }
     }
     "accept and(true,false)" in {
       parseCondition("and(true,false)") { cond: Condition =>
         cond mustBe AndCondition(
-          Location(1 -> 1),
-          Seq(True(Location(1 -> 5)), False(Location(1 -> 10)))
+          At(1 -> 1),
+          Seq(True(At(1 -> 5)), False(At(1 -> 10)))
         )
       }
     }
     "accept or(true,false)" in {
       parseCondition("or(true,false)") { cond: Condition =>
         cond mustBe OrCondition(
-          Location(1 -> 1),
-          Seq(True(Location(1 -> 4)), False(Location(1 -> 9)))
+          At(1 -> 1),
+          Seq(True(At(1 -> 4)), False(At(1 -> 9)))
         )
       }
     }
     "accept xor(true,false)" in {
       parseCondition("xor(true,false)") { cond: Condition =>
         cond mustBe XorCondition(
-          Location(1 -> 1),
-          Seq(True(Location(1 -> 5)), False(Location(1 -> 10)))
+          At(1 -> 1),
+          Seq(True(At(1 -> 5)), False(At(1 -> 10)))
         )
       }
     }
     "accept not(true,false)" in {
       parseCondition("not(true)") { cond: Condition =>
-        cond mustBe NotCondition(Location(1 -> 1), True(Location(1 -> 5)))
+        cond mustBe NotCondition(At(1 -> 1), True(At(1 -> 5)))
       }
     }
     "accept function call" in {
       parseCondition("This.That(x=42)") { cond: Condition =>
         cond mustBe FunctionCallCondition(
-          Location(1 -> 1),
-          PathIdentifier(Location(1 -> 1), Seq("This", "That")),
+          At(1 -> 1),
+          PathIdentifier(At(1 -> 1), Seq("This", "That")),
           ArgList(ListMap(
-            Identifier(Location(1 -> 11), "x") ->
-              LiteralInteger(Location(1 -> 13), BigInt(42))
+            Identifier(At(1 -> 11), "x") ->
+              LiteralInteger(At(1 -> 13), BigInt(42))
           ))
         )
       }

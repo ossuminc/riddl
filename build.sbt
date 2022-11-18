@@ -42,7 +42,6 @@ lazy val Utils = config("utils")
 lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
   .configure(C.withCoverage(0)).enablePlugins(BuildInfoPlugin).settings(
     name := "riddl-utils",
-    coverageExcludedPackages := "<empty>",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
     buildInfoObject := "RiddlBuildInfo",
     buildInfoPackage := "com.reactific.riddl.utils",
@@ -82,8 +81,7 @@ val Language = config("language")
 lazy val language = project.in(file("language")).configure(C.withCoverage(0))
   .configure(C.mavenPublish).settings(
     name := "riddl-language",
-    coverageExcludedPackages :=
-      "<empty>;.*AST;.*BuildInfo;.*PredefinedType;.*Terminals.*",
+    coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++
       Dep.testing
   ).dependsOn(utils)

@@ -201,7 +201,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case t: Time                      => this.add(t.kind)
       case dt: DateTime                 => this.add(dt.kind)
       case ts: TimeStamp                => this.add(ts.kind)
-      case ll: LatLong                  => this.add(ll.kind)
+      case ll: Location                  => this.add(ll.kind)
       case n: Nothing                   => this.add(n.kind)
       case AliasedTypeExpression(_, id) => this.add(id.format)
       case URL(_, scheme) => this

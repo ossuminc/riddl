@@ -21,12 +21,12 @@ trait Expressions extends TypeExpression {
 
   /** Base trait for expressions that yield a boolean value (a condition)
     */
-  sealed abstract class Condition(loc: Location) extends Expression {
+  sealed abstract class Condition(loc: At) extends Expression {
     def expressionType: TypeExpression = Bool(loc)
   }
 
   /** Base trait for expressions that yield a numeric value */
-  sealed abstract class NumericExpression(loc: Location) extends Expression {
+  sealed abstract class NumericExpression(loc: At) extends Expression {
     def expressionType: TypeExpression = Number(loc)
   }
 
@@ -46,9 +46,9 @@ trait Expressions extends TypeExpression {
     */
 
   case class ArithmeticOperator(
-    loc: Location,
-    operator: String,
-    operands: Seq[Expression])
+                                 loc: At,
+                                 operator: String,
+                                 operands: Seq[Expression])
       extends NumericExpression(loc) {
     override def format: String = operator + operands.mkString("(", ",", ")")
   }
@@ -62,7 +62,7 @@ trait Expressions extends TypeExpression {
     * @param path
     *   The path to the value for this expression
     */
-  case class ValueExpression(loc: Location, path: PathIdentifier)
+  case class ValueExpression(loc: At, path: PathIdentifier)
       extends Expression {
     override def format: String = "@" + path.format
     def expressionType: TypeExpression = Abstract(loc)
@@ -74,7 +74,7 @@ trait Expressions extends TypeExpression {
     * @param loc
     *   The location of the undefined condition
     */
-  case class UndefinedExpression(loc: Location) extends Expression {
+  case class UndefinedExpression(loc: At) extends Expression {
     override def format: String = Punctuation.undefinedMark
     def expressionType: TypeExpression = Abstract(loc)
 
@@ -108,9 +108,9 @@ trait Expressions extends TypeExpression {
     *   An argument list that should correspond to teh fields of the message
     */
   case class AggregateConstructionExpression(
-    loc: Location,
-    msg: PathIdentifier,
-    args: ArgList = ArgList())
+                                              loc: At,
+                                              msg: PathIdentifier,
+                                              args: ArgList = ArgList())
       extends Expression {
     override def format: String = msg.format + {
       if (args.nonEmpty) { args.format }
@@ -128,8 +128,8 @@ trait Expressions extends TypeExpression {
     *   The [[PathIdentifier]] of the entity type for with the Id is created
     */
   case class EntityIdExpression(
-    loc: Location,
-    entityId: PathIdentifier)
+                                 loc: At,
+                                 entityId: PathIdentifier)
       extends Expression {
     override def format: String = {
       Keywords.new_ + " Id(" + entityId.format + ")"
@@ -148,18 +148,18 @@ trait Expressions extends TypeExpression {
     *   An [[ArgList]] to pass to the function.
     */
   case class FunctionCallExpression(
-    loc: Location,
-    name: PathIdentifier,
-    arguments: ArgList)
+                                     loc: At,
+                                     name: PathIdentifier,
+                                     arguments: ArgList)
       extends Expression {
     override def format: String = name.format + arguments.format
     def expressionType: TypeExpression = Abstract(loc)
   }
 
   case class ArbitraryOperator(
-    loc: Location,
-    opName: LiteralString,
-    arguments: Seq[Expression])
+                                loc: At,
+                                opName: LiteralString,
+                                arguments: Seq[Expression])
       extends Expression {
     override def format: String = opName.format + "(" + arguments.map(_.format)
       .mkString("(", ", ", ")") + ")"
@@ -173,7 +173,7 @@ trait Expressions extends TypeExpression {
     * @param expressions
     *   The expressions that are grouped
     */
-  case class GroupExpression(loc: Location, expressions: Seq[Expression])
+  case class GroupExpression(loc: At, expressions: Seq[Expression])
       extends Expression {
     override def format: String = {
       s"(${expressions.map(_.format).mkString(", ")})"
@@ -197,10 +197,10 @@ trait Expressions extends TypeExpression {
     *   An expression for the result if the condition is false
     */
   case class Ternary(
-    loc: Location,
-    condition: Condition,
-    expr1: Expression,
-    expr2: Expression)
+                      loc: At,
+                      condition: Condition,
+                      expr1: Expression,
+                      expr2: Expression)
       extends Expression {
     override def format: String =
       s"if(${condition.format},${expr1.format},${expr2.format})"
@@ -216,7 +216,7 @@ trait Expressions extends TypeExpression {
     * @param n
     *   The number to use as the value of the expression
     */
-  case class LiteralInteger(loc: Location, n: BigInt)
+  case class LiteralInteger(loc: At, n: BigInt)
       extends NumericExpression(loc) {
     override def format: String = n.toString()
     override def expressionType: TypeExpression = Integer(loc)
@@ -228,7 +228,7 @@ trait Expressions extends TypeExpression {
     * @param d
     *   The decimal number to use as the value of the expression
     */
-  case class LiteralDecimal(loc: Location, d: BigDecimal)
+  case class LiteralDecimal(loc: At, d: BigDecimal)
       extends NumericExpression(loc) {
     override def format: String = d.toString
     override def expressionType: TypeExpression = Decimal(loc)
@@ -240,7 +240,7 @@ trait Expressions extends TypeExpression {
     * @param loc
     *   The location of this expression value
     */
-  case class True(loc: Location) extends Condition(loc) {
+  case class True(loc: At) extends Condition(loc) {
     override def format: String = "true"
   }
 
@@ -248,7 +248,7 @@ trait Expressions extends TypeExpression {
     * @param loc
     *   The location of this expression value
     */
-  case class False(loc: Location) extends Condition(loc) {
+  case class False(loc: At) extends Condition(loc) {
     override def format: String = "false"
   }
 
@@ -265,7 +265,7 @@ trait Expressions extends TypeExpression {
     * @param cond
     *   The arbitrary condition provided as a quoted string
     */
-  case class ArbitraryCondition(loc: Location, cond: LiteralString)
+  case class ArbitraryCondition(loc: At, cond: LiteralString)
       extends Condition(loc) {
     override def format: String = cond.format
   }
@@ -278,7 +278,7 @@ trait Expressions extends TypeExpression {
     * @param path
     *   The path to the value for this condition
     */
-  case class ValueCondition(loc: Location, path: PathIdentifier)
+  case class ValueCondition(loc: At, path: PathIdentifier)
       extends Condition(loc) {
     override def format: String = "@" + path.format
   }
@@ -295,9 +295,9 @@ trait Expressions extends TypeExpression {
     *   An [[ArgList]] to pass to the function.
     */
   case class FunctionCallCondition(
-    loc: Location,
-    name: PathIdentifier,
-    arguments: ArgList)
+                                    loc: At,
+                                    name: PathIdentifier,
+                                    arguments: ArgList)
       extends Condition(loc) {
     override def format: String = name.format + arguments.format
   }
@@ -340,10 +340,10 @@ trait Expressions extends TypeExpression {
     *   The second operand in the comparison
     */
   case class Comparison(
-    loc: Location,
-    op: Comparator,
-    expr1: Expression,
-    expr2: Expression)
+                         loc: At,
+                         op: Comparator,
+                         expr1: Expression,
+                         expr2: Expression)
       extends Condition(loc) {
     override def format: String = op.format + Seq(expr1.format, expr2.format)
       .mkString("(", ",", ")")
@@ -356,14 +356,14 @@ trait Expressions extends TypeExpression {
     * @param cond1
     *   The condition being negated
     */
-  case class NotCondition(loc: Location, cond1: Condition)
+  case class NotCondition(loc: At, cond1: Condition)
       extends Condition(loc) {
     override def format: String = "not(" + cond1 + ")"
   }
 
   /** Base class for conditions with two operands
     */
-  abstract class MultiCondition(loc: Location) extends Condition(loc) {
+  abstract class MultiCondition(loc: At) extends Condition(loc) {
     def conditions: Seq[Condition]
 
     override def format: String = conditions.mkString("(", ",", ")")
@@ -376,7 +376,7 @@ trait Expressions extends TypeExpression {
     * @param conditions
     *   The conditions (minimum 2) that must all be true for "and" to be true
     */
-  case class AndCondition(loc: Location, conditions: Seq[Condition])
+  case class AndCondition(loc: At, conditions: Seq[Condition])
       extends MultiCondition(loc) {
     override def format: String = "and" + super.format
   }
@@ -389,7 +389,7 @@ trait Expressions extends TypeExpression {
     *   The conditions (minimum 2), any one of which must be true for "Or" to be
     *   true
     */
-  case class OrCondition(loc: Location, conditions: Seq[Condition])
+  case class OrCondition(loc: At, conditions: Seq[Condition])
       extends MultiCondition(loc) {
     override def format: String = "or" + super.format
   }
@@ -401,7 +401,7 @@ trait Expressions extends TypeExpression {
     *   The conditions (minimum 2), only one of which may be true for "xor" to
     *   be true.
     */
-  case class XorCondition(loc: Location, conditions: Seq[Condition])
+  case class XorCondition(loc: At, conditions: Seq[Condition])
       extends MultiCondition(loc) {
     override def format: String = "xor" + super.format
   }
@@ -417,7 +417,7 @@ trait Expressions extends TypeExpression {
     * since the context is the addition of 42 and the arbitrary expression
     */
   case class ArbitraryExpression(cond: LiteralString) extends Expression {
-    override def loc: Location = cond.loc
+    override def loc: At = cond.loc
 
     override def format: String = cond.format
     override def expressionType: TypeExpression = Abstract(loc)
@@ -426,30 +426,30 @@ trait Expressions extends TypeExpression {
   // /////////////////////////////////////////////////////////// Typed Functions
 
   /** Base trait for expressions that yield a numeric value */
-  sealed abstract class TimeExpression(loc: Location) extends Expression {
+  sealed abstract class TimeExpression(loc: At) extends Expression {
     def expressionType: TypeExpression = TimeStamp(loc)
   }
 
   case class TimeStampFunction(
-    loc: Location,
-    name: String,
-    args: Seq[Expression])
+                                loc: At,
+                                name: String,
+                                args: Seq[Expression])
       extends TimeExpression(loc) {
     def format: String = ""
   }
 
-  case class DateFunction(loc: Location, name: String, args: Seq[Expression])
+  case class DateFunction(loc: At, name: String, args: Seq[Expression])
       extends TimeExpression(loc) {
     override def expressionType: TypeExpression = Date(loc)
     def format: String = ""
   }
 
-  case class NumberFunction(loc: Location, name: String, args: Seq[Expression])
+  case class NumberFunction(loc: At, name: String, args: Seq[Expression])
       extends NumericExpression(loc) {
     def format: String = ""
   }
 
-  case class StringFunction(loc: Location, name: String, args: Seq[Expression])
+  case class StringFunction(loc: At, name: String, args: Seq[Expression])
       extends Expression {
     override def expressionType: TypeExpression = Strng(loc)
     def format: String = ""

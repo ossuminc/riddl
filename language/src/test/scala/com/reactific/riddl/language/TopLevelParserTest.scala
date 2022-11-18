@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
 
@@ -22,8 +22,8 @@ class TopLevelParserTest extends ParsingTestBase {
   val rip = RiddlParserInput(simpleDomainFile)
 
   val simpleDomain = RootContainer(List(Domain(
-    Location(1, 1, rip),
-    Identifier(Location(1, 8, rip), "foo"),
+    At(1, 1, rip),
+    Identifier(At(1, 8, rip), "foo"),
     Seq.empty[DomainOption],
     Seq.empty[AuthorRef],
     Seq.empty[Author],

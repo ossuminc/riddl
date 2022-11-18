@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.StringParser
 
 /** Unit Tests For CommonParser */
@@ -15,7 +15,7 @@ class CommonParserTest extends ParsingTest {
 
   "CommonParserTest" should {
     "location should construct from pair" in {
-      val loc = Location((1, 1))
+      val loc = At((1, 1))
       loc.line mustBe 1
       val column = loc.col
       column mustBe 1

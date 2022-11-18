@@ -23,7 +23,7 @@ trait TypeExpression extends AbstractDefinitions {
   }
 
   /** A TypeExpression that references another type by PathIdentifier */
-  case class AliasedTypeExpression(loc: Location, pid: PathIdentifier)
+  case class AliasedTypeExpression(loc: At, pid: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"Reference To ${pid.format}"
   }
@@ -44,8 +44,7 @@ trait TypeExpression extends AbstractDefinitions {
       case _: Enumeration                => "Enumeration"
       case _: Alternation                => "Alternation"
       case _: Aggregation                => "Aggregation"
-      case Mapping(_, from, to)   => s"Map From ${kind(from)} To ${kind(to)}"
-      case RangeType(_, min, max) => s"Range($min,$max)"
+      case Mapping(_, from, to) => s"Map From ${kind(from)} To ${kind(to)}"
       case EntityReferenceTypeExpression(_, entity) =>
         s"Reference To Entity ${entity.format}"
       case _: Pattern                     => s"Pattern"
@@ -60,32 +59,32 @@ trait TypeExpression extends AbstractDefinitions {
 
   /** Base of an enumeration for the four kinds of message types */
   sealed trait MessageKind {
-    def kind: String
+    @inline def kind: String
     def format: String = kind.capitalize
   }
 
   /** An enumerator value for command types */
   final case object CommandKind extends MessageKind {
-    def kind: String = "command"
+    @inline def kind: String = "command"
   }
 
   /** An enumerator value for event types */
   final case object EventKind extends MessageKind {
-    def kind: String = "event"
+    @inline def kind: String = "event"
   }
 
   /** An enumerator value for query types */
   final case object QueryKind extends MessageKind {
-    def kind: String = "query"
+    @inline def kind: String = "query"
   }
 
   /** An enumerator value for result types */
   final case object ResultKind extends MessageKind {
-    def kind: String = "result"
+    @inline def kind: String = "result"
   }
 
   final case object OtherKind extends MessageKind {
-    def kind: String = "other"
+    @inline def kind: String = "other"
   }
 
   /** Base trait of the cardinality type expressions */
@@ -101,8 +100,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param typeExp
     *   The type expression that is indicated as optional
     */
-  case class Optional(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
+  case class Optional(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}?"
   }
 
@@ -115,8 +113,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The type expression that is indicated with a cardinality of zero or
     *   more.
     */
-  case class ZeroOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
+  case class ZeroOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}*"
   }
 
@@ -128,8 +125,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param typeExp
     *   The type expression that is indicated with a cardinality of one or more.
     */
-  case class OneOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
+  case class OneOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}+"
   }
 
@@ -146,7 +142,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The maximum number of items
     */
   case class SpecificRange(
-    loc: Location,
+    loc: At,
     typeExp: TypeExpression,
     min: Long,
     max: Long)
@@ -168,7 +164,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   define independent descriptions
     */
   case class Enumerator(
-    loc: Location,
+    loc: At,
     id: Identifier,
     enumVal: Option[Long] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -189,7 +185,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   chosen.
     */
   case class Enumeration(
-    loc: Location,
+    loc: At,
     enumerators: Seq[Enumerator])
       extends TypeExpression {
     override def format: String = "{ " + enumerators.map(_.format)
@@ -207,7 +203,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   may be chosen
     */
   case class Alternation(
-    loc: Location,
+    loc: At,
     of: Seq[AliasedTypeExpression])
       extends TypeExpression {
     override def format: String =
@@ -229,7 +225,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   An optional description of the field.
     */
   case class Field(
-    loc: Location,
+    loc: At,
     id: Identifier,
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -264,14 +260,12 @@ trait TypeExpression extends AbstractDefinitions {
     *   The fields of the aggregation
     */
   case class Aggregation(
-    loc: Location,
+    loc: At,
     fields: Seq[Field] = Seq.empty[Field])
       extends AggregateTypeExpression {}
 
   object Aggregation {
-    def empty(loc: Location = Location.empty): Aggregation = {
-      Aggregation(loc)
-    }
+    def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   }
 
   /** A type expressions that defines a mapping from a key to a value. The value
@@ -286,7 +280,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The type expression for the values of the mapping
     */
   case class Mapping(
-    loc: Location,
+    loc: At,
     from: TypeExpression,
     to: TypeExpression)
       extends TypeExpression {
@@ -301,7 +295,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The type of entity referenced by this type expression.
     */
   case class EntityReferenceTypeExpression(
-    loc: Location,
+    loc: At,
     entity: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"reference to Entity ${entity.format}"
@@ -319,11 +313,12 @@ trait TypeExpression extends AbstractDefinitions {
     *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
     */
   case class Pattern(
-    loc: Location,
+    loc: At,
     pattern: Seq[LiteralString])
-      extends TypeExpression {
+      extends PredefinedType {
+    override def kind: String = Predefined.Pattern
     override def format: String =
-      s"pattern(${pattern.map(_.format).mkString(", ")})"
+      s"${Predefined.Pattern}(${pattern.map(_.format).mkString(", ")})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Strng]
@@ -339,10 +334,11 @@ trait TypeExpression extends AbstractDefinitions {
     *   The path identifier of the entity type
     */
   case class UniqueId(
-    loc: Location,
+    loc: At,
     entityPath: PathIdentifier)
-      extends TypeExpression {
-    override def format: String = s"Id(${entityPath.format})"
+      extends PredefinedType {
+    @inline def kind: String = Predefined.Id
+    override def format: String = s"$kind(${entityPath.format})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Strng] ||
@@ -361,7 +357,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The fields of the message's aggregation
     */
   case class MessageType(
-    loc: Location,
+    loc: At,
     messageKind: MessageKind,
     fields: Seq[Field] = Seq.empty[Field])
       extends AggregateTypeExpression {
@@ -371,11 +367,13 @@ trait TypeExpression extends AbstractDefinitions {
   /** Base class of all pre-defined type expressions
     */
   abstract class PredefinedType extends TypeExpression {
-    def loc: Location
+    override def isEmpty: Boolean = true
+
+    def loc: At
 
     def kind: String
 
-    override def format: String = s"$kind"
+    override def format: String = kind
   }
 
   object PredefinedType {
@@ -394,19 +392,21 @@ trait TypeExpression extends AbstractDefinitions {
     *   The maximum length of the string (default: MaxInt)
     */
   case class Strng(
-    loc: Location,
+    loc: At,
     min: Option[Long] = None,
     max: Option[Long] = None)
       extends PredefinedType {
     override lazy val kind: String = Predefined.String
+    override def format: String =
+      s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
     }
   }
 
-  case class Currency(loc: Location, country: String) extends PredefinedType {
-    def kind: String = Predefined.Currency
+  case class Currency(loc: At, country: String) extends PredefinedType {
+    @inline def kind: String = Predefined.Currency
   }
 
   /** The simplest type expression: Abstract An abstract type expression is one
@@ -417,10 +417,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Abstract(
-    loc: Location)
-      extends PredefinedType {
-    def kind: String = Predefined.Abstract
+  case class Abstract(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.Abstract
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = true
   }
@@ -437,8 +435,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Bool(loc: Location) extends NumericType {
-    def kind: String = Predefined.Boolean
+  case class Bool(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Boolean
   }
 
   /** A predefined type expression for an arbitrary number value
@@ -446,8 +444,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the number type expression
     */
-  case class Number(loc: Location) extends NumericType {
-    def kind: String = Predefined.Number
+  case class Number(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Number
   }
 
   /** A predefined type expression for an integer value
@@ -455,8 +453,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the integer type expression
     */
-  case class Integer(loc: Location) extends NumericType {
-    def kind: String = Predefined.Integer
+  case class Integer(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Integer
   }
 
   /** A type expression that defines a set of integer values from a minimum
@@ -470,12 +468,12 @@ trait TypeExpression extends AbstractDefinitions {
     *   The maximum value of the RangeType
     */
   case class RangeType(
-    loc: Location,
+    loc: At,
     min: Long,
     max: Long)
       extends NumericType {
-    override def format: String = s"range($min,$max)"
-    def kind: String = Predefined.Range
+    override def format: String = s"$kind($min,$max)"
+    @inline def kind: String = Predefined.Range
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
     }
@@ -487,8 +485,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the decimal integer type expression
     */
-  case class Decimal(loc: Location) extends NumericType {
-    def kind: String = Predefined.Decimal
+  case class Decimal(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Decimal
   }
 
   /** A predefined type expression for a real number value.
@@ -496,52 +494,52 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the real number type expression
     */
-  case class Real(loc: Location) extends NumericType {
-    def kind: String = Predefined.Real
+  case class Real(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Real
   }
 
   /** A predefined type expression for the SI Base unit for Current (amperes)
     * @param loc
     *   \- The locaitonof the current type expression
     */
-  case class Current(loc: Location) extends NumericType {
-    def kind: String = Predefined.Current
+  case class Current(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Current
   }
 
   /** A predefined type expression for the SI Base unit for Length (meters)
     * @param loc
     *   The location of the current type expression
     */
-  case class Length(loc: Location) extends NumericType {
-    def kind: String = Predefined.Length
+  case class Length(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Length
   }
 
   /** A predefined type expression for the SI Base Unit for Luminosity (candela)
     * @param loc
     *   The location of the luminosity expression
     */
-  case class Luminosity(loc: Location) extends NumericType {
-    def kind: String = Predefined.Luminosity
+  case class Luminosity(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Luminosity
   }
 
-  case class Mass(loc: Location) extends NumericType {
-    def kind: String = Predefined.Mass
+  case class Mass(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Mass
   }
 
   /** A predefined type expression for the SI Base Unit for Mole (mole)
     * @param loc
     *   \- The location of the mass type expression
     */
-  case class Mole(loc: Location) extends NumericType {
-    def kind: String = Predefined.Mole
+  case class Mole(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Mole
   }
 
   /** A predefined type expression for the SI Base Unit for Temperature (Kelvin)
     * @param loc
     *   \- The location of the mass type expression
     */
-  case class Temperature(loc: Location) extends NumericType {
-    def kind: String = Predefined.Temperature
+  case class Temperature(loc: At) extends NumericType {
+    @inline def kind: String = Predefined.Temperature
   }
 
   sealed trait TimeType extends PredefinedType
@@ -551,8 +549,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the date type expression.
     */
-  case class Date(loc: Location) extends TimeType {
-    def kind: String = Predefined.Date
+  case class Date(loc: At) extends TimeType {
+    @inline def kind: String = Predefined.Date
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
@@ -567,8 +565,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the time type expression.
     */
-  case class Time(loc: Location) extends TimeType {
-    def kind: String = Predefined.Time
+  case class Time(loc: At) extends TimeType {
+    @inline def kind: String = Predefined.Time
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
@@ -583,8 +581,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the datetime type expression.
     */
-  case class DateTime(loc: Location) extends TimeType {
-    def kind: String = Predefined.DateTime
+  case class DateTime(loc: At) extends TimeType {
+    @inline def kind: String = Predefined.DateTime
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Date] ||
@@ -599,8 +597,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the timestamp
     */
-  case class TimeStamp(loc: Location) extends TimeType {
-    def kind: String = Predefined.TimeStamp
+  case class TimeStamp(loc: At) extends TimeType {
+    @inline def kind: String = Predefined.TimeStamp
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
@@ -615,8 +613,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the duration type expression
     */
-  case class Duration(loc: Location) extends TimeType {
-    def kind: String = Predefined.Duration
+  case class Duration(loc: At) extends TimeType {
+    @inline def kind: String = Predefined.Duration
   }
 
   /** A predefined type expression for a universally unique identifier as
@@ -625,8 +623,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the UUID type expression
     */
-  case class UUID(loc: Location) extends PredefinedType {
-    def kind: String = Predefined.UUID
+  case class UUID(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.UUID
   }
 
   /** A predefined type expression for a Uniform Resource Locator of a specific
@@ -637,9 +635,9 @@ trait TypeExpression extends AbstractDefinitions {
     * @param scheme
     *   The scheme to which the URL is constrained.
     */
-  case class URL(loc: Location, scheme: Option[LiteralString] = None)
+  case class URL(loc: At, scheme: Option[LiteralString] = None)
       extends PredefinedType {
-    def kind: String = Predefined.URL
+    @inline def kind: String = Predefined.URL
   }
 
   /** A predefined type expression for a location on earth given in latitude and
@@ -648,8 +646,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the LatLong type expression.
     */
-  case class LatLong(loc: Location) extends PredefinedType {
-    def kind: String = Predefined.LatLong
+  case class Location(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.Location
   }
 
   /** A predefined type expression for a type that can have no values
@@ -657,8 +655,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the nothing type expression.
     */
-  case class Nothing(loc: Location) extends PredefinedType {
-    def kind: String = Predefined.Nothing
+  case class Nothing(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.Nothing
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false
   }

@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
 import org.scalatest.Assertion
@@ -238,7 +238,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
       parseResult(RiddlParserInput(input))
     }
     "resolve simple path through an include" in {
-      val eL = Location.empty
+      val eL = At.empty
       val root = RootContainer(
         contents = Seq(Domain(
           eL,

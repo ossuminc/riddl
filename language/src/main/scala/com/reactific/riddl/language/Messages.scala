@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.utils.Logger
 
 object Messages {
@@ -26,8 +26,8 @@ object Messages {
 
     def severity: Int
 
-    def isIgnorable: Boolean = severity <= Warning.severity
-    def isActionable: Boolean = severity >= Error.severity
+    def isIgnorable: Boolean = severity < Warning.severity
+    def isActionable: Boolean = severity >= Warning.severity
 
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
@@ -81,7 +81,7 @@ object Messages {
   }
 
   case class Message(
-    loc: Location,
+    loc: At,
     message: String,
     kind: KindOfMessage = Error,
     context: String = "")
@@ -112,28 +112,32 @@ object Messages {
     }
   }
 
-  def error(
-    message: String,
-    loc: Location = Location.empty
-  ): Message = { Message(loc, message) }
+  def info(message: String, loc: At = At.empty): Message = {
+    Message(loc, message, Info)
+  }
 
-  def warning(message: String, loc: Location = Location.empty): Message = {
+  def warning(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Warning)
   }
 
-  def severe(message: String, loc: Location = Location.empty): Message = {
+  def error(
+    message: String,
+    loc: At = At.empty
+  ): Message = { Message(loc, message) }
+
+  def severe(message: String, loc: At = At.empty): Message = {
     Message(loc, message, SevereError)
   }
 
-  def errors(message: String, loc: Location = Location.empty): Messages = {
+  def errors(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message))
   }
 
-  def warnings(message: String, loc: Location = Location.empty): Messages = {
+  def warnings(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Warning))
   }
 
-  def severes(message: String, loc: Location = Location.empty): Messages = {
+  def severes(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Messages.SevereError))
   }
 
@@ -149,7 +153,8 @@ object Messages {
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
     def justMissing: Messages = msgs.filter(_.isMissing)
-    def justWarnings: Messages = msgs.filter(x => x.isWarning && !x.isMissing)
+    def justWarnings: Messages = msgs
+      .filter(x => x.isWarning && !x.isMissing && !x.isStyle)
     def justErrors: Messages = msgs.filter(_.isError)
   }
 
@@ -165,6 +170,12 @@ object Messages {
     options: CommonOptions
   ): Int = {
     val list = if (options.sortMessagesByLocation) messages.sorted else messages
+    if (options.groupMessagesByKind) { logMessagesByGroup(list, options, log) }
+    else { logMessagesRetainingOrder(list, log) }
+    highestSeverity(list)
+  }
+
+  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
     list.foreach { msg =>
       msg.kind match {
         case Info           => log.info(msg.format)
@@ -175,9 +186,9 @@ object Messages {
         case SevereError    => log.severe(msg.format)
       }
     }
-    highestSeverity(messages)
   }
-  def logMessages(
+
+  def logMessagesByGroup(
     messages: Messages,
     commonOptions: CommonOptions,
     log: Logger

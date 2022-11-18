@@ -125,7 +125,8 @@ domain dokn is {
         entity Location is {
             options(event-sourced, available)
 
-            type AddDeliveryLocation is command  { geohash: LatLong, label: String }
+            type AddDeliveryLocation is command  { geohash: Location, label:
+            String }
             type DeliveryLocationAdded is event  { }
 
             type ChangeLocationName is command { newName: String }
@@ -148,7 +149,7 @@ domain dokn is {
             state LocationBase is {
               fields {
                 locationId: LocationId,
-                geohash: LatLong,
+                geohash: Location,
                 label: String ,
                 address: Address,
                 notes: NoteList,

@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import org.scalatest.matchers.*
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -23,13 +23,6 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       AliasedTypeExpression(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe
         AliasedTypeExpression(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo")))
 
-      Strng mustBe Strng
-      Bool mustBe Bool
-      Number mustBe Number
-      Date mustBe Date
-      Time mustBe Time
-      TimeStamp mustBe TimeStamp
-      URL mustBe URL
       Enumeration((0, 0), Seq.empty[Enumerator]) mustBe
         Enumeration((0, 0), Seq.empty[Enumerator])
       Alternation((0, 0), Seq.empty[AliasedTypeExpression]) mustBe
@@ -62,17 +55,17 @@ class ASTTest extends AnyWordSpec with must.Matchers {
 
   "PathIdentifier" should {
     "format" in {
-      PathIdentifier(Location(), Nil).format mustBe ""
-      PathIdentifier(Location(), List("", "foo", "baz")).format mustBe
+      PathIdentifier(At(), Nil).format mustBe ""
+      PathIdentifier(At(), List("", "foo", "baz")).format mustBe
         "^foo.baz"
-      PathIdentifier(Location(), List("foo", "bar", "baz")).format mustBe
+      PathIdentifier(At(), List("foo", "bar", "baz")).format mustBe
         "foo.bar.baz"
-      PathIdentifier(Location(), List("foo")).format mustBe "foo"
+      PathIdentifier(At(), List("foo")).format mustBe "foo"
     }
   }
 
   "RootContainer" should {
-    "be at location 0,0" in { RootContainer(Nil).loc mustBe Location.empty }
+    "be at location 0,0" in { RootContainer(Nil).loc mustBe At.empty }
     "have no description" in { RootContainer(Nil).description mustBe None }
     "have no brief" in { RootContainer(Nil).brief mustBe None }
     "have no id" in { RootContainer(Nil).identify mustBe "Root" }
@@ -83,47 +76,47 @@ class ASTTest extends AnyWordSpec with must.Matchers {
 
   "Include" should {
     "identify as root container" in {
-      Include(Location(), Seq.empty[Definition]).isRootContainer mustBe true
+      Include(At(), Seq.empty[Definition]).isRootContainer mustBe true
     }
   }
 
   "String" should {
-    "have kind 'String'" in { Strng(Location()).kind mustBe "String" }
+    "have kind 'String'" in { Strng(At()).kind mustBe "String" }
   }
 
   "Bool" should {
-    "have kind 'Boolean'" in { Bool(Location()).kind mustBe "Boolean" }
+    "have kind 'Boolean'" in { Bool(At()).kind mustBe "Boolean" }
   }
 
   "EntityAggregate" should {
     "have correct name" in {
-      EntityIsAggregate(Location()).name mustBe "aggregate"
-      EntityTransient(Location()).name mustBe "transient"
-      EntityIsConsistent(Location()).name mustBe "consistent"
-      EntityIsAvailable(Location()).name mustBe "available"
+      EntityIsAggregate(At()).name mustBe "aggregate"
+      EntityTransient(At()).name mustBe "transient"
+      EntityIsConsistent(At()).name mustBe "consistent"
+      EntityIsAvailable(At()).name mustBe "available"
     }
   }
 
   "Context" should {
     "correctly identify emptiness" in {
-      Context(Location(), Identifier(Location(), "test")).contents mustBe empty
+      Context(At(), Identifier(At(), "test")).contents mustBe empty
     }
     "correctly identify non-emptiness" in {
       val types =
-        List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
-      Context(Location(), Identifier(Location(), "test"), types = types)
+        List(Type(At(), Identifier(At(), "A"), Bool(At())))
+      Context(At(), Identifier(At(), "test"), types = types)
         .contents mustBe types
     }
   }
 
   "Domain" should {
     "empty domain should have empty contents" in {
-      Domain(Location(), Identifier(Location(), "test")).contents mustBe empty
+      Domain(At(), Identifier(At(), "test")).contents mustBe empty
     }
     "non-empty domain should have non-empty contents" in {
       val types =
-        List(Type(Location(), Identifier(Location(), "A"), Bool(Location())))
-      Domain(Location(), Identifier(Location(), "test"), types = types)
+        List(Type(At(), Identifier(At(), "A"), Bool(At())))
+      Domain(At(), Identifier(At(), "test"), types = types)
         .contents mustBe types
     }
   }
@@ -132,49 +125,49 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "contents" should {
       "contain all contents" in {
         val options = Seq(
-          EntityIsAggregate(Location()),
-          EntityTransient(Location()),
-          EntityKind(Location(), Seq(LiteralString(Location(), "concept")))
+          EntityIsAggregate(At()),
+          EntityTransient(At()),
+          EntityKind(At(), Seq(LiteralString(At(), "concept")))
         )
         val states = Seq(State(
-          Location(),
-          Identifier(Location(), "bar"),
+          At(),
+          Identifier(At(), "bar"),
           Aggregation(
-            Location(),
+            At(),
             Seq[Field](Field(
-              Location(),
-              Identifier(Location(), "foo"),
-              Integer(Location())
+              At(),
+              Identifier(At(), "foo"),
+              Integer(At())
             ))
           )
         ))
-        val handlers = Seq(Handler(Location(), Identifier(Location(), "con")))
+        val handlers = Seq(Handler(At(), Identifier(At(), "con")))
 
         val functions = Seq(Function(
-          Location(),
-          Identifier(Location(), "my_func"),
+          At(),
+          Identifier(At(), "my_func"),
           None,
           Option(Aggregation(
-            Location(),
+            At(),
             Seq(
-              Field(Location(), Identifier(Location(), "a"), Bool(Location()))
+              Field(At(), Identifier(At(), "a"), Bool(At()))
             )
           ))
         ))
 
         val invariants = Seq(Invariant(
-          Location(),
-          Identifier(Location(), "my_id"),
-          Some(True(Location())),
+          At(),
+          Identifier(At(), "my_id"),
+          Some(True(At())),
           None
         ))
         val types = Seq(
-          Type(Location(), Identifier(Location(), "mytype"), Bool(Location())),
-          Type(Location(), Identifier(Location(), "mytype2"), Bool(Location()))
+          Type(At(), Identifier(At(), "mytype"), Bool(At())),
+          Type(At(), Identifier(At(), "mytype2"), Bool(At()))
         )
         val entity = AST.Entity(
-          loc = Location(),
-          id = Identifier(Location(), "foo"),
+          loc = At(),
+          id = Identifier(At(), "foo"),
           options = options,
           states = states,
           types = types,

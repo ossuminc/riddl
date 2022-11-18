@@ -7,7 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -87,7 +87,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     )
   }
 
-  def keywordToKind(keyword: String, location: Location): ProcessorShape = {
+  def keywordToKind(keyword: String, location: At): ProcessorShape = {
     keyword match {
       case "source" => Source(location)
       case "sink"   => Sink(location)

@@ -8,7 +8,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -36,8 +36,8 @@ trait DomainParser
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~
         (undefined((
-          LiteralString(Location(), ""),
-          LiteralString(Location(), ""),
+          LiteralString(At(), ""),
+          LiteralString(At(), ""),
           Option.empty[LiteralString],
           Option.empty[LiteralString],
           Option.empty[java.net.URL]

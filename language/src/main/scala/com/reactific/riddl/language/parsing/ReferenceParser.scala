@@ -11,9 +11,6 @@ import fastparse.P
 import fastparse.StringIn
 import fastparse.ScalaWhitespace.*
 
-import scala.reflect.ClassTag
-import scala.reflect.classTag
-
 trait ReferenceParser extends CommonParser {
 
   def adaptorRef[u: P]: P[AdaptorRef] = {
@@ -144,22 +141,6 @@ trait ReferenceParser extends CommonParser {
   def authorRefs[u: P]: P[Seq[AuthorRef]] = {
     P(location ~ by ~ Keywords.author ~ pathIdentifier)
       .map(tpl => (AuthorRef.apply _).tupled(tpl)).rep(0, ",", 3)
-  }
-
-  def reference[u: P, K <: Definition: ClassTag]: P[Reference[K]] = {
-    val clazz = classTag[K].runtimeClass
-    val context = classOf[Context]
-    val entity = classOf[Entity]
-    val state = classOf[State]
-    val projection = classOf[Projection]
-    clazz match {
-      case c: Class[?] if c == context =>
-        contextRef.asInstanceOf[P[Reference[K]]]
-      case c: Class[?] if c == entity => entityRef.asInstanceOf[P[Reference[K]]]
-      case c: Class[?] if c == state  => stateRef.asInstanceOf[P[Reference[K]]]
-      case c: Class[?] if c == projection =>
-        projectionRef.asInstanceOf[P[Reference[K]]]
-    }
   }
 
   def messageTakingRef[u: P]: P[MessageTakingRef[Definition]] = {
