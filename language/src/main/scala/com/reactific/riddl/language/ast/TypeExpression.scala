@@ -45,7 +45,6 @@ trait TypeExpression extends AbstractDefinitions {
       case _: Alternation                => "Alternation"
       case _: Aggregation                => "Aggregation"
       case Mapping(_, from, to)   => s"Map From ${kind(from)} To ${kind(to)}"
-      case RangeType(_, min, max) => s"Range($min,$max)"
       case EntityReferenceTypeExpression(_, entity) =>
         s"Reference To Entity ${entity.format}"
       case _: Pattern                     => s"Pattern"
@@ -316,9 +315,10 @@ trait TypeExpression extends AbstractDefinitions {
   case class Pattern(
     loc: At,
     pattern: Seq[LiteralString])
-      extends TypeExpression {
+      extends PredefinedType {
+    override def kind: String = Predefined.Pattern
     override def format: String =
-      s"pattern(${pattern.map(_.format).mkString(", ")})"
+      s"${Predefined.Pattern}(${pattern.map(_.format).mkString(", ")})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Strng]
@@ -336,8 +336,9 @@ trait TypeExpression extends AbstractDefinitions {
   case class UniqueId(
     loc: At,
     entityPath: PathIdentifier)
-      extends TypeExpression {
-    override def format: String = s"Id(${entityPath.format})"
+      extends PredefinedType {
+    def kind: String = Predefined.Id
+    override def format: String = s"$kind(${entityPath.format})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Strng] ||
@@ -396,6 +397,8 @@ trait TypeExpression extends AbstractDefinitions {
     max: Option[Long] = None)
       extends PredefinedType {
     override lazy val kind: String = Predefined.String
+    override def format: String =
+      s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
@@ -414,9 +417,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Abstract(
-    loc: At)
-      extends PredefinedType {
+  case class Abstract(loc: At) extends PredefinedType {
     def kind: String = Predefined.Abstract
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = true
@@ -471,7 +472,7 @@ trait TypeExpression extends AbstractDefinitions {
     min: Long,
     max: Long)
       extends NumericType {
-    override def format: String = s"range($min,$max)"
+    override def format: String = s"$kind($min,$max)"
     def kind: String = Predefined.Range
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
