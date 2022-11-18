@@ -46,146 +46,146 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
   "Simple Predefined Types" must {
     "support Abstract" in {
       abstract_.kind mustBe Predefined.Abstract
-      AST.kind(abstract_) mustBe Predefined.Abstract
+      AST.errorDescription(abstract_) mustBe Predefined.Abstract
     }
     "support Boolean" in {
       bool.kind mustBe Predefined.Boolean
-      AST.kind(bool) mustBe Predefined.Boolean
+      AST.errorDescription(bool) mustBe Predefined.Boolean
       bool.isEmpty mustBe true
       bool.isContainer mustBe false
     }
     "support Current" in {
       current.kind mustBe Predefined.Current
-      AST.kind(current) mustBe Predefined.Current
+      AST.errorDescription(current) mustBe Predefined.Current
       current.isEmpty mustBe true
       current.isContainer mustBe false
     }
     "support Currency" in {
       currency.kind mustBe Predefined.Currency
-      AST.kind(currency) mustBe Predefined.Currency
+      AST.errorDescription(currency) mustBe Predefined.Currency
       currency.isEmpty mustBe true
       currency.isContainer mustBe false
     }
     "support Date" in {
       date.kind mustBe Predefined.Date
-      AST.kind(date) mustBe Predefined.Date
+      AST.errorDescription(date) mustBe Predefined.Date
       date.isEmpty mustBe true
       date.isContainer mustBe false
     }
     "support DateTime" in {
       dateTime.kind mustBe Predefined.DateTime
-      AST.kind(dateTime) mustBe Predefined.DateTime
+      AST.errorDescription(dateTime) mustBe Predefined.DateTime
       dateTime.isEmpty mustBe true
       dateTime.isContainer mustBe false
     }
     "support Decimal" in {
       decimal.kind mustBe Predefined.Decimal
-      AST.kind(decimal) mustBe Predefined.Decimal
+      AST.errorDescription(decimal) mustBe Predefined.Decimal
       decimal.isEmpty mustBe true
       decimal.isContainer mustBe false
       decimal.format mustBe Predefined.Decimal
     }
     "support Duration" in {
       duration.kind mustBe Predefined.Duration
-      AST.kind(duration) mustBe Predefined.Duration
+      AST.errorDescription(duration) mustBe Predefined.Duration
       duration.isEmpty mustBe true
       duration.isContainer mustBe false
       duration.format mustBe Predefined.Duration
     }
     "support Integer" in {
       integer.kind mustBe Predefined.Integer
-      AST.kind(integer) mustBe Predefined.Integer
+      AST.errorDescription(integer) mustBe Predefined.Integer
       integer.isEmpty mustBe true
       integer.isContainer mustBe false
       integer.format mustBe Predefined.Integer
     }
     "support Length" in {
       length_.kind mustBe Predefined.Length
-      AST.kind(length_) mustBe Predefined.Length
+      AST.errorDescription(length_) mustBe Predefined.Length
       length_.isEmpty mustBe true
       length_.isContainer mustBe false
       length_.format mustBe Predefined.Length
     }
     "support Location" in {
       location.kind mustBe Predefined.Location
-      AST.kind(location) mustBe Predefined.Location
+      AST.errorDescription(location) mustBe Predefined.Location
       location.isEmpty mustBe true
       location.isContainer mustBe false
       location.format mustBe Predefined.Location
     }
     "support Luminosity" in {
       luminosity.kind mustBe Predefined.Luminosity
-      AST.kind(luminosity) mustBe Predefined.Luminosity
+      AST.errorDescription(luminosity) mustBe Predefined.Luminosity
       luminosity.isEmpty mustBe true
       luminosity.isContainer mustBe false
       luminosity.format mustBe Predefined.Luminosity
     }
     "support Mass" in {
       mass.kind mustBe Predefined.Mass
-      AST.kind(mass) mustBe Predefined.Mass
+      AST.errorDescription(mass) mustBe Predefined.Mass
       mass.isEmpty mustBe true
       mass.isContainer mustBe false
       mass.format mustBe Predefined.Mass
     }
     "support Mole" in {
       mole.kind mustBe Predefined.Mole
-      AST.kind(mole) mustBe Predefined.Mole
+      AST.errorDescription(mole) mustBe Predefined.Mole
       mole.isEmpty mustBe true
       mole.isContainer mustBe false
       mole.format mustBe Predefined.Mole
     }
     "support Nothing" in {
       nothing.kind mustBe Predefined.Nothing
-      AST.kind(nothing) mustBe Predefined.Nothing
+      AST.errorDescription(nothing) mustBe Predefined.Nothing
       nothing.isEmpty mustBe true
       nothing.isContainer mustBe false
       nothing.format mustBe Predefined.Nothing
     }
     "support Number" in {
       number.kind mustBe Predefined.Number
-      AST.kind(number) mustBe Predefined.Number
+      AST.errorDescription(number) mustBe Predefined.Number
       number.isEmpty mustBe true
       number.isContainer mustBe false
       number.format mustBe Predefined.Number
     }
     "support Real" in {
       real.kind mustBe Predefined.Real
-      AST.kind(real) mustBe Predefined.Real
+      AST.errorDescription(real) mustBe Predefined.Real
       real.isEmpty mustBe true
       real.isContainer mustBe false
       real.format mustBe Predefined.Real
     }
     "support Temperature" in {
       temperature.kind mustBe Predefined.Temperature
-      AST.kind(temperature) mustBe Predefined.Temperature
+      AST.errorDescription(temperature) mustBe Predefined.Temperature
       temperature.isEmpty mustBe true
       temperature.isContainer mustBe false
       temperature.format mustBe Predefined.Temperature
     }
     "support Time" in {
       time.kind mustBe Predefined.Time
-      AST.kind(time) mustBe Predefined.Time
+      AST.errorDescription(time) mustBe Predefined.Time
       time.isEmpty mustBe true
       time.isContainer mustBe false
       time.format mustBe Predefined.Time
     }
     "support TimeStamp" in {
       timestamp.kind mustBe Predefined.TimeStamp
-      AST.kind(timestamp) mustBe Predefined.TimeStamp
+      AST.errorDescription(timestamp) mustBe Predefined.TimeStamp
       timestamp.isEmpty mustBe true
       timestamp.isContainer mustBe false
       timestamp.format mustBe Predefined.TimeStamp
     }
     "support URL" in {
       url.kind mustBe Predefined.URL
-      AST.kind(url) mustBe Predefined.URL
+      AST.errorDescription(url) mustBe Predefined.URL
       url.isEmpty mustBe true
       url.isContainer mustBe false
       url.format mustBe Predefined.URL
     }
     "support UUID" in {
       uuid.kind mustBe Predefined.UUID
-      AST.kind(uuid) mustBe Predefined.UUID
+      AST.errorDescription(uuid) mustBe Predefined.UUID
       uuid.isEmpty mustBe true
       uuid.isContainer mustBe false
       uuid.format mustBe Predefined.UUID
@@ -197,19 +197,19 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       pattern.isEmpty mustBe true
       pattern.isContainer mustBe false
       pattern.kind mustBe Predefined.Pattern
-      AST.kind(pattern) mustBe Predefined.Pattern
+      AST.errorDescription(pattern) mustBe Predefined.Pattern
       pattern.format mustBe "Pattern(\"^$\")"
     }
     "support Range" in {
       range.isEmpty mustBe true
       range.isContainer mustBe false
       range.kind mustBe Predefined.Range
-      AST.kind(range) mustBe Predefined.Range
+      AST.errorDescription(range) mustBe Predefined.Range
       range.format mustBe "Range(2,4)"
     }
     "support String" in {
       string.kind mustBe Predefined.String
-      AST.kind(string) mustBe Predefined.String
+      AST.errorDescription(string) mustBe Predefined.String
       string.format mustBe "String(42,)"
       string.isEmpty mustBe true
       string.isContainer mustBe false
@@ -220,6 +220,123 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       id.kind mustBe Predefined.Id
       id.isEmpty mustBe true
       id.isContainer mustBe false
+    }
+  }
+
+  val enumeration = Enumeration(
+    At.empty,
+    Seq(
+      Enumerator(At.empty, Identifier(At.empty, "one")),
+      Enumerator(At.empty, Identifier(At.empty, "two")),
+      Enumerator(At.empty, Identifier(At.empty, "three"))
+    )
+  )
+
+  val aggregation = Aggregation(
+    At.empty,
+    Seq(
+      Field(At.empty, Identifier(At.empty, "integer"), integer),
+      Field(At.empty, Identifier(At.empty, "abstract"), abstract_),
+      Field(At.empty, Identifier(At.empty, "bool"), bool),
+      Field(At.empty, Identifier(At.empty, "current"), current),
+      Field(At.empty, Identifier(At.empty, "currency"), currency),
+      Field(At.empty, Identifier(At.empty, "date"), date),
+      Field(At.empty, Identifier(At.empty, "dateTime"), dateTime),
+      Field(At.empty, Identifier(At.empty, "decimal"), decimal),
+      Field(At.empty, Identifier(At.empty, "duration"), duration),
+      Field(At.empty, Identifier(At.empty, "integer"), integer),
+      Field(At.empty, Identifier(At.empty, "length"), length_),
+      Field(At.empty, Identifier(At.empty, "location"), location),
+      Field(At.empty, Identifier(At.empty, "luminosity"), luminosity),
+      Field(At.empty, Identifier(At.empty, "mass"), mass),
+      Field(At.empty, Identifier(At.empty, "mole"), mole),
+      Field(At.empty, Identifier(At.empty, "nothing"), nothing),
+      Field(At.empty, Identifier(At.empty, "number"), number),
+      Field(At.empty, Identifier(At.empty, "real"), real),
+      Field(At.empty, Identifier(At.empty, "temperature"), temperature),
+      Field(At.empty, Identifier(At.empty, "time"), time),
+      Field(At.empty, Identifier(At.empty, "timestamp"), timestamp),
+      Field(At.empty, Identifier(At.empty, "url"), url),
+      Field(At.empty, Identifier(At.empty, "uuid"), uuid),
+      Field(At.empty, Identifier(At.empty, "pattern"), pattern),
+      Field(At.empty, Identifier(At.empty, "range"), range),
+      Field(At.empty, Identifier(At.empty, "string"), string),
+      Field(At.empty, Identifier(At.empty, "id"), id)
+    )
+  )
+
+  val alternation = Alternation(
+    At.empty,
+    Seq(
+      AliasedTypeExpression(At.empty, PathIdentifier(At.empty, Seq("a", "b"))),
+      AliasedTypeExpression(At.empty, PathIdentifier(At.empty, Seq("z", "y")))
+    )
+  )
+
+  val mapping = Mapping(At.empty, string, integer)
+
+  val reference = EntityReferenceTypeExpression(
+    At.empty,
+    PathIdentifier(At.empty, Seq("a", "b", "c", "d", "entity"))
+  )
+
+  val message = MessageType(At.empty, OtherKind, aggregation.fields)
+
+  "Complex Expression Types" must {
+    "Support Aggregation" in {
+      AST.errorDescription(aggregation) mustBe "Aggregation of 27 fields"
+      aggregation.format mustBe
+        "{ integer: Integer, abstract: Abstract, " +
+        "bool: Boolean, current: Current, currency: Currency, date: Date, " +
+        "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
+        "integer: Integer, length: Length, location: Location, " +
+        "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
+        "number: Number, real: Real, temperature: Temperature, time: Time, " +
+        "timestamp: TimeStamp, url: URL, uuid: UUID, " +
+        "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
+        "id: Id(a.b) }"
+      aggregation.isEmpty mustBe false
+      aggregation.isContainer mustBe true
+    }
+    "Support Enumeration" in {
+      AST.errorDescription(enumeration) mustBe "Enumeration of 3 values"
+      enumeration.format mustBe "{ one,two,three }"
+      enumeration.isEmpty mustBe false
+      enumeration.isContainer mustBe false
+    }
+    "Support Alternation" in {
+      AST.errorDescription(alternation) mustBe "Alternation of 2 types"
+      alternation.format mustBe "one of { a.b, z.y }"
+      alternation.isEmpty mustBe false
+      alternation.isContainer mustBe false
+    }
+    "Support Mapping" in {
+      AST.errorDescription(mapping) mustBe "Map from String to Integer"
+      mapping.format mustBe "mapping from String(42,) to Integer"
+      mapping.isEmpty mustBe false
+      mapping.isContainer mustBe false
+    }
+    "Support EntityReference" in {
+      AST.errorDescription(reference) mustBe
+        "Reference to entity a.b.c.d.entity"
+      reference.format mustBe "entity a.b.c.d.entity"
+      reference.isEmpty mustBe false
+      reference.isContainer mustBe false
+    }
+    "Support Messages" in {
+      AST.errorDescription(message) mustBe "Other of 27 fields"
+      message.format mustBe
+        "other { integer: Integer, abstract: Abstract, " +
+        "bool: Boolean, current: Current, currency: Currency, date: Date, " +
+        "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
+        "integer: Integer, length: Length, location: Location, " +
+        "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
+        "number: Number, real: Real, temperature: Temperature, time: Time, " +
+        "timestamp: TimeStamp, url: URL, uuid: UUID, " +
+        "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
+        "id: Id(a.b) }"
+      message.isEmpty mustBe false
+      message.isContainer mustBe true
     }
   }
 

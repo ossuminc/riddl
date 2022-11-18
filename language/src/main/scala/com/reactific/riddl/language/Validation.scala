@@ -963,7 +963,7 @@ object Validation {
                     )
                   case te: TypeExpression => state.addError(
                       ref.pathId.loc,
-                      s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST.kind(te)} type instead"
+                      s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST.errorDescription(te)} type instead"
                     )
                 }
               case _ => state.addError(
@@ -1500,7 +1500,7 @@ object Validation {
                   } else { state }
                 case te: TypeExpression => state.addError(
                     id.loc,
-                    s"'${id.format}' should reference a message type but is a ${AST.kind(te)} type instead."
+                    s"'${id.format}' should reference a message type but is a ${AST.errorDescription(te)} type instead."
                   )
               }
             case _ => addError(

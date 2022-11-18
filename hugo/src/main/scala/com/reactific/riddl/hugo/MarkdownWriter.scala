@@ -388,7 +388,7 @@ case class MarkdownWriter(
 
   def emitFields(fields: Seq[Field]): this.type = {
     list(fields.map { field =>
-      (field.id.format, AST.kind(field.typeEx), field.brief, field.description)
+      (field.id.format, field.typeEx.format, field.brief, field.description)
     })
   }
 
