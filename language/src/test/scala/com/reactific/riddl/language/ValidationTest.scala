@@ -9,7 +9,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.Validation.ValidationState
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
@@ -18,12 +18,12 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationMessage#format" should {
     "produce a correct string" in {
       val msg =
-        Message(Location(1, 2, RiddlParserInput.empty), "the_message", Warning)
+        Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       msg.format mustBe s"Warning: empty(1:2): the_message"
     }
     "compare based on locations" in {
-      val v1 = Message(Location(1, 2, "the_source"), "the_message", Warning)
-      val v2 = Message(Location(2, 3, "the_source"), "the_message", Warning)
+      val v1 = Message(At(1, 2, "the_source"), "the_message", Warning)
+      val v2 = Message(At(2, 3, "the_source"), "the_message", Warning)
       v1 < v2 mustBe true
       v1 == v2 mustBe false
     }
@@ -33,10 +33,10 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
     "parentOf" should {
       "find the parent of an existent child" in {
         val aType =
-          Type(Location(), Identifier(Location(), "bar"), Strng(Location()))
+          Type(At(), Identifier(At(), "bar"), Strng(At()))
         val domain = Domain(
-          Location(),
-          Identifier(Location(), "foo"),
+          At(),
+          Identifier(At(), "foo"),
           types = aType :: Nil
         )
 
@@ -44,9 +44,9 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       }
       "not find the parent of a non-existent child" in {
         val aType =
-          Type(Location(), Identifier(Location(), "bar"), Strng(Location()))
+          Type(At(), Identifier(At(), "bar"), Strng(At()))
         val domain =
-          Domain(Location(), Identifier(Location(), "foo"), types = Nil)
+          Domain(At(), Identifier(At(), "foo"), types = Nil)
 
         ValidationState(SymbolTable(domain)).parentOf(aType) mustBe
           RootContainer.empty
@@ -55,7 +55,7 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
         ValidationState(SymbolTable(RootContainer.empty))
           .checkNonEmpty(Nil, "foo", RootContainer.empty).messages mustBe
           List(Message(
-            Location(1, 1, RiddlParserInput.empty),
+            At(1, 1, RiddlParserInput.empty),
             "foo in Root should not be empty",
             Error
           ))
@@ -66,21 +66,21 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
       "checkOptions" in {
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
           List(
-            EntityIsAggregate(Location()),
-            EntityTransient(Location()),
-            EntityIsAggregate(Location())
+            EntityIsAggregate(At()),
+            EntityTransient(At()),
+            EntityIsAggregate(At())
           ),
-          Location()
+          At()
         ).messages mustBe
-          List(Message(Location(), "Options should not be repeated", Error))
-        case class IntOption(loc: Location, name: String) extends OptionValue
+          List(Message(At(), "Options should not be repeated", Error))
+        case class IntOption(loc: At, name: String) extends OptionValue
         ValidationState(SymbolTable(RootContainer.empty)).checkOptions(
           List(
             IntOption(1 -> 1, "One"),
             IntOption(2 -> 2, "Two"),
             IntOption(3 -> 3, "Three")
           ),
-          Location()
+          At()
         ).messages mustBe Nil
       }
     }

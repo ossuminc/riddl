@@ -55,10 +55,7 @@ class TranslatorTest extends ValidatingTest {
 
   val directory = "language/src/test/input/"
   val output = "language/target/translator-test/"
-  val roots = Seq(
-    "domains/simpleDomain.riddl",
-    "everything.riddl"
-  )
+  val roots = Seq("domains/simpleDomain.riddl", "everything.riddl")
 
   "Translator" should {
     for { fileName <- roots } {
@@ -81,7 +78,7 @@ class TranslatorTest extends ValidatingTest {
             if (errors.isEmpty) {
               info(messages.format)
               succeed
-            } else { fail(messages.format) }
+            } else { fail(errors.format) }
         }
       }
     }

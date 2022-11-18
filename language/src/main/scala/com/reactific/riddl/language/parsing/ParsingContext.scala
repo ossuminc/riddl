@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.Messages
 
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
@@ -43,12 +43,12 @@ trait ParsingContext extends Terminals {
 
   def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
 
-  def location[u: P]: P[Location] = {
+  def location[u: P]: P[At] = {
     P(Index.map(idx => current.location(idx)))
   }
 
   def doImport(
-    loc: Location,
+    loc: At,
     domainName: Identifier,
     fileName: LiteralString
   ): Domain = {
@@ -64,7 +64,7 @@ trait ParsingContext extends Terminals {
     @unused file: File
   ): Domain = {
     // TODO: implement importDomain
-    Domain(Location(), Identifier(Location(), "NotImplemented"))
+    Domain(At(), Identifier(At(), "NotImplemented"))
   }
 
   def doInclude[T <: Definition](
@@ -99,10 +99,10 @@ trait ParsingContext extends Terminals {
   }
 
   def error(message: String): Unit = {
-    val msg = Messages.Message(Location.empty(current), message, Messages.Error)
+    val msg = Messages.Message(At.empty(current), message, Messages.Error)
     errors.append(msg)
   }
-  def error(loc: Location, message: String, context: String = ""): Unit = {
+  def error(loc: At, message: String, context: String = ""): Unit = {
     val msg = Messages.Message(loc, message, Messages.Error, context)
     errors.append(msg)
   }

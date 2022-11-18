@@ -8,7 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.utils.SeqHelpers.*
 
 import scala.annotation.unused
@@ -123,23 +123,23 @@ object Folding {
 
     def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
 
-    def addStyle(loc: Location, msg: String): S = {
+    def addStyle(loc: At, msg: String): S = {
       add(Message(loc, msg, StyleWarning))
     }
 
-    def addMissing(loc: Location, msg: String): S = {
+    def addMissing(loc: At, msg: String): S = {
       add(Message(loc, msg, MissingWarning))
     }
 
-    def addWarning(loc: Location, msg: String): S = {
+    def addWarning(loc: At, msg: String): S = {
       add(Message(loc, msg, Warning))
     }
 
-    def addError(loc: Location, msg: String): S = {
+    def addError(loc: At, msg: String): S = {
       add(Message(loc, msg, Error))
     }
 
-    def addSevere(loc: Location, msg: String): S = {
+    def addSevere(loc: At, msg: String): S = {
       add(Message(loc, msg, SevereError))
     }
 

@@ -8,7 +8,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -49,31 +49,60 @@ trait TypeParser extends CommonParser {
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
-  def simplePredefinedTypes[u: P]: P[TypeExpression] = {
+  def oneWordPredefTypes[u: P]: P[TypeExpression] = {
     P(
-      stringType | currencyType | urlType |
-        (location ~ Predefined.Abstract).map(AST.Abstract) |
-        (location ~ Predefined.Boolean).map(AST.Bool) |
-        (location ~ Predefined.Number).map(AST.Number) |
-        (location ~ Predefined.Integer).map(AST.Integer) |
-        (location ~ Predefined.Decimal).map(AST.Decimal) |
-        (location ~ Predefined.Real).map(AST.Real) |
-        (location ~ Predefined.Duration).map(AST.Duration) |
-        (location ~ Predefined.LatLong).map(AST.LatLong) |
-        (location ~ Predefined.DateTime).map(AST.DateTime) |
-        (location ~ Predefined.Date).map(AST.Date) |
-        (location ~ Predefined.TimeStamp).map(AST.TimeStamp) |
-        (location ~ Predefined.Time).map(AST.Time) |
-        (location ~ Predefined.UUID).map(AST.UUID) |
-        (location ~ Predefined.Length).map(AST.Length) |
-        (location ~ Predefined.Luminosity).map(AST.Luminosity) |
-        (location ~ Predefined.Mass).map(AST.Mass) |
-        (location ~ Predefined.Mole).map(AST.Mole) |
-        (location ~ Predefined.Temperature).map(AST.Temperature) |
-        (location ~ Predefined.Current).map(AST.Current) |
-        (location ~ Predefined.Nothing).map(AST.Nothing) |
-        (location ~ Punctuation.undefinedMark).map(AST.Abstract)
-    )./
+      location ~ StringIn(
+        // order matters in this list, because of common prefixes
+        Predefined.Abstract,
+        Predefined.Boolean,
+        Predefined.Current,
+        Predefined.Decimal,
+        Predefined.Duration,
+        Predefined.DateTime,
+        Predefined.Date,
+        Predefined.Integer,
+        Predefined.Length,
+        Predefined.Location,
+        Predefined.Luminosity,
+        Predefined.Mass,
+        Predefined.Mole,
+        Predefined.Nothing,
+        Predefined.Number,
+        Predefined.Real,
+        Predefined.Temperature,
+        Predefined.TimeStamp,
+        Predefined.Time,
+        Predefined.UUID
+      ).! ~~ !CharPred(_.isLetterOrDigit)
+    ).map {
+      case (at, Predefined.Abstract)    => AST.Abstract(at)
+      case (at, Predefined.Boolean)     => AST.Bool(at)
+      case (at, Predefined.Current)     => AST.Current(at)
+      case (at, Predefined.Decimal)     => AST.Decimal(at)
+      case (at, Predefined.Duration)    => AST.Duration(at)
+      case (at, Predefined.DateTime)    => AST.DateTime(at)
+      case (at, Predefined.Date)        => AST.Date(at)
+      case (at, Predefined.Integer)     => AST.Integer(at)
+      case (at, Predefined.Length)      => AST.Length(at)
+      case (at, Predefined.Location)    => AST.Location(at)
+      case (at, Predefined.Luminosity)  => AST.Luminosity(at)
+      case (at, Predefined.Mass)        => AST.Mass(at)
+      case (at, Predefined.Mole)        => AST.Mole(at)
+      case (at, Predefined.Nothing)     => AST.Nothing(at)
+      case (at, Predefined.Number)      => AST.Number(at)
+      case (at, Predefined.Real)        => AST.Real(at)
+      case (at, Predefined.Temperature) => AST.Temperature(at)
+      case (at, Predefined.TimeStamp)   => AST.TimeStamp(at)
+      case (at, Predefined.Time)        => AST.Time(at)
+      case (at, Predefined.UUID)        => AST.UUID(at)
+      case (at, _) =>
+        error("Unrecognized predefined type")
+        AST.Abstract(at)
+    }
+  }
+
+  def simplePredefinedTypes[u: P]: P[TypeExpression] = {
+    P(stringType | currencyType | urlType | oneWordPredefTypes)./
   }
 
   def patternType[u: P]: P[Pattern] = {
@@ -172,7 +201,7 @@ trait TypeParser extends CommonParser {
   }
 
   def makeMessageType(
-    loc: Location,
+    loc: At,
     mk: MessageKind,
     agg: Aggregation
   ): MessageType = { MessageType(loc, mk, agg.fields) }
@@ -242,27 +271,24 @@ trait TypeParser extends CommonParser {
     ))
   }
 
-  def defOfMessage[u:P]: P[Type] = {
-    P(location ~ messageKind ~/ identifier ~ is  ~ aggregation ~
-      briefly ~
-      description
+  def defOfMessage[u: P]: P[Type] = {
+    P(
+      location ~ messageKind ~/ identifier ~ is ~ aggregation ~ briefly ~
+        description
     ).map { case (loc, mk, id, agg, b, d) =>
-      val mt =  MessageType(agg.loc, mk, agg.fields)
+      val mt = MessageType(agg.loc, mk, agg.fields)
       Type(loc, id, mt, b, d)
     }
   }
 
-  def defOfType[u:P]: P[Type] = {
-    P(location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~
-      description
-    ).map { case (loc, id, typEx, b, d) =>
-      Type(loc, id, typEx, b, d)
-    }
+  def defOfType[u: P]: P[Type] = {
+    P(
+      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~
+        description
+    ).map { case (loc, id, typEx, b, d) => Type(loc, id, typEx, b, d) }
   }
 
-  def typeDef[u: P]: P[Type] = {
-    defOfType | defOfMessage
-  }
+  def typeDef[u: P]: P[Type] = { defOfType | defOfMessage }
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
 }

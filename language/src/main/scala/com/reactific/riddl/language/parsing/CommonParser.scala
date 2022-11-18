@@ -7,7 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -149,7 +149,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
 
   def maybeOptionWithArgs[u: P](
     validOptions: => P[String]
-  ): P[(Location, String, Seq[LiteralString])] = {
+  ): P[(At, String, Seq[LiteralString])] = {
     P(
       location ~ validOptions ~
         (Punctuation.roundOpen ~ literalString.rep(0, P(Punctuation.comma)) ~
@@ -162,7 +162,7 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
 
   def options[u: P, TY <: RiddlValue](
     validOptions: => P[String]
-  )(mapper: => (Location, String, Seq[LiteralString]) => TY
+  )(mapper: => (At, String, Seq[LiteralString]) => TY
   ): P[Seq[TY]] = {
     P(
       (Keywords.options ~ Punctuation.roundOpen ~/

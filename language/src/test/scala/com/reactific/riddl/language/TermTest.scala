@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.BlockDescription
 import com.reactific.riddl.language.AST.Identifier
 import com.reactific.riddl.language.AST.LiteralString
 import com.reactific.riddl.language.AST.Term
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 class TermTest extends ParsingTest {
 
   "Term" should {
@@ -30,13 +30,13 @@ class TermTest extends ParsingTest {
           val found = finder.find(_.isInstanceOf[Term])
           found contains Term(
             2 -> 3,
-            Identifier(Location(), "one"),
+            Identifier(At(), "one"),
             None,
             Some(BlockDescription(2 -> 15, Seq(LiteralString(2 -> 28, "uno"))))
           )
           found contains Term(
             4 -> 5,
-            Identifier(Location(), "two"),
+            Identifier(At(), "two"),
             None,
             Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
           )

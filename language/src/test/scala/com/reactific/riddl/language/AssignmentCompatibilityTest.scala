@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.AST.*
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
@@ -14,18 +14,18 @@ import org.scalatest.matchers.must.Matchers
 /** Unit Tests For AssignmentCompatibility */
 class AssignmentCompatibilityTest extends AnyWordSpec with Matchers {
 
-  val abstrct = Abstract(Location.empty)
-  val datetime = DateTime(Location.empty)
-  val timestamp = TimeStamp(Location.empty)
-  val date = Date(Location.empty)
-  val time = Time(Location.empty)
-  val number = Number(Location.empty)
-  val integer = Integer(Location.empty)
-  val real = Real(Location.empty)
-  val decimal = Decimal(Location.empty)
-  val range = AST.RangeType(Location.empty, 0, 100)
-  val nothing = AST.Nothing(Location.empty)
-  val string = AST.Strng(Location.empty)
+  val abstrct = Abstract(At.empty)
+  val datetime = DateTime(At.empty)
+  val timestamp = TimeStamp(At.empty)
+  val date = Date(At.empty)
+  val time = Time(At.empty)
+  val number = Number(At.empty)
+  val integer = Integer(At.empty)
+  val real = Real(At.empty)
+  val decimal = Decimal(At.empty)
+  val range = AST.RangeType(At.empty, 0, 100)
+  val nothing = AST.Nothing(At.empty)
+  val string = AST.Strng(At.empty)
 
   "AssignmentCompatibility" should {
     "check compatibility of Date" in {

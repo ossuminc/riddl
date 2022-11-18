@@ -8,7 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 
 import java.util.regex.PatternSyntaxException
 import scala.reflect.ClassTag
@@ -72,7 +72,7 @@ object Validation {
         case NonFatal(xcptn) =>
           val message = ExceptionUtils.getRootCauseStackTrace(xcptn)
             .mkString("\n")
-          state.addSevere(Location.empty, message)
+          state.addSevere(At.empty, message)
       }
     }
     Result(
@@ -644,7 +644,7 @@ object Validation {
       predicate: Boolean = true,
       message: => String,
       kind: KindOfMessage,
-      loc: Location
+      loc: At
     ): ValidationState = {
       if (!predicate) { add(Message(loc, message, kind)) }
       else { this }
@@ -1031,7 +1031,7 @@ object Validation {
 
     def checkOptions[T <: OptionValue](
       options: Seq[T],
-      loc: Location
+      loc: At
     ): ValidationState = {
       check(
         options.sizeIs == options.distinct.size,
@@ -1252,7 +1252,7 @@ object Validation {
     }
 
     def checkFunctionCall(
-      loc: Location,
+      loc: At,
       pathId: PathIdentifier,
       args: ArgList,
       defn: Definition,

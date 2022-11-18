@@ -23,7 +23,7 @@ trait TypeExpression extends AbstractDefinitions {
   }
 
   /** A TypeExpression that references another type by PathIdentifier */
-  case class AliasedTypeExpression(loc: Location, pid: PathIdentifier)
+  case class AliasedTypeExpression(loc: At, pid: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"Reference To ${pid.format}"
   }
@@ -101,8 +101,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param typeExp
     *   The type expression that is indicated as optional
     */
-  case class Optional(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
+  case class Optional(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}?"
   }
 
@@ -115,8 +114,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The type expression that is indicated with a cardinality of zero or
     *   more.
     */
-  case class ZeroOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
+  case class ZeroOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}*"
   }
 
@@ -128,8 +126,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param typeExp
     *   The type expression that is indicated with a cardinality of one or more.
     */
-  case class OneOrMore(loc: Location, typeExp: TypeExpression)
-      extends Cardinality {
+  case class OneOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}+"
   }
 
@@ -146,7 +143,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The maximum number of items
     */
   case class SpecificRange(
-    loc: Location,
+    loc: At,
     typeExp: TypeExpression,
     min: Long,
     max: Long)
@@ -168,7 +165,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   define independent descriptions
     */
   case class Enumerator(
-    loc: Location,
+    loc: At,
     id: Identifier,
     enumVal: Option[Long] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -189,7 +186,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   chosen.
     */
   case class Enumeration(
-    loc: Location,
+    loc: At,
     enumerators: Seq[Enumerator])
       extends TypeExpression {
     override def format: String = "{ " + enumerators.map(_.format)
@@ -207,7 +204,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   may be chosen
     */
   case class Alternation(
-    loc: Location,
+    loc: At,
     of: Seq[AliasedTypeExpression])
       extends TypeExpression {
     override def format: String =
@@ -229,7 +226,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   An optional description of the field.
     */
   case class Field(
-    loc: Location,
+    loc: At,
     id: Identifier,
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -264,14 +261,12 @@ trait TypeExpression extends AbstractDefinitions {
     *   The fields of the aggregation
     */
   case class Aggregation(
-    loc: Location,
+    loc: At,
     fields: Seq[Field] = Seq.empty[Field])
       extends AggregateTypeExpression {}
 
   object Aggregation {
-    def empty(loc: Location = Location.empty): Aggregation = {
-      Aggregation(loc)
-    }
+    def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   }
 
   /** A type expressions that defines a mapping from a key to a value. The value
@@ -286,7 +281,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The type expression for the values of the mapping
     */
   case class Mapping(
-    loc: Location,
+    loc: At,
     from: TypeExpression,
     to: TypeExpression)
       extends TypeExpression {
@@ -301,7 +296,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The type of entity referenced by this type expression.
     */
   case class EntityReferenceTypeExpression(
-    loc: Location,
+    loc: At,
     entity: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"reference to Entity ${entity.format}"
@@ -319,7 +314,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
     */
   case class Pattern(
-    loc: Location,
+    loc: At,
     pattern: Seq[LiteralString])
       extends TypeExpression {
     override def format: String =
@@ -339,7 +334,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The path identifier of the entity type
     */
   case class UniqueId(
-    loc: Location,
+    loc: At,
     entityPath: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"Id(${entityPath.format})"
@@ -361,7 +356,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The fields of the message's aggregation
     */
   case class MessageType(
-    loc: Location,
+    loc: At,
     messageKind: MessageKind,
     fields: Seq[Field] = Seq.empty[Field])
       extends AggregateTypeExpression {
@@ -371,11 +366,13 @@ trait TypeExpression extends AbstractDefinitions {
   /** Base class of all pre-defined type expressions
     */
   abstract class PredefinedType extends TypeExpression {
-    def loc: Location
+    override def isEmpty: Boolean = true
+
+    def loc: At
 
     def kind: String
 
-    override def format: String = s"$kind"
+    override def format: String = kind
   }
 
   object PredefinedType {
@@ -394,7 +391,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The maximum length of the string (default: MaxInt)
     */
   case class Strng(
-    loc: Location,
+    loc: At,
     min: Option[Long] = None,
     max: Option[Long] = None)
       extends PredefinedType {
@@ -405,7 +402,7 @@ trait TypeExpression extends AbstractDefinitions {
     }
   }
 
-  case class Currency(loc: Location, country: String) extends PredefinedType {
+  case class Currency(loc: At, country: String) extends PredefinedType {
     def kind: String = Predefined.Currency
   }
 
@@ -418,7 +415,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The location of the Bool type expression
     */
   case class Abstract(
-    loc: Location)
+    loc: At)
       extends PredefinedType {
     def kind: String = Predefined.Abstract
 
@@ -437,7 +434,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Bool(loc: Location) extends NumericType {
+  case class Bool(loc: At) extends NumericType {
     def kind: String = Predefined.Boolean
   }
 
@@ -446,7 +443,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the number type expression
     */
-  case class Number(loc: Location) extends NumericType {
+  case class Number(loc: At) extends NumericType {
     def kind: String = Predefined.Number
   }
 
@@ -455,7 +452,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the integer type expression
     */
-  case class Integer(loc: Location) extends NumericType {
+  case class Integer(loc: At) extends NumericType {
     def kind: String = Predefined.Integer
   }
 
@@ -470,7 +467,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The maximum value of the RangeType
     */
   case class RangeType(
-    loc: Location,
+    loc: At,
     min: Long,
     max: Long)
       extends NumericType {
@@ -487,7 +484,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the decimal integer type expression
     */
-  case class Decimal(loc: Location) extends NumericType {
+  case class Decimal(loc: At) extends NumericType {
     def kind: String = Predefined.Decimal
   }
 
@@ -496,7 +493,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the real number type expression
     */
-  case class Real(loc: Location) extends NumericType {
+  case class Real(loc: At) extends NumericType {
     def kind: String = Predefined.Real
   }
 
@@ -504,7 +501,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   \- The locaitonof the current type expression
     */
-  case class Current(loc: Location) extends NumericType {
+  case class Current(loc: At) extends NumericType {
     def kind: String = Predefined.Current
   }
 
@@ -512,7 +509,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the current type expression
     */
-  case class Length(loc: Location) extends NumericType {
+  case class Length(loc: At) extends NumericType {
     def kind: String = Predefined.Length
   }
 
@@ -520,11 +517,11 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the luminosity expression
     */
-  case class Luminosity(loc: Location) extends NumericType {
+  case class Luminosity(loc: At) extends NumericType {
     def kind: String = Predefined.Luminosity
   }
 
-  case class Mass(loc: Location) extends NumericType {
+  case class Mass(loc: At) extends NumericType {
     def kind: String = Predefined.Mass
   }
 
@@ -532,7 +529,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   \- The location of the mass type expression
     */
-  case class Mole(loc: Location) extends NumericType {
+  case class Mole(loc: At) extends NumericType {
     def kind: String = Predefined.Mole
   }
 
@@ -540,7 +537,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   \- The location of the mass type expression
     */
-  case class Temperature(loc: Location) extends NumericType {
+  case class Temperature(loc: At) extends NumericType {
     def kind: String = Predefined.Temperature
   }
 
@@ -551,7 +548,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the date type expression.
     */
-  case class Date(loc: Location) extends TimeType {
+  case class Date(loc: At) extends TimeType {
     def kind: String = Predefined.Date
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -567,7 +564,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the time type expression.
     */
-  case class Time(loc: Location) extends TimeType {
+  case class Time(loc: At) extends TimeType {
     def kind: String = Predefined.Time
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -583,7 +580,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the datetime type expression.
     */
-  case class DateTime(loc: Location) extends TimeType {
+  case class DateTime(loc: At) extends TimeType {
     def kind: String = Predefined.DateTime
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -599,7 +596,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the timestamp
     */
-  case class TimeStamp(loc: Location) extends TimeType {
+  case class TimeStamp(loc: At) extends TimeType {
     def kind: String = Predefined.TimeStamp
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -615,7 +612,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the duration type expression
     */
-  case class Duration(loc: Location) extends TimeType {
+  case class Duration(loc: At) extends TimeType {
     def kind: String = Predefined.Duration
   }
 
@@ -625,7 +622,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the UUID type expression
     */
-  case class UUID(loc: Location) extends PredefinedType {
+  case class UUID(loc: At) extends PredefinedType {
     def kind: String = Predefined.UUID
   }
 
@@ -637,7 +634,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param scheme
     *   The scheme to which the URL is constrained.
     */
-  case class URL(loc: Location, scheme: Option[LiteralString] = None)
+  case class URL(loc: At, scheme: Option[LiteralString] = None)
       extends PredefinedType {
     def kind: String = Predefined.URL
   }
@@ -648,8 +645,8 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the LatLong type expression.
     */
-  case class LatLong(loc: Location) extends PredefinedType {
-    def kind: String = Predefined.LatLong
+  case class Location(loc: At) extends PredefinedType {
+    def kind: String = Predefined.Location
   }
 
   /** A predefined type expression for a type that can have no values
@@ -657,7 +654,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the nothing type expression.
     */
-  case class Nothing(loc: Location) extends PredefinedType {
+  case class Nothing(loc: At) extends PredefinedType {
     def kind: String = Predefined.Nothing
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false

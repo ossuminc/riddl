@@ -41,7 +41,7 @@ trait AbstractDefinitions extends Terminals {
   trait RiddlValue extends RiddlNode {
 
     /** The location in the parse at which this RiddlValue occurs */
-    def loc: Location
+    def loc: At
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -51,13 +51,13 @@ trait AbstractDefinitions extends Terminals {
     * @param s
     *   The parsed value of the string content
     */
-  case class LiteralString(loc: Location, s: String) extends RiddlValue {
+  case class LiteralString(loc: At, s: String) extends RiddlValue {
     override def format = s"\"$s\""
 
     override def isEmpty: Boolean = s.isEmpty
   }
   object LiteralString {
-    val empty: LiteralString = LiteralString(Location.empty, "")
+    val empty: LiteralString = LiteralString(At.empty, "")
   }
 
   /** A RiddlValue that is a parsed identifier, typically the name of a
@@ -68,14 +68,14 @@ trait AbstractDefinitions extends Terminals {
     * @param value
     *   The parsed value of the identifier
     */
-  case class Identifier(loc: Location, value: String) extends RiddlValue {
+  case class Identifier(loc: At, value: String) extends RiddlValue {
     override def format: String = value
 
     override def isEmpty: Boolean = value.isEmpty
   }
 
   object Identifier {
-    val empty: Identifier = Identifier(Location.empty, "")
+    val empty: Identifier = Identifier(At.empty, "")
   }
 
   /** Represents a segmented identifier to a definition in the model. Path
@@ -88,7 +88,7 @@ trait AbstractDefinitions extends Terminals {
     * @param value
     *   The list of strings that make up the path identifier
     */
-  case class PathIdentifier(loc: Location, value: Seq[String])
+  case class PathIdentifier(loc: At, value: Seq[String])
       extends RiddlValue {
     override def format: String = {
       value.foldLeft(Seq.empty[String]) { case (r: Seq[String], s: String) =>
@@ -106,7 +106,7 @@ trait AbstractDefinitions extends Terminals {
     * optional description. This class provides the description part.
     */
   trait Description extends RiddlValue {
-    def loc: Location
+    def loc: At
 
     def lines: Seq[LiteralString]
 
@@ -114,14 +114,14 @@ trait AbstractDefinitions extends Terminals {
   }
 
   case class BlockDescription(
-    loc: Location = Location.empty,
+    loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString])
       extends Description {
     def format: String = ""
   }
 
   case class FileDescription(
-    loc: Location,
+    loc: At,
     file: Path)
       extends Description {
     lazy val lines: Seq[LiteralString] = {

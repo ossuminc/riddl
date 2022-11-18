@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.utils.Logger
 
 object Messages {
@@ -81,7 +81,7 @@ object Messages {
   }
 
   case class Message(
-    loc: Location,
+    loc: At,
     message: String,
     kind: KindOfMessage = Error,
     context: String = "")
@@ -112,32 +112,32 @@ object Messages {
     }
   }
 
-  def info(message: String, loc: Location = Location.empty): Message = {
+  def info(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Info)
   }
 
-  def warning(message: String, loc: Location = Location.empty): Message = {
+  def warning(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Warning)
   }
 
   def error(
     message: String,
-    loc: Location = Location.empty
+    loc: At = At.empty
   ): Message = { Message(loc, message) }
 
-  def severe(message: String, loc: Location = Location.empty): Message = {
+  def severe(message: String, loc: At = At.empty): Message = {
     Message(loc, message, SevereError)
   }
 
-  def errors(message: String, loc: Location = Location.empty): Messages = {
+  def errors(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message))
   }
 
-  def warnings(message: String, loc: Location = Location.empty): Messages = {
+  def warnings(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Warning))
   }
 
-  def severes(message: String, loc: Location = Location.empty): Messages = {
+  def severes(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Messages.SevereError))
   }
 

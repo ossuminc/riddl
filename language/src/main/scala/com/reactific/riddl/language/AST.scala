@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
@@ -83,7 +83,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
   /** A term definition for the glossary */
   case class Term(
-    loc: Location,
+    loc: At,
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
@@ -108,7 +108,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The [[java.nio.file.Path]] to the file included.
     */
   case class Include[T <: Definition](
-    loc: Location = Location(RiddlParserInput.empty),
+    loc: At = At(RiddlParserInput.empty),
     contents: Seq[T] = Seq.empty[T],
     path: Option[Path] = None)
       extends Definition with VitalDefinitionDefinition with RootDefinition {
@@ -147,7 +147,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A URL associated with the author
     */
   case class Author(
-    loc: Location,
+    loc: At,
     id: Identifier,
     name: LiteralString,
     email: LiteralString,
@@ -165,7 +165,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     def format: String = ""
   }
 
-  case class AuthorRef(loc: Location, pathId: PathIdentifier)
+  case class AuthorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Author] {
     override def format: String = s"${Keywords.author} ${pathId.format}"
     def kind: String = ""
@@ -246,7 +246,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     override def isRootContainer: Boolean = true
 
-    def loc: Location = Location.empty
+    def loc: At = At.empty
 
     override def id: Identifier = Identifier(loc, "Root")
 
@@ -280,7 +280,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class CommandRef(loc: Location, pathId: PathIdentifier)
+  case class CommandRef(loc: At, pathId: PathIdentifier)
       extends MessageRef {
     def messageKind: MessageKind = CommandKind
   }
@@ -292,7 +292,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class EventRef(loc: Location, pathId: PathIdentifier)
+  case class EventRef(loc: At, pathId: PathIdentifier)
       extends MessageRef {
     def messageKind: MessageKind = EventKind
   }
@@ -304,7 +304,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the query type
     */
-  case class QueryRef(loc: Location, pathId: PathIdentifier)
+  case class QueryRef(loc: At, pathId: PathIdentifier)
       extends MessageRef {
     def messageKind: MessageKind = QueryKind
   }
@@ -316,7 +316,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the result type
     */
-  case class ResultRef(loc: Location, pathId: PathIdentifier)
+  case class ResultRef(loc: At, pathId: PathIdentifier)
       extends MessageRef {
     def messageKind: MessageKind = ResultKind
   }
@@ -335,7 +335,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the type.
     */
   case class Type(
-    loc: Location,
+    loc: At,
     id: Identifier,
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -371,7 +371,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the reference type
     */
-  case class TypeRef(loc: Location, pathId: PathIdentifier)
+  case class TypeRef(loc: At, pathId: PathIdentifier)
       extends Reference[Type] {
     override def format: String = s"${Keywords.`type`} ${pathId.format}"
   }
@@ -389,7 +389,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the action
     */
   case class ArbitraryAction(
-    loc: Location,
+    loc: At,
     what: LiteralString,
     description: Option[Description])
       extends Action {
@@ -407,7 +407,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the action
     */
   case class ErrorAction(
-    loc: Location,
+    loc: At,
     message: LiteralString,
     description: Option[Description])
       extends Action {
@@ -427,7 +427,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the action
     */
   case class SetAction(
-    loc: Location,
+    loc: At,
     target: PathIdentifier,
     value: Expression,
     description: Option[Description] = None)
@@ -436,7 +436,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class AppendAction(
-    loc: Location,
+    loc: At,
     value: Expression,
     target: PathIdentifier,
     description: Option[Description] = None)
@@ -456,7 +456,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An argument list that should correspond to teh fields of the message
     */
   case class MessageConstructor(
-    loc: Location,
+    loc: At,
     msg: MessageRef,
     args: ArgList = ArgList())
       extends RiddlNode {
@@ -476,7 +476,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the yield action
     */
   case class ReturnAction(
-    loc: Location,
+    loc: At,
     value: Expression,
     description: Option[Description] = None)
       extends Action {
@@ -493,7 +493,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the yield action
     */
   case class YieldAction(
-    loc: Location,
+    loc: At,
     msg: MessageConstructor,
     description: Option[Description] = None)
       extends Action {
@@ -512,7 +512,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the action
     */
   case class PublishAction(
-    loc: Location,
+    loc: At,
     msg: MessageConstructor,
     pipe: PipeRef,
     description: Option[Description] = None)
@@ -521,7 +521,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class SubscribeAction(
-    loc: Location,
+    loc: At,
     msgs: MessageConstructor,
     pipe: PipeRef,
     description: Option[Description] = None)
@@ -530,7 +530,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class FunctionCallAction(
-    loc: Location,
+    loc: At,
     function: PathIdentifier,
     arguments: ArgList,
     description: Option[Description] = None)
@@ -550,7 +550,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of this action
     */
   case class MorphAction(
-    loc: Location,
+    loc: At,
     entity: EntityRef,
     state: StateRef,
     description: Option[Description] = None)
@@ -572,7 +572,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of this action
     */
   case class BecomeAction(
-    loc: Location,
+    loc: At,
     entity: EntityRef,
     handler: HandlerRef,
     description: Option[Description] = None)
@@ -594,7 +594,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description for this action
     */
   case class TellAction(
-    loc: Location,
+    loc: At,
     msg: MessageConstructor,
     entity: MessageTakingRef[Definition],
     description: Option[Description] = None)
@@ -615,7 +615,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the action.
     */
   case class AskAction(
-    loc: Location,
+    loc: At,
     entity: EntityRef,
     msg: MessageConstructor,
     description: Option[Description] = None)
@@ -634,7 +634,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description for this action
     */
   case class ReplyAction(
-    loc: Location,
+    loc: At,
     msg: MessageConstructor,
     description: Option[Description] = None)
       extends SagaStepAction {
@@ -651,7 +651,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description for the action
     */
   case class CompoundAction(
-    loc: Location,
+    loc: At,
     actions: Seq[Action],
     description: Option[Description] = None)
       extends Action {
@@ -667,7 +667,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param scenario
     *   The strings that define the scenario
     */
-  case class GivenClause(loc: Location, scenario: Seq[LiteralString])
+  case class GivenClause(loc: At, scenario: Seq[LiteralString])
       extends GherkinClause {
     def format: String = ""
   }
@@ -679,7 +679,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param condition
     *   The condition expression that defines the trigger for the [[Example]]
     */
-  case class WhenClause(loc: Location, condition: Condition)
+  case class WhenClause(loc: At, condition: Condition)
       extends GherkinClause {
     def format: String = ""
   }
@@ -692,7 +692,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param action
     *   The action to be performed
     */
-  case class ThenClause(loc: Location, action: Action) extends GherkinClause {
+  case class ThenClause(loc: At, action: Action) extends GherkinClause {
     def format: String = ""
   }
 
@@ -704,7 +704,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param action
     *   The action to be performed
     */
-  case class ButClause(loc: Location, action: Action) extends GherkinClause {
+  case class ButClause(loc: At, action: Action) extends GherkinClause {
     def format: String = ""
   }
 
@@ -732,7 +732,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the example
     */
   case class Example(
-    loc: Location,
+    loc: At,
     id: Identifier,
     givens: Seq[GivenClause] = Seq.empty[GivenClause],
     whens: Seq[WhenClause] = Seq.empty[WhenClause],
@@ -759,7 +759,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced entity.
     */
-  case class EntityRef(loc: Location, pathId: PathIdentifier)
+  case class EntityRef(loc: At, pathId: PathIdentifier)
       extends MessageTakingRef[Entity] {
     override def format: String = s"${Keywords.entity} ${pathId.format}"
   }
@@ -771,7 +771,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced function.
     */
-  case class FunctionRef(loc: Location, pathId: PathIdentifier)
+  case class FunctionRef(loc: At, pathId: PathIdentifier)
       extends Reference[Function] {
     override def format: String = s"${Keywords.function} ${pathId.format}"
   }
@@ -796,7 +796,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the function.
     */
   case class Function(
-    loc: Location,
+    loc: At,
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
@@ -854,7 +854,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the invariant.
     */
   case class Invariant(
-    loc: Location,
+    loc: At,
     id: Identifier,
     expression: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -873,7 +873,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class OnOtherClause(
-    loc: Location,
+    loc: At,
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -903,7 +903,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the on clause.
     */
   case class OnMessageClause(
-    loc: Location,
+    loc: At,
     msg: MessageRef,
     from: Option[Reference[Definition]],
     examples: Seq[Example] = Seq.empty[Example],
@@ -936,7 +936,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the handler
     */
   case class Handler(
-    loc: Location,
+    loc: At,
     id: Identifier,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -976,7 +976,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced handler
     */
-  case class HandlerRef(loc: Location, pathId: PathIdentifier)
+  case class HandlerRef(loc: At, pathId: PathIdentifier)
       extends Reference[Handler] {
     override def format: String = s"${Keywords.handler} ${pathId.format}"
   }
@@ -997,7 +997,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the state.
     */
   case class State(
-    loc: Location,
+    loc: At,
     id: Identifier,
     aggregation: Aggregation,
     types: Seq[Type] = Seq.empty[Type],
@@ -1020,7 +1020,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced state definition
     */
-  case class StateRef(loc: Location, pathId: PathIdentifier)
+  case class StateRef(loc: At, pathId: PathIdentifier)
       extends Reference[State] {
     override def format: String = s"${Keywords.state} ${pathId.format}"
   }
@@ -1049,7 +1049,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   Optional description of the entity
     */
   case class Entity(
-    loc: Location,
+    loc: At,
     id: Identifier,
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     states: Seq[State] = Seq.empty[State],
@@ -1090,11 +1090,11 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
   sealed trait AdaptorDirection extends RiddlValue
 
-  case class InboundAdaptor(loc: Location) extends AdaptorDirection {
+  case class InboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "from"
   }
 
-  case class OutboundAdaptor(loc: Location) extends AdaptorDirection {
+  case class OutboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "to"
   }
 
@@ -1119,7 +1119,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   Optional description of the adaptor.
     */
   case class Adaptor(
-    loc: Location,
+    loc: At,
     id: Identifier,
     direction: AdaptorDirection,
     context: ContextRef,
@@ -1147,7 +1147,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class AdaptorRef(
-    loc: Location,
+    loc: At,
     pathId: PathIdentifier)
       extends MessageTakingRef[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${pathId.format}"
@@ -1186,7 +1186,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A detailed description of this repository
     */
   case class Repository(
-    loc: Location,
+    loc: At,
     id: Identifier,
     types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
@@ -1233,7 +1233,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A detailed description of this Projection
     */
   case class Projection(
-    loc: Location,
+    loc: At,
     id: Identifier,
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
@@ -1269,7 +1269,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced projection definition
     */
-  case class ProjectionRef(loc: Location, pathId: PathIdentifier)
+  case class ProjectionRef(loc: At, pathId: PathIdentifier)
       extends MessageTakingRef[Projection] {
     override def format: String = s"${Keywords.projection} ${pathId.format}"
   }
@@ -1302,7 +1302,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the context
     */
   case class Context(
-    loc: Location,
+    loc: At,
     id: Identifier,
     options: Seq[ContextOption] = Seq.empty[ContextOption],
     types: Seq[Type] = Seq.empty[Type],
@@ -1350,7 +1350,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier for the referenced context
     */
-  case class ContextRef(loc: Location, pathId: PathIdentifier)
+  case class ContextRef(loc: At, pathId: PathIdentifier)
       extends MessageTakingRef[Context] {
     override def format: String = s"context ${pathId.format}"
   }
@@ -1370,7 +1370,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the pipe.
     */
   case class Pipe(
-    loc: Location,
+    loc: At,
     id: Identifier,
     transmitType: Option[TypeRef] = None,
     brief: Option[LiteralString] = None,
@@ -1399,7 +1399,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the Inlet
     */
   case class Inlet(
-    loc: Location,
+    loc: At,
     id: Identifier,
     type_ : TypeRef,
     entity: Option[EntityRef] = None,
@@ -1424,7 +1424,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the Outlet.
     */
   case class Outlet(
-    loc: Location,
+    loc: At,
     id: Identifier,
     type_ : TypeRef,
     entity: Option[EntityRef] = None,
@@ -1439,37 +1439,37 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     def keyword: String
   }
 
-  case class Source(loc: Location) extends ProcessorShape {
+  case class Source(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.source
   }
 
-  case class Sink(loc: Location) extends ProcessorShape {
+  case class Sink(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.sink
   }
 
-  case class Flow(loc: Location) extends ProcessorShape {
+  case class Flow(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.flow
   }
 
-  case class Merge(loc: Location) extends ProcessorShape {
+  case class Merge(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.merge
   }
 
-  case class Split(loc: Location) extends ProcessorShape {
+  case class Split(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.split
   }
 
-  case class Multi(loc: Location) extends ProcessorShape {
+  case class Multi(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.multi
   }
 
-  case class Void(loc: Location) extends ProcessorShape {
+  case class Void(loc: At) extends ProcessorShape {
     def format: String = ""
     override def keyword: String = Keywords.void
   }
@@ -1495,7 +1495,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the processor
     */
   case class Processor(
-    loc: Location,
+    loc: At,
     id: Identifier,
     shape: ProcessorShape,
     inlets: Seq[Inlet] = Seq.empty[Inlet],
@@ -1563,7 +1563,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced projection definition
     */
-  case class ProcessorRef(loc: Location, pathId: PathIdentifier)
+  case class ProcessorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Processor] {
     override def format: String = s"${Keywords.processor} ${pathId.format}"
   }
@@ -1575,7 +1575,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier for the referenced pipe.
     */
-  case class PipeRef(loc: Location, pathId: PathIdentifier)
+  case class PipeRef(loc: At, pathId: PathIdentifier)
       extends MessageTakingRef[Pipe] {
     override def format: String = s"${Keywords.pipe} ${pathId.format}"
   }
@@ -1594,7 +1594,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced [[Inlet]]
     */
-  case class InletRef(loc: Location, pathId: PathIdentifier)
+  case class InletRef(loc: At, pathId: PathIdentifier)
       extends StreamletRef[Inlet] {
     override def format: String = s"${Keywords.inlet} ${pathId.format}"
   }
@@ -1606,7 +1606,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the referenced [[Outlet]]
     */
-  case class OutletRef(loc: Location, pathId: PathIdentifier)
+  case class OutletRef(loc: At, pathId: PathIdentifier)
       extends StreamletRef[Outlet] {
     override def format: String = s"${Keywords.outlet} ${pathId.format}"
   }
@@ -1635,7 +1635,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the joint
     */
   case class InletJoint(
-    loc: Location,
+    loc: At,
     id: Identifier,
     inletRef: InletRef,
     pipe: PipeRef,
@@ -1662,7 +1662,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the OutletJoint
     */
   case class OutletJoint(
-    loc: Location,
+    loc: At,
     id: Identifier,
     outletRef: OutletRef,
     pipe: PipeRef,
@@ -1694,7 +1694,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the plant
     */
   case class Plant(
-    loc: Location,
+    loc: At,
     id: Identifier,
     pipes: Seq[Pipe] = Seq.empty[Pipe],
     processors: Seq[Processor] = Seq.empty[Processor],
@@ -1742,7 +1742,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the saga action
     */
   case class SagaStep(
-    loc: Location,
+    loc: At,
     id: Identifier,
     // TODO: The do and undo actions should be Seq[Example]
     doAction: SagaStepAction,
@@ -1781,7 +1781,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the saga.
     */
   case class Saga(
-    loc: Location,
+    loc: At,
     id: Identifier,
     options: Seq[SagaOption] = Seq.empty[SagaOption],
     input: Option[Aggregation] = None,
@@ -1812,7 +1812,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
-  case class SagaRef(loc: Location, pathId: PathIdentifier)
+  case class SagaRef(loc: At, pathId: PathIdentifier)
       extends Reference[Saga] {
     def format: String = s"${Keywords.saga} ${pathId.format}"
   }
@@ -1832,7 +1832,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A longer description of the actor and its role
     */
   case class Actor(
-    loc: Location,
+    loc: At,
     id: Identifier,
     is_a: LiteralString,
     brief: Option[LiteralString],
@@ -1848,7 +1848,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that locates the references StoryActor
     */
-  case class ActorRef(loc: Location, pathId: PathIdentifier)
+  case class ActorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Actor] {
     def format: String = s"${Keywords.actor} ${pathId.format}"
   }
@@ -1866,7 +1866,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A brief description of the parallel group
     */
   case class ParallelGroup(
-    loc: Location,
+    loc: At,
     contents: Seq[InteractionExpression],
     brief: Option[LiteralString])
       extends InteractionExpression {
@@ -1884,7 +1884,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A brief description of the optional group
     */
   case class OptionalGroup(
-    loc: Location,
+    loc: At,
     contents: Seq[InteractionExpression],
     brief: Option[LiteralString])
       extends InteractionExpression {
@@ -1915,7 +1915,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A brief description of the interaction
     */
   case class ArbitraryStep(
-    loc: Location,
+    loc: At,
     from: Reference[Definition],
     relationship: LiteralString,
     to: Reference[Definition],
@@ -1925,7 +1925,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class SelfProcessingStep(
-    loc: Location,
+    loc: At,
     from: Reference[Definition],
     relationship: LiteralString,
     brief: Option[LiteralString] = None)
@@ -1935,7 +1935,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class ActivateOutputStep(
-    loc: Location,
+    loc: At,
     from: OutputRef,
     relationship: LiteralString,
     to: ActorRef,
@@ -1945,7 +1945,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class ProvideInputStep(
-    loc: Location,
+    loc: At,
     from: ActorRef,
     relationship: LiteralString,
     to: InputRef,
@@ -1955,7 +1955,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class StoryCase(
-    loc: Location,
+    loc: At,
     id: Identifier,
     interactions: Seq[InteractionExpression],
     brief: Option[LiteralString] = None,
@@ -1976,7 +1976,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The benefit of that utilization
     */
   case class UserStory(
-    loc: Location,
+    loc: At,
     actor: ActorRef,
     capability: LiteralString,
     benefit: LiteralString)
@@ -2009,7 +2009,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the
     */
   case class Story(
-    loc: Location,
+    loc: At,
     id: Identifier,
     userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
@@ -2043,7 +2043,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
-  case class StoryRef(loc: Location, pathId: PathIdentifier)
+  case class StoryRef(loc: At, pathId: PathIdentifier)
       extends Reference[Story] {
     def format: String = s"${Keywords.story} ${pathId.format}"
   }
@@ -2051,7 +2051,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   sealed trait UIElement extends ApplicationDefinition
 
   case class Group(
-    loc: Location,
+    loc: At,
     id: Identifier,
     types: Seq[Type] = Seq.empty[Type],
     elements: Seq[UIElement] = Seq.empty[UIElement],
@@ -2068,7 +2068,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = ""
   }
 
-  case class GroupRef(loc: Location, pathId: PathIdentifier)
+  case class GroupRef(loc: At, pathId: PathIdentifier)
       extends Reference[Group] {
     def format: String = s"${Keywords.group} ${pathId.format}"
   }
@@ -2088,7 +2088,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   A detailed description of the view
     */
   case class Output(
-    loc: Location,
+    loc: At,
     id: Identifier,
     types: Seq[Type],
     putOut: ResultRef,
@@ -2109,7 +2109,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the View
     */
-  case class OutputRef(loc: Location, pathId: PathIdentifier)
+  case class OutputRef(loc: At, pathId: PathIdentifier)
       extends Reference[Output] {
     def format: String = s"${Keywords.output} ${pathId.format}"
   }
@@ -2130,7 +2130,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   a detailed description of the Give
     */
   case class Input(
-    loc: Location,
+    loc: At,
     id: Identifier,
     types: Seq[Type],
     putIn: CommandRef,
@@ -2151,13 +2151,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the Give
     */
-  case class InputRef(loc: Location, pathId: PathIdentifier)
+  case class InputRef(loc: At, pathId: PathIdentifier)
       extends Reference[Input] {
     def format: String = s"${Keywords.input} ${pathId.format}"
   }
 
   case class Application(
-    loc: Location,
+    loc: At,
     id: Identifier,
     options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     types: Seq[Type] = Seq.empty[Type],
@@ -2183,7 +2183,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier that refers to the Application
     */
-  case class ApplicationRef(loc: Location, pathId: PathIdentifier)
+  case class ApplicationRef(loc: At, pathId: PathIdentifier)
       extends MessageTakingRef[Application] {
     def format: String = s"${Keywords.application} ${pathId.format}"
   }
@@ -2214,7 +2214,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   An optional description of the domain.
     */
   case class Domain(
-    loc: Location,
+    loc: At,
     id: Identifier,
     options: Seq[DomainOption] = Seq.empty[DomainOption],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -2261,7 +2261,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier for the referenced domain.
     */
-  case class DomainRef(loc: Location, pathId: PathIdentifier)
+  case class DomainRef(loc: At, pathId: PathIdentifier)
       extends Reference[Domain] {
     override def format: String = s"${Keywords.domain} ${pathId.format}"
   }

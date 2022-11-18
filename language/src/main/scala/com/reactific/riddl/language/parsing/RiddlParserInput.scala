@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.ast.Location
+import com.reactific.riddl.language.ast.At
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -58,7 +58,7 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  def rangeOf(loc: Location): (Int, Int) = {
+  def rangeOf(loc: At): (Int, Int) = {
     require(loc.line > 0)
     val start = lineNumberLookup(loc.line - 1)
     val end =
@@ -70,13 +70,13 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  @inline final def location(index: Int): Location = { Location(this, index) }
+  @inline final def location(index: Int): At = { At(this, index) }
 
   def prettyIndex(index: Int): String = { location(index).toString }
 
   val nl: String = System.getProperty("line.separator")
 
-  def annotateErrorLine(index: Location): String = {
+  def annotateErrorLine(index: At): String = {
     if (index.source.nonEmpty) {
       val (start, end) = rangeOf(index)
       val quoted = slice(start, end).stripTrailing()
@@ -102,7 +102,7 @@ private case class EmptyParserInput() extends RiddlParserInput {
 
 case class StringParserInput(
   data: String,
-  origin: String = Location.defaultSourceName)
+  origin: String = At.defaultSourceName)
     extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
   override def isEmpty: Boolean = data.isEmpty

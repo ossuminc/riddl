@@ -222,7 +222,7 @@ trait Terminals {
     final val Duration = "Duration"
     final val Id = "Id"
     final val Integer = "Integer"
-    final val LatLong = "LatLong"
+    final val Location = "Location"
     final val Length = "Length" // in meters
     final val Luminosity = "Luminosity" // in candelas
     final val Mass = "Mass" // in kilograms
@@ -236,7 +236,6 @@ trait Terminals {
     final val Temperature = "Temperature" // in Kelvin
     final val Time = "Time"
     final val TimeStamp = "TimeStamp"
-    final val UniqueId = "UniqueId"
     final val URL = "URL"
     final val UUID = "UUID"
   }
