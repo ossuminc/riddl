@@ -6,7 +6,6 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.TextFileWriter
