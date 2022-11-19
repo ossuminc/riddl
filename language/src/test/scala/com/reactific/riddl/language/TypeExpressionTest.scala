@@ -408,13 +408,62 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     }
     "support TimeStamp equality" in {
       val ts = TimeStamp(At.empty)
-      ts.isAssignmentCompatible(DateTime(At.empty)) mustBe true
-      ts.isAssignmentCompatible(Date(At.empty)) mustBe true
-      ts.isAssignmentCompatible(Strng(At.empty)) mustBe true
-      ts.isAssignmentCompatible(
-        Pattern(At.empty, Seq(LiteralString(At.empty, "")))
-      ) mustBe true
-      ts.isAssignmentCompatible(TimeStamp(At.empty)) mustBe true
+      ts.isAssignmentCompatible(ts) mustBe true
+      ts.isAssignmentCompatible(timestamp) mustBe true
+      ts.isAssignmentCompatible(dateTime) mustBe true
+      ts.isAssignmentCompatible(date) mustBe true
+      ts.isAssignmentCompatible(string) mustBe true
+      ts.isAssignmentCompatible(pattern) mustBe true
+    }
+    "support UniqueId equality" in {
+      id.isAssignmentCompatible(id) mustBe true
+      id.isAssignmentCompatible(string) mustBe true
+      id.isAssignmentCompatible(pattern) mustBe true
+    }
+    "support String" in {
+      string.isAssignmentCompatible(string) mustBe true
+      string.isAssignmentCompatible(pattern) mustBe true
+    }
+    "support Range" in {
+      range.isAssignmentCompatible(integer) mustBe true
+      range.isAssignmentCompatible(real) mustBe true
+      range.isAssignmentCompatible(decimal) mustBe true
+      range.isAssignmentCompatible(number) mustBe true
+      range.isAssignmentCompatible(current) mustBe true
+      range.isAssignmentCompatible(length_) mustBe true
+      range.isAssignmentCompatible(luminosity) mustBe true
+      range.isAssignmentCompatible(mass) mustBe true
+      range.isAssignmentCompatible(mole) mustBe true
+      range.isAssignmentCompatible(temperature) mustBe true
+      range.isAssignmentCompatible(range) mustBe true
+    }
+    "support Nothing" in {
+      nothing.isAssignmentCompatible(abstract_) mustBe false
+      nothing.isAssignmentCompatible(bool) mustBe false
+      nothing.isAssignmentCompatible(current) mustBe false
+      nothing.isAssignmentCompatible(currency) mustBe false
+      nothing.isAssignmentCompatible(date) mustBe false
+      nothing.isAssignmentCompatible(dateTime) mustBe false
+      nothing.isAssignmentCompatible(decimal) mustBe false
+      nothing.isAssignmentCompatible(duration) mustBe false
+      nothing.isAssignmentCompatible(id) mustBe false
+      nothing.isAssignmentCompatible(integer) mustBe false
+      nothing.isAssignmentCompatible(location) mustBe false
+      nothing.isAssignmentCompatible(length_) mustBe false
+      nothing.isAssignmentCompatible(luminosity) mustBe false
+      nothing.isAssignmentCompatible(mass) mustBe false
+      nothing.isAssignmentCompatible(mole) mustBe false
+      nothing.isAssignmentCompatible(nothing) mustBe false
+      nothing.isAssignmentCompatible(number) mustBe false
+      nothing.isAssignmentCompatible(pattern) mustBe false
+      nothing.isAssignmentCompatible(range) mustBe false
+      nothing.isAssignmentCompatible(real) mustBe false
+      nothing.isAssignmentCompatible(string) mustBe false
+      nothing.isAssignmentCompatible(temperature) mustBe false
+      nothing.isAssignmentCompatible(time) mustBe false
+      nothing.isAssignmentCompatible(timestamp) mustBe false
+      nothing.isAssignmentCompatible(url) mustBe false
+      nothing.isAssignmentCompatible(uuid) mustBe false
     }
   }
 }
