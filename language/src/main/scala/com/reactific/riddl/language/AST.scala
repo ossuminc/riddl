@@ -280,8 +280,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class CommandRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class CommandRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = CommandKind
   }
 
@@ -292,8 +291,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class EventRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class EventRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = EventKind
   }
 
@@ -304,8 +302,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the query type
     */
-  case class QueryRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class QueryRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = QueryKind
   }
 
@@ -316,8 +313,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the result type
     */
-  case class ResultRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = ResultKind
   }
 
@@ -371,8 +367,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the reference type
     */
-  case class TypeRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Type] {
+  case class TypeRef(loc: At, pathId: PathIdentifier) extends Reference[Type] {
     override def format: String = s"${Keywords.`type`} ${pathId.format}"
   }
 
@@ -679,8 +674,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param condition
     *   The condition expression that defines the trigger for the [[Example]]
     */
-  case class WhenClause(loc: At, condition: Condition)
-      extends GherkinClause {
+  case class WhenClause(loc: At, condition: Condition) extends GherkinClause {
     def format: String = ""
   }
 
@@ -1812,8 +1806,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
-  case class SagaRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Saga] {
+  case class SagaRef(loc: At, pathId: PathIdentifier) extends Reference[Saga] {
     def format: String = s"${Keywords.saga} ${pathId.format}"
   }
 
@@ -1982,6 +1975,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     benefit: LiteralString)
       extends RiddlValue {
     def format: String = ""
+    override def isEmpty: Boolean = false
   }
 
   /** The definition of an agile user story. Stories define functionality from

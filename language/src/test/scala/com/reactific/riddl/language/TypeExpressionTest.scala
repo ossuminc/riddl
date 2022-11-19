@@ -282,6 +282,11 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
 
   val message = MessageType(At.empty, OtherKind, aggregation.fields)
 
+  val alias = AliasedTypeExpression(
+    At.empty,
+    PathIdentifier(At.empty, Seq("a", "b", "foo"))
+  )
+
   "Complex Expression Types" must {
     "Support Aggregation" in {
       AST.errorDescription(aggregation) mustBe "Aggregation of 27 fields"
@@ -301,26 +306,26 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     "Support Enumeration" in {
       AST.errorDescription(enumeration) mustBe "Enumeration of 3 values"
       enumeration.format mustBe "{ one,two,three }"
-      enumeration.isEmpty mustBe false
+      enumeration.isEmpty mustBe true
       enumeration.isContainer mustBe false
     }
     "Support Alternation" in {
       AST.errorDescription(alternation) mustBe "Alternation of 2 types"
       alternation.format mustBe "one of { a.b, z.y }"
-      alternation.isEmpty mustBe false
+      alternation.isEmpty mustBe true
       alternation.isContainer mustBe false
     }
     "Support Mapping" in {
       AST.errorDescription(mapping) mustBe "Map from String to Integer"
       mapping.format mustBe "mapping from String(42,) to Integer"
-      mapping.isEmpty mustBe false
+      mapping.isEmpty mustBe true
       mapping.isContainer mustBe false
     }
     "Support EntityReference" in {
       AST.errorDescription(reference) mustBe
         "Reference to entity a.b.c.d.entity"
       reference.format mustBe "entity a.b.c.d.entity"
-      reference.isEmpty mustBe false
+      reference.isEmpty mustBe true
       reference.isContainer mustBe false
     }
     "Support Messages" in {
@@ -337,6 +342,37 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
         "id: Id(a.b) }"
       message.isEmpty mustBe false
       message.isContainer mustBe true
+    }
+    "Support type aliases" in {
+      AST.errorDescription(alias) mustBe "a.b.foo"
+      alias.format mustBe "a.b.foo"
+      alias.isEmpty mustBe true
+      alias.isContainer mustBe false
+    }
+  }
+
+  val optional = Optional(At.empty, integer)
+  val oneOrMore = OneOrMore(At.empty, integer)
+  val zeroOrMore = ZeroOrMore(At.empty, integer)
+
+  "Cardinality" must {
+    "support optional" in {
+      AST.errorDescription(optional) mustBe "Integer?"
+      optional.format mustBe "Integer?"
+      optional.isEmpty mustBe true
+      optional.isContainer mustBe false
+    }
+    "support oneOrMore" in {
+      AST.errorDescription(oneOrMore) mustBe "Integer+"
+      oneOrMore.format mustBe "Integer+"
+      oneOrMore.isEmpty mustBe true
+      oneOrMore.isContainer mustBe false
+    }
+    "support zeroOrMore" in {
+      AST.errorDescription(zeroOrMore) mustBe "Integer*"
+      zeroOrMore.format mustBe "Integer*"
+      zeroOrMore.isEmpty mustBe true
+      zeroOrMore.isContainer mustBe false
     }
   }
 
