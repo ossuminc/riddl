@@ -459,9 +459,9 @@ object Validation {
         s.doAction.getClass == s.undoAction.getClass,
         "The primary action and revert action must be the same shape",
         Error,
-        s.doAction.loc
-      ).checkAction(s.doAction, s, parents)
-        .checkAction(s.undoAction, s, parents).checkDescription(s)
+        s.loc
+      ).checkExamples(s.doAction, s +: parents)
+        .checkExamples(s.undoAction, s +: parents).checkDescription(s)
     }
 
     def validateContext(
@@ -963,7 +963,8 @@ object Validation {
                     )
                   case te: TypeExpression => state.addError(
                       ref.pathId.loc,
-                      s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST.errorDescription(te)} type instead"
+                      s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST
+                          .errorDescription(te)} type instead"
                     )
                 }
               case _ => state.addError(

@@ -324,8 +324,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       step: SagaStep
     ): PrettifyState = {
       state.withCurrent(
-        _.openDef(step).emitAction(step.doAction).add("reverted by")
-          .emitAction(step.undoAction)
+        _.openDef(step).emitExamples(step.doAction)
+          .add("reverted by")
+          .emitExamples(step.undoAction)
       )
     }
 

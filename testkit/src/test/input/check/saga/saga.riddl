@@ -15,24 +15,25 @@ domain ignore1 is {
       requires: { p1: String, p2: String }
       returns: {s: String }
       step One is {
-        tell command Something() to entity blah
-        reverted by
-        tell command UndoSomething() to entity blah
-      } as {
         example A is {
-           then "Pass p1 to blah via Something command"
-        }
-      }
+          then tell command Something() to entity blah
+        } described as "First step performing action"
+        reverted by
+        example One_Undo { then tell command UndoSomething() to entity blah }
+        described as "First step compensation action"
+      } described as "First saga step"
       step Two is {
-        call AnotherThing(a=42) reverted by call UndoAnotherThing(a=42)
-     } as {
         example B is {
           given "Step One has completed"
-          then "Pass 42 to AnotherThing function"
+          then call AnotherThing(a=42)
+          and "Pass 42 to AnotherThing function"
           and "Return AnotherThing's output"
           but "Revert it with UndoAnotherThing(a=42) if it fails"
-        }
-      }
+        } described as "Second step performing action"
+        reverted by
+        scenario Two_Undo { then call UndoAnotherThing(a=42) }
+        described as "Second step compensation action"
+      } described as "Second saca step"
     }
   } described as "ignore"
 } described as "just for testing a saga"

@@ -101,6 +101,10 @@ trait AbstractDefinitions extends Terminals {
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
   }
 
+  object PathIdentifier {
+    val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
+  }
+
   /** The description of a definition. All definitions have a name and an
     * optional description. This class provides the description part.
     */

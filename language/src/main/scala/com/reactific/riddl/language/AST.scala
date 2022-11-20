@@ -89,7 +89,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     description: Option[Description] = None)
       extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = description.isEmpty
-    def format: String = ""
+    def format: String = s"${Keywords.term} ${id.format}"
     final val kind: String = "Term"
   }
 
@@ -1003,7 +1003,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     override def contents: Seq[StateDefinition] = aggregation.fields ++ types ++
       handlers
-    def format: String = ""
+    def format: String = s"${Keywords.state} ${id.format}"
     final val kind: String = "State"
   }
 
@@ -1738,15 +1738,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    // TODO: The do and undo actions should be Seq[Example]
-    doAction: SagaStepAction,
-    undoAction: SagaStepAction,
-    examples: Seq[Example],
+    doAction: Seq[Example] = Seq.empty[Example],
+    undoAction: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends SagaDefinition {
-    def contents: Seq[Example] = examples
-    def format: String = ""
+    def contents: Seq[Example] = doAction ++ undoAction
+    def format: String = s"${Keywords.step} ${id.format}"
     final val kind: String = "SagaStep"
   }
 
@@ -1828,10 +1826,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: At,
     id: Identifier,
     is_a: LiteralString,
-    brief: Option[LiteralString],
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with DomainDefinition {
-    def format: String = ""
+    def format: String = s"${Keywords.actor} ${id.format} is ${is_a.format}"
     override def kind: String = "Actor"
   }
 
@@ -1950,12 +1948,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class StoryCase(
     loc: At,
     id: Identifier,
-    interactions: Seq[InteractionExpression],
+    interactions: Seq[InteractionExpression] = Seq.empty[InteractionExpression],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with StoryDefinition {
     override def kind: String = "StoryCase"
-    override def format: String = ""
+    override def format: String = s"${Keywords.case_} ${id.format}"
   }
 
   /** An agile user story definition
@@ -2026,6 +2024,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
 
     final val kind: String = "Story"
+
+    override def format: String = s"${Keywords.story} ${id.format}"
 
     override def maturity: Int = {
       var score = super.maturity

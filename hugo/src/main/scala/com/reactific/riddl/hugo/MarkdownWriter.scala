@@ -784,19 +784,17 @@ case class MarkdownWriter(
 
   def emitSagaSteps(actions: Seq[SagaStep]): this.type = {
     h2("Saga Actions")
-    actions.foreach { action =>
-      h3(action.identify)
-      emitShortDefDoc(action)
-      h4("Messaging")
-      list(Seq(
-        "Do:" -> action.doAction.format,
-        "Undo:" -> action.undoAction.format
-      ))
-      p(action.format)
-      emitExamples(action.examples, 4)
+    actions.foreach { step =>
+      h3(step.identify)
+      emitShortDefDoc(step)
+      h4("Do Examples")
+      emitExamples(step.doAction, 5)
+      h4("Undo Examples")
+      emitExamples(step.undoAction, 5)
     }
     this
   }
+
   def emitSaga(saga: Saga, parents: Seq[String]): this.type = {
     containerHead(saga, "Saga")
     emitDefDoc(saga, parents)
