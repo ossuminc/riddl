@@ -170,11 +170,8 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
   }.map { case (x, y) => x + y }
 
   def arbitraryOperator[u: P]: P[ArbitraryOperator] = {
-    P(
-      location ~ operatorName ~ Punctuation.roundOpen ~
-        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
-    ).map { case (loc, name, expressions) =>
-      ArbitraryOperator(loc, LiteralString(loc, name), expressions)
+    P(location ~ operatorName ~ argList).map { case (loc, name, args) =>
+      ArbitraryOperator(loc, LiteralString(loc, name), args)
     }
   }
 

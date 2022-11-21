@@ -133,17 +133,16 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept arbitrary expression with many  args" in {
-      parseExpression("wow(0,0,0,0,0,0)") { expr: Expression =>
+      parseExpression("wow(a=0,b=0,c=0)") { expr: Expression =>
         expr mustBe ArbitraryOperator(
           At(1 -> 1),
           LiteralString(1 -> 1, "wow"),
-          Seq(
-            LiteralInteger(At(1 -> 5), 0),
-            LiteralInteger(At(1 -> 7), 0),
-            LiteralInteger(At(1 -> 9), 0),
-            LiteralInteger(At(1 -> 11), 0),
-            LiteralInteger(At(1 -> 13), 0),
-            LiteralInteger(At(1 -> 15), 0)
+          ArgList(
+            ListMap(
+              Identifier(At(1->5),"a" ) -> LiteralInteger(At(1 -> 7), 0),
+              Identifier(At(1->9),"b") -> LiteralInteger(At(1 ->11), 0),
+              Identifier(At(1->13),"c") -> LiteralInteger(At(1 -> 15), 0)
+            )
           )
         )
       }

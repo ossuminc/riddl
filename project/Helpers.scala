@@ -43,8 +43,7 @@ object Dep {
   val testing: Seq[ModuleID] = Seq(
     scalactic % "test",
     scalatest % "test",
-    scalacheck % "test",
-    slf4j % "test"
+    scalacheck % "test"
   )
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)
 
