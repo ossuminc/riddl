@@ -16,18 +16,19 @@ trait Expressions extends TypeExpression {
   /** Base trait of all expressions
     */
   sealed trait Expression extends RiddlValue {
+    @inline override def isEmpty: Boolean = true
     def expressionType: TypeExpression
   }
 
   /** Base trait for expressions that yield a boolean value (a condition)
     */
   sealed abstract class Condition(loc: At) extends Expression {
-    def expressionType: TypeExpression = Bool(loc)
+    @inline def expressionType: TypeExpression = Bool(loc)
   }
 
   /** Base trait for expressions that yield a numeric value */
   sealed abstract class NumericExpression(loc: At) extends Expression {
-    def expressionType: TypeExpression = Number(loc)
+    @inline def expressionType: TypeExpression = Number(loc)
   }
 
   /** Represents the use of an arithmetic operator or well-known function call.
@@ -50,20 +51,20 @@ trait Expressions extends TypeExpression {
     operator: String,
     operands: Seq[Expression])
       extends NumericExpression(loc) {
-    override def format: String = operator +
-      operands.map(_.format).mkString("(", ",", ")")
+    override def format: String = operator + operands.map(_.format)
+      .mkString("(", ",", ")")
   }
 
-  /** Represents an expression that is merely a reference to some value,
-    * presumably an entity state value. Since it can be a boolean value, it is
-    * also a condition
+  /** Represents an opoerator that is merely a reference to some value,
+    * presumably an entity state value but could also be a projection or
+    * repository value.
     *
     * @param loc
     *   The location of this expression
     * @param path
     *   The path to the value for this expression
     */
-  case class ValueExpression(loc: At, path: PathIdentifier) extends Expression {
+  case class ValueOperator(loc: At, path: PathIdentifier) extends Expression {
     override def format: String = "@" + path.format
     def expressionType: TypeExpression = Abstract(loc)
   }
@@ -74,7 +75,7 @@ trait Expressions extends TypeExpression {
     * @param loc
     *   The location of the undefined condition
     */
-  case class UndefinedExpression(loc: At) extends Expression {
+  case class UndefinedOperator(loc: At) extends Expression {
     override def format: String = Punctuation.undefinedMark
     def expressionType: TypeExpression = Abstract(loc)
 
@@ -128,7 +129,7 @@ trait Expressions extends TypeExpression {
     * @param entityId
     *   The [[PathIdentifier]] of the entity type for with the Id is created
     */
-  case class EntityIdExpression(
+  case class NewEntityIdOperator(
     loc: At,
     entityId: PathIdentifier)
       extends Expression {
@@ -356,7 +357,7 @@ trait Expressions extends TypeExpression {
     *   The condition being negated
     */
   case class NotCondition(loc: At, cond1: Condition) extends Condition(loc) {
-    override def format: String = "not(" + cond1 + ")"
+    override def format: String = "not(" + cond1.format + ")"
   }
 
   /** Base class for conditions with two operands
@@ -364,7 +365,8 @@ trait Expressions extends TypeExpression {
   abstract class MultiCondition(loc: At) extends Condition(loc) {
     def conditions: Seq[Condition]
 
-    override def format: String = conditions.mkString("(", ",", ")")
+    override def format: String = conditions.map(_.format)
+      .mkString("(", ",", ")")
   }
 
   /** And condition
@@ -421,36 +423,45 @@ trait Expressions extends TypeExpression {
     override def expressionType: TypeExpression = Abstract(loc)
   }
 
-  // /////////////////////////////////////////////////////////// Typed Functions
+  // /////////////////////////////////////////////////////////// Time Operators
 
-  /** Base trait for expressions that yield a numeric value */
-  sealed abstract class TimeExpression(loc: At) extends Expression {
-    def expressionType: TypeExpression = TimeStamp(loc)
+  /** Base trait for expressions that yield a TimeStamp value */
+  trait ValueFunctionExpression extends Expression {
+    def name: String
+    def args: Seq[Expression]
+    def format: String = s"$name(${args.map(_.format).mkString(", ")})"
   }
 
   case class TimeStampFunction(
     loc: At,
     name: String,
-    args: Seq[Expression])
-      extends TimeExpression(loc) {
-    def format: String = ""
+    args: Seq[Expression] = Seq.empty[Expression])
+      extends ValueFunctionExpression {
+    override def expressionType: TypeExpression = TimeStamp(At.empty)
   }
 
-  case class DateFunction(loc: At, name: String, args: Seq[Expression])
-      extends TimeExpression(loc) {
+  case class DateFunction(
+    loc: At,
+    name: String,
+    args: Seq[Expression] = Seq.empty[Expression])
+      extends ValueFunctionExpression {
     override def expressionType: TypeExpression = Date(loc)
-    def format: String = ""
   }
 
-  case class NumberFunction(loc: At, name: String, args: Seq[Expression])
-      extends NumericExpression(loc) {
-    def format: String = ""
+  case class NumberFunction(
+    loc: At,
+    name: String,
+    args: Seq[Expression] = Seq.empty[Expression])
+      extends NumericExpression(loc) with ValueFunctionExpression {
+    override def expressionType: TypeExpression = Number(At.empty)
+
   }
 
-  case class StringFunction(loc: At, name: String, args: Seq[Expression])
-      extends Expression {
+  case class StringFunction(
+    loc: At,
+    name: String,
+    args: Seq[Expression] = Seq.empty[Expression])
+      extends ValueFunctionExpression {
     override def expressionType: TypeExpression = Strng(loc)
-    def format: String = ""
   }
-
 }

@@ -1318,7 +1318,7 @@ object Validation {
       defn: Definition,
       parents: Seq[Definition]
     ): ValidationState = expression match {
-      case ValueExpression(_, path) => checkPathRef[Field](path, defn, parents)(
+      case ValueOperator(_, path) => checkPathRef[Field](path, defn, parents)(
           nullSingleMatchingValidationFunction
         )()
       case GroupExpression(_, expressions) => checkSequence(expressions) {
@@ -1343,7 +1343,7 @@ object Validation {
       case AggregateConstructionExpression(_, pid, args) =>
         checkPathRef[Type](pid, defn, parents)()()
           .checkArgList(args, defn, parents)
-      case EntityIdExpression(_, entityRef) =>
+      case NewEntityIdOperator(_, entityRef) =>
         checkPathRef[Entity](entityRef, defn, parents)()()
       case Ternary(loc, condition, expr1, expr2) =>
         checkExpression(condition, defn, parents)
@@ -1410,8 +1410,8 @@ object Validation {
       parents: Seq[Definition]
     ): Option[TypeExpression] = {
       expr match {
-        case EntityIdExpression(loc, pid)       => Some(UniqueId(loc, pid))
-        case ValueExpression(_, path)           => getPathIdType(path, parents)
+        case NewEntityIdOperator(loc, pid)       => Some(UniqueId(loc, pid))
+        case ValueOperator(_, path)           => getPathIdType(path, parents)
         case FunctionCallExpression(_, name, _) => getPathIdType(name, parents)
         case GroupExpression(loc, expressions)  =>
           // the type of a group is the last expression but it could be empty

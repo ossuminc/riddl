@@ -128,13 +128,13 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
     P(literalString).map(ls => ArbitraryExpression(ls))
   }
 
-  def undefinedExpression[u: P]: P[UndefinedExpression] = {
-    P(location ~ Punctuation.undefinedMark).map(UndefinedExpression)
+  def undefinedExpression[u: P]: P[UndefinedOperator] = {
+    P(location ~ Punctuation.undefinedMark).map(UndefinedOperator)
   }
 
-  def valueExpression[u: P]: P[ValueExpression] = {
+  def valueExpression[u: P]: P[ValueOperator] = {
     P(location ~ Punctuation.at ~ pathIdentifier)
-      .map(tpl => (ValueExpression.apply _).tupled(tpl))
+      .map(tpl => (ValueOperator.apply _).tupled(tpl))
   }
 
   def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
@@ -142,11 +142,11 @@ trait ExpressionParser extends CommonParser with ReferenceParser {
       .map(tpl => (AggregateConstructionExpression.apply _).tupled(tpl))
   }
 
-  def entityIdValue[u: P]: P[EntityIdExpression] = {
+  def entityIdValue[u: P]: P[NewEntityIdOperator] = {
     P(
       location ~ Keywords.new_ ~/ Predefined.Id ~ Punctuation.roundOpen ~
         pathIdentifier ~ Punctuation.roundClose
-    ).map(tpl => (EntityIdExpression.apply _).tupled(tpl))
+    ).map(tpl => (NewEntityIdOperator.apply _).tupled(tpl))
   }
 
   def terminalExpression[u: P]: P[Expression] = {
