@@ -23,7 +23,7 @@ object V {
   val scalacheck = "1.17.0"
   val scalatest = "3.2.14"
   val scopt = "4.1.0"
-  val slf4j = "2.0.3"
+  val slf4j = "2.0.4"
 }
 
 object Dep {
