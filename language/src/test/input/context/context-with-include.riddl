@@ -1,0 +1,5 @@
+domain dominus is {
+    context withRiddl is {
+      include "term-in-context"
+    }
+}
