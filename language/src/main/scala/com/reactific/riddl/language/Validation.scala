@@ -1318,9 +1318,7 @@ object Validation {
       defn: Definition,
       parents: Seq[Definition]
     ): ValidationState = expression match {
-      case ValueExpression(_, path) =>
-        // TODO: Can we validate based on type? What if a Type is returned?
-        checkPathRef[Field](path, defn, parents)(
+      case ValueExpression(_, path) => checkPathRef[Field](path, defn, parents)(
           nullSingleMatchingValidationFunction
         )()
       case GroupExpression(_, expressions) => checkSequence(expressions) {
