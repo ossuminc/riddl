@@ -195,6 +195,27 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with WithIncludes[CT]
       with WithTerms {
 
+    /**
+     * Implicit conversion of boolean to Int for easier computation of
+     * statistics below
+     * @param b
+     * @return
+     */
+    implicit def bool2int(b:Boolean): Int = if (b) 1 else 0
+
+    /**
+     * Compute the completeness of this definition. Vital definitions should
+     * have options, terms, and authors but includes are optional.
+     * Incompleteness is signalled by child definitions that are empty.
+     *
+     * @return A numerator and denominator for percent complete
+     */
+    def completeness: (Int,Int) = {
+      // TODO: make subclass implementations
+      (hasOptions*1 + hasTerms + hasAuthors + brief.nonEmpty +
+        description.nonEmpty) -> 5
+    }
+
     /** Compute the 'maturity' of a definition. Maturity is a score with no
       * maximum but with scoring rules that target 100 points per definition.
       * Maturity is broken down this way:
