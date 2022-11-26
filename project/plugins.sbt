@@ -1,4 +1,4 @@
-libraryDependencies += "org.slf4j" % "slf4j-nop" % "2.0.4"
+libraryDependencies += "org.slf4j" % "slf4j-nop" % "2.0.5"
 
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.34")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.6.4")
