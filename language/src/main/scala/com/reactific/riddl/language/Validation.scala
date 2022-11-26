@@ -160,7 +160,6 @@ object Validation {
             case in: Input   => validateInput(in, parents)
             case out: Output => validateOutput(out, parents)
             case t: Term     => validateTerm(t, parents)
-            case a: Author   => validateAuthorInfo(a, parents)
             case i: Include[ApplicationDefinition] @unchecked =>
               validateInclude(i)
           }
@@ -171,24 +170,20 @@ object Validation {
             case f: Function  => validateFunction(f, parents)
             case i: Invariant => validateInvariant(i, parents)
             case t: Term      => validateTerm(t, parents)
-            case a: Author    => validateAuthorInfo(a, parents)
             case i: Include[EntityDefinition] @unchecked => validateInclude(i)
           }
         case cd: ContextDefinition => cd match {
-            case t: Type         => validateType(t, parents)
-            case h: Handler      => validateHandler(h, parents)
-            case f: Function     => validateFunction(f, parents)
-            case e: Entity       => validateEntity(e, parents)
-            case a: Adaptor      => validateAdaptor(a, parents)
-            case p: Processor    => validateProcessor(p, parents)
-            case p: Projection   => validateProjection(p, parents)
-            case r: Repository   => validateRepository(r, parents)
-            case t: Term         => validateTerm(t, parents)
-            case a: Author       => validateAuthorInfo(a, parents)
-            case p: Pipe         => validatePipe(p, parents)
-            case ij: InletJoint  => validateInletJoint(ij, parents)
-            case oj: OutletJoint => validateOutletJoint(oj, parents)
-            case s: Saga         => validateSaga(s, parents)
+            case t: Type       => validateType(t, parents)
+            case h: Handler    => validateHandler(h, parents)
+            case f: Function   => validateFunction(f, parents)
+            case e: Entity     => validateEntity(e, parents)
+            case a: Adaptor    => validateAdaptor(a, parents)
+            case p: Processor  => validateProcessor(p, parents)
+            case p: Projection => validateProjection(p, parents)
+            case r: Repository => validateRepository(r, parents)
+            case t: Term       => validateTerm(t, parents)
+            case p: Pipe       => validatePipe(p, parents)
+            case s: Saga       => validateSaga(s, parents)
             case i: Include[ContextDefinition] @unchecked => validateInclude(i)
           }
         case dd: DomainDefinition => dd match {
@@ -205,15 +200,19 @@ object Validation {
           }
         case hd: HandlerDefinition => hd match {
             case oc: OnClause => validateOnClause(oc, parents)
-            case t: Term      => validateTerm(t, parents)
-            case a: Author    => validateAuthorInfo(a, parents)
-            case i: Include[HandlerDefinition] @unchecked => validateInclude(i)
           }
         case ad: AdaptorDefinition => ad match {
             case h: Handler => validateHandler(h, parents)
             case t: Term    => validateTerm(t, parents)
-            case a: Author  => validateAuthorInfo(a, parents)
             case i: Include[AdaptorDefinition] @unchecked => validateInclude(i)
+          }
+        case pd: PlantDefinition => pd match {
+            case t: Term         => validateTerm(t, parents)
+            case ij: InletJoint  => validateInletJoint(ij, parents)
+            case oj: OutletJoint => validateOutletJoint(oj, parents)
+            case p: Processor    => validateProcessor(p, parents)
+            case p: Pipe         => validatePipe(p, parents)
+            case i: Include[PlantDefinition] @unchecked => validateInclude(i)
           }
         case ss: SagaStep     => validateSagaStep(ss, parents)
         case _: RootContainer => this // ignore
@@ -1410,8 +1409,8 @@ object Validation {
       parents: Seq[Definition]
     ): Option[TypeExpression] = {
       expr match {
-        case NewEntityIdOperator(loc, pid)       => Some(UniqueId(loc, pid))
-        case ValueOperator(_, path)           => getPathIdType(path, parents)
+        case NewEntityIdOperator(loc, pid)      => Some(UniqueId(loc, pid))
+        case ValueOperator(_, path)             => getPathIdType(path, parents)
         case FunctionCallExpression(_, name, _) => getPathIdType(name, parents)
         case GroupExpression(loc, expressions)  =>
           // the type of a group is the last expression but it could be empty

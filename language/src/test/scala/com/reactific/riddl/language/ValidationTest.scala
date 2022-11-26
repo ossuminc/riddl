@@ -11,10 +11,10 @@ import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.Validation.ValidationState
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import org.scalatest.matchers.must
-import org.scalatest.wordspec.AnyWordSpec
 
-class ValidationTest extends AnyWordSpec with must.Matchers {
+import java.nio.file.Path
+
+class ValidationTest extends ParsingTest {
   "ValidationMessage#format" should {
     "produce a correct string" in {
       val msg =
@@ -32,21 +32,14 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
   "ValidationState" should {
     "parentOf" should {
       "find the parent of an existent child" in {
-        val aType =
-          Type(At(), Identifier(At(), "bar"), Strng(At()))
-        val domain = Domain(
-          At(),
-          Identifier(At(), "foo"),
-          types = aType :: Nil
-        )
+        val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
+        val domain = Domain(At(), Identifier(At(), "foo"), types = aType :: Nil)
 
         ValidationState(SymbolTable(domain)).parentOf(aType) mustBe domain
       }
       "not find the parent of a non-existent child" in {
-        val aType =
-          Type(At(), Identifier(At(), "bar"), Strng(At()))
-        val domain =
-          Domain(At(), Identifier(At(), "foo"), types = Nil)
+        val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
+        val domain = Domain(At(), Identifier(At(), "foo"), types = Nil)
 
         ValidationState(SymbolTable(domain)).parentOf(aType) mustBe
           RootContainer.empty
@@ -83,6 +76,37 @@ class ValidationTest extends AnyWordSpec with must.Matchers {
           At()
         ).messages mustBe Nil
       }
+    }
+  }
+  "Validate All Things" must {
+    var root: RootContainer = null
+    "parse correctly" in {
+      val rootFile = "language/src/test/input/full/domain.riddl"
+      val parseResult = parseTopLevelDomains(Path.of(rootFile))
+      parseResult match {
+        case Left(errors) => fail(errors.format)
+        case Right(rootContainer) =>
+          root = rootContainer
+          val validationResult = Validation.validate(root)
+          validationResult.root mustBe root
+          succeed
+      }
+    }
+    "handle includes" in {
+      val incls = root.contents.head.includes
+      incls mustNot be(empty)
+      incls.head.contents mustNot be(empty)
+      incls.head.contents.head.getClass mustBe(classOf[Application])
+      incls(1).contents.head.getClass mustBe classOf[Context]
+    }
+    "have terms and author refs in applications" in {
+      val apps = root.contents.head.contents
+      apps mustNot be(empty)
+      apps.head mustBe a[Application]
+      val app = apps.head.asInstanceOf[Application]
+      app.terms mustNot be(empty)
+      app.hasAuthors mustBe true
+      app.authors mustNot be(empty)
     }
   }
 }

@@ -1,0 +1,20 @@
+context other by authorReid is { ??? }
+context context by author Reid is {
+  adaptor adaptor from context other is { ??? }
+  term term is briefly "not interesting"
+  function function is { ??? }
+  event event is { at: TimeStamp }
+  handler handler is {
+    on event event {
+      then "nothing"
+    }
+  }
+  repository repository is { ??? }
+  pipe pipe is { ??? }
+  source source is { ??? }
+  sink sink is { ??? }
+  flow flow is { ??? }
+  merge merge is { ??? }
+  split split is { ??? }
+  saga saga is { ??? }
+}

@@ -70,7 +70,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with DomainDefinition
       with EntityDefinition
       with FunctionDefinition
-      with HandlerDefinition
       with PlantDefinition
       with ProcessorDefinition
       with ProjectionDefinition
@@ -156,7 +155,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with VitalDefinitionDefinition {
+      extends LeafDefinition with DomainDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
@@ -195,24 +194,24 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with WithIncludes[CT]
       with WithTerms {
 
-    /**
-     * Implicit conversion of boolean to Int for easier computation of
-     * statistics below
-     * @param b
-     * @return
-     */
-    implicit def bool2int(b:Boolean): Int = if (b) 1 else 0
+    /** Implicit conversion of boolean to Int for easier computation of
+      * statistics below
+      * @param b
+      * @return
+      */
+    import scala.language.implicitConversions
+    implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
 
-    /**
-     * Compute the completeness of this definition. Vital definitions should
-     * have options, terms, and authors but includes are optional.
-     * Incompleteness is signalled by child definitions that are empty.
-     *
-     * @return A numerator and denominator for percent complete
-     */
-    def completeness: (Int,Int) = {
+    /** Compute the completeness of this definition. Vital definitions should
+      * have options, terms, and authors but includes are optional.
+      * Incompleteness is signalled by child definitions that are empty.
+      *
+      * @return
+      *   A numerator and denominator for percent complete
+      */
+    def completeness: (Int, Int) = {
       // TODO: make subclass implementations
-      (hasOptions*1 + hasTerms + hasAuthors + brief.nonEmpty +
+      (hasOptions * 1 + hasTerms + hasAuthors + brief.nonEmpty +
         description.nonEmpty) -> 5
     }
 
@@ -955,13 +954,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    includes: Seq[Include[HandlerDefinition]] = Seq
-      .empty[Include[HandlerDefinition]],
-    options: Seq[HandlerOption] = Seq.empty[HandlerOption],
-    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[HandlerOption, HandlerDefinition]
+      extends Container[HandlerDefinition]
       with AdaptorDefinition
       with ApplicationDefinition
       with ContextDefinition
@@ -970,18 +965,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with RepositoryDefinition
       with ProcessorDefinition
       with ProjectionDefinition {
-    override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
-    override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
-      terms
+    override def isEmpty: Boolean = clauses.isEmpty
+    override def contents: Seq[HandlerDefinition] = clauses
     final val kind: String = "Handler"
-
-    override def maturity: Int = {
-      var score = super.maturity
-      if (clauses.nonEmpty) score +=
-        Math.max(clauses.count(_.nonEmpty), maxMaturity)
-      Math.max(score, maxMaturity)
-    }
-
+    def format: String = s"${Keywords.handler} ${id.format}"
   }
 
   /** A reference to a Handler
@@ -1629,10 +1616,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   /** Sealed base trait for both kinds of Joint definitions
     */
   sealed trait Joint
-      extends LeafDefinition
-      with AlwaysEmpty
-      with PlantDefinition
-      with ContextDefinition
+      extends LeafDefinition with AlwaysEmpty with PlantDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *

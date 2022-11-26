@@ -756,7 +756,6 @@ case class MarkdownWriter(
       emitExamples(clause.examples, 4)
     }
     emitUsage(handler)
-    emitTerms(handler.terms)
     this
   }
 

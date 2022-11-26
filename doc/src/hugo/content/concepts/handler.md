@@ -12,7 +12,7 @@ received by its parent definition. Handlers are composed as a set of
 [message]({{< relref "message.md" >}}) with an 
 [example]{{< relref example.md >}}. The example specifies the business logic 
 that should be executed upon receipt of the message. Because that business 
-logic can send and publish further messages to other component, a 
+logic can send and publish further messages to other components, a 
 relationship can be inferred between the component receiving the message 
 sent and the component that contains the handler.
 
