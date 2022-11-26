@@ -27,7 +27,7 @@ trait AbstractDefinitions extends Terminals {
 
     /** determine if this node is empty or not. Non-containers are always empty
       */
-    def isEmpty: Boolean = false
+    def isEmpty: Boolean = true
 
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
@@ -88,8 +88,7 @@ trait AbstractDefinitions extends Terminals {
     * @param value
     *   The list of strings that make up the path identifier
     */
-  case class PathIdentifier(loc: At, value: Seq[String])
-      extends RiddlValue {
+  case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue {
     override def format: String = {
       value.foldLeft(Seq.empty[String]) { case (r: Seq[String], s: String) =>
         if (s.isEmpty) { r :+ "^" }
@@ -100,6 +99,10 @@ trait AbstractDefinitions extends Terminals {
     }
 
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
+  }
+
+  object PathIdentifier {
+    val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
   }
 
   /** The description of a definition. All definitions have a name and an

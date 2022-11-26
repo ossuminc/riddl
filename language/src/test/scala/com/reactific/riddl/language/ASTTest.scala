@@ -56,27 +56,10 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(At(), Nil).format mustBe ""
-      PathIdentifier(At(), List("", "foo", "baz")).format mustBe
-        "^foo.baz"
+      PathIdentifier(At(), List("", "foo", "baz")).format mustBe "^foo.baz"
       PathIdentifier(At(), List("foo", "bar", "baz")).format mustBe
         "foo.bar.baz"
       PathIdentifier(At(), List("foo")).format mustBe "foo"
-    }
-  }
-
-  "RootContainer" should {
-    "be at location 0,0" in { RootContainer(Nil).loc mustBe At.empty }
-    "have no description" in { RootContainer(Nil).description mustBe None }
-    "have no brief" in { RootContainer(Nil).brief mustBe None }
-    "have no id" in { RootContainer(Nil).identify mustBe "Root" }
-    "identify as root container" in {
-      RootContainer(Nil).isRootContainer mustBe true
-    }
-  }
-
-  "Include" should {
-    "identify as root container" in {
-      Include(At(), Seq.empty[Definition]).isRootContainer mustBe true
     }
   }
 
@@ -97,15 +80,45 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     }
   }
 
+  val actor = Actor(
+    At.empty,
+    Identifier(At.empty, "actor"),
+    LiteralString(At.empty, "role")
+  )
+  val adaptor = Adaptor(
+    At.empty,
+    Identifier(At.empty, "adaptor"),
+    InboundAdaptor(At.empty),
+    ContextRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "context")))
+  )
+  val application = Application(At.empty, Identifier(At.empty, "application"))
+  val author =
+    Author(At.empty, Identifier.empty, LiteralString.empty, LiteralString.empty)
+
+  val sagastep = SagaStep(At.empty, Identifier(At.empty,"sagastep"))
+  val state =
+    State(At.empty, Identifier(At.empty, "state"), Aggregation.empty())
+  val storycase = StoryCase(At.empty, Identifier(At.empty, "storycase"))
+  val story = Story(At.empty, Identifier(At.empty, "story"))
+  val term = Term(At.empty, Identifier(At.empty, "term"))
+  "Actor" should {
+    "have a test" in {
+      actor.format mustBe s"actor ${actor.id.format} is ${actor.is_a.format}"
+    }
+  }
+
+  "Adaptor" should { "have a test" in { pending } }
+  "Application" should { "have a test" in { pending } }
+  "Author" should { "have a test" in { pending } }
+
   "Context" should {
     "correctly identify emptiness" in {
       Context(At(), Identifier(At(), "test")).contents mustBe empty
     }
     "correctly identify non-emptiness" in {
-      val types =
-        List(Type(At(), Identifier(At(), "A"), Bool(At())))
-      Context(At(), Identifier(At(), "test"), types = types)
-        .contents mustBe types
+      val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
+      Context(At(), Identifier(At(), "test"), types = types).contents mustBe
+        types
     }
   }
 
@@ -114,10 +127,9 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       Domain(At(), Identifier(At(), "test")).contents mustBe empty
     }
     "non-empty domain should have non-empty contents" in {
-      val types =
-        List(Type(At(), Identifier(At(), "A"), Bool(At())))
-      Domain(At(), Identifier(At(), "test"), types = types)
-        .contents mustBe types
+      val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
+      Domain(At(), Identifier(At(), "test"), types = types).contents mustBe
+        types
     }
   }
 
@@ -134,11 +146,7 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           Identifier(At(), "bar"),
           Aggregation(
             At(),
-            Seq[Field](Field(
-              At(),
-              Identifier(At(), "foo"),
-              Integer(At())
-            ))
+            Seq[Field](Field(At(), Identifier(At(), "foo"), Integer(At())))
           )
         ))
         val handlers = Seq(Handler(At(), Identifier(At(), "con")))
@@ -149,18 +157,13 @@ class ASTTest extends AnyWordSpec with must.Matchers {
           None,
           Option(Aggregation(
             At(),
-            Seq(
-              Field(At(), Identifier(At(), "a"), Bool(At()))
-            )
+            Seq(Field(At(), Identifier(At(), "a"), Bool(At())))
           ))
         ))
 
-        val invariants = Seq(Invariant(
-          At(),
-          Identifier(At(), "my_id"),
-          Some(True(At())),
-          None
-        ))
+        val invariants = Seq(
+          Invariant(At(), Identifier(At(), "my_id"), Some(True(At())), None)
+        )
         val types = Seq(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),
           Type(At(), Identifier(At(), "mytype2"), Bool(At()))
@@ -183,5 +186,54 @@ class ASTTest extends AnyWordSpec with must.Matchers {
       }
     }
   }
+  "Example" should { "have a test" in { pending } }
+  "Field" should { "have a test" in { pending } }
+  "Function" should { "have a test" in { pending } }
+  "Group" should { "have a test" in { pending } }
+  "Handler" should { "have a test" in { pending } }
 
+  "Include" should {
+    "identify as root container" in {
+      Include(At(), Seq.empty[Definition]).isRootContainer mustBe true
+    }
+  }
+
+  "Inlet" should { "have a test" in { pending } }
+  "InletJoint" should { "have a test" in { pending } }
+  "Input" should { "have a test" in { pending } }
+  "Invariant" should { "have a test" in { pending } }
+  "OnMessageClause" should { "have a test" in { pending } }
+  "OnOtherClause" should { "have a test" in { pending } }
+  "Outlet" should { "have a test" in { pending } }
+  "OutletJoint" should { "have a test" in { pending } }
+  "Output" should { "have a test" in { pending } }
+  "Pipe" should { "have a test" in { pending } }
+  "Plant" should { "have a test" in { pending } }
+  "Processor" should { "have a test" in { pending } }
+  "Projection" should { "have a test" in { pending } }
+  "Repository" should { "have a test" in { pending } }
+
+  "RootContainer" should {
+    "be at location 0,0" in { RootContainer(Nil).loc mustBe At.empty }
+    "have no description" in { RootContainer(Nil).description mustBe None }
+    "have no brief" in { RootContainer(Nil).brief mustBe None }
+    "have no id" in { RootContainer(Nil).identify mustBe "Root" }
+    "identify as root container" in {
+      RootContainer(Nil).isRootContainer mustBe true
+    }
+  }
+
+  "Saga" should { "have a test" in { pending } }
+  "SagaStep" should { "have a test" in { pending } }
+  "State" should { "format correctly" in { state.format mustBe "state state" } }
+  "Story" should { "format correctly" in { story.format mustBe "story story" } }
+  "StoryCase" should {
+    "format correctly" in { storycase.format mustBe "case storycase" }
+  }
+
+  "Term" should {
+    "format correctly" in {
+      term.format mustBe s"${Keywords.term} ${term.id.format}"
+    }
+  }
 }

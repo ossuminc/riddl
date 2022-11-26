@@ -14,7 +14,7 @@ import fastparse.ScalaWhitespace.*
 /** Unit Tests For StreamingParser */
 trait StreamingParser extends ReferenceParser with HandlerParser {
 
-  def pipeDefinition[u: P]: P[Pipe] = {
+  def pipe[u: P]: P[Pipe] = {
     location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
       (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~ close ~
       briefly ~ description
@@ -216,8 +216,8 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     include[PlantDefinition, X](plantDefinitions(_))
   }
 
-  def plantDefinition[u: P]: P[PlantDefinition & ContextDefinition] = {
-    P(pipeDefinition | processor | joint)
+  def plantDefinition[u: P]: P[PlantDefinition] = {
+    P(pipe | processor | joint)
   }
 
   def plantDefinitions[u: P]: P[Seq[PlantDefinition]] = {

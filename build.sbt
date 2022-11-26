@@ -42,7 +42,8 @@ lazy val Utils = config("utils")
 lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
   .configure(C.withCoverage(0)).enablePlugins(BuildInfoPlugin).settings(
     name := "riddl-utils",
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3, Dep.slf4j) ++
+      Dep.testing,
     buildInfoObject := "RiddlBuildInfo",
     buildInfoPackage := "com.reactific.riddl.utils",
     buildInfoOptions := Seq(ToMap, ToJson, BuildTime),

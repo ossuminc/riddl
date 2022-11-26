@@ -51,10 +51,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "+",
-          Seq(
-            LiteralInteger(At(1 -> 3), 1),
-            LiteralInteger(At(1 -> 5), 1)
-          )
+          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
         )
       }
     }
@@ -63,10 +60,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "-",
-          Seq(
-            LiteralInteger(At(1 -> 3), 1),
-            LiteralInteger(At(1 -> 5), 1)
-          )
+          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
         )
       }
     }
@@ -75,10 +69,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "*",
-          Seq(
-            LiteralInteger(At(1 -> 3), 1),
-            LiteralInteger(At(1 -> 5), 1)
-          )
+          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
         )
       }
     }
@@ -87,10 +78,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "/",
-          Seq(
-            LiteralInteger(At(1 -> 3), 1),
-            LiteralInteger(At(1 -> 5), 1)
-          )
+          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
         )
       }
     }
@@ -99,10 +87,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "%",
-          Seq(
-            LiteralInteger(At(1 -> 3), 1),
-            LiteralInteger(At(1 -> 5), 1)
-          )
+          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
         )
       }
     }
@@ -111,10 +96,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe NumberFunction(
           At(1 -> 1),
           "pow",
-          Seq(
-            LiteralInteger(At(1 -> 5), 2),
-            LiteralInteger(At(1 -> 7), 3)
-          )
+          Seq(LiteralInteger(At(1 -> 5), 2), LiteralInteger(At(1 -> 7), 3))
         )
       }
     }
@@ -124,8 +106,7 @@ class ExpressionParserTest extends ParsingTest {
           At(1 -> 1),
           PathIdentifier(At(1 -> 1), Seq("Entity", "Function")),
           ArgList(ListMap(
-            Identifier(At(1 -> 17), "i") ->
-              LiteralInteger(At(1 -> 19), magic),
+            Identifier(At(1 -> 17), "i") -> LiteralInteger(At(1 -> 19), magic),
             Identifier(At(1 -> 23), "j") ->
               LiteralInteger(At(1 -> 25), magic / 2)
           ))
@@ -133,18 +114,15 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept arbitrary expression with many  args" in {
-      parseExpression("wow(0,0,0,0,0,0)") { expr: Expression =>
+      parseExpression("wow(a=0,b=0,c=0)") { expr: Expression =>
         expr mustBe ArbitraryOperator(
           At(1 -> 1),
           LiteralString(1 -> 1, "wow"),
-          Seq(
-            LiteralInteger(At(1 -> 5), 0),
-            LiteralInteger(At(1 -> 7), 0),
-            LiteralInteger(At(1 -> 9), 0),
-            LiteralInteger(At(1 -> 11), 0),
-            LiteralInteger(At(1 -> 13), 0),
-            LiteralInteger(At(1 -> 15), 0)
-          )
+          ArgList(ListMap(
+            Identifier(At(1 -> 5), "a") -> LiteralInteger(At(1 -> 7), 0),
+            Identifier(At(1 -> 9), "b") -> LiteralInteger(At(1 -> 11), 0),
+            Identifier(At(1 -> 13), "c") -> LiteralInteger(At(1 -> 15), 0)
+          ))
         )
       }
     }
@@ -155,8 +133,8 @@ class ExpressionParserTest extends ParsingTest {
           Comparison(
             1 -> 4,
             lt,
-            ValueExpression(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
-            ValueExpression(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
+            ValueOperator(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
+            ValueOperator(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
           ),
           LiteralInteger(1 -> 13, BigInt(42)),
           LiteralInteger(1 -> 16, BigInt(21))

@@ -25,7 +25,7 @@ trait TypeExpression extends AbstractDefinitions {
   /** A TypeExpression that references another type by PathIdentifier */
   case class AliasedTypeExpression(loc: At, pid: PathIdentifier)
       extends TypeExpression {
-    override def format: String = s"Reference To ${pid.format}"
+    override def format: String = pid.format
   }
 
   /** A utility function for getting the kind of a type expression.
@@ -35,23 +35,25 @@ trait TypeExpression extends AbstractDefinitions {
     * @return
     *   A string indicating the kind corresponding to te
     */
-  def kind(te: TypeExpression): String = {
+  def errorDescription(te: TypeExpression): String = {
     te match {
-      case AliasedTypeExpression(_, pid) => s"Reference To ${pid.format}"
-      case Optional(_, typeExp)          => kind(typeExp) + "?"
-      case ZeroOrMore(_, typeExp)        => kind(typeExp) + "*"
-      case OneOrMore(_, typeExp)         => kind(typeExp) + "+"
-      case _: Enumeration                => "Enumeration"
-      case _: Alternation                => "Alternation"
-      case _: Aggregation                => "Aggregation"
-      case Mapping(_, from, to) => s"Map From ${kind(from)} To ${kind(to)}"
+      case AliasedTypeExpression(_, pid) => pid.format
+      case Optional(_, typeExp)          => errorDescription(typeExp) + "?"
+      case ZeroOrMore(_, typeExp)        => errorDescription(typeExp) + "*"
+      case OneOrMore(_, typeExp)         => errorDescription(typeExp) + "+"
+      case e: Enumeration => s"Enumeration of ${e.enumerators.size} values"
+      case a: Alternation => s"Alternation of ${a.of.size} types"
+      case a: Aggregation => s"Aggregation of ${a.fields.size} fields"
+      case Mapping(_, from, to) =>
+        s"Map from ${errorDescription(from)} to ${errorDescription(to)}"
       case EntityReferenceTypeExpression(_, entity) =>
-        s"Reference To Entity ${entity.format}"
-      case _: Pattern                     => s"Pattern"
-      case UniqueId(_, entityPath)        => s"Id(${entityPath.format})"
-      case MessageType(_, messageKind, _) => messageKind.format
-      case predefinedType: PredefinedType => predefinedType.kind
-      case _                              => "<unknown type expression>"
+        s"Reference to entity ${entity.format}"
+      case _: Pattern              => Predefined.Pattern
+      case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
+      case m @ MessageType(_, messageKind, _) =>
+        s"${messageKind.format} of ${m.fields.size} fields"
+      case pt: PredefinedType => pt.kind
+      case _                  => "<unknown type expression>"
     }
   }
 
@@ -298,7 +300,7 @@ trait TypeExpression extends AbstractDefinitions {
     loc: At,
     entity: PathIdentifier)
       extends TypeExpression {
-    override def format: String = s"reference to Entity ${entity.format}"
+    override def format: String = s"${Keywords.entity} ${entity.format}"
   }
 
   /** A type expression that defines a string value constrained by a Java

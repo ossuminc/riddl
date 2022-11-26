@@ -215,8 +215,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
       case _: Example | _: Inlet | _: Outlet | _: InletJoint | _: OutletJoint |
-           _: Author | _: OnMessageClause | _: Include[Definition] @unchecked |
-           _: RootContainer =>
+          _: Author | _: OnMessageClause | _: OnOtherClause |
+          _: Include[Definition] @unchecked | _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
@@ -241,9 +241,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         val (mkd, parents) = setUpContainer(container, state, stack)
         container match {
           case a: Application => mkd.emitApplication(a, stack)
-          case out: Output   => state.addToGlossary(out, stack)
-          case in: Input     => state.addToGlossary(in, stack)
-          case grp: Group    => state.addToGlossary(grp, stack)
+          case out: Output    => state.addToGlossary(out, stack)
+          case in: Input      => state.addToGlossary(in, stack)
+          case grp: Group     => state.addToGlossary(grp, stack)
           case t: Type        => mkd.emitType(t, stack)
           case s: State       => mkd.emitState(s, stack)
           case h: Handler     => mkd.emitHandler(h, parents)
@@ -254,6 +254,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case a: Adaptor     => mkd.emitAdaptor(a, parents)
           case p: Processor   => mkd.emitProcessor(p, stack)
           case p: Projection  => mkd.emitProjection(p, parents)
+          case _: Repository  => // TODO: mkd.emitRepository(r, parents)
           case s: Saga        => mkd.emitSaga(s, parents)
           case s: Story       => mkd.emitStory(s, stack)
           case p: Plant       => mkd.emitPlant(p, parents)

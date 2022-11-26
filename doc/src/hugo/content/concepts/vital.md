@@ -16,7 +16,6 @@ These are the vital definitions:
 * [Domains]({{< relref "domain.md" >}}),
 * [Functions]({{< relref "function.md" >}}),
 * [Entities]({{< relref "entity.md" >}}),
-* [Handlers]({{< relref "handler.md" >}}),
 * [Plants]({{< relref "plant.md" >}}),
 * [Processors]({{< relref "processor.md" >}}),
 * [Projections]({{< relref "projection.md" >}}),

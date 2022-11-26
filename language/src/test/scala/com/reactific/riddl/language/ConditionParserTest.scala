@@ -36,9 +36,7 @@ class ConditionParserTest extends ParsingTest {
 
   "ConditionParser" should {
     "accept true" in {
-      parseCondition("true") { cond: Condition =>
-        cond mustBe True(At(1 -> 1))
-      }
+      parseCondition("true") { cond: Condition => cond mustBe True(At(1 -> 1)) }
     }
     "accept false" in {
       parseCondition("false") { cond: Condition =>
@@ -47,34 +45,26 @@ class ConditionParserTest extends ParsingTest {
     }
     "accept literal string" in {
       parseCondition("\"decide\"") { cond: Condition =>
-        cond mustBe ArbitraryCondition(
-          At(1 -> 1),
-          LiteralString(At(1 -> 1), "decide")
-        )
+        cond mustBe
+          ArbitraryCondition(At(1 -> 1), LiteralString(At(1 -> 1), "decide"))
       }
     }
     "accept and(true,false)" in {
       parseCondition("and(true,false)") { cond: Condition =>
-        cond mustBe AndCondition(
-          At(1 -> 1),
-          Seq(True(At(1 -> 5)), False(At(1 -> 10)))
-        )
+        cond mustBe
+          AndCondition(At(1 -> 1), Seq(True(At(1 -> 5)), False(At(1 -> 10))))
       }
     }
     "accept or(true,false)" in {
       parseCondition("or(true,false)") { cond: Condition =>
-        cond mustBe OrCondition(
-          At(1 -> 1),
-          Seq(True(At(1 -> 4)), False(At(1 -> 9)))
-        )
+        cond mustBe
+          OrCondition(At(1 -> 1), Seq(True(At(1 -> 4)), False(At(1 -> 9))))
       }
     }
     "accept xor(true,false)" in {
       parseCondition("xor(true,false)") { cond: Condition =>
-        cond mustBe XorCondition(
-          At(1 -> 1),
-          Seq(True(At(1 -> 5)), False(At(1 -> 10)))
-        )
+        cond mustBe
+          XorCondition(At(1 -> 1), Seq(True(At(1 -> 5)), False(At(1 -> 10))))
       }
     }
     "accept not(true,false)" in {
@@ -102,13 +92,13 @@ class ConditionParserTest extends ParsingTest {
             Comparison(
               1 -> 4,
               lt,
-              ValueExpression(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
+              ValueOperator(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
               LiteralInteger(1 -> 9, BigInt(42))
             ),
             Comparison(
               1 -> 13,
               lt,
-              ValueExpression(1 -> 15, PathIdentifier(1 -> 16, Seq("b"))),
+              ValueOperator(1 -> 15, PathIdentifier(1 -> 16, Seq("b"))),
               FunctionCallExpression(
                 1 -> 18,
                 PathIdentifier(1 -> 18, Seq("SomeFunc")),

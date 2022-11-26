@@ -8,6 +8,9 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.parsing.TopLevelParser
+
+import java.nio.file.Path
 
 class ContextValidationTest extends ValidatingTest {
 
@@ -138,14 +141,31 @@ class ContextValidationTest extends ValidatingTest {
           val errors = msgs.justErrors
           info(errors.format)
           errors must be(empty)
-          val expected = Projection(
-            (2, 2, rpi),
-            Identifier((2, 13, rpi), "foo")
-          )
+          val expected =
+            Projection((2, 2, rpi), Identifier((2, 13, rpi), "foo"))
           context.projections.size mustBe (1)
           context.projections.head mustBe expected
       }
     }
-    "allow includes" in { pending } // TODO: write this case
+
+    "allow includes" in {
+      val name = "language/src/test/input/context/context-with-include.riddl"
+      val path = Path.of(name)
+      TopLevelParser.parse(path) match {
+        case Left(errors) => fail(errors.format)
+        case Right(root) =>
+          root mustNot be(empty)
+          root.contents mustNot be(empty)
+          val d = root.contents.head
+          d.contexts mustNot be(empty)
+          val c = d.contexts.head
+          c.includes mustNot be(empty)
+          val inc = c.includes.head
+          inc.contents.head match {
+            case t: Term => t.format contains "foo"
+            case _       => fail("test case should have term 'foo'")
+          }
+      }
+    }
   }
 }

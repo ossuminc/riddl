@@ -36,25 +36,12 @@ trait HandlerParser extends GherkinParser with FunctionParser {
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
-  def handlerOptions[u: P]: P[Seq[HandlerOption]] = {
-    options[u, HandlerOption](StringIn("partial").!) {
-      case (loc, "partial", _) => PartialHandlerOption(loc)
-      case (_, _, _)           => throw new RuntimeException("Impossible case")
-    }
+  def handlerDefinitions[u: P]: P[Seq[OnClause]] = {
+    P(onMessageClause | onOtherClause).rep(0)
   }
 
-  def handlerInclude[x: P]: P[Include[HandlerDefinition]] = {
-    include[HandlerDefinition, x](handlerDefinitions(_))
-  }
-
-  def handlerDefinitions[u: P]: P[Seq[HandlerDefinition]] = {
-    P(onMessageClause | onOtherClause | term | handlerInclude).rep(0)
-  }
-
-  def handlerBody[u: P]: P[(Seq[HandlerOption], Seq[HandlerDefinition])] = {
-    undefined((Seq.empty[HandlerOption], Seq.empty[HandlerDefinition]))
-    |
-    (handlerOptions ~ handlerDefinitions)
+  def handlerBody[u: P]: P[Seq[OnClause]] = {
+    undefined(Seq.empty[OnClause]) | handlerDefinitions
   }
 
   def handler[u: P]: P[Handler] = {
@@ -62,22 +49,12 @@ trait HandlerParser extends GherkinParser with FunctionParser {
       Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
         handlerBody ~
         close ~ briefly ~ description
-    ).map { case (loc, id, authors, (options, definitions), briefly, desc) =>
-      val groups = definitions.groupBy(_.getClass)
-      val includes = mapTo[Include[HandlerDefinition]](groups.get(
-        classOf[Include[HandlerDefinition]]
-      ))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val clauses = mapTo[OnMessageClause](groups.get(classOf[OnMessageClause]))
-
+    ).map { case (loc, id, authors, clauses, briefly, desc) =>
       Handler(
         loc,
         id,
         clauses,
         authors,
-        includes,
-        options,
-        terms,
         briefly,
         desc
       )

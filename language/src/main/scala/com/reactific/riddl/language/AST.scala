@@ -70,7 +70,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with DomainDefinition
       with EntityDefinition
       with FunctionDefinition
-      with HandlerDefinition
       with PlantDefinition
       with ProcessorDefinition
       with ProjectionDefinition
@@ -89,7 +88,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     description: Option[Description] = None)
       extends LeafDefinition with VitalDefinitionDefinition {
     override def isEmpty: Boolean = description.isEmpty
-    def format: String = ""
+    def format: String = s"${Keywords.term} ${id.format}"
     final val kind: String = "Term"
   }
 
@@ -156,7 +155,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with VitalDefinitionDefinition {
+      extends LeafDefinition with DomainDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
@@ -194,6 +193,27 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with WithAuthors
       with WithIncludes[CT]
       with WithTerms {
+
+    /** Implicit conversion of boolean to Int for easier computation of
+      * statistics below
+      * @param b
+      * @return
+      */
+    import scala.language.implicitConversions
+    implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
+
+    /** Compute the completeness of this definition. Vital definitions should
+      * have options, terms, and authors but includes are optional.
+      * Incompleteness is signalled by child definitions that are empty.
+      *
+      * @return
+      *   A numerator and denominator for percent complete
+      */
+    def completeness: (Int, Int) = {
+      // TODO: make subclass implementations
+      (hasOptions * 1 + hasTerms + hasAuthors + brief.nonEmpty +
+        description.nonEmpty) -> 5
+    }
 
     /** Compute the 'maturity' of a definition. Maturity is a score with no
       * maximum but with scoring rules that target 100 points per definition.
@@ -280,8 +300,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class CommandRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class CommandRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = CommandKind
   }
 
@@ -292,8 +311,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the event type
     */
-  case class EventRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class EventRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = EventKind
   }
 
@@ -304,8 +322,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the query type
     */
-  case class QueryRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class QueryRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = QueryKind
   }
 
@@ -316,8 +333,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier to the result type
     */
-  case class ResultRef(loc: At, pathId: PathIdentifier)
-      extends MessageRef {
+  case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: MessageKind = ResultKind
   }
 
@@ -371,8 +387,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   The path identifier of the reference type
     */
-  case class TypeRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Type] {
+  case class TypeRef(loc: At, pathId: PathIdentifier) extends Reference[Type] {
     override def format: String = s"${Keywords.`type`} ${pathId.format}"
   }
 
@@ -679,8 +694,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param condition
     *   The condition expression that defines the trigger for the [[Example]]
     */
-  case class WhenClause(loc: At, condition: Condition)
-      extends GherkinClause {
+  case class WhenClause(loc: At, condition: Condition) extends GherkinClause {
     def format: String = ""
   }
 
@@ -940,13 +954,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    includes: Seq[Include[HandlerDefinition]] = Seq
-      .empty[Include[HandlerDefinition]],
-    options: Seq[HandlerOption] = Seq.empty[HandlerOption],
-    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
-      extends VitalDefinition[HandlerOption, HandlerDefinition]
+      extends Container[HandlerDefinition]
       with AdaptorDefinition
       with ApplicationDefinition
       with ContextDefinition
@@ -955,18 +965,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with RepositoryDefinition
       with ProcessorDefinition
       with ProjectionDefinition {
-    override def isEmpty: Boolean = super.isEmpty && clauses.isEmpty
-    override def contents: Seq[HandlerDefinition] = super.contents ++ clauses ++
-      terms
+    override def isEmpty: Boolean = clauses.isEmpty
+    override def contents: Seq[HandlerDefinition] = clauses
     final val kind: String = "Handler"
-
-    override def maturity: Int = {
-      var score = super.maturity
-      if (clauses.nonEmpty) score +=
-        Math.max(clauses.count(_.nonEmpty), maxMaturity)
-      Math.max(score, maxMaturity)
-    }
-
+    def format: String = s"${Keywords.handler} ${id.format}"
   }
 
   /** A reference to a Handler
@@ -1009,7 +1011,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     override def contents: Seq[StateDefinition] = aggregation.fields ++ types ++
       handlers
-    def format: String = ""
+    def format: String = s"${Keywords.state} ${id.format}"
     final val kind: String = "State"
   }
 
@@ -1614,10 +1616,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   /** Sealed base trait for both kinds of Joint definitions
     */
   sealed trait Joint
-      extends LeafDefinition
-      with AlwaysEmpty
-      with PlantDefinition
-      with ContextDefinition
+      extends LeafDefinition with AlwaysEmpty with PlantDefinition
 
   /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
     *
@@ -1744,15 +1743,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    // TODO: The do and undo actions should be Seq[Example]
-    doAction: SagaStepAction,
-    undoAction: SagaStepAction,
-    examples: Seq[Example],
+    doAction: Seq[Example] = Seq.empty[Example],
+    undoAction: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends SagaDefinition {
-    def contents: Seq[Example] = examples
-    def format: String = ""
+    def contents: Seq[Example] = doAction ++ undoAction
+    def format: String = s"${Keywords.step} ${id.format}"
     final val kind: String = "SagaStep"
   }
 
@@ -1812,8 +1809,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
-  case class SagaRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Saga] {
+  case class SagaRef(loc: At, pathId: PathIdentifier) extends Reference[Saga] {
     def format: String = s"${Keywords.saga} ${pathId.format}"
   }
 
@@ -1835,10 +1831,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: At,
     id: Identifier,
     is_a: LiteralString,
-    brief: Option[LiteralString],
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with DomainDefinition {
-    def format: String = ""
+    def format: String = s"${Keywords.actor} ${id.format} is ${is_a.format}"
     override def kind: String = "Actor"
   }
 
@@ -1957,12 +1953,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class StoryCase(
     loc: At,
     id: Identifier,
-    interactions: Seq[InteractionExpression],
+    interactions: Seq[InteractionExpression] = Seq.empty[InteractionExpression],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with StoryDefinition {
     override def kind: String = "StoryCase"
-    override def format: String = ""
+    override def format: String = s"${Keywords.case_} ${id.format}"
   }
 
   /** An agile user story definition
@@ -1982,6 +1978,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     benefit: LiteralString)
       extends RiddlValue {
     def format: String = ""
+    override def isEmpty: Boolean = false
   }
 
   /** The definition of an agile user story. Stories define functionality from
@@ -2032,6 +2029,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
 
     final val kind: String = "Story"
+
+    override def format: String = s"${Keywords.story} ${id.format}"
 
     override def maturity: Int = {
       var score = super.maturity
