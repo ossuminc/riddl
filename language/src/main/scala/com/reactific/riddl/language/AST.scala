@@ -406,7 +406,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class ArbitraryAction(
     loc: At,
     what: LiteralString,
-    description: Option[Description])
+    description: Option[Description] = None)
       extends Action {
     override def format: String = what.format
   }

@@ -16,10 +16,15 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
   "RiddlFileEmitter" should {
     "add literal strings" in {
-      val strings = Seq(LiteralString(At.empty, "string"))
+      val string = LiteralString(At.empty, "string")
+      val strings = Seq(string)
+      val twoStrings = Seq(string, string)
       rfe.clear
       rfe.add(strings)
       rfe.toString mustBe " \"string\" "
+      rfe.clear
+      rfe.add(twoStrings)
+      rfe.toString mustBe "\n\"string\"\n\"string\"\n"
     }
     "add string" in {
       rfe.clear
@@ -30,6 +35,9 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear
       rfe.add(Some("string"))(identity)
       rfe.toString mustBe "string"
+      rfe.clear
+      rfe.add(Option.empty[String])(identity)
+      rfe.toString mustBe ""
     }
     "add indent" in {
       rfe.clear
@@ -43,12 +51,15 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear
       intercept[IllegalArgumentException] { rfe.outdent }
     }
-    "starts a definition with a brace" in {
+    "starts a definition with/out a brace" in {
       rfe.clear
       val defn = Domain(At.empty, Identifier(At.empty, "domain"))
       rfe.openDef(defn, withBrace = true)
       defn.isEmpty mustBe true
       rfe.toString mustBe "domain domain is { ??? }"
+      rfe.clear
+      rfe.openDef(defn, withBrace = false)
+      rfe.toString mustBe "domain domain is "
     }
     "emits Strngs" in {
       rfe.clear
@@ -90,10 +101,42 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.emitTypeExpression(Location(At.empty)).toString mustBe "Location"
       rfe.clear
       rfe.emitTypeExpression(patt).toString mustBe "Pattern(\"^stuff.*$\") "
+      rfe.clear
+      rfe.emitTypeExpression(Abstract(At.empty)).toString mustBe "Abstract"
+      rfe.clear
+      rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42))
+        .toString mustBe "Integer{24,42}"
     }
+    "emit actions" in {
+      val action = ArbitraryAction(At.empty, LiteralString(At.empty, "blah"))
+      val actions = Seq(action, action)
+      rfe.clear
+      rfe.emitActions(actions).toString mustBe (action.format + action.format)
+    }
+    "emit Gherkin Strings" in {
+      val string = LiteralString(At.empty, "string")
+      rfe.clear
+      rfe.emitGherkinStrings(Seq.empty[LiteralString]).toString mustBe "\"\""
+      rfe.clear
+      rfe.emitGherkinStrings(Seq(string)).toString mustBe string.format
+      rfe.clear
+      rfe.emitGherkinStrings(Seq(string, string)).toString mustBe
+        """
+          |  "string"
+          |  "string"
+          |""".stripMargin
 
+    }
     "emit examples" in {
       rfe.clear
+      val thenClause = ThenClause(
+        At.empty,
+        ArbitraryAction(
+          At.empty,
+          LiteralString(At.empty, "ya gots ta do betta"),
+          None
+        )
+      )
       val example = Example(
         At.empty,
         Identifier(At.empty, "ex-maple"),
@@ -113,14 +156,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
             )
           )
         )),
-        Seq(ThenClause(
-          At.empty,
-          ArbitraryAction(
-            At.empty,
-            LiteralString(At.empty, "ya gots ta do betta"),
-            None
-          )
-        )),
+        Seq(thenClause, thenClause),
         Seq(ButClause(
           At.empty,
           ArbitraryAction(
@@ -135,9 +171,13 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.emitExamples(examples)
       val expected =
         """example ex-maple is {
-          |  given  "It's like this, see"  when not(<("one","two"))  then "ya gots ta do betta"  but "no at familia expense"}
+          |  given  "It's like this, see"  when not(<("one","two"))
+          |  then "ya gots ta do betta"
+          |  and "ya gots ta do betta"  but "no at familia expense"}
           |example ex-maple is {
-          |  given  "It's like this, see"  when not(<("one","two"))  then "ya gots ta do betta"  but "no at familia expense"}
+          |  given  "It's like this, see"  when not(<("one","two"))
+          |  then "ya gots ta do betta"
+          |  and "ya gots ta do betta"  but "no at familia expense"}
           |""".stripMargin
       rfe.toString mustBe expected
     }

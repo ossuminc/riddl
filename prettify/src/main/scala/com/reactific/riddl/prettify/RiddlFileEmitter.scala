@@ -196,37 +196,28 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitTypeExpression(typEx: TypeExpression): RiddlFileEmitter = {
     typEx match {
       case string: Strng                => emitString(string)
-      case b: Bool                      => this.add(b.kind)
-      case n: Number                    => this.add(n.kind)
-      case i: Integer                   => this.add(i.kind)
-      case d: Decimal                   => this.add(d.kind)
-      case r: Real                      => this.add(r.kind)
-      case d: Date                      => this.add(d.kind)
-      case t: Time                      => this.add(t.kind)
-      case dt: DateTime                 => this.add(dt.kind)
-      case ts: TimeStamp                => this.add(ts.kind)
-      case ll: Location                 => this.add(ll.kind)
-      case n: Nothing                   => this.add(n.kind)
       case AliasedTypeExpression(_, id) => this.add(id.format)
       case URL(_, scheme) => this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
       case enumeration: Enumeration => emitEnumeration(enumeration)
       case alternation: Alternation => emitAlternation(alternation)
-      case aggregation: Aggregation => emitAggregation(aggregation)
       case mapping: Mapping         => emitMapping(mapping)
       case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
       case EntityReferenceTypeExpression(_, er) => this
           .add(s"${Keywords.reference} to ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
-      case mt: MessageType      => emitMessageType(mt)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
       case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")
       case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => this.emitTypeExpression(typex).add("+")
-      case a: Abstract          => this.add(a.kind)
-      case x: TypeExpression =>
-        require(requirement = false, s"Unknown type $x")
-        this
+      case SpecificRange(_, typex, n, x) => this.emitTypeExpression(typex)
+          .add("{").add(n.toString).add(",").add(x.toString).add("}")
+      case ate: AggregateTypeExpression =>
+        ate match {
+          case aggr: Aggregation => emitAggregation(aggr)
+          case mt: MessageType      => emitMessageType(mt)
+        }
+      case p: PredefinedType => this.add(p.kind)
     }
   }
 
