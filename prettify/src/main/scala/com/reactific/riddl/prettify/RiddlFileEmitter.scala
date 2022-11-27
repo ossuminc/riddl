@@ -17,7 +17,11 @@ import java.nio.charset.StandardCharsets
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   private var indentLevel: Int = 0
-  override def toString: String = sb.toString
+
+  override def clear: Unit = {
+    super.clear
+    indentLevel = 0
+  }
 
   def asString: String = sb.toString()
 
@@ -107,8 +111,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitString(s: Strng): RiddlFileEmitter = {
     (s.min, s.max) match {
-      case (Some(n), Some(x)) => this.add(s"String($n,$x")
-      case (None, Some(x))    => this.add(s"String(,$x")
+      case (Some(n), Some(x)) => this.add(s"String($n,$x)")
+      case (None, Some(x))    => this.add(s"String(,$x)")
       case (Some(n), None)    => this.add(s"String($n)")
       case (None, None)       => this.add(s"String")
     }
@@ -201,7 +205,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case t: Time                      => this.add(t.kind)
       case dt: DateTime                 => this.add(dt.kind)
       case ts: TimeStamp                => this.add(ts.kind)
-      case ll: Location                  => this.add(ll.kind)
+      case ll: Location                 => this.add(ll.kind)
       case n: Nothing                   => this.add(n.kind)
       case AliasedTypeExpression(_, id) => this.add(id.format)
       case URL(_, scheme) => this
@@ -219,6 +223,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")
       case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => this.emitTypeExpression(typex).add("+")
+      case a: Abstract          => this.add(a.kind)
       case x: TypeExpression =>
         require(requirement = false, s"Unknown type $x")
         this
@@ -299,8 +304,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emit(): Path = {
+    Files.createDirectories(filePath.getParent)
     Files.writeString(filePath, sb.toString(), StandardCharsets.UTF_8)
     filePath
   }
-
 }
