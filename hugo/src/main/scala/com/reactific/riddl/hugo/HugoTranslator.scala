@@ -23,7 +23,7 @@ import scala.collection.mutable
 
 object HugoTranslator extends Translator[HugoCommand.Options] {
 
-  val geekDoc_version = "v0.35.8"
+  val geekDoc_version = "v0.36.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"

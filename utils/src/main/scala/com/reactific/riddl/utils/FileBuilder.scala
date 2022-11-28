@@ -16,4 +16,6 @@ trait FileBuilder {
 
   override def toString: String = sb.toString
   def toLines: Seq[String] = sb.toString.split(newLine).toIndexedSeq
+
+  def clear: Unit = sb.clear()
 }
