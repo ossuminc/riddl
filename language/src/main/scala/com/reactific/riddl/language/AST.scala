@@ -161,7 +161,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
 
     final val kind: String = "Author"
-    def format: String = ""
+    def format: String = s"${Keywords.author} ${id.format}"
   }
 
   case class AuthorRef(loc: At, pathId: PathIdentifier)

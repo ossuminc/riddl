@@ -47,7 +47,7 @@ trait Options extends AbstractDefinitions {
 
     override def isEmpty: Boolean = options.isEmpty && super.isEmpty
 
-    override def hasOptions: Boolean = true
+    override def hasOptions: Boolean = options.nonEmpty
   }
 
   //////////////////////////////////////////////////////////////////// ADAPTOR
@@ -55,24 +55,23 @@ trait Options extends AbstractDefinitions {
   sealed abstract class AdaptorOption(val name: String) extends OptionValue
 
   case class AdaptorTechnologyOption(
-                                      loc: At,
-                                      override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends AdaptorOption("technology")
 
   //////////////////////////////////////////////////////////////////// HANDLER
 
   sealed abstract class HandlerOption(val name: String) extends OptionValue
 
-  case class PartialHandlerOption(loc: At)
-      extends HandlerOption("partial")
+  case class PartialHandlerOption(loc: At) extends HandlerOption("partial")
 
   /////////////////////////////////////////////////////////////////// PROJECTION
 
   sealed abstract class ProjectionOption(val name: String) extends OptionValue
 
   case class ProjectionTechnologyOption(
-                                         loc: At,
-                                         override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends ProjectionOption("technology")
 
   /////////////////////////////////////////////////////////////////// PROJECTION
@@ -80,8 +79,8 @@ trait Options extends AbstractDefinitions {
   sealed abstract class RepositoryOption(val name: String) extends OptionValue
 
   case class RepositoryTechnologyOption(
-                                         loc: At,
-                                         override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends RepositoryOption("technology")
 
   //////////////////////////////////////////////////////////////////// ENTITY
@@ -104,8 +103,7 @@ trait Options extends AbstractDefinitions {
     * @param loc
     *   The location of the option.
     */
-  case class EntityEventSourced(loc: At)
-      extends EntityOption("event sourced")
+  case class EntityEventSourced(loc: At) extends EntityOption("event sourced")
 
   /** An [[EntityOption]] that indicates that this entity should store only the
     * latest value without using event sourcing. In other words, the history of
@@ -140,8 +138,7 @@ trait Options extends AbstractDefinitions {
     * @param loc
     *   The location of the option.
     */
-  case class EntityIsConsistent(loc: At)
-      extends EntityOption("consistent")
+  case class EntityIsConsistent(loc: At) extends EntityOption("consistent")
 
   /** A [[EntityOption]] that indicates that this entity favors availability
     * over consistency in the CAP theorem.
@@ -166,12 +163,11 @@ trait Options extends AbstractDefinitions {
     * @param loc
     *   The location at which this option occurs.
     */
-  case class EntityMessageQueue(loc: At)
-      extends EntityOption("message queue")
+  case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
 
   case class EntityTechnologyOption(
-                                     loc: At,
-                                     override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends EntityOption("technology")
 
   /** An [[EntityOption]] that indicates the general kind of entity being
@@ -201,8 +197,7 @@ trait Options extends AbstractDefinitions {
     * @param loc
     *   The location of the tail recursive option
     */
-  case class TailRecursive(loc: At)
-      extends FunctionOption("tail-recursive")
+  case class TailRecursive(loc: At) extends FunctionOption("tail-recursive")
 
   //////////////////////////////////////////////////////////////////// CONTEXT
 
@@ -211,8 +206,8 @@ trait Options extends AbstractDefinitions {
   sealed abstract class ContextOption(val name: String) extends OptionValue
 
   case class ContextPackageOption(
-                                   loc: At,
-                                   override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends ContextOption("package")
 
   /** A context's "wrapper" option. This option suggests the bounded context is
@@ -244,8 +239,8 @@ trait Options extends AbstractDefinitions {
   case class GatewayOption(loc: At) extends ContextOption("gateway")
 
   case class ContextTechnologyOption(
-                                      loc: At,
-                                      override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends ContextOption("technology")
 
   //////////////////////////////////////////////////////////////////// PROCESSOR
@@ -253,8 +248,8 @@ trait Options extends AbstractDefinitions {
   sealed abstract class ProcessorOption(val name: String) extends OptionValue
 
   case class ProcessorTechnologyOption(
-                                        loc: At,
-                                        override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends ProcessorOption("technology")
 
   //////////////////////////////////////////////////////////////////// PLANT
@@ -262,13 +257,13 @@ trait Options extends AbstractDefinitions {
   sealed abstract class PlantOption(val name: String) extends OptionValue
 
   case class PlantPackageOption(
-                                 loc: At,
-                                 override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends PlantOption("package")
 
   case class PlantTechnologyOption(
-                                    loc: At,
-                                    override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends PlantOption("technology")
 
   //////////////////////////////////////////////////////////////////// SAGA
@@ -293,8 +288,8 @@ trait Options extends AbstractDefinitions {
   case class ParallelOption(loc: At) extends SagaOption("parallel")
 
   case class SagaTechnologyOption(
-                                   loc: At,
-                                   override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends SagaOption("technology")
 
   ////////////////////////////////////////////////////////////////// APPLICATION
@@ -302,8 +297,8 @@ trait Options extends AbstractDefinitions {
   sealed abstract class ApplicationOption(val name: String) extends OptionValue
 
   case class ApplicationTechnologyOption(
-                                          loc: At,
-                                          override val args: Seq[LiteralString] = Seq.empty[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString] = Seq.empty[LiteralString])
       extends ApplicationOption("technology")
 
   ////////////////////////////////////////////////////////////////// DOMAIN
@@ -320,16 +315,15 @@ trait Options extends AbstractDefinitions {
     *   The location of the wrapper option
     */
   case class DomainPackageOption(
-                                  loc: At,
-                                  override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends DomainOption("package")
 
-  case class DomainExternalOption(loc: At)
-      extends DomainOption("external")
+  case class DomainExternalOption(loc: At) extends DomainOption("external")
 
   case class DomainTechnologyOption(
-                                     loc: At,
-                                     override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends DomainOption("technology")
 
   ////////////////////////////////////////////////////////////////// DOMAIN
@@ -337,8 +331,8 @@ trait Options extends AbstractDefinitions {
   sealed abstract class StoryOption(val name: String) extends OptionValue
 
   case class StoryTechnologyOption(
-                                    loc: At,
-                                    override val args: Seq[LiteralString])
+    loc: At,
+    override val args: Seq[LiteralString])
       extends StoryOption("technology")
 
   case class StorySynchronousOption(loc: At) extends StoryOption("synch")

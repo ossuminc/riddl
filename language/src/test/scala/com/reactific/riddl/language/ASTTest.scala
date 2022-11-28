@@ -8,11 +8,11 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import org.scalatest.matchers.*
+import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 /** Unit Tests For Abstract Syntax Tree */
-class ASTTest extends AnyWordSpec with must.Matchers {
+class ASTTest extends AnyWordSpec with Matchers {
 
   "Types" should {
     "support domain definitions" in {
@@ -71,8 +71,8 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     "have kind 'Boolean'" in { Bool(At()).kind mustBe "Boolean" }
   }
 
-  "EntityAggregate" should {
-    "have correct name" in {
+  "Entity Options" should {
+    "have correct names" in {
       EntityIsAggregate(At()).name mustBe "aggregate"
       EntityTransient(At()).name mustBe "transient"
       EntityIsConsistent(At()).name mustBe "consistent"
@@ -80,51 +80,101 @@ class ASTTest extends AnyWordSpec with must.Matchers {
     }
   }
 
-  val actor = Actor(
+  val actor: Actor = Actor(
     At.empty,
     Identifier(At.empty, "actor"),
     LiteralString(At.empty, "role")
   )
-  val adaptor = Adaptor(
+  val adaptor: Adaptor = Adaptor(
     At.empty,
     Identifier(At.empty, "adaptor"),
     InboundAdaptor(At.empty),
     ContextRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "context")))
   )
-  val application = Application(At.empty, Identifier(At.empty, "application"))
-  val author =
-    Author(At.empty, Identifier.empty, LiteralString.empty, LiteralString.empty)
+  val authorRef: AuthorRef =
+    AuthorRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "c")))
+  val application: Application = Application(
+    At.empty,
+    Identifier(At.empty, "application"),
+    authors = Seq(authorRef)
+  )
+  val author: Author = Author(
+    At.empty,
+    Identifier(At(), "Reid"),
+    LiteralString.empty,
+    LiteralString.empty
+  )
 
-  val sagastep = SagaStep(At.empty, Identifier(At.empty,"sagastep"))
-  val state =
+  val sagastep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagastep"))
+  val state: State =
     State(At.empty, Identifier(At.empty, "state"), Aggregation.empty())
-  val storycase = StoryCase(At.empty, Identifier(At.empty, "storycase"))
-  val story = Story(At.empty, Identifier(At.empty, "story"))
-  val term = Term(At.empty, Identifier(At.empty, "term"))
+  val storycase: StoryCase =
+    StoryCase(At.empty, Identifier(At.empty, "storycase"))
+  val story: Story = Story(At.empty, Identifier(At.empty, "story"))
+  val term: Term = Term(At.empty, Identifier(At.empty, "term"))
   "Actor" should {
     "have a test" in {
       actor.format mustBe s"actor ${actor.id.format} is ${actor.is_a.format}"
     }
   }
+  val domain = Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
+  val context = Context(At(), Identifier(At(), "test"))
 
   "Adaptor" should { "have a test" in { pending } }
   "Application" should { "have a test" in { pending } }
-  "Author" should { "have a test" in { pending } }
+  "Author" should {
+    "be sane" in {
+      author.isEmpty mustBe true
+      author.format mustBe "author Reid"
+    }
+  }
+  "AuthorRef" should {
+    "convert to string" in { authorRef.format mustBe "author a.b.c" }
+  }
+  "AST.findAuthors" should {
+    "find authors" in {
+      val authors = AST.findAuthors(application, Seq(domain))
+      authors mustBe Seq(authorRef)
+    }
+  }
 
   "Context" should {
-    "correctly identify emptiness" in {
-      Context(At(), Identifier(At(), "test")).contents mustBe empty
-    }
+    "correctly identify emptiness" in { context.contents mustBe empty }
     "correctly identify non-emptiness" in {
       val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
       Context(At(), Identifier(At(), "test"), types = types).contents mustBe
         types
     }
+    "has completeness" in {
+      val (num, den) = context.completeness
+      num mustBe 0
+      den mustBe 5
+    }
+    "maxMaturity is 100" in { AST.maxMaturity mustBe 100 }
+  }
+  "WithTypes" must {
+    "be sane" in {
+      val wt = new WithTypes {
+        def types: Seq[Type] = Seq.empty
+        def id: AST.Identifier = Identifier.empty
+        def kind: String = ""
+        def contents: Seq[Definition] = Seq.empty
+        def description: Option[AST.Description] = None
+        def brief: Option[AST.LiteralString] = None
+        def loc: At = At.empty
+        def format: String = ""
+      }
+      wt.hasAuthors mustBe false
+      wt.hasTypes mustBe false
+      wt.hasOptions mustBe false
+      wt.isEmpty mustBe true
+      wt.format mustBe ""
+    }
   }
 
   "Domain" should {
     "empty domain should have empty contents" in {
-      Domain(At(), Identifier(At(), "test")).contents mustBe empty
+      domain.contents mustNot be(empty)
     }
     "non-empty domain should have non-empty contents" in {
       val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
@@ -193,8 +243,13 @@ class ASTTest extends AnyWordSpec with must.Matchers {
   "Handler" should { "have a test" in { pending } }
 
   "Include" should {
-    "identify as root container" in {
-      Include(At(), Seq.empty[Definition]).isRootContainer mustBe true
+    "identify as root container, etc" in {
+      val incl = Include(At(), Seq.empty[Definition])
+      incl.isRootContainer mustBe true
+      incl.brief mustBe None
+      incl.description mustBe None
+      incl.loc mustBe At.empty
+      incl.format mustBe ""
     }
   }
 
