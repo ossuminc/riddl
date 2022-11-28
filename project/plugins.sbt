@@ -1,5 +1,3 @@
-libraryDependencies += "org.slf4j" % "slf4j-nop" % "2.0.4"
-
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.34")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.6.4")
 addSbtPlugin("org.jetbrains" % "sbt-ide-settings" % "1.0.0")

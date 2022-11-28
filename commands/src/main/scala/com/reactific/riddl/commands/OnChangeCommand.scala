@@ -17,12 +17,6 @@ import scopt.OParser
 
 import java.io.File
 import java.nio.file.Path
-import com.reactific.riddl.language.*
-import org.eclipse.jgit.api.*
-import org.eclipse.jgit.api.errors.GitAPIException
-import org.eclipse.jgit.merge.MergeStrategy
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import org.eclipse.jgit.submodule.SubmoduleWalk
 import pureconfig.error.CannotParse
 
 import java.nio.file.attribute.FileTime
@@ -31,7 +25,6 @@ import java.time.Instant
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-import scala.jdk.CollectionConverters.*
 
 object OnChangeCommand {
   final val cmdName: String = "onchange"
@@ -62,7 +55,6 @@ class OnChangeCommand
           .action((f, opts) => opts.copy(configFile = f.toPath))
           .text("""Provides the top directory of a git repo clone that
                   |contains the <input-file> to be processed.""".stripMargin),
-
         arg[File]("watch-directory").required()
           .action((f, opts) => opts.copy(watchDirectory = f.toPath))
           .text("""Provides the top directory of a git repo clone that
@@ -187,35 +179,6 @@ class OnChangeCommand
     outputDirOverride: Option[Path]
   ): Either[Messages, Unit] = { Left(errors("Not Implemented")) }
 
-  def runWhenGitChanges(
-    root: AST.RootContainer,
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: OnChangeCommand.Options
-  )(doit: (
-      AST.RootContainer,
-      Logger,
-      CommonOptions,
-      OnChangeCommand.Options
-    ) => Either[Messages, Unit]
-  ): Either[Messages, Unit] = {
-    val gitCloneDir = options.watchDirectory
-    require(Files.isDirectory(gitCloneDir), s"$gitCloneDir is not a directory.")
-    val builder = new FileRepositoryBuilder
-    val repository =
-      builder.setGitDir(gitCloneDir.resolve(".git").toFile)
-        .build // scan up the file system tree
-    val git = new Git(repository)
-
-    val when = getTimeStamp(gitCloneDir)
-    val opts = prepareOptions(options)
-
-    if (gitHasChanges(log, commonOptions, opts, git, when)) {
-      pullCommits(log, commonOptions, git)
-      doit(root, log, commonOptions, opts)
-    } else { Right(()) }
-  }
-
   private final val timeStampFileName: String = ".riddl-timestamp"
   def getTimeStamp(dir: Path): FileTime = {
     val filePath = dir.resolve(timeStampFileName)
@@ -226,58 +189,6 @@ class OnChangeCommand
       val when = Files.getLastModifiedTime(filePath)
       Files.setLastModifiedTime(filePath, FileTime.from(Instant.now()))
       when
-    }
-  }
-
-  def gitHasChanges(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: OnChangeCommand.Options,
-    git: Git,
-    minTime: FileTime
-  ): Boolean = {
-    val repo = git.getRepository
-    val top = repo.getDirectory.getParentFile.toPath.toAbsolutePath
-    val subPath =
-      if (options.watchDirectory.getNameCount > 0) {
-        val relativeDir = options.watchDirectory.toAbsolutePath
-        val relativized = top.relativize(relativeDir)
-        if (relativized.getNameCount > 1) relativized.toString else "."
-      } else { "." }
-    val status = git.status().setProgressMonitor(
-      DotWritingProgressMonitor(System.out, log, commonOptions)
-    ).setIgnoreSubmodules(SubmoduleWalk.IgnoreSubmoduleMode.ALL)
-      .addPath(subPath).call()
-
-    val potentiallyChangedFiles =
-      (status.getAdded.asScala ++ status.getChanged.asScala ++
-        status.getModified.asScala).toSet[String]
-
-    val maybeModified = for {
-      fName <- potentiallyChangedFiles
-      timestamp = Files.getLastModifiedTime(Path.of(fName))
-      isModified = timestamp.compareTo(minTime) > 0
-    } yield { isModified }
-    maybeModified.exists(x => x)
-  }
-
-  def pullCommits(
-    log: Logger,
-    commonOptions: CommonOptions,
-    git: Git
-  ): Boolean = {
-    try {
-      if (commonOptions.verbose) {
-        log.info("Pulling latest changes from remote")
-      }
-      val pullCommand = git.pull
-      pullCommand.setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
-        .setStrategy(MergeStrategy.THEIRS)
-      pullCommand.call.isSuccessful
-    } catch {
-      case e: GitAPIException =>
-        log.severe("Error when pulling latest changes:", e)
-        false
     }
   }
 
