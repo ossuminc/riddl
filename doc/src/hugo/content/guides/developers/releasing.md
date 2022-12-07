@@ -35,7 +35,8 @@ specification such as
 This will expose any language change issues. If this doesn't pass, go back
 and fix the software again and start from scratch. The test case named 
 `RunRiddlcOnArbitraryTest` will do this for you if you clone that repo and 
-adjust the paths in that test case for your clone. Don't commit that change.
+adjust the paths in that test case for your clone. The test will just succeed
+if it can't find those files locally. 
 
 ## Commit Changes
 You've probably made changes as a result of the above. Commit those to a branch
