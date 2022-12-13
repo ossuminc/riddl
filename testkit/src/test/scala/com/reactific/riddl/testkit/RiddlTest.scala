@@ -96,43 +96,54 @@ class RiddlTest extends ParsingTestBase {
   def capturingStdOut[A](f: () => A): (A, String) = {
     val out = System.out
     val printStream = StringBuildingPrintStream()
-    try {
-      System.setOut(printStream)
-      val a = f()
-      val output = printStream.mkString()
-      (a, output)
-    } finally { System.setOut(out) }
+    synchronized {
+      try {
+        System.setOut(printStream)
+        val a = f()
+        val output = printStream.mkString()
+        (a, output)
+      } finally { System.setOut(out) }
+    }
   }
 
   "SysLogger" should {
-    val sl = SysLogger()
     "print error message" in {
-      capturingStdOut(() => sl.error("asdf"))._2 mustBe "[error] asdf\n"
+      val sl = SysLogger()
+      val captured = capturingStdOut(() => sl.error("asdf"))
+      captured._2 mustBe "[error] asdf\n"
     }
     "print severe message" in {
-      capturingStdOut(() => sl.severe("asdf"))._2 mustBe "[severe] asdf\n"
+      val sl = SysLogger()
+      val captured = capturingStdOut(() => sl.severe("asdf"))
+      captured._2 mustBe "[severe] asdf\n"
     }
     "print warning message" in {
-      capturingStdOut(() => sl.warn("asdf"))._2 mustBe "[warning] asdf\n"
+      val sl = SysLogger()
+      val captured = capturingStdOut(() => sl.warn("asdf"))
+      captured._2 mustBe "[warning] asdf\n"
     }
     "print info message" in {
-      capturingStdOut(() => sl.info("asdf"))._2 mustBe "[info] asdf\n"
+      val sl = SysLogger()
+      val captured = capturingStdOut(() => sl.info("asdf"))
+      captured._2 mustBe "[info] asdf\n"
     }
     "print many message" in {
-      capturingStdOut { () =>
+      val sl = SysLogger()
+      val captured = capturingStdOut { () =>
         sl.error("a")
         sl.info("b")
         sl.info("c")
         sl.warn("d")
         sl.severe("e")
         sl.error("f")
-      }._2 mustBe """[error] a
-                    |[info] b
-                    |[info] c
-                    |[warning] d
-                    |[severe] e
-                    |[error] f
-                    |""".stripMargin
+      }
+      captured._2 mustBe """[error] a
+                           |[info] b
+                           |[info] c
+                           |[warning] d
+                           |[severe] e
+                           |[error] f
+                           |""".stripMargin
     }
   }
 
