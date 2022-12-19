@@ -41,10 +41,10 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(1 -> 1, Identifier(1 -> 6, "cur"), Current(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Currency(US)" in {
-      val input = "type cur = Currency(US)"
+    "allow rename of Currency(USD)" in {
+      val input = "type cur = Currency(USD)"
       val expected =
-        Type(1 -> 1, Identifier(1 -> 6, "cur"), Currency(1 -> 12, "US"))
+        Type(1 -> 1, Identifier(1 -> 6, "cur"), Currency(1 -> 12, "USD"))
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow rename of Length" in {
