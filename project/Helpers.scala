@@ -21,7 +21,7 @@ object V {
   val lang3 = "3.12.0"
   val pureconfig = "0.17.2"
   val scalacheck = "1.17.0"
-  val scalatest = "3.2.14"
+  val scalatest = "3.2.15"
   val scopt = "4.1.0"
   val slf4j = "2.0.4"
 }
@@ -40,11 +40,8 @@ object Dep {
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val slf4j = "org.slf4j" % "slf4j-nop" % V.slf4j
 
-  val testing: Seq[ModuleID] = Seq(
-    scalactic % "test",
-    scalatest % "test",
-    scalacheck % "test"
-  )
+  val testing: Seq[ModuleID] =
+    Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)
 
 }
