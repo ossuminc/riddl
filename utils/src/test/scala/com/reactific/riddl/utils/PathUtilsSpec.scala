@@ -11,8 +11,10 @@ import scala.collection.mutable
 class PathUtilsSpec extends AnyWordSpec with Matchers {
 
   val miss: mutable.ListBuffer[Path] = mutable.ListBuffer.empty[Path]
-  val diffSize: mutable.ListBuffer[(Path,Path)] = mutable.ListBuffer.empty[(Path,Path)]
-  val diffCont: mutable.ListBuffer[(Path,Path)] = mutable.ListBuffer.empty[(Path,Path)]
+  val diffSize: mutable.ListBuffer[(Path, Path)] = mutable.ListBuffer
+    .empty[(Path, Path)]
+  val diffCont: mutable.ListBuffer[(Path, Path)] = mutable.ListBuffer
+    .empty[(Path, Path)]
   def clear: Unit = {
     miss.clear()
     diffSize.clear()
@@ -34,29 +36,41 @@ class PathUtilsSpec extends AnyWordSpec with Matchers {
     "compare empty directories" in {
       val path1 = Path.of("utils/src/test/input/empty")
       val path2 = path1
-      PathUtils.compareDirectories(path1, path2)(missing, differentSize, differentContent)
+      clear
+      PathUtils.compareDirectories(path1, path2)(
+        missing,
+        differentSize,
+        differentContent
+      )
       miss mustBe empty
       diffSize mustBe empty
       diffCont mustBe empty
-      clear
     }
     "compare size difference directories" in {
       val path1 = Path.of("utils/src/test/input/size1")
       val path2 = Path.of("utils/src/test/input/size2")
-      PathUtils.compareDirectories(path1, path2)(missing, differentSize, differentContent)
+      clear
+      PathUtils.compareDirectories(path1, path2)(
+        missing,
+        differentSize,
+        differentContent
+      )
       miss mustBe empty
       diffCont mustBe empty
-      diffSize mustNot be (empty)
-      clear
+      diffSize mustNot be(empty)
     }
     "compare content difference directories" in {
       val path1 = Path.of("utils/src/test/input/diff1")
       val path2 = Path.of("utils/src/test/input/diff2")
-      PathUtils.compareDirectories(path1, path2)(missing, differentSize, differentContent)
-      miss mustBe empty
-      diffCont mustNot be ( empty )
-      diffSize mustBe(empty)
       clear
+      PathUtils.compareDirectories(path1, path2)(
+        missing,
+        differentSize,
+        differentContent
+      )
+      miss mustBe empty
+      diffCont mustNot be(empty)
+      diffSize mustBe (empty)
     }
   }
 }
