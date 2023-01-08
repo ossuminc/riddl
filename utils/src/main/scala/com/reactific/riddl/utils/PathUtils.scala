@@ -12,6 +12,8 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import scala.jdk.Accumulator
+import scala.jdk.StreamConverters.StreamHasToScala
 
 object PathUtils {
 
@@ -54,5 +56,32 @@ object PathUtils {
       if (Files.isRegularFile(dl_path)) { fileName }
       else { "" }
     } else { "" }
+  }
+
+  def compareDirectories(
+    a: Path,
+    b: Path
+  )(missing: Path => Boolean,
+    differentSize: (Path, Path) => Boolean,
+    differentContent: (Path, Path) => Boolean
+  ): Unit = {
+    var exit = false
+    val sourceFiles = Files.list(a).toScala(Accumulator).toList
+      .filterNot(_.getFileName.toString.startsWith("."))
+    for { fileA <- sourceFiles } {
+      val fileNameA = fileA.getFileName
+      val fileB = b.resolve(fileNameA)
+      if (!Files.exists(fileB)) { exit = missing(fileB) }
+      else {
+        val sizeA = Files.size(fileA)
+        val sizeB = Files.size(fileB)
+        if (sizeA != sizeB) { exit = differentSize(fileA, fileB) }
+        else {
+          val bytesA = Files.readAllBytes(fileA)
+          val bytesB = Files.readAllBytes(fileB)
+          if (bytesA != bytesB) { exit = differentContent(fileA, fileB) }
+        }
+      }
+    }
   }
 }

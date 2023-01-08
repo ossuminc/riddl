@@ -15,14 +15,14 @@ import fastparse.ScalaWhitespace.*
 /** Parsing rules for Type definitions */
 trait TypeParser extends CommonParser {
 
-  def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
+  private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
       location ~ Keywords.reference ~ Readability.to.? ~/
         maybe(Keywords.entity) ~ pathIdentifier
     ).map { tpl => (EntityReferenceTypeExpression.apply _).tupled(tpl) }
   }
 
-  def stringType[u: P]: P[Strng] = {
+  private def stringType[u: P]: P[Strng] = {
     P(
       location ~ Predefined.String ~/
         (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~
@@ -33,23 +33,41 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def isoCountryCode[u: P]: P[String] = { P(CharIn("A-Z").rep(2, "", 2).!) }
+  private def isoCountryCode[u: P]: P[String] = {
+    P(StringIn("AFN", "AED", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN",
+      "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BOV",
+      "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHE", "CHF",
+      "CHW", "CLF", "CLP", "CNY", "COP", "COU", "CRC", "CUC", "CUP", "CVE",
+      "CZK", "DJF", "DKK", "DOP", "EGP", "ERN", "ETB", "EUR", "FJD", "FKP",
+      "GBP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HKD", "HNL",
+      "HRK", "HTG", "HUF", "IDR", "ILS", "INR", "IQD", "IRR", "ISK", "JMD",
+      "JOD", "JPY", "KES", "KGS", "KHR", "KMF", "KPW", "KRW", "KWD", "KYD",
+      "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA",
+      "MKD", "MMK", "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN", "MXV",
+      "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "NZD", "OMR", "PEN",
+      "PGK", "PHP", "PKR", "PLN", "PYG", "QAR", "RON", "RSD", "RUB", "RWF",
+      "SAR", "SBD", "SCR", "SDG", "SEK", "SGD", "SHP", "SLE", "SOS", "SRD",
+      "STN", "SVC", "SYP", "SZL", "THB", "TJS", "TMT", "TND", "TOP", "TRY",
+      "TTD", "TWD", "TZS", "UAH", "UGX", "USD", "USN", "UYI", "UYU", "UZS",
+      "VED", "VEF", "VND", "VUV", "WST", "XAF", "XCD", "XDR", "XOF", "XPF",
+      "XSU", "XUA", "YER", "ZAR", "ZMW", "ZWL"
+    ).!)}
 
-  def currencyType[u: P]: P[Currency] = {
+  private def currencyType[u: P]: P[Currency] = {
     P(
       location ~ Predefined.Currency ~/
         (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
     ).map { tpl => (Currency.apply _).tupled(tpl) }
   }
 
-  def urlType[u: P]: P[URL] = {
+  private def urlType[u: P]: P[URL] = {
     P(
       location ~ Predefined.URL ~/
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
-  def oneWordPredefTypes[u: P]: P[TypeExpression] = {
+  private def oneWordPredefTypes[u: P]: P[TypeExpression] = {
     P(
       location ~ StringIn(
         // order matters in this list, because of common prefixes

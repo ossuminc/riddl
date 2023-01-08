@@ -293,6 +293,14 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = s"${messageKind.kind} ${pathId.format}"
   }
 
+  object MessageRef {
+    lazy val empty = new MessageRef {
+      def messageKind: MessageKind = OtherKind
+      override def pathId: PathIdentifier = PathIdentifier.empty
+      override def loc: At = At.empty
+    }
+  }
+
   /** A Reference to a command type
     *
     * @param loc

@@ -31,7 +31,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
   import FromCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd("from").children(
+    cmd(FromCommand.cmdName).children(
       arg[File]("config-file").action { (file, opt) =>
         opt.copy(inputFile = Some(file.toPath))
       }.text("A HOCON configuration file with riddlc options in it."),
