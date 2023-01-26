@@ -480,7 +480,7 @@ case class MarkdownWriter(
           .mkString("-")
       case _: Mapping     => "Mapping"
       case _: Aggregation => "Aggregation"
-      case _: MessageType => "Message"
+      case _: AggregateUseCaseTypeExpression => "Message"
       case _              => typeEx.format
     }
     name.replace(" ", "-")
@@ -507,11 +507,11 @@ case class MarkdownWriter(
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
         "Aggregation of:" + data.mkString(", ")
-      case mt: MessageType =>
+      case mt: AggregateUseCaseTypeExpression =>
         val data = mt.fields.map { f: Field =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
-        s"${mt.messageKind.kind} message of: " + data.mkString(", ")
+        s"${mt.usecase.kind} message of: " + data.mkString(", ")
       case _ => typeEx.format
     }
   }
@@ -544,8 +544,8 @@ case class MarkdownWriter(
           (f.id.format, resolveTypeExpression(f.typeEx, pars))
         }
         list("Fields", data, headLevel + 1)
-      case mt: MessageType =>
-        h2(s"${mt.messageKind.format} Of")
+      case mt: AggregateUseCaseTypeExpression =>
+        h2(s"${mt.usecase.format} Of")
         val data = mt.fields.map { f: Field =>
           val pars = f +: parents
           (f.id.format, resolveTypeExpression(f.typeEx, pars))
@@ -576,7 +576,7 @@ case class MarkdownWriter(
 
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
     val suffix = typ.typ match {
-      case mt: MessageType => mt.messageKind.kind.capitalize
+      case mt: AggregateUseCaseTypeExpression => mt.usecase.kind.capitalize
       case _               => "Type"
     }
     containerHead(typ, suffix)
@@ -588,13 +588,7 @@ case class MarkdownWriter(
   def emitTypesToc(definition: WithTypes): this.type = {
     val groups = definition.types.groupBy { typ =>
       typ.typ match {
-        case mt: MessageType => mt.messageKind match {
-            case CommandKind => "Commands"
-            case EventKind   => "Events"
-            case QueryKind   => "Queries"
-            case ResultKind  => "Results"
-            case OtherKind   => "Others"
-          }
+        case mt: AggregateUseCaseTypeExpression => mt.usecase.format
         case _ => "Others"
       }
     }.toSeq.sortBy(_._1)
@@ -909,8 +903,8 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(projection, "Projection")
     emitDefDoc(projection, parents)
-    if (projection.aggregation.nonEmpty) {
-      emitFields(projection.aggregation.get.fields)
+    if (projection.types.nonEmpty) {
+      emitTypesToc(projection)
     }
     listOf("Handlers", projection.handlers)
     emitUsage(projection)

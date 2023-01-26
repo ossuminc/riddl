@@ -175,6 +175,7 @@ trait Terminals {
     final val repository = "repository"
     final val requires = "requires"
     final val required = "required"
+    final val record = "record"
     final val result = "result"
     final val results = "results"
     final val return_ = "return"

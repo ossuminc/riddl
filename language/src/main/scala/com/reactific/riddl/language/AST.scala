@@ -288,14 +288,14 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
   /** Base trait for the four kinds of message references */
   sealed trait MessageRef extends Reference[Type] {
-    def messageKind: MessageKind
+    def messageKind: AggregateUseCase
 
     override def format: String = s"${messageKind.kind} ${pathId.format}"
   }
 
   object MessageRef {
     lazy val empty = new MessageRef {
-      def messageKind: MessageKind = OtherKind
+      def messageKind: AggregateUseCase = OtherCase
       override def pathId: PathIdentifier = PathIdentifier.empty
       override def loc: At = At.empty
     }
@@ -309,7 +309,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The path identifier to the event type
     */
   case class CommandRef(loc: At, pathId: PathIdentifier) extends MessageRef {
-    def messageKind: MessageKind = CommandKind
+    def messageKind: AggregateUseCase = CommandCase
   }
 
   /** A Reference to an event type
@@ -320,7 +320,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The path identifier to the event type
     */
   case class EventRef(loc: At, pathId: PathIdentifier) extends MessageRef {
-    def messageKind: MessageKind = EventKind
+    def messageKind: AggregateUseCase = EventCase
   }
 
   /** A reference to a query type
@@ -331,7 +331,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The path identifier to the query type
     */
   case class QueryRef(loc: At, pathId: PathIdentifier) extends MessageRef {
-    def messageKind: MessageKind = QueryKind
+    def messageKind: AggregateUseCase = QueryCase
   }
 
   /** A reference to a result type
@@ -342,7 +342,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The path identifier to the result type
     */
   case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
-    def messageKind: MessageKind = ResultKind
+    def messageKind: AggregateUseCase = ResultCase
   }
 
   /** A type definition which associates an identifier with a type expression.
@@ -376,7 +376,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       typ match {
         case Aggregation(_, fields)      => fields
         case Enumeration(_, enumerators) => enumerators
-        case MessageType(_, _, fields)   => fields
+        case AggregateUseCaseTypeExpression(_, _, fields)   => fields
         case _                           => Seq.empty[TypeDefinition]
       }
     }
@@ -387,6 +387,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   type Event = Type
   type Query = Type
   type Result = Type
+  type Record = Type
 
   /** A reference to a type definition
     *
@@ -1220,21 +1221,25 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * RIDDL: projections gather data from entities and other sources, transform
     * that data into a specific record type, and support querying that data
     * arbitrarily.
-    * @see
+   *
+   * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
     * @see
     *   https://en.wikipedia.org/wiki/Projection_(mathematics)
-    *
-    * @param loc
+   * @param loc
     *   Location in the source of the Projection
     * @param id
     *   The unique identifier for this Projection
-    * @param aggregation
-    *   The projected type
+   * @param authors
+   *    The authors of this definition
+   * @param options
+   *    Options that can be used by the translators
+   * @param types
+   *    The type definitions necessary to construct the query results
+   * @param aggregation
+    *   An optional aggregation to represent the projection (deprecated)
     * @param handlers
     *   Specifies how to handle
-    * @param options
-    *   Options that can be used by the translators
     * @param terms
     *   Definitions of terms about this Projection
     * @param brief
@@ -1249,25 +1254,24 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
-    aggregation: Option[Aggregation] = None,
+    types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[ProjectionOption, ProjectionDefinition]
-      with ContextDefinition {
+      with ContextDefinition with WithTypes {
     override lazy val contents: Seq[ProjectionDefinition] = {
-      super.contents ++ aggregation.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      super.contents ++
         handlers ++ invariants ++ terms
     }
     final val kind: String = "Projection"
 
     override def maturity: Int = {
       var score = super.maturity
-      val fields: Seq[Field] = aggregation.map(_.fields).getOrElse(Seq.empty)
-      if (fields.nonEmpty) score +=
-        Math.max(fields.count(_.nonEmpty), maxMaturity)
+      val records: Seq[Type] = types.filter(_.typ.isContainer)
+      if (records.nonEmpty) score += Math.max(types.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }

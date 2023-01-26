@@ -50,7 +50,7 @@ trait TypeExpression extends AbstractDefinitions {
         s"Reference to entity ${entity.format}"
       case _: Pattern              => Predefined.Pattern
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
-      case m @ MessageType(_, messageKind, _) =>
+      case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
         s"${messageKind.format} of ${m.fields.size} fields"
       case pt: PredefinedType => pt.kind
       case _                  => "<unknown type expression>"
@@ -60,32 +60,36 @@ trait TypeExpression extends AbstractDefinitions {
   // //////////////////////////////////////////////////////////////////////// TYPES
 
   /** Base of an enumeration for the four kinds of message types */
-  sealed trait MessageKind {
+  sealed trait AggregateUseCase {
     @inline def kind: String
     def format: String = kind.capitalize
   }
 
   /** An enumerator value for command types */
-  final case object CommandKind extends MessageKind {
+  final case object CommandCase extends AggregateUseCase {
     @inline def kind: String = "command"
   }
 
   /** An enumerator value for event types */
-  final case object EventKind extends MessageKind {
+  final case object EventCase extends AggregateUseCase {
     @inline def kind: String = "event"
   }
 
   /** An enumerator value for query types */
-  final case object QueryKind extends MessageKind {
+  final case object QueryCase extends AggregateUseCase {
     @inline def kind: String = "query"
   }
 
   /** An enumerator value for result types */
-  final case object ResultKind extends MessageKind {
+  final case object ResultCase extends AggregateUseCase {
     @inline def kind: String = "result"
   }
 
-  final case object OtherKind extends MessageKind {
+  final case object RecordCase extends AggregateUseCase {
+    @inline def kind: String = "record"
+  }
+
+  final case object OtherCase extends AggregateUseCase {
     @inline def kind: String = "other"
   }
 
@@ -348,22 +352,23 @@ trait TypeExpression extends AbstractDefinitions {
     }
   }
 
-  /** A type expression for an aggregation type expression that is marked as
-    * being one of the four message kinds.
+  /** A type expression for an aggregation that is marked as
+    * being one of the use cases. This is used for messages, records, and
+    * other aggregate types that need to have their purpose distinguished.
     *
     * @param loc
     *   The location of the message type expression
-    * @param messageKind
+    * @param usecase
     *   The kind of message defined
     * @param fields
     *   The fields of the message's aggregation
     */
-  case class MessageType(
-    loc: At,
-    messageKind: MessageKind,
-    fields: Seq[Field] = Seq.empty[Field])
-      extends AggregateTypeExpression {
-    override def format: String = { messageKind.kind + " " + super.format }
+  case class AggregateUseCaseTypeExpression(
+                                             loc: At,
+                                             usecase: AggregateUseCase,
+                                             fields: Seq[Field] = Seq.empty[Field]
+  ) extends AggregateTypeExpression {
+    override def format: String = { usecase.format + " " + super.format }
   }
 
   /** Base class of all pre-defined type expressions

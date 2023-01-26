@@ -403,9 +403,20 @@ object Validation {
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents, p).checkAggregation(p.aggregation)
+      checkContainer(parents, p).checkAggregateUseCases(p.types, parents)
         .checkDescription(p)
     }
+
+
+    def checkAggregation(
+                          aggregation: Option[Aggregation]
+                        ): ValidationState = {
+      aggregation match {
+        case None => this
+        case Some(aggregation) => checkAggregation(aggregation)
+      }
+    }
+
 
     def validateRepository(
       r: Repository,
@@ -501,7 +512,7 @@ object Validation {
       parents: Seq[AST.Definition]
     ): ValidationState = {
       checkDefinition(parents, in)
-        .checkMessageRef(in.putIn, in, parents, CommandKind)
+        .checkMessageRef(in.putIn, in, parents, CommandCase)
         .checkDescription(in)
     }
 
@@ -510,7 +521,7 @@ object Validation {
       parents: Seq[AST.Definition]
     ): ValidationState = {
       checkDefinition(parents, out)
-        .checkMessageRef(out.putOut, out, parents, ResultKind)
+        .checkMessageRef(out.putOut, out, parents, ResultCase)
         .checkDescription(out)
 
     }
@@ -720,15 +731,6 @@ object Validation {
     }
 
     def checkAggregation(
-      aggregation: Option[Aggregation]
-    ): ValidationState = {
-      aggregation match {
-        case None              => this
-        case Some(aggregation) => checkAggregation(aggregation)
-      }
-    }
-
-    def checkAggregation(
       agg: Aggregation
     ): ValidationState = {
       checkSequence(agg.fields) { case (state, field) =>
@@ -741,20 +743,25 @@ object Validation {
       }
     }
 
-    def checkMessageType(
-      mt: MessageType,
-      typeDef: Definition,
-      parents: Seq[Definition]
+    def checkAggregateUseCase(
+                                mt: AggregateUseCaseTypeExpression,
+                                typeDef: Definition,
+                                parents: Seq[Definition]
     ): ValidationState = {
-      val kind = mt.messageKind.kind
       checkSequence(mt.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
           field.id.value.head.isLower,
-          s"Field names in $kind messages should start with a lower case letter",
+          s"Field names in ${mt.usecase.kind} should start with a lower case letter",
           StyleWarning,
           field.loc
         ).checkTypeExpression(field.typeEx, typeDef, parents)
           .checkDescription(field)
+      }
+    }
+
+    def checkAggregateUseCases(typeDefs: Seq[Type], parents: Seq[Definition]): ValidationState = {
+      checkSequence(typeDefs) { case (state, ty) =>
+        state.checkAggregateUseCase(ty.typ.asInstanceOf[AggregateUseCaseTypeExpression], ty, parents)
       }
     }
 
@@ -776,7 +783,7 @@ object Validation {
         case AliasedTypeExpression(_, id: PathIdentifier) =>
           checkPathRef[Type](id, defn, parents)()()
         case agg: Aggregation            => checkAggregation(agg)
-        case mt: MessageType             => checkMessageType(mt, defn, parents)
+        case mt: AggregateUseCaseTypeExpression => checkAggregateUseCase(mt, defn, parents)
         case alt: Alternation            => checkAlternation(alt, defn, parents)
         case mapping: Mapping            => checkMapping(mapping, defn, parents)
         case rt: RangeType               => checkRangeType(rt)
@@ -945,7 +952,7 @@ object Validation {
       ref: MessageRef,
       topDef: Definition,
       parents: Seq[Definition],
-      kind: MessageKind
+      kind: AggregateUseCase
     ): ValidationState = {
       if (ref.isEmpty) { addError(ref.pathId.loc, s"${ref.identify} is empty") }
       else {
@@ -953,7 +960,7 @@ object Validation {
           (state, _, _, _, defn) =>
             defn match {
               case Type(_, _, typ, _, _) => typ match {
-                  case MessageType(_, mk, _) => state.check(
+                  case AggregateUseCaseTypeExpression(_, mk, _) => state.check(
                       mk == kind,
                       s"'${ref.identify} should be ${article(kind.kind)} type" +
                         s" but is ${article(mk.kind)} type instead",
@@ -1481,7 +1488,7 @@ object Validation {
         (state, _, id, _, defn) =>
           defn match {
             case Type(_, _, typ, _, _) => typ match {
-                case mt: MessageType =>
+                case mt: AggregateUseCaseTypeExpression =>
                   val names = messageConstructor.args.args.keys.map(_.value)
                     .toSeq
                   val unset = mt.fields.filterNot { fName =>

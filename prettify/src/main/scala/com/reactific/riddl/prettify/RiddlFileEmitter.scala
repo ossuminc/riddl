@@ -185,8 +185,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this.add(line)
   }
 
-  def emitMessageType(mt: MessageType): RiddlFileEmitter = {
-    this.add(mt.messageKind.kind.toLowerCase).add(" ").emitFields(mt.fields)
+  def emitMessageType(mt: AggregateUseCaseTypeExpression): RiddlFileEmitter = {
+    this.add(mt.usecase.kind.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
   def emitMessageRef(mr: MessageRef): RiddlFileEmitter = { this.add(mr.format) }
@@ -215,7 +215,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case ate: AggregateTypeExpression =>
         ate match {
           case aggr: Aggregation => emitAggregation(aggr)
-          case mt: MessageType      => emitMessageType(mt)
+          case mt: AggregateUseCaseTypeExpression      => emitMessageType(mt)
         }
       case p: PredefinedType => this.add(p.kind)
     }
