@@ -82,6 +82,7 @@ class StoryTest extends ValidatingTest {
           |
           |  projection OrganizationViews is {
           |   record SimpleView { a: Integer}
+          |   handler Simple { ??? }
           |   term xyz
           |   brief "y"
           |  } described as "nada"
@@ -154,6 +155,7 @@ class StoryTest extends ValidatingTest {
           |
           |  projection OrganizationViews is {
           |   record SimpleView { a: Integer}
+          |   handler Simple { ??? }
           |   term xyz
           |   brief "y"
           |  } described as "nada"
@@ -226,6 +228,7 @@ class StoryTest extends ValidatingTest {
           |
           |  projection OrganizationViews is {
           |   record SimpleView { a: Integer}
+          |   handler Simple { ??? }
           |   term xyz
           |   brief "y"
           |  } described as "nada"

@@ -344,7 +344,7 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = { checkContainer(parents, h).checkDescription(h) }
 
-    def validateOnClause(
+    private def validateOnClause(
       oc: OnClause,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -359,7 +359,7 @@ object Validation {
       }).checkDescription(oc)
     }
 
-    def validateInclude[T <: Definition](i: Include[T]): ValidationState = {
+    private def validateInclude[T <: Definition](i: Include[T]): ValidationState = {
       check(i.nonEmpty, "Include has no included content", Error, i.loc)
         .check(i.path.nonEmpty, "Include has no path provided", Error, i.loc)
         .step { s =>
@@ -374,7 +374,7 @@ object Validation {
         }
     }
 
-    def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {
+    private def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {
       this.entities = this.entities :+ e
       checkContainer(parents, e).checkOptions[EntityOption](e.options, e.loc)
         .addIf(e.states.isEmpty && !e.isEmpty) {
@@ -399,7 +399,7 @@ object Validation {
         }.checkDescription(e)
     }
 
-    def validateProjection(
+    private def validateProjection(
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -415,22 +415,11 @@ object Validation {
         s"${p.identify} must have exactly one Handler but has ${p.handlers.length}", Error, p.loc)
     }
 
-
-    def checkAggregation(
-                          aggregation: Option[Aggregation]
-                        ): ValidationState = {
-      aggregation match {
-        case None => this
-        case Some(aggregation) => checkAggregation(aggregation)
-      }
-    }
-
-
-    def validateRepository(
+    private def validateRepository(
       r: Repository,
       parents: Seq[Definition]
     ): ValidationState = { checkContainer(parents, r).checkDescription(r) }
-    def validateAdaptor(
+    private def validateAdaptor(
       a: Adaptor,
       parents: Seq[Definition]
     ): ValidationState = {
