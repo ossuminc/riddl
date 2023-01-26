@@ -301,8 +301,8 @@ object Validation {
       parents: Seq[Definition]
     ): ValidationState = {
       checkDefinition(parents, ai)
-        .checkNonEmptyValue(ai.name, "name", ai, Error, required = true)
-        .checkNonEmptyValue(ai.email, "email", ai, Error, required = true)
+        .checkNonEmptyValue(ai.name, "name", ai, required = true)
+        .checkNonEmptyValue(ai.email, "email", ai, required = true)
         .checkDescription(ai)
     }
 
@@ -403,8 +403,16 @@ object Validation {
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents, p).checkAggregateUseCases(p.types, parents)
+      checkContainer(parents, p)
         .checkDescription(p)
+        .check(p.types.exists{ typ =>
+          typ.typ match {
+            case auc: AggregateUseCaseTypeExpression => auc.usecase == RecordCase
+            case _ => false
+          }
+        },s"${p.identify} lacks a required ${RecordCase.format} definition.",Error, p.loc)
+        .check(p.handlers.length == 1,
+        s"${p.identify} must have exactly one Handler but has ${p.handlers.length}", Error, p.loc)
     }
 
 
@@ -759,13 +767,7 @@ object Validation {
       }
     }
 
-    def checkAggregateUseCases(typeDefs: Seq[Type], parents: Seq[Definition]): ValidationState = {
-      checkSequence(typeDefs) { case (state, ty) =>
-        state.checkAggregateUseCase(ty.typ.asInstanceOf[AggregateUseCaseTypeExpression], ty, parents)
-      }
-    }
-
-    def checkMapping(
+    private def checkMapping(
       mapping: AST.Mapping,
       typeDef: Definition,
       parents: Seq[Definition]
@@ -774,7 +776,7 @@ object Validation {
         .checkTypeExpression(mapping.to, typeDef, parents)
     }
 
-    def checkTypeExpression[TD <: Definition](
+    private def checkTypeExpression[TD <: Definition](
       typ: TypeExpression,
       defn: Definition,
       parents: Seq[Definition]
@@ -782,8 +784,8 @@ object Validation {
       typ match {
         case AliasedTypeExpression(_, id: PathIdentifier) =>
           checkPathRef[Type](id, defn, parents)()()
-        case agg: Aggregation            => checkAggregation(agg)
         case mt: AggregateUseCaseTypeExpression => checkAggregateUseCase(mt, defn, parents)
+        case agg: Aggregation            => checkAggregation(agg)
         case alt: Alternation            => checkAlternation(alt, defn, parents)
         case mapping: Mapping            => checkMapping(mapping, defn, parents)
         case rt: RangeType               => checkRangeType(rt)
@@ -909,7 +911,7 @@ object Validation {
       )
     }
 
-    def checkPathRef[T <: Definition: ClassTag](
+    private def checkPathRef[T <: Definition: ClassTag](
       pid: PathIdentifier,
       container: Definition,
       parents: Seq[Definition],
@@ -939,7 +941,7 @@ object Validation {
       this
     }
 
-    def checkRef[T <: Definition: ClassTag](
+    private def checkRef[T <: Definition: ClassTag](
       reference: Reference[T],
       defn: Definition,
       parents: Seq[Definition],
@@ -948,7 +950,7 @@ object Validation {
       checkPathRef[T](reference.pathId, defn, parents, kind)()()
     }
 
-    def checkMessageRef(
+    private def checkMessageRef(
       ref: MessageRef,
       topDef: Definition,
       parents: Seq[Definition],
@@ -982,7 +984,7 @@ object Validation {
       }
     }
 
-    def checkOption[A <: RiddlValue](
+    private def checkOption[A <: RiddlValue](
       opt: Option[A],
       name: String,
       thing: Definition
@@ -998,14 +1000,15 @@ object Validation {
           folder(s1, x)
       }
     }
-    def checkSequence[A](
+
+    private def checkSequence[A](
       elements: Seq[A]
     )(fold: (ValidationState, A) => ValidationState
     ): ValidationState = elements.foldLeft(this) { case (next, element) =>
       fold(next, element)
     }
 
-    def checkNonEmptyValue(
+    private def checkNonEmptyValue(
       value: RiddlValue,
       name: String,
       thing: Definition,
@@ -1048,7 +1051,7 @@ object Validation {
       )
     }
 
-    def checkUniqueContent(definition: Definition): ValidationState = {
+    private def checkUniqueContent(definition: Definition): ValidationState = {
       val allNames = definition.contents.map(_.id.value)
       val uniqueNames = allNames.toSet
       if (allNames.size != uniqueNames.size) {
@@ -1121,7 +1124,7 @@ object Validation {
       result
     }
 
-    def checkContainer(
+    private def checkContainer(
       parents: Seq[Definition],
       container: Definition
     ): ValidationState = {
@@ -1134,7 +1137,7 @@ object Validation {
       )
     }
 
-    def checkDescription[TD <: DescribedValue](
+    private def checkDescription[TD <: DescribedValue](
       id: String,
       value: TD
     ): ValidationState = {
@@ -1161,11 +1164,11 @@ object Validation {
       } else this
     }
 
-    def checkDescription[TD <: Definition](
+    private def checkDescription[TD <: Definition](
       definition: TD
     ): ValidationState = { checkDescription(definition.identify, definition) }
 
-    def checkAction(
+    private def checkAction(
       action: Action,
       defn: Definition,
       parents: Seq[Definition]
@@ -1220,7 +1223,7 @@ object Validation {
       }
     }
 
-    def checkActions(
+    private def checkActions(
       actions: Seq[Action],
       defn: Definition,
       parents: Seq[Definition]
@@ -1230,7 +1233,7 @@ object Validation {
       )
     }
 
-    def checkExample(
+    private def checkExample(
       example: Example,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -1249,7 +1252,7 @@ object Validation {
         .checkDescription(example)
     }
 
-    def checkExamples(
+    private def checkExamples(
       examples: Seq[Example],
       parents: Seq[Definition]
     ): ValidationState = {
@@ -1258,7 +1261,7 @@ object Validation {
       }
     }
 
-    def checkFunctionCall(
+    private def checkFunctionCall(
       loc: At,
       pathId: PathIdentifier,
       args: ArgList,
@@ -1309,7 +1312,7 @@ object Validation {
       }()
     }
 
-    def checkExpressions(
+    private def checkExpressions(
       expressions: Seq[Expression],
       defn: Definition,
       parents: Seq[Definition]
@@ -1319,7 +1322,7 @@ object Validation {
       }
     }
 
-    def checkExpression(
+    private def checkExpression(
       expression: Expression,
       defn: Definition,
       parents: Seq[Definition]
@@ -1411,7 +1414,7 @@ object Validation {
       }
     }
 
-    def getExpressionType(
+    private def getExpressionType(
       expr: Expression,
       parents: Seq[Definition]
     ): Option[TypeExpression] = {
@@ -1446,7 +1449,7 @@ object Validation {
       }
     }
 
-    def checkAssignmentCompatability(
+    private def checkAssignmentCompatability(
       path: PathIdentifier,
       expr: Expression,
       parents: Seq[Definition]
@@ -1467,7 +1470,7 @@ object Validation {
       } else { this }
     }
 
-    def checkArgList(
+    private def checkArgList(
       arguments: ArgList,
       defn: Definition,
       parents: Seq[Definition]
@@ -1477,7 +1480,7 @@ object Validation {
       }
     }
 
-    def checkMessageConstructor(
+    private def checkMessageConstructor(
       messageConstructor: MessageConstructor,
       defn: Definition,
       parents: Seq[Definition]
@@ -1516,7 +1519,7 @@ object Validation {
       }(defaultMultiMatchValidationFunction)
     }
 
-    def checkProcessorKind(proc: Processor): ValidationState = {
+    private def checkProcessorKind(proc: Processor): ValidationState = {
       val ins = proc.inlets.size
       val outs = proc.outlets.size
       proc.shape match {

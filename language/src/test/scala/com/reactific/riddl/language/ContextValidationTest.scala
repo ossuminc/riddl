@@ -134,17 +134,23 @@ class ContextValidationTest extends ValidatingTest {
       }
     }
     "allow projections" in {
-      val input = """projection foo is { ??? }
+      val input = """projection foo is {
+                    |  record one is { ??? }
+                    |  handler one is { ??? }
+                    |}
                     |""".stripMargin
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
           info(errors.format)
           errors must be(empty)
-          val expected =
-            Projection((2, 2, rpi), Identifier((2, 13, rpi), "foo"))
           context.projections.size mustBe (1)
-          context.projections.head mustBe expected
+          val actual = context.projections.head
+          val expected =
+            Projection((2,2,rpi),Identifier((2,13,rpi),"foo"),List(),List(),List(),
+              List(Type((3,3,rpi),Identifier((3,10,rpi),"one"),AggregateUseCaseTypeExpression((3,17,rpi),RecordCase,List()),None,None)),
+              List(Handler((4,11,rpi),Identifier((4,11,rpi),"one"),List(),List(),None,None)),List(),List(),None,None)
+          actual mustBe expected
       }
     }
 
