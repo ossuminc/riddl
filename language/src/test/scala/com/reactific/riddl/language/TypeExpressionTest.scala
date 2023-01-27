@@ -280,7 +280,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     PathIdentifier(At.empty, Seq("a", "b", "c", "d", "entity"))
   )
 
-  val message = MessageType(At.empty, OtherKind, aggregation.fields)
+  val message = AggregateUseCaseTypeExpression(At.empty, OtherCase, aggregation.fields)
 
   val alias = AliasedTypeExpression(
     At.empty,
@@ -331,7 +331,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     "Support Messages" in {
       AST.errorDescription(message) mustBe "Other of 27 fields"
       message.format mustBe
-        "other { integer: Integer, abstract: Abstract, " +
+        "Other { integer: Integer, abstract: Abstract, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
         "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +

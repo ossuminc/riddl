@@ -218,7 +218,7 @@ object Folding {
                 // what we are looking for
                 fields
               case Enumeration(_, enumerators) => enumerators
-              case MessageType(_, _, fields)   =>
+              case AggregateUseCaseTypeExpression(_, _, fields)   =>
                 // Message types have fields too, those fields are what we seek
                 fields
               case AliasedTypeExpression(_, pid) =>
@@ -232,7 +232,7 @@ object Folding {
           case t: Type => t.typ match {
               case Aggregation(_, fields)        => fields
               case Enumeration(_, enumerators)   => enumerators
-              case MessageType(_, _, fields)     => fields
+              case AggregateUseCaseTypeExpression(_, _, fields)     => fields
               case AliasedTypeExpression(_, pid) =>
                 // if we're at a type definition that references another type then
                 // we need to push that type's path on the name stack

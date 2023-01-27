@@ -208,13 +208,13 @@ class TypeParserTest extends ParsingTest {
         val expected = Type(
           (1, 1, rip),
           Identifier((1, 6, rip), "mkt"),
-          MessageType(
+          AggregateUseCaseTypeExpression(
             (1, 12, rip),
             mk match {
-              case "command" => CommandKind
-              case "event"   => EventKind
-              case "query"   => QueryKind
-              case "result"  => ResultKind
+              case "command" => CommandCase
+              case "event"   => EventCase
+              case "query"   => QueryCase
+              case "result"  => ResultCase
             },
             Seq(
               Field(
@@ -329,9 +329,9 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 9, rip), "foo"),
-        MessageType(
+        AggregateUseCaseTypeExpression(
           (1, 16, rip),
-          CommandKind,
+          CommandCase,
           Seq(Field(
             (1, 18, rip),
             Identifier((1, 18, rip), "a"),

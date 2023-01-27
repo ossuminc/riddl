@@ -73,7 +73,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
             val entityE = model.contents.head.contexts.head.entities.head
             val command = model.contents.head.contexts.head.types.head
             val fieldRef = command.typ match {
-              case x: MessageType => x.fields.find(_.id.value == "ref").get
+              case x: AggregateUseCaseTypeExpression => x.fields.find(_.id.value == "ref").get
               case _              => fail("Wrong kind of type expression")
             }
             result.uses(fieldRef).contains(entityE)

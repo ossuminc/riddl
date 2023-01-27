@@ -119,11 +119,11 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def simplePredefinedTypes[u: P]: P[TypeExpression] = {
+  private def simplePredefinedTypes[u: P]: P[TypeExpression] = {
     P(stringType | currencyType | urlType | oneWordPredefTypes)./
   }
 
-  def patternType[u: P]: P[Pattern] = {
+  private def patternType[u: P]: P[Pattern] = {
     P(
       location ~ Predefined.Pattern ~/ Punctuation.roundOpen ~
         (literalStrings |
@@ -132,7 +132,7 @@ trait TypeParser extends CommonParser {
     ).map(tpl => (Pattern.apply _).tupled(tpl))
   }
 
-  def uniqueIdType[u: P]: P[UniqueId] = {
+  private def uniqueIdType[u: P]: P[UniqueId] = {
     (location ~ Predefined.Id ~ Punctuation.roundOpen ~/
       maybe(Keywords.entity) ~ pathIdentifier.? ~ Punctuation.roundClose./)
       .map {
@@ -142,7 +142,7 @@ trait TypeParser extends CommonParser {
       }
   }
 
-  def enumValue[u: P]: P[Option[Long]] = {
+  private def enumValue[u: P]: P[Option[Long]] = {
     P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose./).?
   }
 
@@ -169,12 +169,12 @@ trait TypeParser extends CommonParser {
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
-  def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
+  private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
     P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./
       .map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
   }
 
-  def fieldTypeExpression[u: P]: P[TypeExpression] = {
+  private def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(
       simplePredefinedTypes./ | patternType | uniqueIdType | enumeration |
         alternation | entityReferenceType | mappingType | rangeType |
@@ -200,33 +200,35 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def messageKind[u: P]: P[MessageKind] = {
+  private def aggregateUseCase[u: P]: P[AggregateUseCase] = {
     P(
       StringIn(
         Keywords.command,
         Keywords.event,
         Keywords.query,
-        Keywords.result
+        Keywords.result,
+        Keywords.record
       ).!
     ).map { mk =>
       mk.toLowerCase() match {
-        case kind if kind == Keywords.command => CommandKind
-        case kind if kind == Keywords.event   => EventKind
-        case kind if kind == Keywords.query   => QueryKind
-        case kind if kind == Keywords.result  => ResultKind
+        case kind if kind == Keywords.command => CommandCase
+        case kind if kind == Keywords.event   => EventCase
+        case kind if kind == Keywords.query   => QueryCase
+        case kind if kind == Keywords.result  => ResultCase
+        case kind if kind == Keywords.record => RecordCase
       }
     }
   }
 
-  def makeMessageType(
-    loc: At,
-    mk: MessageKind,
-    agg: Aggregation
-  ): MessageType = { MessageType(loc, mk, agg.fields) }
+  private def makeAggregateUseCaseType(
+                                loc: At,
+                                mk: AggregateUseCase,
+                                agg: Aggregation
+  ): AggregateUseCaseTypeExpression = { AggregateUseCaseTypeExpression(loc, mk, agg.fields) }
 
-  def messageType[u: P]: P[MessageType] = {
-    P(location ~ messageKind ~ aggregation).map { case (loc, mk, agg) =>
-      makeMessageType(loc, mk, agg)
+  private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
+    P(location ~ aggregateUseCase ~ aggregation).map { case (loc, mk, agg) =>
+      makeAggregateUseCaseType(loc, mk, agg)
     }
   }
 
@@ -235,7 +237,7 @@ trait TypeParser extends CommonParser {
     *   mapping from Integer to String
     * }}}
     */
-  def mappingType[u: P]: P[Mapping] = {
+  private def mappingType[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
@@ -247,7 +249,7 @@ trait TypeParser extends CommonParser {
     *   range(1,2)
     * }}}
     */
-  def rangeType[u: P]: P[RangeType] = {
+  private def rangeType[u: P]: P[RangeType] = {
     P(
       location ~ Keywords.range ~ Punctuation.roundOpen ~/
         integer.?.map(_.getOrElse(0L)) ~ Punctuation.comma ~
@@ -255,7 +257,7 @@ trait TypeParser extends CommonParser {
     ).map { tpl => (RangeType.apply _).tupled(tpl) }
   }
 
-  def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
+  private def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
     P(
       Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~ StringIn(
         Punctuation.question,
@@ -281,32 +283,32 @@ trait TypeParser extends CommonParser {
     }
   }
 
-  def typeExpression[u: P]: P[TypeExpression] = {
+  private def typeExpression[u: P]: P[TypeExpression] = {
     P(cardinality(
       simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-        alternation | entityReferenceType | aggregation | messageType |
+        alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression |
         mappingType | rangeType | aliasedTypeExpression
     ))
   }
 
-  def defOfMessage[u: P]: P[Type] = {
+  private def defOfTypeKindType[u: P]: P[Type] = {
     P(
-      location ~ messageKind ~/ identifier ~ is ~ aggregation ~ briefly ~
+      location ~ aggregateUseCase ~/ identifier ~ is ~ aggregation ~ briefly ~
         description
     ).map { case (loc, mk, id, agg, b, d) =>
-      val mt = MessageType(agg.loc, mk, agg.fields)
+      val mt = AggregateUseCaseTypeExpression(agg.loc, mk, agg.fields)
       Type(loc, id, mt, b, d)
     }
   }
 
-  def defOfType[u: P]: P[Type] = {
+  private def defOfType[u: P]: P[Type] = {
     P(
       location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~
         description
     ).map { case (loc, id, typEx, b, d) => Type(loc, id, typEx, b, d) }
   }
 
-  def typeDef[u: P]: P[Type] = { defOfType | defOfMessage }
+  def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
 }

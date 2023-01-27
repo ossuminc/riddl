@@ -30,12 +30,12 @@ trait ProjectionParser extends TypeParser with HandlerParser {
   }
 
   type ProjectionBody =
-    (Seq[ProjectionOption], Option[Aggregation], Seq[ProjectionDefinition])
+    (Seq[ProjectionOption], Seq[Type], Seq[ProjectionDefinition])
   def projectionBody[u: P]: P[ProjectionBody] = {
     P(
       undefined(
-        (Seq.empty[ProjectionOption], None, Seq.empty[ProjectionDefinition])
-      ) | (projectionOptions ~ aggregation.? ~ projectionDefinitions)
+        (Seq.empty[ProjectionOption], Seq.empty[Type], Seq.empty[ProjectionDefinition])
+      ) | (projectionOptions ~ typeDef.rep(0) ~ projectionDefinitions)
     )
   }
 
@@ -57,7 +57,7 @@ trait ProjectionParser extends TypeParser with HandlerParser {
             loc,
             id,
             authors,
-            (options, aggregation, definitions),
+            (options, types, definitions),
             briefly,
             description
           ) =>
@@ -74,7 +74,7 @@ trait ProjectionParser extends TypeParser with HandlerParser {
           authors,
           options,
           includes,
-          aggregation,
+          types,
           handlers,
           invariants,
           terms,

@@ -80,7 +80,12 @@ class StoryTest extends ValidatingTest {
           |
           |  entity Organization is { ??? } described as "nada"
           |
-          |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
+          |  projection OrganizationViews is {
+          |   record SimpleView { a: Integer}
+          |   handler Simple { ??? }
+          |   term xyz
+          |   brief "y"
+          |  } described as "nada"
           |} described as "nada"
           |
           |application Improving_app is {
@@ -148,7 +153,12 @@ class StoryTest extends ValidatingTest {
           |
           |  entity Organization is { ??? } described as "nada"
           |
-          |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
+          |  projection OrganizationViews is {
+          |   record SimpleView { a: Integer}
+          |   handler Simple { ??? }
+          |   term xyz
+          |   brief "y"
+          |  } described as "nada"
           |} described as "nada"
           |
           |application Improving_app is {
@@ -216,7 +226,12 @@ class StoryTest extends ValidatingTest {
           |
           |  entity Organization is { ??? } described as "nada"
           |
-          |  projection OrganizationViews is { fields { a: Integer} term xyz brief "y" } described as "nada"
+          |  projection OrganizationViews is {
+          |   record SimpleView { a: Integer}
+          |   handler Simple { ??? }
+          |   term xyz
+          |   brief "y"
+          |  } described as "nada"
           |} described as "nada"
           |
           |application Improving_app is {
