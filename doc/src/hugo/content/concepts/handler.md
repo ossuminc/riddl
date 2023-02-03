@@ -10,7 +10,7 @@ whenever a [message]({{< relref "message.md" >}}) of a particular type is
 received by its parent definition. Handlers are composed as a set of
 [on clauses]({{< relref "onclause.md" >}}) that connect a
 [message]({{< relref "message.md" >}}) with an 
-[example]{{< relref example.md >}}. The example specifies the business logic 
+[example]({{< relref example.md >}}). The example specifies the business logic 
 that should be executed upon receipt of the message. Because that business 
 logic can send and publish further messages to other components, a 
 relationship can be inferred between the component receiving the message 
@@ -19,16 +19,16 @@ sent and the component that contains the handler.
 There are several kinds of handlers depending on the handler's containing
 definition, as shown in this table:
 
-| Occurs In   | Handler Focus                                                  |   
-|-------------|----------------------------------------------------------------|
-| Adaptor     | Translate messages between [contexts]({{< relref context.md>}} |
- | Application | Handling the messages received from the user                   |
-| Context     | Implements API of the stateless context                        |
-| Entity      | Handler to use on new entity before any morph action           |
-| Processor   | Provide ETL logic for moving inputs to outputs                 |
-| Projection  | Handle updates and queries on the projection                   |
-| Repository  | Handle updates and queries on the repository                   |
-| State       | Handle messages while entity is in that state                  |
+| Occurs In   | Handler Focus                                                    |   
+|-------------|------------------------------------------------------------------|
+| Adaptor     | Translate messages between [contexts]({{< relref context.md >}}) |
+| Application | Handling the messages received from the user                     |
+| Context     | Implements API of the stateless context                          |
+| Entity      | Handler to use on new entity before any morph action             |
+| Processor   | Provide ETL logic for moving inputs to outputs                   |
+| Projection  | Handle updates and queries on the projection                     |
+| Repository  | Handle updates and queries on the repository                     |
+| State       | Handle messages while entity is in that state                    |
 
 The types of definition in which Handlers occur are known as the 
 "active" definitions. More details are provided in the sections below. 
