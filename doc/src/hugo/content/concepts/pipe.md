@@ -15,7 +15,7 @@ Pipes can transmit any data type that RIDDL can specify. There is only one
 data type that flows in a pipe.  The transmission type is often used with
 an [alternation]({{< relref "type#alternation" >}} ) of 
 [messages]({{< relref "message" >}}) such as the 
-commands and queries that an [entity](entity) might receive.
+commands and queries that an [entity]({{< relref "entity" >}}) might receive.
 
 ## Pipe Options
 Pipes may play a large role in the resiliency of a reactive system, so we 

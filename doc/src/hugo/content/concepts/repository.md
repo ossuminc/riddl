@@ -1,10 +1,10 @@
 ---
-title: "Root"
+title: "Repository"
 draft: false
 ---
 
 A RIDDL repository is an abstraction for anything that can retain 
-information(e.g. [messages]({{< relref message.md >}}))for retrieval at a
+information (e.g. [messages]({{< relref message.md >}})) for retrieval at a
 later time. This might be a relational database, NoSQL database, a data lake, 
 an API, or something not yet invented. There is no specific technology implied
 other than the retention and retrieval of information. You should think of 
@@ -29,7 +29,7 @@ how the processing of that query should proceed and yield a
 
 [Command messages]({{< relref "message.md#query" >}}) sent to the 
 repository are updates to the repository. The handler should define how the 
-update work and may optionally yield an
+update works and may optionally yield an
 [Event message]({{< relref "message.md#result" >}}) but generally that is 
 handled at a higher level of abstraction. 
 
@@ -39,5 +39,5 @@ handled at a higher level of abstraction.
 ## Contains
 * [Types]({{< relref "type.md" >}})
 * [Messages]({{< relref "message.md" >}})
-* [Handler]({{< relref handler.md >}}})
+* [Handler]({{< relref handler.md >}})
 

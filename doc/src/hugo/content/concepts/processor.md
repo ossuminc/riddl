@@ -33,7 +33,7 @@ shown in the table:
 | 0        | any       | Source | Sources originate their data, and publish it to an outlet   |
 | any      | 0         | Sink   | Sinks terminate their data, and consume it from their inlet |
 | 1        | 1         | Flow   | Flows transform their data from inlet to outlet             |
-| 1        | any       | Split  | Splits their data from one source to multiple outlets       |
+| 1        | any       | Split  | Splits their data from one inlet to multiple outlets        |
 | any      | 1         | Merge  | Merges their data from multiple intles to a single outlet   |
 | any      | any       | Multi  | Any other combination is a many-to-many flow                |
 

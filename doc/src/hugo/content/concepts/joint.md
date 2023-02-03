@@ -12,7 +12,7 @@ Joints join [Processor]({{< relref "processor.md" >}})
 
 Joints are necessary to set up a pipeline in a Plant which must flow data 
 from [source]({{< relref "processor.md" >}}) to 
-[sink]({{< relref "processor.md" >}}]. 
+[sink]({{< relref "processor.md" >}}). 
 
 ## Occurs In
 

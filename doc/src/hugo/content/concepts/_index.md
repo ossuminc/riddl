@@ -65,7 +65,7 @@ With those clarifying simplifications, here's the hierarchy:
         * [State]({{< relref "state.md" >}})
           * [Type]({{< relref "type.md" >}})
           * [Field]({{< relref "field.md" >}})
-          * [Handler]({{< relref "handler.md" >}}
+          * [Handler]({{< relref "handler.md" >}})
             * [On Clause]({{< relref "onclause.md" >}})
               * [Example]({{< relref "example.md" >}})
         * [Invariant]({{< relref "invariant.md" >}})
