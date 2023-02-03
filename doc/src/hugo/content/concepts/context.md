@@ -56,7 +56,6 @@ an API (Application Programming Interface) as the interface to a program. The AP
 
 To further your understanding, watch this 
 [34-minute video](https://www.youtube.com/watch?v=am-HXycfalo) by
-{{< relref "entity.md" >}}
 [Eric Evans]({{< relref "../../introduction/who-made-riddl-possible.md#eric-evans" >}}) 
 from DDD Europe 2020 conference
 
