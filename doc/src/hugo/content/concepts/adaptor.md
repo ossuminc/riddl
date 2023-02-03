@@ -19,8 +19,8 @@ how messages are translated into other messages and forwarded to the target
 
 ## Target Context
 Adaptors are only definable within a containing 
-[Context]{{< relref context.md >}}) which provides one participant of the 
-translation. The other [Context]{{< relref "context.md" >}}), known as the 
+[Context]*{{< relref context.md >}}) which provides one participant of the 
+translation. The other [Context]*{{< relref "context.md" >}}), known as the 
 *target* context, is specified within the definition of the adaptor. 
 
 ## Adaptation Directionality
@@ -29,17 +29,17 @@ the target context. However, multiple Adaptors can be defined
 to achieve bidirectional adaptation between
 [Contexts]({{< relref "context.md" >}}). 
 The directionality of an Adaptor is specified in the definition of the adaptor.
-This leads two twoo kinds of aaptors: inbound and outbound.
+This leads to two kinds of adaptors: inbound and outbound.
 
 ## Inbound Adaptors
 Inbound adaptors provide an adaptation that occurs from the 
-[Context]{{< relref "context.md" >}}) referenced in the adaptor to the
-[Context]{{< relref "context.md" >}}) containing the adaptor. 
+[Context]({{< relref "context.md" >}}) referenced in the adaptor to the
+[Context]({{< relref "context.md" >}}) containing the adaptor. 
 
 ## Outbound Adaptors
 Outbound adaptors provide an adaptation that occurs from the
-[Context]{{< relref "context.md" >}}) containing the Adaptor to the
-[Context]{{< relref "context.md" >}}) referenced in the adaptor.
+[Context]({{< relref "context.md" >}}) containing the adaptor to the
+[Context]({{< relref "context.md" >}}) referenced in the adaptor.
 
 ## Occurs In
 * [Contexts]({{< relref "context.md" >}})
