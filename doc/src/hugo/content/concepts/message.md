@@ -8,12 +8,12 @@ an implementation that is a message-driven system per the
 [Reactive Manifesto](https://reactivemanifesto.org). Messages in RIDDL are 
 a special case of an [aggregate type]({{< relref "type.md#aggregation" >}}) 
 and the _lingua franca_ of many RIDDL definitions. They define the API for:
-* [`adaptor`s]({{< relref "adaptor.md" >}})
-* [`application`s]({{< relref "adaptor.md" >}})
-* [`context`s]({{< relref "context.md" >}})
-* [`entity`s]({{< relref "entity.md" >}})
-* [`processor`s]({{< relref "processor.md" >}}
-* [`projection`s]({{< relref "projection.md" >}})
+* [`adaptors`]({{< relref "adaptor.md" >}})
+* [`applications`]({{< relref "adaptor.md" >}})
+* [`contexts`]({{< relref "context.md" >}})
+* [`entities`]({{< relref "entity.md" >}})
+* [`processors`]({{< relref "processor.md" >}})
+* [`projections`]({{< relref "projection.md" >}})
 * and [`repositories`]({{< relref "repository.md" >}})
 
 * That is, these are the fundamental building blocks of a
@@ -59,14 +59,14 @@ table below.
 | Command |   Yes    |    No     |     Yes      |      Independent      |
 |  Event  |  Maybe   |    Yes    |      No      | Consequent Of Command |
 |  Query  |   Yes    |    No     |     Yes      |      Independent      |
-| Result  |    No    |    Yes    |      No      | Consequent Of Result  |
+| Result  |    No    |    Yes    |      No      | Consequent Of Query   |
 
 The truth table above helps you understand the relationship between the kind of
 message and how it is handled by a model component. The sections below get 
 even more specific.
 
 #### How Messages Are Handled By Adaptors
-|  Kind   | In Regard To Handling By Projection |
+|  Kind   | In Regard To Handling By Adaptor    |
 |:-------:|:-----------------------------------:|
 | Command |   Intent To Translate For Context   |
 |  Event  |   Intent To Translate For Context   |
@@ -74,7 +74,7 @@ even more specific.
 | Result  |   Intent to Translate For Context   |
 
 #### How Messages Are Handled By Applications
-|  Kind   |  In Regard To Handling By Projection   |
+|  Kind   |  In Regard To Handling By Application  |
 |:-------:|:--------------------------------------:|
 | Command |  Data given from user to application   |
 |  Event  |             Not Applicable             |
@@ -82,7 +82,7 @@ even more specific.
 | Result  | Data provided to user from application |
 
 #### How Messages Are Handled By Contexts
-|  Kind   |  In Regard To Handling By Projection  |
+|  Kind   |  In Regard To Handling By Context     |
 |:-------:|:-------------------------------------:|
 | Command | Intent To Take Some Stateless Action  |
 |  Event  | Notification That a Command Completed |
