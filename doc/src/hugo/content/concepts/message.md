@@ -8,13 +8,13 @@ an implementation that is a message-driven system per the
 [Reactive Manifesto](https://reactivemanifesto.org). Messages in RIDDL are 
 a special case of an [aggregate type]({{< relref "type.md#aggregation" >}}) 
 and the _lingua franca_ of many RIDDL definitions. They define the API for:
-* [`adaptors`]({{< relref "adaptor.md" >}})
-* [`applications`]({{< relref "adaptor.md" >}})
-* [`contexts`]({{< relref "context.md" >}})
-* [`entities`]({{< relref "entity.md" >}})
-* [`processors`]({{< relref "processor.md" >}})
-* [`projections`]({{< relref "projection.md" >}})
-* and [`repositories`]({{< relref "repository.md" >}})
+* [`adaptor`s]({{< relref "adaptor.md" >}})
+* [`application`s]({{< relref "adaptor.md" >}})
+* [`context`s]({{< relref "context.md" >}})
+* [`entity`s]({{< relref "entity.md" >}})
+* [`processor`s]({{< relref "processor.md" >}})
+* [`projection`s]({{< relref "projection.md" >}})
+* and [`repository`s]({{< relref "repository.md" >}})
 
 * That is, these are the fundamental building blocks of a
 [message-driven system](https://developer.lightbend.com/docs/akka-platform-guide/concepts/message-driven-event-driven.html)
