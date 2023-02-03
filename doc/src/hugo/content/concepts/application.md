@@ -27,7 +27,7 @@ technologies.
 
 ## Groups
 Applications abstractly design a user interface by containing a set of 
-[groups]({{< relref "group.md" >}}]]). Groups can be nested which allows them
+[groups]({{< relref "group.md" >}}). Groups can be nested which allows them
 to define the structure of a user interface. 
 
 ## Handlers
