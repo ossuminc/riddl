@@ -19,8 +19,8 @@ how messages are translated into other messages and forwarded to the target
 
 ## Target Context
 Adaptors are only definable within a containing 
-[Context]*{{< relref context.md >}}) which provides one participant of the 
-translation. The other [Context]*{{< relref "context.md" >}}), known as the 
+[Context]({{< relref context.md >}}) which provides one participant of the 
+translation. The other [Context]({{< relref "context.md" >}}), known as the 
 *target* context, is specified within the definition of the adaptor. 
 
 ## Adaptation Directionality
