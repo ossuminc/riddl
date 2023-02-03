@@ -11,7 +11,7 @@ hierarchy.
 
 These are the vital definitions:
 * [Adaptors]({{< relref "adaptor.md" >}}),
-* [Applications]{{< relref "application.md" >}}),
+* [Applications]({{< relref "application.md" >}}),
 * [Contexts]({{< relref "context.md" >}}),
 * [Domains]({{< relref "domain.md" >}}),
 * [Functions]({{< relref "function.md" >}}),
