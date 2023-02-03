@@ -145,12 +145,12 @@ in the `ids` field and an optional string value in `name`
 #### Prefixes
 The prefixes allowed have a similar meaning to the suffixes:
 
-| Suffix        | Meaning                                                   |
+| Prefix        | Meaning                                                   |
 |---------------|-----------------------------------------------------------|
-| required      | Required: exactly 1 instance of the preceding type        |
-| optional      | Optional: either 0 or 1 instances of the preceding type   |
-| many          | Zero or more instances of the preceding type              |
-| many required | One or more instances of the preceding type               |
+| required      | Required: exactly 1 instance of the following type        |
+| optional      | Optional: either 0 or 1 instances of the following type   |
+| many          | Zero or more instances of the following type              |
+| many required | One or more instances of the following type               |
 
 ## Occurs In
 All [Vital Definitions]({{< relref vital.md >}}) 
