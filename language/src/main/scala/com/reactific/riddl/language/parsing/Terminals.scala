@@ -245,6 +245,7 @@ trait Terminals {
     final val and = "and"
     final val are = "are"
     final val as = "as"
+    final val at = "at"
     final val by = "by"
     final val for_ = "for"
     final val from = "from"

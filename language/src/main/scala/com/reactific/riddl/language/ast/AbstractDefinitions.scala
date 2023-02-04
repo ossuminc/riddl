@@ -8,6 +8,7 @@ package com.reactific.riddl.language.ast
 
 import com.reactific.riddl.language.parsing.Terminals
 
+import java.net.URL
 import java.nio.file.Path
 import scala.reflect.ClassTag
 import scala.reflect.classTag
@@ -131,7 +132,17 @@ trait AbstractDefinitions extends Terminals {
       val src = scala.io.Source.fromFile(file.toFile)
       src.getLines().toSeq.map(LiteralString(loc, _))
     }
-    def format: String = ""
+    def format: String = file.toAbsolutePath.toString
+  }
+
+  case class URLDescription(
+    loc: At,
+    url: URL)
+      extends Description {
+    lazy val lines: Seq[LiteralString] = Seq.empty[LiteralString]
+
+    /** Format the node to a string */
+    override def format: String = url.toExternalForm
   }
 
   trait BrieflyDescribedValue extends RiddlValue {

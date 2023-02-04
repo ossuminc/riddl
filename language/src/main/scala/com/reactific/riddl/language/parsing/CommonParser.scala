@@ -72,14 +72,21 @@ trait CommonParser extends Terminals with NoWhiteSpaceParsers {
     }
   }
 
+  def urlDescription[u: P]: P[URLDescription] = {
+    P (location ~ httpUrl ).map { case (loc, url) =>
+      URLDescription(loc, url)
+    }
+  }
+
   def briefly[u: P]: P[Option[LiteralString]] = {
     P(StringIn(Keywords.brief, Keywords.briefly) ~ literalString).?
   }
 
   def description[u: P]: P[Option[Description]] = P(
     StringIn(Keywords.described, Keywords.explained) ~/
-      ((as ~ blockDescription) | (Readability.in ~ fileDescription))
-  ).?
+      ((as ~ blockDescription) | (Readability.in ~ fileDescription) |
+        (Readability.at ~ urlDescription))
+    ).?
 
   def wholeNumber[u: P]: P[Long] = { CharIn("0-9").rep(1).!.map(_.toLong) }
 
