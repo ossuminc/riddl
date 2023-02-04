@@ -7,7 +7,7 @@ Not all definitions are equal. The RIDDL language considers some definitions
 to be more important than others, and we call these "vital definitions". You 
 can recognize a vital definition because they all have  
 [Examples]({{< relref "example.md" >}}) somewhere in their definitional
-hierarchy.
+hierarchy. Vital definitions are also the only ones permitted to reference an [Author]({{< relref "author.md" >}}).
 
 These are the vital definitions:
 * [Adaptors]({{< relref "adaptor.md" >}}),
