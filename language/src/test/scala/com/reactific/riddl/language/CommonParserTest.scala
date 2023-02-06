@@ -20,6 +20,23 @@ class CommonParserTest extends ParsingTest {
       val column = loc.col
       column mustBe 1
     }
+    "descriptions can be URLs" in {
+      val input = """domain foo is { ??? } described at
+                    |https://www.wordnik.com/words/phi""".stripMargin
+      parseDomainDefinition(input, identity) match {
+        case Left(errors) => fail(errors.format)
+        case Right((domain, _)) =>
+          val expected = Domain(
+            (1, 1),
+            Identifier((1, 8), "foo"),
+            description = Some(URLDescription(
+              (2, 1),
+              new java.net.URL("https://www.wordnik.com/words/phi")
+            ))
+          )
+          domain.toString mustBe expected.toString
+      }
+    }
     "literal strings can handle any chars except \"" in {
       val input = """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`
                     | regular chars: abcdefghijklmnopqrstuvwxyz 0123456789
