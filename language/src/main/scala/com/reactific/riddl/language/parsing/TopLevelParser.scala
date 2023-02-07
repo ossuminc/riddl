@@ -12,6 +12,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 import java.io.File
+import java.net.URL
 import java.nio.file.Path
 
 /** Top level parsing rules */
@@ -22,12 +23,6 @@ class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
     P(Start ~ domain.rep(0) ~ End).map(RootContainer(_, inputSeen))
   }
 }
-
-case class FileParser(topFile: File)
-    extends TopLevelParser(RiddlParserInput(topFile))
-
-case class StringParser(content: String)
-    extends TopLevelParser(RiddlParserInput(content))
 
 object TopLevelParser {
 
@@ -40,23 +35,24 @@ object TopLevelParser {
 
   def parse(file: File): Either[Messages, RootContainer] = {
     val fpi = FileParserInput(file)
-    val tlp = new TopLevelParser(fpi)
-    tlp.expect(tlp.fileRoot(_)).map(_._1)
+    parse(fpi)
   }
 
   def parse(path: Path): Either[Messages, RootContainer] = {
     val fpi = new FileParserInput(path)
-    val tlp = new TopLevelParser(fpi)
-    tlp.expect(tlp.fileRoot(_)).map(_._1)
+    parse(fpi)
+  }
+
+  def parse(url: URL): Either[Messages, RootContainer] = {
+    val upi =  URLParserInput(url)
+    parse(upi)
   }
 
   def parse(
     input: String,
     origin: String = "string"
   ): Either[Messages, RootContainer] = {
-    val sp = StringParserInput(input, origin)
-    val tlp = new TopLevelParser(sp)
-    tlp.expect(tlp.fileRoot(_)).map(_._1)
+    val spi = StringParserInput(input, origin)
+    parse(spi)
   }
-
 }
