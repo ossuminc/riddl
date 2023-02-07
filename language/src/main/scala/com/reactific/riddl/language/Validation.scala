@@ -361,17 +361,7 @@ object Validation {
 
     def validateInclude[T <: Definition](i: Include[T]): ValidationState = {
       check(i.nonEmpty, "Include has no included content", Error, i.loc)
-        .check(i.path.nonEmpty, "Include has no path provided", Error, i.loc)
-        .step { s =>
-          if (i.path.nonEmpty) {
-            s.check(
-              i.path.get.toString.nonEmpty,
-              "Include path provided is empty",
-              Error,
-              i.loc
-            )
-          } else { s }
-        }
+        .check(i.source.nonEmpty, "Include has no source provided", Error, i.loc)
     }
 
     def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {

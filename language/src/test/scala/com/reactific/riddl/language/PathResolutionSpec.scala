@@ -14,8 +14,6 @@ import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.nio.file.Path
-
 class PathResolutionSpec extends AnyWordSpec with Matchers {
 
   def parseAndValidate(
@@ -264,7 +262,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                 ))
               )
             ),
-            Some(Path.of("foo"))
+            Some("foo")
           ))
         )),
         Seq.empty[RiddlParserInput]

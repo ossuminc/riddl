@@ -10,6 +10,7 @@ import com.reactific.riddl.language.Folding
 import com.reactific.riddl.language.TranslatingState
 import com.reactific.riddl.language.TranslationResult
 
+import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,6 +33,11 @@ case class PrettifyState(
 
   def outPathFor(path: Path): Path = {
     val suffixPath = if (path.isAbsolute) relativeToInPath(path) else path
+    outPath.resolve(suffixPath)
+  }
+
+  def outPathFor(url: URL): Path = {
+    val suffixPath = Path.of(url.toURI)
     outPath.resolve(suffixPath)
   }
 

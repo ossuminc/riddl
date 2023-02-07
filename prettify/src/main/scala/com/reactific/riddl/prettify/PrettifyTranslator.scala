@@ -15,6 +15,7 @@ import com.reactific.riddl.language.Translator
 import com.reactific.riddl.language.Validation
 import com.reactific.riddl.utils.Logger
 
+import java.nio.file.Path
 import scala.annotation.unused
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
@@ -330,13 +331,19 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
-    def openInclude[T <: Definition](
+    private def openInclude[T <: Definition](
       state: PrettifyState,
       @unused include: Include[T]
     ): PrettifyState = {
       if (!state.options.singleFile) {
-        include.path match {
-          case Some(path) =>
+        include.source match {
+          case Some(path: String) if path.startsWith("http") =>
+            val url = new java.net.URL(path)
+            state.current.add(s"include \"$path\"")
+            val outPath = state.outPathFor(url)
+            state.pushFile(RiddlFileEmitter(outPath))
+          case Some(str: String) =>
+            val path = Path.of(str)
             val relativePath = state.relativeToInPath(path)
             state.current.add(s"include \"$relativePath\"")
             val outPath = state.outPathFor(path)
@@ -348,7 +355,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       } else { state }
     }
 
-    def closeInclude[T <: Definition](
+    private def closeInclude[T <: Definition](
       state: PrettifyState,
       @unused include: Include[T]
     ): PrettifyState = {

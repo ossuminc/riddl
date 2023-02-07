@@ -56,11 +56,11 @@ object CommandPlugin {
     }
   }
 
-  def runCommandWithArgs(
+  private def runCommandWithArgs(
     name: String,
     args: Array[String],
     log: Logger,
-    commonOptions: CommonOptions = CommonOptions(),
+    commonOptions: CommonOptions,
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, Unit] = {
     val result = loadCommandNamed(name, commonOptions, pluginsDir)
@@ -217,7 +217,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     extends PluginInterface {
   final override def pluginVersion: String = RiddlBuildInfo.version
 
-  val optionsClass: Class[?] = classTag[OPT].runtimeClass
+  private val optionsClass: Class[?] = classTag[OPT].runtimeClass
 
   /** Provide an scopt OParser for the commands options type, OPT
     * @return

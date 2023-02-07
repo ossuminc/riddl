@@ -7,6 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import java.io.File
+import java.net.URL
 import scala.collection.mutable
 
 /** The stack of input sources while parsing */
@@ -18,6 +19,8 @@ case class InputStack(
   def push(input: RiddlParserInput): Unit = inputs.push(input)
 
   def push(file: File): Unit = { inputs.push(FileParserInput(file)) }
+
+  def push(url: URL): Unit = { inputs.push(URLParserInput(url)) }
 
   def pop: RiddlParserInput = { inputs.pop() }
 
