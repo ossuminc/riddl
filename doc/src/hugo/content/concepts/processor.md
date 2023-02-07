@@ -4,9 +4,9 @@ draft: false
 ---
 
 A processor is a component of any [vital definition]({{< relref "vital" >}}). 
-A processors performs some transformation, typically of the data flowing in from
-its [inlet(s)]({{< relref inlet >}}), and produces some, potentially different, 
-data to its [outlet(s)]({{< relref outlet >}}).
+A processors performs some transformation of the data flowing in from
+its [inlet]({{< relref inlet >}}), and produces different
+data to its [outlet]({{< relref outlet >}}).
 
 
 ## Inlets
