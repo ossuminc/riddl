@@ -9,8 +9,6 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
-import java.nio.file.Path
-
 // scalastyle:off number.of.methods
 
 /** Abstract Syntax Tree This object defines the model for processing RIDDL and
@@ -103,13 +101,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The location of the include statement in the source
     * @param contents
     *   The Vital Definitions read from the file
-    * @param path
-    *   The [[java.nio.file.Path]] to the file included.
+    * @param source
+    *   A string providing the source (path or URL) of the included source
     */
   case class Include[T <: Definition](
     loc: At = At(RiddlParserInput.empty),
     contents: Seq[T] = Seq.empty[T],
-    path: Option[Path] = None)
+    source: Option[String] = None)
       extends Definition with VitalDefinitionDefinition with RootDefinition {
 
     def id: Identifier = Identifier.empty
@@ -121,7 +119,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def isRootContainer: Boolean = true
     def format: String = ""
     final val kind: String = "Include"
-
   }
 
   /** Added to definitions that support includes */

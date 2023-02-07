@@ -18,7 +18,10 @@ import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
-trait ParsingTestBase extends AnyWordSpec with Matchers
+trait ParsingTestBase extends AnyWordSpec with Matchers {
+  case class StringParser(content: String)
+    extends TopLevelParser(RiddlParserInput(content))
+}
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     extends TopLevelParser(input) with Matchers {

@@ -8,7 +8,6 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.parsing.StringParser
 import org.scalatest.Assertion
 
 import scala.collection.immutable.ListMap

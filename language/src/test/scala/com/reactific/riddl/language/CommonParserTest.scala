@@ -8,7 +8,6 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.parsing.StringParser
 
 /** Unit Tests For CommonParser */
 class CommonParserTest extends ParsingTest {

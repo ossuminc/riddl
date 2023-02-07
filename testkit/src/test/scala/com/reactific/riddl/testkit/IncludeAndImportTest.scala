@@ -20,10 +20,49 @@ class IncludeAndImportTest extends ParsingTest {
         ),
         identity
       ) match {
-        case Right(_) => fail("Should have gotten 'does not exist' error")
+        case Right(_) =>
+          fail("Should have gotten 'does not exist' error")
         case Left(errors) =>
           errors.size must be(1)
           errors.exists(_.format.contains("does not exist,"))
+      }
+    }
+    "handle bad URL" in {
+      val badURL = new java.net.URL("https://incredible.lightness.of.being:8900000/@@@")
+      parseDomainDefinition(
+        RiddlParserInput(badURL),
+        identity
+      ) match {
+        case Right(_) =>
+          fail("Should have gotten 'port out of range' error")
+        case Left(errors) =>
+          errors.size must be(1)
+          errors.exists(_.format.contains("port out of range: 8900000"))
+      }
+    }
+    "handle non existent URL" in {
+      val emptyURL = new java.net.URL("https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl")
+      parseDomainDefinition(
+        RiddlParserInput(emptyURL),
+        identity
+      ) match {
+        case Right(_) =>
+          fail("Should have gotten 'port out of range' error")
+        case Left(errors) =>
+          errors.size must be(1)
+          errors.exists(_.format.contains("port out of range: 8900000"))
+      }
+    }
+    "handle existing URL" in {
+      val fullURL = new java.net.URL("https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain.riddl")
+      parseDomainDefinition(
+        RiddlParserInput(fullURL),
+        identity
+      ) match {
+        case Right(_) =>
+          succeed
+        case Left(errors) =>
+          fail(errors.format)
       }
     }
     "handle inclusions into domain" in {
