@@ -4,7 +4,7 @@ draft: false
 ---
 
 An Outlet is a component of a 
-[Processor]({{< relref "processor" >}}) that specifies a named input through
+[Processor]({{< relref "processor" >}}) that specifies a named output through
 which data of a particular type streams out of the processor.
 
 

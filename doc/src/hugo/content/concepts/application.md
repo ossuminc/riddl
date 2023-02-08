@@ -33,7 +33,7 @@ to define the structure of a user interface.
 ## Handlers
 Applications have message 
 [handlers]({{< relref handler.md >}}) like many other RIDDL definitions. 
-However, application handler's only receive their messages from 
+However, application handlers only receive their messages from 
 [actors]({{< relref actor.md >}}), unlike other handlers. Typically, the 
 handling of messages in handlers will ultimately send further messages to 
 other components, like a [context]({{< relref context.md >}}) or
