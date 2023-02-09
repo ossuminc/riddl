@@ -1213,6 +1213,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     }
   }
 
+  /** A reference to a repository definition
+    *
+    * @param loc
+    *   The location of the state reference
+    * @param pathId
+    *   The path identifier of the referenced projection definition
+    */
+  case class RepositoryRef(loc: At, pathId: PathIdentifier)
+      extends MessageTakingRef[Projection] {
+    override def format: String = s"${Keywords.repository} ${pathId.format}"
+  }
+
   /** Projections get their name from Euclidean Geometry but are probably more
     * analogous to a relational database view. The concept is very simple in
     * RIDDL: projections gather data from entities and other sources, transform
@@ -1233,8 +1245,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
    *    Options that can be used by the translators
    * @param types
    *    The type definitions necessary to construct the query results
-   * @param aggregation
-    *   An optional aggregation to represent the projection (deprecated)
     * @param handlers
     *   Specifies how to handle
     * @param terms
