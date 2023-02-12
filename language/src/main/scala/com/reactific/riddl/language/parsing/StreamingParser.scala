@@ -16,8 +16,9 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
 
   def pipe[u: P]: P[Pipe] = {
     location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
-      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~ close ~
-      briefly ~ description
+      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~
+      Readability.from ~ outletRef ~ Readability.to ~ inletRef ~
+      close ~ briefly ~ description
   }.map { tpl => (Pipe.apply _).tupled(tpl) }
 
   def toEntity[u: P]: P[EntityRef] = { P(Readability.to ~/ entityRef) }

@@ -371,10 +371,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with DomainDefinition {
     override def contents: Seq[TypeDefinition] = {
       typ match {
-        case Aggregation(_, fields)      => fields
-        case Enumeration(_, enumerators) => enumerators
-        case AggregateUseCaseTypeExpression(_, _, fields)   => fields
-        case _                           => Seq.empty[TypeDefinition]
+        case Aggregation(_, fields)                       => fields
+        case Enumeration(_, enumerators)                  => enumerators
+        case AggregateUseCaseTypeExpression(_, _, fields) => fields
+        case _ => Seq.empty[TypeDefinition]
       }
     }
     final val kind: String = "Type"
@@ -1230,21 +1230,21 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * RIDDL: projections gather data from entities and other sources, transform
     * that data into a specific record type, and support querying that data
     * arbitrarily.
-   *
-   * @see
+    *
+    * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
     * @see
     *   https://en.wikipedia.org/wiki/Projection_(mathematics)
-   * @param loc
+    * @param loc
     *   Location in the source of the Projection
     * @param id
     *   The unique identifier for this Projection
-   * @param authors
-   *    The authors of this definition
-   * @param options
-   *    Options that can be used by the translators
-   * @param types
-   *    The type definitions necessary to construct the query results
+    * @param authors
+    *   The authors of this definition
+    * @param options
+    *   Options that can be used by the translators
+    * @param types
+    *   The type definitions necessary to construct the query results
     * @param handlers
     *   Specifies how to handle
     * @param terms
@@ -1268,17 +1268,18 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[ProjectionOption, ProjectionDefinition]
-      with ContextDefinition with WithTypes {
+      with ContextDefinition
+      with WithTypes {
     override lazy val contents: Seq[ProjectionDefinition] = {
-      super.contents ++
-        handlers ++ invariants ++ terms
+      super.contents ++ handlers ++ invariants ++ terms
     }
     final val kind: String = "Projection"
 
     override def maturity: Int = {
       var score = super.maturity
       val records: Seq[Type] = types.filter(_.typ.isContainer)
-      if (records.nonEmpty) score += Math.max(types.count(_.nonEmpty), maxMaturity)
+      if (records.nonEmpty) score +=
+        Math.max(types.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
@@ -1385,6 +1386,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The name of the pipe
     * @param transmitType
     *   The type of data transmitted.
+    * @param from
+    *   A reference to an outlet that provides the pipe input
+    * @param to
+    *   A reference to an inlet that provides the pipe output
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1394,6 +1399,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: At,
     id: Identifier,
     transmitType: Option[TypeRef] = None,
+    from: Option[OutletRef] = None,
+    to: Option[InletRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends LeafDefinition with PlantDefinition with ContextDefinition {
@@ -1485,6 +1492,11 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     def keyword: String = Keywords.split
   }
 
+  case class Router(loc: At) extends ProcessorShape {
+    def format: String = ""
+    def keyword: String = Keywords.router
+  }
+
   case class Multi(loc: At) extends ProcessorShape {
     def format: String = ""
     def keyword: String = Keywords.multi
@@ -1565,6 +1577,10 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
           isEmpty || (outlets.size >= 2 && inlets.size == 1),
           "Invalid Split Streamlet"
         )
+      case Router(_) => require(
+          isEmpty || (outlets.size >= 2 && inlets.size >= 2),
+          "Invalid Router Streamlet"
+        )
       case Multi(_) => require(
           isEmpty || (outlets.size >= 2 && inlets.size >= 2),
           "Invalid Multi Streamlet"
@@ -1632,65 +1648,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = s"${Keywords.outlet} ${pathId.format}"
   }
 
-  /** Sealed base trait for both kinds of Joint definitions
-    */
-  sealed trait Joint
-      extends LeafDefinition with AlwaysEmpty with PlantDefinition
-
-  /** A joint that connects an [[Processor]]'s [[Inlet]] to a [[Pipe]].
-    *
-    * @param loc
-    *   The location of the InletJoint
-    * @param id
-    *   The name of the inlet joint
-    * @param inletRef
-    *   A reference to the inlet being connected
-    * @param pipe
-    *   A reference to the pipe being connected
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the joint
-    */
-  case class InletJoint(
-    loc: At,
-    id: Identifier,
-    inletRef: InletRef,
-    pipe: PipeRef,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Joint {
-    def format: String = ""
-    final val kind: String = "Inlet Joint"
-  }
-
-  /** A joint that connects a [[Processor]]'s [[Outlet]] to a [[Pipe]].
-    *
-    * @param loc
-    *   The location of the OutletJoint
-    * @param id
-    *   The name of the OutletJoint
-    * @param outletRef
-    *   A reference to the outlet being connected
-    * @param pipe
-    *   A reference to the pipe being connected
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the OutletJoint
-    */
-  case class OutletJoint(
-    loc: At,
-    id: Identifier,
-    outletRef: OutletRef,
-    pipe: PipeRef,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends Joint {
-    def format: String = ""
-    final val kind: String = "Outlet Joint"
-  }
-
   /** The definition of a plant which brings pipes, processors and joints
     * together into a closed system of data processing.
     *
@@ -1702,10 +1659,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The set of pipes involved in the plant
     * @param processors
     *   The set of processors involved in the plant.
-    * @param inJoints
-    *   The InletJoints connecting pipes and processors
-    * @param outJoints
-    *   The OutletJoints connecting pipes and processors
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1716,8 +1669,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     pipes: Seq[Pipe] = Seq.empty[Pipe],
     processors: Seq[Processor] = Seq.empty[Processor],
-    inJoints: Seq[InletJoint] = Seq.empty[InletJoint],
-    outJoints: Seq[OutletJoint] = Seq.empty[OutletJoint],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[PlantDefinition]] = Seq
       .empty[Include[PlantDefinition]],
@@ -1728,7 +1679,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends VitalDefinition[PlantOption, PlantDefinition]
       with DomainDefinition {
     override lazy val contents: Seq[PlantDefinition] = super.contents ++
-      pipes ++ processors ++ inJoints ++ outJoints ++ terms
+      pipes ++ processors ++ terms
     final val kind: String = "Plant"
 
     override def maturity: Int = {
@@ -1736,8 +1687,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       if (pipes.nonEmpty) score += Math.max(pipes.count(_.nonEmpty), 10)
       if (processors.nonEmpty) score +=
         Math.max(processors.count(_.nonEmpty), 20)
-      if (inJoints.nonEmpty) score += Math.max(inJoints.count(_.nonEmpty), 10)
-      if (outJoints.nonEmpty) score += Math.max(outJoints.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
   }
@@ -1752,8 +1701,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The command to be done.
     * @param undoAction
     *   The command that undoes [[doAction]]
-    * @param examples
-    *   An list of examples for the intended behavior
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description

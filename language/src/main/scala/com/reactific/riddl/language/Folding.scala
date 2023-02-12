@@ -408,7 +408,7 @@ object Folding {
       pid: PathIdentifier,
       parents: Seq[Definition]
     ): Option[DEF] = {
-      def isSameDef(d: Definition): Boolean = {
+      def isSameKind(d: Definition): Boolean = {
         val clazz = classTag[DEF].runtimeClass
         d.getClass == clazz
       }
@@ -416,12 +416,12 @@ object Folding {
       if (pid.value.isEmpty) { None }
       else if (pid.value.exists(_.isEmpty)) {
         resolveRelativePath(pid, parents).headOption match {
-          case Some(head) if isSameDef(head) => Some(head.asInstanceOf[DEF])
+          case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
           case _                             => None
         }
       } else {
         resolvePathFromHierarchy(pid, parents).headOption match {
-          case Some(head) if isSameDef(head) => Some(head.asInstanceOf[DEF])
+          case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
           case _ =>
             val symTabCompatibleNameSearch = pid.value.reverse
             val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
@@ -430,7 +430,7 @@ object Folding {
                 // We couldn't find the path in the hierarchy or the symbol table
                 // so let's signal this by returning an empty sequence
                 None
-              case (d, _) :: Nil if isSameDef(d) => // exact match
+              case (d, _) :: Nil if isSameKind(d) => // exact match
                 // Give caller an option to do something or morph the results
                 Some(d.asInstanceOf[DEF])
               case _ => None

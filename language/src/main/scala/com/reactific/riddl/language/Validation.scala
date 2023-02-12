@@ -139,19 +139,17 @@ object Validation {
       val parents = definitionParents.toSeq
       definition match {
         case leaf: LeafDefinition => leaf match {
-            case f: Field        => validateField(f, parents)
-            case e: Example      => validateExample(e, parents)
-            case e: Enumerator   => validateEnumerator(e, parents)
-            case i: Invariant    => validateInvariant(i, parents)
-            case t: Term         => validateTerm(t, parents)
-            case p: Pipe         => validatePipe(p, parents)
-            case i: Inlet        => validateInlet(i, parents)
-            case o: Outlet       => validateOutlet(o, parents)
-            case ij: InletJoint  => validateInletJoint(ij, parents)
-            case oj: OutletJoint => validateOutletJoint(oj, parents)
-            case a: Author       => validateAuthorInfo(a, parents)
-            case sa: Actor       => validateActor(sa, parents)
-            case sc: StoryCase   => validateStoryCase(sc, parents)
+            case f: Field      => validateField(f, parents)
+            case e: Example    => validateExample(e, parents)
+            case e: Enumerator => validateEnumerator(e, parents)
+            case i: Invariant  => validateInvariant(i, parents)
+            case t: Term       => validateTerm(t, parents)
+            case p: Pipe       => validatePipe(p, parents)
+            case i: Inlet      => validateInlet(i, parents)
+            case o: Outlet     => validateOutlet(o, parents)
+            case a: Author     => validateAuthorInfo(a, parents)
+            case sa: Actor     => validateActor(sa, parents)
+            case sc: StoryCase => validateStoryCase(sc, parents)
           }
         case ad: ApplicationDefinition => ad match {
             case typ: Type   => validateType(typ, parents)
@@ -198,20 +196,17 @@ object Validation {
             case a: Actor       => validateActor(a, parents)
             case i: Include[DomainDefinition] @unchecked => validateInclude(i)
           }
-        case hd: HandlerDefinition => hd match {
-            case oc: OnClause => validateOnClause(oc, parents)
-          }
+        case hd: HandlerDefinition =>
+          hd match { case oc: OnClause => validateOnClause(oc, parents) }
         case ad: AdaptorDefinition => ad match {
             case h: Handler => validateHandler(h, parents)
             case t: Term    => validateTerm(t, parents)
             case i: Include[AdaptorDefinition] @unchecked => validateInclude(i)
           }
         case pd: PlantDefinition => pd match {
-            case t: Term         => validateTerm(t, parents)
-            case ij: InletJoint  => validateInletJoint(ij, parents)
-            case oj: OutletJoint => validateOutletJoint(oj, parents)
-            case p: Processor    => validateProcessor(p, parents)
-            case p: Pipe         => validatePipe(p, parents)
+            case t: Term      => validateTerm(t, parents)
+            case p: Processor => validateProcessor(p, parents)
+            case p: Pipe      => validatePipe(p, parents)
             case i: Include[PlantDefinition] @unchecked => validateInclude(i)
           }
         case ss: SagaStep     => validateSagaStep(ss, parents)
@@ -259,6 +254,20 @@ object Validation {
       checkDefinition(parents, p)
         .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
           st.checkPathRef[Type](typeRef.pathId, p, parents)()()
+
+        }.checkOption(p.from, "from outlet", p) { (st, outlet) =>
+          st.checkPathRef[Outlet](outlet.pathId, p, parents)()()
+        }.checkOption(p.to, "to inlet", p) { (st, inlet) =>
+          val st2 = st.checkPathRef[Inlet](inlet.pathId, p, parents)()()
+          if (p.transmitType.nonEmpty) {
+            st2.resolvePathIdentifier[Inlet](inlet.pathId, parents)
+              .map { inlet =>
+                if (!areSameType(p.transmitType.get, inlet.type_, parents)) {
+                  this.addError(inlet.loc, "Type mismatch")
+                }
+              }
+          }
+          st2
         }.checkDescription(p)
     }
 
@@ -274,26 +283,6 @@ object Validation {
         .checkOption(o.entity, "entity reference", o) { (st, er) =>
           st.checkRef[Entity](er, o, parents)
         }.checkDescription(o)
-    }
-
-    def validateInletJoint(
-      ij: InletJoint,
-      parents: Seq[Definition]
-    ): ValidationState = {
-      checkDefinition(parents, ij)
-        .checkPathRef[Pipe](ij.pipe.pathId, ij, parents)()()
-        .checkPathRef[Inlet](ij.inletRef.pathId, ij, parents)()()
-        .checkDescription(ij)
-    }
-
-    def validateOutletJoint(
-      oj: OutletJoint,
-      parents: Seq[Definition]
-    ): ValidationState = {
-      checkDefinition(parents, oj)
-        .checkPathRef[Pipe](oj.pipe.pathId, oj, parents)()()
-        .checkPathRef[Outlet](oj.outletRef.pathId, oj, parents)()()
-        .checkDescription(oj)
     }
 
     def validateAuthorInfo(
@@ -359,12 +348,21 @@ object Validation {
       }).checkDescription(oc)
     }
 
-    private def validateInclude[T <: Definition](i: Include[T]): ValidationState = {
-      check(i.nonEmpty, "Include has no included content", Error, i.loc)
-        .check(i.source.nonEmpty, "Include has no source provided", Error, i.loc)
+    private def validateInclude[T <: Definition](
+      i: Include[T]
+    ): ValidationState = {
+      check(i.nonEmpty, "Include has no included content", Error, i.loc).check(
+        i.source.nonEmpty,
+        "Include has no source provided",
+        Error,
+        i.loc
+      )
     }
 
-    private def validateEntity(e: Entity, parents: Seq[Definition]): ValidationState = {
+    private def validateEntity(
+      e: Entity,
+      parents: Seq[Definition]
+    ): ValidationState = {
       this.entities = this.entities :+ e
       checkContainer(parents, e).checkOptions[EntityOption](e.options, e.loc)
         .addIf(e.states.isEmpty && !e.isEmpty) {
@@ -393,16 +391,23 @@ object Validation {
       p: Projection,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents, p)
-        .checkDescription(p)
-        .check(p.types.exists{ typ =>
+      checkContainer(parents, p).checkDescription(p).check(
+        p.types.exists { typ =>
           typ.typ match {
-            case auc: AggregateUseCaseTypeExpression => auc.usecase == RecordCase
+            case auc: AggregateUseCaseTypeExpression => auc.usecase ==
+                RecordCase
             case _ => false
           }
-        },s"${p.identify} lacks a required ${RecordCase.format} definition.",Error, p.loc)
-        .check(p.handlers.length == 1,
-        s"${p.identify} must have exactly one Handler but has ${p.handlers.length}", Error, p.loc)
+        },
+        s"${p.identify} lacks a required ${RecordCase.format} definition.",
+        Error,
+        p.loc
+      ).check(
+        p.handlers.length == 1,
+        s"${p.identify} must have exactly one Handler but has ${p.handlers.length}",
+        Error,
+        p.loc
+      )
     }
 
     private def validateRepository(
@@ -731,9 +736,9 @@ object Validation {
     }
 
     def checkAggregateUseCase(
-                                mt: AggregateUseCaseTypeExpression,
-                                typeDef: Definition,
-                                parents: Seq[Definition]
+      mt: AggregateUseCaseTypeExpression,
+      typeDef: Definition,
+      parents: Seq[Definition]
     ): ValidationState = {
       checkSequence(mt.fields) { case (state, field) =>
         state.checkIdentifierLength(field).check(
@@ -763,7 +768,8 @@ object Validation {
       typ match {
         case AliasedTypeExpression(_, id: PathIdentifier) =>
           checkPathRef[Type](id, defn, parents)()()
-        case mt: AggregateUseCaseTypeExpression => checkAggregateUseCase(mt, defn, parents)
+        case mt: AggregateUseCaseTypeExpression =>
+          checkAggregateUseCase(mt, defn, parents)
         case agg: Aggregation            => checkAggregation(agg)
         case alt: Alternation            => checkAlternation(alt, defn, parents)
         case mapping: Mapping            => checkMapping(mapping, defn, parents)
@@ -1362,7 +1368,7 @@ object Validation {
           case Some(t: Type)     => Some(t.typ)
           case Some(f: Field)    => Some(f.typeEx)
           case Some(s: State)    => Some(s.aggregation)
-          case Some(Pipe(_, _, tt, _, _)) =>
+          case Some(Pipe(_, _, tt, _, _, _, _)) =>
             val te = tt.map(x => AliasedTypeExpression(x.loc, x.pathId))
             Some(te.getOrElse(Abstract(pid.loc)))
           case Some(Inlet(_, _, typ, _, _, _)) =>
@@ -1537,11 +1543,20 @@ object Validation {
               s"${proc.identify} should have >1 Outlets and 1 Inlet but has $outs and $ins"
             )
           } else { this }
+        case AST.Router(loc) =>
+          if (ins < 2 || outs < 2) {
+            this.addError(
+              loc,
+              s"${proc.identify} should have >1 Outlets and >1 Inlets but has" +
+                s" $outs Outlets and $ins Inlets"
+            )
+          } else { this }
         case AST.Multi(loc) =>
           if (ins < 2 || outs < 2) {
             this.addError(
               loc,
-              s"${proc.identify} should have >1 Outlets and >1 Inlets but has $outs and $ins"
+              s"${proc.identify} should have >1 Outlets and >1 Inlets but has" +
+                s" $outs Outlets and $ins Inlets"
             )
           } else { this }
         case AST.Void(loc) =>
@@ -1552,6 +1567,18 @@ object Validation {
             )
           } else { this }
       }
+    }
+
+    private def areSameType(
+      tr1: TypeRef,
+      tr2: TypeRef,
+      parents: Seq[Definition]
+    ): Boolean = {
+      val pid1 = tr1.pathId
+      val pid2 = tr2.pathId
+      val typeDef1 = resolvePathIdentifier[Type](pid1, parents)
+      val typeDef2 = resolvePathIdentifier[Type](pid2, parents)
+      typeDef1.nonEmpty && typeDef2.nonEmpty && (typeDef1.get == typeDef2.get)
     }
   }
 }

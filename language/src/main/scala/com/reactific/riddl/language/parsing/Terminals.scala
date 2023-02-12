@@ -182,6 +182,7 @@ trait Terminals {
     final val returns = "returns"
     final val reverted = "reverted"
     final val role = "role"
+    final val router = "router"
     final val saga = "saga"
     final val scenario = "scenario"
     final val scope = "scope"

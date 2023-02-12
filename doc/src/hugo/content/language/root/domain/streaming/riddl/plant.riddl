@@ -1,33 +1,32 @@
 domain AnyDomain is {
-plant SensorMaintenance is {
+  plant SensorMaintenance is {
 
-  source GetWeatherForecast is {
-    outlet Weather is type Forecast
-  } described by "This is a source for Forecast data"
+    source GetWeatherForecast is {
+      outlet Weather is type Forecast
+    } described by "This is a source for Forecast data"
 
-  flow GetCurrentTemperature is {
-    inlet Weather is type Forecast
-    outlet CurrentTemp is type Temperature
-  } explained as "This is a Flow for the current temperature, when it changes"
+    flow GetCurrentTemperature is {
+      inlet Weather is type Forecast
+      outlet CurrentTemp is type Temperature
+    } explained as "This is a Flow for the current temperature, when it changes"
 
-  sink AttenuateSensor is {
-    inlet CurrentTemp is type Temperature
-  } explained as "This is a Sink for making sensor adjustments based on temperature"
+    pipe WeatherForecast is {
+      transmit type Forecast
+      from outlet GetWeatherForecast.Weather
+      to inlet GetCurrentTemperature.inlet
+    } explained as "Carries changes in the current weather forecast"
 
-  pipe WeatherForecast is {
-    transmit type Forecast
-  } explained as "Carries changes in the current weather forecast"
+    pipe TemperatureChanges is {
+      transmit type temperature
+      from outlet GetCurrentTemperature.CurrentTemp
+      to inlet AttenuateSensor.CurrentTemp from
+    } explained as "Carries changes in the current temperature"
 
-  pipe TemperatureChanges is {
-    transmit type temperature
-  } explained as "Carries changes in the current temperature"
+    repository AttenuateSensor is {
+      inlet CurrentTemp is record Temperature
+    } explained as "This is a Sink for making sensor adjustments based on temperature"
 
-  joint forecast is outlet GetWeatherForecast.Weather to pipe WeatherForecast
-  joint temp_in is inlet GetCurrentTemperature.weather from pipe WeatherForecast
-  joint temp_out is outlet GetCurrentTemperature.CurrentTemp to pipe TemperatureChanges
-  joint temp_changes is inlet AttenuateSensor.CurrentTemp from pipe TemperatureChanges
-
-} explained as
-"A complete plant definition for temperature based sensor attenuation."
+  } explained as
+  "A complete plant definition for temperature based sensor attenuation."
 
 } explained as "Plants can only be specified in a domain definition"
