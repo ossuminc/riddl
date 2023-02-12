@@ -1,0 +1,21 @@
+Missing: streaming.riddl(3:3): Type 'Temperature' should have a description:
+   type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
+   ^
+Missing: streaming.riddl(3:31): Type 'Forecast' should have a description:
+   type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
+                               ^
+Missing: streaming.riddl(13:3): Vital definitions should have an author reference:
+   sink AttenuateSensor is {
+   ^
+Missing: streaming.riddl(1:1): Vital definitions should have an author reference:
+ domain AnyDomain is {
+ ^
+Missing: streaming.riddl(2:1): Vital definitions should have an author reference:
+ context SensorMaintenance is {
+ ^
+Missing: streaming.riddl(4:3): Vital definitions should have an author reference:
+   source GetWeatherForecast is {
+   ^
+Missing: streaming.riddl(8:3): Vital definitions should have an author reference:
+   flow GetCurrentTemperature is {
+   ^

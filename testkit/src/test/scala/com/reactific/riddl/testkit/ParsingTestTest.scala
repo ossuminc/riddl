@@ -22,44 +22,11 @@ class ParsingTestTest extends ParsingTest {
       }
     }
 
-    "parse[InletJoint]" in {
-      val rpi = RiddlParserInput("""joint foo is inlet bar from pipe baz""")
-      parseDefinition[InletJoint](rpi) match {
-        case Right((ij, _)) =>
-          val expected = InletJoint(
-            (1, 1, rpi),
-            Identifier((1, 7, rpi), "foo"),
-            InletRef((1, 14, rpi), PathIdentifier((1, 20, rpi), Seq("bar"))),
-            PipeRef((1, 29, rpi), PathIdentifier((1, 34, rpi), Seq("baz")))
-          )
-          ij mustBe expected
-        case Left(errors) => fail(errors.format)
-      }
-    }
-
-    "parse[OutletJoint]" in {
-      val rpi = RiddlParserInput("""joint foo is outlet bar to pipe baz""")
-      parseDefinition[OutletJoint](rpi) match {
-        case Right((oj, _)) =>
-          val expected = OutletJoint(
-            (1, 1, rpi),
-            Identifier((1, 7, rpi), "foo"),
-            OutletRef((1, 14, rpi), PathIdentifier((1, 21, rpi), Seq("bar"))),
-            PipeRef((1, 28, rpi), PathIdentifier((1, 33, rpi), Seq("baz")))
-          )
-          oj mustBe expected
-        case Left(errors) => fail(errors.format)
-      }
-    }
-
     "parse[Example]" in {
       val rpi = RiddlParserInput("""example foo is { ??? }""")
       parseDefinition[Example](rpi) match {
         case Right((oj, _)) =>
-          val expected = Example(
-            (1, 1, rpi),
-            Identifier((1, 9, rpi), "foo")
-          )
+          val expected = Example((1, 1, rpi), Identifier((1, 9, rpi), "foo"))
           oj mustBe expected
         case Left(errors) => fail(errors.format)
       }
@@ -75,7 +42,7 @@ class ParsingTestTest extends ParsingTest {
       }
     }
 
-      "parseTopLevelDomain[Domain]" in {
+    "parseTopLevelDomain[Domain]" in {
       parseTopLevelDomain[Domain](
         "domain foo is { ??? }",
         _.contents.head
@@ -99,16 +66,6 @@ class ParsingTestTest extends ParsingTest {
       parseTopLevelDomain[Story](
         "domain foo is { story X is { ??? } }",
         _.contents.head.stories.head
-      ) match {
-        case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
-      }
-    }
-
-    "parseTopLevelDomain[Plant]" in {
-      parseTopLevelDomain[Plant](
-        "domain foo is { plant X is { ??? } }",
-        _.contents.head.plants.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe ("X")

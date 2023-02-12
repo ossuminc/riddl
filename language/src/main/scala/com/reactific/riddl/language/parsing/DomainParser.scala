@@ -53,7 +53,7 @@ trait DomainParser
 
   def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (author | typeDef | context | plant | actor | story | domain | term |
+      (author | typeDef | context | actor | story | domain | term |
         application | importDef | domainInclude).rep(0)
     )
   }
@@ -79,7 +79,6 @@ trait DomainParser
       val subdomains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
-      val plants = mapTo[Plant](groups.get(classOf[Plant]))
       val stories = mapTo[Story](groups.get(classOf[Story]))
       val apps = mapTo[Application](groups.get(classOf[Application]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
@@ -95,7 +94,6 @@ trait DomainParser
         authors,
         types,
         contexts,
-        plants,
         actors,
         stories,
         apps,

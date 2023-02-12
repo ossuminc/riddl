@@ -79,9 +79,6 @@ Style: everything.riddl(62:7): Type 'somethingDate' should start with a capital 
 Missing: everything.riddl(41:5): Type 'agg' should have a description:
      type agg is {
      ^
-Missing: everything.riddl(12:24): entity reference in Outlet 'Commands' should not be empty:
-     source Source is { outlet Commands is DoAThing } described by "Data Source"
-                        ^
 Missing: everything.riddl(85:7): Type 'ItHappened' should have a description:
        type ItHappened is event { when: String }
        ^
@@ -121,8 +118,8 @@ Missing: everything.riddl(28:5): Type 'dat' should have a description:
 Missing: everything.riddl(5:3): Type 'SomeType' should have a description:
    type SomeType is String
    ^
-Missing: everything.riddl(11:3): Plant 'APlant' should have a description:
-   plant APlant is {
+Missing: everything.riddl(11:3): Context 'APlant' should have a description:
+   context APlant is {
    ^
 Missing: everything.riddl(62:7): Type 'somethingDate' should have a description:
        type somethingDate is Date
@@ -139,9 +136,6 @@ Style: everything.riddl(31:5): Type 'url' should start with a capital letter:
 Missing: everything.riddl(27:5): Type 'ident' should have a description:
      type ident is UUID             // Define ident as an Id
      ^
-Missing: everything.riddl(13:20): entity reference in Inlet 'Commands' should not be empty:
-     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-                    ^
 Style: everything.riddl(27:5): Type 'ident' should start with a capital letter:
      type ident is UUID             // Define ident as an Id
      ^
@@ -212,7 +206,7 @@ Warning: everything.riddl(68:7): Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
        ^
 Missing: everything.riddl(11:3): Vital definitions should have an author reference:
-   plant APlant is {
+   context APlant is {
    ^
 Missing: everything.riddl(12:5): Vital definitions should have an author reference:
      source Source is { outlet Commands is DoAThing } described by "Data Source"

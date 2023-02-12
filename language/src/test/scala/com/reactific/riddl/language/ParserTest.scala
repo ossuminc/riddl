@@ -86,12 +86,10 @@ class ParserTest extends ParsingTest {
       val input = RiddlParserInput(
         """domain one is { ??? }
           |domain two is {
-          |  plant one is { ??? }
-          |  plant two is {
+          |  context one is {
           |    pipe a is { ??? }
           |    multi b is { ??? }
           |  }
-          |  context one is { ??? }
           |  context two is {
           |    function foo is { ??? }
           |    term expialidocious is described by { ??? }

@@ -122,12 +122,12 @@ More on that can be found [here](https://medium.com/nick-tune-tech-strategy-blog
 
 ## Jacobsen Use Cases 2.0
 
-TODO: write tis
+TODO: write this section
 
 ## Agile User Stories
 Agile user stories are used to capture the requirements of various components
 within a system. In RIDDL, user stories are part of a 
-[story]({{< relref ../concepts.story.md >}}) definition 
+[story]({{< relref "../concepts/story.md" >}}) definition 
 
 As a [persona], I [want to], [so that]...
 

@@ -43,10 +43,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       case _: Handler       => Keywords.handler
       case _: Inlet         => Keywords.inlet
       case _: Invariant     => Keywords.invariant
-      case _: Joint         => Keywords.joint
       case _: Outlet        => Keywords.outlet
       case _: Pipe          => Keywords.pipe
-      case _: Plant         => Keywords.plant
       case p: Processor     => p.shape.keyword
       case _: RootContainer => "root"
       case _: Saga          => Keywords.saga
@@ -103,13 +101,13 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       container match {
         case story: Story => openStory(state, story)
         // FIXME: Implement StoryCase, Interactions, etc.
-        case domain: Domain     => openDomain(state, domain)
-        case adaptor: Adaptor   => openAdaptor(state, adaptor)
-        case typ: Type          => state.current.emitType(typ); state
-        case function: Function => openFunction(state, function)
-        case st: State          => openState(state, st)
-        case oc: OnMessageClause       => openOnClause(state, oc)
-        case step: SagaStep     => openSagaStep(state, step)
+        case domain: Domain      => openDomain(state, domain)
+        case adaptor: Adaptor    => openAdaptor(state, adaptor)
+        case typ: Type           => state.current.emitType(typ); state
+        case function: Function  => openFunction(state, function)
+        case st: State           => openState(state, st)
+        case oc: OnMessageClause => openOnClause(state, oc)
+        case step: SagaStep      => openSagaStep(state, step)
         case include: Include[Definition] @unchecked =>
           openInclude(state, include)
         case processor: Processor => openProcessor(state, processor)
@@ -136,7 +134,6 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
             _.openDef(invariant).closeDef(invariant, withBrace = false)
           )
         case pipe: Pipe   => doPipe(state, pipe)
-        case joint: Joint => doJoint(state, joint)
         case actor: Actor => doActor(state, actor)
         case _: Field     => state // was handled by Type case in openContainer
         case _            =>
@@ -155,10 +152,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): PrettifyState = {
       container match {
-        case _: Type      => state // openContainer did all of it
-        case story: Story => closeStory(state, story)
-        case st: State    => state.withCurrent(_.closeDef(st))
-        case _: OnMessageClause  => closeOnClause(state)
+        case _: Type            => state // openContainer did all of it
+        case story: Story       => closeStory(state, story)
+        case st: State          => state.withCurrent(_.closeDef(st))
+        case _: OnMessageClause => closeOnClause(state)
         case include: Include[Definition] @unchecked =>
           closeInclude(state, include)
         case _: RootContainer =>
@@ -266,21 +263,6 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }.withCurrent(_.closeDef(pipe))
     }
 
-    def doJoint(state: PrettifyState, joint: Joint): PrettifyState = {
-      val s = state
-        .withCurrent(_.addIndent(s"${keyword(joint)} ${joint.id.format} is "))
-      joint match {
-        case InletJoint(_, _, inletRef, pipeRef, _, _) => s.withCurrent(
-            _.addIndent(s"inlet ${inletRef.pathId.format} from")
-              .add(s" pipe ${pipeRef.pathId.format}\n")
-          )
-        case OutletJoint(_, _, outletRef, pipeRef, _, _) => s.withCurrent(
-            _.addIndent(s"outlet ${outletRef.pathId.format} to")
-              .add(s" pipe ${pipeRef.pathId.format}\n")
-          )
-      }
-    }
-
     def doInlet(state: PrettifyState, inlet: Inlet): PrettifyState = {
       state.withCurrent(
         _.addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
@@ -325,8 +307,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       step: SagaStep
     ): PrettifyState = {
       state.withCurrent(
-        _.openDef(step).emitExamples(step.doAction)
-          .add("reverted by")
+        _.openDef(step).emitExamples(step.doAction).add("reverted by")
           .emitExamples(step.undoAction)
       )
     }

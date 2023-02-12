@@ -20,6 +20,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import scala.annotation.tailrec
 import scala.annotation.unused
 import scala.collection.mutable
+import scala.math.abs
 
 /** Validates an AST */
 object Validation {
@@ -190,7 +191,6 @@ object Validation {
             case c: Context     => validateContext(c, parents)
             case d: Domain      => validateDomain(d, parents)
             case s: Story       => validateStory(s, parents)
-            case p: Plant       => validatePlant(p, parents)
             case t: Term        => validateTerm(t, parents)
             case a: Author      => validateAuthorInfo(a, parents)
             case a: Actor       => validateActor(a, parents)
@@ -257,13 +257,16 @@ object Validation {
 
         }.checkOption(p.from, "from outlet", p) { (st, outlet) =>
           st.checkPathRef[Outlet](outlet.pathId, p, parents)()()
-        }.checkOption(p.to, "to inlet", p) { (st, inlet) =>
-          val st2 = st.checkPathRef[Inlet](inlet.pathId, p, parents)()()
+        }.checkOption(p.to, "to inlet", p) { (st, inletRef) =>
+          val st2 = st.checkPathRef[Inlet](inletRef.pathId, p, parents)()()
           if (p.transmitType.nonEmpty) {
-            st2.resolvePathIdentifier[Inlet](inlet.pathId, parents)
+            st2.resolvePathIdentifier[Inlet](inletRef.pathId, parents)
               .map { inlet =>
                 if (!areSameType(p.transmitType.get, inlet.type_, parents)) {
-                  this.addError(inlet.loc, "Type mismatch")
+                  this.addError(inletRef.loc,
+                    s"Type mismatch: expected ${inlet.type_.identify} " +
+                      s" but ${p.identify} is defined to transmit ${p
+                        .transmitType.get.identify}")
                 }
               }
           }
@@ -273,16 +276,12 @@ object Validation {
 
     def validateInlet(i: Inlet, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents, i).checkRef[Type](i.type_, i, parents)
-        .checkOption(i.entity, "entity reference", i) { (st, er) =>
-          st.checkRef[Entity](er, i, parents)
-        }.checkDescription(i)
+        .checkDescription(i)
     }
 
     def validateOutlet(o: Outlet, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents, o).checkRef[Type](o.type_, o, parents)
-        .checkOption(o.entity, "entity reference", o) { (st, er) =>
-          st.checkRef[Entity](er, o, parents)
-        }.checkDescription(o)
+        .checkDescription(o)
     }
 
     def validateAuthorInfo(
@@ -442,7 +441,7 @@ object Validation {
       p: Processor,
       parents: Seq[Definition]
     ): ValidationState = {
-      checkContainer(parents, p).checkProcessorKind(p).checkDescription(p)
+      checkContainer(parents, p).checkProcessorShape(p).checkDescription(p)
     }
 
     def validateDomain(d: Domain, parents: Seq[Definition]): ValidationState = {
@@ -572,11 +571,6 @@ object Validation {
         )
       }.checkDescription(sc)
     }
-
-    def validatePlant(
-      p: Plant,
-      parents: Seq[Definition]
-    ): ValidationState = { checkContainer(parents, p).checkDescription(p) }
 
     def checkUnused(): ValidationState = {
       if (commonOptions.showUnusedWarnings) {
@@ -1371,9 +1365,9 @@ object Validation {
           case Some(Pipe(_, _, tt, _, _, _, _)) =>
             val te = tt.map(x => AliasedTypeExpression(x.loc, x.pathId))
             Some(te.getOrElse(Abstract(pid.loc)))
-          case Some(Inlet(_, _, typ, _, _, _)) =>
+          case Some(Inlet(_, _, typ, _, _)) =>
             Some(AliasedTypeExpression(typ.loc, typ.pathId))
-          case Some(Outlet(_, _, typ, _, _, _)) =>
+          case Some(Outlet(_, _, typ, _, _)) =>
             Some(AliasedTypeExpression(typ.loc, typ.pathId))
           case Some(_) => Option.empty[TypeExpression]
         }
@@ -1504,69 +1498,60 @@ object Validation {
       }(defaultMultiMatchValidationFunction)
     }
 
-    private def checkProcessorKind(proc: Processor): ValidationState = {
+    private def checkProcessorShape(proc: Processor): ValidationState = {
       val ins = proc.inlets.size
       val outs = proc.outlets.size
-      proc.shape match {
-        case AST.Source(loc) =>
-          if (ins != 0 || outs != 1) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have 1 Outlet and no Inlets but has $outs and $ins "
-            )
-          } else { this }
-        case AST.Flow(loc) =>
-          if (ins != 1 || outs != 1) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have 1 Outlet and 1 Inlet but has $outs and $ins"
-            )
-          } else { this }
-        case AST.Sink(loc) =>
-          if (ins != 1 || outs != 0) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have no Outlets and 1 Inlet but has $outs and $ins"
-            )
-          } else { this }
-        case AST.Merge(loc) =>
-          if (ins < 2 || outs != 1) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have 1 Outlet and >1 Inlets but has $outs and $ins"
-            )
-          } else { this }
-        case AST.Split(loc) =>
-          if (ins != 1 || outs < 2) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have >1 Outlets and 1 Inlet but has $outs and $ins"
-            )
-          } else { this }
-        case AST.Router(loc) =>
-          if (ins < 2 || outs < 2) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have >1 Outlets and >1 Inlets but has" +
-                s" $outs Outlets and $ins Inlets"
-            )
-          } else { this }
-        case AST.Multi(loc) =>
-          if (ins < 2 || outs < 2) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have >1 Outlets and >1 Inlets but has" +
-                s" $outs Outlets and $ins Inlets"
-            )
-          } else { this }
-        case AST.Void(loc) =>
-          if (ins > 0 || outs > 0) {
-            this.addError(
-              loc,
-              s"${proc.identify} should have no Outlets or Inlets but has $outs and $ins"
-            )
-          } else { this }
+      def generateError(
+        proc: Processor,
+        req_ins: Int,
+        req_outs: Int
+      ): ValidationState = {
+        def sOutlet(n: Int): String = {
+          if (n == 1) s"1 outlet"
+          else if (n < 0) { s"at least ${abs(n)} outlets" }
+          else s"$n outlets"
+        }
+        def sInlet(n: Int): String = {
+          if (n == 1) s"1 inlet"
+          else if (n < 0) { s"at least ${abs(n)} outlets" }
+          else s"$n inlets"
+        }
+        this.addError(
+          proc.loc,
+          s"${proc.identify} should have " + sOutlet(req_outs) + " and " +
+            sInlet(req_ins) + s" but it has " + sOutlet(outs) + " and " +
+            sInlet(ins)
+        )
       }
+
+      if (!proc.isEmpty) {
+        proc.shape match {
+          case _: AST.Source =>
+            if (ins != 0 || outs != 1) { generateError(proc, 0, 1) }
+            else { this }
+          case _: AST.Flow =>
+            if (ins != 1 || outs != 1) { generateError(proc, 1, 1) }
+            else { this }
+          case _: AST.Sink =>
+            if (ins != 1 || outs != 0) { generateError(proc, 1, 0) }
+            else { this }
+          case _: AST.Merge =>
+            if (ins < 2 || outs != 1) { generateError(proc, -2, 1) }
+            else { this }
+          case _: AST.Split =>
+            if (ins != 1 || outs < 2) { generateError(proc, 1, -2) }
+            else { this }
+          case _: AST.Router =>
+            if (ins < 2 || outs < 2) { generateError(proc, -2, -2) }
+            else { this }
+          case _: AST.Multi =>
+            if (ins < 2 || outs < 2) { generateError(proc, -2, -2) }
+            else { this }
+          case _: AST.Void =>
+            if (ins > 0 || outs > 0) { generateError(proc, 0, 0) }
+            else { this }
+        }
+      } else { this }
     }
 
     private def areSameType(

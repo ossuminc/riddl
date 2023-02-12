@@ -1339,6 +1339,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
     repositories: Seq[Repository] = Seq.empty[Repository],
+    pipes: Seq[Pipe] = Seq.empty[Pipe],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
@@ -1346,8 +1347,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with DomainDefinition
       with WithTypes {
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
-      types ++ entities ++ adaptors ++ sagas ++ functions ++ terms ++
-      projections ++ handlers
+      types ++ entities ++ adaptors ++ sagas ++ processors ++ functions ++
+      terms ++ handlers ++ projections ++ repositories ++ pipes
+
     final val kind: String = "Context"
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -1403,7 +1405,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     to: Option[InletRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with PlantDefinition with ContextDefinition {
+      extends LeafDefinition with ContextDefinition {
     override def isEmpty: Boolean = transmitType.isEmpty
     def format: String = ""
     final val kind: String = "Pipe"
@@ -1430,7 +1432,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends Streamlet with AlwaysEmpty {
@@ -1455,7 +1456,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    entity: Option[EntityRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
       extends Streamlet with AlwaysEmpty {
@@ -1520,8 +1520,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   The list of inlets that provide the data the processor needs
     * @param outlets
     *   The list of outlets that the processor produces
-    * @param examples
-    *   A set of examples that define the data processing
+    * @param handlers
+    *   Definitions of how the processor handles each event type
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1542,7 +1542,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None)
       extends VitalDefinition[ProcessorOption, ProcessorDefinition]
-      with PlantDefinition
       with ContextDefinition {
     override def contents: Seq[ProcessorDefinition] = super.contents ++
       inlets ++ outlets ++ handlers ++ terms
@@ -1646,49 +1645,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class OutletRef(loc: At, pathId: PathIdentifier)
       extends StreamletRef[Outlet] {
     override def format: String = s"${Keywords.outlet} ${pathId.format}"
-  }
-
-  /** The definition of a plant which brings pipes, processors and joints
-    * together into a closed system of data processing.
-    *
-    * @param loc
-    *   The location of the plant definition
-    * @param id
-    *   The name of the plant
-    * @param pipes
-    *   The set of pipes involved in the plant
-    * @param processors
-    *   The set of processors involved in the plant.
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the plant
-    */
-  case class Plant(
-    loc: At,
-    id: Identifier,
-    pipes: Seq[Pipe] = Seq.empty[Pipe],
-    processors: Seq[Processor] = Seq.empty[Processor],
-    terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include[PlantDefinition]] = Seq
-      .empty[Include[PlantDefinition]],
-    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    options: Seq[PlantOption] = Seq.empty[PlantOption],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends VitalDefinition[PlantOption, PlantDefinition]
-      with DomainDefinition {
-    override lazy val contents: Seq[PlantDefinition] = super.contents ++
-      pipes ++ processors ++ terms
-    final val kind: String = "Plant"
-
-    override def maturity: Int = {
-      var score = super.maturity
-      if (pipes.nonEmpty) score += Math.max(pipes.count(_.nonEmpty), 10)
-      if (processors.nonEmpty) score +=
-        Math.max(processors.count(_.nonEmpty), 20)
-      Math.max(score, maxMaturity)
-    }
   }
 
   /** The definition of one step in a saga with its undo step and example.
@@ -2186,7 +2142,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     authorDefs: Seq[Author] = Seq.empty[Author],
     types: Seq[Type] = Seq.empty[Type],
     contexts: Seq[Context] = Seq.empty[Context],
-    plants: Seq[Plant] = Seq.empty[Plant],
     actors: Seq[Actor] = Seq.empty[Actor],
     stories: Seq[Story] = Seq.empty[Story],
     applications: Seq[Application] = Seq.empty[Application],
@@ -2202,8 +2157,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with DomainDefinition {
 
     override lazy val contents: Seq[DomainDefinition] = {
-      super.contents ++ domains ++ types ++ contexts ++ plants ++ actors ++
-        stories ++ applications ++ terms ++ authorDefs
+      super.contents ++ domains ++ types ++ contexts ++ actors ++ stories ++
+        applications ++ terms ++ authorDefs
     }
     final val kind: String = "Domain"
 
@@ -2211,7 +2166,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       var score = super.maturity
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 15)
       if (contexts.nonEmpty) score += Math.max(contexts.count(_.nonEmpty), 15)
-      if (plants.nonEmpty) score += Math.max(plants.count(_.nonEmpty), 10)
       if (stories.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 15)
       if (applications.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 5)
       if (domains.nonEmpty) score += Math.max(domains.count(_.nonEmpty), 10)

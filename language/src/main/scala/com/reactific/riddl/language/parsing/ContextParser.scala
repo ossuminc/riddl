@@ -64,6 +64,7 @@ trait ContextParser
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
+      val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
       val includes = mapTo[Include[ContextDefinition]](groups.get(
         classOf[Include[ContextDefinition]]
       ))
@@ -87,6 +88,7 @@ trait ContextParser
         handlers,
         projections,
         repos,
+        pipes,
         authorRefs,
         briefly,
         desc

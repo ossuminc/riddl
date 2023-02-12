@@ -20,7 +20,7 @@ class RepositoryTest extends ValidatingTest {
           |        on command AddThis {
           |          then { "add 'what' to the list" }
           |        }
-          |        on query Only {
+          |        on query GetOne {
           |          then { reply result fubar.Reply(that = "some value") } }
           |        }
           |     }

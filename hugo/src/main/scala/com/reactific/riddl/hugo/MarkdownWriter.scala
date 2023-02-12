@@ -615,8 +615,8 @@ case class MarkdownWriter(
     toc("Subdomains", mkTocSeq(domain.domains))
     emitTypesToc(domain)
     toc("Contexts", mkTocSeq(domain.contexts))
+    toc("Applications", mkTocSeq(domain.applications))
     toc("Stories", mkTocSeq(domain.stories))
-    toc("Plants", mkTocSeq(domain.plants))
     emitUsage(domain)
     emitTerms(domain.terms)
     emitIndex("Domain", domain, parents)
@@ -709,6 +709,9 @@ case class MarkdownWriter(
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Entities", mkTocSeq(context.entities))
     toc("Sagas", mkTocSeq(context.sagas))
+    // TODO: generate a diagram for the processors and pipes
+    toc("Processors", mkTocSeq(context.processors))
+    list("Pipes", mkTocSeq(context.pipes))
     emitUsage(context)
     emitTerms(context.terms)
     emitIndex("Context", context, parents)
@@ -845,19 +848,6 @@ case class MarkdownWriter(
     emitDescription(story.description)
   }
 
-  def emitPlant(plant: Plant, parents: Seq[String]): this.type = {
-    containerHead(plant, "Plant")
-    emitDefDoc(plant, parents)
-    // TODO: generate a diagram for the plant
-    toc("Processors", mkTocSeq(plant.processors))
-    list("Pipes", mkTocSeq(plant.pipes))
-    list("Input Joints", mkTocSeq(plant.inJoints))
-    list("Output Joints", mkTocSeq(plant.outJoints))
-    emitUsage(plant)
-    emitTerms(plant.terms)
-    emitIndex("Plant", plant, parents)
-  }
-
   def emitPipe(pipe: Pipe, parents: Seq[String]): this.type = {
     leafHead(pipe, weight = 20)
     emitDefDoc(pipe, parents)
@@ -874,22 +864,15 @@ case class MarkdownWriter(
     h2("Inlets")
     proc.inlets.foreach { inlet =>
       val typeRef = makePathIdRef(inlet.type_.pathId, parents)
-      val entityRef =
-        if (inlet.entity.nonEmpty) {
-          " sunken to " + makePathIdRef(inlet.entity.get.pathId, parents)
-        } else ""
       h3(inlet.id.format)
-      p(typeRef + entityRef)
+      p(typeRef)
       emitShortDefDoc(inlet)
     }
     h2("Outlets")
     proc.outlets.foreach { outlet =>
       val typeRef = makePathIdRef(outlet.type_.pathId, parents)
-      val entityRef = if (outlet.entity.nonEmpty) {
-        " sourced from " + makePathIdRef(outlet.entity.get.pathId, parents)
-      }
       h3(outlet.id.format)
-      p(typeRef + entityRef)
+      p(typeRef)
       emitShortDefDoc(outlet)
     }
     emitUsage(proc)

@@ -154,8 +154,7 @@ case class HugoTranslatorState(
     val result = definition match {
       case _: OnMessageClause | _: Example | _: Inlet | _: Outlet => pars + "#" +
           definition.id.value.toLowerCase
-      case _: Field | _: Enumerator | _: Invariant | _: InletJoint |
-          _: OutletJoint | _: Author | _: SagaStep |
+      case _: Field | _: Enumerator | _: Invariant | _: Author | _: SagaStep |
           _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
       case _ =>
         if (parents.isEmpty) pars + definition.id.value.toLowerCase

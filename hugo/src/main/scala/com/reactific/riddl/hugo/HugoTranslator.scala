@@ -214,7 +214,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case e: Enumerator => state.addToGlossary(e, stack)
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _: Outlet | _: InletJoint | _: OutletJoint |
+      case _: Example | _: Inlet | _: Outlet |
           _: Author | _: OnMessageClause | _: OnOtherClause |
           _: Include[Definition] @unchecked | _: RootContainer =>
         // All these cases do not generate a file as their content contributes
@@ -257,7 +257,6 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case _: Repository  => // TODO: mkd.emitRepository(r, parents)
           case s: Saga        => mkd.emitSaga(s, parents)
           case s: Story       => mkd.emitStory(s, stack)
-          case p: Plant       => mkd.emitPlant(p, parents)
           case unknown =>
             require(
               requirement = false,

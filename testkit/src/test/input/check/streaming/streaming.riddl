@@ -1,33 +1,30 @@
 domain AnyDomain is {
-plant SensorMaintenance is {
-
+context SensorMaintenance is {
+  type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
   source GetWeatherForecast is {
-    outlet WeatherSink is Forecast
+    outlet WeatherSink is type Forecast
   } described by "This is a source for Forecast data"
 
   flow GetCurrentTemperature is {
-    inlet WeatherSource is Forecast
-    outlet OutTemp is Temperature
+    inlet WeatherSource is type Forecast
+    outlet OutTemp is type Temperature
   } explained as "This is a Flow for the current temperature, when it changes"
 
   sink AttenuateSensor is {
-    inlet InTemp is Temperature
+    inlet InTemp is type Temperature
   } explained as "This is a Sink for making sensor adjustments based on temperature"
 
   pipe WeatherForecast is {
-    transmit Forecast
+    transmit type Forecast
+    from outlet GetWeatherForecast.WeatherSink
+    to inlet GetCurrentTemperature.WeatherSource
   } explained as "Carries changes in the current weather forecast"
 
   pipe TemperatureChanges is {
-    transmit Temperature
+    transmit type Temperature
+    from outlet GetCurrentTemperature.OutTemp
+    to inlet AttenuateSensor.InTemp
   } explained as "Carries changes in the current temperature"
-
-  joint forecast is outlet GetWeatherForecast.WeatherSink to pipe WeatherForecast
-  joint temp_in is inlet GetCurrentTemperature.WeatherSource from pipe WeatherForecast
-  joint temp_out is outlet GetCurrentTemperature.OutTemp to pipe TemperatureChanges
-  joint temp_changes is inlet AttenuateSensor.InTemp from pipe TemperatureChanges
-
 } explained as
 "A complete plant definition for temperature based sensor attenuation."
-
 } explained as "Plants can only be specified in a domain definition"

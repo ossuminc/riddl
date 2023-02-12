@@ -77,11 +77,6 @@ class PrettifyTest extends RiddlFilesTestBase {
   }
 
   "PrettifyTranslator" should {
-    "check plant.riddl" in {
-      processAFile(
-        "doc/src/hugo/content/language/root/domain/streaming/riddl/plant.riddl"
-      )
-    }
     "check domains" in { processADirectory("testkit/src/test/input/domains") }
     "check enumerations" in {
       processADirectory("testkit/src/test/input/enumerations")

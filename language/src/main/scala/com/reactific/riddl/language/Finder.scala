@@ -88,7 +88,6 @@ case class Finder(root: Definition) {
               case f: Function =>
                 makeVitalStats(f, state.functionStats)
               case h: Handler => makeVitalStats(h, state.handlerStats)
-              case p: Plant   => makeVitalStats(p, state.plantStats)
               case p: Processor =>
                 makeVitalStats(p, state.processorStats)
               case p: Projection =>
