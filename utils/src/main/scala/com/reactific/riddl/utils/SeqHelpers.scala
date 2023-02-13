@@ -16,6 +16,16 @@ object SeqHelpers {
       if (index < 0) { Seq.empty[T] }
       else { seq.drop(index) }
     }
+    def allUnique: Boolean = {
+      val set = scala.collection.mutable.Set[T]()
+      seq.forall { x =>
+        if (set(x)) false
+        else {
+          set += x
+          true
+        }
+      }
+    }
   }
 
   implicit class StackHelpers[T](stack: mutable.Stack[T]) {

@@ -243,6 +243,14 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def hasTypes: Boolean = types.nonEmpty
   }
 
+  trait WithStreaming extends Definition {
+    def inlets: Seq[Inlet]
+    def outlets: Seq[Outlet]
+
+    def hasInlets: Boolean = inlets.nonEmpty
+    def hasOutlets: Boolean = outlets.nonEmpty
+  }
+
   /** The root of the containment hierarchy, corresponding roughly to a level
     * about a file.
     *
@@ -1357,7 +1365,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     description: Option[Description] = None)
       extends VitalDefinition[ContextOption, ContextDefinition]
       with DomainDefinition
-      with WithTypes {
+      with WithTypes with WithStreaming{
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
       types ++ entities ++ adaptors ++ sagas ++ processors ++ functions ++
       terms ++ handlers ++ projections ++ repositories ++ pipes

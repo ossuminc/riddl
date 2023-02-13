@@ -135,9 +135,7 @@ object Folding {
       add(Message(loc, msg, Warning))
     }
 
-    def addError(loc: At, msg: String): S = {
-      add(Message(loc, msg, Error))
-    }
+    def addError(loc: At, msg: String): S = { add(Message(loc, msg, Error)) }
 
     def addSevere(loc: At, msg: String): S = {
       add(Message(loc, msg, SevereError))
@@ -217,8 +215,8 @@ object Folding {
                 // if we're at a field composed of more fields, then those fields
                 // what we are looking for
                 fields
-              case Enumeration(_, enumerators) => enumerators
-              case AggregateUseCaseTypeExpression(_, _, fields)   =>
+              case Enumeration(_, enumerators)                  => enumerators
+              case AggregateUseCaseTypeExpression(_, _, fields) =>
                 // Message types have fields too, those fields are what we seek
                 fields
               case AliasedTypeExpression(_, pid) =>
@@ -230,10 +228,10 @@ object Folding {
                 Seq.empty[Definition]
             }
           case t: Type => t.typ match {
-              case Aggregation(_, fields)        => fields
-              case Enumeration(_, enumerators)   => enumerators
-              case AggregateUseCaseTypeExpression(_, _, fields)     => fields
-              case AliasedTypeExpression(_, pid) =>
+              case Aggregation(_, fields)                       => fields
+              case Enumeration(_, enumerators)                  => enumerators
+              case AggregateUseCaseTypeExpression(_, _, fields) => fields
+              case AliasedTypeExpression(_, pid)                =>
                 // if we're at a type definition that references another type then
                 // we need to push that type's path on the name stack
                 adjustStacksForPid(searchFor, pid, parentStack, nameStack)
@@ -390,17 +388,17 @@ object Folding {
         Seq(newParents.head)
       } else {
         // we found the starting point, adjust the PathIdentifier to drop the
-        // one we found, and
+        // one we found, and use resolveRelativePath to descend through names
         val newPid = PathIdentifier(pid.loc, pid.value.drop(1))
         resolveRelativePath(newPid, newParents)
       }
     }
 
-    def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
+    private def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
       defStack
     }
 
-    def doNothingMultiple(
+    private def doNothingMultiple(
       @unused list: List[(Definition, Seq[Definition])]
     ): Seq[Definition] = { Seq.empty[Definition] }
 
@@ -417,7 +415,7 @@ object Folding {
       else if (pid.value.exists(_.isEmpty)) {
         resolveRelativePath(pid, parents).headOption match {
           case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
-          case _                             => None
+          case _                              => None
         }
       } else {
         resolvePathFromHierarchy(pid, parents).headOption match {
