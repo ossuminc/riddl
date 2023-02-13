@@ -44,12 +44,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   /** Base trait of definitions that are part of a Handler Definition */
   sealed trait HandlerDefinition extends Definition
 
-  /** Base trait of any definition that occurs in the body of a plant
-    */
-  sealed trait PlantDefinition extends Definition
-
-  /** Base trait of definitions defined in a processor
-    */
+  /** Base trait of definitions defined in a processor */
   sealed trait ProcessorDefinition extends Definition
 
   /** Base trait of definitions defined in a repository */
@@ -68,15 +63,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with DomainDefinition
       with EntityDefinition
       with FunctionDefinition
-      with PlantDefinition
       with ProcessorDefinition
       with ProjectionDefinition
       with RepositoryDefinition
       with SagaDefinition
       with StoryDefinition
 
-  /** Base trait of definitions that can be used in a Story */
-  sealed trait MessageTakingRef[+T <: Definition] extends Reference[T]
 
   /** A term definition for the glossary */
   case class Term(
@@ -91,7 +83,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** Added to definitions that support a list of term definitions */
-  trait WithTerms {
+  private trait WithTerms {
     def terms: Seq[Term]
     def hasTerms: Boolean = terms.nonEmpty
   }
@@ -191,12 +183,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with WithIncludes[CT]
       with WithTerms {
 
+    import scala.language.implicitConversions
     /** Implicit conversion of boolean to Int for easier computation of
       * statistics below
-      * @param b
+      * @param b The boolean to convert to an Int
       * @return
       */
-    import scala.language.implicitConversions
     implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
 
     /** Compute the completeness of this definition. Vital definitions should
@@ -291,7 +283,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   object MessageRef {
-    lazy val empty = new MessageRef {
+    lazy val empty: MessageRef = new MessageRef {
       def messageKind: AggregateUseCase = OtherCase
       override def pathId: PathIdentifier = PathIdentifier.empty
       override def loc: At = At.empty
@@ -302,7 +294,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the reference
-    * @param id
+    * @param pathId
     *   The path identifier to the event type
     */
   case class CommandRef(loc: At, pathId: PathIdentifier) extends MessageRef {
@@ -313,7 +305,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the reference
-    * @param id
+    * @param pathId
     *   The path identifier to the event type
     */
   case class EventRef(loc: At, pathId: PathIdentifier) extends MessageRef {
@@ -324,7 +316,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the reference
-    * @param id
+    * @param pathId
     *   The path identifier to the query type
     */
   case class QueryRef(loc: At, pathId: PathIdentifier) extends MessageRef {
@@ -335,7 +327,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the reference
-    * @param id
+    * @param pathId
     *   The path identifier to the result type
     */
   case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
@@ -380,17 +372,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     final val kind: String = "Type"
     def format: String = ""
   }
-  type Command = Type
-  type Event = Type
-  type Query = Type
-  type Result = Type
-  type Record = Type
 
   /** A reference to a type definition
     *
     * @param loc
     *   The location in the source where the reference to the type is made
-    * @param id
+    * @param pathId
     *   The path identifier of the reference type
     */
   case class TypeRef(loc: At, pathId: PathIdentifier) extends Reference[Type] {
@@ -541,15 +528,36 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     override def format: String = s"publish ${msg.format} to ${pipe.format}"
   }
 
+  /** An action that subscribes to messages from a pipe
+   * @param loc
+   *   The location in the source at which the subscribe action occurs
+   * @param type_
+   *   The type of message to be received from the pipe
+   * @param pipe
+   *   The pipe from which the messages are received
+   * @param description
+   *   An optional description of the action
+   */
   case class SubscribeAction(
     loc: At,
-    msgs: MessageConstructor,
+    type_ : TypeRef,
     pipe: PipeRef,
     description: Option[Description] = None)
       extends Action {
-    def format: String = ""
+    def format: String = s"subscribe to ${pipe.format}"
   }
 
+  /** An action to call a function
+   *
+   * @param loc
+   * The location in the source at which the subscribe action occurs
+   * @param function
+   * The function to call
+   * @param arguments
+   * The arguments to provide to the function
+   * @param description
+   * An optional description of the action
+   */
   case class FunctionCallAction(
     loc: At,
     function: PathIdentifier,
@@ -600,27 +608,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends Action {
     override def format: String =
       s"become ${entity.format} to ${handler.format}"
-  }
-
-  /** An action that tells a message to an entity. This is very analogous to the
-    * tell operator in Akka.
-    *
-    * @param loc
-    *   The location of the tell action
-    * @param entity
-    *   The entity to which the message is directed
-    * @param msg
-    *   A constructed message value to send to the entity, probably a command
-    * @param description
-    *   An optional description for this action
-    */
-  case class TellAction(
-    loc: At,
-    msg: MessageConstructor,
-    entity: MessageTakingRef[Definition],
-    description: Option[Description] = None)
-      extends SagaStepAction {
-    override def format: String = s"tell ${msg.format} to ${entity.format}"
   }
 
   /** An action that asks a query to an entity. This is very analogous to the
@@ -776,7 +763,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the entity reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: At, pathId: PathIdentifier)
@@ -981,7 +968,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the handler reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced handler
     */
   case class HandlerRef(loc: At, pathId: PathIdentifier)
@@ -1025,7 +1012,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the state reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced state definition
     */
   case class StateRef(loc: At, pathId: PathIdentifier)
@@ -1117,6 +1104,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     * @param id
     *   Name of the adaptor
     * @param direction
+    *   An indication of whether this is an inbound or outbound adaptor.
     * @param context
     *   A reference to the bounded context from which messages are adapted
     * @param handlers
@@ -1288,7 +1276,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the state reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: At, pathId: PathIdentifier)
@@ -1339,6 +1327,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     handlers: Seq[Handler] = Seq.empty[Handler],
     projections: Seq[Projection] = Seq.empty[Projection],
     repositories: Seq[Repository] = Seq.empty[Repository],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     pipes: Seq[Pipe] = Seq.empty[Pipe],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -1371,7 +1361,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the reference
-    * @param id
+    * @param pathId
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: At, pathId: PathIdentifier)
@@ -1434,8 +1424,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     type_ : TypeRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet with AlwaysEmpty {
-    def format: String = ""
+      extends Streamlet with AlwaysEmpty with ContextDefinition with ProcessorDefinition with RepositoryDefinition
+        with EntityDefinition with AdaptorDefinition {
+    def format: String = s"${Keywords.inlet} ${id.format} is ${type_.format}"
     final val kind: String = "Inlet"
   }
 
@@ -1458,8 +1449,9 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     type_ : TypeRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet with AlwaysEmpty {
-    def format: String = ""
+      extends Streamlet with AlwaysEmpty with ContextDefinition with ProcessorDefinition with RepositoryDefinition
+        with EntityDefinition with AdaptorDefinition {
+    def format: String = s"${Keywords.outlet} ${id.format} is ${type_.format}"
     final val kind: String = "Outlet"
   }
 
@@ -1468,42 +1460,42 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   case class Source(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.source
     def keyword: String = Keywords.source
   }
 
   case class Sink(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.sink
     def keyword: String = Keywords.sink
   }
 
   case class Flow(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.flow
     def keyword: String = Keywords.flow
   }
 
   case class Merge(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.merge
     def keyword: String = Keywords.merge
   }
 
   case class Split(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.split
     def keyword: String = Keywords.split
   }
 
   case class Router(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.router
     def keyword: String = Keywords.router
   }
 
   case class Multi(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.multi
     def keyword: String = Keywords.multi
   }
 
   case class Void(loc: At) extends ProcessorShape {
-    def format: String = ""
+    def format: String = Keywords.void
     override def keyword: String = Keywords.void
   }
 
@@ -1596,7 +1588,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the state reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced projection definition
     */
   case class ProcessorRef(loc: At, pathId: PathIdentifier)
@@ -1608,7 +1600,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the pipe reference
-    * @param id
+    * @param pathId
     *   The path identifier for the referenced pipe.
     */
   case class PipeRef(loc: At, pathId: PathIdentifier)
@@ -1627,7 +1619,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the inlet reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced [[Inlet]]
     */
   case class InletRef(loc: At, pathId: PathIdentifier)
@@ -1639,7 +1631,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *
     * @param loc
     *   The location of the outlet reference
-    * @param id
+    * @param pathId
     *   The path identifier of the referenced [[Outlet]]
     */
   case class OutletRef(loc: At, pathId: PathIdentifier)
@@ -1763,7 +1755,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   /** A reference to an StoryActor using a path identifier
     * @param loc
     *   THe location of the StoryActor in the source code
-    * @param id
+    * @param pathId
     *   The path identifier that locates the references StoryActor
     */
   case class ActorRef(loc: At, pathId: PathIdentifier)
@@ -2027,7 +2019,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   /** A reference to an View using a path identifier
     * @param loc
     *   The location of the ViewRef in the source code
-    * @param id
+    * @param pathId
     *   The path identifier that refers to the View
     */
   case class OutputRef(loc: At, pathId: PathIdentifier)
@@ -2043,7 +2035,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     *   Name of the give
     * @param types
     *   type definitions needed for the Give
-    * @param given
+    * @param putIn
     *   a Type reference of the type given by the user
     * @param brief
     *   A brief description of the Give

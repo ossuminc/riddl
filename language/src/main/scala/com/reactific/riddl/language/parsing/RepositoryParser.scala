@@ -11,7 +11,7 @@ import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-trait RepositoryParser extends HandlerParser {
+trait RepositoryParser extends HandlerParser with StreamingParser {
 
   def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
     options[u, RepositoryOption](StringIn(Options.technology).!) {
@@ -26,7 +26,7 @@ trait RepositoryParser extends HandlerParser {
   }
 
   def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
-    P(typeDef | handler | term | repositoryInclude).rep(0)
+    P(typeDef | handler | term | repositoryInclude | inlet | outlet ).rep(0)
   }
 
   def repository[u: P]: P[Repository] = {

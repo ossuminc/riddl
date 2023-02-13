@@ -233,6 +233,9 @@ trait AbstractDefinitions extends Terminals {
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
+  /** Base trait of definitions that can be used in a Story */
+  sealed trait MessageTakingRef[+T <: Definition] extends Reference[T]
+
   /** Base class for all actions. Actions are used in the "then" and "but"
     * clauses of a Gherkin example such as in the body of a handler's `on`
     * clause or in the definition of a Function. The subclasses define different

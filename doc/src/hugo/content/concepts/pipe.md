@@ -4,18 +4,27 @@ draft: false
 ---
 
 Pipes are uni-directional conduits for reliably transmitting data of a
-particular type. Pipes always make connections between an
-[InletJoint]({{< relref "joint#inletjoint" >}}) (the source of data) and an 
-[OutletJoint]({{< relref "joint#outletjoint" >}}). These joints are always 
-attached to a [processor]({{< relref "processor.md" >}}), 
-even possibly the same processor (making a feedback loop). 
+particular [type]({{< relref "type" >}}).
 
 ## Data Transmission Type
 Pipes can transmit any data type that RIDDL can specify. There is only one
 data type that flows in a pipe.  The transmission type is often used with
-an [alternation]({{< relref "type#alternation" >}} ) of 
-[messages]({{< relref "message" >}}) such as the 
+an [alternation]({{< relref "type#alternation" >}} ) of
+[messages]({{< relref "message" >}}) such as the
 commands and queries that an [entity]({{< relref "entity" >}}) might receive.
+
+## Pipe End Connections
+Pipes have two ends, `from` and `to`, and each must be connected to a 
+[processor]({{< relref "processor">}}). Data elements of the transmission 
+type flow from `from` to `end`. Such end connections may be closed or 
+open. A closed end is specified in the definition of the pipe by 
+connecting it to an [inlet]({{< relref "inlet" >}}) (for `to` ends) or 
+[outlet]({{< relref "outlet" >}}) (for `from` ends).
+An open end is not specified in the pipe definition. Instead, it is 
+implied by use of the`publish` and `subscribe`
+[action]({{< relref "action" >}})s. This permits multiple publishers and 
+multiple subscribers. 
+
 
 ## Pipe Options
 Pipes may play a large role in the resiliency of a reactive system, so we 

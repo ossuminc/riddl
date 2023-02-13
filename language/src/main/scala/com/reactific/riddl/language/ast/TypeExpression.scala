@@ -10,6 +10,7 @@ package com.reactific.riddl.language.ast
 trait TypeExpression extends AbstractDefinitions {
 
 ///////////////////////////////////////////////////////////// TYPES
+  
   sealed trait TypeDefinition extends Definition
 
   /** Base trait of an expression that defines a type

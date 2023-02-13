@@ -100,7 +100,7 @@ object Validation {
     var types: Seq[Type] = Seq.empty[Type]
     var functions: Seq[Function] = Seq.empty[Function]
 
-    def associateUsage(user: Definition, use: Definition): Unit = {
+    private def associateUsage(user: Definition, use: Definition): Unit = {
       val used = uses.getOrElse(user, Seq.empty[Definition])
       val new_used = used :+ use
       uses.update(user, new_used)
@@ -133,7 +133,7 @@ object Validation {
       }
     }
 
-    def validateADefinition(
+    private def validateADefinition(
       definition: Definition,
       definitionParents: mutable.Stack[Definition]
     ): ValidationState = {
@@ -169,8 +169,18 @@ object Validation {
             case f: Function  => validateFunction(f, parents)
             case i: Invariant => validateInvariant(i, parents)
             case t: Term      => validateTerm(t, parents)
+            case i: Inlet     => validateInlet(i, parents)
+            case o: Outlet    => validateOutlet(o, parents)
             case i: Include[EntityDefinition] @unchecked => validateInclude(i)
           }
+        case rd: RepositoryDefinition => rd match {
+          case h: Handler   => validateHandler(h, parents)
+          case t: Type      => validateType(t, parents)
+          case i: Inlet     => validateInlet(i, parents)
+          case o: Outlet    => validateOutlet(o, parents)
+          case t: Term      => validateTerm(t, parents)
+          case i: Include[RepositoryDefinition] @unchecked => validateInclude(i)
+        }
         case cd: ContextDefinition => cd match {
             case t: Type       => validateType(t, parents)
             case h: Handler    => validateHandler(h, parents)
@@ -183,6 +193,8 @@ object Validation {
             case t: Term       => validateTerm(t, parents)
             case p: Pipe       => validatePipe(p, parents)
             case s: Saga       => validateSaga(s, parents)
+            case i: Inlet      => validateInlet(i, parents)
+            case o: Outlet     => validateOutlet(o, parents)
             case i: Include[ContextDefinition] @unchecked => validateInclude(i)
           }
         case dd: DomainDefinition => dd match {
@@ -200,32 +212,28 @@ object Validation {
           hd match { case oc: OnClause => validateOnClause(oc, parents) }
         case ad: AdaptorDefinition => ad match {
             case h: Handler => validateHandler(h, parents)
+            case i: Inlet => validateInlet(i, parents)
+            case o: Outlet => validateOutlet(o, parents)
             case t: Term    => validateTerm(t, parents)
             case i: Include[AdaptorDefinition] @unchecked => validateInclude(i)
-          }
-        case pd: PlantDefinition => pd match {
-            case t: Term      => validateTerm(t, parents)
-            case p: Processor => validateProcessor(p, parents)
-            case p: Pipe      => validatePipe(p, parents)
-            case i: Include[PlantDefinition] @unchecked => validateInclude(i)
           }
         case ss: SagaStep     => validateSagaStep(ss, parents)
         case _: RootContainer => this // ignore
       }
     }
 
-    def validateTerm(t: Term, parents: Seq[Definition]): ValidationState = {
+    private def validateTerm(t: Term, parents: Seq[Definition]): ValidationState = {
       this.checkDefinition(parents, t).checkDescription(t)
     }
 
-    def validateEnumerator(
+    private def validateEnumerator(
       e: Enumerator,
       parents: Seq[Definition]
     ): ValidationState = {
       this.checkDefinition(parents, e).checkDescription(e)
     }
 
-    def validateField(f: Field, parents: Seq[Definition]): ValidationState = {
+    private def validateField(f: Field, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents, f)
         .addIf(f.id.value.matches("^[^a-z].*"))(Message(
           f.id.loc,
@@ -234,14 +242,14 @@ object Validation {
         )).checkTypeExpression(f.typeEx, f, parents).checkDescription(f)
     }
 
-    def validateExample(
+    private def validateExample(
       e: Example,
       parents: Seq[Definition]
     ): ValidationState = {
       checkDefinition(parents, e).checkExample(e, parents).checkDescription(e)
     }
 
-    def validateInvariant(
+    private def validateInvariant(
       i: Invariant,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -250,7 +258,7 @@ object Validation {
       }.checkDescription(i)
     }
 
-    def validatePipe(p: Pipe, parents: Seq[Definition]): ValidationState = {
+    private def validatePipe(p: Pipe, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents, p)
         .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
           st.checkPathRef[Type](typeRef.pathId, p, parents)()()
@@ -274,17 +282,17 @@ object Validation {
         }.checkDescription(p)
     }
 
-    def validateInlet(i: Inlet, parents: Seq[Definition]): ValidationState = {
+    private def validateInlet(i: Inlet, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents, i).checkRef[Type](i.type_, i, parents)
         .checkDescription(i)
     }
 
-    def validateOutlet(o: Outlet, parents: Seq[Definition]): ValidationState = {
+    private def validateOutlet(o: Outlet, parents: Seq[Definition]): ValidationState = {
       checkDefinition(parents, o).checkRef[Type](o.type_, o, parents)
         .checkDescription(o)
     }
 
-    def validateAuthorInfo(
+    private def validateAuthorInfo(
       ai: Author,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -294,7 +302,7 @@ object Validation {
         .checkDescription(ai)
     }
 
-    def validateType(t: Type, parents: Seq[Definition]): ValidationState = {
+    private def validateType(t: Type, parents: Seq[Definition]): ValidationState = {
       types = types :+ t
       checkDefinition(parents, t).check(
         t.id.value.head.isUpper,
@@ -306,7 +314,7 @@ object Validation {
       }.checkDescription(t)
     }
 
-    def validateState(s: State, parents: Seq[Definition]): ValidationState = {
+    private def validateState(s: State, parents: Seq[Definition]): ValidationState = {
       checkContainer(parents, s)
         .addIf(s.aggregation.fields.isEmpty && !s.isEmpty) {
           Message(
@@ -318,7 +326,7 @@ object Validation {
         }.checkDescription(s)
     }
 
-    def validateFunction(
+    private def validateFunction(
       f: Function,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -327,7 +335,7 @@ object Validation {
         .checkDescription(f)
     }
 
-    def validateHandler(
+    private def validateHandler(
       h: Handler,
       parents: Seq[Definition]
     ): ValidationState = { checkContainer(parents, h).checkDescription(h) }
@@ -473,7 +481,7 @@ object Validation {
         .checkDescription(c)
     }
 
-    def validateStory(
+    private def validateStory(
       s: Story,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -483,7 +491,7 @@ object Validation {
       }.checkExamples(s.examples, parents).checkDescription(s)
     }
 
-    def validateApplication(
+    private def validateApplication(
       app: Application,
       parents: Seq[AST.Definition]
     ): ValidationState = {
@@ -493,12 +501,12 @@ object Validation {
       }.checkDescription(app)
     }
 
-    def validateGroup(
+    private def validateGroup(
       grp: Group,
       parents: Seq[AST.Definition]
     ): ValidationState = { checkDefinition(parents, grp) }
 
-    def validateInput(
+    private def validateInput(
       in: Input,
       parents: Seq[AST.Definition]
     ): ValidationState = {
@@ -507,7 +515,7 @@ object Validation {
         .checkDescription(in)
     }
 
-    def validateOutput(
+    private def validateOutput(
       out: Output,
       parents: Seq[AST.Definition]
     ): ValidationState = {
@@ -517,7 +525,7 @@ object Validation {
 
     }
 
-    def validateActor(
+    private def validateActor(
       @unused actor: Actor,
       @unused parents: Seq[Definition]
     ): ValidationState = {
@@ -530,7 +538,7 @@ object Validation {
       this
     }
 
-    def validateStoryCase(
+    private def validateStoryCase(
       sc: StoryCase,
       parents: Seq[Definition]
     ): ValidationState = {
@@ -625,13 +633,13 @@ object Validation {
       id: Seq[String]
     ): List[T] = { symbolTable.lookup[T](id) }
 
-    def addIf(predicate: Boolean)(msg: => Message): ValidationState = {
+    private def addIf(predicate: Boolean)(msg: => Message): ValidationState = {
       if (predicate) add(msg) else this
     }
 
     private val vowels: Regex = "[aAeEiIoOuU]".r
 
-    def article(thing: String): String = {
+    private def article(thing: String): String = {
       val article = if (vowels.matches(thing.substring(0, 1))) "an" else "a"
       s"$article $thing"
     }
@@ -646,15 +654,15 @@ object Validation {
       else { this }
     }
 
-    def checkThat(
-      predicate: Boolean = true
+    private def checkThat(
+      predicate: Boolean
     )(f: ValidationState => ValidationState
     ): ValidationState = {
       if (predicate) { f(this) }
       else { this }
     }
 
-    def checkIdentifierLength[T <: Definition](
+    private def checkIdentifierLength[T <: Definition](
       d: T,
       min: Int = 3
     ): ValidationState = {
@@ -666,7 +674,7 @@ object Validation {
       } else { this }
     }
 
-    def checkPattern(p: Pattern): ValidationState = {
+    private def checkPattern(p: Pattern): ValidationState = {
       try {
         val compound = p.pattern.map(_.s).reduce(_ + _)
         java.util.regex.Pattern.compile(compound)
@@ -676,7 +684,7 @@ object Validation {
       }
     }
 
-    def checkEnumeration(
+    private def checkEnumeration(
       enumerators: Seq[Enumerator]
     ): ValidationState = {
       checkSequence(enumerators) { case (state, enumerator) =>
@@ -690,7 +698,7 @@ object Validation {
       }
     }
 
-    def checkAlternation(
+    private def checkAlternation(
       alternation: AST.Alternation,
       typeDef: Definition,
       parents: Seq[Definition]
@@ -700,7 +708,7 @@ object Validation {
       }
     }
 
-    def checkRangeType(
+    private def checkRangeType(
       rt: RangeType
     ): ValidationState = {
       this.check(
@@ -716,7 +724,7 @@ object Validation {
       )
     }
 
-    def checkAggregation(
+    private def checkAggregation(
       agg: Aggregation
     ): ValidationState = {
       checkSequence(agg.fields) { case (state, field) =>
@@ -729,7 +737,7 @@ object Validation {
       }
     }
 
-    def checkAggregateUseCase(
+    private def checkAggregateUseCase(
       mt: AggregateUseCaseTypeExpression,
       typeDef: Definition,
       parents: Seq[Definition]

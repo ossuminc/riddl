@@ -12,7 +12,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
-trait EntityParser extends TypeParser with HandlerParser {
+trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
 
   def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -78,7 +78,7 @@ trait EntityParser extends TypeParser with HandlerParser {
   }
 
   def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(handler | function | invariant | typeDef | state | entityInclude | term)
+    P(handler | function | invariant | typeDef | state | entityInclude | inlet | outlet | term)
       .rep
   }
 

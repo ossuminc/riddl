@@ -465,3 +465,28 @@ trait Expressions extends TypeExpression {
     override def expressionType: TypeExpression = Strng(loc)
   }
 }
+
+/** A helper class for publishing messages that represents the construction of
+ * the message to be sent.
+ *
+ * @param msg
+ * A message reference that specifies the specific type of message to
+ * construct
+ * @param args
+ * An argument list that should correspond to teh fields of the message
+ */
+case class MessageConstructor(
+                               loc: At,
+                               msg: MessageRef,
+                               args: ArgList = ArgList())
+  extends RiddlNode {
+  override def format: String = msg.format + {
+    if (args.nonEmpty) {
+      args.format
+    }
+    else {
+      "()"
+    }
+  }
+}
+

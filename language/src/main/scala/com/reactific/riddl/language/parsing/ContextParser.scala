@@ -48,7 +48,7 @@ trait ContextParser
     P(
       undefined(Seq.empty[ContextDefinition]) |
         (typeDef | handler | entity | adaptor | function | saga | processor |
-          pipe | projection | repository | term | contextInclude).rep(0)
+          pipe | projection | repository | inlet | outlet | term | contextInclude).rep(0)
     )
   }
 
@@ -65,6 +65,8 @@ trait ContextParser
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
       val processors = mapTo[Processor](groups.get(classOf[Processor]))
       val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val includes = mapTo[Include[ContextDefinition]](groups.get(
         classOf[Include[ContextDefinition]]
       ))
@@ -88,6 +90,8 @@ trait ContextParser
         handlers,
         projections,
         repos,
+        inlets,
+        outlets,
         pipes,
         authorRefs,
         briefly,
