@@ -69,7 +69,6 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with SagaDefinition
       with StoryDefinition
 
-
   /** A term definition for the glossary */
   case class Term(
     loc: At,
@@ -83,7 +82,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** Added to definitions that support a list of term definitions */
-  private trait WithTerms {
+  trait WithTerms {
     def terms: Seq[Term]
     def hasTerms: Boolean = terms.nonEmpty
   }
@@ -184,9 +183,11 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with WithTerms {
 
     import scala.language.implicitConversions
+
     /** Implicit conversion of boolean to Int for easier computation of
       * statistics below
-      * @param b The boolean to convert to an Int
+      * @param b
+      *   The boolean to convert to an Int
       * @return
       */
     implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
@@ -529,15 +530,15 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** An action that subscribes to messages from a pipe
-   * @param loc
-   *   The location in the source at which the subscribe action occurs
-   * @param type_
-   *   The type of message to be received from the pipe
-   * @param pipe
-   *   The pipe from which the messages are received
-   * @param description
-   *   An optional description of the action
-   */
+    * @param loc
+    *   The location in the source at which the subscribe action occurs
+    * @param type_
+    *   The type of message to be received from the pipe
+    * @param pipe
+    *   The pipe from which the messages are received
+    * @param description
+    *   An optional description of the action
+    */
   case class SubscribeAction(
     loc: At,
     type_ : TypeRef,
@@ -548,16 +549,16 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   }
 
   /** An action to call a function
-   *
-   * @param loc
-   * The location in the source at which the subscribe action occurs
-   * @param function
-   * The function to call
-   * @param arguments
-   * The arguments to provide to the function
-   * @param description
-   * An optional description of the action
-   */
+    *
+    * @param loc
+    *   The location in the source at which the subscribe action occurs
+    * @param function
+    *   The function to call
+    * @param arguments
+    *   The arguments to provide to the function
+    * @param description
+    *   An optional description of the action
+    */
   case class FunctionCallAction(
     loc: At,
     function: PathIdentifier,
@@ -608,6 +609,27 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends Action {
     override def format: String =
       s"become ${entity.format} to ${handler.format}"
+  }
+
+  /** An action that tells a message to an entity. This is very analogous to the
+    * tell operator in Akka.
+    *
+    * @param loc
+    *   The location of the tell action
+    * @param entity
+    *   The entity to which the message is directed
+    * @param msg
+    *   A constructed message value to send to the entity, probably a command
+    * @param description
+    *   An optional description for this action
+    */
+  case class TellAction(
+    loc: At,
+    msg: MessageConstructor,
+    entity: MessageTakingRef[Definition],
+    description: Option[Description] = None)
+      extends SagaStepAction {
+    override def format: String = s"tell ${msg.format} to ${entity.format}"
   }
 
   /** An action that asks a query to an entity. This is very analogous to the
@@ -1424,8 +1446,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     type_ : TypeRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet with AlwaysEmpty with ContextDefinition with ProcessorDefinition with RepositoryDefinition
-        with EntityDefinition with AdaptorDefinition {
+      extends Streamlet
+      with AlwaysEmpty
+      with ContextDefinition
+      with ProcessorDefinition
+      with RepositoryDefinition
+      with EntityDefinition
+      with AdaptorDefinition {
     def format: String = s"${Keywords.inlet} ${id.format} is ${type_.format}"
     final val kind: String = "Inlet"
   }
@@ -1449,8 +1476,13 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     type_ : TypeRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends Streamlet with AlwaysEmpty with ContextDefinition with ProcessorDefinition with RepositoryDefinition
-        with EntityDefinition with AdaptorDefinition {
+      extends Streamlet
+      with AlwaysEmpty
+      with ContextDefinition
+      with ProcessorDefinition
+      with RepositoryDefinition
+      with EntityDefinition
+      with AdaptorDefinition {
     def format: String = s"${Keywords.outlet} ${id.format} is ${type_.format}"
     final val kind: String = "Outlet"
   }
