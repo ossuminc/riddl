@@ -30,7 +30,7 @@ case class ValidationState(
     this
   }
   private var types: Seq[Type] = Seq.empty[Type]
-  def addType(ty: Type): ValidationState =  {
+  def addType(ty: Type): ValidationState = {
     types = types :+ ty
     this
   }
@@ -38,6 +38,34 @@ case class ValidationState(
   private var functions: Seq[Function] = Seq.empty[Function]
   def addFunction(fun: Function): ValidationState = {
     functions = functions :+ fun
+    this
+  }
+
+  private var inlets: Seq[Inlet] = Seq.empty[Inlet]
+  def getInlets: Seq[Inlet] = inlets
+  def addInlet(in: Inlet): ValidationState = {
+    inlets = inlets :+ in
+    this
+  }
+
+  private var outlets: Seq[Outlet] = Seq.empty[Outlet]
+  def getOutlets: Seq[Outlet] = outlets
+  def addOutlet(out: Outlet): ValidationState = {
+    outlets = outlets :+ out
+    this
+  }
+
+  private var pipes: Seq[Pipe] = Seq.empty[Pipe]
+  def getPipes: Seq[Pipe] = pipes
+  def addPipe(out: Pipe): ValidationState = {
+    pipes = pipes :+ out
+    this
+  }
+
+  private var processors: Seq[Processor] = Seq.empty[Processor]
+  def getProcessors: Seq[Processor] = processors
+  def addProcessor(proc: Processor): ValidationState = {
+    processors = processors :+ proc
     this
   }
 

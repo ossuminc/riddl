@@ -12,7 +12,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(true)
+        msgs.isOnlyIgnorable must be(true)
       }
     }
     "not supported in contexts" in {
@@ -21,7 +21,7 @@ class AuthorTest extends ValidatingTest {
           .stripMargin
       parseDomainDefinition(input, identity) match {
         case Left(msgs) =>
-          msgs.isIgnorable must be(false)
+          msgs.isOnlyIgnorable must be(false)
           msgs.head.message must include("Expected one of")
         case Right(_) => fail("should not have parsed")
       }
@@ -29,7 +29,7 @@ class AuthorTest extends ValidatingTest {
     "must be defined" in {
       val input = """domain foo by author Bar is { ??? }"""
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(false)
         val errs = msgs.filter(_.kind == Messages.Error)
         errs mustNot be(empty)
         errs.head.message must include("author Bar is not defined")
@@ -45,7 +45,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(true)
+        msgs.isOnlyIgnorable must be(true)
       }
     }
     "referenced from Context" in {
@@ -58,7 +58,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(true)
+        msgs.isOnlyIgnorable must be(true)
       }
     }
     "referenced from Domain" in {
@@ -71,7 +71,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(true)
+        msgs.isOnlyIgnorable must be(true)
       }
     }
     "referenced from Entity" in {
@@ -86,7 +86,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(false)
         msgs.isOnlyWarnings must be(true)
       }
     }
@@ -102,7 +102,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(false)
         msgs.isOnlyWarnings must be(true)
       }
     }
@@ -118,7 +118,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(true)
+        msgs.isOnlyIgnorable must be(true)
       }
     }
     "referenced from Story" in {
@@ -131,7 +131,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isIgnorable must be(true)
+        msgs.isOnlyIgnorable must be(true)
       }
     }
   }

@@ -112,6 +112,9 @@ object Messages {
     }
   }
 
+  def style(message: String, loc: At = At.empty): Message = {
+    Message(loc, message, StyleWarning)
+  }
   def info(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Info)
   }
@@ -148,7 +151,7 @@ object Messages {
     def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
-    def isIgnorable: Boolean = {
+    def isOnlyIgnorable: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }

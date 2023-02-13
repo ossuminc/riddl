@@ -9,8 +9,9 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.validation.ValidationState
-import com.reactific.riddl.language.validation.DefinitionValidator
+import com.reactific.riddl.language.validation.{
+  ValidationState, StreamValidator, DefinitionValidator
+}
 
 import scala.util.control.NonFatal
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -60,11 +61,10 @@ object Validation {
     val parents = mutable.Stack.empty[Definition]
     val endState = {
       try {
-        val defVal = DefinitionValidator()
-        val s1 = defVal.validate(state, root, parents)
+        val s1 = DefinitionValidator.validate(state, root, parents)
         val s2 = s1.checkUnused()
         val s3 = s2.checkOverloads(symTab)
-        s3
+        StreamValidator.validate(s3, root, parents)
       } catch {
         case NonFatal(xcptn) =>
           val message = ExceptionUtils.getRootCauseStackTrace(xcptn)

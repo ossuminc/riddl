@@ -11,7 +11,7 @@ import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 import scala.annotation.unused
 import scala.collection.mutable
 
-case class DefinitionValidator() {
+object DefinitionValidator {
 
   def validate(
     state: ValidationState,
@@ -208,20 +208,21 @@ case class DefinitionValidator() {
 
   private def validateInlet(
     state: ValidationState,
-    i: Inlet,
+    inlet: Inlet,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkDefinition(parents, i).checkRef[Type](i.type_, i, parents)
-      .checkDescription(i)
+    state.addInlet(inlet).checkDefinition(parents, inlet)
+      .checkRef[Type](inlet.type_, inlet, parents).checkDescription(inlet)
   }
 
   private def validateOutlet(
     state: ValidationState,
-    o: Outlet,
+    outlet: Outlet,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkDefinition(parents, o).checkRef[Type](o.type_, o, parents)
-      .checkDescription(o)
+    state.addOutlet(outlet).checkDefinition(parents, outlet).checkRef[Type](outlet.type_,
+      outlet, parents)
+      .checkDescription(outlet)
   }
 
   private def validateAuthorInfo(

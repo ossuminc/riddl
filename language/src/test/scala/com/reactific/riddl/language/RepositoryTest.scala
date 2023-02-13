@@ -35,7 +35,7 @@ class RepositoryTest extends ValidatingTest {
             case Some(context) =>
               context.repositories mustNot be(empty)
               if (msgs.nonEmpty) { info(msgs.format) }
-              msgs.isIgnorable mustBe true
+              msgs.isOnlyIgnorable mustBe true
               succeed
             case _ =>
               fail("Did not parse a context!")
