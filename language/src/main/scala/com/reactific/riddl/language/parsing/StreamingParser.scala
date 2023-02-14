@@ -14,24 +14,35 @@ import fastparse.ScalaWhitespace.*
 /** Unit Tests For StreamingParser */
 trait StreamingParser extends ReferenceParser with HandlerParser {
 
+  def pipeOptions[X: P]: P[Seq[PipeOption]] = {
+    options[X, PipeOption](StringIn(Options.persistent, Options.technology).!) {
+      case (loc, Options.persistent, _)    => PipePersistentOption(loc)
+      case (loc, Options.technology, args) => PipeTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
+  }
+
   def pipe[u: P]: P[Pipe] = {
-    location ~ Keywords.pipe ~/ identifier ~ is ~ open ~
-      (undefined(None) | Keywords.transmit ~/ typeRef.map(Option(_))) ~
-      (Readability.from ~ outletRef).? ~
-      (Readability.to ~ inletRef).? ~ close ~ briefly ~ description
-  }.map { tpl => (Pipe.apply _).tupled(tpl) }
+    location ~ Keywords.pipe ~/ identifier ~ is ~ open ~ pipeOptions ~
+      (undefined((None, None, None)) |
+        Keywords.transmit ~/ typeRef.map(Option(_)) ~
+        (Readability.from ~ outletRef).? ~ (Readability.to ~ inletRef).?) ~
+      close ~ briefly ~ description
+  }.map { case (at, id, opts, (typ, out, in), brief, desc) =>
+    Pipe(at, id, opts, typ, out, in, brief, desc)
+  }
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/
-        briefly ~ description
+      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ briefly ~
+        description
     )./.map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/
-        briefly ~ description
+      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ briefly ~
+        description
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 

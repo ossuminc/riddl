@@ -5,3 +5,4 @@ Missing: main.riddl(2:16): For Domain 'foo', description at main.riddl(2:16) is 
 Missing: main.riddl(1:1): Vital definitions should have an author reference:
  domain foo is {
  ^
+Style: empty(1:1): Models without any streaming data will exhibit minimal effect

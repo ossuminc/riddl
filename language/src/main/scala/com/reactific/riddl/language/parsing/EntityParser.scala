@@ -26,6 +26,7 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
         Options.finiteStateMachine,
         Options.kind,
         Options.messageQueue,
+        Options.device,
         Options.technology
       ).!
     ) {
@@ -39,6 +40,7 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
         EntityIsFiniteStateMachine(loc)
       case (loc, Options.kind, args)       => EntityKind(loc, args)
       case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
+      case (loc, Options.device, _)        => EntityIsDevice(loc)
       case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
       case _ => throw new RuntimeException("Impossible case")
     }
@@ -101,6 +103,8 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val includes = mapTo[Include[EntityDefinition]](groups.get(
         classOf[Include[EntityDefinition]]
       ))
@@ -114,6 +118,8 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
         handlers,
         functions,
         invariants,
+        inlets,
+        outlets,
         includes,
         authorRefs,
         terms,

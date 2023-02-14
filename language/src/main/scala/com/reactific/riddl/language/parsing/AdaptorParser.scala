@@ -11,7 +11,8 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parser rules for Adaptors */
-trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
+trait AdaptorParser extends HandlerParser with GherkinParser with
+  ActionParser with StreamingParser {
 
   def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](StringIn(Options.technology).!) {
@@ -26,7 +27,7 @@ trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
 
   def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      (handler | adaptorInclude | term).rep(1) |
+      (handler | inlet | outlet | adaptorInclude | term).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }
@@ -65,12 +66,16 @@ trait AdaptorParser extends HandlerParser with GherkinParser with ActionParser {
         val terms = mapTo[Term](groups.get(classOf[Term]))
         val handlers: Seq[Handler] = defs.filter(_.isInstanceOf[Handler])
           .map(_.asInstanceOf[Handler])
+        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
         Adaptor(
           loc,
           id,
           dir,
           cref,
           handlers,
+          inlets,
+          outlets,
           includes,
           authorRefs,
           options,

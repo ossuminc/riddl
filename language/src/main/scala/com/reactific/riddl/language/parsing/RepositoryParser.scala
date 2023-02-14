@@ -39,6 +39,8 @@ trait RepositoryParser extends HandlerParser with StreamingParser {
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[RepositoryDefinition]](groups.get(
         classOf[Include[RepositoryDefinition]]
@@ -49,6 +51,8 @@ trait RepositoryParser extends HandlerParser with StreamingParser {
         id,
         types,
         handlers,
+        inlets,
+        outlets,
         authors,
         includes,
         opts,

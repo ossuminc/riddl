@@ -72,6 +72,7 @@ class StreamingParserTest extends ParsingTest {
       val expected = Pipe(
         (1, 1, rpi),
         Identifier((2, 6, rpi), "TemperatureChanges"),
+        Seq.empty,
         Option(TypeRef(
           (3, 12, rpi),
           PathIdentifier((3, 12, rpi), List("temperature"))
@@ -134,6 +135,7 @@ class StreamingParserTest extends ParsingTest {
           Pipe(
             (18, 3, rpi),
             Identifier((18, 8, rpi), "WeatherForecast"),
+            Seq.empty[PipeOption],
             Option(TypeRef(
               (19, 14, rpi),
               PathIdentifier((19, 14, rpi), List("Forecast"))
@@ -164,6 +166,7 @@ class StreamingParserTest extends ParsingTest {
           Pipe(
             (24, 3, rpi),
             Identifier((24, 8, rpi), "TemperatureChanges"),
+            Seq.empty[PipeOption],
             Option(TypeRef(
               (25, 14, rpi),
               PathIdentifier((25, 14, rpi), List("temperature"))

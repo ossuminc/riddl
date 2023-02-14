@@ -26,12 +26,12 @@ class DomainValidatorTest extends ValidatingTest {
         ),
         CommonOptions()
       )
-      val theErrors: Messages = result.messages
-      theErrors must not be empty
-      val messages = theErrors.map(_.format)
+      val theErrors: Messages = result.messages.justErrors
+      theErrors mustBe empty
+      val messages = result.messages.map(_.format)
       val notOccur =
         "Style: empty(2:2): Domain 'foo' overloads Domain 'foo' at empty(1:1)"
-      assert(messages.exists(_.startsWith(notOccur)))
+      messages.exists(_.startsWith(notOccur)) mustBe true
     }
 
     "allow author information" in {
@@ -64,11 +64,25 @@ class DomainValidatorTest extends ValidatingTest {
           )
           domain.authorDefs mustNot be(empty)
           domain.authorDefs.head must be(expectedAuthor)
-          val expectedAuthorRef = AuthorRef((1,12,rpi),
-            PathIdentifier((1,22,rpi), Seq("Reid")))
+          val expectedAuthorRef =
+            AuthorRef((1, 12, rpi), PathIdentifier((1, 22, rpi), Seq("Reid")))
           domain.authors mustNot be(empty)
           domain.authors.head must be(expectedAuthorRef)
-          messages mustBe empty
+          messages.isOnlyIgnorable mustBe true
+      }
+    }
+    "identify useless domain hierarchy" in {
+      val input = """
+                    |domain foo is {
+                    |  domain bar is { ??? }
+                    |}""".stripMargin
+      parseAndValidateDomain(input) {
+        (domain: Domain, _: RiddlParserInput, messages: Messages) =>
+          domain mustNot be(empty)
+          domain.contents mustNot be(empty)
+          messages mustNot be(empty)
+          messages.isOnlyIgnorable mustBe true
+          messages.find(_.message contains "Singly nested") mustNot be(empty)
       }
     }
   }

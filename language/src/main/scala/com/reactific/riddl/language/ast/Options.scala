@@ -165,6 +165,8 @@ trait Options extends AbstractDefinitions {
     */
   case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
 
+  case class EntityIsDevice(loc: At) extends EntityOption("device")
+
   case class EntityTechnologyOption(
     loc: At,
     override val args: Seq[LiteralString])
@@ -252,19 +254,16 @@ trait Options extends AbstractDefinitions {
     override val args: Seq[LiteralString])
       extends ProcessorOption("technology")
 
-  //////////////////////////////////////////////////////////////////// PLANT
+  //////////////////////////////////////////////////////////////////// PIPE
 
-  sealed abstract class PlantOption(val name: String) extends OptionValue
+  sealed abstract class PipeOption(val name: String) extends OptionValue
 
-  case class PlantPackageOption(
+  case class PipePersistentOption(loc: At) extends PipeOption("package")
+
+  case class PipeTechnologyOption(
     loc: At,
     override val args: Seq[LiteralString])
-      extends PlantOption("package")
-
-  case class PlantTechnologyOption(
-    loc: At,
-    override val args: Seq[LiteralString])
-      extends PlantOption("technology")
+      extends PipeOption("technology")
 
   //////////////////////////////////////////////////////////////////// SAGA
 

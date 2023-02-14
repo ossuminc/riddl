@@ -182,7 +182,7 @@ object DefinitionValidator {
     p: Pipe,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkDefinition(parents, p)
+    state.addPipe(p).checkDefinition(parents, p)
       .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
         st.checkPathRef[Type](typeRef.pathId, p, parents)()()
       }.checkOption(p.from, "from outlet", p) { (st, outlet) =>
@@ -220,9 +220,8 @@ object DefinitionValidator {
     outlet: Outlet,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.addOutlet(outlet).checkDefinition(parents, outlet).checkRef[Type](outlet.type_,
-      outlet, parents)
-      .checkDescription(outlet)
+    state.addOutlet(outlet).checkDefinition(parents, outlet)
+      .checkRef[Type](outlet.type_, outlet, parents).checkDescription(outlet)
   }
 
   private def validateAuthorInfo(
@@ -397,7 +396,14 @@ object DefinitionValidator {
     state: ValidationState,
     d: Domain,
     parents: Seq[Definition]
-  ): ValidationState = { state.checkContainer(parents, d).checkDescription(d) }
+  ): ValidationState = {
+    state.checkContainer(parents, d).check(
+      d.domains.isEmpty || d.domains.size > 2,
+      "Singly nested domains do not add value",
+      StyleWarning,
+      if (d.domains.isEmpty) d.loc else d.domains.head.loc
+    ).checkDescription(d)
+  }
 
   private def validateSaga(
     state: ValidationState,

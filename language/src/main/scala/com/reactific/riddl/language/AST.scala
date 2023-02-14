@@ -1082,6 +1082,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     includes: Seq[Include[EntityDefinition]] = Seq
       .empty[Include[EntityDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -1094,7 +1096,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
 
     override lazy val contents: Seq[EntityDefinition] = {
       super.contents ++ states ++ types ++ handlers ++ functions ++
-        invariants ++ terms
+        invariants ++ terms ++ inlets ++ outlets
     }
 
     final val kind: String = "Entity"
@@ -1150,6 +1152,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     direction: AdaptorDirection,
     context: ContextRef,
     handlers: Seq[Handler] = Seq.empty[Handler],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -1160,7 +1164,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends VitalDefinition[AdaptorOption, AdaptorDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[AdaptorDefinition] = {
-      super.contents ++ handlers ++ terms
+      super.contents ++ handlers ++ inlets ++ outlets ++ terms
     }
     final val kind: String = "Adaptor"
 
@@ -1216,6 +1220,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     id: Identifier,
     types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[RepositoryDefinition]] = Seq
       .empty[Include[RepositoryDefinition]],
@@ -1227,7 +1233,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       with ContextDefinition {
     override def kind: String = "Repository"
     override lazy val contents: Seq[RepositoryDefinition] = {
-      super.contents ++ types ++ handlers ++ terms
+      super.contents ++ types ++ handlers ++ inlets ++ outlets ++ terms
     }
   }
 
@@ -1365,10 +1371,12 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     description: Option[Description] = None)
       extends VitalDefinition[ContextOption, ContextDefinition]
       with DomainDefinition
-      with WithTypes with WithStreaming{
+      with WithTypes
+      with WithStreaming {
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
       types ++ entities ++ adaptors ++ sagas ++ processors ++ functions ++
-      terms ++ handlers ++ projections ++ repositories ++ pipes
+      terms ++ handlers ++ projections ++ repositories ++ inlets ++ outlets ++
+      pipes
 
     final val kind: String = "Context"
 
@@ -1420,14 +1428,16 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class Pipe(
     loc: At,
     id: Identifier,
+    options: Seq[PipeOption] = Seq.empty[PipeOption],
     transmitType: Option[TypeRef] = None,
     from: Option[OutletRef] = None,
     to: Option[InletRef] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None)
-      extends LeafDefinition with ContextDefinition {
+      extends LeafDefinition
+      with ContextDefinition
+      with WithOptions[PipeOption] {
     override def isEmpty: Boolean = transmitType.isEmpty
-    def format: String = ""
     final val kind: String = "Pipe"
   }
 
@@ -2216,5 +2226,4 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
       extends Reference[Domain] {
     override def format: String = s"${Keywords.domain} ${pathId.format}"
   }
-
 }

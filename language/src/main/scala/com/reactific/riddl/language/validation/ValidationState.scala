@@ -856,7 +856,7 @@ case class ValidationState(
         case Some(t: Type)     => Some(t.typ)
         case Some(f: Field)    => Some(f.typeEx)
         case Some(s: State)    => Some(s.aggregation)
-        case Some(Pipe(_, _, tt, _, _, _, _)) =>
+        case Some(Pipe(_, _, _, tt, _, _, _, _)) =>
           val te = tt.map(x => AliasedTypeExpression(x.loc, x.pathId))
           Some(te.getOrElse(Abstract(pid.loc)))
         case Some(Inlet(_, _, typ, _, _)) =>

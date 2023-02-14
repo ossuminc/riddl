@@ -24,7 +24,7 @@ class DefinitionValidatorTest extends ValidatingTest {
             )
           } else {
             val styleWarnings = msgs.filter(_.kind == StyleWarning)
-            styleWarnings.size mustEqual 2
+            styleWarnings.size mustEqual 3
             assertValidationMessage(
               styleWarnings,
               StyleWarning,
