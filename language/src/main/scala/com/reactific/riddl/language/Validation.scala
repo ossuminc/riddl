@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.validation.{
-  ValidationState, StreamValidator, DefinitionValidator
+  ValidationState, DefinitionValidator
 }
 
 import scala.util.control.NonFatal
@@ -59,25 +59,27 @@ object Validation {
     val symTab = SymbolTable(root)
     val state = ValidationState(symTab, root, commonOptions)
     val parents = mutable.Stack.empty[Definition]
-    val endState = {
+    val endState: ValidationState = {
       try {
         val s1 = DefinitionValidator.validate(state, root, parents)
-        val s2 = s1.checkUnused()
-        val s3 = s2.checkOverloads(symTab)
-        StreamValidator.validate(s3, root, parents)
+        s1.checkUnused()
+        s1.checkOverloads()
+        s1.checkStreaming()
+        s1
       } catch {
         case NonFatal(xcptn) =>
           val message = ExceptionUtils.getRootCauseStackTrace(xcptn)
             .mkString("\n")
           state.addSevere(At.empty, message)
+          state
       }
     }
     Result(
       endState.messages.sortBy(_.loc),
       root,
       symTab,
-      endState.uses.toMap,
-      endState.usedBy.toMap
+      endState.usesAsMap,
+      endState.usedByAsMap
     )
   }
 }

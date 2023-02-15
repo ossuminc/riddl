@@ -11,9 +11,9 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For FunctionParser */
-trait ProjectionParser extends TypeParser with HandlerParser {
+private[parsing] trait ProjectionParser extends TypeParser with HandlerParser {
 
-  def projectionOptions[u: P]: P[Seq[ProjectionOption]] = {
+  private def projectionOptions[u: P]: P[Seq[ProjectionOption]] = {
     options[u, ProjectionOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         ProjectionTechnologyOption(loc, args)
@@ -21,17 +21,18 @@ trait ProjectionParser extends TypeParser with HandlerParser {
     }
   }
 
-  def projectionInclude[u: P]: P[Include[ProjectionDefinition]] = {
+  private def projectionInclude[u: P]: P[Include[ProjectionDefinition]] = {
     include[ProjectionDefinition, u](projectionDefinitions(_))
   }
 
-  def projectionDefinitions[u: P]: P[Seq[ProjectionDefinition]] = {
+  private def projectionDefinitions[u: P]: P[Seq[ProjectionDefinition]] = {
     P(term | projectionInclude | handler | invariant).rep(0)
   }
 
-  type ProjectionBody =
+  private type ProjectionBody =
     (Seq[ProjectionOption], Seq[Type], Seq[ProjectionDefinition])
-  def projectionBody[u: P]: P[ProjectionBody] = {
+
+  private def projectionBody[u: P]: P[ProjectionBody] = {
     P(
       undefined(
         (Seq.empty[ProjectionOption], Seq.empty[Type], Seq.empty[ProjectionDefinition])

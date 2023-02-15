@@ -13,13 +13,13 @@ import fastparse.ScalaWhitespace.*
 /** SagaParser Implements the parsing of saga definitions in context
   * definitions.
   */
-trait SagaParser
+private[parsing] trait SagaParser
     extends ReferenceParser
     with ActionParser
     with GherkinParser
     with FunctionParser {
 
-  def sagaStep[u: P]: P[SagaStep] = {
+  private def sagaStep[u: P]: P[SagaStep] = {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ open ~ examples ~
         Keywords.reverted ~ Readability.by.? ~ examples ~ close ~ briefly ~
@@ -27,7 +27,7 @@ trait SagaParser
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 
-  def sagaOptions[u: P]: P[Seq[SagaOption]] = {
+  private def sagaOptions[u: P]: P[Seq[SagaOption]] = {
     options[u, SagaOption](StringIn(Options.parallel, Options.sequential).!) {
       case (loc, option, _) if option == Options.parallel => ParallelOption(loc)
       case (loc, option, _) if option == Options.sequential =>
@@ -38,21 +38,22 @@ trait SagaParser
     }
   }
 
-  def sagaInclude[u: P]: P[Include[SagaDefinition]] = {
+  private def sagaInclude[u: P]: P[Include[SagaDefinition]] = {
     include[SagaDefinition, u](sagaDefinitions(_))
   }
 
-  def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
+  private def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
     P(sagaStep | function | term | sagaInclude).rep(2)
   }
 
-  type SagaBodyType = (
+  private type SagaBodyType = (
     Seq[SagaOption],
     Option[Aggregation],
     Option[Aggregation],
     Seq[SagaDefinition]
   )
-  def sagaBody[u: P]: P[SagaBodyType] = {
+
+  private def sagaBody[u: P]: P[SagaBodyType] = {
     P(
       undefined(
         (Seq.empty[SagaOption], None, None, Seq.empty[SagaDefinition])

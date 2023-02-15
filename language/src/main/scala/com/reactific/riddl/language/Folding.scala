@@ -104,14 +104,11 @@ object Folding {
     ): STATE
   }
 
-  trait State[S <: State[?]] {
-    def step(f: S => S): S = f(this.asInstanceOf[S])
-    def stepIf(predicate: Boolean = true)(f: S => S): S = {
-      if (predicate) f(this.asInstanceOf[S]) else this.asInstanceOf[S]
+  trait State {
+    def step(f: this.type => this.type): this.type = f(this)
+    def stepIf(predicate: Boolean = true)(f: this.type => this.type): this.type = {
+      if (predicate) f(this) else this
     }
-  }
-
-  trait MessagesState[S <: State[?]] extends State[S] {
 
     def commonOptions: CommonOptions
 
@@ -119,48 +116,46 @@ object Folding {
 
     def messages: Messages.Messages = msgs.toList
 
-    def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
-
-    def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
-
-    def addStyle(loc: At, msg: String): S = {
+    def addStyle(loc: At, msg: String): this.type = {
       add(Message(loc, msg, StyleWarning))
     }
 
-    def addMissing(loc: At, msg: String): S = {
+    def addMissing(loc: At, msg: String): this.type = {
       add(Message(loc, msg, MissingWarning))
     }
 
-    def addWarning(loc: At, msg: String): S = {
+    def addWarning(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Warning))
     }
 
-    def addError(loc: At, msg: String): S = { add(Message(loc, msg, Error)) }
+    def addError(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, Error))
+    }
 
-    def addSevere(loc: At, msg: String): S = {
+    def addSevere(loc: At, msg: String): this.type = {
       add(Message(loc, msg, SevereError))
     }
 
-    def add(msg: Message): S = {
+    def add(msg: Message): this.type = {
       msg.kind match {
         case StyleWarning =>
-          if (isReportStyleWarnings) {
+          if (commonOptions.showStyleWarnings) {
             msgs += msg
-            this.asInstanceOf[S]
-          } else { this.asInstanceOf[S] }
+            this
+          } else { this }
         case MissingWarning =>
-          if (isReportMissingWarnings) {
+          if (commonOptions.showMissingWarnings) {
             msgs += msg
-            this.asInstanceOf[S]
-          } else { this.asInstanceOf[S] }
+            this
+          } else { this }
         case _ =>
           msgs += msg
-          this.asInstanceOf[S]
+          this
       }
     }
   }
 
-  trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
+  trait PathResolutionState extends State {
 
     def symbolTable: SymbolTable
 

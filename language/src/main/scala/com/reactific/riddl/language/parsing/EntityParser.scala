@@ -12,9 +12,9 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for entity definitions */
-trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
+private[parsing] trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
 
-  def entityOptions[X: P]: P[Seq[EntityOption]] = {
+  private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
       StringIn(
         Options.eventSourced,
@@ -47,13 +47,14 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
   }
 
   type StateThings = (Aggregation, Seq[StateDefinition])
-  def stateDefinition[u: P]: P[StateThings] = {
+
+  private def stateDefinition[u: P]: P[StateThings] = {
     P(aggregation ~ (typeDef | handler | invariant).rep(0)).map {
       case (agg, stateDefs) => (agg, stateDefs)
     }
   }
 
-  def stateBody[u: P]: P[StateThings] = {
+  private def stateBody[u: P]: P[StateThings] = {
     P(
       undefined((
         Aggregation(At.empty, Seq.empty[Field]),
@@ -62,7 +63,7 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
     )
   }
 
-  def state[u: P]: P[State] = {
+  private def state[u: P]: P[State] = {
     P(
       location ~ Keywords.state ~/ identifier ~ is ~ open ~ stateBody ~ close ~
         briefly ~ description
@@ -75,22 +76,22 @@ trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
     }
   }
 
-  def entityInclude[X: P]: P[Include[EntityDefinition]] = {
+  private def entityInclude[X: P]: P[Include[EntityDefinition]] = {
     include[EntityDefinition, X](entityDefinitions(_))
   }
 
-  def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
+  private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(handler | function | invariant | typeDef | state | entityInclude | inlet | outlet | term)
       .rep
   }
 
-  type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
+  private type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
 
-  def noEntityBody[u: P]: P[EntityBody] = {
+  private def noEntityBody[u: P]: P[EntityBody] = {
     P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
   }
 
-  def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
+  private def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
 
   def entity[u: P]: P[Entity] = {
     P(

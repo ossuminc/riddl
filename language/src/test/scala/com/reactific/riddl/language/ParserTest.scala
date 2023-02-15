@@ -285,16 +285,14 @@ class ParserTest extends ParsingTest {
                   (10, 7, rpi),
                   ArbitraryAction(
                     (10, 12, rpi),
-                    LiteralString((10, 12, rpi), "I'll just eat worms"),
-                    None
+                    LiteralString((10, 12, rpi), "I'll just eat worms")
                   )
                 )),
                 Seq(ButClause(
                   (11, 7, rpi),
                   ArbitraryAction(
                     (11, 12, rpi),
-                    LiteralString((11, 12, rpi), "I'm happy"),
-                    None
+                    LiteralString((11, 12, rpi), "I'm happy")
                   )
                 ))
               ))

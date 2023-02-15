@@ -12,9 +12,9 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For StreamingParser */
-trait StreamingParser extends ReferenceParser with HandlerParser {
+private[parsing] trait StreamingParser extends ReferenceParser with HandlerParser {
 
-  def pipeOptions[X: P]: P[Seq[PipeOption]] = {
+  private def pipeOptions[X: P]: P[Seq[PipeOption]] = {
     options[X, PipeOption](StringIn(Options.persistent, Options.technology).!) {
       case (loc, Options.persistent, _)    => PipePersistentOption(loc)
       case (loc, Options.technology, args) => PipeTechnologyOption(loc, args)
@@ -46,22 +46,22 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 
-  def processorInclude[u: P](
-    minInlets: Int = 0,
-    maxInlets: Int = 0,
-    minOutlets: Int = 0,
-    maxOutlets: Int = 0
+  private def processorInclude[u: P](
+    minInlets: Int,
+    maxInlets: Int,
+    minOutlets: Int,
+    maxOutlets: Int
   ): P[Include[ProcessorDefinition]] = {
     include[ProcessorDefinition, u](
       processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
   }
 
-  def processorDefinitions[u: P](
-    minInlets: Int = 0,
-    maxInlets: Int = 0,
-    minOutlets: Int = 0,
-    maxOutlets: Int = 0
+  private def processorDefinitions[u: P](
+    minInlets: Int,
+    maxInlets: Int,
+    minOutlets: Int,
+    maxOutlets: Int
   ): P[Seq[ProcessorDefinition]] = {
     P(
       (inlet.rep(minInlets, "", maxInlets) ~/
@@ -74,7 +74,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     )
   }
 
-  def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
+  private def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
     options[u, ProcessorOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         ProcessorTechnologyOption(loc, args)
@@ -82,11 +82,11 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     }
   }
 
-  def processorBody[u: P](
-    minInlets: Int = 0,
-    maxInlets: Int = 0,
-    minOutlets: Int = 0,
-    maxOutlets: Int = 0
+  private def processorBody[u: P](
+    minInlets: Int,
+    maxInlets: Int,
+    minOutlets: Int,
+    maxOutlets: Int
   ): P[(Seq[ProcessorOption], Seq[ProcessorDefinition])] = {
     P(
       undefined((Seq.empty[ProcessorOption], Seq.empty[ProcessorDefinition])) |
@@ -95,7 +95,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     )
   }
 
-  def keywordToKind(keyword: String, location: At): ProcessorShape = {
+  private def keywordToKind(keyword: String, location: At): ProcessorShape = {
     keyword match {
       case "source" => Source(location)
       case "sink"   => Sink(location)
@@ -108,7 +108,7 @@ trait StreamingParser extends ReferenceParser with HandlerParser {
     }
   }
 
-  def processorTemplate[u: P](
+  private def processorTemplate[u: P](
     keyword: String,
     minInlets: Int = 0,
     maxInlets: Int = 0,

@@ -188,12 +188,12 @@ object DefinitionValidator {
       }.checkOption(p.from, "from outlet", p) { (st, outlet) =>
         st.checkPathRef[Outlet](outlet.pathId, p, parents)()()
       }.checkOption(p.to, "to inlet", p) { (st, inletRef) =>
-        val st2 = st.checkPathRef[Inlet](inletRef.pathId, p, parents)()()
+        val st2: state.type = st.checkPathRef[Inlet](inletRef.pathId, p, parents)()()
         if (p.transmitType.nonEmpty) {
           val maybeResolved: Option[Inlet] = st2
             .resolvePathIdentifier[Inlet](inletRef.pathId, parents)
 
-          maybeResolved.map { inlet =>
+          val mapped: Option[state.type] = maybeResolved.map { inlet =>
             if (!st2.areSameType(p.transmitType.get, inlet.type_, parents)) {
               st2.addError(
                 inletRef.loc,
@@ -201,7 +201,8 @@ object DefinitionValidator {
                   s" but ${p.identify} is defined to transmit ${p.transmitType.get.identify}"
               )
             } else { st2 }
-          }.getOrElse(st2)
+          }
+          mapped.getOrElse(st2)
         } else { st2 }
       }.checkDescription(p)
   }
@@ -389,7 +390,7 @@ object DefinitionValidator {
     p: Processor,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkContainer(parents, p).checkProcessorShape(p).checkDescription(p)
+    state.addProcessor(p).checkContainer(parents, p).checkProcessorShape(p).checkDescription(p)
   }
 
   private def validateDomain(
@@ -452,10 +453,10 @@ object DefinitionValidator {
     s: Story,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkContainer(parents, s).checkThat(s.userStory.isEmpty) {
-      vs: ValidationState =>
+    val s1: ValidationState  = state.checkContainer(parents, s).checkThat(s.userStory.isEmpty) { vs: state.type =>
         vs.addMissing(s.loc, s"${s.identify} is missing a user story")
-    }.checkExamples(s.examples, parents).checkDescription(s)
+    }
+    s1.checkExamples(s.examples, parents).checkDescription(s)
   }
 
   private def validateApplication(
@@ -463,8 +464,7 @@ object DefinitionValidator {
     app: Application,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkContainer(parents, app).checkThat(app.groups.isEmpty) {
-      vs: ValidationState =>
+    state.checkContainer(parents, app).checkThat(app.groups.isEmpty) { vs: state.type =>
         vs.addMissing(app.loc, s"${app.identify} should have a group")
     }.checkDescription(app)
   }
@@ -514,18 +514,16 @@ object DefinitionValidator {
     sc: StoryCase,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkDefinition(parents, sc).stepIf(sc.interactions.nonEmpty) { st =>
-      sc.interactions.foldLeft(st) { (st, step) =>
+    state.checkDefinition(parents, sc).stepIf(sc.interactions.nonEmpty) { st: state.type  =>
+      sc.interactions.foldLeft[st.type](st) { (st, step) =>
         step match {
-          case par: ParallelGroup => st
-              .stepIf(par.contents.isEmpty) { vs: ValidationState =>
+          case par: ParallelGroup => st.stepIf(par.contents.isEmpty) { vs =>
                 vs.addMissing(
                   par.loc,
                   "Parallel interaction should not be empty"
                 )
               }
-          case opt: OptionalGroup => st
-              .stepIf(opt.contents.isEmpty) { vs: ValidationState =>
+          case opt: OptionalGroup => st.stepIf(opt.contents.isEmpty) { vs =>
                 vs.addMissing(
                   opt.loc,
                   "Optional interaction should not be empty"

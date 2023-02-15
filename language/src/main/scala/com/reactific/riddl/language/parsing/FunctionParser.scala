@@ -11,16 +11,16 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Unit Tests For FunctionParser */
-trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
+private[parsing] trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
 
-  def functionOptions[X: P]: P[Seq[FunctionOption]] = {
+  private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  def functionInclude[x: P]: P[Include[FunctionDefinition]] = {
+  private def functionInclude[x: P]: P[Include[FunctionDefinition]] = {
     include[FunctionDefinition, x](functionDefinitions(_))
   }
 
@@ -32,15 +32,11 @@ trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
     P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)
   }
 
-  def optionalInputOrOutput[
-    u: P
-  ]: P[(Option[Aggregation], Option[Aggregation])] = { P(input.? ~ output.?) }
-
-  def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
+  private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
     P(typeDef | example | function | term | functionInclude).rep(0)
   }
 
-  def functionBody[u: P]: P[
+  private def functionBody[u: P]: P[
     (
       Seq[FunctionOption],
       Option[Aggregation],

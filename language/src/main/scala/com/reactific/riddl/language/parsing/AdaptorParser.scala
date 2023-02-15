@@ -11,28 +11,28 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parser rules for Adaptors */
-trait AdaptorParser extends HandlerParser with GherkinParser with
+private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser with
   ActionParser with StreamingParser {
 
-  def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
+  private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) => AdaptorTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  def adaptorInclude[u: P]: P[Include[AdaptorDefinition]] = {
+  private def adaptorInclude[u: P]: P[Include[AdaptorDefinition]] = {
     include[AdaptorDefinition, u](adaptorDefinitions(_))
   }
 
-  def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
+  private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
       (handler | inlet | outlet | adaptorInclude | term).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }
 
-  def adaptorDirection[u: P]: P[AdaptorDirection] = {
+  private def adaptorDirection[u: P]: P[AdaptorDirection] = {
     P(location ~ (Readability.from.! | Readability.to.!)).map {
       case (loc, "from") => InboundAdaptor(loc)
       case (loc, "to")   => OutboundAdaptor(loc)

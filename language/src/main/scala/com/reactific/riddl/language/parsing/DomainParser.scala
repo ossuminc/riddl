@@ -8,19 +8,18 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
-import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for domains. */
-trait DomainParser
+private[parsing] trait DomainParser
     extends ApplicationParser
     with ContextParser
     with StoryParser
     with StreamingParser
     with TypeParser {
 
-  def domainOptions[X: P]: P[Seq[DomainOption]] = {
+  private def domainOptions[X: P]: P[Seq[DomainOption]] = {
     options[X, DomainOption](StringIn(Options.package_, Options.technology).!) {
       case (loc, Options.package_, args)   => DomainPackageOption(loc, args)
       case (loc, Options.technology, args) => DomainTechnologyOption(loc, args)
@@ -28,37 +27,18 @@ trait DomainParser
     }
   }
 
-  def domainInclude[X: P]: P[Include[DomainDefinition]] = {
+  private def domainInclude[X: P]: P[Include[DomainDefinition]] = {
     include[DomainDefinition, X](domainContent(_))
   }
 
-  def author[u: P]: P[Author] = {
-    P(
-      location ~ Keywords.author ~/ identifier ~ is ~ open ~
-        (undefined((
-          LiteralString(At(), ""),
-          LiteralString(At(), ""),
-          Option.empty[LiteralString],
-          Option.empty[LiteralString],
-          Option.empty[java.net.URL]
-        )) |
-          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-            (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
-      Author(loc, id, name, email, org, title, url, brief, desc)
-    }
-  }
-
-  def domainContent[u: P]: P[Seq[DomainDefinition]] = {
+  private def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
       (author | typeDef | context | actor | story | domain | term |
         application | importDef | domainInclude).rep(0)
     )
   }
 
-  def actor[u: P]: P[Actor] = {
+  private def actor[u: P]: P[Actor] = {
     P(
       location ~ Keywords.actor ~ identifier ~/ is ~ literalString ~ briefly ~
         description

@@ -407,9 +407,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class ArbitraryAction(
     loc: At,
-    what: LiteralString,
-    description: Option[Description] = None)
-      extends Action {
+    what: LiteralString
+  ) extends Action {
     override def format: String = what.format
   }
 
@@ -425,8 +424,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class ErrorAction(
     loc: At,
-    message: LiteralString,
-    description: Option[Description])
+    message: LiteralString)
       extends Action {
     override def format: String = s"severe \"${message.format}\""
   }
@@ -446,8 +444,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class SetAction(
     loc: At,
     target: PathIdentifier,
-    value: Expression,
-    description: Option[Description] = None)
+    value: Expression)
       extends Action {
     override def format: String = { s"set ${target.format} to ${value.format}" }
   }
@@ -455,8 +452,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class AppendAction(
     loc: At,
     value: Expression,
-    target: PathIdentifier,
-    description: Option[Description] = None)
+    target: PathIdentifier)
       extends Action {
     override def format: String = {
       s"append ${value.format} to ${target.format}"
@@ -494,8 +490,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class ReturnAction(
     loc: At,
-    value: Expression,
-    description: Option[Description] = None)
+    value: Expression)
       extends Action {
     override def format: String = s"return ${value.format}"
   }
@@ -511,8 +506,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class YieldAction(
     loc: At,
-    msg: MessageConstructor,
-    description: Option[Description] = None)
+    msg: MessageConstructor)
       extends Action {
     override def format: String = s"yield ${msg.format}"
   }
@@ -531,9 +525,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class PublishAction(
     loc: At,
     msg: MessageConstructor,
-    pipe: PipeRef,
-    description: Option[Description] = None)
-      extends SagaStepAction {
+    pipe: PipeRef)
+      extends Action {
     override def format: String = s"publish ${msg.format} to ${pipe.format}"
   }
 
@@ -549,9 +542,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class SubscribeAction(
     loc: At,
-    type_ : TypeRef,
-    pipe: PipeRef,
-    description: Option[Description] = None)
+     pipe: PipeRef,
+    type_ : TypeRef)
       extends Action {
     def format: String = s"subscribe to ${pipe.format}"
   }
@@ -570,9 +562,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class FunctionCallAction(
     loc: At,
     function: PathIdentifier,
-    arguments: ArgList,
-    description: Option[Description] = None)
-      extends SagaStepAction {
+    arguments: ArgList)
+      extends Action {
     override def format: String = s"call ${function.format}${arguments.format}"
   }
 
@@ -590,8 +581,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class MorphAction(
     loc: At,
     entity: EntityRef,
-    state: StateRef,
-    description: Option[Description] = None)
+    state: StateRef)
       extends Action {
     override def format: String = s"morph ${entity.format} to ${state.format}"
   }
@@ -612,8 +602,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class BecomeAction(
     loc: At,
     entity: EntityRef,
-    handler: HandlerRef,
-    description: Option[Description] = None)
+    handler: HandlerRef)
       extends Action {
     override def format: String =
       s"become ${entity.format} to ${handler.format}"
@@ -634,9 +623,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class TellAction(
     loc: At,
     msg: MessageConstructor,
-    entity: MessageTakingRef[Definition],
-    description: Option[Description] = None)
-      extends SagaStepAction {
+    entity: MessageTakingRef[Definition])
+      extends Action {
     override def format: String = s"tell ${msg.format} to ${entity.format}"
   }
 
@@ -655,9 +643,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
   case class AskAction(
     loc: At,
     entity: EntityRef,
-    msg: MessageConstructor,
-    description: Option[Description] = None)
-      extends SagaStepAction {
+    msg: MessageConstructor)
+      extends Action {
     override def format: String = s"ask ${entity.format} to ${msg.format}"
   }
 
@@ -673,9 +660,8 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class ReplyAction(
     loc: At,
-    msg: MessageConstructor,
-    description: Option[Description] = None)
-      extends SagaStepAction {
+    msg: MessageConstructor)
+      extends Action {
     override def format: String = s"reply with ${msg.format}"
   }
 
@@ -690,8 +676,7 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     */
   case class CompoundAction(
     loc: At,
-    actions: Seq[Action],
-    description: Option[Description] = None)
+    actions: Seq[Action])
       extends Action {
     override def format: String = actions.mkString("{", ",", "}")
   }
@@ -905,10 +890,27 @@ object AST extends ast.Expressions with ast.Options with parsing.Terminals {
     final val kind: String = "Invariant"
   }
 
-  trait OnClause extends HandlerDefinition {
+  /**
+   * A sealed trait for the kinds of OnClause that can
+   * occur within a Handler definition.
+   */
+  sealed trait OnClause extends HandlerDefinition {
     def examples: Seq[Example]
   }
 
+  /** Defines the actions to be taken when a message does not match
+   * any of the OnMessageClauses. OnOtherClause corresponds to the
+   * "other" case of an [[AST.Handler]].
+   *
+   * @param loc
+   *   THe location of the "on other" clause
+   * @param examples
+   *   A set of examples that define the behavior when a message doesn't match
+   * @param brief
+   *   A brief description (one sentence) for use in documentation
+   * @param description
+   *   An optional description of the on clause.
+   */
   case class OnOtherClause(
     loc: At,
     examples: Seq[Example] = Seq.empty[Example],

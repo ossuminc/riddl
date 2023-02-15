@@ -241,11 +241,7 @@ trait AbstractDefinitions extends Terminals {
     * clause or in the definition of a Function. The subclasses define different
     * kinds of actions that can be used.
     */
-  trait Action extends DescribedValue
-
-  /** An action that can also be used in a SagaStep
-    */
-  trait SagaStepAction extends Action
+  trait Action extends RiddlValue
 
   /** Base class of any Gherkin value
     */

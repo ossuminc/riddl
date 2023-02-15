@@ -172,22 +172,20 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       state: PrettifyState,
       domain: Domain
     ): PrettifyState = {
-      state.withCurrent(_.openDef(domain)).step { s1: PrettifyState =>
-        domain.authorDefs.foldLeft(s1) { (st, author) =>
-          st.withCurrent(
-            _.addIndent(s"author is {\n").indent
-              .addIndent(s"name = ${author.name.format}\n")
-              .addIndent(s"email = ${author.email.format}\n")
-          ).step { s2 =>
-            author.organization.map(org =>
-              s2.withCurrent(_.addIndent(s"organization =${org.format}\n"))
-            ).orElse(Option(s2)).get
-          }.step { s3 =>
-            author.title.map(title =>
-              s3.withCurrent(_.addIndent(s"title = ${title.format}\n"))
-            ).orElse(Option(s3)).get
-          }.withCurrent(_.outdent.addIndent("}\n"))
-        }
+      val s0: PrettifyState = state.withCurrent(_.openDef(domain))
+      domain.authorDefs.foldLeft[PrettifyState](s0) { (st: PrettifyState, author) =>
+        val s1: PrettifyState = st.withCurrent(
+          _.addIndent(s"author is {\n").indent
+            .addIndent(s"name = ${author.name.format}\n")
+            .addIndent(s"email = ${author.email.format}\n")
+        )
+        val s2: PrettifyState = author.organization.map[PrettifyState] { org =>
+          s1.withCurrent(_.addIndent(s"organization =${org.format}\n"))
+        }.getOrElse(s1)
+        val s3: PrettifyState  = author.title.map(title =>
+            s2.withCurrent(_.addIndent(s"title = ${title.format}\n"))
+          ).getOrElse(s2)
+        s3.withCurrent(_.outdent.addIndent("}\n"))
       }
     }
 
@@ -279,15 +277,13 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       state: PrettifyState,
       function: Function
     ): PrettifyState = {
-      state.withCurrent(_.openDef(function)).step { s =>
-        function.input.fold(s)(te =>
-          s.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
+      val s1 = state.withCurrent(_.openDef(function))
+      val s2 = function.input.fold[state.type](s1)(te =>
+          s1.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
         )
-      }.step { s =>
-        function.output.fold(s)(te =>
-          s.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
-        )
-      }
+      function.output.fold(s2)(te =>
+        s2.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
+      )
     }
 
     def openState(reformatState: PrettifyState, state: State): PrettifyState = {

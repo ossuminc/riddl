@@ -16,9 +16,9 @@ import fastparse.ScalaWhitespace.*
   * @see
   *   https://cucumber.io/docs/gherkin/reference/
   */
-trait GherkinParser extends ActionParser {
+private[parsing] trait GherkinParser extends ActionParser {
 
-  def givens[u: P]: P[Seq[GivenClause]] = {
+  private def givens[u: P]: P[Seq[GivenClause]] = {
     P(
       (location ~ IgnoreCase(Keywords.given_) ~/ docBlock)
         .map(tpl => (GivenClause.apply _).tupled(tpl)) ~
@@ -27,7 +27,7 @@ trait GherkinParser extends ActionParser {
     ).map { case (initial, remainder) => initial +: remainder }
   }
 
-  def whens[u: P]: P[Seq[WhenClause]] = {
+  private def whens[u: P]: P[Seq[WhenClause]] = {
     P(
       (location ~ IgnoreCase(Keywords.when) ~/ condition)
         .map(tpl => (WhenClause.apply _).tupled(tpl)) ~
@@ -36,7 +36,7 @@ trait GherkinParser extends ActionParser {
     ).map { case (initial, remainder) => initial +: remainder }
   }
 
-  def thens[u: P]: P[Seq[ThenClause]] = {
+  private def thens[u: P]: P[Seq[ThenClause]] = {
     P(
       (location ~ IgnoreCase(Keywords.then_) ~/ anyAction)
         .map(tpl => (ThenClause.apply _).tupled(tpl)) ~
@@ -45,7 +45,7 @@ trait GherkinParser extends ActionParser {
     ).map { case (initial, remainder) => initial +: remainder }
   }
 
-  def buts[u: P]: P[Seq[ButClause]] = {
+  private def buts[u: P]: P[Seq[ButClause]] = {
     P(
       (location ~ (IgnoreCase(Keywords.else_) | IgnoreCase(Keywords.but)) ~/
         anyAction).map(tpl => (ButClause.apply _).tupled(tpl)) ~
@@ -57,8 +57,9 @@ trait GherkinParser extends ActionParser {
     }
   }
 
-  type ExampleBody =
+  private type ExampleBody =
     (Seq[GivenClause], Seq[WhenClause], Seq[ThenClause], Seq[ButClause])
+
   def exampleBody[u: P]: P[ExampleBody] = {
     P(
       (givens.?.map(_.getOrElse(Seq.empty[GivenClause])) ~
@@ -72,7 +73,7 @@ trait GherkinParser extends ActionParser {
     )
   }
 
-  def undefinedBody[u: P]: P[ExampleBody] = {
+  private def undefinedBody[u: P]: P[ExampleBody] = {
     P(undefined((
       Seq.empty[GivenClause],
       Seq.empty[WhenClause],
@@ -89,13 +90,6 @@ trait GherkinParser extends ActionParser {
         briefly ~ description
     ).map { case (loc, id, (g, w, t, e), brief, desc) =>
       Example(loc, id, g, w, t, e, brief, desc)
-    }
-  }
-
-  def testedWithExamples[u: P]: P[Seq[Example]] = {
-    P(("tested" ~ ("with" | "by")).? ~ examples).?.map {
-      case Some(examples) => examples
-      case None           => Seq.empty[Example]
     }
   }
 

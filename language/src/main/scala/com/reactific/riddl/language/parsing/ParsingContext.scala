@@ -32,13 +32,14 @@ trait ParsingContext extends Terminals {
     .ListBuffer.empty[Messages.Message]
 
   @inline def current: RiddlParserInput = { stack.current }
-  @inline def push(path: Path): Unit = { stack.push(path) }
-  @inline def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
-  @inline def pop: RiddlParserInput = {
+  @inline protected def push(path: Path): Unit = { stack.push(path) }
+  @inline protected def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
+  @inline protected def pop: RiddlParserInput = {
     val rpi = stack.pop
     filesSeen.append(rpi)
     rpi
   }
+
   private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable
     .ListBuffer.empty[RiddlParserInput]
 
@@ -61,7 +62,7 @@ trait ParsingContext extends Terminals {
     } else { importDomain(file) }
   }
 
-  def importDomain(
+  private def importDomain(
     @unused file: File
   ): Domain = {
     // TODO: implement importDomain
@@ -117,7 +118,7 @@ trait ParsingContext extends Terminals {
     }.distinct.mkString("(", " | ", ")")
   }
 
-  def makeParseFailureError(failure: Failure): Unit = {
+  private def makeParseFailureError(failure: Failure): Unit = {
     val location = current.location(failure.index)
     val trace = failure.trace()
     val msg = trace.terminals.value.size match {
@@ -129,7 +130,7 @@ trait ParsingContext extends Terminals {
     error(location, msg, context)
   }
 
-  def makeParseFailureError(exception: Throwable): Unit = {
+  private def makeParseFailureError(exception: Throwable): Unit = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n","\n  ", "\n")
     error(At.empty, message)
   }

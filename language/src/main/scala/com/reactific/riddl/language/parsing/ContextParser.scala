@@ -11,7 +11,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
-trait ContextParser
+private[parsing] trait ContextParser
     extends HandlerParser
     with AdaptorParser
     with EntityParser
@@ -21,7 +21,7 @@ trait ContextParser
     with StreamingParser
     with TypeParser {
 
-  def contextOptions[X: P]: P[Seq[ContextOption]] = {
+  private def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](
       StringIn(
         Options.wrapper,
@@ -40,11 +40,11 @@ trait ContextParser
     }
   }
 
-  def contextInclude[X: P]: P[Include[ContextDefinition]] = {
+  private def contextInclude[X: P]: P[Include[ContextDefinition]] = {
     include[ContextDefinition, X](contextDefinitions(_))
   }
 
-  def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
+  private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
         (typeDef | handler | entity | adaptor | function | saga | processor |

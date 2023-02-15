@@ -133,8 +133,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
         At.empty,
         ArbitraryAction(
           At.empty,
-          LiteralString(At.empty, "ya gots ta do betta"),
-          None
+          LiteralString(At.empty, "ya gots ta do betta")
         )
       )
       val example = Example(
@@ -161,8 +160,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
           At.empty,
           ArbitraryAction(
             At.empty,
-            LiteralString(At.empty, "no at familia expense"),
-            None
+            LiteralString(At.empty, "no at familia expense")
           )
         ))
       )

@@ -10,7 +10,7 @@ package com.reactific.riddl.language.ast
 trait TypeExpression extends AbstractDefinitions {
 
 ///////////////////////////////////////////////////////////// TYPES
-  
+
   sealed trait TypeDefinition extends Definition
 
   /** Base trait of an expression that defines a type
@@ -365,9 +365,9 @@ trait TypeExpression extends AbstractDefinitions {
     *   The fields of the message's aggregation
     */
   case class AggregateUseCaseTypeExpression(
-                                             loc: At,
-                                             usecase: AggregateUseCase,
-                                             fields: Seq[Field] = Seq.empty[Field]
+    loc: At,
+    usecase: AggregateUseCase,
+    fields: Seq[Field] = Seq.empty[Field]
   ) extends AggregateTypeExpression {
     override def format: String = { usecase.format + " " + super.format }
   }

@@ -15,7 +15,27 @@ import java.net.URL
 import java.nio.file.Files
 
 /** Common Parsing Rules */
-trait CommonParser extends Terminals with NoWhiteSpaceParsers {
+private[parsing] trait CommonParser extends Terminals with NoWhiteSpaceParsers {
+
+  def author[u: P]: P[Author] = {
+    P(
+      location ~ Keywords.author ~/ identifier ~ is ~ open ~
+        (undefined((
+          LiteralString(At(), ""),
+          LiteralString(At(), ""),
+          Option.empty[LiteralString],
+          Option.empty[LiteralString],
+          Option.empty[java.net.URL]
+        )) |
+          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+            (Keywords.title ~ is ~ literalString).? ~
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
+      Author(loc, id, name, email, org, title, url, brief, desc)
+    }
+  }
+
 
   def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]

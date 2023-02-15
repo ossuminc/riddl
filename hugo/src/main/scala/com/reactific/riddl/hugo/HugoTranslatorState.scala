@@ -28,7 +28,7 @@ case class HugoTranslatorState(
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
     extends TranslatingState[MarkdownWriter]
-    with PathResolutionState[HugoTranslatorState]
+    with PathResolutionState
     with TranslationResult {
 
   final val symbolTable: SymbolTable = result.symTab

@@ -10,37 +10,37 @@ import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-trait HandlerParser extends GherkinParser with FunctionParser {
+private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
 
-  def onClauseBody[u: P]: P[Seq[Example]] = {
+  private def onClauseBody[u: P]: P[Seq[Example]] = {
     open ~
       ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
         Seq(Example(l, Identifier(l, ""), g, w, t, b))
       } | nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
   }
 
-  def fromClause[u: P]: P[Reference[Definition]] = {
+  private def fromClause[u: P]: P[Reference[Definition]] = {
     P(
       Readability.from./ ~
         (actorRef | entityRef | pipeRef | adaptorRef | contextRef)
     )
   }
 
-  def onOtherClause[u: P]: P[OnClause] = {
+  private def onOtherClause[u: P]: P[OnClause] = {
     P( Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
       description ).map( t => (OnOtherClause.apply _).tupled(t))
   }
 
-  def onMessageClause[u: P]: P[OnClause] = {
+  private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/ fromClause.? ~ onClauseBody ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
-  def handlerDefinitions[u: P]: P[Seq[OnClause]] = {
+  private def handlerDefinitions[u: P]: P[Seq[OnClause]] = {
     P(onMessageClause | onOtherClause).rep(0)
   }
 
-  def handlerBody[u: P]: P[Seq[OnClause]] = {
+  private def handlerBody[u: P]: P[Seq[OnClause]] = {
     undefined(Seq.empty[OnClause]) | handlerDefinitions
   }
 
