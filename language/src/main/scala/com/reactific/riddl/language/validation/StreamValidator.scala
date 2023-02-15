@@ -80,9 +80,10 @@ object StreamValidator {
     inlets: Seq[Inlet]
   ): ValidationState = {
     val inUseInlets: Seq[Inlet] = pipes.flatMap { pipe =>
-      val parents = state.symbolTable.parentsOf(pipe)
+      val parents = pipe +: state.symbolTable.parentsOf(pipe)
       pipe.to.flatMap[Inlet] { inletRef =>
-        state.resolvePathIdentifier(inletRef.pathId, parents)
+        val maybe = state.resolvePathIdentifier[Inlet](inletRef.pathId, parents)
+        maybe
       }
     }
 
