@@ -7,16 +7,17 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
+import Terminals.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-trait ApplicationParser
+private[parsing] trait ApplicationParser
     extends CommonParser
     with ReferenceParser
     with HandlerParser
     with TypeParser {
 
-  def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
+  private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         ApplicationTechnologyOption(loc, args)
@@ -24,7 +25,7 @@ trait ApplicationParser
     }
   }
 
-  def group[u: P]: P[Group] = {
+  private def group[u: P]: P[Group] = {
     P(
       location ~ Keywords.group ~/ identifier ~ is ~ open ~ types ~
         (group | appOutput | appInput).rep(0) ~ close ~ briefly ~ description
@@ -33,7 +34,7 @@ trait ApplicationParser
     }
   }
 
-  def appOutput[u: P]: P[Output] = {
+  private def appOutput[u: P]: P[Output] = {
     P(
       location ~ Keywords.output ~/ identifier ~ is ~ open ~ types ~
         Keywords.presents ~/ resultRef ~ close ~ briefly ~ description
@@ -42,7 +43,7 @@ trait ApplicationParser
     }
   }
 
-  def appInput[u: P]: P[Input] = {
+  private def appInput[u: P]: P[Input] = {
     P(
       location ~ Keywords.input ~/ identifier ~ is ~ open ~ types ~
         Keywords.acquires ~ commandRef ~ close ~ briefly ~ description
@@ -51,19 +52,19 @@ trait ApplicationParser
     }
   }
 
-  def applicationDefinition[u: P]: P[ApplicationDefinition] = {
+  private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
     P(group | handler | term | typeDef | applicationInclude)
   }
 
-  def applicationDefinitions[u: P]: P[Seq[ApplicationDefinition]] = {
+  private def applicationDefinitions[u: P]: P[Seq[ApplicationDefinition]] = {
     P(applicationDefinition.rep(0))
   }
 
-  def applicationInclude[u: P]: P[Include[ApplicationDefinition]] = {
+  private def applicationInclude[u: P]: P[Include[ApplicationDefinition]] = {
     include[ApplicationDefinition, u](applicationDefinitions(_))
   }
 
-  def emptyApplication[
+  private def emptyApplication[
     u: P
   ]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
     undefined((Seq.empty[ApplicationOption], Seq.empty[ApplicationDefinition]))

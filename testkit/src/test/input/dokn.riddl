@@ -20,7 +20,7 @@ domain dokn is {
     type LocationId is Id(Location.Location)
     type NoteList is reference to Note.Note*
 
-    plant CompanyPlant is {
+    context CompanyPlant is {
         pipe CompanyEvents is {
             transmit dokn.Company.Company.CompanyEvent
         }

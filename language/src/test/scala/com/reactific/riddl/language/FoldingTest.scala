@@ -12,7 +12,7 @@ class FoldingTest extends ParsingTest {
 
   val input: String =
     """domain one is {
-      |  plant one is {
+      |  context one is {
       |    pipe a is { ??? }
       |    term whomprat is described by "a 2m long rat on Tatooine"
       |    flow b is {
@@ -20,7 +20,7 @@ class FoldingTest extends ParsingTest {
       |      outlet b_out is Number
       |    }
       |  }
-      |  context one is { ??? }
+      |  // context one is { ??? }
       |  context two is {
       |    term ForcePush is described by "an ability of the Jedi"
       |    function foo is {
@@ -57,13 +57,30 @@ class FoldingTest extends ParsingTest {
               val path = stack.map(_.identify).reverse :+ definition.identify
               track :+ path
           }
-          val expectedCount = 26
+          val expectedCount = 25
           result.length must be(expectedCount)
           val expectedResult = List(
             List("Root"),
             List("Root", "Domain 'one'"),
             List("Root", "Domain 'one'", "Type 'AString'"),
             List("Root", "Domain 'one'", "Context 'one'"),
+            List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'"),
+            List(
+              "Root",
+              "Domain 'one'",
+              "Context 'one'",
+              "Flow 'b'",
+              "Inlet 'b_in'"
+            ),
+            List(
+              "Root",
+              "Domain 'one'",
+              "Context 'one'",
+              "Flow 'b'",
+              "Outlet 'b_out'"
+            ),
+            List("Root", "Domain 'one'", "Context 'one'", "Term 'whomprat'"),
+            List("Root", "Domain 'one'", "Context 'one'", "Pipe 'a'"),
             List("Root", "Domain 'one'", "Context 'two'"),
             List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
             List(
@@ -139,25 +156,7 @@ class FoldingTest extends ParsingTest {
               "Function 'foo'",
               "Field 'b'"
             ),
-            List("Root", "Domain 'one'", "Context 'two'", "Term 'ForcePush'"),
-            List("Root", "Domain 'one'", "Plant 'one'"),
-            List("Root", "Domain 'one'", "Plant 'one'", "Pipe 'a'"),
-            List("Root", "Domain 'one'", "Plant 'one'", "Flow 'b'"),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Plant 'one'",
-              "Flow 'b'",
-              "Inlet 'b_in'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Plant 'one'",
-              "Flow 'b'",
-              "Outlet 'b_out'"
-            ),
-            List("Root", "Domain 'one'", "Plant 'one'", "Term 'whomprat'")
+            List("Root", "Domain 'one'", "Context 'two'", "Term 'ForcePush'")
           )
           result mustBe expectedResult
       }
@@ -220,7 +219,7 @@ class FoldingTest extends ParsingTest {
         case Right(root) =>
           val tracking = new Tracking
           val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 17
+          val expectedContainers = 16
           val expectedLeaves = 9
           tracked.defs mustBe expectedLeaves
           tracked.contPush mustBe expectedContainers

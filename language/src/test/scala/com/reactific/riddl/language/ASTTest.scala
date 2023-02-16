@@ -6,6 +6,7 @@
 
 package com.reactific.riddl.language
 
+import com.reactific.riddl.language.parsing.Terminals.Keywords
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import org.scalatest.matchers.must.Matchers
@@ -117,8 +118,8 @@ class ASTTest extends AnyWordSpec with Matchers {
       actor.format mustBe s"actor ${actor.id.format} is ${actor.is_a.format}"
     }
   }
-  val domain = Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
-  val context = Context(At(), Identifier(At(), "test"))
+  val domain: AST.Domain = Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
+  val context: AST.Context = Context(At(), Identifier(At(), "test"))
 
   "Adaptor" should { "have a test" in { pending } }
   "Application" should { "have a test" in { pending } }

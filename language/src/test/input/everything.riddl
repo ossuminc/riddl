@@ -10,12 +10,13 @@ domain Everything by author Reid is {
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
 
-  plant APlant is {
+  context APlant is {
     source Source is { outlet Commands is type DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is type DoAThing } explained as "Data Sink"
-    pipe AChannel is { transmit type DoAThing } explained as "A Channel"
-    joint input is outlet Source.Commands to pipe AChannel
-    joint output is inlet Sink.Commands from pipe AChannel
+    pipe AChannel is { transmit type DoAThing
+      from outlet Source.Commands
+      to inlet Sink.Commands
+    } explained as "A Channel"
   }
 
   actor Author is "human" briefly "A scoundrel"

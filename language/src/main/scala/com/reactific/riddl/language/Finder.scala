@@ -54,8 +54,8 @@ case class Finder(root: Definition) {
 
   def findEmpty: DefWithParents = findWithParents(_.isEmpty)
 
-  def makeVitalStats[T <: VitalDefinition[?, ?]](
-    v: T,
+  private def makeVitalStats(
+    v: VitalDefinition[?,?],
     stats: => KindStats
   ): Unit = {
     stats.count += 1
@@ -88,7 +88,6 @@ case class Finder(root: Definition) {
               case f: Function =>
                 makeVitalStats(f, state.functionStats)
               case h: Handler => makeVitalStats(h, state.handlerStats)
-              case p: Plant   => makeVitalStats(p, state.plantStats)
               case p: Processor =>
                 makeVitalStats(p, state.processorStats)
               case p: Projection =>

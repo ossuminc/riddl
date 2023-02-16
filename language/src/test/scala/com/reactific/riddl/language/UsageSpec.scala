@@ -104,7 +104,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
           val commonOptions = CommonOptions()
           val result = Validation.validate(model, commonOptions)
           info(result.messages.format)
-          result.messages.isIgnorable mustBe (false)
+          result.messages.isOnlyIgnorable mustBe (false)
           val warnings = result.messages.justWarnings
           warnings.size mustBe (1)
           val warnMessage = warnings.head.format
@@ -121,7 +121,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
         case Left(messages) => fail(messages.format)
         case Right(model) =>
           val result = Validation.validate(model, CommonOptions())
-          result.messages.isIgnorable mustBe (false)
+          result.messages.isOnlyIgnorable mustBe (false)
           val warnings = result.messages.justWarnings
           warnings.size mustBe (1)
           val warnMessage = warnings.head.format

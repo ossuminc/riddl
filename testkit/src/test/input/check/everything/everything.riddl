@@ -8,12 +8,12 @@ domain Everything is {
   // Channels are defined to flow messages between entities. They are defined
   // in domain scope because they can cross contexts too.
 
-  plant APlant is {
+  context APlant is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    pipe AChannel is { transmit DoAThing } explained as "A Channel"
-    joint input is outlet Source.Commands to pipe AChannel
-    joint output is inlet Sink.Commands from pipe AChannel
+    pipe AChannel is { transmit DoAThing
+      from  outlet Source.Commands  to inlet Sink.Commands
+    } explained as "A Channel"
   }
 
   // Domains are composed of bounded contexts so ...

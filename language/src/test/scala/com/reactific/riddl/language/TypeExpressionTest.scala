@@ -9,6 +9,7 @@ package com.reactific.riddl.language
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 

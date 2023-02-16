@@ -9,14 +9,15 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
-trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
+private[parsing] trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
-  def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
+  private def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
     messageTakingRef | sagaRef | functionRef
   }
 
-  def arbitraryStep[u: P]: P[ArbitraryStep] = {
+  private def arbitraryStep[u: P]: P[ArbitraryStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ arbitraryStoryRef ~
         literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly
@@ -25,7 +26,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
+  private def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
     P(
       location ~ Keywords.step ~ Readability.for_.? ~
         (arbitraryStoryRef | actorRef) ~ literalString ~ briefly
@@ -34,7 +35,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def viewOutputStep[u: P]: P[ActivateOutputStep] = {
+  private def viewOutputStep[u: P]: P[ActivateOutputStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ outputRef ~
         literalString ~ Readability.to.? ~ actorRef ~ briefly
@@ -43,7 +44,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def provideInputStep[u: P]: P[ProvideInputStep] = {
+  private def provideInputStep[u: P]: P[ProvideInputStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ actorRef ~ literalString ~
         Readability.to.? ~ inputRef ~ briefly
@@ -52,28 +53,28 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def optionalGroup[u: P]: P[OptionalGroup] = {
+  private def optionalGroup[u: P]: P[OptionalGroup] = {
     P(
       location ~ Keywords.optional./ ~ open ~ interactionExpressions ~ close ~
         briefly
     )./.map { case (loc, steps, brief) => OptionalGroup(loc, steps, brief) }
   }
 
-  def parallelGroup[u: P]: P[ParallelGroup] = {
+  private def parallelGroup[u: P]: P[ParallelGroup] = {
     P(
       location ~ Keywords.parallel./ ~ open ~ interactionExpressions ~ close ~
         briefly
     )./.map { case (loc, steps, brief) => ParallelGroup(loc, steps, brief) }
   }
 
-  def interactionExpressions[u: P]: P[Seq[InteractionExpression]] = {
+  private def interactionExpressions[u: P]: P[Seq[InteractionExpression]] = {
     P(
       parallelGroup | optionalGroup | viewOutputStep | provideInputStep |
         arbitraryStep | selfProcessingStep
     ).rep(0, Punctuation.comma./)
   }
 
-  def storyCase[u: P]: P[StoryCase] = {
+  private def storyCase[u: P]: P[StoryCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
         (undefined(Seq.empty[InteractionStep]) | interactionExpressions) ~
@@ -99,7 +100,7 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     ).?.map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get }
   }
 
-  def storyOptions[u: P]: P[Seq[StoryOption]] = {
+  private def storyOptions[u: P]: P[Seq[StoryOption]] = {
     options[u, StoryOption](StringIn(Options.technology, Options.sync).!) {
       case (loc, Options.sync, _)          => StorySynchronousOption(loc)
       case (loc, Options.technology, args) => StoryTechnologyOption(loc, args)
@@ -107,11 +108,11 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     }
   }
 
-  def storyInclude[u: P]: P[Include[StoryDefinition]] = {
+  private def storyInclude[u: P]: P[Include[StoryDefinition]] = {
     include[StoryDefinition, u](storyDefinitions(_))
   }
 
-  def storyDefinitions[u: P]: P[Seq[StoryDefinition]] = {
+  private def storyDefinitions[u: P]: P[Seq[StoryDefinition]] = {
     P(storyCase | example | term | storyInclude).rep(0)
   }
 
@@ -121,7 +122,8 @@ trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
     Seq[java.net.URL],
     Seq[StoryDefinition]
   )
-  def storyBody[u: P]: P[StoryBody] = { P(
+
+  private def storyBody[u: P]: P[StoryBody] = { P(
     undefined((Seq.empty[StoryOption], Option.empty[UserStory],
       Seq.empty[java.net.URL], Seq.empty[StoryDefinition])) |
       (storyOptions ~ userStory.? ~ shownBy ~ storyDefinitions))./ }

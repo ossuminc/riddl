@@ -19,7 +19,7 @@ import scala.collection.mutable
 case class PrettifyState(
   commonOptions: CommonOptions,
   options: PrettifyCommand.Options)
-    extends Folding.State[PrettifyState]
+    extends Folding.State
     with TranslatingState[RiddlFileEmitter]
     with TranslationResult {
 
@@ -69,14 +69,14 @@ case class PrettifyState(
     file
   }
 
-  def pushFile(file: RiddlFileEmitter): PrettifyState = {
+  def pushFile(file: RiddlFileEmitter): this.type = {
     fileStack.push(file)
     addFile(file)
   }
 
   def popFile(): PrettifyState = { fileStack.pop(); this }
 
-  def withCurrent(f: RiddlFileEmitter => Unit): PrettifyState = {
+  def withCurrent(f: RiddlFileEmitter => Unit): this.type = {
     f(current); this
   }
 }

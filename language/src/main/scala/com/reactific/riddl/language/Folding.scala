@@ -104,14 +104,11 @@ object Folding {
     ): STATE
   }
 
-  trait State[S <: State[?]] {
-    def step(f: S => S): S = f(this.asInstanceOf[S])
-    def stepIf(predicate: Boolean = true)(f: S => S): S = {
-      if (predicate) f(this.asInstanceOf[S]) else this.asInstanceOf[S]
+  trait State {
+    def step(f: this.type => this.type): this.type = f(this)
+    def stepIf(predicate: Boolean = true)(f: this.type => this.type): this.type = {
+      if (predicate) f(this) else this
     }
-  }
-
-  trait MessagesState[S <: State[?]] extends State[S] {
 
     def commonOptions: CommonOptions
 
@@ -119,50 +116,46 @@ object Folding {
 
     def messages: Messages.Messages = msgs.toList
 
-    def isReportMissingWarnings: Boolean = commonOptions.showMissingWarnings
-
-    def isReportStyleWarnings: Boolean = commonOptions.showStyleWarnings
-
-    def addStyle(loc: At, msg: String): S = {
+    def addStyle(loc: At, msg: String): this.type = {
       add(Message(loc, msg, StyleWarning))
     }
 
-    def addMissing(loc: At, msg: String): S = {
+    def addMissing(loc: At, msg: String): this.type = {
       add(Message(loc, msg, MissingWarning))
     }
 
-    def addWarning(loc: At, msg: String): S = {
+    def addWarning(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Warning))
     }
 
-    def addError(loc: At, msg: String): S = {
+    def addError(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Error))
     }
 
-    def addSevere(loc: At, msg: String): S = {
+    def addSevere(loc: At, msg: String): this.type = {
       add(Message(loc, msg, SevereError))
     }
 
-    def add(msg: Message): S = {
+    def add(msg: Message): this.type = {
       msg.kind match {
         case StyleWarning =>
-          if (isReportStyleWarnings) {
+          if (commonOptions.showStyleWarnings) {
             msgs += msg
-            this.asInstanceOf[S]
-          } else { this.asInstanceOf[S] }
+            this
+          } else { this }
         case MissingWarning =>
-          if (isReportMissingWarnings) {
+          if (commonOptions.showMissingWarnings) {
             msgs += msg
-            this.asInstanceOf[S]
-          } else { this.asInstanceOf[S] }
+            this
+          } else { this }
         case _ =>
           msgs += msg
-          this.asInstanceOf[S]
+          this
       }
     }
   }
 
-  trait PathResolutionState[S <: State[?]] extends MessagesState[S] {
+  trait PathResolutionState extends State {
 
     def symbolTable: SymbolTable
 
@@ -217,8 +210,8 @@ object Folding {
                 // if we're at a field composed of more fields, then those fields
                 // what we are looking for
                 fields
-              case Enumeration(_, enumerators) => enumerators
-              case AggregateUseCaseTypeExpression(_, _, fields)   =>
+              case Enumeration(_, enumerators)                  => enumerators
+              case AggregateUseCaseTypeExpression(_, _, fields) =>
                 // Message types have fields too, those fields are what we seek
                 fields
               case AliasedTypeExpression(_, pid) =>
@@ -230,10 +223,10 @@ object Folding {
                 Seq.empty[Definition]
             }
           case t: Type => t.typ match {
-              case Aggregation(_, fields)        => fields
-              case Enumeration(_, enumerators)   => enumerators
-              case AggregateUseCaseTypeExpression(_, _, fields)     => fields
-              case AliasedTypeExpression(_, pid) =>
+              case Aggregation(_, fields)                       => fields
+              case Enumeration(_, enumerators)                  => enumerators
+              case AggregateUseCaseTypeExpression(_, _, fields) => fields
+              case AliasedTypeExpression(_, pid)                =>
                 // if we're at a type definition that references another type then
                 // we need to push that type's path on the name stack
                 adjustStacksForPid(searchFor, pid, parentStack, nameStack)
@@ -390,17 +383,17 @@ object Folding {
         Seq(newParents.head)
       } else {
         // we found the starting point, adjust the PathIdentifier to drop the
-        // one we found, and
+        // one we found, and use resolveRelativePath to descend through names
         val newPid = PathIdentifier(pid.loc, pid.value.drop(1))
         resolveRelativePath(newPid, newParents)
       }
     }
 
-    def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
+    private def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
       defStack
     }
 
-    def doNothingMultiple(
+    private def doNothingMultiple(
       @unused list: List[(Definition, Seq[Definition])]
     ): Seq[Definition] = { Seq.empty[Definition] }
 
@@ -408,7 +401,7 @@ object Folding {
       pid: PathIdentifier,
       parents: Seq[Definition]
     ): Option[DEF] = {
-      def isSameDef(d: Definition): Boolean = {
+      def isSameKind(d: Definition): Boolean = {
         val clazz = classTag[DEF].runtimeClass
         d.getClass == clazz
       }
@@ -416,12 +409,12 @@ object Folding {
       if (pid.value.isEmpty) { None }
       else if (pid.value.exists(_.isEmpty)) {
         resolveRelativePath(pid, parents).headOption match {
-          case Some(head) if isSameDef(head) => Some(head.asInstanceOf[DEF])
-          case _                             => None
+          case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
+          case _                              => None
         }
       } else {
         resolvePathFromHierarchy(pid, parents).headOption match {
-          case Some(head) if isSameDef(head) => Some(head.asInstanceOf[DEF])
+          case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
           case _ =>
             val symTabCompatibleNameSearch = pid.value.reverse
             val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
@@ -430,7 +423,7 @@ object Folding {
                 // We couldn't find the path in the hierarchy or the symbol table
                 // so let's signal this by returning an empty sequence
                 None
-              case (d, _) :: Nil if isSameDef(d) => // exact match
+              case (d, _) :: Nil if isSameKind(d) => // exact match
                 // Give caller an option to do something or morph the results
                 Some(d.asInstanceOf[DEF])
               case _ => None

@@ -10,13 +10,15 @@ import com.reactific.riddl.language.AST.*
 import fastparse.P
 import fastparse.StringIn
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
-trait ReferenceParser extends CommonParser {
+private[parsing] trait ReferenceParser extends CommonParser {
 
   def adaptorRef[u: P]: P[AdaptorRef] = {
     P(location ~ Keywords.adaptor ~ pathIdentifier)
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
+
   def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))

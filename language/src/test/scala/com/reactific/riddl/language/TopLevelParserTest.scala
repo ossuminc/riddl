@@ -26,17 +26,7 @@ class TopLevelParserTest extends ParsingTestBase {
     Identifier(At(1, 8, rip), "foo"),
     Seq.empty[DomainOption],
     Seq.empty[AuthorRef],
-    Seq.empty[Author],
-    List(),
-    List(),
-    List(),
-    List(),
-    List(),
-    List(),
-    List(),
-    List(),
-    List(),
-    None
+    Seq.empty[Author]
   )))
 
   "parse" should {

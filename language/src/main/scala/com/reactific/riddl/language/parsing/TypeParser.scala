@@ -11,9 +11,10 @@ import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 /** Parsing rules for Type definitions */
-trait TypeParser extends CommonParser {
+private[parsing] trait TypeParser extends CommonParser {
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
@@ -146,7 +147,7 @@ trait TypeParser extends CommonParser {
     P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose./).?
   }
 
-  def enumerator[u: P]: P[Enumerator] = {
+  private def enumerator[u: P]: P[Enumerator] = {
     P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
       (Enumerator.apply _).tupled(tpl)
     }
@@ -160,7 +161,7 @@ trait TypeParser extends CommonParser {
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
-  def alternation[u: P]: P[Alternation] = {
+  private def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (Punctuation.undefinedMark.!
@@ -221,9 +222,9 @@ trait TypeParser extends CommonParser {
   }
 
   private def makeAggregateUseCaseType(
-                                loc: At,
-                                mk: AggregateUseCase,
-                                agg: Aggregation
+    loc: At,
+    mk: AggregateUseCase,
+    agg: Aggregation
   ): AggregateUseCaseTypeExpression = { AggregateUseCaseTypeExpression(loc, mk, agg.fields) }
 
   private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {

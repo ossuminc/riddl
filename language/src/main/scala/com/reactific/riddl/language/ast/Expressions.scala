@@ -6,6 +6,8 @@
 
 package com.reactific.riddl.language.ast
 
+import com.reactific.riddl.language.parsing.Terminals.*
+
 import scala.collection.immutable.ListMap
 
 /** A trait for inclusion into AST object in AST.scala */
@@ -97,7 +99,7 @@ trait Expressions extends TypeExpression {
     override def format: String = args.map { case (id, exp) =>
       id.format + "=" + exp.format
     }.mkString("(", ", ", ")")
-    override def isEmpty = args.isEmpty
+    override def isEmpty: Boolean = args.isEmpty
   }
 
   /** A helper class for creating aggregates and messages that represents the

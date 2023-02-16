@@ -8,7 +8,7 @@ package com.reactific.riddl.language.parsing
 
 /** Terminal symbol definitions in various categories */
 
-trait Terminals {
+object Terminals {
 
   object Punctuation {
     final val asterisk = "*"
@@ -60,12 +60,12 @@ trait Terminals {
     final val device = "device"
     final val eventSourced = "event-sourced"
     final val finiteStateMachine = "fsm"
-    final val function = "function"
     final val gateway = "gateway"
     final val kind = "kind"
     final val messageQueue = "mq"
     final val package_ = "package"
     final val parallel = "parallel"
+    final val persistent = "persistent"
     final val reply = "reply"
     final val sequential = "sequential"
     final val service = "service"
@@ -136,6 +136,7 @@ trait Terminals {
     final val implemented = "implemented"
     final val import_ = "import"
     final val include = "include"
+    final val init = "init"
     final val inlet = "inlet"
     final val inlets = "inlets"
     final val input = "input"
@@ -182,6 +183,7 @@ trait Terminals {
     final val returns = "returns"
     final val reverted = "reverted"
     final val role = "role"
+    final val router = "router"
     final val saga = "saga"
     final val scenario = "scenario"
     final val scope = "scope"

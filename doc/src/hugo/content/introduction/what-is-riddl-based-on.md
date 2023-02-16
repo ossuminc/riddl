@@ -10,6 +10,7 @@ The RIDDL specification language borrows concepts from:
 * [Reactive System Architecture (RSA)](https://www.reactivemanifesto.org/)
 * [C4 Model Of Software Architecture](https://c4model.com)
 * [Akka](https://akka.io)
+* [Jacobsen Use Cases 2.0](https://www.ivarjacobson.com/publications/white-papers/use-case-20-e-book)
 * [Agile User Stories](https://en.wikipedia.org/wiki/User_story)
 * [Behavior Driven Development (BDD)](https://en.wikipedia.org/wiki/Behavior-driven_development)
 * [Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine)
@@ -119,9 +120,14 @@ in DDD. DDD also has its own diagrams:
 
 More on that can be found [here](https://medium.com/nick-tune-tech-strategy-blog/domain-driven-architecture-diagrams-139a75acb578)
 
+## Jacobsen Use Cases 2.0
+
+TODO: write this section
+
 ## Agile User Stories
 Agile user stories are used to capture the requirements of various components
-within a system. In RIDDL we capture these user stories as a Feature. 
+within a system. In RIDDL, user stories are part of a 
+[story]({{< relref "../concepts/story.md" >}}) definition 
 
 As a [persona], I [want to], [so that]...
 

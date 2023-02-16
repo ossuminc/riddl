@@ -45,7 +45,7 @@ class StoryTest extends ValidatingTest {
               messages: Messages.Messages
             ) =>
           domain.stories mustNot be(empty)
-          messages.isIgnorable mustBe true
+          messages.isOnlyIgnorable mustBe true
           val story = domain.stories.head
           story.id.format mustBe "WritingABook"
           story.userStory mustNot be(empty)
@@ -134,7 +134,7 @@ class StoryTest extends ValidatingTest {
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
           if (msgs.nonEmpty) { info(msgs.format) }
-          msgs.isIgnorable mustBe true
+          msgs.isOnlyIgnorable mustBe true
           succeed
       }
     }
@@ -207,7 +207,7 @@ class StoryTest extends ValidatingTest {
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
           if (msgs.nonEmpty) { info(msgs.format) }
-          msgs.isIgnorable mustBe true
+          msgs.isOnlyIgnorable mustBe true
           succeed
       }
     }
@@ -275,7 +275,7 @@ class StoryTest extends ValidatingTest {
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
           if (msgs.nonEmpty) { info(msgs.format) }
-          msgs.isIgnorable mustBe true
+          msgs.isOnlyIgnorable mustBe true
           succeed
       }
     }

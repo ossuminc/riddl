@@ -10,10 +10,11 @@ import com.reactific.riddl.language.AST.*
 
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
-trait RepositoryParser extends HandlerParser {
+private[parsing] trait RepositoryParser extends HandlerParser with StreamingParser {
 
-  def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
+  private def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
     options[u, RepositoryOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         RepositoryTechnologyOption(loc, args)
@@ -21,12 +22,12 @@ trait RepositoryParser extends HandlerParser {
     }
   }
 
-  def repositoryInclude[x: P]: P[Include[RepositoryDefinition]] = {
+  private def repositoryInclude[x: P]: P[Include[RepositoryDefinition]] = {
     include[RepositoryDefinition, x](repositoryDefinitions(_))
   }
 
-  def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
-    P(typeDef | handler | term | repositoryInclude).rep(0)
+  private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
+    P(typeDef | handler | term | repositoryInclude | inlet | outlet ).rep(0)
   }
 
   def repository[u: P]: P[Repository] = {
@@ -39,6 +40,8 @@ trait RepositoryParser extends HandlerParser {
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[RepositoryDefinition]](groups.get(
         classOf[Include[RepositoryDefinition]]
@@ -49,6 +52,8 @@ trait RepositoryParser extends HandlerParser {
         id,
         types,
         handlers,
+        inlets,
+        outlets,
         authors,
         includes,
         opts,

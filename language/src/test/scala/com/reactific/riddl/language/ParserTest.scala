@@ -86,12 +86,10 @@ class ParserTest extends ParsingTest {
       val input = RiddlParserInput(
         """domain one is { ??? }
           |domain two is {
-          |  plant one is { ??? }
-          |  plant two is {
+          |  context one is {
           |    pipe a is { ??? }
           |    multi b is { ??? }
           |  }
-          |  context one is { ??? }
           |  context two is {
           |    function foo is { ??? }
           |    term expialidocious is described by { ??? }
@@ -287,16 +285,14 @@ class ParserTest extends ParsingTest {
                   (10, 7, rpi),
                   ArbitraryAction(
                     (10, 12, rpi),
-                    LiteralString((10, 12, rpi), "I'll just eat worms"),
-                    None
+                    LiteralString((10, 12, rpi), "I'll just eat worms")
                   )
                 )),
                 Seq(ButClause(
                   (11, 7, rpi),
                   ArbitraryAction(
                     (11, 12, rpi),
-                    LiteralString((11, 12, rpi), "I'm happy"),
-                    None
+                    LiteralString((11, 12, rpi), "I'm happy")
                   )
                 ))
               ))

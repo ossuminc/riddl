@@ -7,7 +7,6 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Adaptor
-import com.reactific.riddl.language.Messages.MissingWarning
 
 /** Unit Tests For ConsumerTest */
 class AdaptorTest extends ValidatingTest {
@@ -41,7 +40,7 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input) { (_, _, messages) =>
-        messages.filterNot(_.kind == MissingWarning) mustBe empty
+        messages.isOnlyIgnorable mustBe true
       }
     }
 
@@ -64,7 +63,7 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input) { (_, _, messages) =>
-        messages.filterNot(_.kind == Messages.MissingWarning) mustBe empty
+        messages.isOnlyIgnorable mustBe true
       }
     }
 

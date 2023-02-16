@@ -10,11 +10,13 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
+
 
 /** Parsing rules for entity definitions */
-trait EntityParser extends TypeParser with HandlerParser {
+private[parsing] trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
 
-  def entityOptions[X: P]: P[Seq[EntityOption]] = {
+  private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
       StringIn(
         Options.eventSourced,
@@ -26,6 +28,7 @@ trait EntityParser extends TypeParser with HandlerParser {
         Options.finiteStateMachine,
         Options.kind,
         Options.messageQueue,
+        Options.device,
         Options.technology
       ).!
     ) {
@@ -39,19 +42,21 @@ trait EntityParser extends TypeParser with HandlerParser {
         EntityIsFiniteStateMachine(loc)
       case (loc, Options.kind, args)       => EntityKind(loc, args)
       case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
+      case (loc, Options.device, _)        => EntityIsDevice(loc)
       case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
       case _ => throw new RuntimeException("Impossible case")
     }
   }
 
   type StateThings = (Aggregation, Seq[StateDefinition])
-  def stateDefinition[u: P]: P[StateThings] = {
+
+  private def stateDefinition[u: P]: P[StateThings] = {
     P(aggregation ~ (typeDef | handler | invariant).rep(0)).map {
       case (agg, stateDefs) => (agg, stateDefs)
     }
   }
 
-  def stateBody[u: P]: P[StateThings] = {
+  private def stateBody[u: P]: P[StateThings] = {
     P(
       undefined((
         Aggregation(At.empty, Seq.empty[Field]),
@@ -60,7 +65,7 @@ trait EntityParser extends TypeParser with HandlerParser {
     )
   }
 
-  def state[u: P]: P[State] = {
+  private def state[u: P]: P[State] = {
     P(
       location ~ Keywords.state ~/ identifier ~ is ~ open ~ stateBody ~ close ~
         briefly ~ description
@@ -73,22 +78,22 @@ trait EntityParser extends TypeParser with HandlerParser {
     }
   }
 
-  def entityInclude[X: P]: P[Include[EntityDefinition]] = {
+  private def entityInclude[X: P]: P[Include[EntityDefinition]] = {
     include[EntityDefinition, X](entityDefinitions(_))
   }
 
-  def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(handler | function | invariant | typeDef | state | entityInclude | term)
+  private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
+    P(handler | function | invariant | typeDef | state | entityInclude | inlet | outlet | term)
       .rep
   }
 
-  type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
+  private type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
 
-  def noEntityBody[u: P]: P[EntityBody] = {
+  private def noEntityBody[u: P]: P[EntityBody] = {
     P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
   }
 
-  def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
+  private def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
 
   def entity[u: P]: P[Entity] = {
     P(
@@ -101,6 +106,8 @@ trait EntityParser extends TypeParser with HandlerParser {
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val includes = mapTo[Include[EntityDefinition]](groups.get(
         classOf[Include[EntityDefinition]]
       ))
@@ -114,6 +121,8 @@ trait EntityParser extends TypeParser with HandlerParser {
         handlers,
         functions,
         invariants,
+        inlets,
+        outlets,
         includes,
         authorRefs,
         terms,

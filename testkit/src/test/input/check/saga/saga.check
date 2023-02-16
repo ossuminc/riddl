@@ -1,3 +1,4 @@
+Style: empty(1:1): Models without any streaming data will exhibit minimal effect
 Style: saga.riddl(6:18): Field identifier 'a' is too short. The minimum length is 3:
        requires { a: Integer described by "a"} returns { b: Integer described by "b"}
                   ^

@@ -92,6 +92,11 @@ case class SymbolTable(container: Definition) {
     }
   }
 
+  def contextOf(definition: Definition): Option[Context] = {
+    val tail = parentsOf(definition).dropWhile(_.getClass != classOf[Context])
+    tail.headOption.asInstanceOf[Option[Context]]
+  }
+
   /** Get the full path of a definition
     *
     * @param definition

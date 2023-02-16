@@ -65,7 +65,7 @@ class TypeValidatorTest extends ValidatingTest {
                                |""".stripMargin) {
         case (_: Domain, _, msgs: Messages) =>
           msgs mustNot be(empty)
-          msgs.size mustBe (2)
+          msgs.size mustBe (3)
           msgs.filter(_.kind == Messages.Warning).head.format must include("is unused")
       }
     }

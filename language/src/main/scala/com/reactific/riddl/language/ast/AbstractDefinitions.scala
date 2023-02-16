@@ -6,14 +6,12 @@
 
 package com.reactific.riddl.language.ast
 
-import com.reactific.riddl.language.parsing.Terminals
-
 import java.net.URL
 import java.nio.file.Path
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 
-trait AbstractDefinitions extends Terminals {
+trait AbstractDefinitions {
 
   /** The root trait of all things RIDDL AST. Every node in the tree is a
     * RiddlNode.
@@ -233,16 +231,15 @@ trait AbstractDefinitions extends Terminals {
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
+  /** Base trait of definitions that can be used in a Story */
+  trait MessageTakingRef[+T <: Definition] extends Reference[T]
+
   /** Base class for all actions. Actions are used in the "then" and "but"
     * clauses of a Gherkin example such as in the body of a handler's `on`
     * clause or in the definition of a Function. The subclasses define different
     * kinds of actions that can be used.
     */
-  trait Action extends DescribedValue
-
-  /** An action that can also be used in a SagaStep
-    */
-  trait SagaStepAction extends Action
+  trait Action extends RiddlValue
 
   /** Base class of any Gherkin value
     */
