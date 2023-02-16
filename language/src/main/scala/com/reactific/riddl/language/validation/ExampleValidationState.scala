@@ -242,7 +242,8 @@ trait ExampleValidationState extends TypeValidationState {
       case AskAction(_, entity, msg) => this
         .checkRef[Entity](entity, defn, parents)
         .checkMessageConstructor(msg, defn, parents)
-      case ReplyAction(_, msg) => checkMessageConstructor(msg, defn, parents)
+      case ReplyAction(_, msg) => this
+        .checkMessageConstructor(msg, defn, parents)
       case CompoundAction(loc, actions) =>
         check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
           .checkSequence(actions) { (s, action) =>
@@ -250,7 +251,7 @@ trait ExampleValidationState extends TypeValidationState {
           }
       case ArbitraryAction(loc, what) => this.check(
         what.nonEmpty,
-        "arbitrary action is empty so specifies nothing",
+        "arbitrary action is empty providing no behavior specification value",
         MissingWarning,
         loc
       )

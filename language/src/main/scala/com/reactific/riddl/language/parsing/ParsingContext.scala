@@ -24,7 +24,7 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
-trait ParsingContext extends Terminals {
+trait ParsingContext {
 
   private val stack: InputStack = InputStack()
 

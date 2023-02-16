@@ -13,6 +13,7 @@ import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Folding
 import com.reactific.riddl.language.Translator
 import com.reactific.riddl.language.Validation
+import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path

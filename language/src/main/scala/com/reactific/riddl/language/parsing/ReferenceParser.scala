@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.*
 import fastparse.P
 import fastparse.StringIn
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 private[parsing] trait ReferenceParser extends CommonParser {
 

@@ -9,6 +9,7 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 private[parsing] trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 

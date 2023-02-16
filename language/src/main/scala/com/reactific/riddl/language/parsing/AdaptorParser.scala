@@ -6,6 +6,8 @@
 
 package com.reactific.riddl.language.parsing
 
+import Terminals.*
+
 import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*

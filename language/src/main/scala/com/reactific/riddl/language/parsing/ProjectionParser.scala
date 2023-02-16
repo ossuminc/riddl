@@ -9,6 +9,7 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectionParser extends TypeParser with HandlerParser {

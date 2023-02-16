@@ -1,0 +1,96 @@
+version=3.6.0
+preset = default
+maxColumn = 80
+docstrings.style = SpaceAsterisk
+
+
+// If true, the margin character | is aligned with the opening
+// triple quote in interpolated and raw string literals.
+assumeStandardLibraryStripMargin = true
+includeCurlyBraceInSelectChains = true
+includeNoParensInSelectChains = true
+danglingParentheses.preset = true
+
+runner {
+  dialect = scala213source3
+  optimizer {
+    forceConfigStyleOnOffset = 150
+    forceConfigStyleMinArgCount = 3
+  }
+}
+
+spaces {
+  inImportCurlyBraces = true
+}
+
+indent {
+  main = 2
+  defnSite = 2
+  callSite = 2
+  caseSite = 5
+  extendSite = 2
+}
+
+// Set to `none` setting to minimize git diffs/conflicts from
+// renamings and other refactorings.
+align {
+  preset = none
+  stripMargin = true
+  tokens = [caseArrow]
+  arrowEnumeratorGenerator = true
+  openParenTupleSite = false
+  openParenCallSite = false
+  openParenDefnSite = false
+  openParenCtrlSite = false
+  multiline = true
+  inInterpolation = false
+}
+
+newlines {
+  source = fold
+  alwaysBeforeElseAfterCurlyIf = false
+  inInterpolation = oneline
+}
+
+continuationIndent {
+  callSite = 2
+  defnSite = 2
+  ctorSite = 2
+}
+
+verticalMultiline {
+  arityThreshold = 100
+  newlineAfterOpenParen = false
+  atDefnSite = true
+}
+
+rewrite {
+  rules = [ExpandImportSelectors, PreferCurlyFors]
+  redundantBraces.stringInterpolation = true
+}
+
+optIn {
+  breakChainOnFirstMethodDot = true
+  annotationNewlines = false
+  configStyleArguments = true
+}
+
+
+
+
+// Configure which source files should be formatted in this project.
+
+project {
+  git = true
+  includeFilters = [
+    ".*\\.scala$"
+    ".*\\.sbt$"
+  ]
+  excludeFilters = []
+}
+
+// Miscellaneous
+
+binPack.literalArgumentLists = false
+
+

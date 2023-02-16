@@ -8,7 +8,7 @@ package com.reactific.riddl.language.parsing
 
 /** Terminal symbol definitions in various categories */
 
-trait Terminals {
+object Terminals {
 
   object Punctuation {
     final val asterisk = "*"

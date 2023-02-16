@@ -6,6 +6,8 @@
 
 package com.reactific.riddl.language.ast
 
+import com.reactific.riddl.language.parsing.Terminals.*
+
 /** Unit Tests For TypeExpression */
 trait TypeExpression extends AbstractDefinitions {
 

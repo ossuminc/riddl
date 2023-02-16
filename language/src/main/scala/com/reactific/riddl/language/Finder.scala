@@ -54,8 +54,8 @@ case class Finder(root: Definition) {
 
   def findEmpty: DefWithParents = findWithParents(_.isEmpty)
 
-  def makeVitalStats[T <: VitalDefinition[?, ?]](
-    v: T,
+  private def makeVitalStats(
+    v: VitalDefinition[?,?],
     stats: => KindStats
   ): Unit = {
     stats.count += 1

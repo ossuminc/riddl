@@ -13,6 +13,7 @@ import com.reactific.riddl.prettify.PrettifyTranslator.keyword
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.charset.StandardCharsets
+import com.reactific.riddl.language.parsing.Terminals.*
 
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {

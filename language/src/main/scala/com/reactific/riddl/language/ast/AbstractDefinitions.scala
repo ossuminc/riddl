@@ -6,14 +6,12 @@
 
 package com.reactific.riddl.language.ast
 
-import com.reactific.riddl.language.parsing.Terminals
-
 import java.net.URL
 import java.nio.file.Path
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 
-trait AbstractDefinitions extends Terminals {
+trait AbstractDefinitions {
 
   /** The root trait of all things RIDDL AST. Every node in the tree is a
     * RiddlNode.

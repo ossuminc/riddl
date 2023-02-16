@@ -6,6 +6,7 @@
 
 package com.reactific.riddl.language.parsing
 
+import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import fastparse.*
@@ -15,7 +16,7 @@ import java.net.URL
 import java.nio.file.Files
 
 /** Common Parsing Rules */
-private[parsing] trait CommonParser extends Terminals with NoWhiteSpaceParsers {
+private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def author[u: P]: P[Author] = {
     P(

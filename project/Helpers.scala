@@ -2,6 +2,7 @@ import com.typesafe.sbt.packager.Keys.maintainer
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
+import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtLogOnEachError
 import sbt.Keys.organizationName
 import sbt.Keys._
 import sbt._
@@ -107,7 +108,8 @@ object C {
         if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
         else if (scalaVersion.value.startsWith("2.13")) { scala2_13_Options }
         else Seq.empty[String]
-      }
+      },
+      scalafmtLogOnEachError := true
     )
   }
 

@@ -11,6 +11,7 @@ import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 /** Parsing rules for Type definitions */
 private[parsing] trait TypeParser extends CommonParser {

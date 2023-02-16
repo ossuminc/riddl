@@ -6,12 +6,13 @@
 
 package com.reactific.riddl.language.parsing
 
+import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.LiteralString
 import fastparse.*
 import fastparse.NoWhitespace.*
 
 /** Parser rules that should not collect white space */
-private[parsing] trait NoWhiteSpaceParsers extends ParsingContext with Terminals {
+private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
   def markdownLine[u: P]: P[LiteralString] = {
     P(

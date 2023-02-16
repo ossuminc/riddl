@@ -13,6 +13,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 import scala.collection.immutable.ListMap
+import Terminals.*
 
 /** Parser rules for value expressions */
 private[parsing] trait ExpressionParser extends CommonParser with ReferenceParser {

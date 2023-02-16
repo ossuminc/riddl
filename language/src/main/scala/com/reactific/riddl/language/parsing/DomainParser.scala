@@ -8,6 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
+import Terminals.*
+
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 

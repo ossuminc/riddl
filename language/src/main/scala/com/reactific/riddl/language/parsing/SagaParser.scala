@@ -9,6 +9,7 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 /** SagaParser Implements the parsing of saga definitions in context
   * definitions.

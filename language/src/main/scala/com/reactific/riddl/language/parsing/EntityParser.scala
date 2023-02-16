@@ -10,6 +10,8 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
+
 
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser extends TypeParser with HandlerParser with StreamingParser {

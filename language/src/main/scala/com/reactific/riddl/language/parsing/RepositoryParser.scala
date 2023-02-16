@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.*
 
 import fastparse.*
 import fastparse.ScalaWhitespace.*
+import Terminals.*
 
 private[parsing] trait RepositoryParser extends HandlerParser with StreamingParser {
 
