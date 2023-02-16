@@ -4,8 +4,34 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.At
 
+import scala.collection.mutable
+
 /** Unit Tests For ExampleValidationState */
 trait ExampleValidationState extends TypeValidationState {
+
+  protected val subscriptions
+    : mutable.HashMap[SubscribeAction, Seq[Definition]] = mutable.HashMap
+    .empty[SubscribeAction, Seq[Definition]]
+
+  protected def addSubscription(
+    sub: SubscribeAction,
+    parents: Seq[Definition]
+  ): this.type = {
+    subscriptions.put(sub, parents)
+    this
+  }
+
+  protected val publishings: mutable.HashMap[PublishAction, Seq[Definition]] =
+    mutable.HashMap
+      .empty[PublishAction, Seq[Definition]]
+
+  protected def addPublishings(
+    pub: PublishAction,
+    parents: Seq[Definition]
+  ): this.type = {
+    publishings.put(pub, parents)
+    this
+  }
 
   def checkExamples(
     examples: Seq[Example],
@@ -21,15 +47,19 @@ trait ExampleValidationState extends TypeValidationState {
     parents: Seq[Definition]
   ): this.type = {
     val Example(_, _, givens, whens, thens, buts, _, _) = example
-    this.checkSequence(givens) { (st: this.type, givenClause) =>
-      st.checkSequence(givenClause.scenario) { (st, ls) =>
-        st.checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
-      }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
-    }.checkSequence(whens) { (st: this.type, when) =>
-      st.checkExpression(when.condition, example, parents)
-    }.checkThat(example.id.nonEmpty) { st =>
-      st.checkNonEmpty(thens, "Thens", example, required = true)
-    }.checkActions(thens.map(_.action), example, parents)
+    this
+      .checkSequence(givens) { (st: this.type, givenClause) =>
+        st.checkSequence(givenClause.scenario) { (st, ls) =>
+          st.checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
+        }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
+      }
+      .checkSequence(whens) { (st: this.type, when) =>
+        st.checkExpression(when.condition, example, parents)
+      }
+      .checkThat(example.id.nonEmpty) { st =>
+        st.checkNonEmpty(thens, "Thens", example, required = true)
+      }
+      .checkActions(thens.map(_.action), example, parents)
       .checkActions(buts.map(_.action), example, parents)
       .checkDescription(example)
   }
@@ -54,32 +84,35 @@ trait ExampleValidationState extends TypeValidationState {
     checkPathRef[Type](id, defn, parents, Some(kind)) {
       (state: this.type, _, id, _, defn) =>
         defn match {
-          case Type(_, _, typ, _, _) => typ match {
-            case mt: AggregateUseCaseTypeExpression =>
-              val names = messageConstructor.args.args.keys.map(_.value).toSeq
-              val unset = mt.fields.filterNot { fName =>
-                names.contains(fName.id.value)
-              }
-              if (unset.nonEmpty) {
-                unset.filterNot(_.isImplicit).foldLeft[this.type](state) {
-                  (next: this.type, field) =>
-                    next.addError(
-                      messageConstructor.loc,
-                      s"${field.identify} was not set in message constructor"
-                    )
+          case Type(_, _, typ, _, _) =>
+            typ match {
+              case mt: AggregateUseCaseTypeExpression =>
+                val names = messageConstructor.args.args.keys.map(_.value).toSeq
+                val unset = mt.fields.filterNot { fName =>
+                  names.contains(fName.id.value)
                 }
-              } else {
-                state
-              }
-            case te: TypeExpression => state.addError(
+                if (unset.nonEmpty) {
+                  unset.filterNot(_.isImplicit).foldLeft[this.type](state) {
+                    (next: this.type, field) =>
+                      next.addError(
+                        messageConstructor.loc,
+                        s"${field.identify} was not set in message constructor"
+                      )
+                  }
+                } else {
+                  state
+                }
+              case te: TypeExpression =>
+                state.addError(
+                  id.loc,
+                  s"'${id.format}' should reference a message type but is a ${errorDescription(te)} type instead."
+                )
+            }
+          case _ =>
+            addError(
               id.loc,
-              s"'${id.format}' should reference a message type but is a ${errorDescription(te)} type instead."
+              s"'${id.format}' was expected to be a message type but is ${article(defn.kind)} instead"
             )
-          }
-          case _ => addError(
-            id.loc,
-            s"'${id.format}' was expected to be a message type but is ${article(defn.kind)} instead"
-          )
         }
     }(defaultMultiMatchValidationFunction)
   }
@@ -111,10 +144,7 @@ trait ExampleValidationState extends TypeValidationState {
           val argNames = args.args.keys.map(_.value).toSeq
           val s1 = state.check(
             argNames.size == paramNames.size,
-            s"Wrong number of arguments for ${fid.format}. Expected ${
-              paramNames
-                .size
-            }, but got ${argNames.size}",
+            s"Wrong number of arguments for ${fid.format}. Expected ${paramNames.size}, but got ${argNames.size}",
             Error,
             loc
           )
@@ -152,22 +182,26 @@ trait ExampleValidationState extends TypeValidationState {
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = expression match {
-    case ValueOperator(_, path) => checkPathRef[Field](path, defn, parents)(
-      nullSingleMatchingValidationFunction
-    )()
-    case GroupExpression(_, expressions) => checkSequence(expressions) {
-      (st, expr) => st.checkExpression(expr, defn, parents)
-    }
+    case ValueOperator(_, path) =>
+      checkPathRef[Field](path, defn, parents)(
+        nullSingleMatchingValidationFunction
+      )()
+    case GroupExpression(_, expressions) =>
+      checkSequence(expressions) { (st, expr) =>
+        st.checkExpression(expr, defn, parents)
+      }
     case FunctionCallExpression(loc, pathId, arguments) =>
       checkFunctionCall(loc, pathId, arguments, defn, parents)
-    case ArithmeticOperator(loc, op, operands) => check(
-      op.nonEmpty,
-      "Operator is empty in abstract binary operator",
-      Error,
-      loc
-    ).checkExpressions(operands, defn, parents)
+    case ArithmeticOperator(loc, op, operands) =>
+      check(
+        op.nonEmpty,
+        "Operator is empty in abstract binary operator",
+        Error,
+        loc
+      ).checkExpressions(operands, defn, parents)
     case Comparison(loc, comp, arg1, arg2) =>
-      checkExpression(arg1, defn, parents).checkExpression(arg2, defn, parents)
+      checkExpression(arg1, defn, parents)
+        .checkExpression(arg2, defn, parents)
         .check(
           arg1.expressionType.isAssignmentCompatible(arg2.expressionType),
           s"Incompatible expression types in ${comp.format} expression",
@@ -182,12 +216,13 @@ trait ExampleValidationState extends TypeValidationState {
     case Ternary(loc, condition, expr1, expr2) =>
       checkExpression(condition, defn, parents)
         .checkExpression(expr1, defn, parents)
-        .checkExpression(expr2, defn, parents).check(
-        expr1.expressionType.isAssignmentCompatible(expr2.expressionType),
-        "Incompatible expression types in Ternary expression",
-        Error,
-        loc
-      )
+        .checkExpression(expr2, defn, parents)
+        .check(
+          expr1.expressionType.isAssignmentCompatible(expr2.expressionType),
+          "Incompatible expression types in Ternary expression",
+          Error,
+          loc
+        )
 
     case NotCondition(_, cond1) => checkExpression(cond1, defn, parents)
     case condition: MultiCondition =>
@@ -200,9 +235,10 @@ trait ExampleValidationState extends TypeValidationState {
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    checkSequence(actions)((s: this.type, action) => s.checkAction(action, defn, parents))
+    checkSequence(actions)((s: this.type, action) =>
+      s.checkAction(action, defn, parents)
+    )
   }
-
 
   private def checkAction(
     action: Action,
@@ -211,53 +247,66 @@ trait ExampleValidationState extends TypeValidationState {
   ): this.type = {
     action match {
       case _: ErrorAction => this
-      case SetAction(_, path, value) => this
-        .checkPathRef[Field](path, defn, parents)()()
-        .checkExpression(value, defn, parents)
-        .checkAssignmentCompatability(path, value, parents)
-      case AppendAction(_, value, path) => this
-        .checkExpression(value, defn, parents)
-        .checkPathRef[Field](path, defn, parents)()()
+      case SetAction(_, path, value) =>
+        this
+          .checkPathRef[Field](path, defn, parents)()()
+          .checkExpression(value, defn, parents)
+          .checkAssignmentCompatability(path, value, parents)
+      case AppendAction(_, value, path) =>
+        this
+          .checkExpression(value, defn, parents)
+          .checkPathRef[Field](path, defn, parents)()()
       case ReturnAction(_, expr) => this.checkExpression(expr, defn, parents)
-      case YieldAction(_, msg) => this
-        .checkMessageConstructor(msg, defn, parents)
-      case PublishAction(_, msg, pipeRef) => this
-        .checkMessageConstructor(msg, defn, parents)
-        .checkRef[Pipe](pipeRef, defn, parents)
-      case SubscribeAction(_, pipe, typ) => this
-        .checkRef[Type](typ, defn, parents)
-        .checkRef[Pipe](pipe, defn, parents)
-      case FunctionCallAction(_, funcId, args) => this
-        .checkPathRef[Function](funcId, defn, parents)()()
-        .checkArgList(args, defn, parents)
-      case BecomeAction(_, entity, handler) => this
-        .checkRef[Entity](entity, defn, parents)
-        .checkRef[Handler](handler, defn, parents)
-      case MorphAction(_, entity, entityState) => this
-        .checkRef[Entity](entity, defn, parents)
-        .checkRef[State](entityState, defn, parents)
-      case TellAction(_, msg, entity) => this
-        .checkRef[Definition](entity, defn, parents)
-        .checkMessageConstructor(msg, defn, parents)
-      case AskAction(_, entity, msg) => this
-        .checkRef[Entity](entity, defn, parents)
-        .checkMessageConstructor(msg, defn, parents)
-      case ReplyAction(_, msg) => this
-        .checkMessageConstructor(msg, defn, parents)
+      case YieldAction(_, msg) =>
+        this
+          .checkMessageConstructor(msg, defn, parents)
+      case p @ PublishAction(_, msg, pipeRef) =>
+        this
+          .checkMessageConstructor(msg, defn, parents)
+          .checkRef[Pipe](pipeRef, defn, parents)
+          .addPublishings(p, parents)
+      case s @ SubscribeAction(_, pipe, typ) =>
+        this
+          .checkRef[Type](typ, defn, parents)
+          .checkRef[Pipe](pipe, defn, parents)
+          .addSubscription(s, parents)
+      case FunctionCallAction(_, funcId, args) =>
+        this
+          .checkPathRef[Function](funcId, defn, parents)()()
+          .checkArgList(args, defn, parents)
+      case BecomeAction(_, entity, handler) =>
+        this
+          .checkRef[Entity](entity, defn, parents)
+          .checkRef[Handler](handler, defn, parents)
+      case MorphAction(_, entity, entityState) =>
+        this
+          .checkRef[Entity](entity, defn, parents)
+          .checkRef[State](entityState, defn, parents)
+      case TellAction(_, msg, entity) =>
+        this
+          .checkRef[Definition](entity, defn, parents)
+          .checkMessageConstructor(msg, defn, parents)
+      case AskAction(_, entity, msg) =>
+        this
+          .checkRef[Entity](entity, defn, parents)
+          .checkMessageConstructor(msg, defn, parents)
+      case ReplyAction(_, msg) =>
+        this
+          .checkMessageConstructor(msg, defn, parents)
       case CompoundAction(loc, actions) =>
         check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
           .checkSequence(actions) { (s, action) =>
             s.checkAction(action, defn, parents)
           }
-      case ArbitraryAction(loc, what) => this.check(
-        what.nonEmpty,
-        "arbitrary action is empty providing no behavior specification value",
-        MissingWarning,
-        loc
-      )
+      case ArbitraryAction(loc, what) =>
+        this.check(
+          what.nonEmpty,
+          "arbitrary action is empty providing no behavior specification value",
+          MissingWarning,
+          loc
+        )
     }
   }
-
 
   def checkAssignmentCompatability(
     path: PathIdentifier,
@@ -272,7 +321,9 @@ trait ExampleValidationState extends TypeValidationState {
         s"""Setting a value requires assignment compatibility, but field:
            |  ${path.format} (${pidType.map(_.format).getOrElse("<not found>")})
            |is not assignment compatible with expression:
-           |  ${expr.format} (${exprType.map(_.format).getOrElse("<not found>")})
+           |  ${expr.format} (${exprType
+            .map(_.format)
+            .getOrElse("<not found>")})
            |""".stripMargin
       )
     } else {

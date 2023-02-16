@@ -28,8 +28,17 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
   }
 
   private def onOtherClause[u: P]: P[OnClause] = {
-    P( Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
-      description ).map( t => (OnOtherClause.apply _).tupled(t))
+    P(
+      Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
+        description
+    ).map(t => (OnOtherClause.apply _).tupled(t))
+  }
+
+  private def onInitClause[u: P]: P[OnClause] = {
+    P(
+      Keywords.on ~ Keywords.init ~/ location ~ onClauseBody ~ briefly ~
+        description
+    ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
   private def onMessageClause[u: P]: P[OnClause] = {
@@ -37,8 +46,15 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
+  private def onTermClause[u: P]: P[OnClause] = {
+    P(
+      Keywords.on ~ Keywords.term ~/ location ~ onClauseBody ~ briefly ~
+        description
+    ).map(t => (OnInitClause.apply _).tupled(t))
+  }
+
   private def handlerDefinitions[u: P]: P[Seq[OnClause]] = {
-    P(onMessageClause | onOtherClause).rep(0)
+    P(onInitClause | onMessageClause | onTermClause | onOtherClause).rep(0)
   }
 
   private def handlerBody[u: P]: P[Seq[OnClause]] = {

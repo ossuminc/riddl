@@ -136,6 +136,7 @@ object Terminals {
     final val implemented = "implemented"
     final val import_ = "import"
     final val include = "include"
+    final val init = "init"
     final val inlet = "inlet"
     final val inlets = "inlets"
     final val input = "input"

@@ -746,7 +746,9 @@ case class MarkdownWriter(
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       clause match {
+        case oic: OnInitClause => h3(oic.kind)
         case omc: OnMessageClause => h3(clause.kind + " " + omc.msg.format)
+        case otc: OnTermClause => h3(otc.kind)
         case ooc: OnOtherClause   => h3(ooc.kind)
       }
       emitShortDefDoc(clause)
