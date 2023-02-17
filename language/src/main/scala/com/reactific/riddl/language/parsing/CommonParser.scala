@@ -21,13 +21,15 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def author[u: P]: P[Author] = {
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~
-        (undefined((
-          LiteralString(At(), ""),
-          LiteralString(At(), ""),
-          Option.empty[LiteralString],
-          Option.empty[LiteralString],
-          Option.empty[java.net.URL]
-        )) |
+        (undefined(
+          (
+            LiteralString(At(), ""),
+            LiteralString(At(), ""),
+            Option.empty[LiteralString],
+            Option.empty[LiteralString],
+            Option.empty[java.net.URL]
+          )
+        ) |
           (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
             literalString ~ (Keywords.organization ~ is ~ literalString).? ~
             (Keywords.title ~ is ~ literalString).? ~
@@ -36,7 +38,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
       Author(loc, id, name, email, org, title, url, brief, desc)
     }
   }
-
 
   def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]
@@ -77,11 +78,11 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     )
   }
 
-  def blockDescription[u: P]: P[BlockDescription] = {
+  private def blockDescription[u: P]: P[BlockDescription] = {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
 
-  def fileDescription[u: P]: P[FileDescription] = {
+  private def fileDescription[u: P]: P[FileDescription] = {
     P(location ~ Keywords.file ~ literalString).map { tpl =>
       val path = current.root.toPath.resolve(tpl._2.s)
       if (Files.isReadable(path) && Files.isRegularFile(path)) {
@@ -93,8 +94,8 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def urlDescription[u: P]: P[URLDescription] = {
-    P (location ~ httpUrl ).map { case (loc, url) =>
+  private def urlDescription[u: P]: P[URLDescription] = {
+    P(location ~ httpUrl).map { case (loc, url) =>
       URLDescription(loc, url)
     }
   }
@@ -107,9 +108,11 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     StringIn(Keywords.described, Keywords.explained) ~/
       ((as ~ blockDescription) | (Readability.in ~ fileDescription) |
         (Readability.at ~ urlDescription))
-    ).?
+  ).?
 
-  def wholeNumber[u: P]: P[Long] = { CharIn("0-9").rep(1).!.map(_.toLong) }
+  private def wholeNumber[u: P]: P[Long] = {
+    CharIn("0-9").rep(1).!.map(_.toLong)
+  }
 
   def integer[u: P]: P[Long] = {
     StringIn(Operators.plus, Operators.minus).? ~ wholeNumber
@@ -122,22 +125,23 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def literalDecimal[u: P]: P[LiteralDecimal] = {
     P(
       location ~ StringIn(Operators.plus, Operators.minus).?.! ~ CharIn("0-9")
-        .rep(1).! ~ Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
+        .rep(1)
+        .! ~ Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
         ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
     ).map { case (loc, a, b, c, d, e) =>
       LiteralDecimal(loc, BigDecimal(a + b + c + d + e))
     }
   }
 
-  def simpleIdentifier[u: P]: P[String] = {
+  private def simpleIdentifier[u: P]: P[String] = {
     P((CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_").?).!)
   }
 
-  def quotedIdentifier[u: P]: P[String] = {
+  private def quotedIdentifier[u: P]: P[String] = {
     P("'" ~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
   }
 
-  def anyIdentifier[u: P]: P[String] = {
+  private def anyIdentifier[u: P]: P[String] = {
     P(simpleIdentifier | quotedIdentifier)
   }
 
@@ -161,12 +165,14 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def is[u: P]: P[Unit] = {
-    P(StringIn(
-      Readability.is,
-      Readability.are,
-      Punctuation.colon,
-      Punctuation.equalsSign
-    )).?
+    P(
+      StringIn(
+        Readability.is,
+        Readability.are,
+        Punctuation.colon,
+        Punctuation.equalsSign
+      )
+    ).?
   }
 
   def by[u: P]: P[Unit] = { P(StringIn(Readability.by, Readability.from)).? }
@@ -175,7 +181,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
 
-  def maybeOptionWithArgs[u: P](
+  private def maybeOptionWithArgs[u: P](
     validOptions: => P[String]
   ): P[(At, String, Seq[LiteralString])] = {
     P(
@@ -190,8 +196,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def options[u: P, TY <: RiddlValue](
     validOptions: => P[String]
-  )(mapper: => (At, String, Seq[LiteralString]) => TY
-  ): P[Seq[TY]] = {
+  )(mapper: => (At, String, Seq[LiteralString]) => TY): P[Seq[TY]] = {
     P(
       (Keywords.options ~ Punctuation.roundOpen ~/
         maybeOptionWithArgs(validOptions).rep(1, P(Punctuation.comma)) ~
@@ -210,15 +215,15 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 
-  def hostString[u: P]: P[String] = {
+  private def hostString[u: P]: P[String] = {
     P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
   }
 
-  def portNum[u: P]: P[String] = {
+  private def portNum[u: P]: P[String] = {
     P(CharsWhileIn("0-9").rep(min = 1, max = 5)).!
   }
 
-  def urlPath[u: P]: P[String] = {
+  private def urlPath[u: P]: P[String] = {
     P(
       CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch))
         .rep(min = 0, max = 240)
@@ -226,13 +231,13 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def httpUrl[u: P]: P[java.net.URL] = {
-    P("http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath).!
-      .map(new URL(_))
+    P(
+      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
+    ).!.map(new URL(_))
   }
 
   def term[u: P]: P[Term] = {
     P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
       .map(tpl => (Term.apply _).tupled(tpl))
   }
-
 }
