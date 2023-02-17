@@ -58,7 +58,6 @@ object Terminals {
     final val concept = "concept"
     final val consistent = "consistent"
     final val device = "device"
-    final val external = "external"
     final val eventSourced = "event-sourced"
     final val finiteStateMachine = "fsm"
     final val gateway = "gateway"
