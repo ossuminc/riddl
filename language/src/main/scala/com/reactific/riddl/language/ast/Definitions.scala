@@ -1256,9 +1256,11 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends Streamlet
       with AlwaysEmpty
+      with ApplicationDefinition
       with ContextDefinition
       with ProcessorDefinition
       with RepositoryDefinition
+      with SagaDefinition
       with EntityDefinition
       with AdaptorDefinition {
     def format: String = s"${Keywords.inlet} ${id.format} is ${type_.format}"
@@ -1287,9 +1289,11 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends Streamlet
       with AlwaysEmpty
+      with ApplicationDefinition
       with ContextDefinition
       with ProcessorDefinition
       with RepositoryDefinition
+      with SagaDefinition
       with EntityDefinition
       with AdaptorDefinition {
     def format: String = s"${Keywords.outlet} ${id.format} is ${type_.format}"
@@ -1560,6 +1564,8 @@ trait Definitions extends Expressions with Options {
     output: Option[Aggregation] = None,
     sagaSteps: Seq[SagaStep] = Seq.empty[SagaStep],
     functions: Seq[Function] = Seq.empty[Function],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[SagaDefinition]] = Seq.empty[Include[SagaDefinition]],
     terms: Seq[Term] = Seq.empty[Term],
@@ -1735,7 +1741,7 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
-  case class StoryCase(
+  case class UseCase(
     loc: At,
     id: Identifier,
     interactions: Seq[InteractionExpression] = Seq.empty[InteractionExpression],
@@ -1743,7 +1749,7 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends LeafDefinition
       with StoryDefinition {
-    override def kind: String = "StoryCase"
+    override def kind: String = "UseCase"
 
     override def format: String = s"${Keywords.case_} ${id.format}"
   }
@@ -1770,22 +1776,23 @@ trait Definitions extends Expressions with Options {
     override def isEmpty: Boolean = false
   }
 
-  /** The definition of an agile user story. Stories define functionality from
-    * the perspective of a certain kind of user (man or machine), interacting
-    * with the system via some role. RIDDL extends the notion of an agile user
-    * story by allowing a linkage between the story and the RIDDL features that
-    * implement it.
+  /** The definition of an Jacobsen use case which focuses on a story. Stories
+    * define functionality from the perspective of actor's (man or machine)
+    * interaction with the system that is part of their role.  RIDDL defines
+   * these stories by allowing a linkage between the actor and RIDDL
+   * applications or bounded contexts.
     *
     * @param loc
     *   The location of the story definition
     * @param id
     *   The name of the story
     * @param userStory
-    *   The user story per agile and xP
+    *   The user story per agile and xP (I as a >role< need >feature< so that
+   *   >reason>)
     * @param shownBy
     *   A list of URLs to visualizations or other materials related to the story
     * @param cases
-    *   A list of StoryCase's that define the story
+    *   A list of UseCase's that define the story
     * @param examples
     *   Gherkin examples to specify "done" for the implementation of the user
     *   story
@@ -1799,7 +1806,7 @@ trait Definitions extends Expressions with Options {
     id: Identifier,
     userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
-    cases: Seq[StoryCase] = Seq.empty[StoryCase],
+    cases: Seq[UseCase] = Seq.empty[UseCase],
     examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[StoryDefinition]] = Seq
@@ -1956,6 +1963,8 @@ trait Definitions extends Expressions with Options {
     types: Seq[Type] = Seq.empty[Type],
     groups: Seq[Group] = Seq.empty[Group],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,

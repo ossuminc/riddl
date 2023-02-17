@@ -57,7 +57,7 @@ object DefinitionValidator {
           case o: Outlet     => validateOutlet(state, o, parents)
           case a: Author     => validateAuthorInfo(state, a, parents)
           case sa: Actor     => validateActor(state, sa, parents)
-          case sc: StoryCase => validateStoryCase(state, sc, parents)
+          case sc: UseCase   => validateStoryCase(state, sc, parents)
         }
       case ad: ApplicationDefinition =>
         ad match {
@@ -66,6 +66,8 @@ object DefinitionValidator {
           case h: Handler  => validateHandler(state, h, parents)
           case in: Input   => validateInput(state, in, parents)
           case out: Output => validateOutput(state, out, parents)
+          case in: Inlet   => validateInlet(state, in, parents)
+          case out: Outlet => validateOutlet(state, out, parents)
           case t: Term     => validateTerm(state, t, parents)
           case i: Include[ApplicationDefinition] @unchecked =>
             validateInclude(state, i)
@@ -92,6 +94,14 @@ object DefinitionValidator {
           case t: Term    => validateTerm(state, t, parents)
           case i: Include[RepositoryDefinition] @unchecked =>
             validateInclude(state, i)
+        }
+      case sd: SagaDefinition =>
+        sd match {
+          case f: Function => validateFunction(state, f, parents)
+          case s: SagaStep => validateSagaStep(state, s, parents)
+          case f: Field    => validateField(state, f, parents)
+          case i: Inlet    => validateInlet(state, i, parents)
+          case o: Outlet   => validateOutlet(state, o, parents)
         }
       case cd: ContextDefinition =>
         cd match {
@@ -135,8 +145,11 @@ object DefinitionValidator {
           case i: Include[AdaptorDefinition] @unchecked =>
             validateInclude(state, i)
         }
-      case ss: SagaStep     => validateSagaStep(state, ss, parents)
       case _: RootContainer => state // ignore
+      case unimplemented: Definition =>
+        throw new NotImplementedError(
+          s"Validation of ${unimplemented.identify} is not implemented."
+        )
     }
   }
 
@@ -601,7 +614,7 @@ object DefinitionValidator {
 
   private def validateStoryCase(
     state: ValidationState,
-    sc: StoryCase,
+    sc: UseCase,
     parents: Seq[Definition]
   ): ValidationState = {
     state

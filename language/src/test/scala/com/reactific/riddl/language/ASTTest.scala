@@ -109,8 +109,8 @@ class ASTTest extends AnyWordSpec with Matchers {
   val sagastep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagastep"))
   val state: State =
     State(At.empty, Identifier(At.empty, "state"), Aggregation.empty())
-  val storycase: StoryCase =
-    StoryCase(At.empty, Identifier(At.empty, "storycase"))
+  val storycase: UseCase =
+    UseCase(At.empty, Identifier(At.empty, "storycase"))
   val story: Story = Story(At.empty, Identifier(At.empty, "story"))
   val term: Term = Term(At.empty, Identifier(At.empty, "term"))
   "Actor" should {
@@ -283,7 +283,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   "SagaStep" should { "have a test" in { pending } }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
   "Story" should { "format correctly" in { story.format mustBe "story story" } }
-  "StoryCase" should {
+  "UseCase" should {
     "format correctly" in { storycase.format mustBe "case storycase" }
   }
 
