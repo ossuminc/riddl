@@ -22,10 +22,7 @@ private[parsing] trait DomainParser
     with TypeParser {
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](
-      StringIn(Options.package_, Options.external, Options.technology).!
-    ) {
-      case (loc, Options.external, _)      => DomainExternalOption(loc)
+    options[X, DomainOption](StringIn(Options.package_, Options.technology).!) {
       case (loc, Options.package_, args)   => DomainPackageOption(loc, args)
       case (loc, Options.technology, args) => DomainTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
@@ -68,11 +65,9 @@ private[parsing] trait DomainParser
       val apps = mapTo[Application](groups.get(classOf[Application]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val actors = mapTo[Actor](groups.get(classOf[Actor]))
-      val includes = mapTo[Include[DomainDefinition]](
-        groups.get(
-          classOf[Include[DomainDefinition]]
-        )
-      )
+      val includes = mapTo[Include[DomainDefinition]](groups.get(
+        classOf[Include[DomainDefinition]]
+      ))
       Domain(
         loc,
         id,
