@@ -42,9 +42,9 @@
       {{ $current.Scratch.Set "prev" (dict "name" $name "this" $this) }}
     {{ end }}
 
-    {{ $send := default false .send }}
-    {{ if $send }}
-      {{ template "menu_nextprev" dict "sect" $send "current" ($current.Scratch.Get "current") "site" ($current.Scratch.Get "site") }}
+    {{ $sub := default false .sub }}
+    {{ if $sub }}
+      {{ template "menu_nextprev" dict "sect" $sub "current" ($current.Scratch.Get "current") "site" ($current.Scratch.Get "site") }}
     {{ end }}
   {{ end }}
 {{ end }}

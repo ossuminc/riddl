@@ -25,7 +25,7 @@
           {{ $isCurrent := eq $current $this }}
           {{ $isAncestor := $this.IsAncestor $current }}
           {{ $id := substr (sha1 $this.Permalink) 0 8 }}
-          {{ $doCollapse := and (isset . "send") (or $this.Params.GeekdocCollapseSection (default false .Site.Params.GeekdocCollapseAllSections)) }}
+          {{ $doCollapse := and (isset . "sub") (or $this.Params.GeekdocCollapseSection (default false .Site.Params.GeekdocCollapseAllSections)) }}
 
           {{ $anchor := default "" .anchor }}
           {{ if $anchor }}
@@ -78,7 +78,7 @@
           <span class="flex">{{ $name }}</span>
         {{ end }}
 
-        {{ with .send }}
+        {{ with .sub }}
           {{ template "menu-file" dict "sect" . "current" $current "site" $site }}
         {{ end }}
       </li>

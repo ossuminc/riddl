@@ -10,7 +10,7 @@ riddlc is the command that makes all the magic happen. As you will see, riddlc
 is a rich and powerful tool for processing RIDDL input. 
 
 ## Command Syntax overview
-`riddlc` uses a send-command structure. At a high level, the command line syntax
+`riddlc` uses a sub-command structure. At a high level, the command line syntax
 is very simple:
 ```shell
 > riddlc [common options] command-name [command-options]

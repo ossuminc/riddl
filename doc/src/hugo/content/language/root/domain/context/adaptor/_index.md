@@ -5,7 +5,7 @@ weight: 20
 draft: "false"
 ---
 
-Adaptors are translators between contexts and (send-)domains.
+Adaptors are translators between contexts and (sub-)domains.
 DDD calls these "anti-corruption layers"; but we find that term to be awkward
 and its abbreviation to be conflated with Access Control List and with a
 ligament of the knee (*Anterior Cruciate Ligament*). Consequently, we prefer
