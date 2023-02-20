@@ -13,7 +13,7 @@ class FoldingTest extends ParsingTest {
   val input: String =
     """domain one is {
       |  context one is {
-      |    pipe a is { ??? }
+      |    connector a is { ??? }
       |    term whomprat is described by "a 2m long rat on Tatooine"
       |    flow b is {
       |      inlet b_in is String
@@ -80,7 +80,7 @@ class FoldingTest extends ParsingTest {
               "Outlet 'b_out'"
             ),
             List("Root", "Domain 'one'", "Context 'one'", "Term 'whomprat'"),
-            List("Root", "Domain 'one'", "Context 'one'", "Pipe 'a'"),
+            List("Root", "Domain 'one'", "Context 'one'", "Connector 'a'"),
             List("Root", "Domain 'one'", "Context 'two'"),
             List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
             List(

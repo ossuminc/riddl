@@ -11,7 +11,7 @@ domain Everything is {
   context APlant is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    pipe AChannel is { transmit DoAThing
+    connector AChannel is {
       from  outlet Source.Commands  to inlet Sink.Commands
     } explained as "A Channel"
   }
@@ -75,13 +75,17 @@ domain Everything is {
           example only {
             given "Something arrives"
             when misc()
-            then tell event Inebriated() to entity Everything.full.SomeOtherThing
+            then {
+              send event ItHappend() to
+                inlet Everything.full.SomeOtherThing.SOT_in
+            }
           }
         }
       }
     }
 
     entity SomeOtherThing is {
+      inlet SOT_In is SomeOtherTHing.ItHappened
       type ItHappened is event { when: String }
       state otherThingState is { fields { then: String } }
       handler fee is {

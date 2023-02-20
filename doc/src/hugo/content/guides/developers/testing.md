@@ -30,5 +30,5 @@ occur, and then it should succeed after the regression is fixed.
 ### "Examples" Tests
 In `examples/src/test/scala` there is a `CheckExamplesSpec.scala` which runs
 the parser and validator on the examples in `examples/src/riddl`. Each
-sub-directory there is a separate example. They are expected to parse and
+send-directory there is a separate example. They are expected to parse and
 validate cleanly without issue 

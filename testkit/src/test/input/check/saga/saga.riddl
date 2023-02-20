@@ -9,17 +9,19 @@ domain ignore1 is {
       requires { c: Integer described by "c"} returns { d: Integer described by "d"}
     } explained as "A reversion function for undoing AnotherThing"
 
-    entity blah is { ??? }
+    entity blah is {
+      inlet in is command Something
+     }
     saga name is {
       options(parallel)
       requires: { p1: String, p2: String }
       returns: {s: String }
       step One is {
         example A is {
-          then tell command Something() to entity blah
+          then send command Something() to inlet blah.in
         } described as "First step performing action"
         reverted by
-        example One_Undo { then tell command UndoSomething() to entity blah }
+        example One_Undo { then send command UndoSomething() to inlet blah.in }
         described as "First step compensation action"
       } described as "First saga step"
       step Two is {

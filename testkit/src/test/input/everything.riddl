@@ -11,8 +11,8 @@ domain Everything is {
   context APlant is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    pipe AChannel is { transmit DoAThing
-      from  outlet Source.Commands  to inlet Sink.Commands
+    connector AChannel is {
+      from outlet Source.Commands to inlet Sink.Commands
     } explained as "A Channel"
   }
 
@@ -36,6 +36,11 @@ domain Everything is {
   // Domains are composed of bounded contexts so ...
   context full is {
     // Contexts can contain many kinds of definitions
+
+    inlet input is type DoAThing
+    connector foo is {
+       from outlet APlant.Source.Commands to inlet full.input
+    }
 
     // 8 pre-defined types, shown as re-names
     type str is String             // Define str as a String
@@ -87,7 +92,8 @@ domain Everything is {
             example only {
               given "Something arrives "
               when misc()
-              then tell event Inebriated() to entity Everything.full.SomeOtherThing
+              then send event Inebriated() to
+                inlet Everything.full.input
             }
           }
         }

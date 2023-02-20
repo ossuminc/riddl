@@ -14,17 +14,7 @@ import Terminals.*
 private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
 
   private def onClauseBody[u: P]: P[Seq[Example]] = {
-    open ~
-      ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
-        Seq(Example(l, Identifier(l, ""), g, w, t, b))
-      } | nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
-  }
-
-  private def fromClause[u: P]: P[Reference[Definition]] = {
-    P(
-      Readability.from./ ~
-        (actorRef | entityRef | pipeRef | adaptorRef | contextRef)
-    )
+    open ~ (nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
   }
 
   private def onOtherClause[u: P]: P[OnClause] = {
@@ -42,7 +32,8 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
   }
 
   private def onMessageClause[u: P]: P[OnClause] = {
-    Keywords.on ~ location ~ messageRef ~/ fromClause.? ~ onClauseBody ~
+    Keywords.on ~ location ~ messageRef ~/
+      (Readability.from./ ~ inletRef).? ~ onClauseBody ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 

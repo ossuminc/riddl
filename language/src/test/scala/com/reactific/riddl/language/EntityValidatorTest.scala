@@ -25,7 +25,7 @@ class EntityValidatorTest extends ValidatingTest {
           msgs.count(_.kind.isError) mustBe 1
           // msgs.count(_.kind.isWarning) mustBe 1
           val numMissing =
-          msgs.count(_.kind.isMissing)
+            msgs.count(_.kind.isMissing)
           numMissing mustBe 3
           entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
@@ -56,7 +56,8 @@ class EntityValidatorTest extends ValidatingTest {
           |  state foo is { fields { field: String } handler x is {???}  }
           |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
-        case (_: Entity, _, msgs: Messages) => assertValidationMessage(
+        case (_: Entity, _, msgs: Messages) =>
+          assertValidationMessage(
             msgs,
             Error,
             "Entity 'MultiState' is declared as an fsm, but doesn't have " +
@@ -115,13 +116,15 @@ class EntityValidatorTest extends ValidatingTest {
         """domain foo is {
           |context bar is {
           |  type DoIt = command { ??? }
-          |  type Message = event { a: Integer }
+          |  event Message is { a: Integer }
+          |
           |  entity Hamburger  is {
           |    options (aggregate, transient)
+          |    outlet ridOfIt is event Message
           |    state field is { fields { field: SomeType } handler x is { ??? } }
           |    handler baz is {
           |      on command DoIt {
-          |        then tell event Message() to entity Hamburger
+          |        then send event Message() to outlet ridOfIt
           |      }
           |    }
           |  }

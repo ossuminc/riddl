@@ -70,6 +70,7 @@ private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser wi
           .map(_.asInstanceOf[Handler])
         val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
         val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
+        val types = mapTo[Type](groups.get(classOf[Outlet]))
         Adaptor(
           loc,
           id,
@@ -78,6 +79,7 @@ private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser wi
           handlers,
           inlets,
           outlets,
+          types,
           includes,
           authorRefs,
           options,

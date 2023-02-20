@@ -14,33 +14,43 @@ import Terminals.*
 
 private[parsing] trait ReferenceParser extends CommonParser {
 
-  def adaptorRef[u: P]: P[AdaptorRef] = {
+  private def adaptorRef[u: P]: P[AdaptorRef] = {
     P(location ~ Keywords.adaptor ~ pathIdentifier)
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
 
-  def commandRef[u: P]: P[CommandRef] = {
+  private def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }
 
-  def eventRef[u: P]: P[EventRef] = {
+  private def eventRef[u: P]: P[EventRef] = {
     P(location ~ Keywords.event ~ pathIdentifier)
       .map(tpl => (EventRef.apply _).tupled(tpl))
   }
 
-  def queryRef[u: P]: P[QueryRef] = {
+  private def queryRef[u: P]: P[QueryRef] = {
     P(location ~ Keywords.query ~ pathIdentifier)
       .map(tpl => (QueryRef.apply _).tupled(tpl))
   }
 
-  def resultRef[u: P]: P[ResultRef] = {
+  private def resultRef[u: P]: P[ResultRef] = {
     P(location ~ Keywords.result ~ pathIdentifier)
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
+  private def recordRef[u: P]: P[RecordRef] = {
+    P(location ~ Keywords.record ~ pathIdentifier)
+      .map(tpl => (RecordRef.apply _).tupled(tpl))
+  }
+
+  private def otherRef[u: P]: P[OtherRef] = {
+    P(location ~ Keywords.other ~ pathIdentifier)
+      .map(tpl => (OtherRef.apply _).tupled(tpl))
+  }
+
   def messageRef[u: P]: P[MessageRef] = {
-    P(commandRef | eventRef | queryRef | resultRef)
+    P(commandRef | eventRef | queryRef | resultRef | recordRef | otherRef)
   }
 
   def entityRef[u: P]: P[EntityRef] = {
@@ -64,7 +74,18 @@ private[parsing] trait ReferenceParser extends CommonParser {
   }
 
   def typeRef[u: P]: P[TypeRef] = {
-    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)
+    P(
+      location ~
+        StringIn(
+          Keywords.`type`,
+          Keywords.command,
+          Keywords.query,
+          Keywords.event,
+          Keywords.result,
+          Keywords.record,
+          Keywords.other
+        ).? ~ pathIdentifier
+    )
       .map(tpl => (TypeRef.apply _).tupled(tpl))
   }
 
@@ -78,11 +99,6 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (DomainRef.apply _).tupled(tpl))
   }
 
-  def pipeRef[u: P]: P[PipeRef] = {
-    P(location ~ Keywords.pipe ~ pathIdentifier)
-      .map(tpl => (PipeRef.apply _).tupled(tpl))
-  }
-
   def outletRef[u: P]: P[OutletRef] = {
     P(location ~ Keywords.outlet ~ pathIdentifier)
       .map(tpl => (OutletRef.apply _).tupled(tpl))
@@ -93,7 +109,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (InletRef.apply _).tupled(tpl))
   }
 
-  def processorRef[u: P]: P[ProcessorRef] = {
+  def streamletRef[u: P]: P[StreamletRef] = {
     P(
       location ~ StringIn(
         Keywords.source,
@@ -102,12 +118,17 @@ private[parsing] trait ReferenceParser extends CommonParser {
         Keywords.split,
         Keywords.void
       ) ~ pathIdentifier
-    ).map(tpl => (ProcessorRef.apply _).tupled(tpl))
+    ).map(tpl => (StreamletRef.apply _).tupled(tpl))
   }
 
   def projectionRef[u: P]: P[ProjectionRef] = {
     P(location ~ Keywords.projection ~ pathIdentifier)
       .map(tpl => (ProjectionRef.apply _).tupled(tpl))
+  }
+
+  def repositoryRef[u: P]: P[RepositoryRef] = {
+    P(location ~ Keywords.repository ~ pathIdentifier)
+      .map(tpl => (RepositoryRef.apply _).tupled(tpl))
   }
 
   def sagaRef[u: P]: P[SagaRef] = {
@@ -142,13 +163,14 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def authorRefs[u: P]: P[Seq[AuthorRef]] = {
     P(location ~ by ~ Keywords.author ~ pathIdentifier)
-      .map(tpl => (AuthorRef.apply _).tupled(tpl)).rep(0, ",", 3)
+      .map(tpl => (AuthorRef.apply _).tupled(tpl))
+      .rep(0, ",", 3)
   }
 
-  def messageTakingRef[u: P]: P[MessageTakingRef[Definition]] = {
+  def messageTakingRef[u: P]: P[MessageTakingRef[Processor[?, ?]]] = {
     P(
-      adaptorRef | applicationRef | contextRef | entityRef | pipeRef |
-        projectionRef
+      adaptorRef | applicationRef | contextRef | entityRef | projectionRef |
+        repositoryRef | streamletRef
     )
   }
 }

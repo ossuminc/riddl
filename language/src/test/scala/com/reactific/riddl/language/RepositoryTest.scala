@@ -12,6 +12,7 @@ class RepositoryTest extends ValidatingTest {
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {
+          |    outlet hereyougo is bar.fubar.Reply
           |    repository fubar is {
           |      query GetOne is { how: String }
           |      result Reply is { that: String }
@@ -21,21 +22,27 @@ class RepositoryTest extends ValidatingTest {
           |          then { "add 'what' to the list" }
           |        }
           |        on query GetOne {
-          |          then { reply result fubar.Reply(that = "some value") } }
+          |          then {
+          |            send result fubar.Reply(that = "some value") to outlet
+          |             hereyougo
+          |          }
+          |        }
           |        }
           |     }
           |  }
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain (input) {
+      parseAndValidateDomain(input) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.contexts.headOption match {
             case Some(context) =>
               context.repositories mustNot be(empty)
               if (msgs.nonEmpty) { info(msgs.format) }
-              msgs.isOnlyIgnorable mustBe true
+              val errors = msgs.justErrors
+              errors.size mustBe 0
+              msgs.isOnlyWarnings
               succeed
             case _ =>
               fail("Did not parse a context!")

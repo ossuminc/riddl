@@ -14,7 +14,9 @@ import fastparse.ScalaWhitespace.*
 /** ActionParser Define actions that various constructs can take for modelling
   * behavior in a message-passing system
   */
-private[parsing] trait ActionParser extends ReferenceParser with ExpressionParser {
+private[parsing] trait ActionParser
+    extends ReferenceParser
+    with ExpressionParser {
 
   private def arbitraryAction[u: P]: P[ArbitraryAction] = {
     P(location ~ literalString).map { tpl =>
@@ -28,22 +30,16 @@ private[parsing] trait ActionParser extends ReferenceParser with ExpressionParse
     }
   }
 
-  private def setAction[u: P]: P[SetAction] = {
+  private def assignAction[u: P]: P[AssignAction] = {
     P(
       Keywords.set ~/ location ~ pathIdentifier ~ Readability.to ~ expression
-    ).map { t => (SetAction.apply _).tupled(t) }
+    ).map { t => (AssignAction.apply _).tupled(t) }
   }
 
   private def appendAction[u: P]: P[AppendAction] = {
     P(
       location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
     ).map { t => (AppendAction.apply _).tupled(t) }
-  }
-
-  private def morphAction[u: P]: P[MorphAction] = {
-    P(
-      Keywords.morph ~/ location ~ entityRef ~ Readability.to.? ~ stateRef
-    ).map { tpl => (MorphAction.apply _).tupled(tpl) }
   }
 
   private def becomeAction[u: P]: P[BecomeAction] = {
@@ -62,25 +58,15 @@ private[parsing] trait ActionParser extends ReferenceParser with ExpressionParse
   }
 
   private def returnAction[u: P]: P[ReturnAction] = {
-    P(Keywords.return_ ~/ location ~ expression )
+    P(Keywords.return_ ~/ location ~ expression)
       .map(t => (ReturnAction.apply _).tupled(t))
   }
 
-  private def yieldAction[u: P]: P[YieldAction] = {
-    P(Keywords.yield_ ~/ location ~ messageConstructor)
-      .map(t => (YieldAction.apply _).tupled(t))
-  }
-
-  private def publishAction[u: P]: P[PublishAction] = {
+  private def sendAction[u: P]: P[SendAction] = {
     P(
-      Keywords.publish ~/ location ~ messageConstructor ~ Readability.to ~ pipeRef
-    ).map { t => (PublishAction.apply _).tupled(t) }
-  }
-
-  private def subscribeAction[u: P]: P[Action] = {
-    P(Keywords.subscribe ~/ location ~ Readability.to ~ pipeRef ~ Readability.for_ ~ typeRef).map {
-      t => (SubscribeAction.apply _).tupled(t)
-    }
+      Keywords.send ~/ location ~ messageConstructor ~
+        Readability.to ~ (outletRef | inletRef)
+    ).map { t => (SendAction.apply _).tupled(t) }
   }
 
   private def functionCallAction[u: P]: P[FunctionCallAction] = {
@@ -88,35 +74,27 @@ private[parsing] trait ActionParser extends ReferenceParser with ExpressionParse
       .map(tpl => (FunctionCallAction.apply _).tupled(tpl))
   }
 
-  private def tellAction[u: P]: P[TellAction] = {
-    P(
-      Keywords.tell ~/ location ~ messageConstructor ~ Readability.to.? ~/ messageTakingRef
-    ).map { t => (TellAction.apply _).tupled(t) }
-  }
-
-  private def replyAction[u: P]: P[ReplyAction] = {
-    P(
-      Keywords.reply ~/ Readability.with_.? ~ location ~ messageConstructor
-    ).map { t => (ReplyAction.apply _).tupled(t) }
-  }
-
-  private def askAction[u: P]: P[AskAction] = {
-    P(
-      Keywords.ask ~/ location ~ entityRef ~ Readability.to.? ~/ messageConstructor
-    ).map { tpl => (AskAction.apply _).tupled(tpl) }
-  }
-
   private def compoundAction[u: P]: P[CompoundAction] = {
-    P(location ~ open ~ anyAction.rep(1, ",") ~ close)
+    P(location ~ open ~ allActions.rep(1, ",") ~ close)
       .map(tpl => (CompoundAction.apply _).tupled(tpl))
   }
 
+  def entityActions[u: P]: P[EntityAction] = {
+    P(assignAction | appendAction | becomeAction)
+  }
 
-  def anyAction[u: P]: P[Action] = {
+  def functionActions[u:P]: P[FunctionAction] = {
+    P(returnAction)
+  }
+
+  def anyActions[u:P]: P[AnyAction] = {
+    P(sendAction | arbitraryAction | errorAction | functionCallAction |
+      compoundAction)
+  }
+
+  def allActions[u: P]: P[Action] = {
     P(
-      replyAction | setAction | appendAction | morphAction | becomeAction |
-        yieldAction | returnAction | arbitraryAction | errorAction |
-        publishAction | subscribeAction | tellAction | askAction | functionCallAction | compoundAction
+      entityActions | functionActions | anyActions
     )
   }
 

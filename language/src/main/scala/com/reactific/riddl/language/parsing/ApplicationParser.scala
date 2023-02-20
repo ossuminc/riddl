@@ -38,7 +38,7 @@ private[parsing] trait ApplicationParser
   private def appOutput[u: P]: P[Output] = {
     P(
       location ~ Keywords.output ~/ identifier ~ is ~ open ~ types ~
-        Keywords.presents ~/ resultRef ~ close ~ briefly ~ description
+        Keywords.presents ~/ messageRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, result, brief, description) =>
       Output(loc, id, types, result, brief, description)
     }
@@ -47,7 +47,7 @@ private[parsing] trait ApplicationParser
   private def appInput[u: P]: P[Input] = {
     P(
       location ~ Keywords.input ~/ identifier ~ is ~ open ~ types ~
-        Keywords.acquires ~ commandRef ~ close ~ briefly ~ description
+        Keywords.acquires ~ messageRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, yields, brief, description) =>
       Input(loc, id, types, yields, brief, description)
     }

@@ -70,6 +70,19 @@ trait PathIdValidationState extends UsageValidationState {
     checkPathRef[T](reference.pathId, defn, parents, kind)()()
   }
 
+  def checkMaybeRef[T <: Definition: ClassTag](
+    reference: Option[Reference[T]],
+    defn: Definition,
+    parents: Seq[Definition],
+    kind: Option[String] = None
+  ): this.type = {
+    reference.map{ ref =>
+      checkPathRef[T](ref.pathId, defn, parents, kind)()()
+    }
+    this
+  }
+
+
   def checkMessageRef(
     ref: MessageRef,
     topDef: Definition,
@@ -124,9 +137,6 @@ trait PathIdValidationState extends UsageValidationState {
         case Some(t: Type) => Some(t.typ)
         case Some(f: Field) => Some(f.typeEx)
         case Some(s: State) => Some(s.aggregation)
-        case Some(Pipe(_, _, _, tt, _, _, _, _)) =>
-          val te = tt.map(x => AliasedTypeExpression(x.loc, x.pathId))
-          Some(te.getOrElse(Abstract(pid.loc)))
         case Some(Inlet(_, _, typ, _, _)) =>
           Some(AliasedTypeExpression(typ.loc, typ.pathId))
         case Some(Outlet(_, _, typ, _, _)) =>

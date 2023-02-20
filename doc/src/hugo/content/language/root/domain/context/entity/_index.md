@@ -21,6 +21,6 @@ entity Example is {
 ```
 
 ## Details
-The links below provide more details on the various sub-definitions of an entity:
+The links below provide more details on the various send-definitions of an entity:
 
 {{< toc-tree >}}

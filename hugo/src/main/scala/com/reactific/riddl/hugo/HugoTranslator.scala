@@ -29,7 +29,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
   )
 
-  def deleteAll(directory: File): Boolean = {
+  private def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
     if (maybeFiles.nonEmpty) {
       for (file <- maybeFiles.get) { deleteAll(file) }
@@ -37,7 +37,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     directory.delete
   }
 
-  def loadATheme(from: URL, destDir: Path): Unit = {
+  private def loadATheme(from: URL, destDir: Path): Unit = {
     val fileName = PathUtils.copyURLToDir(from, destDir)
     if (fileName.nonEmpty) {
       val zip_path = destDir.resolve(fileName)
@@ -61,14 +61,14 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     }
   }
 
-  def loadThemes(options: HugoCommand.Options): Unit = {
+  private def loadThemes(options: HugoCommand.Options): Unit = {
     for ((name, url) <- options.themes if url.nonEmpty) {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url.get, destDir)
     }
   }
 
-  def loadStaticAssets(
+  private def loadStaticAssets(
     inputPath: Path,
     log: Logger,
     options: HugoCommand.Options
@@ -96,7 +96,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     PathUtils.copyResource(name, destination)
   }
 
-  def manuallyMakeNewHugoSite(path: Path): Unit = {
+  private def manuallyMakeNewHugoSite(path: Path): Unit = {
     Files.createDirectories(path)
     Files.createDirectories(path.resolve("archetypes"))
     Files.createDirectories(path.resolve("content"))
@@ -124,7 +124,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     }
   }
 
-  def makeDirectoryStructure(
+  private def makeDirectoryStructure(
     inputPath: Path,
     log: Logger,
     options: HugoCommand.Options,
@@ -145,7 +145,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     loadStaticAssets(inputPath, log, options)
   }
 
-  def writeConfigToml(
+  private def writeConfigToml(
     options: HugoCommand.Options,
     author: Option[Author]
   ): Unit = {
@@ -156,7 +156,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
   }
 
-  def setUpContainer(
+  private def setUpContainer(
     c: Definition,
     state: HugoTranslatorState,
     stack: Seq[Definition]
@@ -166,7 +166,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     state.addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
-  def setUpLeaf(
+  private def setUpLeaf(
     d: Definition,
     state: HugoTranslatorState,
     stack: Seq[Definition]
@@ -203,7 +203,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Right(newState)
   }
 
-  def processingFolder(
+  private def processingFolder(
     state: HugoTranslatorState,
     defn: Definition,
     stack: Seq[Definition]
@@ -225,10 +225,10 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         // handling.
         leaf match {
           // handled by definition that contains the term
-          case p: Pipe =>
+          case c: Connector =>
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
-            mkd.emitPipe(p, parents)
-            state.addToGlossary(p, stack)
+            mkd.emitConnection(c, parents)
+            state.addToGlossary(c, stack)
           case sa: Actor     => state.addToGlossary(sa, stack)
           case sc: UseCase => state.addToGlossary(sc, stack)
           case unknown =>
@@ -252,7 +252,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case c: Context     => mkd.emitContext(c, stack)
           case d: Domain      => mkd.emitDomain(d, parents)
           case a: Adaptor     => mkd.emitAdaptor(a, parents)
-          case p: Processor   => mkd.emitProcessor(p, stack)
+          case s: Streamlet   => mkd.emitStreamlet(s, stack)
           case p: Projection  => mkd.emitProjection(p, parents)
           case _: Repository  => // TODO: mkd.emitRepository(r, parents)
           case s: Saga        => mkd.emitSaga(s, parents)

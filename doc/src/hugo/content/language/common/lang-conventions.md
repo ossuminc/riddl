@@ -49,7 +49,7 @@ domain root is {
   }
 }
 ```
-That is, domains are definitions that can contain the definition of (sub)
+That is, domains are definitions that can contain the definition of (send)
 domains. Similarly `context` can define `entity` 
 ```riddl
 context foo is {

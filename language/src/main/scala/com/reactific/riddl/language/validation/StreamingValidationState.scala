@@ -2,9 +2,6 @@ package com.reactific.riddl.language.validation
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.Messages.*
-
-import scala.math.abs
 
 trait StreamingValidationState extends ExampleValidationState {
 
@@ -22,32 +19,29 @@ trait StreamingValidationState extends ExampleValidationState {
     this
   }
 
-  private var pipes: Seq[Pipe] = Seq.empty[Pipe]
+  private var connectors: Seq[Connector] = Seq.empty[Connector]
 
-  def addPipe(out: Pipe): this.type = {
-    pipes = pipes :+ out
+  def addConnection(conn: Connector): this.type = {
+    connectors = connectors :+ conn
     this
   }
 
-  private var processors: Seq[Processor] = Seq.empty[Processor]
+  private var streamlets: Seq[Streamlet] = Seq.empty[Streamlet]
 
-  def addProcessor(proc: Processor): this.type = {
-    processors = processors :+ proc
+  def addStreamlet(proc: Streamlet): this.type = {
+    streamlets = streamlets :+ proc
     this
   }
 
   def checkStreaming(): Unit = {
     checkStreamingUsage()
-    checkPipePersistence()
-    checkUnattachedInlets()
-    checkUnsubscribedPipes()
-    checkUnpublishedPipes()
+    checkConnectorPersistence()
+    checkUnattachedOutlets()
+    checkUnusedOutlets()
   }
 
   private def checkStreamingUsage(): Unit = {
-    if (
-      inlets.isEmpty && outlets.isEmpty && pipes.isEmpty && processors.isEmpty
-    ) {
+    if (inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty) {
       add(
         Messages.style(
           "Models without any streaming data will exhibit minimal effect",
@@ -57,17 +51,17 @@ trait StreamingValidationState extends ExampleValidationState {
     }
   }
 
-  private def checkPipePersistence(): Unit = {
-    pipes.foldLeft[this.type](this) { (state: this.type, pipe) =>
-      val pipeParents = state.symbolTable.parentsOf(pipe)
-      val maybePipeContext = state.symbolTable.contextOf(pipe)
-      require(maybePipeContext.nonEmpty, "Pipe with no Context")
-      val pipeContext = maybePipeContext.get
-      val maybeToInlet = pipe.to.flatMap(inlet =>
-        state.resolvePathIdentifier[Inlet](inlet.pathId, pipeParents)
+  private def checkConnectorPersistence(): Unit = {
+    connectors.foldLeft[this.type](this) { (state: this.type, connector) =>
+      val connParents = state.symbolTable.parentsOf(connector)
+      val maybeConnContext = state.symbolTable.contextOf(connector)
+      require(maybeConnContext.nonEmpty, "Connector with no Context")
+      val pipeContext = maybeConnContext.get
+      val maybeToInlet = connector.to.flatMap(inlet =>
+        state.resolvePathIdentifier[Inlet](inlet.pathId, connParents)
       )
-      val maybeFromOutlet = pipe.from.flatMap(outlet =>
-        state.resolvePathIdentifier[Outlet](outlet.pathId, pipeParents)
+      val maybeFromOutlet = connector.from.flatMap(outlet =>
+        state.resolvePathIdentifier[Outlet](outlet.pathId, connParents)
       )
       val maybeInletContext = maybeToInlet
         .flatMap(inlet => state.symbolTable.contextOf(inlet))
@@ -78,170 +72,69 @@ trait StreamingValidationState extends ExampleValidationState {
       val outletIsSameContext = maybeOutletContext.nonEmpty &&
         (pipeContext == maybeOutletContext.get)
 
-      if (pipe.hasOption[PipePersistentOption]) {
+      if (connector.hasOption[ConnectorPersistentOption]) {
         if (outletIsSameContext && inletIsSameContext) {
-          val message = s"The persistence option on ${pipe.identify} is not " +
-            s"needed since both ends of the pipe connect within the same " +
-            s"context"
-          state.add(style(message, pipe.loc))
+          val message =
+            s"The persistence option on ${connector.identify} is not " +
+              s"needed since both ends of the connector connect within the same " +
+              s"context"
+          state.addStyle(connector.loc, message)
         } else state
       } else {
         if (!outletIsSameContext || !inletIsSameContext) {
-          val message = s"The persistence option should be specified on " +
-            s"${pipe.identify} because an end of the pipe is not connected " +
+          val message =
+            s"The persistence option on ${connector.identify} should be " +
+            s"specified because an end of the connector is not connected " +
             s"within the same context"
-          state.add(style(message, pipe.loc))
+          state.addStyle(connector.loc, message)
         } else state
       }
     }
   }
 
-  private def checkUnattachedInlets(): Unit = {
-    val inUseInlets: Seq[Inlet] = pipes.flatMap { pipe =>
-      val parents = pipe +: symbolTable.parentsOf(pipe)
-      pipe.to.flatMap[Inlet] { inletRef =>
-        val maybe = resolvePathIdentifier[Inlet](inletRef.pathId, parents)
-        maybe
-      }
+  private def checkUnattachedOutlets(): Unit = {
+    val connected: Seq[(Outlet, Inlet)] = for {
+      conn <- connectors
+      parents = symbolTable.parentsOf(conn)
+      maybeInletRef = conn.to
+      inletRef <- maybeInletRef
+      maybeOutletRef = conn.from
+      outletRef <- maybeOutletRef
+      inlet <- resolvePathIdentifier[Inlet](inletRef.pathId, parents)
+      outlet <- resolvePathIdentifier[Outlet](outletRef.pathId, parents)
+    } yield {
+      (outlet, inlet)
     }
 
+    val inUseOutlets = connected.map(_._1)
+    val unattachedOutlets = outlets.toSet[Outlet] -- inUseOutlets
+
+    val s2 = unattachedOutlets.foldLeft[this.type](this) {
+      (st: this.type, outlet) =>
+        val message = s"${outlet.identify} is not connected"
+        st.addWarning(outlet.loc, message)
+    }
+
+    val inUseInlets = connected.map(_._2)
     val unattachedInlets = inlets.toSet[Inlet] -- inUseInlets
 
-    unattachedInlets.foldLeft[this.type](this) { (st: this.type, inlet) =>
-      val message = s"${inlet.identify} is not attached to a pipe and will " +
-        s"never " + s"receive any messages"
-      st.add(error(message, inlet.loc))
+    unattachedInlets.foldLeft[this.type](s2) { (st: this.type, inlet) =>
+      val message = s"${inlet.identify} is not connected"
+      st.addWarning(inlet.loc, message)
     }
+
   }
 
-  def checkProcessorShape(proc: Processor): this.type = {
-    val ins = proc.inlets.size
-    val outs = proc.outlets.size
-
-    def generateError(
-      proc: Processor,
-      req_ins: Int,
-      req_outs: Int
-    ): this.type = {
-      def sOutlet(n: Int): String = {
-        if (n == 1) s"1 outlet"
-        else if (n < 0) {
-          s"at least ${abs(n)} outlets"
-        } else s"$n outlets"
-      }
-
-      def sInlet(n: Int): String = {
-        if (n == 1) s"1 inlet"
-        else if (n < 0) {
-          s"at least ${abs(n)} outlets"
-        } else s"$n inlets"
-      }
-
-      this.addError(
-        proc.loc,
-        s"${proc.identify} should have " + sOutlet(req_outs) + " and " +
-          sInlet(req_ins) + s" but it has " + sOutlet(outs) + " and " +
-          sInlet(ins)
-      )
-    }
-
-    if (!proc.isEmpty) {
-      proc.shape match {
-        case _: Source =>
-          if (ins != 0 || outs != 1) {
-            generateError(proc, 0, 1)
-          } else {
-            this
-          }
-        case _: Flow =>
-          if (ins != 1 || outs != 1) {
-            generateError(proc, 1, 1)
-          } else {
-            this
-          }
-        case _: Sink =>
-          if (ins != 1 || outs != 0) {
-            generateError(proc, 1, 0)
-          } else {
-            this
-          }
-        case _: Merge =>
-          if (ins < 2 || outs != 1) {
-            generateError(proc, -2, 1)
-          } else {
-            this
-          }
-        case _: Split =>
-          if (ins != 1 || outs < 2) {
-            generateError(proc, 1, -2)
-          } else {
-            this
-          }
-        case _: Router =>
-          if (ins < 2 || outs < 2) {
-            generateError(proc, -2, -2)
-          } else {
-            this
-          }
-        case _: Multi =>
-          if (ins < 2 || outs < 2) {
-            generateError(proc, -2, -2)
-          } else {
-            this
-          }
-        case _: Void =>
-          if (ins > 0 || outs > 0) {
-            generateError(proc, 0, 0)
-          } else {
-            this
-          }
-      }
-    } else {
-      this
-    }
-  }
-
-  private def checkUnsubscribedPipes(): Unit = {
-    val unattachedOutletPipes: Set[Pipe] = pipes.filter(_.to.isEmpty).toSet
-    val subscribedPipes: Seq[Pipe] = subscriptions.flatMap { case (sub, pars) =>
-      resolvePathIdentifier[Pipe](sub.pipe.pathId, pars).flatMap { pipe: Pipe =>
-        if (pipe.to.isEmpty) Some(pipe)
-        else {
-          val message =
-            s"Subscribing to ${pipe.identify} with attached ${pipe.to.get.format} will yield no data"
-          addError(sub.loc, message)
-          Option.empty[Pipe]
-        }
-      }.toSeq
+  private def checkUnusedOutlets(): Unit = {
+    val usedOutlets: Seq[Outlet] = sends.flatMap { case (send, pars) =>
+      resolvePathIdentifier[Outlet](send.portlet.pathId, pars)
     }.toSeq
 
-    val unsubscribedPipes: Set[Pipe] = unattachedOutletPipes -- subscribedPipes
+    val unusedOutlets: Set[Outlet] = outlets.toSet -- usedOutlets
 
-    for { pipe <- unsubscribedPipes } {
-      val message = s"${pipe.identify} has no subscribers"
-      addMissing(pipe.loc, message)
+    for { outlet <- unusedOutlets } {
+      val message = s"${outlet.identify} has nothing sent to it"
+      addMissing(outlet.loc, message)
     }
   }
-
-  private def checkUnpublishedPipes(): Unit = {
-    val unattachedInletPipes: Set[Pipe] = pipes.filter(_.from.isEmpty).toSet
-    val publishedPipes: Seq[Pipe] = publishings.flatMap { case (sub, pars) =>
-      resolvePathIdentifier[Pipe](sub.pipe.pathId, pars).flatMap { pipe: Pipe =>
-        if (pipe.to.isEmpty) Some(pipe)
-        else {
-          val message =
-            s"Publishing to ${pipe.identify} with attached ${pipe.from.get.format} will receive no data"
-          addError(sub.loc, message)
-          Option.empty[Pipe]
-        }
-      }.toSeq
-    }.toSeq
-    val unpublishedPipes: Set[Pipe] = unattachedInletPipes -- publishedPipes
-
-    for { pipe <- unpublishedPipes } {
-      val message = s"${pipe.identify} has no publishers"
-      addMissing(pipe.loc, message)
-    }
-  }
-
 }

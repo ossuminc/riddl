@@ -52,12 +52,12 @@ object DefinitionValidator {
           case e: Enumerator => validateEnumerator(state, e, parents)
           case i: Invariant  => validateInvariant(state, i, parents)
           case t: Term       => validateTerm(state, t, parents)
-          case p: Pipe       => validatePipe(state, p, parents)
           case i: Inlet      => validateInlet(state, i, parents)
           case o: Outlet     => validateOutlet(state, o, parents)
           case a: Author     => validateAuthorInfo(state, a, parents)
           case sa: Actor     => validateActor(state, sa, parents)
           case sc: UseCase   => validateStoryCase(state, sc, parents)
+          case c: Connector  => validateConnection(state, c, parents)
         }
       case ad: ApplicationDefinition =>
         ad match {
@@ -110,14 +110,14 @@ object DefinitionValidator {
           case f: Function   => validateFunction(state, f, parents)
           case e: Entity     => validateEntity(state, e, parents)
           case a: Adaptor    => validateAdaptor(state, a, parents)
-          case p: Processor  => validateProcessor(state, p, parents)
+          case s: Streamlet  => validateStreamlet(state, s, parents)
           case p: Projection => validateProjection(state, p, parents)
           case r: Repository => validateRepository(state, r, parents)
           case t: Term       => validateTerm(state, t, parents)
-          case p: Pipe       => validatePipe(state, p, parents)
           case s: Saga       => validateSaga(state, s, parents)
           case i: Inlet      => validateInlet(state, i, parents)
           case o: Outlet     => validateOutlet(state, o, parents)
+          case c: Connector  => validateConnection(state, c, parents)
           case i: Include[ContextDefinition] @unchecked =>
             validateInclude(state, i)
         }
@@ -136,11 +136,15 @@ object DefinitionValidator {
         }
       case hd: HandlerDefinition =>
         hd match { case oc: OnClause => validateOnClause(state, oc, parents) }
+      case oc: OnClauseDefinition =>
+        oc match { case e: Example => validateExample(state, e, parents) }
+
       case ad: AdaptorDefinition =>
         ad match {
           case h: Handler => validateHandler(state, h, parents)
           case i: Inlet   => validateInlet(state, i, parents)
           case o: Outlet  => validateOutlet(state, o, parents)
+          case t: Type    => validateType(state, t, parents)
           case t: Term    => validateTerm(state, t, parents)
           case i: Include[AdaptorDefinition] @unchecked =>
             validateInclude(state, i)
@@ -207,42 +211,6 @@ object DefinitionValidator {
       .checkDescription(i)
   }
 
-  private def validatePipe(
-    state: ValidationState,
-    p: Pipe,
-    parents: Seq[Definition]
-  ): ValidationState = {
-    state
-      .addPipe(p)
-      .checkDefinition(parents, p)
-      .checkOption(p.transmitType, "transmit type", p) { (st, typeRef) =>
-        st.checkPathRef[Type](typeRef.pathId, p, parents)()()
-      }
-      .checkOption(p.from, "from outlet", p) { (st, outlet) =>
-        st.checkPathRef[Outlet](outlet.pathId, p, parents)()()
-      }
-      .checkOption(p.to, "to inlet", p) { (st, inletRef) =>
-        val st2: state.type =
-          st.checkPathRef[Inlet](inletRef.pathId, p, parents)()()
-        if (p.transmitType.nonEmpty) {
-          val maybeResolved: Option[Inlet] = st2
-            .resolvePathIdentifier[Inlet](inletRef.pathId, parents)
-
-          val mapped: Option[state.type] = maybeResolved.map { inlet =>
-            if (!st2.areSameType(p.transmitType.get, inlet.type_, parents)) {
-              st2.addError(
-                inletRef.loc,
-                s"Type mismatch: expected ${inlet.type_.identify} " +
-                  s" but ${p.identify} is defined to transmit ${p.transmitType.get.identify}"
-              )
-            } else { st2 }
-          }
-          mapped.getOrElse(st2)
-        } else { st2 }
-      }
-      .checkDescription(p)
-  }
-
   private def validateInlet(
     state: ValidationState,
     inlet: Inlet,
@@ -265,6 +233,37 @@ object DefinitionValidator {
       .checkDefinition(parents, outlet)
       .checkRef[Type](outlet.type_, outlet, parents)
       .checkDescription(outlet)
+  }
+
+  private def validateConnection(
+    state: ValidationState,
+    connector: Connector,
+    parents: Seq[Definition]
+  ): ValidationState = {
+    val s2 = state
+      .checkMaybeRef[Outlet](connector.from, connector, parents)
+      .checkMaybeRef[Inlet](connector.to, connector, parents)
+      .addConnection(connector)
+    val maybeOutlet: Option[Outlet] = connector.from.flatMap{ outRef =>
+      s2.resolvePathIdentifier[Outlet](outRef.pathId, parents)
+    }
+    val maybeInlet: Option[Inlet] = connector.to.flatMap { inRef =>
+      s2.resolvePathIdentifier[Inlet](inRef.pathId, parents)
+    }
+
+    (maybeOutlet, maybeInlet) match {
+      case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
+        if (!s2.areSameType(inlet.type_, outlet.type_, parents)) {
+          s2.addError(
+            inlet.loc,
+            s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
+              s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} which are not the same types"
+          )
+        } else { s2 }
+      case _ =>
+        // one of the two didn't resolve, already handled above.
+        s2
+    }
   }
 
   private def validateAuthorInfo(
@@ -459,16 +458,16 @@ object DefinitionValidator {
     }
   }
 
-  private def validateProcessor(
+  private def validateStreamlet(
     state: ValidationState,
-    p: Processor,
+    s: Streamlet,
     parents: Seq[Definition]
   ): ValidationState = {
     state
-      .addProcessor(p)
-      .checkContainer(parents, p)
-      .checkProcessorShape(p)
-      .checkDescription(p)
+      .addStreamlet(s)
+      .checkContainer(parents, s)
+      .checkStreamletShape(s)
+      .checkDescription(s)
   }
 
   private def validateDomain(

@@ -53,7 +53,11 @@ abstract class ValidatingTest extends ParsingTest {
         info(s"${warnings.length} Warnings:")
         if (warnings.nonEmpty) { info(warnings.format) }
         errors mustBe empty
-        warnings.forall(_.message.contains("is unused")) mustBe true
+        warnings.forall { msg =>
+          info(msg.message)
+          msg.message.contains("is unused") |
+            msg.message.contains("is not connected")
+        } mustBe true
     }
   }
 

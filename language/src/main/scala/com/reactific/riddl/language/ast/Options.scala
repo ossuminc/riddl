@@ -5,6 +5,8 @@
  */
 
 package com.reactific.riddl.language.ast
+import com.reactific.riddl.language.parsing.Terminals
+
 import scala.reflect.ClassTag
 
 /** Option definitions for Vitals */
@@ -247,23 +249,24 @@ trait Options extends AbstractDefinitions {
 
   //////////////////////////////////////////////////////////////////// PROCESSOR
 
-  sealed abstract class ProcessorOption(val name: String) extends OptionValue
+  sealed abstract class StreamletOption(val name: String) extends OptionValue
 
-  case class ProcessorTechnologyOption(
+  case class StreamletTechnologyOption(
     loc: At,
     override val args: Seq[LiteralString])
-      extends ProcessorOption("technology")
+      extends StreamletOption(Terminals.Options.technology)
 
   //////////////////////////////////////////////////////////////////// PIPE
 
-  sealed abstract class PipeOption(val name: String) extends OptionValue
+  sealed abstract class ConnectorOption(val name: String) extends OptionValue
 
-  case class PipePersistentOption(loc: At) extends PipeOption("package")
+  case class ConnectorPersistentOption(loc: At)
+    extends ConnectorOption("package")
 
-  case class PipeTechnologyOption(
+  case class ConnectorTechnologyOption(
     loc: At,
     override val args: Seq[LiteralString])
-      extends PipeOption("technology")
+      extends ConnectorOption("technology")
 
   //////////////////////////////////////////////////////////////////// SAGA
 

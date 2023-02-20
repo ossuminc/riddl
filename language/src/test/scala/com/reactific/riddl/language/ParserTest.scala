@@ -87,8 +87,7 @@ class ParserTest extends ParsingTest {
         """domain one is { ??? }
           |domain two is {
           |  context one is {
-          |    pipe a is { ??? }
-          |    multi b is { ??? }
+          |    router b is { ??? }
           |  }
           |  context two is {
           |    function foo is { ??? }

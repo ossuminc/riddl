@@ -49,12 +49,16 @@ class AdaptorTest extends ValidatingTest {
         """domain ignore is { context Target is {???}  context Foo is {
           |type ItWillHappen = command { abc: String described as "abc" } described as "?"
           |type LetsDoIt = command { bcd: String described as "abc" } described as "?"
-          |entity MyEntity is { ??? }
+          |entity MyEntity is { inlet commands is command LetsDoIt }
+          |  connector only is { from outlet PaymentAdapter.forMyEntity
+          |    to inlet MyEntity.commands }
           |adaptor PaymentAdapter to context Target is {
+          |  outlet forMyEntity is command LetsDoIt
           |  handler sendAMessage is {
           |    on command ItWillHappen  {
-          |      example one is { then tell command LetsDoIt(bcd="foo") to
-          |        entity MyEntity
+          |      example one is {
+          |        then send command LetsDoIt(bcd="foo") to
+          |          outlet forMyEntity
           |      } described as "eno"
           |    } described as "?"
           |  } explained as "?"
@@ -63,7 +67,7 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input) { (_, _, messages) =>
-        messages.isOnlyIgnorable mustBe true
+        messages.isOnlyWarnings mustBe true
       }
     }
 

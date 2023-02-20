@@ -40,13 +40,15 @@ case class MarkdownWriter(
     this
   }
 
-  def containerWeight: Int = 2 * 5
+  private def containerWeight: Int = 2 * 5
 
-  def tbd(defn: Definition): this.type = {
-    if (defn.isEmpty) { p("TBD: To Be Defined") }
+  private def tbd(definition: Definition): this.type = {
+    if (definition.isEmpty) { p("TBD: To Be Defined") }
     else { this }
   }
-  def containerHead(cont: Definition, titleSuffix: String): this.type = {
+
+  private def containerHead(cont: Definition, titleSuffix: String): this.type
+  = {
 
     fileHead(
       cont.id.format + s": $titleSuffix",
@@ -62,7 +64,7 @@ case class MarkdownWriter(
     )
   }
 
-  def leafHead(definition: Definition, weight: Int): this.type = {
+  private def leafHead(definition: Definition, weight: Int): this.type = {
     fileHead(
       s"${definition.id.format}: ${definition.getClass.getSimpleName}",
       weight,
@@ -710,8 +712,8 @@ case class MarkdownWriter(
     toc("Entities", mkTocSeq(context.entities))
     toc("Sagas", mkTocSeq(context.sagas))
     // TODO: generate a diagram for the processors and pipes
-    toc("Processors", mkTocSeq(context.processors))
-    list("Pipes", mkTocSeq(context.pipes))
+    toc("Streamlets", mkTocSeq(context.streamlets))
+    list("Connections", mkTocSeq(context.connections))
     emitUsage(context)
     emitTerms(context.terms)
     emitIndex("Context", context, parents)
@@ -850,16 +852,19 @@ case class MarkdownWriter(
     emitDescription(story.description)
   }
 
-  def emitPipe(pipe: Pipe, parents: Seq[String]): this.type = {
-    leafHead(pipe, weight = 20)
-    emitDefDoc(pipe, parents)
-    if (pipe.transmitType.nonEmpty) {
-      p(s"Transmission Type: ${pipe.transmitType.get.format} ")
+  def emitConnection(conn: Connector, parents: Seq[String]): this.type = {
+    leafHead(conn, weight = 20)
+    emitDefDoc(conn, parents)
+    if (conn.from.nonEmpty && conn.to.nonEmpty) {
+      val prefix = if (conn.flows.nonEmpty) s"flows ${conn.flows.get.format}"
+      else ""
+      p(s"$prefix from ${conn.from.get.format} to ${conn.to.get.format}")
+
     }
-    emitUsage(pipe)
+    emitUsage(conn)
   }
 
-  def emitProcessor(proc: Processor, parents: Seq[Definition]): this.type = {
+  def emitStreamlet(proc: Streamlet, parents: Seq[Definition]): this.type = {
     leafHead(proc, weight = 30)
     val parList = state.makeParents(parents)
     emitDefDoc(proc, parList)

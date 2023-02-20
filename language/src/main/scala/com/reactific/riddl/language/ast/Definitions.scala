@@ -3,6 +3,8 @@ package com.reactific.riddl.language.ast
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.Terminals.Keywords
 
+import scala.collection.immutable.Seq
+
 /** Unit Tests For Definitions */
 trait Definitions extends Expressions with Options {
 
@@ -29,14 +31,29 @@ trait Definitions extends Expressions with Options {
   /** Base trait of definitions that are part of a Handler Definition */
   sealed trait HandlerDefinition extends Definition
 
+  /** Base trait of definitions that are part of an On Clause Definition */
+  sealed trait OnClauseDefinition extends Definition
+
   /** Base trait of definitions defined in a processor */
-  sealed trait ProcessorDefinition extends Definition
+  sealed trait ProcessorDefinition
+      extends Definition
+      with AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with EntityDefinition
+      with ProjectionDefinition
+      with RepositoryDefinition
+      with StreamletDefinition
+      with SagaDefinition
 
   /** Base trait of definitions defined in a repository */
   sealed trait RepositoryDefinition extends Definition
 
   /** Base trait of definitions defined at root scope */
   sealed trait RootDefinition extends Definition
+
+  /** Base trait of definitions define within a Streamlet */
+  sealed trait StreamletDefinition extends Definition
 
   /** Base trait of definitions that are in the body of a Story definition */
   sealed trait StoryDefinition extends Definition
@@ -48,7 +65,7 @@ trait Definitions extends Expressions with Options {
       with DomainDefinition
       with EntityDefinition
       with FunctionDefinition
-      with ProcessorDefinition
+      with StreamletDefinition
       with ProjectionDefinition
       with RepositoryDefinition
       with SagaDefinition
@@ -164,11 +181,11 @@ trait Definitions extends Expressions with Options {
     override def hasAuthors: Boolean = authors.nonEmpty
   }
 
-  sealed trait VitalDefinition[T <: OptionValue, CT <: Definition]
+  sealed trait VitalDefinition[OPT <: OptionValue, DEF <: Definition]
       extends Definition
-      with WithOptions[T]
+      with WithOptions[OPT]
       with WithAuthors
-      with WithIncludes[CT]
+      with WithIncludes[DEF]
       with WithTerms {
 
     import scala.language.implicitConversions
@@ -234,7 +251,15 @@ trait Definitions extends Expressions with Options {
     override def hasTypes: Boolean = types.nonEmpty
   }
 
-  trait WithStreaming extends Definition {
+  /** Definition of a Processor This is a base class for all Processor
+    * definitions
+    */
+  trait Processor[OPT <: OptionValue, DEF <: Definition]
+      extends VitalDefinition[OPT, DEF]
+      with WithTypes {
+
+    def handlers: Seq[Handler]
+
     def inlets: Seq[Inlet]
 
     def outlets: Seq[Outlet]
@@ -242,6 +267,7 @@ trait Definitions extends Expressions with Options {
     def hasInlets: Boolean = inlets.nonEmpty
 
     def hasOutlets: Boolean = outlets.nonEmpty
+
   }
 
   /** The root of the containment hierarchy, corresponding roughly to a level
@@ -296,7 +322,7 @@ trait Definitions extends Expressions with Options {
     }
   }
 
-  /** A Reference to a command type
+  /** A Reference to a command message type
     *
     * @param loc
     *   The location of the reference
@@ -307,7 +333,7 @@ trait Definitions extends Expressions with Options {
     def messageKind: AggregateUseCase = CommandCase
   }
 
-  /** A Reference to an event type
+  /** A Reference to an event message type
     *
     * @param loc
     *   The location of the reference
@@ -318,7 +344,7 @@ trait Definitions extends Expressions with Options {
     def messageKind: AggregateUseCase = EventCase
   }
 
-  /** A reference to a query type
+  /** A reference to a query message type
     *
     * @param loc
     *   The location of the reference
@@ -329,7 +355,7 @@ trait Definitions extends Expressions with Options {
     def messageKind: AggregateUseCase = QueryCase
   }
 
-  /** A reference to a result type
+  /** A reference to a result message type
     *
     * @param loc
     *   The location of the reference
@@ -338,6 +364,28 @@ trait Definitions extends Expressions with Options {
     */
   case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
     def messageKind: AggregateUseCase = ResultCase
+  }
+
+  /** A reference to a record message type
+    *
+    * @param loc
+    *   The location of the reference
+    * @param pathId
+    *   The path identifier to the result type
+    */
+  case class RecordRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+    def messageKind: AggregateUseCase = RecordCase
+  }
+
+  /** A reference to an other message type
+    *
+    * @param loc
+    *   The location of the reference
+    * @param pathId
+    *   The path identifier to the result type
+    */
+  case class OtherRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+    def messageKind: AggregateUseCase = OtherCase
   }
 
   /** A type definition which associates an identifier with a type expression.
@@ -360,12 +408,9 @@ trait Definitions extends Expressions with Options {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Definition
-      with ApplicationDefinition
-      with ContextDefinition
-      with EntityDefinition
       with StateDefinition
+      with ProcessorDefinition
       with FunctionDefinition
-      with RepositoryDefinition
       with DomainDefinition {
     override def contents: Seq[TypeDefinition] = {
       typ match {
@@ -474,7 +519,7 @@ trait Definitions extends Expressions with Options {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
   ) extends LeafDefinition
-      with ProcessorDefinition
+      with OnClauseDefinition
       with FunctionDefinition
       with StoryDefinition {
     final val kind: String = "Example"
@@ -691,7 +736,7 @@ trait Definitions extends Expressions with Options {
   case class OnMessageClause(
     loc: At,
     msg: MessageRef,
-    from: Option[Reference[Definition]],
+    from: Option[InletRef],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -768,7 +813,7 @@ trait Definitions extends Expressions with Options {
       with EntityDefinition
       with StateDefinition
       with RepositoryDefinition
-      with ProcessorDefinition
+      with StreamletDefinition
       with ProjectionDefinition {
     override def isEmpty: Boolean = clauses.isEmpty
 
@@ -877,9 +922,8 @@ trait Definitions extends Expressions with Options {
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[EntityOption, EntityDefinition]
-      with ContextDefinition
-      with WithTypes {
+  ) extends Processor[EntityOption, EntityDefinition]
+      with ContextDefinition {
 
     override lazy val contents: Seq[EntityDefinition] = {
       super.contents ++ states ++ types ++ handlers ++ functions ++
@@ -942,6 +986,7 @@ trait Definitions extends Expressions with Options {
     handlers: Seq[Handler] = Seq.empty[Handler],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
+    types: Seq[Type] = Seq.empty[Type],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -949,7 +994,7 @@ trait Definitions extends Expressions with Options {
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[AdaptorOption, AdaptorDefinition]
+  ) extends Processor[AdaptorOption, AdaptorDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[AdaptorDefinition] = {
       super.contents ++ handlers ++ inlets ++ outlets ++ terms
@@ -1016,7 +1061,7 @@ trait Definitions extends Expressions with Options {
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[RepositoryOption, RepositoryDefinition]
+  ) extends Processor[RepositoryOption, RepositoryDefinition]
       with ContextDefinition {
     override def kind: String = "Repository"
 
@@ -1074,12 +1119,14 @@ trait Definitions extends Expressions with Options {
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
     types: Seq[Type] = Seq.empty[Type],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[ProjectionOption, ProjectionDefinition]
+  ) extends Processor[ProjectionOption, ProjectionDefinition]
       with ContextDefinition
       with WithTypes {
     override lazy val contents: Seq[ProjectionDefinition] = {
@@ -1144,7 +1191,7 @@ trait Definitions extends Expressions with Options {
     entities: Seq[Entity] = Seq.empty[Entity],
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
     sagas: Seq[Saga] = Seq.empty[Saga],
-    processors: Seq[Processor] = Seq.empty[Processor],
+    streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ContextDefinition]] = Seq
@@ -1154,18 +1201,16 @@ trait Definitions extends Expressions with Options {
     repositories: Seq[Repository] = Seq.empty[Repository],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
-    pipes: Seq[Pipe] = Seq.empty[Pipe],
+    connections: Seq[Connector] = Seq.empty[Connector],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[ContextOption, ContextDefinition]
-      with DomainDefinition
-      with WithTypes
-      with WithStreaming {
+  ) extends Processor[ContextOption, ContextDefinition]
+      with DomainDefinition {
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
-      types ++ entities ++ adaptors ++ sagas ++ processors ++ functions ++
-      terms ++ handlers ++ projections ++ repositories ++ inlets ++ outlets ++
-      pipes
+      types ++ entities ++ adaptors ++ sagas ++ streamlets ++ functions ++
+      terms ++ handlers ++ projections ++ repositories ++ inlets ++
+      outlets ++ connections
 
     final val kind: String = "Context"
 
@@ -1176,7 +1221,7 @@ trait Definitions extends Expressions with Options {
       if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       if (adaptors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
       if (sagas.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
-      if (processors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if (streamlets.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       if (functions.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       if (handlers.nonEmpty) score += 10
       if (projections.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
@@ -1196,44 +1241,8 @@ trait Definitions extends Expressions with Options {
     override def format: String = s"context ${pathId.format}"
   }
 
-  /** Definition of a pipe for data streaming purposes. Pipes are conduits
-    * through which data of a particular type flows.
-    *
-    * @param loc
-    *   The location of the pipe definition
-    * @param id
-    *   The name of the pipe
-    * @param transmitType
-    *   The type of data transmitted.
-    * @param from
-    *   A reference to an outlet that provides the pipe input
-    * @param to
-    *   A reference to an inlet that provides the pipe output
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the pipe.
-    */
-  case class Pipe(
-    loc: At,
-    id: Identifier,
-    options: Seq[PipeOption] = Seq.empty[PipeOption],
-    transmitType: Option[TypeRef] = None,
-    from: Option[OutletRef] = None,
-    to: Option[InletRef] = None,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None
-  ) extends LeafDefinition
-      with ContextDefinition
-      with WithOptions[PipeOption] {
-    override def isEmpty: Boolean = transmitType.isEmpty
-
-    final val kind: String = "Pipe"
-  }
-
-  /** Base trait of an Inlet or Outlet definition
-    */
-  trait Streamlet extends LeafDefinition with ProcessorDefinition
+  /** A sealed trait for Inlets and Outlets */
+  sealed trait Portlet extends Definition
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -1251,19 +1260,15 @@ trait Definitions extends Expressions with Options {
   case class Inlet(
     loc: At,
     id: Identifier,
-    type_ : TypeRef,
+    type_ : Reference[Type],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Streamlet
-      with AlwaysEmpty
-      with ApplicationDefinition
-      with ContextDefinition
+  ) extends Portlet
+      with LeafDefinition
       with ProcessorDefinition
-      with RepositoryDefinition
-      with SagaDefinition
-      with EntityDefinition
-      with AdaptorDefinition {
-    def format: String = s"${Keywords.inlet} ${id.format} is ${type_.format}"
+      with AlwaysEmpty {
+    def format: String =
+      s"${Keywords.inlet} ${id.format} is ${type_.format}"
 
     final val kind: String = "Inlet"
   }
@@ -1284,77 +1289,88 @@ trait Definitions extends Expressions with Options {
   case class Outlet(
     loc: At,
     id: Identifier,
-    type_ : TypeRef,
+    type_ : Reference[Type],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Streamlet
-      with AlwaysEmpty
-      with ApplicationDefinition
-      with ContextDefinition
+  ) extends Portlet
+      with LeafDefinition
       with ProcessorDefinition
-      with RepositoryDefinition
-      with SagaDefinition
-      with EntityDefinition
-      with AdaptorDefinition {
+      with AlwaysEmpty {
     def format: String = s"${Keywords.outlet} ${id.format} is ${type_.format}"
 
     final val kind: String = "Outlet"
   }
 
-  sealed trait ProcessorShape extends RiddlValue {
+  case class Connector(
+    loc: At,
+    id: Identifier,
+    options: Seq[ConnectorOption] = Seq.empty[ConnectorOption],
+    flows: Option[TypeRef] = Option.empty[TypeRef],
+    from: Option[OutletRef] = Option.empty[OutletRef],
+    to: Option[InletRef] = Option.empty[InletRef],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = Option.empty[Description]
+  ) extends LeafDefinition
+      with ContextDefinition
+      with WithOptions[ConnectorOption] {
+    final override def isEmpty: Boolean = super.isEmpty && flows.isEmpty &&
+      from.isEmpty && to.isEmpty
+
+    final val kind: String = "Connector"
+    override def format: String = s"${Keywords.connector}"
+  }
+
+  sealed trait StreamletShape extends RiddlValue {
     def keyword: String
   }
 
-  case class Source(loc: At) extends ProcessorShape {
+  case class Void(loc: At) extends StreamletShape {
+    def format: String = Keywords.void
+
+    def keyword: String = Keywords.void
+  }
+
+  case class Source(loc: At) extends StreamletShape {
     def format: String = Keywords.source
 
     def keyword: String = Keywords.source
   }
 
-  case class Sink(loc: At) extends ProcessorShape {
+  case class Sink(loc: At) extends StreamletShape {
     def format: String = Keywords.sink
 
     def keyword: String = Keywords.sink
   }
 
-  case class Flow(loc: At) extends ProcessorShape {
+  case class Flow(loc: At) extends StreamletShape {
     def format: String = Keywords.flow
 
     def keyword: String = Keywords.flow
   }
 
-  case class Merge(loc: At) extends ProcessorShape {
+  case class Merge(loc: At) extends StreamletShape {
     def format: String = Keywords.merge
 
     def keyword: String = Keywords.merge
   }
 
-  case class Split(loc: At) extends ProcessorShape {
+  case class Split(loc: At) extends StreamletShape {
     def format: String = Keywords.split
 
     def keyword: String = Keywords.split
   }
 
-  case class Router(loc: At) extends ProcessorShape {
+  case class Router(loc: At) extends StreamletShape {
     def format: String = Keywords.router
 
     def keyword: String = Keywords.router
   }
 
-  case class Multi(loc: At) extends ProcessorShape {
-    def format: String = Keywords.multi
-
-    def keyword: String = Keywords.multi
-  }
-
-  case class Void(loc: At) extends ProcessorShape {
-    def format: String = Keywords.void
-
-    override def keyword: String = Keywords.void
-  }
-
-  /** A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A
-    * processor's processing is specified by Gherkin [[Example]]s
+  /** Definition of a Streamlet. A computing element for processing data from
+    * [[Inlet]]s to [[Outlet]]s. A processor's processing is specified by
+    * Gherkin [[Example]]s. Streamlets come in various shapes: Source, Sink,
+    * Flow, Merge, Split, and Router depending on how many inlets and outlets
+    * they have
     *
     * @param loc
     *   The location of the Processor definition
@@ -1373,23 +1389,24 @@ trait Definitions extends Expressions with Options {
     * @param description
     *   An optional description of the processor
     */
-  case class Processor(
+  case class Streamlet(
     loc: At,
     id: Identifier,
-    shape: ProcessorShape,
+    shape: StreamletShape,
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
-    includes: Seq[Include[ProcessorDefinition]] = Seq
-      .empty[Include[ProcessorDefinition]],
+    types: Seq[Type] = Seq.empty[Type],
+    includes: Seq[Include[StreamletDefinition]] = Seq
+      .empty[Include[StreamletDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    options: Seq[ProcessorOption] = Seq.empty[ProcessorOption],
+    options: Seq[StreamletOption] = Seq.empty[StreamletOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[ProcessorOption, ProcessorDefinition]
+  ) extends Processor[StreamletOption, StreamletDefinition]
       with ContextDefinition {
-    override def contents: Seq[ProcessorDefinition] = super.contents ++
+    override def contents: Seq[StreamletDefinition] = super.contents ++
       inlets ++ outlets ++ handlers ++ terms
 
     final val kind: String = shape.getClass.getSimpleName
@@ -1433,11 +1450,6 @@ trait Definitions extends Expressions with Options {
           isEmpty || (outlets.size >= 2 && inlets.size >= 2),
           "Invalid Router Streamlet"
         )
-      case Multi(_) =>
-        require(
-          isEmpty || (outlets.size >= 2 && inlets.size >= 2),
-          "Invalid Multi Streamlet"
-        )
       case Void(_) =>
         require(
           isEmpty || (outlets.isEmpty && inlets.isEmpty),
@@ -1454,21 +1466,9 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced projection definition
     */
-  case class ProcessorRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Processor] {
-    override def format: String = s"${Keywords.processor} ${pathId.format}"
-  }
-
-  /** A reference to a pipe
-    *
-    * @param loc
-    *   The location of the pipe reference
-    * @param pathId
-    *   The path identifier for the referenced pipe.
-    */
-  case class PipeRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Pipe] {
-    override def format: String = s"${Keywords.pipe} ${pathId.format}"
+  case class StreamletRef(loc: At, pathId: PathIdentifier)
+      extends MessageTakingRef[Streamlet] {
+    override def format: String = s"${Keywords.streamlet} ${pathId.format}"
   }
 
   /** Sealed base trait of references to [[Inlet]]s or [[Outlet]]s
@@ -1476,7 +1476,7 @@ trait Definitions extends Expressions with Options {
     * @tparam T
     *   The type of definition to which the references refers.
     */
-  sealed trait StreamletRef[+T <: Definition] extends Reference[T]
+  sealed trait PortletRef[+T <: Portlet] extends Reference[T]
 
   /** A reference to an [[Inlet]]
     *
@@ -1486,7 +1486,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced [[Inlet]]
     */
   case class InletRef(loc: At, pathId: PathIdentifier)
-      extends StreamletRef[Inlet] {
+      extends PortletRef[Inlet] {
     override def format: String = s"${Keywords.inlet} ${pathId.format}"
   }
 
@@ -1498,7 +1498,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced [[Outlet]]
     */
   case class OutletRef(loc: At, pathId: PathIdentifier)
-      extends StreamletRef[Outlet] {
+      extends PortletRef[Outlet] {
     override def format: String = s"${Keywords.outlet} ${pathId.format}"
   }
 
@@ -1778,9 +1778,9 @@ trait Definitions extends Expressions with Options {
 
   /** The definition of an Jacobsen use case which focuses on a story. Stories
     * define functionality from the perspective of actor's (man or machine)
-    * interaction with the system that is part of their role.  RIDDL defines
-   * these stories by allowing a linkage between the actor and RIDDL
-   * applications or bounded contexts.
+    * interaction with the system that is part of their role. RIDDL defines
+    * these stories by allowing a linkage between the actor and RIDDL
+    * applications or bounded contexts.
     *
     * @param loc
     *   The location of the story definition
@@ -1788,7 +1788,7 @@ trait Definitions extends Expressions with Options {
     *   The name of the story
     * @param userStory
     *   The user story per agile and xP (I as a >role< need >feature< so that
-   *   >reason>)
+    *   >reason>)
     * @param shownBy
     *   A list of URLs to visualizations or other materials related to the story
     * @param cases
@@ -1877,7 +1877,7 @@ trait Definitions extends Expressions with Options {
     *   unique identifier oof the view
     * @param types
     *   any type definitions the view needs
-    * @param viewed
+    * @param putOut
     *   A result reference for the data too be presented
     * @param brief
     *   A brief description of the view
@@ -1888,7 +1888,7 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     types: Seq[Type],
-    putOut: ResultRef,
+    putOut: MessageRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends UIElement {
@@ -1932,7 +1932,7 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     types: Seq[Type],
-    putIn: CommandRef,
+    putIn: MessageRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends UIElement {
@@ -1970,7 +1970,7 @@ trait Definitions extends Expressions with Options {
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends VitalDefinition[ApplicationOption, ApplicationDefinition]
+  ) extends Processor[ApplicationOption, ApplicationDefinition]
       with DomainDefinition {
     override def kind: String = "Application"
 

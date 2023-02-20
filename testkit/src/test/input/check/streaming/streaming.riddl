@@ -14,14 +14,13 @@ context SensorMaintenance is {
     inlet InTemp is type Temperature
   } explained as "This is a Sink for making sensor adjustments based on temperature"
 
-  pipe WeatherForecast is {
-    transmit type Forecast
+  connector WeatherForecast is {
     from outlet GetWeatherForecast.WeatherSink
     to inlet GetCurrentTemperature.WeatherSource
   } explained as "Carries changes in the current weather forecast"
 
-  pipe TemperatureChanges is {
-    transmit type Temperature
+  connector TemperatureChanges is {
+    flows type Temperature
     from outlet GetCurrentTemperature.OutTemp
     to inlet AttenuateSensor.InTemp
   } explained as "Carries changes in the current temperature"

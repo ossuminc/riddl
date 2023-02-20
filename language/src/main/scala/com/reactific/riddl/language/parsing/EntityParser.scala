@@ -12,9 +12,11 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-
 /** Parsing rules for entity definitions */
-private[parsing] trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
+private[parsing] trait EntityParser
+    extends TypeParser
+    with HandlerParser
+    with StreamingParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -58,10 +60,12 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
 
   private def stateBody[u: P]: P[StateThings] = {
     P(
-      undefined((
-        Aggregation(At.empty, Seq.empty[Field]),
-        Seq.empty[StateDefinition]
-      )) | stateDefinition
+      undefined(
+        (
+          Aggregation(At.empty, Seq.empty[Field]),
+          Seq.empty[StateDefinition]
+        )
+      ) | stateDefinition
     )
   }
 
@@ -83,8 +87,10 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
   }
 
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(handler | function | invariant | typeDef | state | entityInclude | inlet | outlet | term)
-      .rep
+    P(
+      handler | function | invariant | typeDef | state | entityInclude |
+        inlet | outlet | term
+    ).rep
   }
 
   private type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
@@ -93,7 +99,9 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
     P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
   }
 
-  private def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
+  private def entityBody[u: P]: P[EntityBody] = P(
+    entityOptions.? ~ entityDefinitions
+  )
 
   def entity[u: P]: P[Entity] = {
     P(
@@ -108,9 +116,11 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val includes = mapTo[Include[EntityDefinition]](groups.get(
-        classOf[Include[EntityDefinition]]
-      ))
+      val includes = mapTo[Include[EntityDefinition]](
+        groups.get(
+          classOf[Include[EntityDefinition]]
+        )
+      )
       val terms = mapTo[Term](groups.get(classOf[Term]))
       Entity(
         loc,

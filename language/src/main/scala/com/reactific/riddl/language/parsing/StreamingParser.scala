@@ -13,90 +13,102 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For StreamingParser */
-private[parsing] trait StreamingParser extends ReferenceParser with HandlerParser {
-
-  private def pipeOptions[X: P]: P[Seq[PipeOption]] = {
-    options[X, PipeOption](StringIn(Options.persistent, Options.technology).!) {
-      case (loc, Options.persistent, _)    => PipePersistentOption(loc)
-      case (loc, Options.technology, args) => PipeTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
-    }
-  }
-
-  def pipe[u: P]: P[Pipe] = {
-    location ~ Keywords.pipe ~/ identifier ~ is ~ open ~ pipeOptions ~
-      (undefined((None, None, None)) |
-        Keywords.transmit ~/ typeRef.map(Option(_)) ~
-        (Readability.from ~ outletRef).? ~ (Readability.to ~ inletRef).?) ~
-      close ~ briefly ~ description
-  }.map { case (at, id, opts, (typ, out, in), brief, desc) =>
-    Pipe(at, id, opts, typ, out, in, brief, desc)
-  }
+private[parsing] trait StreamingParser
+    extends ReferenceParser
+    with HandlerParser {
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ briefly ~
-        description
+      location ~ Keywords.inlet ~ identifier ~ is ~
+        typeRef ~/ briefly ~ description
     )./.map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ briefly ~
-        description
+      location ~ Keywords.outlet ~ identifier ~ is ~
+        typeRef ~/ briefly ~ description
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 
-  private def processorInclude[u: P](
+  private def connectorOptions[X: P]: P[Seq[ConnectorOption]] = {
+    options[X, ConnectorOption](
+      StringIn(Options.persistent, Options.technology).!
+    ) {
+      case (loc, Options.persistent, _) => ConnectorPersistentOption(loc)
+      case (loc, Options.technology, args) =>
+        ConnectorTechnologyOption(loc, args)
+      case (_, _, _) => throw new RuntimeException("Impossible case")
+    }
+  }
+
+  def connector[u: P]: P[Connector] = {
+    P(
+      location ~ Keywords.connector ~/ identifier ~ is ~/ open ~
+        connectorOptions ~
+        (undefined((None, None, None)) |
+          (
+            (Keywords.flows ~ typeRef).? ~/
+              Readability.from ~ outletRef ~/
+              Readability.to ~ inletRef
+          ).map { case (typ, out, in) =>
+            (typ, Some(out), Some(in))
+          }) ~ close ~/ briefly ~ description
+    )./.map { case (loc, id, opts, (typ, out, in), brief, desc) =>
+      Connector(loc, id, opts, typ, out, in, brief, desc)
+    }
+  }
+
+  private def streamletInclude[u: P](
     minInlets: Int,
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Include[ProcessorDefinition]] = {
-    include[ProcessorDefinition, u](
-      processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets)(_)
+  ): P[Include[StreamletDefinition]] = {
+    include[StreamletDefinition, u](
+      streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
   }
 
-  private def processorDefinitions[u: P](
+  private def streamletDefinition[u: P](
     minInlets: Int,
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[ProcessorDefinition]] = {
+  ): P[Seq[StreamletDefinition]] = {
     P(
-      (inlet.rep(minInlets, "", maxInlets) ~/
-        outlet.rep(minOutlets, "", maxOutlets) ~/
+      (inlet.rep(minInlets, " ", maxInlets) ~/
+        outlet.rep(minOutlets, " ", maxOutlets) ~/
         (handler | term |
-          processorInclude(minInlets, maxInlets, minOutlets, maxOutlets))
+          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))
           .rep(0)).map { case (inlets, outlets, definitions) =>
         inlets ++ outlets ++ definitions
       }
     )
   }
 
-  private def processorOptions[u: P]: P[Seq[ProcessorOption]] = {
-    options[u, ProcessorOption](StringIn(Options.technology).!) {
+  private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
+    options[u, StreamletOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
-        ProcessorTechnologyOption(loc, args)
+        StreamletTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  private def processorBody[u: P](
+  private def streamletBody[u: P](
     minInlets: Int,
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[(Seq[ProcessorOption], Seq[ProcessorDefinition])] = {
+  ): P[(Seq[StreamletOption], Seq[StreamletDefinition])] = {
     P(
-      undefined((Seq.empty[ProcessorOption], Seq.empty[ProcessorDefinition])) |
-        (processorOptions ~
-          processorDefinitions(minInlets, maxInlets, minOutlets, maxOutlets))
+      undefined((Seq.empty[StreamletOption], Seq.empty[StreamletDefinition])) |
+        (streamletOptions ~
+          streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets))
     )
   }
 
-  private def keywordToKind(keyword: String, location: At): ProcessorShape = {
+  private def keywordToKind(keyword: String, location: At): StreamletShape = {
     keyword match {
       case "source" => Source(location)
       case "sink"   => Sink(location)
@@ -104,38 +116,41 @@ private[parsing] trait StreamingParser extends ReferenceParser with HandlerParse
       case "merge"  => Merge(location)
       case "split"  => Split(location)
       case "router" => Router(location)
-      case "multi"  => Multi(location)
       case "void"   => Void(location)
     }
   }
 
-  private def processorTemplate[u: P](
+  private def streamletTemplate[u: P](
     keyword: String,
     minInlets: Int = 0,
     maxInlets: Int = 0,
     minOutlets: Int = 0,
     maxOutlets: Int = 0
-  ): P[Processor] = {
+  ): P[Streamlet] = {
     P(
       location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
-        processorBody(minInlets, maxInlets, minOutlets, maxOutlets) ~ close ~
+        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~ close ~
         briefly ~ description
     ).map { case (location, id, auths, (options, definitions), brief, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val types = mapTo[Type](groups.get(classOf[Type]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[ProcessorDefinition]](groups.get(
-        classOf[Include[ProcessorDefinition]]
-      ))
-      Processor(
+      val includes = mapTo[Include[StreamletDefinition]](
+        groups.get(
+          classOf[Include[StreamletDefinition]]
+        )
+      )
+      Streamlet(
         location,
         id,
         keywordToKind(keyword, location),
         inlets,
         outlets,
         handlers,
+        types,
         includes,
         auths,
         options,
@@ -146,18 +161,18 @@ private[parsing] trait StreamingParser extends ReferenceParser with HandlerParse
     }
   }
 
-  val MaxStreamlets = 1000
+  private val MaxStreamlets = 1000
 
-  def source[u: P]: P[Processor] = {
-    processorTemplate(Keywords.source, minOutlets = 1, maxOutlets = 1)
+  def source[u: P]: P[Streamlet] = {
+    streamletTemplate(Keywords.source, minOutlets = 1, maxOutlets = 1)
   }
 
-  def sink[u: P]: P[Processor] = {
-    processorTemplate(Keywords.sink, minInlets = 1, maxInlets = 1)
+  def sink[u: P]: P[Streamlet] = {
+    streamletTemplate(Keywords.sink, minInlets = 1, maxInlets = 1)
   }
 
-  def flow[u: P]: P[Processor] = {
-    processorTemplate(
+  def flow[u: P]: P[Streamlet] = {
+    streamletTemplate(
       Keywords.flow,
       minInlets = 1,
       maxInlets = 1,
@@ -166,8 +181,8 @@ private[parsing] trait StreamingParser extends ReferenceParser with HandlerParse
     )
   }
 
-  def split[u: P]: P[Processor] = {
-    processorTemplate(
+  def split[u: P]: P[Streamlet] = {
+    streamletTemplate(
       Keywords.split,
       minInlets = 1,
       maxInlets = 1,
@@ -176,8 +191,8 @@ private[parsing] trait StreamingParser extends ReferenceParser with HandlerParse
     )
   }
 
-  def merge[u: P]: P[Processor] = {
-    processorTemplate(
+  def merge[u: P]: P[Streamlet] = {
+    streamletTemplate(
       Keywords.merge,
       minInlets = 2,
       maxInlets = MaxStreamlets,
@@ -186,9 +201,9 @@ private[parsing] trait StreamingParser extends ReferenceParser with HandlerParse
     )
   }
 
-  def multi[u: P]: P[Processor] = {
-    processorTemplate(
-      Keywords.multi,
+  def router[u: P]: P[Streamlet] = {
+    streamletTemplate(
+      Keywords.router,
       minInlets = 2,
       maxInlets = MaxStreamlets,
       minOutlets = 2,
@@ -196,9 +211,9 @@ private[parsing] trait StreamingParser extends ReferenceParser with HandlerParse
     )
   }
 
-  def void[u: P]: P[Processor] = { processorTemplate(Keywords.void) }
+  def void[u: P]: P[Streamlet] = { streamletTemplate(Keywords.void) }
 
-  def processor[u: P]: P[Processor] =
-    P(source | flow | sink | merge | split | multi | void)
+  def streamlet[u: P]: P[Streamlet] =
+    P(source | flow | sink | merge | split | router | void)
 
 }

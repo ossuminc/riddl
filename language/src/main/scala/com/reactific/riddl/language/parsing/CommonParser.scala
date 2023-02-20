@@ -14,6 +14,7 @@ import fastparse.ScalaWhitespace.*
 
 import java.net.URL
 import java.nio.file.Files
+import scala.reflect.{ClassTag, classTag}
 
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
@@ -208,6 +209,17 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     ).?.map {
       case Some(seq) => seq
       case None      => Seq.empty[TY]
+    }
+  }
+
+  implicit class ClassMapHelper(
+    map: Map[Class[Definition], Seq[Definition]]
+  ) {
+    def extract[T <: Definition: ClassTag]: Seq[T] = {
+      val classe = classTag[T].runtimeClass
+      map
+        .get(classe.asInstanceOf[Class[Definition]])
+        .fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
     }
   }
 
