@@ -4,9 +4,6 @@ Missing: everything.riddl(68:7): Function 'whenUnderTheInfluence' should have a 
 Style: everything.riddl(34:25): Field identifier 'a' is too short. The minimum length is 3:
      type PeachType is { a: Integer }
                          ^
-Missing: everything.riddl(31:5): Type 'url' should have a description:
-     type url is URL
-     ^
 Style: everything.riddl(69:20): Field identifier 'n' is too short. The minimum length is 3:
          requires { n: Nothing }
                     ^
@@ -19,41 +16,17 @@ Missing: everything.riddl(6:3): Type 'DoAThing' should have a description:
 Style: everything.riddl(43:7): Field identifier 'id' is too short. The minimum length is 3:
        id is ident,
        ^
-Missing: everything.riddl(38:5): Type 'alt' should have a description:
-     type alt is one of { enum or stamp or url }
-     ^
-Style: everything.riddl(26:5): Type 'boo' should start with a capital letter:
-     type boo is Boolean            // Define boo as a Boolean
-     ^
-Missing: everything.riddl(30:5): Type 'stamp' should have a description:
-     type stamp is TimeStamp        // Define stamp as a TimeStamp
-     ^
 Style: everything.riddl(48:5): Type 'oneOrMore' should start with a capital letter:
      type oneOrMore is many agg
      ^
 Style: everything.riddl(30:5): Type 'stamp' should start with a capital letter:
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
-Missing: everything.riddl(48:5): Type 'oneOrMore' should have a description:
-     type oneOrMore is many agg
-     ^
-Style: everything.riddl(25:5): Type 'num' should start with a capital letter:
-     type num is Number             // Define num as a Number
-     ^
-Missing: everything.riddl(49:5): Type 'zeroOrMore' should have a description:
-     type zeroOrMore is agg*
-     ^
-Missing: everything.riddl(20:3): Context 'full' should have a description:
-   context full is {
-   ^
 Style: everything.riddl(38:5): Type 'alt' should start with a capital letter:
      type alt is one of { enum or stamp or url }
      ^
 Missing: everything.riddl(29:5): Type 'tim' should have a description:
      type tim is Time               // Define tim as a Time
-     ^
-Missing: everything.riddl(35:5): Type 'enum' should have a description:
-     type enum is any of { Apple Pear Peach(21) Persimmon(42) }
      ^
 Style: everything.riddl(49:5): Type 'zeroOrMore' should start with a capital letter:
      type zeroOrMore is agg*
@@ -64,35 +37,14 @@ Style: everything.riddl(35:5): Type 'enum' should start with a capital letter:
 Style: everything.riddl(62:7): Type 'somethingDate' should start with a capital letter:
        type somethingDate is Date
        ^
-Missing: everything.riddl(41:5): Type 'agg' should have a description:
-     type agg is {
-     ^
-Missing: everything.riddl(50:5): Type 'optional' should have a description:
-     type optional is agg?
-     ^
-Missing: everything.riddl(64:7): Type 'ACommand' should have a description:
-       command ACommand is {}
-       ^
 Style: everything.riddl(41:5): Type 'agg' should start with a capital letter:
      type agg is {
-     ^
-Missing: everything.riddl(34:5): Type 'PeachType' should have a description:
-     type PeachType is { a: Integer }
      ^
 Style: everything.riddl(28:5): Type 'dat' should start with a capital letter:
      type dat is Date               // Define dat as a Date
      ^
-Style: everything.riddl(24:5): Type 'str' should start with a capital letter:
-     type str is String             // Define str as a String
-     ^
 Style: everything.riddl(50:5): Type 'optional' should start with a capital letter:
      type optional is agg?
-     ^
-Missing: everything.riddl(26:5): Type 'boo' should have a description:
-     type boo is Boolean            // Define boo as a Boolean
-     ^
-Missing: everything.riddl(28:5): Type 'dat' should have a description:
-     type dat is Date               // Define dat as a Date
      ^
 Missing: everything.riddl(5:3): Type 'SomeType' should have a description:
    type SomeType is String
@@ -100,20 +52,11 @@ Missing: everything.riddl(5:3): Type 'SomeType' should have a description:
 Missing: everything.riddl(11:3): Context 'APlant' should have a description:
    context APlant is {
    ^
-Missing: everything.riddl(62:7): Type 'somethingDate' should have a description:
-       type somethingDate is Date
-       ^
-Missing: everything.riddl(74:12): OnMessageClause 'On command ACommand' should have a description:
-         on command ACommand {
-            ^
 Style: everything.riddl(70:19): Field identifier 'b' is too short. The minimum length is 3:
          returns { b: Boolean }
                    ^
 Style: everything.riddl(31:5): Type 'url' should start with a capital letter:
      type url is URL
-     ^
-Missing: everything.riddl(27:5): Type 'ident' should have a description:
-     type ident is UUID             // Define ident as an Id
      ^
 Style: everything.riddl(27:5): Type 'ident' should start with a capital letter:
      type ident is UUID             // Define ident as an Id
@@ -124,24 +67,6 @@ Missing: everything.riddl(3:1): Domain 'Everything' should have a description:
 Missing: everything.riddl(24:5): Type 'str' should have a description:
      type str is String             // Define str as a String
      ^
-Missing: everything.riddl(25:5): Type 'num' should have a description:
-     type num is Number             // Define num as a Number
-     ^
-Style: everything.riddl(29:5): Type 'tim' should start with a capital letter:
-     type tim is Time               // Define tim as a Time
-     ^
-Missing: everything.riddl(75:11): Example 'only' should have a description:
-           example only {
-           ^
-Missing: everything.riddl(59:5): Entity 'Something' should have a description:
-     entity Something is {
-     ^
-Error: everything.riddl(66:7): State 'someState' must define a handler:
-       state someState is { fields { someField:  SomeType } }
-       ^
-Missing: everything.riddl(66:7): State 'someState' should have a description:
-       state someState is { fields { someField:  SomeType } }
-       ^
 Warning: everything.riddl(24:5): Type 'str' is unused:
      type str is String             // Define str as a String
      ^
@@ -187,59 +112,11 @@ Missing: everything.riddl(12:5): Vital definitions should have an author referen
 Missing: everything.riddl(13:5): Vital definitions should have an author reference:
      sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
      ^
-Missing: everything.riddl(20:3): Vital definitions should have an author reference:
-   context full is {
-   ^
 Missing: everything.riddl(3:1): Vital definitions should have an author reference:
  domain Everything is {
  ^
-Missing: everything.riddl(59:5): Vital definitions should have an author reference:
-     entity Something is {
-     ^
-Missing: everything.riddl(68:7): Vital definitions should have an author reference:
-       function whenUnderTheInfluence is {
-       ^
-Missing: everything.riddl(73:15): Handler 'foo' should have a description:
-       handler foo is {
-               ^
-Error: everything.riddl(79:26): Path 'ItHappend' was not resolved, in Example 'only', but should refer to an event:
-               send event ItHappend() to
-                          ^
-Error: everything.riddl(80:23): 'Everything.full.SomeOtherThing.SOT_in' was expected to be a Portlet but is an Entity.:
-                 inlet Everything.full.SomeOtherThing.SOT_in
-                       ^
-Error: everything.riddl(88:23): Path 'SomeOtherTHing.ItHappened' was not resolved, in Inlet 'SOT_In', but should refer to a Type:
-       inlet SOT_In is SomeOtherTHing.ItHappened
-                       ^
-Error: everything.riddl(90:7): State 'otherThingState' must define a handler:
-       state otherThingState is { fields { then: String } }
-       ^
-Missing: everything.riddl(87:5): Entity 'SomeOtherThing' should have a description:
-     entity SomeOtherThing is {
-     ^
-Missing: everything.riddl(87:5): Vital definitions should have an author reference:
-     entity SomeOtherThing is {
-     ^
-Missing: everything.riddl(89:7): Type 'ItHappened' should have a description:
-       type ItHappened is event { when: String }
-       ^
-Missing: everything.riddl(90:7): State 'otherThingState' should have a description:
-       state otherThingState is { fields { then: String } }
-       ^
-Missing: everything.riddl(91:15): Handler 'fee' should have a description:
-       handler fee is {
-               ^
-Style: everything.riddl(93:11): Example 'only' overloads Example 'only' at everything.riddl(75:11):
-           example only {
-           ^
-Missing: everything.riddl(92:12): OnMessageClause 'On event ItHappened' should have a description:
-         on event ItHappened {
-            ^
-Missing: everything.riddl(93:11): Example 'only' should have a description:
-           example only {
-           ^
 Warning: everything.riddl(88:7): Inlet 'SOT_In' is not connected:
-       inlet SOT_In is SomeOtherTHing.ItHappened
+       inlet SOT_In is SomeOtherThing.ItHappened
        ^
 Missing: everything.riddl(12:24): Outlet 'Commands' has nothing sent to it:
      source Source is { outlet Commands is DoAThing } described by "Data Source"

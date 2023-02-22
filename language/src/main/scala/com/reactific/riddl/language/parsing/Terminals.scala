@@ -184,6 +184,7 @@ object Terminals {
     final val step = "step"
     final val story = "story"
     final val streamlet = "streamlet"
+    final val tell = "tell"
     final val term = "term"
     final val then_ = "then"
     final val title = "title"

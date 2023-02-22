@@ -104,7 +104,8 @@ class HandlerTest extends ParsingTest {
     "accept shortcut syntax for single example on clauses " in {
       val input =
         """entity DistributionItem is {
-          |  state DistributionState is { ??? }
+          |  type ArbitraryState is { value: String }
+          |  state DistributionState of ArbitraryState is { ??? }
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      when ==(@ContainerNestedInContainer.id,@parentContainer)
@@ -124,7 +125,8 @@ class HandlerTest extends ParsingTest {
       val input =
         """entity DistributionItem is {
           |  inlet incoming is event ItemPreInducted
-          |  state DistributionState is { ??? }
+          |  type ArbitraryState is { value: String }
+          |  state DistributionState of ArbitraryState is { ??? }
           | handler FromContainer  is {
           |    on event ContainerNestedInContainer { example only {
           |      when ==(@ContainerNestedInContainer.id,@parentContainer)

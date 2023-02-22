@@ -10,7 +10,7 @@ import scala.reflect.{ClassTag, classTag}
 /** Unit Tests For PathResolverValidationState */
 trait PathIdValidationState extends UsageValidationState {
 
-  private def notResolved[T <: Definition : ClassTag](
+  private def notResolved[T <: Definition: ClassTag](
     pid: PathIdentifier,
     container: Definition,
     kind: Option[String]
@@ -28,13 +28,15 @@ trait PathIdValidationState extends UsageValidationState {
     )
   }
 
-  def checkPathRef[T <: Definition : ClassTag](
+  def checkPathRef[T <: Definition: ClassTag](
     pid: PathIdentifier,
     container: Definition,
     parents: Seq[Definition],
     kind: Option[String] = None
-  )(single: SingleMatchValidationFunction = defaultSingleMatchValidationFunction
-  )(multi: MultiMatchValidationFunction = defaultMultiMatchValidationFunction
+  )(
+    single: SingleMatchValidationFunction = defaultSingleMatchValidationFunction
+  )(
+    multi: MultiMatchValidationFunction = defaultMultiMatchValidationFunction
   ): this.type = {
     val tc = classTag[T].runtimeClass
     if (pid.value.isEmpty) {
@@ -61,13 +63,26 @@ trait PathIdValidationState extends UsageValidationState {
     this
   }
 
-  def checkRef[T <: Definition : ClassTag](
+  def checkRef[T <: Definition: ClassTag](
     reference: Reference[T],
-    defn: Definition,
+    definition: Definition,
     parents: Seq[Definition],
     kind: Option[String] = None
   ): this.type = {
-    checkPathRef[T](reference.pathId, defn, parents, kind)()()
+    checkPathRef[T](reference.pathId, definition, parents, kind)()()
+  }
+
+  def checkRefAndExamine[T <: Definition: ClassTag](
+    reference: Reference[T],
+    defn: Definition,
+    parents: Seq[Definition]
+  )(thing: T => this.type): this.type = {
+    val s2 = this.checkPathRef[T](reference.pathId, defn, parents, None)()()
+    s2.resolvePathIdentifier[T](reference.pathId, parents) match {
+      case Some(defn) =>
+        thing(defn)
+      case None => s2
+    }
   }
 
   def checkMaybeRef[T <: Definition: ClassTag](
@@ -76,12 +91,11 @@ trait PathIdValidationState extends UsageValidationState {
     parents: Seq[Definition],
     kind: Option[String] = None
   ): this.type = {
-    reference.map{ ref =>
+    reference.map { ref =>
       checkPathRef[T](ref.pathId, defn, parents, kind)()()
     }
     this
   }
-
 
   def checkMessageRef(
     ref: MessageRef,
@@ -91,36 +105,36 @@ trait PathIdValidationState extends UsageValidationState {
   ): this.type = {
     if (ref.isEmpty) {
       addError(ref.pathId.loc, s"${ref.identify} is empty")
-    }
-    else {
+    } else {
       checkPathRef[Type](ref.pathId, topDef, parents, Some(kind.kind)) {
         (state, _, _, _, defn) =>
           defn match {
-            case Type(_, _, typ, _, _) => typ match {
-              case AggregateUseCaseTypeExpression(_, mk, _) => state.check(
-                mk == kind,
-                s"'${ref.identify} should be ${article(kind.kind)} type" +
-                  s" but is ${article(mk.kind)} type instead",
-                Error,
-                ref.pathId.loc
-              )
-              case te: TypeExpression => state.addError(
+            case Type(_, _, typ, _, _) =>
+              typ match {
+                case AggregateUseCaseTypeExpression(_, mk, _) =>
+                  state.check(
+                    mk == kind,
+                    s"'${ref.identify} should be ${article(kind.kind)} type" +
+                      s" but is ${article(mk.kind)} type instead",
+                    Error,
+                    ref.pathId.loc
+                  )
+                case te: TypeExpression =>
+                  state.addError(
+                    ref.pathId.loc,
+                    s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST
+                        .errorDescription(te)} type instead"
+                  )
+              }
+            case _ =>
+              state.addError(
                 ref.pathId.loc,
-                s"'${ref.identify} should reference ${article(kind.kind)} but is a ${
-                  AST
-                    .errorDescription(te)
-                } type instead"
+                s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(defn.kind)} instead"
               )
-            }
-            case _ => state.addError(
-              ref.pathId.loc,
-              s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(defn.kind)} instead"
-            )
           }
       }(defaultMultiMatchValidationFunction)
     }
   }
-
 
   @tailrec final def getPathIdType(
     pid: PathIdentifier,
@@ -128,26 +142,37 @@ trait PathIdValidationState extends UsageValidationState {
   ): Option[TypeExpression] = {
     if (pid.value.isEmpty) {
       None
-    }
-    else {
+    } else {
       val newParents: Seq[Definition] = resolvePath(pid, parents)()()
       val candidate: Option[TypeExpression] = newParents.headOption match {
-        case None => None
+        case None              => None
         case Some(f: Function) => f.output
-        case Some(t: Type) => Some(t.typ)
-        case Some(f: Field) => Some(f.typeEx)
-        case Some(s: State) => Some(s.aggregation)
+        case Some(t: Type)     => Some(t.typ)
+        case Some(f: Field)    => Some(f.typeEx)
+        case Some(s: State) =>
+          Some(AliasedTypeExpression(s.typ.loc, s.typ.pathId))
         case Some(Inlet(_, _, typ, _, _)) =>
           Some(AliasedTypeExpression(typ.loc, typ.pathId))
         case Some(Outlet(_, _, typ, _, _)) =>
           Some(AliasedTypeExpression(typ.loc, typ.pathId))
+        case Some(connector: Connector) =>
+          connector.flows
+            .map(typeRef => AliasedTypeExpression(typeRef.loc, typeRef.pathId))
+            .orElse(Option.empty[TypeExpression])
+        case Some(streamlet: Streamlet) if streamlet.outlets.size == 1 =>
+          this
+            .resolvePathIdentifier[Type](
+              streamlet.outlets.head.type_.pathId,
+              parents
+            )
+            .map(_.typ)
         case Some(_) => Option.empty[TypeExpression]
       }
       candidate match {
         case Some(AliasedTypeExpression(_, pid)) =>
           getPathIdType(pid, newParents)
         case Some(other: TypeExpression) => Some(other)
-        case None => None
+        case None                        => None
       }
     }
   }

@@ -19,37 +19,44 @@ private[parsing] trait ActionParser
     with ExpressionParser {
 
   private def arbitraryAction[u: P]: P[ArbitraryAction] = {
-    P(location ~ literalString).map { tpl =>
+    P(location ~ literalString)./.map { tpl =>
       (ArbitraryAction.apply _).tupled(tpl)
     }
   }
 
   private def errorAction[u: P]: P[ErrorAction] = {
-    P(location ~ Keywords.error ~ literalString).map { tpl =>
+    P(location ~ Keywords.error ~ literalString)./.map { tpl =>
       (ErrorAction.apply _).tupled(tpl)
     }
   }
 
   private def assignAction[u: P]: P[AssignAction] = {
     P(
-      Keywords.set ~/ location ~ pathIdentifier ~ Readability.to ~ expression
-    ).map { t => (AssignAction.apply _).tupled(t) }
+      location ~ Keywords.set ~/ pathIdentifier ~ Readability.to ~ expression
+    )./.map { t => (AssignAction.apply _).tupled(t) }
   }
 
   private def appendAction[u: P]: P[AppendAction] = {
     P(
       location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
-    ).map { t => (AppendAction.apply _).tupled(t) }
+    )./.map { t => (AppendAction.apply _).tupled(t) }
+  }
+
+  private def morphAction[u: P]: P[MorphAction] = {
+    P(
+      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~/
+        Readability.with_ ~ messageConstructor
+    )./.map { tpl => (MorphAction.apply _).tupled(tpl) }
   }
 
   private def becomeAction[u: P]: P[BecomeAction] = {
     P(
-      Keywords.become ~/ location ~ entityRef ~ Readability.to ~ handlerRef
-    ).map { tpl => (BecomeAction.apply _).tupled(tpl) }
+      location ~ Keywords.become ~/ entityRef ~ Readability.to ~ handlerRef
+    )./.map { tpl => (BecomeAction.apply _).tupled(tpl) }
   }
 
   def messageConstructor[u: P]: P[MessageConstructor] = {
-    P(location ~ messageRef ~ argList.?).map { case (loc, ref, args) =>
+    P(location ~ messageRef ~ argList.?)./.map { case (loc, ref, args) =>
       args match {
         case Some(args) => MessageConstructor(loc, ref, args)
         case None       => MessageConstructor(loc, ref)
@@ -58,20 +65,29 @@ private[parsing] trait ActionParser
   }
 
   private def returnAction[u: P]: P[ReturnAction] = {
-    P(Keywords.return_ ~/ location ~ expression)
-      .map(t => (ReturnAction.apply _).tupled(t))
+    P(
+      location ~ Keywords.return_ ~/ expression
+    )./.map(t => (ReturnAction.apply _).tupled(t))
   }
 
   private def sendAction[u: P]: P[SendAction] = {
     P(
-      Keywords.send ~/ location ~ messageConstructor ~
+      location ~ Keywords.send ~/ messageConstructor ~
         Readability.to ~ (outletRef | inletRef)
-    ).map { t => (SendAction.apply _).tupled(t) }
+    )./.map { t => (SendAction.apply _).tupled(t) }
   }
 
   private def functionCallAction[u: P]: P[FunctionCallAction] = {
-    P(Keywords.call ~/ location ~ pathIdentifier ~ argList)
-      .map(tpl => (FunctionCallAction.apply _).tupled(tpl))
+    P(
+      location ~ Keywords.call ~/ pathIdentifier ~ argList
+    )./.map(tpl => (FunctionCallAction.apply _).tupled(tpl))
+  }
+
+  private def tellAction[u: P]: P[TellAction] = {
+    P(
+      location ~ Keywords.tell ~/ messageConstructor ~ Readability.to.? ~
+        messageTakingRef
+    )./.map { t => (TellAction.apply _).tupled(t) }
   }
 
   private def compoundAction[u: P]: P[CompoundAction] = {
@@ -79,17 +95,19 @@ private[parsing] trait ActionParser
       .map(tpl => (CompoundAction.apply _).tupled(tpl))
   }
 
-  def entityActions[u: P]: P[EntityAction] = {
-    P(assignAction | appendAction | becomeAction)
+  private def entityActions[u: P]: P[EntityAction] = {
+    P(assignAction | tellAction | appendAction | morphAction | becomeAction)
   }
 
-  def functionActions[u:P]: P[FunctionAction] = {
+  private def functionActions[u: P]: P[FunctionAction] = {
     P(returnAction)
   }
 
-  def anyActions[u:P]: P[AnyAction] = {
-    P(sendAction | arbitraryAction | errorAction | functionCallAction |
-      compoundAction)
+  private def anyActions[u: P]: P[AnyAction] = {
+    P(
+      sendAction | arbitraryAction | errorAction | functionCallAction |
+        compoundAction
+    )
   }
 
   def allActions[u: P]: P[Action] = {

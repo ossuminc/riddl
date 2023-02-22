@@ -3,8 +3,6 @@ package com.reactific.riddl.language.ast
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.Terminals.Keywords
 
-import scala.collection.immutable.Seq
-
 /** Unit Tests For Definitions */
 trait Definitions extends Expressions with Options {
 
@@ -70,6 +68,13 @@ trait Definitions extends Expressions with Options {
       with RepositoryDefinition
       with SagaDefinition
       with StoryDefinition
+
+  /** Base trait of definitions that can accept a message directly via a
+    * reference
+    * @tparam T
+    *   The kind of reference needed
+    */
+  trait MessageTakingRef[+T <: Processor[?, ?]] extends Reference[T]
 
   /** A term definition for the glossary */
   case class Term(
@@ -251,8 +256,9 @@ trait Definitions extends Expressions with Options {
     override def hasTypes: Boolean = types.nonEmpty
   }
 
-  /** Definition of a Processor This is a base class for all Processor
-    * definitions
+  /** Definition of a Processor. This is a base class for all Processor
+    * definitions (things that have inlets, outlets, handlers, and take messages
+    * directly with a reference).
     */
   trait Processor[OPT <: OptionValue, DEF <: Definition]
       extends VitalDefinition[OPT, DEF]
@@ -373,8 +379,13 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier to the result type
     */
-  case class RecordRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+  case class RecordRef(
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = RecordCase
+    override def isEmpty: Boolean =
+      super.isEmpty && loc.isEmpty && pathId.isEmpty
   }
 
   /** A reference to an other message type
@@ -433,7 +444,10 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the reference type
     */
-  case class TypeRef(loc: At, pathId: PathIdentifier) extends Reference[Type] {
+  case class TypeRef(
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends Reference[Type] {
     override def format: String = s"${Keywords.`type`} ${pathId.format}"
   }
 
@@ -736,7 +750,7 @@ trait Definitions extends Expressions with Options {
   case class OnMessageClause(
     loc: At,
     msg: MessageRef,
-    from: Option[InletRef],
+    from: Option[Reference[Definition]],
     examples: Seq[Example] = Seq.empty[Example],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -854,7 +868,7 @@ trait Definitions extends Expressions with Options {
   case class State(
     loc: At,
     id: Identifier,
-    aggregation: Aggregation,
+    typ: TypeRef,
     types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
@@ -862,8 +876,8 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends EntityDefinition {
 
-    override def contents: Seq[StateDefinition] = aggregation.fields ++ types ++
-      handlers
+    override def contents: Seq[StateDefinition] = types ++
+      handlers ++ invariants
 
     def format: String = s"${Keywords.state} ${id.format}"
 
@@ -1839,13 +1853,36 @@ trait Definitions extends Expressions with Options {
     }
   }
 
+  /** A reference to a Story definintion.
+    * @param loc
+    *   Location of the StoryRef
+    * @param pathId
+    *   The path id of the referenced Story
+    */
   case class StoryRef(loc: At, pathId: PathIdentifier)
       extends Reference[Story] {
     def format: String = s"${Keywords.story} ${pathId.format}"
   }
 
+  /** Sealed trait for all UI elements that derive from it
+    */
   sealed trait UIElement extends ApplicationDefinition
 
+  /** A group of UIElement that can be treated as a whole. For example, a form,
+    * a button group, etc.
+    * @param loc
+    *   The location of the group
+    * @param id
+    *   The unique identifier of the group
+    * @param types
+    *   Type definitions to define types shared by more than one UIElement
+    * @param elements
+    *   The list of UIElements
+    * @param brief
+    *   A brief description of the group
+    * @param description
+    *   A more detailed description of the group
+    */
   case class Group(
     loc: At,
     id: Identifier,
@@ -1864,6 +1901,12 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
+  /** A Reference to a Group
+    * @param loc
+    *   The At locator of the group reference
+    * @param pathId
+    *   The path to the referenced group
+    */
   case class GroupRef(loc: At, pathId: PathIdentifier)
       extends Reference[Group] {
     def format: String = s"${Keywords.group} ${pathId.format}"
@@ -1944,11 +1987,11 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
-  /** A reference to a Give using a path identifier
+  /** A reference to an Input using a path identifier
     *
     * @param loc
     *   THe location of the GiveRef in the source code
-    * @param id
+    * @param pathId
     *   The path identifier that refers to the Give
     */
   case class InputRef(loc: At, pathId: PathIdentifier)
@@ -1956,6 +1999,37 @@ trait Definitions extends Expressions with Options {
     def format: String = s"${Keywords.input} ${pathId.format}"
   }
 
+  /** An application from which a person, robot, or other active agent (the
+    * user) will obtain information, or to which that user will provided
+    * information.
+    * @param loc
+    *   The location of the application in the source
+    * @param id
+    *   The unique identifier for the application
+    * @param options
+    *   The options for the application
+    * @param types
+    *   Types that are needed for the communication with the user
+    * @param groups
+    *   A list of group definitions needed by the application
+    * @param handlers
+    *   The handlers for this application to process incoming messages
+    * @param inlets
+    *   Message inlets for the application
+    * @param outlets
+    *   Message outlets for the application
+    * @param authors
+    *   Author definitions for the application, for attribution of application
+    *   components.
+    * @param terms
+    *   Definitions of terms useful in comprehending the application's purpose
+    * @param includes
+    *   Included source code
+    * @param brief
+    *   A brief description of the application
+    * @param description
+    *   A longer description of the application.
+    */
   case class Application(
     loc: At,
     id: Identifier,
@@ -2000,12 +2074,19 @@ trait Definitions extends Expressions with Options {
     *   The location of the domain definition
     * @param id
     *   The name of the domain
+    * @param options
+    *   Options for the domain
     * @param types
-    *   The types defined in the scope of the domain
+    *   Type definitions with a domain (nearly global) scope, with applicability
+    *   to many contexts or subdomains
     * @param contexts
     *   The contexts defined in the scope of the domain
-    * @param plants
-    *   The plants defined in the scope of the domain
+    * @param actors
+    *   Actor definitions for use in stories
+    * @param stories
+    *   Story definitions for this domain
+    * @param applications
+    *   Application definitions for this domain
     * @param domains
     *   Nested sub-domains within this domain
     * @param terms

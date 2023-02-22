@@ -108,7 +108,7 @@ class ASTTest extends AnyWordSpec with Matchers {
 
   val sagastep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagastep"))
   val state: State =
-    State(At.empty, Identifier(At.empty, "state"), Aggregation.empty())
+    State(At.empty, Identifier(At.empty, "state"), TypeRef())
   val storycase: UseCase =
     UseCase(At.empty, Identifier(At.empty, "storycase"))
   val story: Story = Story(At.empty, Identifier(At.empty, "story"))
@@ -118,7 +118,8 @@ class ASTTest extends AnyWordSpec with Matchers {
       actor.format mustBe s"actor ${actor.id.format} is ${actor.is_a.format}"
     }
   }
-  val domain: AST.Domain = Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
+  val domain: AST.Domain =
+    Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
   val context: AST.Context = Context(At(), Identifier(At(), "test"))
 
   "Adaptor" should { "have a test" in { pending } }
@@ -192,25 +193,28 @@ class ASTTest extends AnyWordSpec with Matchers {
           EntityTransient(At()),
           EntityKind(At(), Seq(LiteralString(At(), "concept")))
         )
-        val states = Seq(State(
-          At(),
-          Identifier(At(), "bar"),
-          Aggregation(
+        val states = Seq(
+          State(
             At(),
-            Seq[Field](Field(At(), Identifier(At(), "foo"), Integer(At())))
+            Identifier(At(), "bar"),
+            TypeRef()
           )
-        ))
+        )
         val handlers = Seq(Handler(At(), Identifier(At(), "con")))
 
-        val functions = Seq(Function(
-          At(),
-          Identifier(At(), "my_func"),
-          None,
-          Option(Aggregation(
+        val functions = Seq(
+          Function(
             At(),
-            Seq(Field(At(), Identifier(At(), "a"), Bool(At())))
-          ))
-        ))
+            Identifier(At(), "my_func"),
+            None,
+            Option(
+              Aggregation(
+                At(),
+                Seq(Field(At(), Identifier(At(), "a"), Bool(At())))
+              )
+            )
+          )
+        )
 
         val invariants = Seq(
           Invariant(At(), Identifier(At(), "my_id"), Some(True(At())), None)
@@ -232,8 +236,7 @@ class ASTTest extends AnyWordSpec with Matchers {
         )
 
         entity.contents.toSet mustBe
-          (states.iterator ++ handlers ++ functions ++ invariants ++ types)
-            .toSet
+          (states.iterator ++ handlers ++ functions ++ invariants ++ types).toSet
       }
     }
   }

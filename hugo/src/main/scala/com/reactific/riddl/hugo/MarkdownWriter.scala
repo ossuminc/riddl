@@ -13,9 +13,7 @@ import com.reactific.riddl.utils.TextFileWriter
 import java.nio.file.Path
 import scala.annotation.unused
 
-case class MarkdownWriter(
-  filePath: Path,
-  state: HugoTranslatorState)
+case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     extends TextFileWriter {
 
   def fileHead(
@@ -24,7 +22,8 @@ case class MarkdownWriter(
     desc: Option[String],
     extras: Map[String, String] = Map.empty[String, String]
   ): this.type = {
-    val adds: String = extras.map { case (k: String, v: String) => s"$k: $v" }
+    val adds: String = extras
+      .map { case (k: String, v: String) => s"$k: $v" }
       .mkString("\n")
     val headTemplate = s"""---
                           |title: "$title"
@@ -47,8 +46,10 @@ case class MarkdownWriter(
     else { this }
   }
 
-  private def containerHead(cont: Definition, titleSuffix: String): this.type
-  = {
+  private def containerHead(
+    cont: Definition,
+    titleSuffix: String
+  ): this.type = {
 
     fileHead(
       cont.id.format + s": $titleSuffix",
@@ -264,7 +265,7 @@ case class MarkdownWriter(
 
   def emitERD(state: State, parents: Seq[Definition]): this.type = {
     h2("Entity Relationships")
-    val fields = state.aggregation.fields
+    val fields = state.record.fields
     val typ: Seq[String] = s"${state.id.format} {" +: fields.map { f =>
       val typeName = makeTypeName(f.typeEx, parents)
       val fieldName = f.id.format.replace(" ", "-")
@@ -277,10 +278,7 @@ case class MarkdownWriter(
     emitMermaidDiagram(lines)
   }
 
-  private case class Level(
-    name: String,
-    href: String,
-    children: Seq[Level]) {
+  private case class Level(name: String, href: String, children: Seq[Level]) {
     override def toString: String = {
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
     }
@@ -292,10 +290,12 @@ case class MarkdownWriter(
       this.state.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
-        container.contents.filter(d =>
-          d.nonEmpty && !d.isInstanceOf[OnMessageClause] &&
-            !d.isInstanceOf[Example]
-        ).map(makeData(_, newParents))
+        container.contents
+          .filter(d =>
+            d.nonEmpty && !d.isInstanceOf[OnMessageClause] &&
+              !d.isInstanceOf[Example]
+          )
+          .map(makeData(_, newParents))
       }
     )
   }
@@ -399,8 +399,8 @@ case class MarkdownWriter(
     @unused level: Int = 2
   ): this.type = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
-    val brief: String = d.brief.map(_.s).getOrElse("Brief description missing.")
-      .trim
+    val brief: String =
+      d.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
     if (d.isVital) {
       val authors = d.asInstanceOf[VitalDefinition[?, ?]].authors
@@ -478,12 +478,13 @@ case class MarkdownWriter(
       case AliasedTypeExpression(_, pid)         => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
-      case Alternation(_, of) => of.map(ate => makeTypeName(ate.pid, parents))
+      case Alternation(_, of) =>
+        of.map(ate => makeTypeName(ate.pathId, parents))
           .mkString("-")
-      case _: Mapping     => "Mapping"
-      case _: Aggregation => "Aggregation"
+      case _: Mapping                        => "Mapping"
+      case _: Aggregation                    => "Aggregation"
       case _: AggregateUseCaseTypeExpression => "Message"
-      case _              => typeEx.format
+      case _                                 => typeEx.format
     }
     name.replace(" ", "-")
   }
@@ -494,14 +495,14 @@ case class MarkdownWriter(
   ): String = {
     typeEx match {
       case a: AliasedTypeExpression =>
-        s"Alias of ${makePathIdRef(a.pid, parents)}"
+        s"Alias of ${makePathIdRef(a.pathId, parents)}"
       case er: EntityReferenceTypeExpression =>
         s"Entity reference to ${makePathIdRef(er.entity, parents)}"
       case uid: UniqueId =>
         s"Unique identifier for entity ${makePathIdRef(uid.entityPath, parents)}"
       case alt: Alternation =>
         val data = alt.of.map { te: AliasedTypeExpression =>
-          makePathIdRef(te.pid, parents)
+          makePathIdRef(te.pathId, parents)
         }
         s"Alternation of: " + data.mkString(", ")
       case agg: Aggregation =>
@@ -526,7 +527,7 @@ case class MarkdownWriter(
     typeEx match {
       case a: AliasedTypeExpression =>
         heading("Alias Of", headLevel)
-        p(makePathIdRef(a.pid, parents))
+        p(makePathIdRef(a.pathId, parents))
       case er: EntityReferenceTypeExpression =>
         heading("Entity Reference To", headLevel)
         p(makePathIdRef(er.entity, parents))
@@ -536,7 +537,7 @@ case class MarkdownWriter(
       case alt: Alternation =>
         heading("Alternation Of", headLevel)
         val data = alt.of.map { te: AliasedTypeExpression =>
-          makePathIdRef(te.pid, parents)
+          makePathIdRef(te.pathId, parents)
         }
         list(data)
       case agg: Aggregation =>
@@ -579,7 +580,7 @@ case class MarkdownWriter(
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
     val suffix = typ.typ match {
       case mt: AggregateUseCaseTypeExpression => mt.usecase.kind.capitalize
-      case _               => "Type"
+      case _                                  => "Type"
     }
     containerHead(typ, suffix)
     emitDefDoc(typ, state.makeParents(stack))
@@ -588,12 +589,15 @@ case class MarkdownWriter(
   }
 
   def emitTypesToc(definition: WithTypes): this.type = {
-    val groups = definition.types.groupBy { typ =>
-      typ.typ match {
-        case mt: AggregateUseCaseTypeExpression => mt.usecase.format
-        case _ => "Others"
+    val groups = definition.types
+      .groupBy { typ =>
+        typ.typ match {
+          case mt: AggregateUseCaseTypeExpression => mt.usecase.format
+          case _                                  => "Others"
+        }
       }
-    }.toSeq.sortBy(_._1)
+      .toSeq
+      .sortBy(_._1)
     h2("Types")
     for { (label, list) <- groups } { toc(label, mkTocSeq(list), 3) }
     this
@@ -725,7 +729,7 @@ case class MarkdownWriter(
     emitDefDoc(state, this.state.makeParents(parents))
     emitERD(state, parents)
     h2("Fields")
-    emitFields(state.aggregation.fields)
+    emitFields(state.record.fields)
     emitUsage(state)
   }
 
@@ -734,7 +738,8 @@ case class MarkdownWriter(
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
-        val expr = invariant.expression.map(_.format)
+        val expr = invariant.expression
+          .map(_.format)
           .getOrElse("<not specified>")
         sb.append("* ").append(expr).append("\n")
         emitDescription(invariant.description, 4)
@@ -748,9 +753,9 @@ case class MarkdownWriter(
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       clause match {
-        case oic: OnInitClause => h3(oic.kind)
+        case oic: OnInitClause    => h3(oic.kind)
         case omc: OnMessageClause => h3(clause.kind + " " + omc.msg.format)
-        case otc: OnTermClause => h3(otc.kind)
+        case otc: OnTermClause    => h3(otc.kind)
         case ooc: OnOtherClause   => h3(ooc.kind)
       }
       emitShortDefDoc(clause)
@@ -856,8 +861,9 @@ case class MarkdownWriter(
     leafHead(conn, weight = 20)
     emitDefDoc(conn, parents)
     if (conn.from.nonEmpty && conn.to.nonEmpty) {
-      val prefix = if (conn.flows.nonEmpty) s"flows ${conn.flows.get.format}"
-      else ""
+      val prefix =
+        if (conn.flows.nonEmpty) s"flows ${conn.flows.get.format}"
+        else ""
       p(s"$prefix from ${conn.from.get.format} to ${conn.to.get.format}")
 
     }
@@ -977,15 +983,17 @@ case class MarkdownWriter(
     )
 
     val stats = Riddl.collectStats(root)
-    emitTableHead(Seq(
-      "Category" -> 'L',
-      "count" -> 'R',
-      "% of All" -> 'R',
-      "avg. maturity" -> 'R',
-      "tot. maturity" -> 'R',
-      "% complete" -> 'R',
-      "% document" -> 'R'
-    ))
+    emitTableHead(
+      Seq(
+        "Category" -> 'L',
+        "count" -> 'R',
+        "% of All" -> 'R',
+        "avg. maturity" -> 'R',
+        "tot. maturity" -> 'R',
+        "% complete" -> 'R',
+        "% document" -> 'R'
+      )
+    )
     stats.categories.foreach { case (key, s) =>
       emitTableRow(
         key,
@@ -1007,4 +1015,5 @@ case class GlossaryEntry(
   brief: String,
   path: Seq[String],
   link: String = "",
-  sourceLink: String = "")
+  sourceLink: String = ""
+)

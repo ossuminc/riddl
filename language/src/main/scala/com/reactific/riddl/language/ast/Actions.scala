@@ -142,6 +142,24 @@ trait Actions extends Definitions {
     override def format: String = s"call ${function.format}${arguments.format}"
   }
 
+  /** An action that morphs the state of an entity to a new structure
+    *
+    * @param loc
+    *   The location of the morph action in the source
+    * @param entity
+    *   The entity to be affected
+    * @param state
+    *   The reference to the new state structure
+    */
+  case class MorphAction(
+    loc: At,
+    entity: EntityRef,
+    state: StateRef,
+    newState: MessageConstructor
+  ) extends EntityAction {
+    override def format: String = s"morph ${entity.format} to ${state.format}"
+  }
+
   /** An action that changes the behavior of an entity by making it use a new
     * handler for its messages; named for the "become" operation in Akka that
     * does the same for an actor.
@@ -157,6 +175,28 @@ trait Actions extends Definitions {
       extends EntityAction {
     override def format: String =
       s"become ${entity.format} to ${handler.format}"
+  }
+
+  /** An action that tells a message to an entity. This is very analogous to the
+    * tell operator in Akka. Unlike using an Portlet, this implies a direct
+    * relationship between the telling entity and the told entity. This action
+    * is considered useful in "high cohesion" scenarios. Use [[SendAction]] to
+    * reduce the coupling between entities because the relationship is managed
+    * by a [[Context]]'s [[Connector]] instead.
+    *
+    * @param loc
+    *   The location of the tell action
+    * @param entity
+    *   The entity to which the message is directed
+    * @param msg
+    *   A constructed message value to send to the entity, probably a command
+    */
+  case class TellAction(
+    loc: At,
+    msg: MessageConstructor,
+    entityRef: MessageTakingRef[Processor[?, ?]]
+  ) extends EntityAction {
+    override def format: String = s"tell ${msg.format} to ${entityRef.format}"
   }
 
   /** An action that is a set of other actions.

@@ -34,14 +34,14 @@ domain dokn is {
             type CompanyAdded is event { ??? }
             type CompanyEvent is one of { type CompanyAdded }
 
-            state CompanyBase is {
-              fields {
-                companyId: CompanyId,
-                mailingAddress: Address,
-                primaryContactName: String,
-                primaryContactPhone: MobileNumber,
-                primaryContactEmail: EmailAddress
-              }
+            record fields is {
+              companyId: CompanyId,
+              mailingAddress: Address,
+              primaryContactName: String,
+              primaryContactPhone: MobileNumber,
+              primaryContactEmail: EmailAddress
+            }
+            state CompanyBase of ^fields is {
               handler CompanyBaseHandler is {
                   on command AddCompany {
                       then send event CompanyAdded() to outlet CompanyEvents_out
@@ -72,13 +72,13 @@ domain dokn is {
             type DriverEvents is one of { DriverAddedToCompany,
                DriverRemovedFromCompany }
 
-            state DriverBase is {
-              fields {
-                driverId: DriverId,
-                name: String,
-                onDutyTime: TimeStamp,
-                companyId: CompanyId
-              }
+            record fields is {
+              driverId: DriverId,
+              name: String,
+              onDutyTime: TimeStamp,
+              companyId: CompanyId
+            }
+            state DriverBase of ^fields is {
               handler DriverBaseHandler is {
                   on command AddDriverToCompany {
                     then send event DriverAddedToCompany (
@@ -101,16 +101,16 @@ domain dokn is {
     context Note is {
         entity Note is {
             options(event-sourced, available)
-            state NoteBase is {
-              fields {
-                noteId: NoteId,
-                locationId: LocationId,
-                companyId: CompanyId,
-                text: String,
-                upvoteCount: Integer,
-                downvoteCount: Integer,
-                approved: Boolean
-              }
+            record fields is {
+              noteId: NoteId,
+              locationId: LocationId,
+              companyId: CompanyId,
+              text: String,
+              upvoteCount: Integer,
+              downvoteCount: Integer,
+              approved: Boolean
+            }
+            state NoteBase of ^fields is {
               handler NoteBaseHandler is { ??? }
             }
         }
@@ -119,12 +119,12 @@ domain dokn is {
     context Media is {
         entity Media is {
             options(consistent)
-            state MediaBase is {
-              fields {
-                mediaId: MediaId,
-                path: String,
-                companyId: CompanyId
-              }
+            record fields is {
+              mediaId: MediaId,
+              path: String,
+              companyId: CompanyId
+            }
+            state MediaBase of ^fields is {
               handler MediaBaseHandler is { ??? }
             }
         }
@@ -156,16 +156,16 @@ domain dokn is {
             type getLocationNotes is query { cid: CompanyId }
             type LocationNotes is result { notes: NoteList }
 
-            state LocationBase is {
-              fields {
-                locationId: LocationId,
-                geohash: Location,
-                label: String ,
-                address: Address,
-                notes: NoteList,
-                ticketCount: Integer,
-                loadingMethod: LoadingMethod
-              }
+            record fields is {
+              locationId: LocationId,
+              geohash: Location,
+              label: String ,
+              address: Address,
+              notes: NoteList,
+              ticketCount: Integer,
+              loadingMethod: LoadingMethod
+            }
+            state LocationBase of ^fields is {
               handler Base is {
                   on command AddDeliveryLocation {
                      then send event DeliveryLocationAdded() to
@@ -185,7 +185,8 @@ domain dokn is {
                       ) to inlet CompanyEvents_in
                   }
                   on event LocationAddressReceived {
-                      then set LocationBase.address to @^^LocationAddressReceived.newAddress
+                      then set LocationBase.address to
+                      @^^^LocationAddressReceived.newAddress
                   }
                   on query getLocationDetails {
                     then send result LocationDetails() to

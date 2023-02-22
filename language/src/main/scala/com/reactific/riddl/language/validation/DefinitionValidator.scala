@@ -220,7 +220,6 @@ object DefinitionValidator {
       .addInlet(inlet)
       .checkDefinition(parents, inlet)
       .checkRef[Type](inlet.type_, inlet, parents)
-      .checkDescription(inlet)
   }
 
   private def validateOutlet(
@@ -232,7 +231,6 @@ object DefinitionValidator {
       .addOutlet(outlet)
       .checkDefinition(parents, outlet)
       .checkRef[Type](outlet.type_, outlet, parents)
-      .checkDescription(outlet)
   }
 
   private def validateConnection(
@@ -244,7 +242,7 @@ object DefinitionValidator {
       .checkMaybeRef[Outlet](connector.from, connector, parents)
       .checkMaybeRef[Inlet](connector.to, connector, parents)
       .addConnection(connector)
-    val maybeOutlet: Option[Outlet] = connector.from.flatMap{ outRef =>
+    val maybeOutlet: Option[Outlet] = connector.from.flatMap { outRef =>
       s2.resolvePathIdentifier[Outlet](outRef.pathId, parents)
     }
     val maybeInlet: Option[Inlet] = connector.to.flatMap { inRef =>
@@ -305,16 +303,23 @@ object DefinitionValidator {
   ): ValidationState = {
     state
       .checkContainer(parents, s)
-      .addIf(s.aggregation.fields.isEmpty && !s.isEmpty) {
-        Message(
-          s.aggregation.loc,
-          s"${s.identify} must define at least one field"
-        )
-      }
-      .addIf(s.handlers.isEmpty && !s.isEmpty) {
-        Message(s.loc, s"${s.identify} must define a handler")
+      .checkRefAndExamine[Type](s.typ, s, parents) { typ: Type =>
+        typ.typ match {
+          case agg: Aggregation =>
+            if (agg.fields.isEmpty && !s.isEmpty) {
+              state.addError(
+                s.typ.loc,
+                s"${s.identify} references an empty aggregate but must have " +
+                  s"at least one field"
+              )
+            } else state
+          case _ => state
+        }
       }
       .checkDescription(s)
+      .stepIf(s.types.nonEmpty) { st =>
+        st.associateUsage(s, s.types.last)
+      }
   }
 
   private def validateFunction(
@@ -373,7 +378,7 @@ object DefinitionValidator {
     state: ValidationState,
     e: Entity,
     parents: Seq[Definition]
-  ): ValidationState = {
+  ): ValidationState =
     state
       .addEntity(e)
       .checkContainer(parents, e)
@@ -395,8 +400,18 @@ object DefinitionValidator {
           Error
         )
       }
+      .addIf(
+        e.states.nonEmpty &&
+          e.states.forall(_.handlers.isEmpty) && e.handlers.isEmpty
+      ) {
+        Message(
+          e.loc,
+          s"${e.identify} has ${e.states.size} state${if (e.states.size != 1) "s"
+            else ""} but no handlers.",
+          Error
+        )
+      }
       .checkDescription(e)
-  }
 
   private def validateProjection(
     state: ValidationState,

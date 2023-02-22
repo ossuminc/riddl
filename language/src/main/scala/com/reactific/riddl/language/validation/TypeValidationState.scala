@@ -17,7 +17,11 @@ trait TypeValidationState extends PathIdValidationState {
     val pid2 = tr2.pathId
     val typeDef1 = resolvePathIdentifier[Type](pid1, parents)
     val typeDef2 = resolvePathIdentifier[Type](pid2, parents)
-    typeDef1.nonEmpty && typeDef2.nonEmpty && (typeDef1.get == typeDef2.get)
+    areSameType(typeDef1, typeDef2)
+  }
+
+  def areSameType(typ1: Option[Type], typ2: Option[Type]): Boolean = {
+    typ1.nonEmpty && typ2.nonEmpty && (typ1.get == typ2.get)
   }
 
   def isAssignmentCompatible(

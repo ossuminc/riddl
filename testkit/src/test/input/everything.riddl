@@ -85,8 +85,8 @@ domain Everything is {
 
       event Inebriated is {}
 
-      state someState is {
-        fields { field:  SomeType }
+      record fields is { field:  SomeType }
+      state someState of ^fields is {
         handler foo is {
           on command ACommand {
             example only {
@@ -107,8 +107,8 @@ domain Everything is {
 
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
-      state otherThingState is {
-        fields { field: String }
+      record fields is { field: String }
+      state otherThingState of ^fields is {
         handler fee is {
           on event ItHappened {
             example only {

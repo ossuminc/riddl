@@ -27,14 +27,15 @@ class FoldingTest extends ParsingTest {
       |       requires { a: Integer, b: String }
       |       returns {}
       |     }
+      |    type oneState is Integer
       |    entity one is {
-      |      state entityState is { ??? }
+      |      state entityState of oneState is { ??? }
       |      handler one  is { ??? }
       |      function one is { ??? }
       |      invariant one is { ??? }
       |    }
       |    entity two is {
-      |      state entityState is { ??? }
+      |      state entityState of oneState is { ??? }
       |      handler one  is { ??? }
       |      function one is { ??? }
       |      invariant one is { ??? }
@@ -57,7 +58,7 @@ class FoldingTest extends ParsingTest {
               val path = stack.map(_.identify).reverse :+ definition.identify
               track :+ path
           }
-          val expectedCount = 25
+          val expectedCount = 26
           result.length must be(expectedCount)
           val expectedResult = List(
             List("Root"),
@@ -82,6 +83,7 @@ class FoldingTest extends ParsingTest {
             List("Root", "Domain 'one'", "Context 'one'", "Term 'whomprat'"),
             List("Root", "Domain 'one'", "Context 'one'", "Connector 'a'"),
             List("Root", "Domain 'one'", "Context 'two'"),
+            List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
             List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
             List(
               "Root",
@@ -102,14 +104,14 @@ class FoldingTest extends ParsingTest {
               "Domain 'one'",
               "Context 'two'",
               "Entity 'one'",
-              "Function " + "'one'"
+              "Function 'one'"
             ),
             List(
               "Root",
               "Domain 'one'",
               "Context 'two'",
               "Entity 'one'",
-              "Invariant " + "'one'"
+              "Invariant 'one'"
             ),
             List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'"),
             List(
@@ -117,7 +119,7 @@ class FoldingTest extends ParsingTest {
               "Domain 'one'",
               "Context 'two'",
               "Entity 'two'",
-              "State " + "'entityState'"
+              "State 'entityState'"
             ),
             List(
               "Root",
@@ -162,10 +164,7 @@ class FoldingTest extends ParsingTest {
       }
     }
 
-    case class Tracker(
-      contPush: Int = 0,
-      defs: Int = 0,
-      contPop: Int = 0)
+    case class Tracker(contPush: Int = 0, defs: Int = 0, contPop: Int = 0)
 
     class Tracking(print: Boolean = false) extends Folding.Folder[Tracker] {
       def openContainer(
@@ -175,7 +174,8 @@ class FoldingTest extends ParsingTest {
       ): Tracker = {
         if (print) {
           info(
-            "> " + container.identify + "(" + stack.map(_.identify)
+            "> " + container.identify + "(" + stack
+              .map(_.identify)
               .mkString(", ") + ")"
           )
         }
@@ -189,7 +189,8 @@ class FoldingTest extends ParsingTest {
       ): Tracker = {
         if (print) {
           info(
-            "==" + definition.identify + "(" + stack.map(_.identify)
+            "==" + definition.identify + "(" + stack
+              .map(_.identify)
               .mkString(", ") + ")"
           )
         }
@@ -203,7 +204,8 @@ class FoldingTest extends ParsingTest {
       ): Tracker = {
         if (print) {
           info(
-            "< " + container.identify + "(" + stack.map(_.identify)
+            "< " + container.identify + "(" + stack
+              .map(_.identify)
               .mkString(", ") + ")"
           )
         }
@@ -219,7 +221,7 @@ class FoldingTest extends ParsingTest {
         case Right(root) =>
           val tracking = new Tracking
           val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 16
+          val expectedContainers = 17
           val expectedLeaves = 9
           tracked.defs mustBe expectedLeaves
           tracked.contPush mustBe expectedContainers

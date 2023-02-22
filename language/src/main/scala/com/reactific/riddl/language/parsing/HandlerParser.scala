@@ -31,9 +31,12 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
+  private def messageOrigins[u:P]: P[Reference[Definition]] = {
+    P(inletRef | messageTakingRef | actorRef | storyRef )
+  }
   private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/
-      (Readability.from./ ~ inletRef).? ~ onClauseBody ~
+      (Readability.from./ ~ messageOrigins).? ~ onClauseBody ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 

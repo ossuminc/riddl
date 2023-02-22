@@ -21,11 +21,11 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |    command DoIt is { ref: Id(C.E), f1: C.T }
                     |    type T is D.T
                     |    entity E is {
-                    |      state S is {
-                    |        fields {
-                    |          f2: D.T,
-                    |          f3: C.T
-                    |        }
+                    |      record SFields is {
+                    |        f2: D.T,
+                    |        f3: C.T
+                    |      }
+                    |      state S of ^SFields is {
                     |        handler H is {
                     |          on command DoIt {
                     |            then set S.f3 to @DoIt.f1
@@ -41,13 +41,21 @@ class UsageSpec extends AnyWordSpec with Matchers {
         case Right(model) =>
           val result = Validation.validate(model, CommonOptions())
           val errors = result.messages.filter(_.kind > Messages.Warning)
-          info("Uses:\n" + result.uses.map { case (key, value) =>
-            s"${key.identify} => ${value.map(_.identify).mkString(",")}"
-          }.mkString("\n"))
-          info("Used By:\n" + result.usedBy.map { case (key, value) =>
-            s"${key.identify} <= ${value.map(_.identify).mkString(",")}"
+          info(
+            "Uses:\n" + result.uses
+              .map { case (key, value) =>
+                s"${key.identify} => ${value.map(_.identify).mkString(",")}"
+              }
+              .mkString("\n")
+          )
+          info(
+            "Used By:\n" + result.usedBy
+              .map { case (key, value) =>
+                s"${key.identify} <= ${value.map(_.identify).mkString(",")}"
+              }
+              .mkString("\n")
+          )
 
-          }.mkString("\n"))
           if (errors.nonEmpty) { fail(errors.format) }
           else {
             // ensure usedBy and uses are reflective
@@ -68,13 +76,14 @@ class UsageSpec extends AnyWordSpec with Matchers {
               println(k.identify + " => " + v.map(_.identify).mkString(", "))
             }
             // But let's make sure we get the right results
-            result.uses.size mustBe (7)
-            result.usedBy.size mustBe (6)
+            result.uses.size mustBe 8
+            result.usedBy.size mustBe 7
             val entityE = model.contents.head.contexts.head.entities.head
             val command = model.contents.head.contexts.head.types.head
             val fieldRef = command.typ match {
-              case x: AggregateUseCaseTypeExpression => x.fields.find(_.id.value == "ref").get
-              case _              => fail("Wrong kind of type expression")
+              case x: AggregateUseCaseTypeExpression =>
+                x.fields.find(_.id.value == "ref").get
+              case _ => fail("Wrong kind of type expression")
             }
             result.uses(fieldRef).contains(entityE)
             result.usedBy(entityE).contains(command)
@@ -86,8 +95,8 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |  context Bar is {
                     |    command ACommand is { ??? } described as "AC"
                     |    entity fooBar is {
-                    |      state AState {
-                    |        { field: Number }
+                    |      record fields is { field: Number }
+                    |      state AState of ^fields {
                     |        handler fooBarHandlerForAState is {
                     |          on command ACommand {
                     |            ???

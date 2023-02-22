@@ -201,6 +201,11 @@ private[parsing] trait TypeParser extends CommonParser {
     }
   }
 
+  def recordAggregation[u: P]: P[(At, Identifier, Aggregation)] = {
+    P(location ~ Keywords.record ~ identifier ~ is ~ aggregation)
+  }
+
+
   private def aggregateUseCase[u: P]: P[AggregateUseCase] = {
     P(
       StringIn(
@@ -232,6 +237,7 @@ private[parsing] trait TypeParser extends CommonParser {
       makeAggregateUseCaseType(loc, mk, agg)
     }
   }
+
 
   /** Parses mappings, i.e.
     * {{{

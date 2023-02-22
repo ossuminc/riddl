@@ -67,7 +67,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     Right(doTranslation(results, log, commonOptions, options))
   }
 
-  def doTranslation(
+  private def doTranslation(
     results: Validation.Result,
     @unused log: Logger,
     commonOptions: CommonOptions,
@@ -93,7 +93,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     state.filesAsString
   }
 
-  class ReformatFolder extends Folder[PrettifyState] {
+  private class ReformatFolder extends Folder[PrettifyState] {
     override def openContainer(
       state: PrettifyState,
       container: Definition,
@@ -136,9 +136,9 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
             _.openDef(invariant).closeDef(invariant, withBrace = false)
           )
         case conn: Connector => doConnector(state, conn)
-        case actor: Actor => doActor(state, actor)
-        case _: Field     => state // was handled by Type case in openContainer
-        case _            =>
+        case actor: Actor    => doActor(state, actor)
+        case _: Field => state // was handled by Type case in openContainer
+        case _        =>
           // inlets and outlets handled by openProcessor
           /* require(
             !definition.isInstanceOf[Definition],
@@ -170,7 +170,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    def openDomain(
+    private def openDomain(
       state: PrettifyState,
       domain: Domain
     ): PrettifyState = {
@@ -196,7 +196,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    def openStory(state: PrettifyState, story: Story): PrettifyState = {
+    private def openStory(state: PrettifyState, story: Story): PrettifyState = {
       state.withCurrent { st =>
         if (story.userStory.isEmpty) {
           st.openDef(story, withBrace = false).add(" ??? ")
@@ -216,11 +216,14 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    def closeStory(state: PrettifyState, story: Story): PrettifyState = {
+    private def closeStory(
+      state: PrettifyState,
+      story: Story
+    ): PrettifyState = {
       state.withCurrent(_.closeDef(story))
     }
 
-    def openAdaptor(
+    private def openAdaptor(
       state: PrettifyState,
       adaptor: Adaptor
     ): PrettifyState = {
@@ -241,7 +244,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
         }
     }
 
-    def openStreamlet(
+    private def openStreamlet(
       state: PrettifyState,
       streamlet: Streamlet
     ): PrettifyState = {
@@ -261,11 +264,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
-    def closeOnClause(state: PrettifyState): PrettifyState = {
+    private def closeOnClause(state: PrettifyState): PrettifyState = {
       state.withCurrent(_.outdent.addIndent("}\n"))
     }
 
-    def doActor(state: PrettifyState, actor: Actor): PrettifyState = {
+    private def doActor(state: PrettifyState, actor: Actor): PrettifyState = {
       state.withCurrent(
         _.add(s"actor ${actor.id.value} is \"${actor.is_a.s}\"")
           .emitBrief(actor.brief)
@@ -274,7 +277,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
-    def doConnector(state: PrettifyState, conn: Connector): PrettifyState = {
+    private def doConnector(
+      state: PrettifyState,
+      conn: Connector
+    ): PrettifyState = {
       state.withCurrent { file =>
         file
           .openDef(conn)
@@ -297,19 +303,22 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    def doInlet(state: PrettifyState, inlet: Inlet): PrettifyState = {
+    private def doInlet(state: PrettifyState, inlet: Inlet): PrettifyState = {
       state.withCurrent(
         _.addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
       )
     }
 
-    def doOutlet(state: PrettifyState, outlet: Outlet): PrettifyState = {
+    private def doOutlet(
+      state: PrettifyState,
+      outlet: Outlet
+    ): PrettifyState = {
       state.withCurrent(
         _.addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
       )
     }
 
-    def openFunction[TCD <: Definition](
+    private def openFunction[TCD <: Definition](
       state: PrettifyState,
       function: Function
     ): PrettifyState = {
@@ -322,19 +331,19 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       )
     }
 
-    def openState(reformatState: PrettifyState, state: State): PrettifyState = {
+    private def openState(
+      reformatState: PrettifyState,
+      state: State
+    ): PrettifyState = {
       reformatState.withCurrent { st =>
         val s1 = st.openDef(state)
         if (state.nonEmpty) {
-          if (state.aggregation.isEmpty) { s1.add("fields { ??? } ").nl }
-          else {
-            s1.addIndent("fields ").emitFields(state.aggregation.fields).nl
-          }
+          s1.addIndent(state.record.format).nl
         }
       }
     }
 
-    def openSagaStep(
+    private def openSagaStep(
       state: PrettifyState,
       step: SagaStep
     ): PrettifyState = {

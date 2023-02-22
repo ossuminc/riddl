@@ -14,7 +14,7 @@ import Terminals.*
 
 private[parsing] trait ReferenceParser extends CommonParser {
 
-  private def adaptorRef[u: P]: P[AdaptorRef] = {
+  def adaptorRef[u: P]: P[AdaptorRef] = {
     P(location ~ Keywords.adaptor ~ pathIdentifier)
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
@@ -39,7 +39,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
-  private def recordRef[u: P]: P[RecordRef] = {
+  def recordRef[u: P]: P[RecordRef] = {
     P(location ~ Keywords.record ~ pathIdentifier)
       .map(tpl => (RecordRef.apply _).tupled(tpl))
   }
@@ -109,7 +109,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (InletRef.apply _).tupled(tpl))
   }
 
-  def streamletRef[u: P]: P[StreamletRef] = {
+  private def streamletRef[u: P]: P[StreamletRef] = {
     P(
       location ~ StringIn(
         Keywords.source,
@@ -146,7 +146,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (ActorRef.apply _).tupled(tpl))
   }
 
-  def applicationRef[u: P]: P[ApplicationRef] = {
+  private def applicationRef[u: P]: P[ApplicationRef] = {
     P(location ~ Keywords.application ~ pathIdentifier)
       .map(tpl => (ApplicationRef.apply _).tupled(tpl))
   }

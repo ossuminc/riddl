@@ -19,14 +19,13 @@ import scala.reflect.classTag
 
 object Folding {
 
-  type SimpleDispatch[S] = (Container[Definition], Definition, S) => S
+  private type SimpleDispatch[S] = (Container[Definition], Definition, S) => S
 
   def foldEachDefinition[S](
     parent: Definition,
     child: Definition,
     state: S
-  )(f: SimpleDispatch[S]
-  ): S = {
+  )(f: SimpleDispatch[S]): S = {
     child match {
       case definition: LeafDefinition => f(parent, definition, state)
       case definition: Definition =>
@@ -40,15 +39,14 @@ object Folding {
   final def foldLeftWithStack[S](
     value: S,
     parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
-  )(top: Definition
-  )(f: (S, Definition, Seq[Definition]) => S
-  ): S = {
+  )(top: Definition)(f: (S, Definition, Seq[Definition]) => S): S = {
     val initial = f(value, top, parents.toSeq)
     parents.push(top)
     try {
       top.contents.foldLeft(initial) { (next, definition) =>
         definition match {
-          case i: Include[Definition] @unchecked => i.contents.foldLeft(next) {
+          case i: Include[Definition] @unchecked =>
+            i.contents.foldLeft(next) {
               case (n, d: LeafDefinition) => f(n, d, parents.toSeq)
               case (n, cd: Definition) => foldLeftWithStack(n, parents)(cd)(f)
             }
@@ -106,7 +104,9 @@ object Folding {
 
   trait State {
     def step(f: this.type => this.type): this.type = f(this)
-    def stepIf(predicate: Boolean = true)(f: this.type => this.type): this.type = {
+    def stepIf(
+      predicate: Boolean = true
+    )(f: this.type => this.type): this.type = {
       if (predicate) f(this) else this
     }
 
@@ -201,11 +201,17 @@ object Folding {
         Seq.empty[Definition]
       } else {
         parentStack.head match {
+          case st: AST.State =>
+            // If we're at a state definition then it references a type for
+            // its fields so we need to push that typeRef's path on the name
+            // stack.
+            adjustStacksForPid(searchFor, st.typ.pathId, parentStack, nameStack)
           case oc: OnMessageClause =>
             // if we're at an onClause that references a message then we
             // need to push that message's path on the name stack
             adjustStacksForPid(searchFor, oc.msg.pathId, parentStack, nameStack)
-          case f: Field => f.typeEx match {
+          case f: Field =>
+            f.typeEx match {
               case Aggregation(_, fields) =>
                 // if we're at a field composed of more fields, then those fields
                 // what we are looking for
@@ -222,7 +228,8 @@ object Folding {
                 // Any other type expression can't be descend into
                 Seq.empty[Definition]
             }
-          case t: Type => t.typ match {
+          case t: Type =>
+            t.typ match {
               case Aggregation(_, fields)                       => fields
               case Enumeration(_, enumerators)                  => enumerators
               case AggregateUseCaseTypeExpression(_, _, fields) => fields
@@ -238,7 +245,8 @@ object Folding {
             // If we're at a Function node, the functions input parameters
             // are the candidates to search next
             f.input.get.fields
-          case d: Definition => d.contents.flatMap {
+          case d: Definition =>
+            d.contents.flatMap {
               case Include(_, contents, _) => contents
               case d: Definition           => Seq(d)
             }
@@ -305,11 +313,12 @@ object Folding {
               // Generate the error message
               this.addError(
                 pid.loc,
-                msg = s"""Path resolution encountered a loop at ${definition
-                          .identify}
+                msg =
+                  s"""Path resolution encountered a loop at ${definition.identify}
                          |  for name '$soughtName' when resolving ${pid.format}
-                         |  in definition context: ${parents.map(_.identify)
-                          .mkString("\n    ", "\n    ", "\n")}
+                         |  in definition context: ${parents
+                      .map(_.identify)
+                      .mkString("\n    ", "\n    ", "\n")}
                          |""".stripMargin
               )
               // Signal we're done searching with no result
@@ -435,8 +444,8 @@ object Folding {
     def resolvePath(
       pid: PathIdentifier,
       parents: Seq[Definition]
-    )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle
-    )(onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
+    )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
+      onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
         doNothingMultiple
     ): Seq[Definition] = {
       if (pid.value.isEmpty) { Seq.empty[Definition] }

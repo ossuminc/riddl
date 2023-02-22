@@ -13,7 +13,7 @@ trait ExampleValidationState extends TypeValidationState {
     mutable.HashMap
       .empty[SendAction, Seq[Definition]]
 
-  protected def addSend(
+  private def addSend(
     send: SendAction,
     parents: Seq[Definition]
   ): this.type = {
@@ -251,6 +251,10 @@ trait ExampleValidationState extends TypeValidationState {
           .checkMessageConstructor(msg, defn, parents)
           .checkRef[Portlet](portlet, defn, parents)
           .addSend(s, parents)
+      case TellAction(_, msg, entityRef) =>
+        this
+          .checkMessageConstructor(msg, defn, parents)
+          .checkRef[Processor[?, ?]](entityRef, defn, parents)
       case FunctionCallAction(_, funcId, args) =>
         this
           .checkPathRef[Function](funcId, defn, parents)()()
@@ -259,6 +263,13 @@ trait ExampleValidationState extends TypeValidationState {
         this
           .checkRef[Entity](entity, defn, parents)
           .checkRef[Handler](handler, defn, parents)
+      case MorphAction(_, entity, state, value) =>
+        this
+          .checkRef[Entity](entity, defn, parents)
+          .checkRef[State](state, defn, parents)
+          .checkMessageConstructor(value, defn, parents)
+      // TODO: Check the message is the right type for the state
+
       case CompoundAction(loc, actions) =>
         check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
           .checkSequence(actions) { (s, action) =>
@@ -274,7 +285,7 @@ trait ExampleValidationState extends TypeValidationState {
     }
   }
 
-  def checkAssignmentCompatability(
+  private def checkAssignmentCompatability(
     path: PathIdentifier,
     expr: Expression,
     parents: Seq[Definition]

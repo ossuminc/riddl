@@ -7,7 +7,6 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
@@ -50,35 +49,30 @@ private[parsing] trait EntityParser
     }
   }
 
-  type StateThings = (Aggregation, Seq[StateDefinition])
-
-  private def stateDefinition[u: P]: P[StateThings] = {
-    P(aggregation ~ (typeDef | handler | invariant).rep(0)).map {
-      case (agg, stateDefs) => (agg, stateDefs)
-    }
+  private def stateDefinitions[u: P]: P[Seq[StateDefinition]] = {
+    P(typeDef | handler | invariant).rep(0)
   }
 
-  private def stateBody[u: P]: P[StateThings] = {
-    P(
-      undefined(
-        (
-          Aggregation(At.empty, Seq.empty[Field]),
-          Seq.empty[StateDefinition]
-        )
-      ) | stateDefinition
-    )
+  private def stateBody[u: P]: P[Seq[StateDefinition]] = {
+    P(undefined(Seq.empty[StateDefinition]) | stateDefinitions)
   }
 
   private def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~/ identifier ~ is ~ open ~ stateBody ~ close ~
+      location ~ Keywords.state ~ identifier ~/ Readability.of ~
+        typeRef ~ (is ~ open ~ stateBody ~ close).? ~
         briefly ~ description
-    ).map { case (loc, id, (agg, things), brief, desc) =>
-      val groups = things.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      State(loc, id, agg, types, handlers, invariants, brief, desc)
+    )./.map { case (loc, id, typRef, body, brief, desc) =>
+      body match {
+        case Some(defs) =>
+          val groups = defs.groupBy(_.getClass)
+          val types = mapTo[Type](groups.get(classOf[Type]))
+          val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+          val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+          State(loc, id, typRef, types, handlers, invariants, brief, desc)
+        case None =>
+          State(loc, id, typRef, brief = brief, description = desc)
+      }
     }
   }
 
@@ -88,8 +82,8 @@ private[parsing] trait EntityParser
 
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(
-      handler | function | invariant | typeDef | state | entityInclude |
-        inlet | outlet | term
+      handler | function | invariant | typeDef | state |
+        entityInclude | inlet | outlet | term
     ).rep
   }
 
