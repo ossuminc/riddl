@@ -191,7 +191,7 @@ object Riddl {
     val function = makeCategoryStats(stats.functionStats, stats.all_stats)
     val handler = makeCategoryStats(stats.handlerStats, stats.all_stats)
     val plant = makeCategoryStats(stats.plantStats, stats.all_stats)
-    val processor = makeCategoryStats(stats.processorStats, stats.all_stats)
+    val processor = makeCategoryStats(stats.streamletStats, stats.all_stats)
     val projection = makeCategoryStats(stats.projectionStats, stats.all_stats)
     val saga = makeCategoryStats(stats.sagaStats, stats.all_stats)
     val story = makeCategoryStats(stats.storyStats, stats.all_stats)

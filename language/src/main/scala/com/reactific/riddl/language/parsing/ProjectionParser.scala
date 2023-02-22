@@ -12,7 +12,8 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait ProjectionParser extends TypeParser with HandlerParser {
+private[parsing] trait ProjectionParser extends TypeParser with HandlerParser
+ with StreamingParser {
 
   private def projectionOptions[u: P]: P[Seq[ProjectionOption]] = {
     options[u, ProjectionOption](StringIn(Options.technology).!) {
@@ -27,7 +28,7 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser {
   }
 
   private def projectionDefinitions[u: P]: P[Seq[ProjectionDefinition]] = {
-    P(term | projectionInclude | handler | invariant).rep(0)
+    P(term | projectionInclude | handler | inlet | outlet | invariant).rep(0)
   }
 
   private type ProjectionBody =
@@ -65,6 +66,8 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser {
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
         val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         val includes = mapTo[Include[ProjectionDefinition]](groups.get(
           classOf[Include[ProjectionDefinition]]
@@ -77,6 +80,8 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser {
           options,
           includes,
           types,
+          inlets,
+          outlets,
           handlers,
           invariants,
           terms,

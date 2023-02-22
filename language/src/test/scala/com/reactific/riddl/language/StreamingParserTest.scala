@@ -12,44 +12,55 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {
 
-  val sourceInput =
+  val sourceInput: String =
     """source GetWeatherForecast is {
-      |  outlet Weather is Forecast
+      |  outlet Weather is command Forecast
       |} brief "foo" described by "This is a source for Forecast data"
       |""".stripMargin
-  def sourceExpected(rpi: RiddlParserInput, col: Int = 0, row: Int = 0) =
-    Processor(
+  def sourceExpected(
+    rpi: RiddlParserInput,
+    col: Int = 0,
+    row: Int = 0
+  ): AST.Streamlet =
+    Streamlet(
       (row + 1, col + 1, rpi),
       Identifier((row + 1, col + 8, rpi), "GetWeatherForecast"),
       Source((row + 1, col + 1, rpi)),
       List.empty[Inlet],
-      List(Outlet(
-        (row + 2, 3, rpi),
-        Identifier((row + 2, 10, rpi), "Weather"),
-        TypeRef(
-          (row + 2, 21, rpi),
-          PathIdentifier((row + 2, 21, rpi), List("Forecast"))
+      List(
+        Outlet(
+          (row + 2, 3, rpi),
+          Identifier((row + 2, 10, rpi), "Weather"),
+          TypeRef(
+            (row + 2, 21, rpi),
+            PathIdentifier((row + 2, 29, rpi), List("Forecast"))
+          )
         )
-      )),
+      ),
       List.empty[Handler],
-      Seq.empty[Include[ProcessorDefinition]],
+      List.empty[Type],
+      Seq.empty[Include[StreamletDefinition]],
       Seq.empty[AuthorRef],
-      Seq.empty[ProcessorOption],
+      Seq.empty[StreamletOption],
       Seq.empty[Term],
       Some(LiteralString((row + 3, 9, rpi), "foo")),
-      Option(BlockDescription(
-        (row + 3, 28, rpi),
-        List(LiteralString(
+      Option(
+        BlockDescription(
           (row + 3, 28, rpi),
-          "This is a source for Forecast " + "data"
-        ))
-      ))
+          List(
+            LiteralString(
+              (row + 3, 28, rpi),
+              "This is a source for Forecast " + "data"
+            )
+          )
+        )
+      )
     )
 
   "StreamingParser" should {
     "recognize a source processor" in {
       val rpi = RiddlParserInput(sourceInput)
-      checkDefinition[Processor, Processor](rpi, sourceExpected(rpi), identity)
+      checkDefinition[Streamlet, Streamlet](rpi, sourceExpected(rpi), identity)
     }
     "recognize a source processor in a context" in {
       val input = s"context foo is { $sourceInput }"
@@ -57,38 +68,9 @@ class StreamingParserTest extends ParsingTest {
       val expected = Context(
         (1, 1, rpi),
         Identifier((1, 9, rpi), "foo"),
-        processors = Seq(sourceExpected(rpi, 17))
+        streamlets = Seq(sourceExpected(rpi, 17))
       )
       checkDefinition[Context, Context](rpi, expected, identity)
-    }
-    "recognize a Pipe" in {
-      val rpi = RiddlParserInput("""
-                                   |pipe TemperatureChanges is {
-                                   |  transmit temperature
-                                   |   from outlet Thinga.MaInnie
-                                   |   to inlet Thinga.MaOutie
-                                   |}
-                                   |""".stripMargin)
-      val expected = Pipe(
-        (1, 1, rpi),
-        Identifier((2, 6, rpi), "TemperatureChanges"),
-        Seq.empty,
-        Option(TypeRef(
-          (3, 12, rpi),
-          PathIdentifier((3, 12, rpi), List("temperature"))
-        )),
-        Some(OutletRef(
-          (4, 9, rpi),
-          PathIdentifier((4, 16, rpi), List("Thinga", "MaInnie"))
-        )),
-        Some(InletRef(
-          (5, 7, rpi),
-          PathIdentifier((5, 13, rpi), List("Thinga", "MaOutie"))
-        )),
-        None,
-        None
-      )
-      checkDefinition[Pipe, Pipe](rpi, expected, identity)
     }
 
     "recognize a streaming context" in {
@@ -96,31 +78,20 @@ class StreamingParserTest extends ParsingTest {
         """
           |domain AnyDomain is {
           |context SensorMaintenance is {
-          |
+          |  command Forecast is {}
+          |  command Temperature is {}
           |  source GetWeatherForecast is {
-          |    outlet Weather is Forecast
+          |    outlet Weather is command Forecast
           |  } described by "This is a source for Forecast data"
           |
           |  flow GetCurrentTemperature is {
-          |    inlet Weather is Forecast
-          |    outlet CurrentTemp is Temperature
+          |    inlet Weather is command Forecast
+          |    outlet CurrentTemp is command Temperature
           |  } explained as "This is a Flow for the current temperature, when it changes"
           |
           |  sink AttenuateSensor is {
-          |    inlet CurrentTemp is Temperature
+          |    inlet CurrentTemp is command Temperature
           |  } explained as "This is a Sink for making sensor adjustments based on temperature"
-          |
-          |  pipe WeatherForecast is {
-          |    transmit Forecast
-          |    from outlet GetWeatherForecast.Weather
-          |    to inlet GetCurrentTemperature.weather
-          |  } explained as "Carries changes in the current weather forecast"
-          |
-          |  pipe TemperatureChanges is {
-          |    transmit temperature
-          |    from outlet GetCurrentTemperature.CurrentTemp
-          |    to inlet AttenuateSensor.CurrentTemp
-          |  } explained as "Carries changes in the current temperature"
           |
           |} explained as
           |"A complete plant definition for temperature based sensor attenuation."
@@ -131,171 +102,147 @@ class StreamingParserTest extends ParsingTest {
       val expected = Context(
         loc = (3, 1, rpi),
         id = Identifier((3, 9, rpi), "SensorMaintenance"),
-        pipes = List(
-          Pipe(
-            (18, 3, rpi),
-            Identifier((18, 8, rpi), "WeatherForecast"),
-            Seq.empty[PipeOption],
-            Option(TypeRef(
-              (19, 14, rpi),
-              PathIdentifier((19, 14, rpi), List("Forecast"))
-            )),
-            Option(OutletRef(
-              (20, 10, rpi),
-              PathIdentifier(
-                (20, 17, rpi),
-                List("GetWeatherForecast", "Weather")
-              )
-            )),
-            Some(InletRef(
-              (21, 8, rpi),
-              PathIdentifier(
-                (21, 14, rpi),
-                List("GetCurrentTemperature", "weather")
-              )
-            )),
+        List(),
+        List(
+          Type(
+            (4, 3, rpi),
+            Identifier((4, 11, rpi), "Forecast"),
+            AggregateUseCaseTypeExpression((4, 23, rpi), CommandCase, List()),
             None,
-            Option(BlockDescription(
-              (22, 18, rpi),
-              List(LiteralString(
-                (22, 18, rpi),
-                "Carries changes in the current weather forecast"
-              ))
-            ))
+            None
           ),
-          Pipe(
-            (24, 3, rpi),
-            Identifier((24, 8, rpi), "TemperatureChanges"),
-            Seq.empty[PipeOption],
-            Option(TypeRef(
-              (25, 14, rpi),
-              PathIdentifier((25, 14, rpi), List("temperature"))
-            )),
-            Option(OutletRef(
-              (26, 10, rpi),
-              PathIdentifier(
-                (26, 17, rpi),
-                List("GetCurrentTemperature", "CurrentTemp")
-              )
-            )),
-            Option(InletRef(
-              (27, 8, rpi),
-              PathIdentifier(
-                (27, 14, rpi),
-                List("AttenuateSensor", "CurrentTemp")
-              )
-            )),
+          Type(
+            (5, 3, rpi),
+            Identifier((5, 11, rpi), "Temperature"),
+            AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, List()),
             None,
-            Option(BlockDescription(
-              (28, 18, rpi),
-              List(LiteralString(
-                (28, 18, rpi),
-                "Carries changes in the current temperature"
-              ))
-            ))
+            None
           )
         ),
-        processors = List(
-          Processor(
-            (5, 3, rpi),
-            Identifier((5, 10, rpi), "GetWeatherForecast"),
-            Source((5, 3, rpi)),
+        streamlets = List(
+          Streamlet(
+            (6, 3, rpi),
+            Identifier((6, 10, rpi), "GetWeatherForecast"),
+            Source((6, 3, rpi)),
             List(),
-            List(Outlet(
-              (6, 5, rpi),
-              Identifier((6, 12, rpi), "Weather"),
-              TypeRef(
-                (6, 23, rpi),
-                PathIdentifier((6, 23, rpi), List("Forecast"))
-              ),
-              None
-            )),
+            List(
+              Outlet(
+                (7, 5, rpi),
+                Identifier((7, 12, rpi), "Weather"),
+                TypeRef(
+                  (7, 23, rpi),
+                  PathIdentifier((7, 31, rpi), List("Forecast"))
+                )
+              )
+            ),
             List.empty[Handler],
-            Seq.empty[Include[ProcessorDefinition]],
+            List.empty[Type],
+            Seq.empty[Include[StreamletDefinition]],
             Seq.empty[AuthorRef],
-            Seq.empty[ProcessorOption],
+            Seq.empty[StreamletOption],
             Seq.empty[Term],
             None,
-            Option(BlockDescription(
-              (7, 18, rpi),
-              List(LiteralString(
-                (7, 18, rpi),
-                "This is a source for Forecast data"
-              ))
-            ))
+            Option(
+              BlockDescription(
+                (8, 18, rpi),
+                List(
+                  LiteralString(
+                    (8, 18, rpi),
+                    "This is a source for Forecast data"
+                  )
+                )
+              )
+            )
           ),
-          Processor(
-            (9, 3, rpi),
-            Identifier((9, 8, rpi), "GetCurrentTemperature"),
-            Flow((9, 3, rpi)),
-            List(Inlet(
-              (10, 5, rpi),
-              Identifier((10, 11, rpi), "Weather"),
-              TypeRef(
-                (10, 22, rpi),
-                PathIdentifier((10, 22, rpi), List("Forecast"))
-              ),
-              None
-            )),
-            List(Outlet(
-              (11, 5, rpi),
-              Identifier((11, 12, rpi), "CurrentTemp"),
-              TypeRef(
-                (11, 27, rpi),
-                PathIdentifier((11, 27, rpi), List("Temperature"))
-              ),
-              None
-            )),
+          Streamlet(
+            (9, 4, rpi),
+            Identifier((9, 9, rpi), "GetCurrentTemperature"),
+            Flow((9, 4, rpi)),
+            List(
+              Inlet(
+                (11, 5, rpi),
+                Identifier((11, 11, rpi), "Weather"),
+                TypeRef(
+                  (11, 22, rpi),
+                  PathIdentifier((11, 30, rpi), List("Forecast"))
+                )
+              )
+            ),
+            List(
+              Outlet(
+                (12, 5, rpi),
+                Identifier((12, 12, rpi), "CurrentTemp"),
+                TypeRef(
+                  (12, 27, rpi),
+                  PathIdentifier((12, 35, rpi), List("Temperature"))
+                )
+              )
+            ),
             List.empty[Handler],
-            Seq.empty[Include[ProcessorDefinition]],
+            List.empty[Type],
+            Seq.empty[Include[StreamletDefinition]],
             Seq.empty[AuthorRef],
-            Seq.empty[ProcessorOption],
+            Seq.empty[StreamletOption],
             Seq.empty[Term],
             None,
-            Option(BlockDescription(
-              (12, 18, rpi),
-              List(LiteralString(
-                (12, 18, rpi),
-                "This is a Flow for the current temperature, when it changes"
-              ))
-            ))
+            Option(
+              BlockDescription(
+                (13, 18, rpi),
+                List(
+                  LiteralString(
+                    (13, 18, rpi),
+                    "This is a Flow for the current temperature, when it changes"
+                  )
+                )
+              )
+            )
           ),
-          Processor(
-            (14, 3, rpi),
-            Identifier((14, 8, rpi), "AttenuateSensor"),
-            Sink((14, 3, rpi)),
-            List(Inlet(
-              (15, 5, rpi),
-              Identifier((15, 11, rpi), "CurrentTemp"),
-              TypeRef(
-                (15, 26, rpi),
-                PathIdentifier((15, 26, rpi), List("Temperature"))
-              ),
-              None
-            )),
+          Streamlet(
+            (15, 3, rpi),
+            Identifier((15, 8, rpi), "AttenuateSensor"),
+            Sink((15, 3, rpi)),
+            List(
+              Inlet(
+                (16, 5, rpi),
+                Identifier((16, 11, rpi), "CurrentTemp"),
+                TypeRef(
+                  (16, 26, rpi),
+                  PathIdentifier((16, 34, rpi), List("Temperature"))
+                )
+              )
+            ),
             List.empty[Outlet],
             List.empty[Handler],
-            Seq.empty[Include[ProcessorDefinition]],
+            List.empty[Type],
+            Seq.empty[Include[StreamletDefinition]],
             Seq.empty[AuthorRef],
-            Seq.empty[ProcessorOption],
+            Seq.empty[StreamletOption],
             Seq.empty[Term],
             None,
-            Option(BlockDescription(
-              (16, 18, rpi),
-              List(LiteralString(
-                (16, 18, rpi),
-                "This is a Sink for making sensor adjustments based on temperature"
-              ))
-            ))
+            Option(
+              BlockDescription(
+                (17, 18, rpi),
+                List(
+                  LiteralString(
+                    (17, 18, rpi),
+                    "This is a Sink for making sensor adjustments based on temperature"
+                  )
+                )
+              )
+            )
           )
         ),
-        description = Option(BlockDescription(
-          (31, 1, rpi),
-          List(LiteralString(
-            (31, 1, rpi),
-            "A complete plant definition for temperature based sensor attenuation."
-          ))
-        ))
+        description = Option(
+          BlockDescription(
+            (20, 1, rpi),
+            List(
+              LiteralString(
+                (20, 1, rpi),
+                "A complete plant definition for temperature based sensor attenuation."
+              )
+            )
+          )
+        )
       )
       checkDefinition[Domain, Context](rpi, expected, _.contexts.head)
     }

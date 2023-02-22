@@ -13,10 +13,10 @@ class ParsingTestTest extends ParsingTest {
   "ParsingTest" should {
 
     "parse[Pipe]" in {
-      val rpi = RiddlParserInput("""pipe foo is { ??? }""")
-      parseDefinition[Pipe](rpi) match {
+      val rpi = RiddlParserInput("""connector foo is { ??? }""")
+      parseDefinition[Connector](rpi) match {
         case Right((pipe, _)) =>
-          val expected = Pipe((1, 1, rpi), Identifier((1, 6, rpi), "foo"))
+          val expected = Connector((1, 1, rpi), Identifier((1, 11, rpi), "foo"))
           pipe mustBe expected
         case Left(errors) => fail(errors.format)
       }
@@ -48,7 +48,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head
       ) match {
         case Left(messages)     => fail(messages.format)
-        case Right((domain, _)) => domain mustBe (empty)
+        case Right((domain, _)) => domain mustBe empty
       }
     }
 
@@ -58,7 +58,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.applications.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -68,7 +68,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.stories.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -78,7 +78,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.types.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -88,7 +88,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.contexts.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -98,7 +98,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.contexts.head.entities.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -108,7 +108,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.contexts.head.adaptors.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -118,7 +118,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.contexts.head.functions.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
@@ -128,17 +128,17 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.contexts.head.sagas.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe ("X")
+        case Right((typ, _)) => typ.id.value mustBe "X"
       }
     }
 
     "parseTopLevelDomain[Processor]" in {
-      parseTopLevelDomain[Processor](
+      parseTopLevelDomain[Streamlet](
         "domain foo is { context C is { source X is { ??? } } }",
-        _.contents.head.contexts.head.processors.head
+        _.contents.head.contexts.head.streamlets.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((src, _)) => src.id.value mustBe ("X")
+        case Right((src, _)) => src.id.value mustBe "X"
       }
     }
 
@@ -148,7 +148,7 @@ class ParsingTestTest extends ParsingTest {
         _.contents.head.contexts.head.projections.head
       ) match {
         case Left(messages)  => fail(messages.format)
-        case Right((src, _)) => src.id.value mustBe ("X")
+        case Right((src, _)) => src.id.value mustBe "X"
       }
     }
 

@@ -18,7 +18,8 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
 
   def parseAndValidate(
     input: RiddlParserInput
-  )(onFailure: Messages.Messages => Assertion,
+  )(
+    onFailure: Messages.Messages => Assertion,
     onSuccess: => Assertion
   ): Assertion = {
     val commonOptions = CommonOptions(
@@ -98,8 +99,8 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |  context D {
                     |    type DSimple = Number
                     |    entity E {
-                    |      state only is {
-                    |        fields { a : DSimple }
+                    |      record fields is { a : DSimple }
+                    |      state only of fields is {
                     |        handler OnlyFoo is { ??? }
                     |      }
                     |      handler ForE is { ??? }
@@ -147,11 +148,11 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |      entity E {
                     |        type ESimple = ^^^CSimple // partial path
                     |        event blah is { dSimple: ^^^.DSimple }
-                    |        state only is {
-                    |          fields { a : Top }
+                    |        record fields is { a : Top }
+                    |        state only of ^.fields is {
                     |          handler foo  is {
                     |            on event ^^^blah {
-                    |              then set ^^only.a to @^^^blah.dSimple
+                    |              then set ^^^only.a to @^^^blah.dSimple
                     |            }
                     |          }
                     |        }
@@ -191,10 +192,10 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |  command DoIt is {}
                     |  context C {
                     |    entity E {
-                    |      state S {
-                    |        fields {
-                    |          f: ^^^^.TPrime
-                    |        }
+                    |      record fields is {
+                    |        f: ^^^^.TPrime
+                    |      }
+                    |      state S of ^fields is  {
                     |        handler foo is {
                     |         on command DoIt {
                     |           then set S.f.t to true
@@ -221,8 +222,8 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
                     |    command DoIt is { value: Number }
                     |    type Info is { g: C.DoIt }
                     |    entity E is {
-                    |      state S is {
-                    |        fields { f: C.Info }
+                    |      record fields is { f: C.Info }
+                    |      state S of ^fields is {
                     |        handler E_Handler is {
                     |          on command C.DoIt {
                     |            then set S.f.g.value to @C.DoIt.value
@@ -238,33 +239,39 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
     "resolve simple path through an include" in {
       val eL = At.empty
       val root = RootContainer(
-        contents = Seq(Domain(
-          eL,
-          Identifier(eL, "D"),
-          includes = Seq(Include(
+        contents = Seq(
+          Domain(
             eL,
-            contents = Seq(
-              Context(
+            Identifier(eL, "D"),
+            includes = Seq(
+              Include(
                 eL,
-                Identifier(eL, "C1"),
-                types = Seq(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
-              ),
-              Context(
-                eL,
-                Identifier(eL, "C2"),
-                types = Seq(Type(
-                  eL,
-                  Identifier(eL, "C2_T"),
-                  AliasedTypeExpression(
+                contents = Seq(
+                  Context(
                     eL,
-                    PathIdentifier(eL, Seq("D", "C1", "C1_T"))
+                    Identifier(eL, "C1"),
+                    types = Seq(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
+                  ),
+                  Context(
+                    eL,
+                    Identifier(eL, "C2"),
+                    types = Seq(
+                      Type(
+                        eL,
+                        Identifier(eL, "C2_T"),
+                        AliasedTypeExpression(
+                          eL,
+                          PathIdentifier(eL, Seq("D", "C1", "C1_T"))
+                        )
+                      )
+                    )
                   )
-                ))
+                ),
+                Some("foo")
               )
-            ),
-            Some("foo")
-          ))
-        )),
+            )
+          )
+        ),
         Seq.empty[RiddlParserInput]
       )
       root.contents.head.contents.length mustBe 2

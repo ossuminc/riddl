@@ -9,27 +9,15 @@ import scala.collection.mutable
 /** Unit Tests For ExampleValidationState */
 trait ExampleValidationState extends TypeValidationState {
 
-  protected val subscriptions
-    : mutable.HashMap[SubscribeAction, Seq[Definition]] = mutable.HashMap
-    .empty[SubscribeAction, Seq[Definition]]
-
-  protected def addSubscription(
-    sub: SubscribeAction,
-    parents: Seq[Definition]
-  ): this.type = {
-    subscriptions.put(sub, parents)
-    this
-  }
-
-  protected val publishings: mutable.HashMap[PublishAction, Seq[Definition]] =
+  protected val sends: mutable.HashMap[SendAction, Seq[Definition]] =
     mutable.HashMap
-      .empty[PublishAction, Seq[Definition]]
+      .empty[SendAction, Seq[Definition]]
 
-  protected def addPublishings(
-    pub: PublishAction,
+  private def addSend(
+    send: SendAction,
     parents: Seq[Definition]
   ): this.type = {
-    publishings.put(pub, parents)
+    sends.put(send, parents)
     this
   }
 
@@ -247,7 +235,7 @@ trait ExampleValidationState extends TypeValidationState {
   ): this.type = {
     action match {
       case _: ErrorAction => this
-      case SetAction(_, path, value) =>
+      case AssignAction(_, path, value) =>
         this
           .checkPathRef[Field](path, defn, parents)()()
           .checkExpression(value, defn, parents)
@@ -256,20 +244,17 @@ trait ExampleValidationState extends TypeValidationState {
         this
           .checkExpression(value, defn, parents)
           .checkPathRef[Field](path, defn, parents)()()
-      case ReturnAction(_, expr) => this.checkExpression(expr, defn, parents)
-      case YieldAction(_, msg) =>
+      case ReturnAction(_, value) =>
+        this.checkExpression(value, defn, parents)
+      case s @ SendAction(_, msg, portlet) =>
         this
           .checkMessageConstructor(msg, defn, parents)
-      case p @ PublishAction(_, msg, pipeRef) =>
+          .checkRef[Portlet](portlet, defn, parents)
+          .addSend(s, parents)
+      case TellAction(_, msg, entityRef) =>
         this
           .checkMessageConstructor(msg, defn, parents)
-          .checkRef[Pipe](pipeRef, defn, parents)
-          .addPublishings(p, parents)
-      case s @ SubscribeAction(_, pipe, typ) =>
-        this
-          .checkRef[Type](typ, defn, parents)
-          .checkRef[Pipe](pipe, defn, parents)
-          .addSubscription(s, parents)
+          .checkRef[Processor[?, ?]](entityRef, defn, parents)
       case FunctionCallAction(_, funcId, args) =>
         this
           .checkPathRef[Function](funcId, defn, parents)()()
@@ -278,21 +263,13 @@ trait ExampleValidationState extends TypeValidationState {
         this
           .checkRef[Entity](entity, defn, parents)
           .checkRef[Handler](handler, defn, parents)
-      case MorphAction(_, entity, entityState) =>
+      case MorphAction(_, entity, state, value) =>
         this
           .checkRef[Entity](entity, defn, parents)
-          .checkRef[State](entityState, defn, parents)
-      case TellAction(_, msg, entity) =>
-        this
-          .checkRef[Definition](entity, defn, parents)
-          .checkMessageConstructor(msg, defn, parents)
-      case AskAction(_, entity, msg) =>
-        this
-          .checkRef[Entity](entity, defn, parents)
-          .checkMessageConstructor(msg, defn, parents)
-      case ReplyAction(_, msg) =>
-        this
-          .checkMessageConstructor(msg, defn, parents)
+          .checkRef[State](state, defn, parents)
+          .checkMessageConstructor(value, defn, parents)
+      // TODO: Check the message is the right type for the state
+
       case CompoundAction(loc, actions) =>
         check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
           .checkSequence(actions) { (s, action) =>
@@ -308,7 +285,7 @@ trait ExampleValidationState extends TypeValidationState {
     }
   }
 
-  def checkAssignmentCompatability(
+  private def checkAssignmentCompatability(
     path: PathIdentifier,
     expr: Expression,
     parents: Seq[Definition]

@@ -18,7 +18,8 @@ private[parsing] trait SagaParser
     extends ReferenceParser
     with ActionParser
     with GherkinParser
-    with FunctionParser {
+    with FunctionParser
+    with StreamingParser {
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
@@ -44,7 +45,7 @@ private[parsing] trait SagaParser
   }
 
   private def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
-    P(sagaStep | function | term | sagaInclude).rep(2)
+    P(sagaStep | inlet | outlet | function | term | sagaInclude).rep(2)
   }
 
   private type SagaBodyType = (
@@ -78,9 +79,13 @@ private[parsing] trait SagaParser
         val groups = definitions.groupBy(_.getClass)
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val steps = mapTo[SagaStep](groups.get(classOf[SagaStep]))
-        val includes = mapTo[Include[SagaDefinition]](groups.get(
-          classOf[Include[SagaDefinition]]
-        ))
+        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
+        val includes = mapTo[Include[SagaDefinition]](
+          groups.get(
+            classOf[Include[SagaDefinition]]
+          )
+        )
         val terms = mapTo[Term](groups.get(classOf[Term]))
         Saga(
           location,
@@ -90,6 +95,8 @@ private[parsing] trait SagaParser
           output,
           steps,
           functions,
+          inlets,
+          outlets,
           authors,
           includes,
           terms,

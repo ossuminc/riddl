@@ -20,11 +20,12 @@ import scala.reflect.*
 
 trait ParsingTestBase extends AnyWordSpec with Matchers {
   case class StringParser(content: String)
-    extends TopLevelParser(RiddlParserInput(content))
+      extends TopLevelParser(RiddlParserInput(content))
 }
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
-    extends TopLevelParser(input) with Matchers {
+    extends TopLevelParser(input)
+    with Matchers {
   push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
@@ -36,19 +37,19 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 
   protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
-      case x if x == classOf[AST.Type]        => typeDef(_)
-      case x if x == classOf[AST.Domain]      => domain(_)
-      case x if x == classOf[AST.Context]     => context(_)
-      case x if x == classOf[AST.Entity]      => entity(_)
-      case x if x == classOf[AST.Adaptor]     => adaptor(_)
-      case x if x == classOf[AST.Invariant]   => invariant(_)
-      case x if x == classOf[AST.Function]    => function(_)
-      case x if x == classOf[AST.Processor]   => processor(_)
-      case x if x == classOf[AST.Pipe]        => pipe(_)
-      case x if x == classOf[AST.Saga]        => saga(_)
-      case x if x == classOf[AST.Example]     => example(_)
-      case x if x == classOf[AST.Story]       => story(_)
-      case _ => throw new RuntimeException(
+      case x if x == classOf[AST.Type]      => typeDef(_)
+      case x if x == classOf[AST.Domain]    => domain(_)
+      case x if x == classOf[AST.Context]   => context(_)
+      case x if x == classOf[AST.Entity]    => entity(_)
+      case x if x == classOf[AST.Adaptor]   => adaptor(_)
+      case x if x == classOf[AST.Invariant] => invariant(_)
+      case x if x == classOf[AST.Function]  => function(_)
+      case x if x == classOf[AST.Streamlet] => streamlet(_)
+      case x if x == classOf[AST.Saga]      => saga(_)
+      case x if x == classOf[AST.Example]   => example(_)
+      case x if x == classOf[AST.Story]     => story(_)
+      case _ =>
+        throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"
         )
     }
@@ -228,7 +229,7 @@ class ParsingTest extends ParsingTestBase {
     TopLevelParser.parse(rpi) match {
       case Left(errors) =>
         fail(errors.format)
-      case Right(root)  => root
+      case Right(root) => root
     }
   }
 

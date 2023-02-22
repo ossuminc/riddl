@@ -29,7 +29,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
   )
 
-  def deleteAll(directory: File): Boolean = {
+  private def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
     if (maybeFiles.nonEmpty) {
       for (file <- maybeFiles.get) { deleteAll(file) }
@@ -37,7 +37,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     directory.delete
   }
 
-  def loadATheme(from: URL, destDir: Path): Unit = {
+  private def loadATheme(from: URL, destDir: Path): Unit = {
     val fileName = PathUtils.copyURLToDir(from, destDir)
     if (fileName.nonEmpty) {
       val zip_path = destDir.resolve(fileName)
@@ -49,7 +49,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case name if name.endsWith(".tar.gz") =>
             Tar.untar(zip_path, destDir)
             zip_path.toFile.delete()
-          case _ => throw new IllegalArgumentException(
+          case _ =>
+            throw new IllegalArgumentException(
               "Can only load a theme from .tar.gz or .zip file"
             )
         }
@@ -61,14 +62,14 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     }
   }
 
-  def loadThemes(options: HugoCommand.Options): Unit = {
+  private def loadThemes(options: HugoCommand.Options): Unit = {
     for ((name, url) <- options.themes if url.nonEmpty) {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url.get, destDir)
     }
   }
 
-  def loadStaticAssets(
+  private def loadStaticAssets(
     inputPath: Path,
     log: Logger,
     options: HugoCommand.Options
@@ -96,7 +97,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     PathUtils.copyResource(name, destination)
   }
 
-  def manuallyMakeNewHugoSite(path: Path): Unit = {
+  private def manuallyMakeNewHugoSite(path: Path): Unit = {
     Files.createDirectories(path)
     Files.createDirectories(path.resolve("archetypes"))
     Files.createDirectories(path.resolve("content"))
@@ -124,7 +125,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     }
   }
 
-  def makeDirectoryStructure(
+  private def makeDirectoryStructure(
     inputPath: Path,
     log: Logger,
     options: HugoCommand.Options,
@@ -145,7 +146,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     loadStaticAssets(inputPath, log, options)
   }
 
-  def writeConfigToml(
+  private def writeConfigToml(
     options: HugoCommand.Options,
     author: Option[Author]
   ): Unit = {
@@ -156,7 +157,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
   }
 
-  def setUpContainer(
+  private def setUpContainer(
     c: Definition,
     state: HugoTranslatorState,
     stack: Seq[Definition]
@@ -166,7 +167,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     state.addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
-  def setUpLeaf(
+  private def setUpLeaf(
     d: Definition,
     state: HugoTranslatorState,
     stack: Seq[Definition]
@@ -203,7 +204,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     Right(newState)
   }
 
-  def processingFolder(
+  private def processingFolder(
     state: HugoTranslatorState,
     defn: Definition,
     stack: Seq[Definition]
@@ -214,9 +215,9 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
       case e: Enumerator => state.addToGlossary(e, stack)
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _: Outlet |
-          _: Author | _: OnMessageClause | _: OnOtherClause |
-          _: Include[Definition] @unchecked | _: RootContainer =>
+      case _: Example | _: Inlet | _: Outlet | _: Author | _: OnMessageClause |
+          _: OnOtherClause | _: Include[Definition] @unchecked |
+          _: RootContainer =>
         // All these cases do not generate a file as their content contributes
         // to the content of their parent container
         state
@@ -225,12 +226,12 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
         // handling.
         leaf match {
           // handled by definition that contains the term
-          case p: Pipe =>
+          case c: Connector =>
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
-            mkd.emitPipe(p, parents)
-            state.addToGlossary(p, stack)
-          case sa: Actor     => state.addToGlossary(sa, stack)
-          case sc: StoryCase => state.addToGlossary(sc, stack)
+            mkd.emitConnection(c, parents)
+            state.addToGlossary(c, stack)
+          case sa: Actor   => state.addToGlossary(sa, stack)
+          case sc: UseCase => state.addToGlossary(sc, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")
             state
@@ -245,18 +246,27 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case in: Input      => state.addToGlossary(in, stack)
           case grp: Group     => state.addToGlossary(grp, stack)
           case t: Type        => mkd.emitType(t, stack)
-          case s: State       => mkd.emitState(s, stack)
-          case h: Handler     => mkd.emitHandler(h, parents)
-          case f: Function    => mkd.emitFunction(f, parents)
-          case e: Entity      => mkd.emitEntity(e, parents)
-          case c: Context     => mkd.emitContext(c, stack)
-          case d: Domain      => mkd.emitDomain(d, parents)
-          case a: Adaptor     => mkd.emitAdaptor(a, parents)
-          case p: Processor   => mkd.emitProcessor(p, stack)
-          case p: Projection  => mkd.emitProjection(p, parents)
-          case _: Repository  => // TODO: mkd.emitRepository(r, parents)
-          case s: Saga        => mkd.emitSaga(s, parents)
-          case s: Story       => mkd.emitStory(s, stack)
+          case s: State =>
+            val maybeType = state.resolvePathIdentifier[Type](s.typ.pathId, s +: stack)
+            maybeType match {
+              case Some(typ: AggregateTypeExpression) =>
+                mkd.emitState(s, typ.fields, stack)
+              case Some(_) =>
+                mkd.emitState(s, Seq.empty[Field], stack)
+              case _ =>
+                throw new IllegalStateException("State aggregate not resolved")
+            }
+          case h: Handler    => mkd.emitHandler(h, parents)
+          case f: Function   => mkd.emitFunction(f, parents)
+          case e: Entity     => mkd.emitEntity(e, parents)
+          case c: Context    => mkd.emitContext(c, stack)
+          case d: Domain     => mkd.emitDomain(d, parents)
+          case a: Adaptor    => mkd.emitAdaptor(a, parents)
+          case s: Streamlet  => mkd.emitStreamlet(s, stack)
+          case p: Projection => mkd.emitProjection(p, parents)
+          case _: Repository => // TODO: mkd.emitRepository(r, parents)
+          case s: Saga       => mkd.emitSaga(s, parents)
+          case s: Story      => mkd.emitStory(s, stack)
           case unknown =>
             require(
               requirement = false,
@@ -274,12 +284,14 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     options: HugoCommand.Options,
     author: Option[Author]
   ): String = {
-    val auth: Author = author.getOrElse(Author(
-      1 -> 1,
-      id = Identifier(1 -> 1, "unknown"),
-      name = LiteralString(1 -> 1, "Not Provided"),
-      email = LiteralString(1 -> 1, "somebody@somewere.tld")
-    ))
+    val auth: Author = author.getOrElse(
+      Author(
+        1 -> 1,
+        id = Identifier(1 -> 1, "unknown"),
+        name = LiteralString(1 -> 1, "Not Provided"),
+        email = LiteralString(1 -> 1, "somebody@somewere.tld")
+      )
+    )
     val themes: String = {
       options.themes.map(_._1).mkString("[ \"", "\", \"", "\" ]")
     }

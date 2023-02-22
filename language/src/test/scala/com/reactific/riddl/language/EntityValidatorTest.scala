@@ -25,7 +25,7 @@ class EntityValidatorTest extends ValidatingTest {
           msgs.count(_.kind.isError) mustBe 1
           // msgs.count(_.kind.isWarning) mustBe 1
           val numMissing =
-          msgs.count(_.kind.isMissing)
+            msgs.count(_.kind.isMissing)
           numMissing mustBe 3
           entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
           entity.options must contain(EntityMessageQueue((3, 15, rpi)))
@@ -39,8 +39,9 @@ class EntityValidatorTest extends ValidatingTest {
       val input =
         """entity MultiState is {
           |  options(fsm)
-          |  state foo is { fields { field: String  } handler x is {???} }
-          |  state bar is { fields { field2: Number } handler x is {???} }
+          |  record fields is { field: String  }
+          |  state foo of ^fields is { handler x is {???} }
+          |  state bar of ^fields is { handler x is {???} }
           |  handler fum is { ??? }
           |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
@@ -53,10 +54,12 @@ class EntityValidatorTest extends ValidatingTest {
       val input =
         """entity MultiState is {
           |  options(fsm)
-          |  state foo is { fields { field: String } handler x is {???}  }
+          |  record fields is { field: String }
+          |  state foo of ^fields is {  handler x is {???}  }
           |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
-        case (_: Entity, _, msgs: Messages) => assertValidationMessage(
+        case (_: Entity, _, msgs: Messages) =>
+          assertValidationMessage(
             msgs,
             Error,
             "Entity 'MultiState' is declared as an fsm, but doesn't have " +
@@ -66,10 +69,16 @@ class EntityValidatorTest extends ValidatingTest {
     }
     "catch missing things" in {
       val input = """entity Hamburger is {
-                    |  state foo is { fields { field:  SomeType } }
+                    |  record fields is { field:  SomeType }
+                    |  state foo of ^fields
                     |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
         case (_: Entity, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Entity 'Hamburger' has 1 state but no handlers"
+          )
           assertValidationMessage(
             msgs,
             Error,
@@ -78,14 +87,20 @@ class EntityValidatorTest extends ValidatingTest {
           )
           assertValidationMessage(
             msgs,
-            Error,
-            "State 'foo' must define a handler"
+            MissingWarning,
+            "Type 'fields' should have a description"
           )
           assertValidationMessage(
             msgs,
             MissingWarning,
             "Entity 'Hamburger' should have a description"
           )
+          assertValidationMessage(
+            msgs,
+            MissingWarning,
+            "State 'foo' in Entity 'Hamburger' should have content"
+          )
+
       }
     }
 
@@ -96,7 +111,8 @@ class EntityValidatorTest extends ValidatingTest {
           |context bar is {
           |  entity Hamburger  is {
           |    options (aggregate, transient)
-          |    state field is { fields { field: SomeType } handler x is {???}  }
+          |    record fields is { field: SomeType }
+          |    state field of ^fields is {  handler x is {???}  }
           |    handler foo is {}
           |  }
           |}
@@ -115,13 +131,16 @@ class EntityValidatorTest extends ValidatingTest {
         """domain foo is {
           |context bar is {
           |  type DoIt = command { ??? }
-          |  type Message = event { a: Integer }
+          |  event Message is { a: Integer }
+          |
           |  entity Hamburger  is {
           |    options (aggregate, transient)
-          |    state field is { fields { field: SomeType } handler x is { ??? } }
+          |    outlet ridOfIt is event Message
+          |    record fields is { field: SomeType } handler x is { ??? }
+          |    state field of ^fields is { }
           |    handler baz is {
           |      on command DoIt {
-          |        then tell event Message() to entity Hamburger
+          |        then send event Message() to outlet ridOfIt
           |      }
           |    }
           |  }

@@ -14,41 +14,35 @@ import Terminals.*
 private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
 
   private def onClauseBody[u: P]: P[Seq[Example]] = {
-    open ~
-      ((location ~ exampleBody).map { case (l, (g, w, t, b)) =>
-        Seq(Example(l, Identifier(l, ""), g, w, t, b))
-      } | nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
-  }
-
-  private def fromClause[u: P]: P[Reference[Definition]] = {
-    P(
-      Readability.from./ ~
-        (actorRef | entityRef | pipeRef | adaptorRef | contextRef)
-    )
+    open ~ (nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
   }
 
   private def onOtherClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.other ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   private def onInitClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.init ~/ location ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.init ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
+  private def messageOrigins[u:P]: P[Reference[Definition]] = {
+    P(inletRef | messageTakingRef | actorRef | storyRef )
+  }
   private def onMessageClause[u: P]: P[OnClause] = {
-    Keywords.on ~ location ~ messageRef ~/ fromClause.? ~ onClauseBody ~
+    Keywords.on ~ location ~ messageRef ~/
+      (Readability.from./ ~ messageOrigins).? ~ is ~ onClauseBody ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
   private def onTermClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.term ~/ location ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.term ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }

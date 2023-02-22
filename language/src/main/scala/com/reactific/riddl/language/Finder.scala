@@ -26,7 +26,7 @@ case class Statistics(
   var functionStats: KindStats = KindStats(),
   var handlerStats: KindStats = KindStats(),
   var plantStats: KindStats = KindStats(),
-  var processorStats: KindStats = KindStats(),
+  var streamletStats: KindStats = KindStats(),
   var projectionStats: KindStats = KindStats(),
   var repositoryStats: KindStats = KindStats(),
   var sagaStats: KindStats = KindStats(),
@@ -76,7 +76,7 @@ case class Finder(root: Definition) {
         }
         state.all_stats.count += 1
         definition match {
-          case vd: VitalDefinition[?, ?] =>
+          case vd: Processor[?,?] =>
             state.all_stats.maturitySum += vd.maturity
             vd match {
               case a: Adaptor => makeVitalStats(a, state.adaptorStats)
@@ -88,8 +88,8 @@ case class Finder(root: Definition) {
               case f: Function =>
                 makeVitalStats(f, state.functionStats)
               case h: Handler => makeVitalStats(h, state.handlerStats)
-              case p: Processor =>
-                makeVitalStats(p, state.processorStats)
+              case p: Streamlet =>
+                makeVitalStats(p, state.streamletStats)
               case p: Projection =>
                 makeVitalStats(p, state.projectionStats)
               case r: Repository =>

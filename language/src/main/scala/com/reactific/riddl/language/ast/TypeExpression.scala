@@ -25,10 +25,15 @@ trait TypeExpression extends AbstractDefinitions {
     }
   }
 
-  /** A TypeExpression that references another type by PathIdentifier */
-  case class AliasedTypeExpression(loc: At, pid: PathIdentifier)
+  /** A TypeExpression that references another type by PathIdentifier
+    * @param loc
+    *   The location of the AliasedTypeExpression
+    * @param pathId
+    *   The path identifier to the aliased type
+    */
+  case class AliasedTypeExpression(loc: At, pathId: PathIdentifier)
       extends TypeExpression {
-    override def format: String = pid.format
+    override def format: String = pathId.format
   }
 
   /** A utility function for getting the kind of a type expression.
@@ -154,8 +159,8 @@ trait TypeExpression extends AbstractDefinitions {
     loc: At,
     typeExp: TypeExpression,
     min: Long,
-    max: Long)
-      extends Cardinality {
+    max: Long
+  ) extends Cardinality {
     override def format: String = s"${typeExp.format}{$min,$max}"
   }
 
@@ -177,8 +182,9 @@ trait TypeExpression extends AbstractDefinitions {
     id: Identifier,
     enumVal: Option[Long] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends LeafDefinition with TypeDefinition {
+    description: Option[Description] = None
+  ) extends LeafDefinition
+      with TypeDefinition {
     override def format: String = id.format
     final val kind: String = "Enumerator"
     override def isEmpty: Boolean = true
@@ -193,11 +199,10 @@ trait TypeExpression extends AbstractDefinitions {
     *   The set of enumerators from which the value of this enumeration may be
     *   chosen.
     */
-  case class Enumeration(
-    loc: At,
-    enumerators: Seq[Enumerator])
+  case class Enumeration(loc: At, enumerators: Seq[Enumerator])
       extends TypeExpression {
-    override def format: String = "{ " + enumerators.map(_.format)
+    override def format: String = "{ " + enumerators
+      .map(_.format)
       .mkString(",") + " }"
 
   }
@@ -211,9 +216,7 @@ trait TypeExpression extends AbstractDefinitions {
     *   The set of type expressions from which the value for this alternation
     *   may be chosen
     */
-  case class Alternation(
-    loc: At,
-    of: Seq[AliasedTypeExpression])
+  case class Alternation(loc: At, of: Seq[AliasedTypeExpression])
       extends TypeExpression {
     override def format: String =
       s"one of { ${of.map(_.format).mkString(", ")} }"
@@ -238,8 +241,8 @@ trait TypeExpression extends AbstractDefinitions {
     id: Identifier,
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None)
-      extends LeafDefinition
+    description: Option[Description] = None
+  ) extends LeafDefinition
       with AlwaysEmpty
       with TypeDefinition
       with SagaDefinition
@@ -258,7 +261,23 @@ trait TypeExpression extends AbstractDefinitions {
     def fields: Seq[Field]
     final lazy val contents: Seq[Field] = fields
     override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
-
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || {
+        other match {
+          case oate: AggregateTypeExpression =>
+            val validity: Seq[Boolean] = for {
+              ofield <- oate.fields
+              myField <- fields.find(_.id.value == ofield.id.value)
+              myTypEx = myField.typeEx
+              oTypeEx = ofield.typeEx
+            } yield {
+              myTypEx.isAssignmentCompatible(oTypeEx)
+            };
+            (validity.size == oate.fields.size) && validity.forall(_ == true)
+          case _ => false
+        }
+      }
+    }
   }
 
   /** A type expression that takes a set of named fields as its value.
@@ -268,9 +287,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param fields
     *   The fields of the aggregation
     */
-  case class Aggregation(
-    loc: At,
-    fields: Seq[Field] = Seq.empty[Field])
+  case class Aggregation(loc: At, fields: Seq[Field] = Seq.empty[Field])
       extends AggregateTypeExpression {}
 
   object Aggregation {
@@ -288,10 +305,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param to
     *   The type expression for the values of the mapping
     */
-  case class Mapping(
-    loc: At,
-    from: TypeExpression,
-    to: TypeExpression)
+  case class Mapping(loc: At, from: TypeExpression, to: TypeExpression)
       extends TypeExpression {
     override def format: String = s"mapping from ${from.format} to ${to.format}"
   }
@@ -303,9 +317,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param entity
     *   The type of entity referenced by this type expression.
     */
-  case class EntityReferenceTypeExpression(
-    loc: At,
-    entity: PathIdentifier)
+  case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier)
       extends TypeExpression {
     override def format: String = s"${Keywords.entity} ${entity.format}"
   }
@@ -321,9 +333,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @see
     *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
     */
-  case class Pattern(
-    loc: At,
-    pattern: Seq[LiteralString])
+  case class Pattern(loc: At, pattern: Seq[LiteralString])
       extends PredefinedType {
     override def kind: String = Predefined.Pattern
     override def format: String =
@@ -342,9 +352,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param entityPath
     *   The path identifier of the entity type
     */
-  case class UniqueId(
-    loc: At,
-    entityPath: PathIdentifier)
+  case class UniqueId(loc: At, entityPath: PathIdentifier)
       extends PredefinedType {
     @inline def kind: String = Predefined.Id
     override def format: String = s"$kind(${entityPath.format})"
@@ -355,9 +363,9 @@ trait TypeExpression extends AbstractDefinitions {
     }
   }
 
-  /** A type expression for an aggregation that is marked as
-    * being one of the use cases. This is used for messages, records, and
-    * other aggregate types that need to have their purpose distinguished.
+  /** A type expression for an aggregation that is marked as being one of the
+    * use cases. This is used for messages, records, and other aggregate types
+    * that need to have their purpose distinguished.
     *
     * @param loc
     *   The location of the message type expression
@@ -401,10 +409,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param max
     *   The maximum length of the string (default: MaxInt)
     */
-  case class Strng(
-    loc: At,
-    min: Option[Long] = None,
-    max: Option[Long] = None)
+  case class Strng(loc: At, min: Option[Long] = None, max: Option[Long] = None)
       extends PredefinedType {
     override lazy val kind: String = Predefined.String
     override def format: String =
@@ -477,11 +482,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param max
     *   The maximum value of the RangeType
     */
-  case class RangeType(
-    loc: At,
-    min: Long,
-    max: Long)
-      extends NumericType {
+  case class RangeType(loc: At, min: Long, max: Long) extends NumericType {
     override def format: String = s"$kind($min,$max)"
     @inline def kind: String = Predefined.Range
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {

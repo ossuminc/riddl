@@ -74,13 +74,13 @@ private[parsing] trait StoryParser extends CommonParser with ReferenceParser wit
     ).rep(0, Punctuation.comma./)
   }
 
-  private def storyCase[u: P]: P[StoryCase] = {
+  private def storyCase[u: P]: P[UseCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
         (undefined(Seq.empty[InteractionStep]) | interactionExpressions) ~
         close ~ briefly ~ description
     ).map { case (loc, id, steps, brief, description) =>
-      StoryCase(loc, id, steps, brief, description)
+      UseCase(loc, id, steps, brief, description)
     }
   }
 
@@ -148,7 +148,7 @@ private[parsing] trait StoryParser extends CommonParser with ReferenceParser wit
           classOf[Include[StoryDefinition]]
         ))
         val examples = mapTo[Example](groups.get(classOf[Example]))
-        val cases = mapTo[StoryCase](groups.get(classOf[StoryCase]))
+        val cases = mapTo[UseCase](groups.get(classOf[UseCase]))
         Story(
           loc,
           id,

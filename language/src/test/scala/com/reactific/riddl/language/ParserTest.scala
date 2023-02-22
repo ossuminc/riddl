@@ -47,7 +47,8 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe
+        case Right((content, rpi)) =>
+          content mustBe
             Domain((1, 1, rpi), Identifier((1, 8, rpi), "foo-fah|roo"))
       }
     }
@@ -60,12 +61,17 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe RootContainer(Seq[Domain](Domain(
-            (1, 1, input),
-            Identifier((1, 8, input), "foo"),
-            domains =
-              Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
-          )))
+        case Right(content) =>
+          content mustBe RootContainer(
+            Seq[Domain](
+              Domain(
+                (1, 1, input),
+                Identifier((1, 8, input), "foo"),
+                domains =
+                  Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
+              )
+            )
+          )
       }
     }
     "allow multiple domains" in {
@@ -76,10 +82,13 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right(content) => content mustBe RootContainer(Seq[Domain](
-            Domain((1, 1, input), Identifier((1, 8, input), "foo")),
-            Domain((2, 1, input), Identifier((2, 8, input), "bar"))
-          ))
+        case Right(content) =>
+          content mustBe RootContainer(
+            Seq[Domain](
+              Domain((1, 1, input), Identifier((1, 8, input), "foo")),
+              Domain((2, 1, input), Identifier((2, 8, input), "bar"))
+            )
+          )
       }
     }
     "allow major definitions to be stubbed with ???" in {
@@ -87,15 +96,15 @@ class ParserTest extends ParsingTest {
         """domain one is { ??? }
           |domain two is {
           |  context one is {
-          |    pipe a is { ??? }
-          |    multi b is { ??? }
+          |    router b is { ??? }
           |  }
           |  context two is {
           |    function foo is { ??? }
           |    term expialidocious is described by { ??? }
           |    entity one is { ??? }
           |    entity two is {
-          |      state entityState is { ??? }
+          |      type twoState is { foo: Integer }
+          |      state entityState of twoState is { ??? }
           |      handler one  is { ??? }
           |      function one is { ??? }
           |      invariant one is { ??? }
@@ -120,7 +129,8 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe
+        case Right((content, rpi)) =>
+          content mustBe
             Context((1, 17, rpi), id = Identifier((1, 25, rpi), "bar"))
       }
     }
@@ -132,7 +142,8 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Context(
+        case Right((content, rpi)) =>
+          content mustBe Context(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "bar"),
             Seq(
@@ -209,94 +220,123 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Invariant(
+        case Right((content, rpi)) =>
+          content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            Some(ArbitraryCondition(
-              (1, 22, rpi),
-              LiteralString((1, 22, rpi), "x is greater or equal to 10")
-            )),
+            Some(
+              ArbitraryCondition(
+                (1, 22, rpi),
+                LiteralString((1, 22, rpi), "x is greater or equal to 10")
+              )
+            ),
             None
           )
       }
     }
     "allow entity definitions in contexts" in {
       val input = RiddlParserInput("""entity Hamburger is {
-                                     |  options ( transient, aggregate )
-                                     |  state foo is { fields { x: String }
-                                     |  handler foo is {} }
-                                     |  function AnAspect is {
-                                     |    EXAMPLE foo {
-                                     |      GIVEN "everybody hates me"
-                                     |      AND "I'm depressed"
-                                     |      WHEN "I go fishing"
-                                     |      THEN "I'll just eat worms"
-                                     |      ELSE "I'm happy"
-                                     |    }
-                                     |  }
-                                     |}
-                                     |""".stripMargin)
+         |  options ( transient, aggregate ) type Foo is { x: String }
+         |  state foo of type Foo {
+         |  handler foo is {} }
+         |  function AnAspect is {
+         |    EXAMPLE foo {
+         |      GIVEN "everybody hates me"
+         |      AND "I'm depressed"
+         |      WHEN "I go fishing"
+         |      THEN "I'll just eat worms"
+         |      ELSE "I'm happy"
+         |    }
+         |  }
+         |}
+         |""".stripMargin)
       parseDefinition[Entity](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Entity(
+        case Right((content, rpi)) =>
+          content mustBe Entity(
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
             Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
-            Seq(State(
-              (3, 3, rpi),
-              Identifier((3, 9, rpi), "foo"),
-              Aggregation(
-                (3, 18, rpi),
-                Seq(Field(
-                  (3, 27, rpi),
-                  Identifier((3, 27, rpi), "x"),
-                  Strng((3, 30, rpi))
-                ))
-              ),
-              Seq.empty[Type],
-              Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "foo")))
-            )),
-            functions = Seq(Function(
-              (5, 3, rpi),
-              Identifier((5, 12, rpi), "AnAspect"),
-              examples = Seq(Example(
-                (6, 5, rpi),
-                Identifier((6, 13, rpi), "foo"),
-                Seq(
-                  GivenClause(
-                    (7, 7, rpi),
-                    Seq(LiteralString((7, 13, rpi), "everybody hates me"))
-                  ),
-                  GivenClause(
-                    (8, 7, rpi),
-                    Seq(LiteralString((8, 11, rpi), "I'm depressed"))
+            Seq(
+              State(
+                (3, 3, rpi),
+                Identifier((3, 9, rpi), "foo"),
+                TypeRef((3, 16, rpi), PathIdentifier((3, 21, rpi), Seq("Foo"))),
+                List(),
+                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "foo")))
+              )
+            ),
+            List(
+              Type(
+                (2, 36, rpi),
+                Identifier((2, 41, rpi), "Foo"),
+                Aggregation(
+                  (2, 48, rpi),
+                  List(
+                    Field(
+                      (2, 50, rpi),
+                      Identifier((2, 50, rpi), "x"),
+                      Strng((2, 53, rpi), None, None),
+                      None,
+                      None
+                    )
                   )
                 ),
-                Seq(WhenClause(
-                  (9, 7, rpi),
-                  ArbitraryCondition(
-                    (9, 12, rpi),
-                    LiteralString((9, 12, rpi), "I go fishing")
+                None,
+                None
+              )
+            ),
+            functions = Seq(
+              Function(
+                (5, 3, rpi),
+                Identifier((5, 12, rpi), "AnAspect"),
+                examples = Seq(
+                  Example(
+                    (6, 5, rpi),
+                    Identifier((6, 13, rpi), "foo"),
+                    Seq(
+                      GivenClause(
+                        (7, 7, rpi),
+                        Seq(LiteralString((7, 13, rpi), "everybody hates me"))
+                      ),
+                      GivenClause(
+                        (8, 7, rpi),
+                        Seq(LiteralString((8, 11, rpi), "I'm depressed"))
+                      )
+                    ),
+                    Seq(
+                      WhenClause(
+                        (9, 7, rpi),
+                        ArbitraryCondition(
+                          (9, 12, rpi),
+                          LiteralString((9, 12, rpi), "I go fishing")
+                        )
+                      )
+                    ),
+                    Seq(
+                      ThenClause(
+                        (10, 7, rpi),
+                        ArbitraryAction(
+                          (10, 12, rpi),
+                          LiteralString((10, 12, rpi), "I'll just eat worms")
+                        )
+                      )
+                    ),
+                    Seq(
+                      ButClause(
+                        (11, 7, rpi),
+                        ArbitraryAction(
+                          (11, 12, rpi),
+                          LiteralString((11, 12, rpi), "I'm happy")
+                        )
+                      )
+                    )
                   )
-                )),
-                Seq(ThenClause(
-                  (10, 7, rpi),
-                  ArbitraryAction(
-                    (10, 12, rpi),
-                    LiteralString((10, 12, rpi), "I'll just eat worms")
-                  )
-                )),
-                Seq(ButClause(
-                  (11, 7, rpi),
-                  ArbitraryAction(
-                    (11, 12, rpi),
-                    LiteralString((11, 12, rpi), "I'm happy")
-                  )
-                ))
-              ))
-            ))
+                )
+              )
+            )
           )
       }
     }
@@ -307,7 +347,8 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) => content mustBe Adaptor(
+        case Right((content, rpi)) =>
+          content mustBe Adaptor(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "fuzz"),
             InboundAdaptor((1, 14, rpi)),
@@ -332,7 +373,8 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((function, _)) => function must matchPattern {
+        case Right((function, _)) =>
+          function must matchPattern {
             case Function(
                   _,
                   Identifier(_, "foo"),

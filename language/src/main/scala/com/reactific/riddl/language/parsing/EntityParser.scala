@@ -7,14 +7,15 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-
 /** Parsing rules for entity definitions */
-private[parsing] trait EntityParser extends TypeParser with HandlerParser with StreamingParser {
+private[parsing] trait EntityParser
+    extends TypeParser
+    with HandlerParser
+    with StreamingParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
@@ -48,33 +49,30 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
     }
   }
 
-  type StateThings = (Aggregation, Seq[StateDefinition])
-
-  private def stateDefinition[u: P]: P[StateThings] = {
-    P(aggregation ~ (typeDef | handler | invariant).rep(0)).map {
-      case (agg, stateDefs) => (agg, stateDefs)
-    }
+  private def stateDefinitions[u: P]: P[Seq[StateDefinition]] = {
+    P(typeDef | handler | invariant).rep(0)
   }
 
-  private def stateBody[u: P]: P[StateThings] = {
-    P(
-      undefined((
-        Aggregation(At.empty, Seq.empty[Field]),
-        Seq.empty[StateDefinition]
-      )) | stateDefinition
-    )
+  private def stateBody[u: P]: P[Seq[StateDefinition]] = {
+    P(undefined(Seq.empty[StateDefinition]) | stateDefinitions)
   }
 
   private def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~/ identifier ~ is ~ open ~ stateBody ~ close ~
+      location ~ Keywords.state ~ identifier ~/ Readability.of ~
+        typeRef ~ (is ~ open ~ stateBody ~ close).? ~
         briefly ~ description
-    ).map { case (loc, id, (agg, things), brief, desc) =>
-      val groups = things.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      State(loc, id, agg, types, handlers, invariants, brief, desc)
+    )./.map { case (loc, id, typRef, body, brief, desc) =>
+      body match {
+        case Some(defs) =>
+          val groups = defs.groupBy(_.getClass)
+          val types = mapTo[Type](groups.get(classOf[Type]))
+          val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+          val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+          State(loc, id, typRef, types, handlers, invariants, brief, desc)
+        case None =>
+          State(loc, id, typRef, brief = brief, description = desc)
+      }
     }
   }
 
@@ -83,8 +81,10 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
   }
 
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
-    P(handler | function | invariant | typeDef | state | entityInclude | inlet | outlet | term)
-      .rep
+    P(
+      handler | function | invariant | typeDef | state |
+        entityInclude | inlet | outlet | term
+    ).rep
   }
 
   private type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
@@ -93,7 +93,9 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
     P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
   }
 
-  private def entityBody[u: P]: P[EntityBody] = P(entityOptions.? ~ entityDefinitions)
+  private def entityBody[u: P]: P[EntityBody] = P(
+    entityOptions.? ~ entityDefinitions
+  )
 
   def entity[u: P]: P[Entity] = {
     P(
@@ -108,9 +110,11 @@ private[parsing] trait EntityParser extends TypeParser with HandlerParser with S
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val includes = mapTo[Include[EntityDefinition]](groups.get(
-        classOf[Include[EntityDefinition]]
-      ))
+      val includes = mapTo[Include[EntityDefinition]](
+        groups.get(
+          classOf[Include[EntityDefinition]]
+        )
+      )
       val terms = mapTo[Term](groups.get(classOf[Term]))
       Entity(
         loc,

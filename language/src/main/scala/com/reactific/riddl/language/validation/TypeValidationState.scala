@@ -6,18 +6,22 @@ import com.reactific.riddl.language.Messages.*
 import java.util.regex.PatternSyntaxException
 
 /** Unit Tests For TypeValidationState */
-trait TypeValidationState extends PathIdValidationState  {
+trait TypeValidationState extends PathIdValidationState {
 
   def areSameType(
-    tr1: TypeRef,
-    tr2: TypeRef,
+    tr1: Reference[Type],
+    tr2: Reference[Type],
     parents: Seq[Definition]
   ): Boolean = {
     val pid1 = tr1.pathId
     val pid2 = tr2.pathId
     val typeDef1 = resolvePathIdentifier[Type](pid1, parents)
     val typeDef2 = resolvePathIdentifier[Type](pid2, parents)
-    typeDef1.nonEmpty && typeDef2.nonEmpty && (typeDef1.get == typeDef2.get)
+    areSameType(typeDef1, typeDef2)
+  }
+
+  def areSameType(typ1: Option[Type], typ2: Option[Type]): Boolean = {
+    typ1.nonEmpty && typ2.nonEmpty && (typ1.get == typ2.get)
   }
 
   def isAssignmentCompatible(
@@ -26,10 +30,11 @@ trait TypeValidationState extends PathIdValidationState  {
   ): Boolean = {
     typeEx1 match {
       case None => false
-      case Some(ty1) => typeEx2 match {
-        case None => false
-        case Some(ty2) => ty1.isAssignmentCompatible(ty2)
-      }
+      case Some(ty1) =>
+        typeEx2 match {
+          case None      => false
+          case Some(ty2) => ty1.isAssignmentCompatible(ty2)
+        }
     }
   }
 
@@ -38,13 +43,13 @@ trait TypeValidationState extends PathIdValidationState  {
     parents: Seq[Definition]
   ): Option[TypeExpression] = {
     expr match {
-      case NewEntityIdOperator(loc, pid) => Some(UniqueId(loc, pid))
-      case ValueOperator(_, path) => getPathIdType(path, parents)
+      case NewEntityIdOperator(loc, pid)      => Some(UniqueId(loc, pid))
+      case ValueOperator(_, path)             => getPathIdType(path, parents)
       case FunctionCallExpression(_, name, _) => getPathIdType(name, parents)
-      case GroupExpression(loc, expressions) =>
+      case GroupExpression(loc, expressions)  =>
         // the type of a group is the last expression but it could be empty
         expressions.lastOption match {
-          case None => Some(Abstract(loc))
+          case None       => Some(Abstract(loc))
           case Some(expr) => getExpressionType(expr, parents)
         }
       case AggregateConstructionExpression(_, pid, _) =>
@@ -54,8 +59,7 @@ trait TypeValidationState extends PathIdValidationState  {
         val expr2Ty = getExpressionType(expr2, parents)
         if (isAssignmentCompatible(expr1Ty, expr2Ty)) {
           expr1Ty
-        }
-        else {
+        } else {
           addError(
             loc,
             s"""Ternary expressions must be assignment compatible but:
@@ -69,7 +73,6 @@ trait TypeValidationState extends PathIdValidationState  {
       case e: Expression => Some(e.expressionType)
     }
   }
-
 
   private def checkPattern(p: Pattern): this.type = {
     try {
@@ -96,7 +99,7 @@ trait TypeValidationState extends PathIdValidationState  {
             id.loc
           )
           .checkDescription(enumerator)
-      case (_,_) => require(requirement=false, "Invalid case"); this
+      case (_, _) => require(requirement = false, "Invalid case"); this
     }
   }
 
@@ -108,22 +111,24 @@ trait TypeValidationState extends PathIdValidationState  {
     checkSequence(alternation.of) {
       case (state: this.type, typex) =>
         state.checkTypeExpression(typex, typeDef, parents)
-      case (_,_) => require(requirement=false, "Invalid case"); this
+      case (_, _) => require(requirement = false, "Invalid case"); this
     }
   }
 
   private def checkRangeType(rt: RangeType): this.type = {
-    this.check(
-      rt.min >= BigInt.long2bigInt(Long.MinValue),
-      "Minimum value might be too small to store in a Long",
-      Warning,
-      rt.loc
-    ).check(
-      rt.max <= BigInt.long2bigInt(Long.MaxValue),
-      "Maximum value might be too large to store in a Long",
-      Warning,
-      rt.loc
-    )
+    this
+      .check(
+        rt.min >= BigInt.long2bigInt(Long.MinValue),
+        "Minimum value might be too small to store in a Long",
+        Warning,
+        rt.loc
+      )
+      .check(
+        rt.max <= BigInt.long2bigInt(Long.MaxValue),
+        "Maximum value might be too large to store in a Long",
+        Warning,
+        rt.loc
+      )
   }
 
   private def checkAggregation(agg: Aggregation): this.type = {
@@ -131,13 +136,14 @@ trait TypeValidationState extends PathIdValidationState  {
       case (state: this.type, field) =>
         state
           .checkIdentifierLength(field)
-          .check(field.id.value.head.isLower,
+          .check(
+            field.id.value.head.isLower,
             "Field names in aggregates should start with a lower case letter",
             StyleWarning,
             field.loc
           )
           .checkDescription(field)
-      case (_,_) => require(requirement=false, "Invalid case"); this
+      case (_, _) => require(requirement = false, "Invalid case"); this
     }
   }
 
@@ -148,14 +154,17 @@ trait TypeValidationState extends PathIdValidationState  {
   ): this.type = {
     checkSequence(mt.fields) {
       case (state: this.type, field) =>
-        state.checkIdentifierLength(field).check(
-          field.id.value.head.isLower,
-          s"Field names in ${mt.usecase.kind} should start with a lower case letter",
-          StyleWarning,
-          field.loc
-        ).checkTypeExpression(field.typeEx, typeDef, parents)
+        state
+          .checkIdentifierLength(field)
+          .check(
+            field.id.value.head.isLower,
+            s"Field names in ${mt.usecase.kind} should start with a lower case letter",
+            StyleWarning,
+            field.loc
+          )
+          .checkTypeExpression(field.typeEx, typeDef, parents)
           .checkDescription(field)
-      case (_,_) => require(requirement=false, "Invalid case"); this
+      case (_, _) => require(requirement = false, "Invalid case"); this
     }
   }
 
@@ -164,7 +173,8 @@ trait TypeValidationState extends PathIdValidationState  {
     typeDef: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    this.checkTypeExpression(mapping.from, typeDef, parents)
+    this
+      .checkTypeExpression(mapping.from, typeDef, parents)
       .checkTypeExpression(mapping.to, typeDef, parents)
   }
 
@@ -178,14 +188,14 @@ trait TypeValidationState extends PathIdValidationState  {
         checkPathRef[Type](id, defn, parents)()()
       case mt: AggregateUseCaseTypeExpression =>
         checkAggregateUseCase(mt, defn, parents)
-      case agg: Aggregation => checkAggregation(agg)
-      case alt: Alternation => checkAlternation(alt, defn, parents)
-      case mapping: Mapping => checkMapping(mapping, defn, parents)
-      case rt: RangeType => checkRangeType(rt)
-      case p: Pattern => checkPattern(p)
+      case agg: Aggregation            => checkAggregation(agg)
+      case alt: Alternation            => checkAlternation(alt, defn, parents)
+      case mapping: Mapping            => checkMapping(mapping, defn, parents)
+      case rt: RangeType               => checkRangeType(rt)
+      case p: Pattern                  => checkPattern(p)
       case Enumeration(_, enumerators) => checkEnumeration(enumerators)
-      case Optional(_, tye) => checkTypeExpression(tye, defn, parents)
-      case OneOrMore(_, tye) => checkTypeExpression(tye, defn, parents)
+      case Optional(_, tye)   => checkTypeExpression(tye, defn, parents)
+      case OneOrMore(_, tye)  => checkTypeExpression(tye, defn, parents)
       case ZeroOrMore(_, tye) => checkTypeExpression(tye, defn, parents)
       case SpecificRange(_, typex: TypeExpression, min, max) =>
         checkTypeExpression(typex, defn, parents)
@@ -211,7 +221,7 @@ trait TypeValidationState extends PathIdValidationState  {
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, defn, parents)()()
       case _: PredefinedType => this // nothing needed
-      case _: TypeRef => this // handled elsewhere
+      case _: TypeRef        => this // handled elsewhere
       case x =>
         require(requirement = false, s"Failed to match definition $x")
         this

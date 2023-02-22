@@ -48,8 +48,9 @@ private[parsing] trait ContextParser
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (typeDef | handler | entity | adaptor | function | saga | processor |
-          pipe | projection | repository | inlet | outlet | term | contextInclude).rep(0)
+        (typeDef | handler | entity | adaptor | function | saga | streamlet |
+          projection | repository | inlet | outlet | connector | term |
+          contextInclude).rep(0)
     )
   }
 
@@ -64,13 +65,15 @@ private[parsing] trait ContextParser
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
-      val processors = mapTo[Processor](groups.get(classOf[Processor]))
-      val pipes = mapTo[Pipe](groups.get(classOf[Pipe]))
+      val streamlets = mapTo[Streamlet](groups.get(classOf[Streamlet]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val includes = mapTo[Include[ContextDefinition]](groups.get(
-        classOf[Include[ContextDefinition]]
-      ))
+      val connections = mapTo[Connector](groups.get(classOf[Connector]))
+      val includes = mapTo[Include[ContextDefinition]](
+        groups.get(
+          classOf[Include[ContextDefinition]]
+        )
+      )
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val projections = mapTo[Projection](groups.get(classOf[Projection]))
@@ -84,7 +87,7 @@ private[parsing] trait ContextParser
         entities,
         adaptors,
         sagas,
-        processors,
+        streamlets,
         functions,
         terms,
         includes,
@@ -93,7 +96,7 @@ private[parsing] trait ContextParser
         repos,
         inlets,
         outlets,
-        pipes,
+        connections,
         authorRefs,
         briefly,
         desc

@@ -4,9 +4,10 @@ import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.AST.*
 
+import scala.math.abs
+
 /** Unit Tests For DefinitionValidationState */
 trait DefinitionValidationState extends BasicValidationState {
-
 
   def checkOptions[T <: OptionValue](options: Seq[T], loc: At): this.type = {
     check(
@@ -31,7 +32,6 @@ trait DefinitionValidationState extends BasicValidationState {
     }
   }
 
-
   private def checkUniqueContent(definition: Definition): this.type = {
     val allNames = definition.contents.map(_.id.value)
     val uniqueNames = allNames.toSet
@@ -39,10 +39,8 @@ trait DefinitionValidationState extends BasicValidationState {
       val duplicateNames = allNames.toSet.removedAll(uniqueNames)
       addError(
         definition.loc,
-        s"${definition.identify} has duplicate content names:\n${
-          duplicateNames
-            .mkString("  ", ",\n  ", "\n")
-        }"
+        s"${definition.identify} has duplicate content names:\n${duplicateNames
+            .mkString("  ", ",\n  ", "\n")}"
       )
     } else {
       this
@@ -62,20 +60,26 @@ trait DefinitionValidationState extends BasicValidationState {
       )
       .checkIdentifierLength(definition)
       .checkUniqueContent(definition)
-      .check(!definition.isVital || definition.hasAuthors,
+      .check(
+        !definition.isVital || definition.hasAuthors,
         "Vital definitions should have an author reference",
         MissingWarning,
         definition.loc
-      ).stepIf(definition.isVital) { vs: this.type =>
-      definition.asInstanceOf[WithAuthors].authors.foldLeft[this.type](vs) {
-        case (vs: this.type, authorRef) =>
-          pathIdToDefinition(authorRef.pathId, parents) match {
-            case None => vs.addError(authorRef.loc, s"${authorRef.format} is not defined")
-            case _ => vs
-          }
-        case (_, _) => vs
+      )
+      .stepIf(definition.isVital) { vs: this.type =>
+        definition.asInstanceOf[WithAuthors].authors.foldLeft[this.type](vs) {
+          case (vs: this.type, authorRef) =>
+            pathIdToDefinition(authorRef.pathId, parents) match {
+              case None =>
+                vs.addError(
+                  authorRef.loc,
+                  s"${authorRef.format} is not defined"
+                )
+              case _ => vs
+            }
+          case (_, _) => vs
+        }
       }
-    }
 
     val path = symbolTable.pathOf(definition)
     if (!definition.id.isEmpty) {
@@ -99,7 +103,9 @@ trait DefinitionValidationState extends BasicValidationState {
             result = result.addStyle(
               head.id.loc,
               s"${definition.identify} has same name as other definitions: " +
-                matches.filterNot(_ == definition).map(x => x.identifyWithLoc)
+                matches
+                  .filterNot(_ == definition)
+                  .map(x => x.identifyWithLoc)
                   .mkString(",  ")
             )
           case _ =>
@@ -155,4 +161,86 @@ trait DefinitionValidationState extends BasicValidationState {
   ): this.type = {
     checkDescription(definition.identify, definition)
   }
+
+  def checkStreamletShape(proc: Streamlet): this.type = {
+    val ins = proc.inlets.size
+    val outs = proc.outlets.size
+
+    def generateError(
+      proc: Streamlet,
+      req_ins: Int,
+      req_outs: Int
+    ): this.type = {
+      def sOutlet(n: Int): String = {
+        if (n == 1) s"1 outlet"
+        else if (n < 0) {
+          s"at least ${abs(n)} outlets"
+        } else s"$n outlets"
+      }
+
+      def sInlet(n: Int): String = {
+        if (n == 1) s"1 inlet"
+        else if (n < 0) {
+          s"at least ${abs(n)} outlets"
+        } else s"$n inlets"
+      }
+
+      this.addError(
+        proc.loc,
+        s"${proc.identify} should have " + sOutlet(req_outs) + " and " +
+          sInlet(req_ins) + s" but it has " + sOutlet(outs) + " and " +
+          sInlet(ins)
+      )
+    }
+
+    if (!proc.isEmpty) {
+      proc.shape match {
+        case _: Source =>
+          if (ins != 0 || outs != 1) {
+            generateError(proc, 0, 1)
+          } else {
+            this
+          }
+        case _: Flow =>
+          if (ins != 1 || outs != 1) {
+            generateError(proc, 1, 1)
+          } else {
+            this
+          }
+        case _: Sink =>
+          if (ins != 1 || outs != 0) {
+            generateError(proc, 1, 0)
+          } else {
+            this
+          }
+        case _: Merge =>
+          if (ins < 2 || outs != 1) {
+            generateError(proc, -2, 1)
+          } else {
+            this
+          }
+        case _: Split =>
+          if (ins != 1 || outs < 2) {
+            generateError(proc, 1, -2)
+          } else {
+            this
+          }
+        case _: Router =>
+          if (ins < 2 || outs < 2) {
+            generateError(proc, -2, -2)
+          } else {
+            this
+          }
+        case _: Void =>
+          if (ins > 0 || outs > 0) {
+            generateError(proc, 0, 0)
+          } else {
+            this
+          }
+      }
+    } else {
+      this
+    }
+  }
+
 }

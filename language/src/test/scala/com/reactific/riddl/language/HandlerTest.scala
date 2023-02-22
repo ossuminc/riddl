@@ -16,9 +16,10 @@ class HandlerTest extends ParsingTest {
       val input = """context Foo is {
                     |  type DoFoo is command { flux: Integer }
                     |  type FooDone is event { flux: Integer }
+                    |  outlet begone is event FooDone
                     |  handler FooHandler is {
                     |    on command FooMessage {
-                    |      then yield event FooDone( flux = 42 )
+                    |      then send event FooDone( flux = 42 ) to outlet begone
                     |    }
                     |  }
                     |}
@@ -103,7 +104,8 @@ class HandlerTest extends ParsingTest {
     "accept shortcut syntax for single example on clauses " in {
       val input =
         """entity DistributionItem is {
-          |  state DistributionState is { ??? }
+          |  type ArbitraryState is { value: String }
+          |  state DistributionState of ArbitraryState is { ??? }
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      when ==(@ContainerNestedInContainer.id,@parentContainer)
@@ -122,7 +124,9 @@ class HandlerTest extends ParsingTest {
     "handle actions" in {
       val input =
         """entity DistributionItem is {
-          |  state DistributionState is { ??? }
+          |  inlet incoming is event ItemPreInducted
+          |  type ArbitraryState is { value: String }
+          |  state DistributionState of ArbitraryState is { ??? }
           | handler FromContainer  is {
           |    on event ContainerNestedInContainer { example only {
           |      when ==(@ContainerNestedInContainer.id,@parentContainer)
@@ -139,13 +143,13 @@ class HandlerTest extends ParsingTest {
           |      and set trackingId to @CreateItem.trackingId
           |      and set manifestId to @CreateItem.manifestId
           |      and set destination to @CreatItem.postalCode
-          |      and tell event ItemPreInducted() to entity DistributionItem
+          |      and send event ItemPreInducted() to inlet incoming
           |    } }
           |    on command InductItem { example only {
           |      then set timeOfFirstScan to @InductItem.originTimeStamp
           |      and set journey to @Inducted
           |      and set lastKnownWorkCenterId to @InductItem.workCenter
-          |      and tell event ItemInducted() to entity DistributionItem
+          |      and send event ItemInducted() to inlet incoming
           |    } }
           |    on command SortItem { example only {
           |      when empty(what=@timeOfFirstScan)
@@ -162,7 +166,7 @@ class HandlerTest extends ParsingTest {
           |      when empty(what=@timeOfFirstScan)
           |      then set timeOfFirstScan to @NestItem.originTimeStamp
           |      and set parentContainer to @NestItem.container
-          |      and tell command AddItemToContainer() to entity DistributionItem
+          |      and send command AddItemToContainer() to inlet incoming
           |    }}
           |    on command TransportItem { example only {
           |      when empty(what=timeOfFirstScan())

@@ -10,7 +10,7 @@ context context by author Reid is {
     }
   }
   repository repository is { ??? }
-  pipe pipe is { ??? }
+  connector pipe is { ??? }
   source source is { ??? }
   sink sink is { ??? }
   flow flow is { ??? }
