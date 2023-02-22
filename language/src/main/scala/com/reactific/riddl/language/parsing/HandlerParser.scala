@@ -19,14 +19,14 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
 
   private def onOtherClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.other ~/ location ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.other ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   private def onInitClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.init ~/ location ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.init ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
@@ -36,13 +36,13 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
   }
   private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/
-      (Readability.from./ ~ messageOrigins).? ~ onClauseBody ~
+      (Readability.from./ ~ messageOrigins).? ~ is ~ onClauseBody ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
   private def onTermClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.term ~/ location ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.term ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }

@@ -263,17 +263,22 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     } else { typeName }
   }
 
-  def emitERD(state: State, parents: Seq[Definition]): this.type = {
+  def emitERD(
+    name: String,
+    fields: Seq[Field],
+    parents: Seq[Definition]
+  ): this.type = {
     h2("Entity Relationships")
-    val fields = state.record.fields
-    val typ: Seq[String] = s"${state.id.format} {" +: fields.map { f =>
+
+    val typ: Seq[String] = s"$name {" +: fields.map { f =>
       val typeName = makeTypeName(f.typeEx, parents)
       val fieldName = f.id.format.replace(" ", "-")
       val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
       s"  $typeName $fieldName $comment"
     } :+ "}"
     val relationships: Seq[String] = fields
-      .map(makeERDRelationship(state.id.format, _, parents)).filter(_.nonEmpty)
+      .map(makeERDRelationship(name, _, parents))
+      .filter(_.nonEmpty)
     val lines = Seq("erDiagram") ++ typ ++ relationships
     emitMermaidDiagram(lines)
   }
@@ -724,12 +729,16 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     this
   }
 
-  def emitState(state: State, parents: Seq[Definition]): this.type = {
+  def emitState(
+    state: State,
+    fields: Seq[Field],
+    parents: Seq[Definition]
+  ): this.type = {
     containerHead(state, "State")
     emitDefDoc(state, this.state.makeParents(parents))
-    emitERD(state, parents)
+    emitERD(state.id.format, fields, parents)
     h2("Fields")
-    emitFields(state.record.fields)
+    emitFields(fields)
     emitUsage(state)
   }
 

@@ -92,6 +92,9 @@ class PrettifyTest extends RiddlFilesTestBase {
     "check petstore.riddl" in {
       processAFile("testkit/src/test/input/petstore.riddl")
     }
-    "check rbbq.riddl" in { processAFile("testkit/src/test/input/rbbq.riddl") }
+    "check rbbq.riddl" in {
+      processAFile("testkit/src/test/input/rbbq.riddl")
+      println("done")
+    }
   }
 }

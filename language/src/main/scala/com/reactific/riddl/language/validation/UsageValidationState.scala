@@ -5,7 +5,10 @@ import com.reactific.riddl.language.Messages.*
 
 import scala.collection.mutable
 
-/** Validation Tracking for usage */
+/** Validation State for Uses/UsedBy Tracking. During parsing, when usage is
+  * detected, call associateUsage. After parsing ends, call checkUnused.
+  * Collects entities, types and functions too
+  */
 trait UsageValidationState extends DefinitionValidationState {
 
   type UseMap = mutable.HashMap[Definition, Seq[Definition]]
@@ -57,13 +60,13 @@ trait UsageValidationState extends DefinitionValidationState {
     if (commonOptions.showUnusedWarnings) {
       def hasUsages(definition: Definition): Boolean = {
         val result = usedBy.get(definition) match {
-          case None => false
+          case None        => false
           case Some(users) => users.nonEmpty
         }
         result
       }
       def checkList(list: Seq[Definition]): Unit = {
-        for {i <- list} {
+        for { i <- list } {
           check(hasUsages(i), s"${i.identify} is unused", Warning, i.loc)
         }
       }

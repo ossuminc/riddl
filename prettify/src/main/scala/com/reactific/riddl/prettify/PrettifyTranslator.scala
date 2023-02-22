@@ -336,9 +336,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       state: State
     ): PrettifyState = {
       reformatState.withCurrent { st =>
-        val s1 = st.openDef(state)
-        if (state.nonEmpty) {
-          s1.addIndent(state.record.format).nl
+        st.addSpace().add(s"${keyword(state)} ${state.id.format} of ${state.typ.format} is {")
+        if (state.isEmpty) {
+          st.add(" ??? }")
+        } else {
+          st.nl.indent
         }
       }
     }
