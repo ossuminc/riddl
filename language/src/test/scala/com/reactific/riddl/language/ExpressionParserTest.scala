@@ -166,5 +166,10 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe NumberFunction(1 -> 1, "length", Seq.empty[Expression])
       }
     }
+    "accept the trim() operator" in {
+      parseExpression("trim()") { expr: Expression =>
+        expr mustBe StringFunction(1 -> 1, "trim", Seq.empty[Expression])
+      }
+    }
   }
 }
