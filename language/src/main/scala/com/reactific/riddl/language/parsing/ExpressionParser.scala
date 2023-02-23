@@ -16,9 +16,7 @@ import scala.collection.immutable.ListMap
 import Terminals.*
 
 /** Parser rules for value expressions */
-private[parsing] trait ExpressionParser
-    extends CommonParser
-    with ReferenceParser {
+private[parsing] trait ExpressionParser extends CommonParser with ReferenceParser {
 
   // //////////////////////////////////////// Conditions == Boolean Expression
 
@@ -42,9 +40,7 @@ private[parsing] trait ExpressionParser
     P(literalString).map(ls => ArbitraryCondition(ls.loc, ls))
   }
 
-  private def emptyArgList[u: P]: P[ArgList] = {
-    undefined[u, ArgList](ArgList())
-  }
+  private def emptyArgList[u: P]: P[ArgList] = { undefined[u, ArgList](ArgList()) }
 
   private def arguments[u: P]: P[ArgList] = {
     P(
@@ -55,8 +51,7 @@ private[parsing] trait ExpressionParser
             s.foldLeft(ListMap.empty[Identifier, Expression]) {
               case (b, (id, exp)) => b + (id -> exp)
             }
-          }
-          .map { lm => ArgList(lm) })
+          }.map { lm => ArgList(lm) })
     )
   }
 
@@ -144,8 +139,7 @@ private[parsing] trait ExpressionParser
       .map(tpl => (ValueOperator.apply _).tupled(tpl))
   }
 
-  private def aggregateConstruction[u: P]
-    : P[AggregateConstructionExpression] = {
+  private def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
     P(location ~ Punctuation.exclamation ~/ pathIdentifier ~ argList)
       .map(tpl => (AggregateConstructionExpression.apply _).tupled(tpl))
   }
@@ -229,13 +223,13 @@ private[parsing] trait ExpressionParser
   }
 
   private def knownNumbers[u: P]: P[NumberFunction] = {
-    functionCall(StringIn("random", "pow", "length").!).map { tpl =>
+    functionCall(StringIn("random", "pow").!).map { tpl =>
       (NumberFunction.apply _).tupled(tpl)
     }
   }
 
   private def knownStrings[u: P]: P[StringFunction] = {
-    functionCall(StringIn("trim").!).map { tpl =>
+    functionCall(StringIn("length").!).map { tpl =>
       (StringFunction.apply _).tupled(tpl)
     }
   }

@@ -14,7 +14,7 @@ import java.nio.file.Path
 class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
 
   val cwd = "/Users/reid/Code/improving.app/riddl"
-  val config = "src/main/riddl/ImprovingApp.conf"
+  val config = "src/main/riddl/KalixStudy.conf"
 
   "riddlc" should {
     s"run --show-times from $config hugo" in {
