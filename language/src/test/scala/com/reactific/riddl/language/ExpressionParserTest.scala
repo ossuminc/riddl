@@ -17,8 +17,7 @@ class ExpressionParserTest extends ParsingTest {
 
   def parseExpression(
     input: String
-  )(check: Expression => Assertion
-  ): Assertion = {
+  )(check: Expression => Assertion): Assertion = {
     parse[Expression, Expression](
       input,
       StringParser("").expression(_),
@@ -104,11 +103,16 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe FunctionCallExpression(
           At(1 -> 1),
           PathIdentifier(At(1 -> 1), Seq("Entity", "Function")),
-          ArgList(ListMap(
-            Identifier(At(1 -> 17), "i") -> LiteralInteger(At(1 -> 19), magic),
-            Identifier(At(1 -> 23), "j") ->
-              LiteralInteger(At(1 -> 25), magic / 2)
-          ))
+          ArgList(
+            ListMap(
+              Identifier(At(1 -> 17), "i") -> LiteralInteger(
+                At(1 -> 19),
+                magic
+              ),
+              Identifier(At(1 -> 23), "j") ->
+                LiteralInteger(At(1 -> 25), magic / 2)
+            )
+          )
         )
       }
     }
@@ -117,11 +121,13 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArbitraryOperator(
           At(1 -> 1),
           LiteralString(1 -> 1, "wow"),
-          ArgList(ListMap(
-            Identifier(At(1 -> 5), "a") -> LiteralInteger(At(1 -> 7), 0),
-            Identifier(At(1 -> 9), "b") -> LiteralInteger(At(1 -> 11), 0),
-            Identifier(At(1 -> 13), "c") -> LiteralInteger(At(1 -> 15), 0)
-          ))
+          ArgList(
+            ListMap(
+              Identifier(At(1 -> 5), "a") -> LiteralInteger(At(1 -> 7), 0),
+              Identifier(At(1 -> 9), "b") -> LiteralInteger(At(1 -> 11), 0),
+              Identifier(At(1 -> 13), "c") -> LiteralInteger(At(1 -> 15), 0)
+            )
+          )
         )
       }
     }
@@ -157,7 +163,7 @@ class ExpressionParserTest extends ParsingTest {
     }
     "accept the length() operator" in {
       parseExpression("length()") { expr: Expression =>
-        expr mustBe StringFunction(1 -> 1, "length", Seq.empty[Expression])
+        expr mustBe NumberFunction(1 -> 1, "length", Seq.empty[Expression])
       }
     }
   }
