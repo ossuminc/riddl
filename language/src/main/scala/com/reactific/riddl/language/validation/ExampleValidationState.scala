@@ -191,9 +191,6 @@ trait ExampleValidationState extends TypeValidationState {
       checkExpression(arg1, defn, parents)
         .checkExpression(arg2, defn, parents)
         .check(
-          // FIXME: The two expressions don't need to be assignment
-          //  compatible, just comparison compatible. Need to take into
-          //  account the coercion of numeric types
           arg1.expressionType.isAssignmentCompatible(arg2.expressionType),
           s"Incompatible expression types in ${comp.format} expression",
           Error,
