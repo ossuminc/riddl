@@ -223,13 +223,13 @@ private[parsing] trait ExpressionParser extends CommonParser with ReferenceParse
   }
 
   private def knownNumbers[u: P]: P[NumberFunction] = {
-    functionCall(StringIn("random", "pow").!).map { tpl =>
+    functionCall(StringIn("random", "pow", "length").!).map { tpl =>
       (NumberFunction.apply _).tupled(tpl)
     }
   }
 
   private def knownStrings[u: P]: P[StringFunction] = {
-    functionCall(StringIn("length").!).map { tpl =>
+    functionCall(StringIn("trim").!).map { tpl =>
       (StringFunction.apply _).tupled(tpl)
     }
   }
