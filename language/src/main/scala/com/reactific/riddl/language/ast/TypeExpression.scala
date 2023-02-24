@@ -13,6 +13,11 @@ trait TypeExpression extends AbstractDefinitions {
 
 ///////////////////////////////////////////////////////////// TYPES
 
+  // We need "Expression" sealed trait from Expression.scala but it
+  // depends on TypeExpression.scala so we make Expression derive from
+  // this forward declaration so we can use it here.
+  trait ForwardDeclaredExpression
+
   sealed trait TypeDefinition extends Definition
 
   /** Base trait of an expression that defines a type
@@ -240,6 +245,7 @@ trait TypeExpression extends AbstractDefinitions {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
+    default: Option[ForwardDeclaredExpression] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -272,7 +278,7 @@ trait TypeExpression extends AbstractDefinitions {
               oTypeEx = ofield.typeEx
             } yield {
               myTypEx.isAssignmentCompatible(oTypeEx)
-            };
+            }
             (validity.size == oate.fields.size) && validity.forall(_ == true)
           case _ => false
         }

@@ -14,7 +14,7 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Parsing rules for Type definitions */
-private[parsing] trait TypeParser extends CommonParser {
+private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
@@ -35,24 +35,176 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def isoCountryCode[u: P]: P[String] = {
-    P(StringIn("AFN", "AED", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN",
-      "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BOV",
-      "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHE", "CHF",
-      "CHW", "CLF", "CLP", "CNY", "COP", "COU", "CRC", "CUC", "CUP", "CVE",
-      "CZK", "DJF", "DKK", "DOP", "EGP", "ERN", "ETB", "EUR", "FJD", "FKP",
-      "GBP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HKD", "HNL",
-      "HRK", "HTG", "HUF", "IDR", "ILS", "INR", "IQD", "IRR", "ISK", "JMD",
-      "JOD", "JPY", "KES", "KGS", "KHR", "KMF", "KPW", "KRW", "KWD", "KYD",
-      "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA",
-      "MKD", "MMK", "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN", "MXV",
-      "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "NZD", "OMR", "PEN",
-      "PGK", "PHP", "PKR", "PLN", "PYG", "QAR", "RON", "RSD", "RUB", "RWF",
-      "SAR", "SBD", "SCR", "SDG", "SEK", "SGD", "SHP", "SLE", "SOS", "SRD",
-      "STN", "SVC", "SYP", "SZL", "THB", "TJS", "TMT", "TND", "TOP", "TRY",
-      "TTD", "TWD", "TZS", "UAH", "UGX", "USD", "USN", "UYI", "UYU", "UZS",
-      "VED", "VEF", "VND", "VUV", "WST", "XAF", "XCD", "XDR", "XOF", "XPF",
-      "XSU", "XUA", "YER", "ZAR", "ZMW", "ZWL"
-    ).!)}
+    P(
+      StringIn(
+        "AFN",
+        "AED",
+        "AMD",
+        "ANG",
+        "AOA",
+        "ARS",
+        "AUD",
+        "AWG",
+        "AZN",
+        "BAM",
+        "BBD",
+        "BDT",
+        "BGN",
+        "BHD",
+        "BIF",
+        "BMD",
+        "BND",
+        "BOB",
+        "BOV",
+        "BRL",
+        "BSD",
+        "BTN",
+        "BWP",
+        "BYN",
+        "BZD",
+        "CAD",
+        "CDF",
+        "CHE",
+        "CHF",
+        "CHW",
+        "CLF",
+        "CLP",
+        "CNY",
+        "COP",
+        "COU",
+        "CRC",
+        "CUC",
+        "CUP",
+        "CVE",
+        "CZK",
+        "DJF",
+        "DKK",
+        "DOP",
+        "EGP",
+        "ERN",
+        "ETB",
+        "EUR",
+        "FJD",
+        "FKP",
+        "GBP",
+        "GEL",
+        "GHS",
+        "GIP",
+        "GMD",
+        "GNF",
+        "GTQ",
+        "GYD",
+        "HKD",
+        "HNL",
+        "HRK",
+        "HTG",
+        "HUF",
+        "IDR",
+        "ILS",
+        "INR",
+        "IQD",
+        "IRR",
+        "ISK",
+        "JMD",
+        "JOD",
+        "JPY",
+        "KES",
+        "KGS",
+        "KHR",
+        "KMF",
+        "KPW",
+        "KRW",
+        "KWD",
+        "KYD",
+        "KZT",
+        "LAK",
+        "LBP",
+        "LKR",
+        "LRD",
+        "LSL",
+        "LYD",
+        "MAD",
+        "MDL",
+        "MGA",
+        "MKD",
+        "MMK",
+        "MNT",
+        "MOP",
+        "MRU",
+        "MUR",
+        "MVR",
+        "MWK",
+        "MXN",
+        "MXV",
+        "MYR",
+        "MZN",
+        "NAD",
+        "NGN",
+        "NIO",
+        "NOK",
+        "NPR",
+        "NZD",
+        "OMR",
+        "PEN",
+        "PGK",
+        "PHP",
+        "PKR",
+        "PLN",
+        "PYG",
+        "QAR",
+        "RON",
+        "RSD",
+        "RUB",
+        "RWF",
+        "SAR",
+        "SBD",
+        "SCR",
+        "SDG",
+        "SEK",
+        "SGD",
+        "SHP",
+        "SLE",
+        "SOS",
+        "SRD",
+        "STN",
+        "SVC",
+        "SYP",
+        "SZL",
+        "THB",
+        "TJS",
+        "TMT",
+        "TND",
+        "TOP",
+        "TRY",
+        "TTD",
+        "TWD",
+        "TZS",
+        "UAH",
+        "UGX",
+        "USD",
+        "USN",
+        "UYI",
+        "UYU",
+        "UZS",
+        "VED",
+        "VEF",
+        "VND",
+        "VUV",
+        "WST",
+        "XAF",
+        "XCD",
+        "XDR",
+        "XOF",
+        "XPF",
+        "XSU",
+        "XUA",
+        "YER",
+        "ZAR",
+        "ZMW",
+        "ZWL"
+      ).!
+    )
+  }
 
   private def currencyType[u: P]: P[Currency] = {
     P(
@@ -164,27 +316,38 @@ private[parsing] trait TypeParser extends CommonParser {
   private def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (Punctuation.undefinedMark.!
-          .map(_ => Seq.empty[AliasedTypeExpression]) |
+        (Punctuation.undefinedMark.!.map(_ =>
+          Seq.empty[AliasedTypeExpression]
+        ) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
-    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./
-      .map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
+    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./.map(tpl =>
+      (AliasedTypeExpression.apply _).tupled(tpl)
+    )
   }
 
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
-    P(cardinality(
-      simplePredefinedTypes./ | patternType | uniqueIdType | enumeration |
-        alternation | entityReferenceType | mappingType | rangeType |
-        aliasedTypeExpression
-    ))
+    P(
+      cardinality(
+        simplePredefinedTypes./ | patternType | uniqueIdType | enumeration |
+          alternation | entityReferenceType | mappingType | rangeType |
+          aliasedTypeExpression
+      )
+    )
+  }
+
+  private def fieldValue[u: P]: P[Option[Expression]] = {
+    P(Punctuation.roundOpen ~ expression ~ Punctuation.roundClose./).?
   }
 
   def field[u: P]: P[Field] = {
-    P(location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description)
+    P(
+      location ~ identifier ~ is ~ fieldTypeExpression ~ fieldValue ~
+        briefly ~ description
+    )
       .map(tpl => (Field.apply _).tupled(tpl))
   }
 
@@ -205,7 +368,6 @@ private[parsing] trait TypeParser extends CommonParser {
     P(location ~ Keywords.record ~ identifier ~ is ~ aggregation)
   }
 
-
   private def aggregateUseCase[u: P]: P[AggregateUseCase] = {
     P(
       StringIn(
@@ -221,7 +383,7 @@ private[parsing] trait TypeParser extends CommonParser {
         case kind if kind == Keywords.event   => EventCase
         case kind if kind == Keywords.query   => QueryCase
         case kind if kind == Keywords.result  => ResultCase
-        case kind if kind == Keywords.record => RecordCase
+        case kind if kind == Keywords.record  => RecordCase
       }
     }
   }
@@ -230,14 +392,16 @@ private[parsing] trait TypeParser extends CommonParser {
     loc: At,
     mk: AggregateUseCase,
     agg: Aggregation
-  ): AggregateUseCaseTypeExpression = { AggregateUseCaseTypeExpression(loc, mk, agg.fields) }
+  ): AggregateUseCaseTypeExpression = {
+    AggregateUseCaseTypeExpression(loc, mk, agg.fields)
+  }
 
-  private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
+  private def aggregateUseCaseTypeExpression[u: P]
+    : P[AggregateUseCaseTypeExpression] = {
     P(location ~ aggregateUseCase ~ aggregation).map { case (loc, mk, agg) =>
       makeAggregateUseCaseType(loc, mk, agg)
     }
   }
-
 
   /** Parses mappings, i.e.
     * {{{
@@ -291,11 +455,13 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def typeExpression[u: P]: P[TypeExpression] = {
-    P(cardinality(
-      simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-        alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression |
-        mappingType | rangeType | aliasedTypeExpression
-    ))
+    P(
+      cardinality(
+        simplePredefinedTypes | patternType | uniqueIdType | enumeration |
+          alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression |
+          mappingType | rangeType | aliasedTypeExpression
+      )
+    )
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {
