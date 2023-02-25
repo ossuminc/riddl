@@ -20,7 +20,10 @@ class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
   push(rpi)
 
   def fileRoot[u: P]: P[RootContainer] = {
-    P(Start ~ domain.rep(0) ~ End).map(RootContainer(_, inputSeen))
+    P(Start ~ domain.rep(0) ~ End).map { domains =>
+      pop
+      RootContainer(domains, inputSeen)
+    }
   }
 }
 
@@ -44,7 +47,7 @@ object TopLevelParser {
   }
 
   def parse(url: URL): Either[Messages, RootContainer] = {
-    val upi =  URLParserInput(url)
+    val upi = URLParserInput(url)
     parse(upi)
   }
 

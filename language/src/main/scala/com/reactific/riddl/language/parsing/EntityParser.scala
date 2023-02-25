@@ -83,7 +83,7 @@ private[parsing] trait EntityParser
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(
       handler | function | invariant | typeDef | state |
-        entityInclude | inlet | outlet | term
+        entityInclude | inlet | outlet | term | constant
     ).rep
   }
 
@@ -104,6 +104,7 @@ private[parsing] trait EntityParser
     ).map { case (loc, id, authorRefs, (options, entityDefs), briefly, desc) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
+      val constants = mapTo[Constant](groups.get(classOf[Constant]))
       val states = mapTo[State](groups.get(classOf[State]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
@@ -122,6 +123,7 @@ private[parsing] trait EntityParser
         options.fold(Seq.empty[EntityOption])(identity),
         states,
         types,
+        constants,
         handlers,
         functions,
         invariants,

@@ -155,7 +155,7 @@ trait ExampleValidationState extends TypeValidationState {
     }()
   }
 
-  def checkExpressions(
+  private def checkExpressions(
     expressions: Seq[Expression],
     defn: Definition,
     parents: Seq[Definition]
@@ -267,8 +267,56 @@ trait ExampleValidationState extends TypeValidationState {
         this
           .checkRef[Entity](entity, defn, parents)
           .checkRef[State](state, defn, parents)
-          .checkMessageConstructor(value, defn, parents)
-      // TODO: Check the message is the right type for the state
+          .checkExpression(value, defn, parents)
+          .step { st: this.type =>
+            val maybeEntity =
+              st.resolvePathIdentifier[Entity](entity.pathId, parents)
+            val maybeState =
+              st.resolvePathIdentifier[State](state.pathId, parents)
+            val maybeExprType = st.getExpressionType(value, parents)
+            if (maybeExprType.isEmpty) {
+              st.addError(
+                value.loc,
+                s"Unable to determine type of expression ${value.format}"
+              )
+            } else {
+              val exprType = maybeExprType.get
+              maybeEntity
+                .flatMap { entity =>
+                  maybeState
+                    .map { resolvedState =>
+                      if (!entity.states.contains(resolvedState)) {
+                        st.addError(
+                          state.loc,
+                          s"${entity.identify} does not contain ${resolvedState.identify}"
+                        )
+                      } else {
+                        val pid = resolvedState.typ.pathId
+                        val maybeType =
+                          resolvePidRelativeTo[Type](pid, resolvedState)
+                        maybeType match {
+                          case Some(typ) =>
+                            if (
+                              !this.isAssignmentCompatible(
+                                Some(typ.typ),
+                                Some(exprType)
+                              )
+                            ) {
+                              st.addError(
+                                value.loc,
+                                s"Morph value of type ${exprType.format} " +
+                                  s"cannot be assigned to ${resolvedState.identify} value of type ${typ.identify}"
+                              )
+                            } else st
+                          case None =>
+                            st
+                        }
+                      }
+                    }
+                }
+              st
+            }
+          }
 
       case CompoundAction(loc, actions) =>
         check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)

@@ -12,8 +12,10 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait ProjectionParser extends TypeParser with HandlerParser
- with StreamingParser {
+private[parsing] trait ProjectionParser
+    extends TypeParser
+    with HandlerParser
+    with StreamingParser {
 
   private def projectionOptions[u: P]: P[Seq[ProjectionOption]] = {
     options[u, ProjectionOption](StringIn(Options.technology).!) {
@@ -28,7 +30,10 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser
   }
 
   private def projectionDefinitions[u: P]: P[Seq[ProjectionDefinition]] = {
-    P(term | projectionInclude | handler | inlet | outlet | invariant).rep(0)
+    P(
+      term | projectionInclude | handler | inlet | outlet | invariant |
+        constant | typeDef
+    ).rep(0)
   }
 
   private type ProjectionBody =
@@ -37,7 +42,11 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser
   private def projectionBody[u: P]: P[ProjectionBody] = {
     P(
       undefined(
-        (Seq.empty[ProjectionOption], Seq.empty[Type], Seq.empty[ProjectionDefinition])
+        (
+          Seq.empty[ProjectionOption],
+          Seq.empty[Type],
+          Seq.empty[ProjectionDefinition]
+        )
       ) | (projectionOptions ~ typeDef.rep(0) ~ projectionDefinitions)
     )
   }
@@ -66,12 +75,15 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+        val constants = mapTo[Constant](groups.get(classOf[Constant]))
         val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
         val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
         val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-        val includes = mapTo[Include[ProjectionDefinition]](groups.get(
-          classOf[Include[ProjectionDefinition]]
-        ))
+        val includes = mapTo[Include[ProjectionDefinition]](
+          groups.get(
+            classOf[Include[ProjectionDefinition]]
+          )
+        )
         val terms = mapTo[Term](groups.get(classOf[Term]))
         Projection(
           loc,
@@ -80,6 +92,7 @@ private[parsing] trait ProjectionParser extends TypeParser with HandlerParser
           options,
           includes,
           types,
+          constants,
           inlets,
           outlets,
           handlers,

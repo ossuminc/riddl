@@ -35,13 +35,13 @@ class ExpressionParserTest extends ParsingTest {
   "ExpressionParser" should {
     "accept literal integer" in {
       parseExpression("42") { expr: Expression =>
-        expr mustBe LiteralInteger(At(1 -> 1), BigInt(magic))
+        expr mustBe IntegerValue(At(1 -> 1), BigInt(magic))
       }
     }
     "accept literal decimal" in {
       parseExpression("42.21") { expr: Expression =>
         expr mustBe
-          LiteralDecimal(At(1 -> 1), BigDecimal(magic.toDouble + 0.21))
+          DecimalValue(At(1 -> 1), BigDecimal(magic.toDouble + 0.21))
       }
     }
     "accept plus binary" in {
@@ -49,7 +49,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "+",
-          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
+          Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
@@ -57,17 +57,17 @@ class ExpressionParserTest extends ParsingTest {
       parseExpression("-(1,1)") { expr: Expression =>
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
-          "-",
-          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
+            "-",
+          Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
     "accept times binary" in {
       parseExpression("*(1,1)") { expr: Expression =>
         expr mustBe ArithmeticOperator(
-          At(1 -> 1),
+            At(1 -> 1),
           "*",
-          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
+          Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
@@ -76,7 +76,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "/",
-          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
+          Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
@@ -85,7 +85,7 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "%",
-          Seq(LiteralInteger(At(1 -> 3), 1), LiteralInteger(At(1 -> 5), 1))
+          Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
@@ -94,23 +94,23 @@ class ExpressionParserTest extends ParsingTest {
         expr mustBe NumberFunction(
           At(1 -> 1),
           "pow",
-          Seq(LiteralInteger(At(1 -> 5), 2), LiteralInteger(At(1 -> 7), 3))
+          Seq(IntegerValue(At(1 -> 5), 2), IntegerValue(At(1 -> 7), 3))
         )
       }
     }
     "accept function call expression " in {
       parseExpression("Entity.Function(i=42, j=21)") { expr: Expression =>
-        expr mustBe FunctionCallExpression(
+          expr mustBe FunctionCallExpression(
           At(1 -> 1),
           PathIdentifier(At(1 -> 1), Seq("Entity", "Function")),
           ArgList(
             ListMap(
-              Identifier(At(1 -> 17), "i") -> LiteralInteger(
+              Identifier(At(1 -> 17), "i") -> IntegerValue(
                 At(1 -> 19),
                 magic
               ),
               Identifier(At(1 -> 23), "j") ->
-                LiteralInteger(At(1 -> 25), magic / 2)
+                IntegerValue(At(1 -> 25), magic / 2)
             )
           )
         )
@@ -123,9 +123,9 @@ class ExpressionParserTest extends ParsingTest {
           LiteralString(1 -> 1, "wow"),
           ArgList(
             ListMap(
-              Identifier(At(1 -> 5), "a") -> LiteralInteger(At(1 -> 7), 0),
-              Identifier(At(1 -> 9), "b") -> LiteralInteger(At(1 -> 11), 0),
-              Identifier(At(1 -> 13), "c") -> LiteralInteger(At(1 -> 15), 0)
+              Identifier(At(1 -> 5), "a") -> IntegerValue(At(1 -> 7), 0),
+              Identifier(At(1 -> 9), "b") -> IntegerValue(At(1 -> 11), 0),
+              Identifier(At(1 -> 13), "c") -> IntegerValue(At(1 -> 15), 0)
             )
           )
         )
@@ -141,8 +141,8 @@ class ExpressionParserTest extends ParsingTest {
             ValueOperator(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
             ValueOperator(1 -> 9, PathIdentifier(1 -> 10, Seq("b")))
           ),
-          LiteralInteger(1 -> 13, BigInt(42)),
-          LiteralInteger(1 -> 16, BigInt(21))
+          IntegerValue(1 -> 13, BigInt(42)),
+          IntegerValue(1 -> 16, BigInt(21))
         )
       }
     }

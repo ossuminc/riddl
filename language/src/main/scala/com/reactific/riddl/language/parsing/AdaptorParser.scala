@@ -13,8 +13,11 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parser rules for Adaptors */
-private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser with
-  ActionParser with StreamingParser {
+private[parsing] trait AdaptorParser
+    extends HandlerParser
+    with GherkinParser
+    with ActionParser
+    with StreamingParser {
 
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](StringIn(Options.technology).!) {
@@ -29,7 +32,7 @@ private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser wi
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      (handler | inlet | outlet | adaptorInclude | term).rep(1) |
+      (handler | inlet | outlet | adaptorInclude | term | constant).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }
@@ -62,15 +65,19 @@ private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser wi
             description
           ) =>
         val groups = defs.groupBy(_.getClass)
-        val includes = mapTo[Include[AdaptorDefinition]](groups.get(
-          classOf[Include[AdaptorDefinition]]
-        ))
+        val includes = mapTo[Include[AdaptorDefinition]](
+          groups.get(
+            classOf[Include[AdaptorDefinition]]
+          )
+        )
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        val handlers: Seq[Handler] = defs.filter(_.isInstanceOf[Handler])
+        val handlers: Seq[Handler] = defs
+          .filter(_.isInstanceOf[Handler])
           .map(_.asInstanceOf[Handler])
         val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
         val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
         val types = mapTo[Type](groups.get(classOf[Outlet]))
+        val constants = mapTo[Constant](groups.get(classOf[Constant]))
         Adaptor(
           loc,
           id,
@@ -80,6 +87,7 @@ private[parsing] trait AdaptorParser extends HandlerParser with GherkinParser wi
           inlets,
           outlets,
           types,
+          constants,
           includes,
           authorRefs,
           options,

@@ -13,6 +13,11 @@ trait TypeExpression extends AbstractDefinitions {
 
 ///////////////////////////////////////////////////////////// TYPES
 
+  // We need "Expression" sealed trait from Expression.scala but it
+  // depends on TypeExpression.scala so we make Expression derive from
+  // this forward declaration so we can use it here.
+  trait ForwardDeclaredExpression extends RiddlNode
+
   sealed trait TypeDefinition extends Definition
 
   /** Base trait of an expression that defines a type
@@ -70,35 +75,35 @@ trait TypeExpression extends AbstractDefinitions {
   /** Base of an enumeration for the four kinds of message types */
   sealed trait AggregateUseCase {
     @inline def kind: String
-    def format: String = kind.capitalize
+    def format: String = kind
   }
 
   /** An enumerator value for command types */
   final case object CommandCase extends AggregateUseCase {
-    @inline def kind: String = "command"
+    @inline def kind: String = "Command"
   }
 
   /** An enumerator value for event types */
   final case object EventCase extends AggregateUseCase {
-    @inline def kind: String = "event"
+    @inline def kind: String = "Event"
   }
 
   /** An enumerator value for query types */
   final case object QueryCase extends AggregateUseCase {
-    @inline def kind: String = "query"
+    @inline def kind: String = "Query"
   }
 
   /** An enumerator value for result types */
   final case object ResultCase extends AggregateUseCase {
-    @inline def kind: String = "result"
+    @inline def kind: String = "Result"
   }
 
   final case object RecordCase extends AggregateUseCase {
-    @inline def kind: String = "record"
+    @inline def kind: String = "Record"
   }
 
   final case object OtherCase extends AggregateUseCase {
-    @inline def kind: String = "other"
+    @inline def kind: String = "Other"
   }
 
   /** Base trait of the cardinality type expressions */
@@ -240,6 +245,7 @@ trait TypeExpression extends AbstractDefinitions {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
+    default: Option[ForwardDeclaredExpression] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -272,7 +278,7 @@ trait TypeExpression extends AbstractDefinitions {
               oTypeEx = ofield.typeEx
             } yield {
               myTypEx.isAssignmentCompatible(oTypeEx)
-            };
+            }
             (validity.size == oate.fields.size) && validity.forall(_ == true)
           case _ => false
         }

@@ -62,14 +62,12 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
-          content mustBe RootContainer(
-            Seq[Domain](
-              Domain(
-                (1, 1, input),
-                Identifier((1, 8, input), "foo"),
-                domains =
-                  Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
-              )
+          content.contents mustBe Seq[Domain](
+            Domain(
+              (1, 1, input),
+              Identifier((1, 8, input), "foo"),
+              domains =
+                Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
       }
@@ -83,11 +81,9 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
-          content mustBe RootContainer(
-            Seq[Domain](
-              Domain((1, 1, input), Identifier((1, 8, input), "foo")),
-              Domain((2, 1, input), Identifier((2, 8, input), "bar"))
-            )
+          content.contents mustBe Seq[Domain](
+            Domain((1, 1, input), Identifier((1, 8, input), "foo")),
+            Domain((2, 1, input), Identifier((2, 8, input), "bar"))
           )
       }
     }
@@ -381,13 +377,13 @@ class ParserTest extends ParsingTest {
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _))
+                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _, _))
                     )
                   ),
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
+                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _, _))
                     )
                   ),
                   _,

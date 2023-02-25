@@ -78,7 +78,7 @@ class ConditionParserTest extends ParsingTest {
           PathIdentifier(At(1 -> 1), Seq("This", "That")),
           ArgList(ListMap(
             Identifier(At(1 -> 11), "x") ->
-              LiteralInteger(At(1 -> 13), BigInt(42))
+                IntegerValue(At(1 -> 13), BigInt(42))
           ))
         )
       }
@@ -92,7 +92,7 @@ class ConditionParserTest extends ParsingTest {
               1 -> 4,
               lt,
               ValueOperator(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
-              LiteralInteger(1 -> 9, BigInt(42))
+              IntegerValue(1 -> 9, BigInt(42))
             ),
             Comparison(
               1 -> 13,
@@ -135,7 +135,7 @@ class ConditionParserTest extends ParsingTest {
                   PathIdentifier(1 -> 32, Seq("SomeFunc")),
                   ArgList(ListMap(
                     Identifier(1 -> 41, "x") ->
-                      LiteralInteger(1 -> 43, BigInt(42))
+                        IntegerValue(1 -> 43, BigInt(42))
                   ))
                 )
               )

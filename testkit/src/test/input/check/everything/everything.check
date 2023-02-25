@@ -25,7 +25,7 @@ Style: everything.riddl(72:20): Field identifier 'n' is too short. The minimum l
 Missing: everything.riddl(62:5): Vital definitions should have an author reference:
      entity Something is {
      ^
-Missing: everything.riddl(92:7): Type 'ItHappened' should have a description:
+Missing: everything.riddl(92:7): Event 'ItHappened' should have a description:
        type ItHappened is event { when: String }
        ^
 Missing: everything.riddl(13:5): Vital definitions should have an author reference:
@@ -109,7 +109,7 @@ Missing: everything.riddl(90:5): Vital definitions should have an author referen
 Style: everything.riddl(65:7): Type 'somethingDate' should start with a capital letter:
        type somethingDate is Date
        ^
-Missing: everything.riddl(67:7): Type 'ACommand' should have a description:
+Missing: everything.riddl(67:7): Command 'ACommand' should have a description:
        command ACommand is {}
        ^
 Missing: everything.riddl(3:1): Vital definitions should have an author reference:
@@ -127,7 +127,7 @@ Warning: everything.riddl(32:5): Type 'tim' is unused:
 Style: everything.riddl(38:5): Type 'enum' should start with a capital letter:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
      ^
-Error: everything.riddl(82:26): Path 'ItHappend' was not resolved, in Example 'only', but should refer to an event:
+Error: everything.riddl(82:26): Path 'ItHappend' was not resolved, in Example 'only', but should refer to an Event:
                send event ItHappend() to
                           ^
 Style: everything.riddl(37:25): Field identifier 'a' is too short. The minimum length is 3:
@@ -172,7 +172,7 @@ Missing: everything.riddl(11:3): Context 'APlant' should have a description:
 Style: everything.riddl(41:5): Type 'alt' should start with a capital letter:
      type alt is one of { enum or stamp or url }
      ^
-Missing: everything.riddl(6:3): Type 'DoAThing' should have a description:
+Missing: everything.riddl(6:3): Command 'DoAThing' should have a description:
    type DoAThing is command { thingField: Integer }
    ^
 Missing: everything.riddl(78:11): Example 'only' should have a description:

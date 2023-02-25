@@ -20,7 +20,7 @@ class ContextValidationTest extends ValidatingTest {
         """options (wrapper, service, gateway, package("foo"), technology("http"))"""
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
-          msgs.filter(_.kind.isError) mustBe (empty)
+          msgs.filter(_.kind.isError) mustBe empty
           context.options.size mustBe 5
           context.options must contain(WrapperOption((2, 11, rpi)))
           context.options must contain(GatewayOption((2, 29, rpi)))
@@ -44,14 +44,13 @@ class ContextValidationTest extends ValidatingTest {
                     |""".stripMargin
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
-          msgs.filter(_.kind.isError) mustBe (empty)
-          context.types.size mustBe (1)
-          context.types.head mustBe
-            (Type(
-              (2, 2, rpi),
-              Identifier((2, 7, rpi), "C"),
-              Current((2, 12, rpi))
-            ))
+          msgs.filter(_.kind.isError) mustBe empty
+          context.types.size mustBe 1
+          context.types.head mustBe Type(
+            (2, 2, rpi),
+            Identifier((2, 7, rpi), "C"),
+            Current((2, 12, rpi))
+          )
       }
     }
     "allow functions" in {
@@ -64,8 +63,8 @@ class ContextValidationTest extends ValidatingTest {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
           info(errors.format)
-          errors must be(empty)
-          context.functions.size mustBe (1)
+          errors mustBe empty
+          context.functions.size mustBe 1
           val expected = Function(
             (2, 2, rpi),
             Identifier((2, 11, rpi), "bar"),
@@ -106,7 +105,7 @@ class ContextValidationTest extends ValidatingTest {
           info(errors.format)
           errors must be(empty)
           val expected = Entity((2, 2, rpi), Identifier((2, 9, rpi), "bar"))
-          context.entities.size mustBe (1)
+          context.entities.size mustBe 1
           context.entities.head mustBe expected
       }
 
@@ -124,7 +123,7 @@ class ContextValidationTest extends ValidatingTest {
             Identifier((2, 7, rpi), "bar"),
             Some(LiteralString((2, 22, rpi), "imaginary line in court room"))
           )
-          context.terms.size mustBe (1)
+          context.terms.size mustBe 1
           context.terms.head mustBe expected
       }
     }
@@ -141,7 +140,7 @@ class ContextValidationTest extends ValidatingTest {
             Identifier((2, 9, rpi), "foo"),
             Source((2, 2, rpi))
           )
-          context.streamlets.size mustBe (1)
+          context.streamlets.size mustBe 1
           context.streamlets.head mustBe expected
       }
     }
@@ -156,7 +155,7 @@ class ContextValidationTest extends ValidatingTest {
           val errors = msgs.justErrors
           info(errors.format)
           errors must be(empty)
-          context.projections.size mustBe (1)
+          context.projections.size mustBe 1
           val actual = context.projections.head
           val expected =
             Projection(
@@ -178,6 +177,7 @@ class ContextValidationTest extends ValidatingTest {
                   None
                 )
               ),
+              List.empty[Constant],
               List.empty[Inlet],
               List.empty[Outlet],
               List(

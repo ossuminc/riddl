@@ -16,7 +16,9 @@ import scala.collection.immutable.ListMap
 import Terminals.*
 
 /** Parser rules for value expressions */
-private[parsing] trait ExpressionParser extends CommonParser with ReferenceParser {
+private[parsing] trait ExpressionParser
+    extends CommonParser
+    with ReferenceParser {
 
   // //////////////////////////////////////// Conditions == Boolean Expression
 
@@ -28,11 +30,11 @@ private[parsing] trait ExpressionParser extends CommonParser with ReferenceParse
     P(trueCondition | falseCondition | arbitraryCondition)
   }
 
-  private def trueCondition[u: P]: P[True] = {
+  def trueCondition[u: P]: P[True] = {
     P(location ~ IgnoreCase("true")).map(True)./
   }
 
-  private def falseCondition[u: P]: P[False] = {
+  def falseCondition[u: P]: P[False] = {
     P(location ~ IgnoreCase("false")).map(False)./
   }
 
@@ -40,18 +42,21 @@ private[parsing] trait ExpressionParser extends CommonParser with ReferenceParse
     P(literalString).map(ls => ArbitraryCondition(ls.loc, ls))
   }
 
-  private def emptyArgList[u: P]: P[ArgList] = { undefined[u, ArgList](ArgList()) }
+  private def emptyArgList[u: P]: P[ArgList] = {
+    undefined[u, ArgList](ArgList())
+  }
 
   private def arguments[u: P]: P[ArgList] = {
     P(
       emptyArgList |
-        ((identifier ~ Punctuation.equalsSign ~ expression)
+        (identifier ~ Punctuation.equalsSign ~ expression)
           .rep(min = 0, Punctuation.comma)
           .map { s: Seq[(Identifier, Expression)] =>
             s.foldLeft(ListMap.empty[Identifier, Expression]) {
               case (b, (id, exp)) => b + (id -> exp)
             }
-          }.map { lm => ArgList(lm) })
+          }
+          .map { lm => ArgList(lm) }
     )
   }
 
@@ -139,7 +144,8 @@ private[parsing] trait ExpressionParser extends CommonParser with ReferenceParse
       .map(tpl => (ValueOperator.apply _).tupled(tpl))
   }
 
-  private def aggregateConstruction[u: P]: P[AggregateConstructionExpression] = {
+  private def aggregateConstruction[u: P]
+    : P[AggregateConstructionExpression] = {
     P(location ~ Punctuation.exclamation ~/ pathIdentifier ~ argList)
       .map(tpl => (AggregateConstructionExpression.apply _).tupled(tpl))
   }
@@ -153,7 +159,8 @@ private[parsing] trait ExpressionParser extends CommonParser with ReferenceParse
 
   private def terminalExpression[u: P]: P[Expression] = {
     P(
-      terminalCondition | literalDecimal | literalInteger | entityIdValue |
+      terminalCondition | decimalValue | integerValue |
+        stringValue | entityIdValue |
         valueExpression | undefinedExpression | arbitraryExpression
     )
   }

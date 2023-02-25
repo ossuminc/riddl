@@ -20,8 +20,7 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidateInContext[D <: ContextDefinition: ClassTag](
     input: String
-  )(validator: (D, RiddlParserInput, Messages) => Assertion
-  ): Seq[Assertion] = {
+  )(validator: (D, RiddlParserInput, Messages) => Assertion): Seq[Assertion] = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     val rpi = RiddlParserInput(parseString)
     parseDefinition[Domain](rpi) match {
@@ -42,7 +41,8 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidateContext(
     input: String,
     options: CommonOptions = CommonOptions()
-  )(validator: (Context, RiddlParserInput, Messages) => Assertion
+  )(
+    validator: (Context, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     val rpi = RiddlParserInput(parseString)
@@ -58,8 +58,7 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidateDomain(
     input: RiddlParserInput
-  )(validator: (Domain, RiddlParserInput, Messages) => Assertion
-  ): Assertion = {
+  )(validator: (Domain, RiddlParserInput, Messages) => Assertion): Assertion = {
     parseDefinition[Domain](input) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, rpi)) =>
@@ -71,16 +70,18 @@ abstract class ValidatingTest extends ParsingTest {
 
   def parseAndValidate(
     input: String,
-    testCaseName: String,
+    origin: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, RiddlParserInput, Messages) => Assertion
+  )(
+    validation: (RootContainer, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    TopLevelParser.parse(input, testCaseName) match {
+    TopLevelParser.parse(input, origin) match {
       case Left(errors) =>
         val msgs = errors.format
-        fail(s"In $testCaseName:\n$msgs")
+        fail(s"In $origin:\n$msgs")
       case Right(root) =>
         val result = Validation.validate(root, options)
+        root.inputs mustNot be(empty)
         validation(root, root.inputs.head, result.messages)
     }
   }
@@ -93,8 +94,9 @@ abstract class ValidatingTest extends ParsingTest {
     fileName: String,
     directory: String = "language/src/test/input/",
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, Messages) => Assertion =
-      (_, msgs) => defaultFail(msgs)
+  )(
+    validation: (RootContainer, Messages) => Assertion = (_, msgs) =>
+      defaultFail(msgs)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
@@ -130,8 +132,7 @@ abstract class ValidatingTest extends ParsingTest {
   def assertValidationMessage(
     msgs: Messages,
     searchFor: String
-  )(f: Message => Boolean
-  ): Assertion = {
+  )(f: Message => Boolean): Assertion = {
     assert(
       msgs.exists(f),
       s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"

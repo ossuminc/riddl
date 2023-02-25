@@ -4,10 +4,10 @@ Style: saga.riddl(6:18): Field identifier 'a' is too short. The minimum length i
 Style: saga.riddl(9:18): Field identifier 'c' is too short. The minimum length is 3:
        requires { c: Integer described by "c"} returns { d: Integer described by "d"}
                   ^
-Missing: saga.riddl(4:5): Type 'UndoSomething' should have a description:
+Missing: saga.riddl(4:5): Command 'UndoSomething' should have a description:
      type UndoSomething = command { ??? }
      ^
-Missing: saga.riddl(3:5): Type 'Something' should have a description:
+Missing: saga.riddl(3:5): Command 'Something' should have a description:
      type Something = command { ??? }
      ^
 Style: saga.riddl(9:57): Field identifier 'd' is too short. The minimum length is 3:

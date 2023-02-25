@@ -8,8 +8,11 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.parsing.TopLevelParser
+import com.reactific.riddl.language.parsing.{
+  RiddlParserInput,
+  StringParserInput,
+  TopLevelParser
+}
 
 import java.io.File
 import scala.io.Source
@@ -19,36 +22,60 @@ class TopLevelParserTest extends ParsingTestBase {
   val origin = "simpleDomain.riddl"
 
   val simpleDomainFile = new File(s"language/src/test/input/domains/$origin")
-  val rip = RiddlParserInput(simpleDomainFile)
+  val rip: RiddlParserInput = RiddlParserInput(simpleDomainFile)
 
-  val simpleDomain = RootContainer(List(Domain(
+  val simpleDomain: AST.Domain = Domain(
     At(1, 1, rip),
     Identifier(At(1, 8, rip), "foo"),
     Seq.empty[DomainOption],
     Seq.empty[AuthorRef],
     Seq.empty[Author]
-  )))
+  )
+  val simpleDomainResults: AST.RootContainer = RootContainer(
+    List(simpleDomain),
+    List(
+      RiddlParserInput(
+        new File("language/src/test/input/domains/simpleDomain.riddl")
+      )
+    )
+  )
 
   "parse" should {
     "parse RiddlParserInput" in {
       TopLevelParser.parse(RiddlParserInput(simpleDomainFile)) mustBe
-        Right(simpleDomain)
+        Right(simpleDomainResults)
     }
     "parse File" in {
-      TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomain)
+      TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomainResults)
     }
     "parse Path" in {
-      TopLevelParser.parse(simpleDomainFile.toPath) mustBe Right(simpleDomain)
+      TopLevelParser.parse(simpleDomainFile.toPath) mustBe
+        Right(simpleDomainResults)
     }
     "parse String" in {
       val source = Source.fromFile(simpleDomainFile)
       try {
         val stringContents = source.mkString
-        TopLevelParser.parse(stringContents, origin) mustBe Right(simpleDomain)
+        val result = TopLevelParser.parse(stringContents, origin)
+        val expected = RootContainer(
+          List(simpleDomain),
+          List(
+            StringParserInput(
+              """domain foo is {
+              |
+              |}
+              |""".stripMargin,
+              "simpleDomain.riddl"
+            )
+          )
+        )
+        result mustBe Right(expected)
       } finally { source.close() }
     }
     "parse empty String" in {
-      TopLevelParser.parse("") mustBe Right(RootContainer.empty)
+      val expected =
+        RootContainer(List(), List(StringParserInput("", "string")))
+      TopLevelParser.parse("") mustBe Right(expected)
     }
   }
 

@@ -34,13 +34,13 @@ class HandlerValidatorTest extends ValidatingTest {
           msgs,
           Error,
           "Path 'EntityCommand' was not resolved, in OnMessageClause" +
-            " 'On command EntityCommand', but should refer to a command"
+            " 'On command EntityCommand', but should refer to a Command"
         )
         assertValidationMessage(
           msgs,
           Error,
           "Path 'EntityEvent' was not resolved, in OnMessageClause " +
-            "'On event EntityEvent', but should refer to an event"
+            "'On event EntityEvent', but should refer to an Event"
         )
       }
     }
@@ -66,7 +66,7 @@ class HandlerValidatorTest extends ValidatingTest {
           msgs,
           Error,
           "Path 'Incoming' was not resolved, in OnMessageClause " +
-            "'On event Incoming', but should refer to an event"
+            "'On event Incoming', but should refer to an Event"
         )
       }
     }
@@ -92,7 +92,7 @@ class HandlerValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Error,
-          "Reference[Type] 'Incoming'(8:10) should reference an event but is " +
+          "Reference[Type] 'Incoming'(8:10) should reference an Event but is " +
             "a String type instead"
         )
       }

@@ -45,7 +45,7 @@ private[parsing] trait ActionParser
   private def morphAction[u: P]: P[MorphAction] = {
     P(
       location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~/
-        Readability.with_ ~ messageConstructor
+        Readability.with_ ~ expression
     )./.map { tpl => (MorphAction.apply _).tupled(tpl) }
   }
 

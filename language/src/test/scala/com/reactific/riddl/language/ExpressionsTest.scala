@@ -10,9 +10,9 @@ import scala.collection.immutable.ListMap
 /** Unit Tests For Expressions */
 class ExpressionsTest extends AnyWordSpec with Matchers {
 
-  val int1 = LiteralInteger(At.empty, BigInt(1))
-  val int2 = LiteralInteger(At.empty, BigInt(2))
-  val litDec = LiteralDecimal(At.empty, BigDecimal(42.0))
+  val int1 = IntegerValue(At.empty, BigInt(1))
+  val int2 = IntegerValue(At.empty, BigInt(2))
+  val litDec = DecimalValue(At.empty, BigDecimal(42.0))
   val aggCE = AggregateConstructionExpression(
     At.empty,
     PathIdentifier(At.empty, Seq("a", "b")),
@@ -22,7 +22,7 @@ class ExpressionsTest extends AnyWordSpec with Matchers {
     At.empty,
     LiteralString(At.empty, "doit"),
     ArgList(ListMap(
-      Identifier(At.empty, "arg") -> LiteralInteger(At.empty, BigInt(1))
+      Identifier(At.empty, "arg") -> IntegerValue(At.empty, BigInt(1))
     ))
   )
   val arbitraryEx = ArbitraryExpression(LiteralString(At.empty, "act"))
@@ -30,8 +30,8 @@ class ExpressionsTest extends AnyWordSpec with Matchers {
     At.empty,
     "*",
     Seq(
-      LiteralInteger(At.empty, BigInt(1)),
-      LiteralInteger(At.empty, BigInt(1))
+      IntegerValue(At.empty, BigInt(1)),
+      IntegerValue(At.empty, BigInt(1))
     )
   )
   val comp = Comparison(At.empty, lt, int1, int2)
@@ -49,7 +49,7 @@ class ExpressionsTest extends AnyWordSpec with Matchers {
     At.empty,
     PathIdentifier(At.empty, Seq("a", "b")),
     ArgList(ListMap(
-      Identifier(At.empty, "arg") -> LiteralInteger(At.empty, BigInt(1))
+      Identifier(At.empty, "arg") -> IntegerValue(At.empty, BigInt(1))
     ))
   )
   val number = NumberFunction(At.empty, "pow")

@@ -89,12 +89,14 @@ trait AbstractDefinitions {
     */
   case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue {
     override def format: String = {
-      value.foldLeft(Seq.empty[String]) { case (r: Seq[String], s: String) =>
-        if (s.isEmpty) { r :+ "^" }
-        else if (r.isEmpty) { Seq(s) }
-        else if (r.last != "^") { r ++ Seq(".", s) }
-        else { r :+ s }
-      }.mkString
+      value
+        .foldLeft(Seq.empty[String]) { case (r: Seq[String], s: String) =>
+          if (s.isEmpty) { r :+ "^" }
+          else if (r.isEmpty) { Seq(s) }
+          else if (r.last != "^") { r ++ Seq(".", s) }
+          else { r :+ s }
+        }
+        .mkString
     }
 
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
@@ -117,15 +119,12 @@ trait AbstractDefinitions {
 
   case class BlockDescription(
     loc: At = At.empty,
-    lines: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends Description {
+    lines: Seq[LiteralString] = Seq.empty[LiteralString]
+  ) extends Description {
     def format: String = ""
   }
 
-  case class FileDescription(
-    loc: At,
-    file: Path)
-      extends Description {
+  case class FileDescription(loc: At, file: Path) extends Description {
     lazy val lines: Seq[LiteralString] = {
       val src = scala.io.Source.fromFile(file.toFile)
       src.getLines().toSeq.map(LiteralString(loc, _))
@@ -133,10 +132,7 @@ trait AbstractDefinitions {
     def format: String = file.toAbsolutePath.toString
   }
 
-  case class URLDescription(
-    loc: At,
-    url: URL)
-      extends Description {
+  case class URLDescription(loc: At, url: URL) extends Description {
     lazy val lines: Seq[LiteralString] = Seq.empty[LiteralString]
 
     /** Format the node to a string */
@@ -155,7 +151,8 @@ trait AbstractDefinitions {
   trait DescribedValue extends RiddlValue {
     def description: Option[Description]
     def descriptionValue: String = {
-      description.map(_.lines.map(_.s))
+      description
+        .map(_.lines.map(_.s))
         .mkString("", System.lineSeparator(), System.lineSeparator())
     }
   }

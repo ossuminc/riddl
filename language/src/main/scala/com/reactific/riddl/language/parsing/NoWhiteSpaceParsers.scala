@@ -31,7 +31,7 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
   private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
 
-  private def strChars[u: P]: P[Unit] = P(CharsWhile(stringChars))
+  def strChars[u: P]: P[Unit] = P(CharsWhile(stringChars))
 
   def literalString[u: P]: P[LiteralString] = {
     P(

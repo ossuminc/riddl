@@ -62,6 +62,7 @@ private[parsing] trait ContextParser
     ).map { case (loc, id, authorRefs, (options, definitions), briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
+      val constants = mapTo[Constant](groups.get(classOf[Constant]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
@@ -84,6 +85,7 @@ private[parsing] trait ContextParser
         id,
         options,
         types,
+        constants,
         entities,
         adaptors,
         sagas,
