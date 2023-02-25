@@ -454,7 +454,7 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     }
   }
 
-  private def typeExpression[u: P]: P[TypeExpression] = {
+  def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
         simplePredefinedTypes | patternType | uniqueIdType | enumeration |
@@ -484,4 +484,20 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
+
+  private def constantExpression[u: P]: P[Expression] = {
+    P(
+      trueCondition | falseCondition | decimalValue |
+        integerValue | stringValue
+    )
+  }
+
+  def constant[u: P]: P[Constant] = {
+    P(
+      location ~ Keywords.const ~ identifier ~ is ~ typeExpression ~
+        Punctuation.equalsSign ~ constantExpression ~
+        briefly ~ description
+    ).map { tpl => (Constant.apply _).tupled(tpl) }
+  }
+
 }

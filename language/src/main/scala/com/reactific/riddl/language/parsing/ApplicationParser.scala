@@ -54,7 +54,10 @@ private[parsing] trait ApplicationParser
   }
 
   private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
-    P(group | handler | inlet | outlet | term | typeDef | applicationInclude)
+    P(
+      group | handler | inlet | outlet | term | typeDef |
+        constant | applicationInclude
+    )
   }
 
   private def applicationDefinitions[u: P]: P[Seq[ApplicationDefinition]] = {
@@ -79,20 +82,24 @@ private[parsing] trait ApplicationParser
     ).map { case (loc, id, authorRefs, (options, content), brief, desc) =>
       val groups = content.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
+      val constants = mapTo[Constant](groups.get(classOf[Constant]))
       val grps = mapTo[Group](groups.get(classOf[Group]))
       val handlers = mapTo[Handler](groups.get(classOf[Group]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[ApplicationDefinition]](groups.get(
-        classOf[Include[ApplicationDefinition]]
-      ))
+      val includes = mapTo[Include[ApplicationDefinition]](
+        groups.get(
+          classOf[Include[ApplicationDefinition]]
+        )
+      )
 
       Application(
         loc,
         id,
         options,
         types,
+        constants,
         grps,
         handlers,
         inlets,

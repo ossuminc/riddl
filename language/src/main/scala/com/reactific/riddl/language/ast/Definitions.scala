@@ -399,6 +399,31 @@ trait Definitions extends Expressions with Options {
     def messageKind: AggregateUseCase = OtherCase
   }
 
+  /** A definition that represents a constant value for reference in behaviors
+    * @param loc
+    * @param id
+    * @param typeEx
+    * @param value
+    * @param brief
+    * @param description
+    */
+  case class Constant(
+    loc: At,
+    id: Identifier,
+    typeEx: TypeExpression,
+    value: ForwardDeclaredExpression,
+    brief: Option[LiteralString],
+    description: Option[Description]
+  ) extends LeafDefinition
+      with ProcessorDefinition
+      with DomainDefinition {
+    override def kind: String = "Constant"
+
+    /** Format the node to a string */
+    override def format: String =
+      s"${Keywords.const} ${id.format} is ${typeEx.format} = ${value.format}"
+  }
+
   /** A type definition which associates an identifier with a type expression.
     *
     * @param loc
@@ -925,6 +950,7 @@ trait Definitions extends Expressions with Options {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     states: Seq[State] = Seq.empty[State],
     types: Seq[Type] = Seq.empty[Type],
+    constnats: Seq[Constant] = Seq.empty[Constant],
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
@@ -1001,6 +1027,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -1133,6 +1160,7 @@ trait Definitions extends Expressions with Options {
     includes: Seq[Include[ProjectionDefinition]] = Seq
       .empty[Include[ProjectionDefinition]],
     types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
@@ -1202,6 +1230,7 @@ trait Definitions extends Expressions with Options {
     id: Identifier,
     options: Seq[ContextOption] = Seq.empty[ContextOption],
     types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
     entities: Seq[Entity] = Seq.empty[Entity],
     adaptors: Seq[Adaptor] = Seq.empty[Adaptor],
     sagas: Seq[Saga] = Seq.empty[Saga],
@@ -2035,6 +2064,7 @@ trait Definitions extends Expressions with Options {
     id: Identifier,
     options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
     groups: Seq[Group] = Seq.empty[Group],
     handlers: Seq[Handler] = Seq.empty[Handler],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
@@ -2104,6 +2134,7 @@ trait Definitions extends Expressions with Options {
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     authorDefs: Seq[Author] = Seq.empty[Author],
     types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
     contexts: Seq[Context] = Seq.empty[Context],
     actors: Seq[Actor] = Seq.empty[Actor],
     stories: Seq[Story] = Seq.empty[Story],
@@ -2120,8 +2151,8 @@ trait Definitions extends Expressions with Options {
       with DomainDefinition {
 
     override lazy val contents: Seq[DomainDefinition] = {
-      super.contents ++ domains ++ types ++ contexts ++ actors ++ stories ++
-        applications ++ terms ++ authorDefs
+      super.contents ++ domains ++ types ++ constants ++ contexts ++ actors ++
+        stories ++ applications ++ terms ++ authorDefs
     }
     final val kind: String = "Domain"
 

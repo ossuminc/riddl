@@ -33,6 +33,10 @@ trait Expressions extends TypeExpression {
     @inline def expressionType: TypeExpression = Number(loc)
   }
 
+  sealed abstract class StringExpression(loc: At) extends Expression {
+    @inline def expressionType: TypeExpression = Strng(loc)
+  }
+
   /** Represents the use of an arithmetic operator or well-known function call.
     * The operator can be simple like addition or subtraction or complicated
     * like pow, sqrt, etc. There is no limit on the number of operands but
@@ -220,7 +224,7 @@ trait Expressions extends TypeExpression {
     * @param n
     *   The number to use as the value of the expression
     */
-  case class LiteralInteger(loc: At, n: BigInt) extends NumericExpression(loc) {
+  case class IntegerValue(loc: At, n: BigInt) extends NumericExpression(loc) {
     override def format: String = n.toString()
     override def expressionType: TypeExpression = Integer(loc)
   }
@@ -231,13 +235,26 @@ trait Expressions extends TypeExpression {
     * @param d
     *   The decimal number to use as the value of the expression
     */
-  case class LiteralDecimal(loc: At, d: BigDecimal)
+  case class DecimalValue(loc: At, d: BigDecimal)
       extends NumericExpression(loc) {
     override def format: String = d.toString
     override def expressionType: TypeExpression = Decimal(loc)
   }
 
-  // /////////////////////////////////////////////////////////// Conditional Expressions
+  /** Represents a literal string parsed between quote characters in the input
+    *
+    * @param loc
+    *   The location in the input of the opening quote character
+    * @param s
+    *   The parsed value of the string content
+    */
+  case class StringValue(loc: At, s: String) extends StringExpression(loc) {
+    override def format = s"\"$s\""
+
+    override def isEmpty: Boolean = s.isEmpty
+  }
+
+///////////////////////////////////////////////////////////// Conditional Expressions
 
   /** A condition value for "true"
     * @param loc
@@ -466,7 +483,8 @@ trait Expressions extends TypeExpression {
     loc: At,
     name: String,
     args: Seq[Expression] = Seq.empty[Expression]
-  ) extends ValueFunctionExpression {
+  ) extends StringExpression(loc)
+      with ValueFunctionExpression {
     override def expressionType: TypeExpression = Strng(loc)
   }
 }

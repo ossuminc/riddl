@@ -16,7 +16,7 @@ trait TypeExpression extends AbstractDefinitions {
   // We need "Expression" sealed trait from Expression.scala but it
   // depends on TypeExpression.scala so we make Expression derive from
   // this forward declaration so we can use it here.
-  trait ForwardDeclaredExpression
+  trait ForwardDeclaredExpression extends RiddlNode
 
   sealed trait TypeDefinition extends Definition
 

@@ -99,6 +99,7 @@ object Terminals {
     final val commands = "commands"
     final val condition = "condition"
     final val connector = "connector"
+    final val const = "constant"
     final val container = "container"
     final val context = "context"
     final val create = "create"

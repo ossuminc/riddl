@@ -178,6 +178,7 @@ class ContextValidationTest extends ValidatingTest {
                   None
                 )
               ),
+              List.empty[Constant],
               List.empty[Inlet],
               List.empty[Outlet],
               List(

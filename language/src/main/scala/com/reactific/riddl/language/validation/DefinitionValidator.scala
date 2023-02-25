@@ -69,6 +69,7 @@ object DefinitionValidator {
           case in: Inlet   => validateInlet(state, in, parents)
           case out: Outlet => validateOutlet(state, out, parents)
           case t: Term     => validateTerm(state, t, parents)
+          case c: Constant => validateConstant(state, c, parents)
           case i: Include[ApplicationDefinition] @unchecked =>
             validateInclude(state, i)
         }
@@ -80,6 +81,7 @@ object DefinitionValidator {
           case f: Function  => validateFunction(state, f, parents)
           case i: Invariant => validateInvariant(state, i, parents)
           case t: Term      => validateTerm(state, t, parents)
+          case c: Constant  => validateConstant(state, c, parents)
           case i: Inlet     => validateInlet(state, i, parents)
           case o: Outlet    => validateOutlet(state, o, parents)
           case i: Include[EntityDefinition] @unchecked =>
@@ -87,11 +89,12 @@ object DefinitionValidator {
         }
       case rd: RepositoryDefinition =>
         rd match {
-          case h: Handler => validateHandler(state, h, parents)
-          case t: Type    => validateType(state, t, parents)
-          case i: Inlet   => validateInlet(state, i, parents)
-          case o: Outlet  => validateOutlet(state, o, parents)
-          case t: Term    => validateTerm(state, t, parents)
+          case h: Handler  => validateHandler(state, h, parents)
+          case t: Type     => validateType(state, t, parents)
+          case c: Constant => validateConstant(state, c, parents)
+          case i: Inlet    => validateInlet(state, i, parents)
+          case o: Outlet   => validateOutlet(state, o, parents)
+          case t: Term     => validateTerm(state, t, parents)
           case i: Include[RepositoryDefinition] @unchecked =>
             validateInclude(state, i)
         }
@@ -106,6 +109,7 @@ object DefinitionValidator {
       case cd: ContextDefinition =>
         cd match {
           case t: Type       => validateType(state, t, parents)
+          case c: Constant   => validateConstant(state, c, parents)
           case h: Handler    => validateHandler(state, h, parents)
           case f: Function   => validateFunction(state, f, parents)
           case e: Entity     => validateEntity(state, e, parents)
@@ -125,6 +129,7 @@ object DefinitionValidator {
         dd match {
           case a: Application => validateApplication(state, a, parents)
           case t: Type        => validateType(state, t, parents)
+          case c: Constant    => validateConstant(state, c, parents)
           case c: Context     => validateContext(state, c, parents)
           case d: Domain      => validateDomain(state, d, parents)
           case s: Story       => validateStory(state, s, parents)
@@ -135,17 +140,20 @@ object DefinitionValidator {
             validateInclude(state, i)
         }
       case hd: HandlerDefinition =>
-        hd match { case oc: OnClause => validateOnClause(state, oc, parents) }
+        hd match {
+          case oc: OnClause => validateOnClause(state, oc, parents)
+        }
       case oc: OnClauseDefinition =>
         oc match { case e: Example => validateExample(state, e, parents) }
 
       case ad: AdaptorDefinition =>
         ad match {
-          case h: Handler => validateHandler(state, h, parents)
-          case i: Inlet   => validateInlet(state, i, parents)
-          case o: Outlet  => validateOutlet(state, o, parents)
-          case t: Type    => validateType(state, t, parents)
-          case t: Term    => validateTerm(state, t, parents)
+          case h: Handler  => validateHandler(state, h, parents)
+          case i: Inlet    => validateInlet(state, i, parents)
+          case o: Outlet   => validateOutlet(state, o, parents)
+          case t: Type     => validateType(state, t, parents)
+          case t: Term     => validateTerm(state, t, parents)
+          case c: Constant => validateConstant(state, c, parents)
           case i: Include[AdaptorDefinition] @unchecked =>
             validateInclude(state, i)
         }
@@ -296,6 +304,16 @@ object DefinitionValidator {
       .checkDescription(t)
   }
 
+  private def validateConstant(
+    state: ValidationState,
+    c: Constant,
+    parents: Seq[Definition]
+  ): ValidationState = {
+    state
+      .checkDefinition(parents, c)
+      .checkDescription(c)
+    // TODO: Finish validation of constants
+  }
   private def validateState(
     state: ValidationState,
     s: State,
