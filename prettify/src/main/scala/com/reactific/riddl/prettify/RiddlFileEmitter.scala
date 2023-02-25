@@ -190,7 +190,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this.add(mt.usecase.kind.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
-  def emitMessageRef(mr: MessageRef): RiddlFileEmitter = { this.add(mr.format) }
+  def emitMessageRef(mr: MessageRef): RiddlFileEmitter = {
+    this.add(mr.format)
+  }
 
   def emitTypeRef(tr: TypeRef): RiddlFileEmitter = { this.add(tr.format) }
 

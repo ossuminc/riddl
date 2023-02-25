@@ -406,6 +406,14 @@ object Folding {
       @unused list: List[(Definition, Seq[Definition])]
     ): Seq[Definition] = { Seq.empty[Definition] }
 
+    def resolvePidRelativeTo[DEF <: Definition: ClassTag](
+      pid: PathIdentifier,
+      definition: Definition
+    ): Option[DEF] = {
+      val parents = definition +: symbolTable.parentsOf(definition)
+      this.resolvePathIdentifier[DEF](pid, parents)
+    }
+
     def resolvePathIdentifier[DEF <: Definition: ClassTag](
       pid: PathIdentifier,
       parents: Seq[Definition]

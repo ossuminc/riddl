@@ -75,35 +75,35 @@ trait TypeExpression extends AbstractDefinitions {
   /** Base of an enumeration for the four kinds of message types */
   sealed trait AggregateUseCase {
     @inline def kind: String
-    def format: String = kind.capitalize
+    def format: String = kind
   }
 
   /** An enumerator value for command types */
   final case object CommandCase extends AggregateUseCase {
-    @inline def kind: String = "command"
+    @inline def kind: String = "Command"
   }
 
   /** An enumerator value for event types */
   final case object EventCase extends AggregateUseCase {
-    @inline def kind: String = "event"
+    @inline def kind: String = "Event"
   }
 
   /** An enumerator value for query types */
   final case object QueryCase extends AggregateUseCase {
-    @inline def kind: String = "query"
+    @inline def kind: String = "Query"
   }
 
   /** An enumerator value for result types */
   final case object ResultCase extends AggregateUseCase {
-    @inline def kind: String = "result"
+    @inline def kind: String = "Result"
   }
 
   final case object RecordCase extends AggregateUseCase {
-    @inline def kind: String = "record"
+    @inline def kind: String = "Record"
   }
 
   final case object OtherCase extends AggregateUseCase {
-    @inline def kind: String = "other"
+    @inline def kind: String = "Other"
   }
 
   /** Base trait of the cardinality type expressions */

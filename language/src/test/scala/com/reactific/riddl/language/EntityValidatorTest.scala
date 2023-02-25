@@ -88,7 +88,7 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             MissingWarning,
-            "Type 'fields' should have a description"
+            "Record 'fields' should have a description"
           )
           assertValidationMessage(
             msgs,

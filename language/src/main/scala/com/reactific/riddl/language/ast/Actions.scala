@@ -155,7 +155,7 @@ trait Actions extends Definitions {
     loc: At,
     entity: EntityRef,
     state: StateRef,
-    newState: MessageConstructor
+    newValue: Expression
   ) extends EntityAction {
     override def format: String = s"morph ${entity.format} to ${state.format}"
   }

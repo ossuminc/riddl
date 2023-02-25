@@ -311,8 +311,16 @@ object DefinitionValidator {
   ): ValidationState = {
     state
       .checkDefinition(parents, c)
+      .step { st =>
+        val expr = c.value.asInstanceOf[Expression]
+        val maybeTypEx = st.getExpressionType(expr, parents)
+        if (!st.isAssignmentCompatible(Some(c.typeEx), maybeTypEx )) {
+          st.addError(expr.
+            loc, s"Expression value for ${c.identify} is not assignment" +
+          s" compatible with declared type ${c.typeEx.format}")
+        } else { st }
+      }
       .checkDescription(c)
-    // TODO: Finish validation of constants
   }
   private def validateState(
     state: ValidationState,

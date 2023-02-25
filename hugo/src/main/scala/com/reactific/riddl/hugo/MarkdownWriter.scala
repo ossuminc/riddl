@@ -584,7 +584,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
 
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
     val suffix = typ.typ match {
-      case mt: AggregateUseCaseTypeExpression => mt.usecase.kind.capitalize
+      case mt: AggregateUseCaseTypeExpression => mt.usecase.kind
       case _                                  => "Type"
     }
     containerHead(typ, suffix)

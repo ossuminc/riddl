@@ -315,7 +315,8 @@ trait Definitions extends Expressions with Options {
   sealed trait MessageRef extends Reference[Type] {
     def messageKind: AggregateUseCase
 
-    override def format: String = s"${messageKind.kind} ${pathId.format}"
+    override def format: String =
+      s"${messageKind.kind.toLowerCase} ${pathId.format}"
   }
 
   object MessageRef {
@@ -457,7 +458,12 @@ trait Definitions extends Expressions with Options {
       }
     }
 
-    final val kind: String = "Type"
+    final val kind: String = {
+      typ match {
+        case AggregateUseCaseTypeExpression(_, useCase, _) => useCase.kind
+        case _ => "Type"
+      }
+    }
 
     def format: String = ""
   }
