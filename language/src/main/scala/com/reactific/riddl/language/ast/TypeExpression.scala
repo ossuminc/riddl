@@ -102,10 +102,6 @@ trait TypeExpression extends AbstractDefinitions {
     @inline def kind: String = "Record"
   }
 
-  final case object OtherCase extends AggregateUseCase {
-    @inline def kind: String = "Other"
-  }
-
   /** Base trait of the cardinality type expressions */
   sealed trait Cardinality extends TypeExpression {
     def typeExp: TypeExpression

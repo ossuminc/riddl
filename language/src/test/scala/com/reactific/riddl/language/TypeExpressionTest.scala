@@ -8,7 +8,6 @@ package com.reactific.riddl.language
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
@@ -281,7 +280,8 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     PathIdentifier(At.empty, Seq("a", "b", "c", "d", "entity"))
   )
 
-  val message = AggregateUseCaseTypeExpression(At.empty, OtherCase, aggregation.fields)
+  val message =
+    AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields)
 
   val alias = AliasedTypeExpression(
     At.empty,
@@ -352,9 +352,9 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     }
   }
 
-  val optional = Optional(At.empty, integer)
-  val oneOrMore = OneOrMore(At.empty, integer)
-  val zeroOrMore = ZeroOrMore(At.empty, integer)
+  val optional: AST.Optional = Optional(At.empty, integer)
+  val oneOrMore: AST.OneOrMore = OneOrMore(At.empty, integer)
+  val zeroOrMore: AST.ZeroOrMore = ZeroOrMore(At.empty, integer)
 
   "Cardinality" must {
     "support optional" in {

@@ -321,7 +321,7 @@ trait Definitions extends Expressions with Options {
 
   object MessageRef {
     lazy val empty: MessageRef = new MessageRef {
-      def messageKind: AggregateUseCase = OtherCase
+      def messageKind: AggregateUseCase = RecordCase
 
       override def pathId: PathIdentifier = PathIdentifier.empty
 
@@ -387,17 +387,6 @@ trait Definitions extends Expressions with Options {
     def messageKind: AggregateUseCase = RecordCase
     override def isEmpty: Boolean =
       super.isEmpty && loc.isEmpty && pathId.isEmpty
-  }
-
-  /** A reference to an other message type
-    *
-    * @param loc
-    *   The location of the reference
-    * @param pathId
-    *   The path identifier to the result type
-    */
-  case class OtherRef(loc: At, pathId: PathIdentifier) extends MessageRef {
-    def messageKind: AggregateUseCase = OtherCase
   }
 
   /** A definition that represents a constant value for reference in behaviors

@@ -44,13 +44,8 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (RecordRef.apply _).tupled(tpl))
   }
 
-  private def otherRef[u: P]: P[OtherRef] = {
-    P(location ~ Keywords.other ~ pathIdentifier)
-      .map(tpl => (OtherRef.apply _).tupled(tpl))
-  }
-
   def messageRef[u: P]: P[MessageRef] = {
-    P(commandRef | eventRef | queryRef | resultRef | recordRef | otherRef)
+    P(commandRef | eventRef | queryRef | resultRef | recordRef)
   }
 
   def entityRef[u: P]: P[EntityRef] = {
