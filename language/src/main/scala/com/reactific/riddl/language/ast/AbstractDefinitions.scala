@@ -253,7 +253,7 @@ trait AbstractDefinitions {
   /** Base trait of definitions that are part of a Saga Definition */
   trait StateDefinition extends Definition
 
-  /** Base trait of any definition that occurs in the body of a projection */
-  trait ProjectionDefinition extends Definition
+  /** Base trait of any definition that occurs in the body of a projector */
+  trait ProjectorDefinition extends Definition
 
 }

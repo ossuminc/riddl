@@ -16,7 +16,7 @@ private[parsing] trait ContextParser
     extends HandlerParser
     with AdaptorParser
     with EntityParser
-    with ProjectionParser
+    with ProjectorParser
     with RepositoryParser
     with SagaParser
     with StreamingParser
@@ -49,7 +49,7 @@ private[parsing] trait ContextParser
     P(
       undefined(Seq.empty[ContextDefinition]) |
         (typeDef | handler | entity | adaptor | function | saga | streamlet |
-          projection | repository | inlet | outlet | connector | term |
+          projector | repository | inlet | outlet | connector | term |
           contextInclude).rep(0)
     )
   }
@@ -77,7 +77,7 @@ private[parsing] trait ContextParser
       )
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val projections = mapTo[Projection](groups.get(classOf[Projection]))
+      val projections = mapTo[Projector](groups.get(classOf[Projector]))
       val repos = mapTo[Repository](groups.get(classOf[Repository]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       Context(

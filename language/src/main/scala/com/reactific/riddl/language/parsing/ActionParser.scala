@@ -86,7 +86,7 @@ private[parsing] trait ActionParser
   private def tellAction[u: P]: P[TellAction] = {
     P(
       location ~ Keywords.tell ~/ messageConstructor ~ Readability.to.? ~
-        messageTakingRef
+        processorRef
     )./.map { t => (TellAction.apply _).tupled(t) }
   }
 

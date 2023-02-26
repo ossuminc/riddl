@@ -8,7 +8,6 @@ package com.reactific.riddl.language
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
@@ -281,7 +280,8 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     PathIdentifier(At.empty, Seq("a", "b", "c", "d", "entity"))
   )
 
-  val message = AggregateUseCaseTypeExpression(At.empty, OtherCase, aggregation.fields)
+  val message =
+    AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields)
 
   val alias = AliasedTypeExpression(
     At.empty,
@@ -330,9 +330,9 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       reference.isContainer mustBe false
     }
     "Support Messages" in {
-      AST.errorDescription(message) mustBe "Other of 27 fields"
+      AST.errorDescription(message) mustBe "Record of 27 fields"
       message.format mustBe
-        "Other { integer: Integer, abstract: Abstract, " +
+        "record { integer: Integer, abstract: Abstract, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
         "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
@@ -352,9 +352,9 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     }
   }
 
-  val optional = Optional(At.empty, integer)
-  val oneOrMore = OneOrMore(At.empty, integer)
-  val zeroOrMore = ZeroOrMore(At.empty, integer)
+  val optional: AST.Optional = Optional(At.empty, integer)
+  val oneOrMore: AST.OneOrMore = OneOrMore(At.empty, integer)
+  val zeroOrMore: AST.ZeroOrMore = ZeroOrMore(At.empty, integer)
 
   "Cardinality" must {
     "support optional" in {

@@ -20,7 +20,8 @@ import scala.reflect.*
 
 object TestParser {}
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
-    extends TopLevelParser(input) with Matchers {
+    extends TopLevelParser(input)
+    with Matchers {
   push(input)
 
   def parse[T <: RiddlNode, U <: RiddlNode](
@@ -41,12 +42,13 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Invariant]   => invariant(_)
       case x if x == classOf[AST.Function]    => function(_)
       case x if x == classOf[AST.Streamlet]   => streamlet(_)
-      case x if x == classOf[AST.Projection]  => projection(_)
-      case x if x == classOf[AST.Connector]  => connector(_)
+      case x if x == classOf[AST.Projector]   => projector(_)
+      case x if x == classOf[AST.Connector]   => connector(_)
       case x if x == classOf[AST.Saga]        => saga(_)
       case x if x == classOf[AST.Example]     => example(_)
       case x if x == classOf[AST.Story]       => story(_)
-      case _ => throw new RuntimeException(
+      case _ =>
+        throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"
         )
     }

@@ -90,7 +90,7 @@ case class Finder(root: Definition) {
               case h: Handler => makeVitalStats(h, state.handlerStats)
               case p: Streamlet =>
                 makeVitalStats(p, state.streamletStats)
-              case p: Projection =>
+              case p: Projector =>
                 makeVitalStats(p, state.projectionStats)
               case r: Repository =>
                 makeVitalStats(r, state.repositoryStats)

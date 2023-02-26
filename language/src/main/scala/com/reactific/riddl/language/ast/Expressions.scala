@@ -63,7 +63,7 @@ trait Expressions extends TypeExpression {
   }
 
   /** Represents an opoerator that is merely a reference to some value,
-    * presumably an entity state value but could also be a projection or
+    * presumably an entity state value but could also be a projector or
     * repository value.
     *
     * @param loc

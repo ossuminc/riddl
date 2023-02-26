@@ -144,8 +144,8 @@ class ContextValidationTest extends ValidatingTest {
           context.streamlets.head mustBe expected
       }
     }
-    "allow projections" in {
-      val input = """projection foo is {
+    "allow projectors" in {
+      val input = """projector foo is {
                     |  record one is { ??? }
                     |  handler one is { ??? }
                     |}
@@ -155,12 +155,12 @@ class ContextValidationTest extends ValidatingTest {
           val errors = msgs.justErrors
           info(errors.format)
           errors must be(empty)
-          context.projections.size mustBe 1
-          val actual = context.projections.head
+          context.projectors.size mustBe 1
+          val actual = context.projectors.head
           val expected =
-            Projection(
+            Projector(
               (2, 2, rpi),
-              Identifier((2, 13, rpi), "foo"),
+              Identifier((2, 12, rpi), "foo"),
               List(),
               List(),
               List(),

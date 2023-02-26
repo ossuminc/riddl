@@ -269,7 +269,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   "Pipe" should { "have a test" in { pending } }
   "Plant" should { "have a test" in { pending } }
   "Processor" should { "have a test" in { pending } }
-  "Projection" should { "have a test" in { pending } }
+  "Projector" should { "have a test" in { pending } }
   "Repository" should { "have a test" in { pending } }
 
   "RootContainer" should {

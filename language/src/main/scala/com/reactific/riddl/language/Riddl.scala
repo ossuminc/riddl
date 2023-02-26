@@ -210,7 +210,7 @@ object Riddl {
         "Handler" -> handler,
         "Plant" -> plant,
         "Processor" -> processor,
-        "Projection" -> projection,
+        "Projector" -> projection,
         "Saga" -> saga,
         "Story" -> story,
         "Other" -> other

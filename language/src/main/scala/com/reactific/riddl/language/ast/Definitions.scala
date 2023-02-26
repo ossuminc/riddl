@@ -39,7 +39,7 @@ trait Definitions extends Expressions with Options {
       with ApplicationDefinition
       with ContextDefinition
       with EntityDefinition
-      with ProjectionDefinition
+      with ProjectorDefinition
       with RepositoryDefinition
       with StreamletDefinition
       with SagaDefinition
@@ -64,7 +64,7 @@ trait Definitions extends Expressions with Options {
       with EntityDefinition
       with FunctionDefinition
       with StreamletDefinition
-      with ProjectionDefinition
+      with ProjectorDefinition
       with RepositoryDefinition
       with SagaDefinition
       with StoryDefinition
@@ -74,7 +74,7 @@ trait Definitions extends Expressions with Options {
     * @tparam T
     *   The kind of reference needed
     */
-  trait MessageTakingRef[+T <: Processor[?, ?]] extends Reference[T]
+  trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
 
   /** A term definition for the glossary */
   case class Term(
@@ -269,11 +269,6 @@ trait Definitions extends Expressions with Options {
     def inlets: Seq[Inlet]
 
     def outlets: Seq[Outlet]
-
-    def hasInlets: Boolean = inlets.nonEmpty
-
-    def hasOutlets: Boolean = outlets.nonEmpty
-
   }
 
   /** The root of the containment hierarchy, corresponding roughly to a level
@@ -321,7 +316,7 @@ trait Definitions extends Expressions with Options {
 
   object MessageRef {
     lazy val empty: MessageRef = new MessageRef {
-      def messageKind: AggregateUseCase = OtherCase
+      def messageKind: AggregateUseCase = RecordCase
 
       override def pathId: PathIdentifier = PathIdentifier.empty
 
@@ -389,24 +384,19 @@ trait Definitions extends Expressions with Options {
       super.isEmpty && loc.isEmpty && pathId.isEmpty
   }
 
-  /** A reference to an other message type
-    *
-    * @param loc
-    *   The location of the reference
-    * @param pathId
-    *   The path identifier to the result type
-    */
-  case class OtherRef(loc: At, pathId: PathIdentifier) extends MessageRef {
-    def messageKind: AggregateUseCase = OtherCase
-  }
-
   /** A definition that represents a constant value for reference in behaviors
     * @param loc
+    *   The location in the source of the Constant
     * @param id
+    *   The unique identifier of the Constant
     * @param typeEx
+    *   The type expression goverining the range of values the constant can have
     * @param value
+    *   The value of the constant
     * @param brief
+    *   A brief descriptin of the constant
     * @param description
+    *   A detailed description of the constant
     */
   case class Constant(
     loc: At,
@@ -461,7 +451,7 @@ trait Definitions extends Expressions with Options {
     final val kind: String = {
       typ match {
         case AggregateUseCaseTypeExpression(_, useCase, _) => useCase.kind
-        case _ => "Type"
+        case _                                             => "Type"
       }
     }
 
@@ -585,7 +575,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Entity] {
+      extends ProcessorRef[Entity] {
     override def format: String = s"${Keywords.entity} ${pathId.format}"
   }
 
@@ -686,7 +676,7 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends LeafDefinition
       with EntityDefinition
-      with ProjectionDefinition
+      with ProjectorDefinition
       with StateDefinition {
     override def isEmpty: Boolean = expression.isEmpty
 
@@ -859,7 +849,7 @@ trait Definitions extends Expressions with Options {
       with StateDefinition
       with RepositoryDefinition
       with StreamletDefinition
-      with ProjectionDefinition {
+      with ProjectorDefinition {
     override def isEmpty: Boolean = clauses.isEmpty
 
     override def contents: Seq[HandlerDefinition] = clauses
@@ -888,9 +878,16 @@ trait Definitions extends Expressions with Options {
     *   The location of the state definition
     * @param id
     *   The name of the state definition
-    * @param aggregation
-    *   The aggregation that provides the field name and type expression
-    *   associations
+    * @param typ
+    *   A reference to a type definition that provides the range of values that
+    *   the state may assume.
+    * @param types
+    *   Types defined within the body of the state
+    * @param handlers
+    *   The handler definitions that may occur when this state is active
+    * @param invariants
+    *   Expressions of boolean logic that must always evaluate to true before
+    *   and after an entity changes when this state is active.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1058,7 +1055,7 @@ trait Definitions extends Expressions with Options {
   }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Adaptor] {
+      extends ProcessorRef[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${pathId.format}"
   }
 
@@ -1122,16 +1119,16 @@ trait Definitions extends Expressions with Options {
     * @param loc
     *   The location of the state reference
     * @param pathId
-    *   The path identifier of the referenced projection definition
+    *   The path identifier of the referenced projector definition
     */
   case class RepositoryRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Projection] {
+      extends ProcessorRef[Projector] {
     override def format: String = s"${Keywords.repository} ${pathId.format}"
   }
 
   /** Projections get their name from Euclidean Geometry but are probably more
     * analogous to a relational database view. The concept is very simple in
-    * RIDDL: projections gather data from entities and other sources, transform
+    * RIDDL: projectors gather data from entities and other sources, transform
     * that data into a specific record type, and support querying that data
     * arbitrarily.
     *
@@ -1140,9 +1137,9 @@ trait Definitions extends Expressions with Options {
     * @see
     *   https://en.wikipedia.org/wiki/Projection_(mathematics)
     * @param loc
-    *   Location in the source of the Projection
+    *   Location in the source of the Projector
     * @param id
-    *   The unique identifier for this Projection
+    *   The unique identifier for this Projector
     * @param authors
     *   The authors of this definition
     * @param options
@@ -1152,19 +1149,19 @@ trait Definitions extends Expressions with Options {
     * @param handlers
     *   Specifies how to handle
     * @param terms
-    *   Definitions of terms about this Projection
+    *   Definitions of terms about this Projector
     * @param brief
-    *   A brief description of this Projection
+    *   A brief description of this Projector
     * @param description
-    *   A detailed description of this Projection
+    *   A detailed description of this Projector
     */
-  case class Projection(
+  case class Projector(
     loc: At,
     id: Identifier,
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
-    includes: Seq[Include[ProjectionDefinition]] = Seq
-      .empty[Include[ProjectionDefinition]],
+    includes: Seq[Include[ProjectorDefinition]] = Seq
+      .empty[Include[ProjectorDefinition]],
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
@@ -1174,13 +1171,13 @@ trait Definitions extends Expressions with Options {
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[ProjectionOption, ProjectionDefinition]
+  ) extends Processor[ProjectionOption, ProjectorDefinition]
       with ContextDefinition
       with WithTypes {
-    override lazy val contents: Seq[ProjectionDefinition] = {
+    override lazy val contents: Seq[ProjectorDefinition] = {
       super.contents ++ handlers ++ invariants ++ terms
     }
-    final val kind: String = "Projection"
+    final val kind: String = "Projector"
 
     override def maturity: Int = {
       var score = super.maturity
@@ -1192,23 +1189,23 @@ trait Definitions extends Expressions with Options {
     }
   }
 
-  /** A reference to an context's projection definition
+  /** A reference to an context's projector definition
     *
     * @param loc
     *   The location of the state reference
     * @param pathId
-    *   The path identifier of the referenced projection definition
+    *   The path identifier of the referenced projector definition
     */
   case class ProjectionRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Projection] {
-    override def format: String = s"${Keywords.projection} ${pathId.format}"
+      extends ProcessorRef[Projector] {
+    override def format: String = s"${Keywords.projector} ${pathId.format}"
   }
 
   /** A bounded context definition. Bounded contexts provide a definitional
     * boundary on the language used to describe some aspect of a system. They
     * imply a tightly integrated ecosystem of one or more microservices that
     * share a common purpose. Context can be used to house entities, read side
-    * projections, sagas, adaptations to other contexts, apis, and etc.
+    * projectors, sagas, adaptations to other contexts, apis, and etc.
     *
     * @param loc
     *   The location of the bounded context definition
@@ -1246,7 +1243,7 @@ trait Definitions extends Expressions with Options {
     includes: Seq[Include[ContextDefinition]] = Seq
       .empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
-    projections: Seq[Projection] = Seq.empty[Projection],
+    projectors: Seq[Projector] = Seq.empty[Projector],
     repositories: Seq[Repository] = Seq.empty[Repository],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
@@ -1258,7 +1255,7 @@ trait Definitions extends Expressions with Options {
       with DomainDefinition {
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
       types ++ entities ++ adaptors ++ sagas ++ streamlets ++ functions ++
-      terms ++ handlers ++ projections ++ repositories ++ inlets ++
+      terms ++ handlers ++ projectors ++ repositories ++ inlets ++
       outlets ++ connections
 
     final val kind: String = "Context"
@@ -1273,7 +1270,7 @@ trait Definitions extends Expressions with Options {
       if (streamlets.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       if (functions.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       if (handlers.nonEmpty) score += 10
-      if (projections.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if (projectors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
   }
@@ -1286,7 +1283,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Context] {
+      extends ProcessorRef[Context] {
     override def format: String = s"context ${pathId.format}"
   }
 
@@ -1508,15 +1505,15 @@ trait Definitions extends Expressions with Options {
 
   }
 
-  /** A reference to an context's projection definition
+  /** A reference to an context's projector definition
     *
     * @param loc
     *   The location of the state reference
     * @param pathId
-    *   The path identifier of the referenced projection definition
+    *   The path identifier of the referenced projector definition
     */
   case class StreamletRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Streamlet] {
+      extends ProcessorRef[Streamlet] {
     override def format: String = s"${Keywords.streamlet} ${pathId.format}"
   }
 
@@ -2097,7 +2094,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier that refers to the Application
     */
   case class ApplicationRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Application] {
+      extends ProcessorRef[Application] {
     def format: String = s"${Keywords.application} ${pathId.format}"
   }
 

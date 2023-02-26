@@ -14,7 +14,7 @@ import Terminals.*
 private[parsing] trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
 
   private def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
-    messageTakingRef | sagaRef | functionRef
+    processorRef | sagaRef | functionRef
   }
 
   private def arbitraryStep[u: P]: P[ArbitraryStep] = {

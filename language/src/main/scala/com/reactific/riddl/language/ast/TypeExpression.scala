@@ -102,10 +102,6 @@ trait TypeExpression extends AbstractDefinitions {
     @inline def kind: String = "Record"
   }
 
-  final case object OtherCase extends AggregateUseCase {
-    @inline def kind: String = "Other"
-  }
-
   /** Base trait of the cardinality type expressions */
   sealed trait Cardinality extends TypeExpression {
     def typeExp: TypeExpression
@@ -254,7 +250,7 @@ trait TypeExpression extends AbstractDefinitions {
       with SagaDefinition
       with StateDefinition
       with FunctionDefinition
-      with ProjectionDefinition {
+      with ProjectorDefinition {
     override def format: String = s"${id.format}: ${typeEx.format}"
     final val kind: String = "Field"
   }
@@ -385,7 +381,9 @@ trait TypeExpression extends AbstractDefinitions {
     usecase: AggregateUseCase,
     fields: Seq[Field] = Seq.empty[Field]
   ) extends AggregateTypeExpression {
-    override def format: String = { usecase.format + " " + super.format }
+    override def format: String = {
+      usecase.format.toLowerCase() + " " + super.format
+    }
   }
 
   /** Base class of all pre-defined type expressions

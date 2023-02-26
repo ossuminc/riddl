@@ -194,7 +194,7 @@ trait Actions extends Definitions {
   case class TellAction(
     loc: At,
     msg: MessageConstructor,
-    entityRef: MessageTakingRef[Processor[?, ?]]
+    entityRef: ProcessorRef[Processor[?, ?]]
   ) extends EntityAction {
     override def format: String = s"tell ${msg.format} to ${entityRef.format}"
   }

@@ -115,7 +115,7 @@ object DefinitionValidator {
           case e: Entity     => validateEntity(state, e, parents)
           case a: Adaptor    => validateAdaptor(state, a, parents)
           case s: Streamlet  => validateStreamlet(state, s, parents)
-          case p: Projection => validateProjection(state, p, parents)
+          case p: Projector => validateProjection(state, p, parents)
           case r: Repository => validateRepository(state, r, parents)
           case t: Term       => validateTerm(state, t, parents)
           case s: Saga       => validateSaga(state, s, parents)
@@ -441,7 +441,7 @@ object DefinitionValidator {
 
   private def validateProjection(
     state: ValidationState,
-    p: Projection,
+    p: Projector,
     parents: Seq[Definition]
   ): ValidationState = {
     state

@@ -12,7 +12,7 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait ProjectionParser
+private[parsing] trait ProjectorParser
     extends TypeParser
     with HandlerParser
     with StreamingParser {
@@ -25,11 +25,11 @@ private[parsing] trait ProjectionParser
     }
   }
 
-  private def projectionInclude[u: P]: P[Include[ProjectionDefinition]] = {
-    include[ProjectionDefinition, u](projectionDefinitions(_))
+  private def projectionInclude[u: P]: P[Include[ProjectorDefinition]] = {
+    include[ProjectorDefinition, u](projectionDefinitions(_))
   }
 
-  private def projectionDefinitions[u: P]: P[Seq[ProjectionDefinition]] = {
+  private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
       term | projectionInclude | handler | inlet | outlet | invariant |
         constant | typeDef
@@ -37,7 +37,7 @@ private[parsing] trait ProjectionParser
   }
 
   private type ProjectionBody =
-    (Seq[ProjectionOption], Seq[Type], Seq[ProjectionDefinition])
+    (Seq[ProjectionOption], Seq[Type], Seq[ProjectorDefinition])
 
   private def projectionBody[u: P]: P[ProjectionBody] = {
     P(
@@ -45,24 +45,24 @@ private[parsing] trait ProjectionParser
         (
           Seq.empty[ProjectionOption],
           Seq.empty[Type],
-          Seq.empty[ProjectionDefinition]
+          Seq.empty[ProjectorDefinition]
         )
       ) | (projectionOptions ~ typeDef.rep(0) ~ projectionDefinitions)
     )
   }
 
-  /** Parses projection definitions, e.g.
+  /** Parses projector definitions, e.g.
     *
     * {{{
-    *   projection myView is {
+    *   projector myView is {
     *     foo: Boolean
     *     bar: Integer
     *   }
     * }}}
     */
-  def projection[u: P]: P[Projection] = {
+  def projector[u: P]: P[Projector] = {
     P(
-      location ~ Keywords.projection ~/ identifier ~ authorRefs ~ is ~ open ~
+      location ~ Keywords.projector ~/ identifier ~ authorRefs ~ is ~ open ~
         projectionBody ~ close ~ briefly ~ description
     ).map {
       case (
@@ -79,13 +79,13 @@ private[parsing] trait ProjectionParser
         val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
         val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
         val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-        val includes = mapTo[Include[ProjectionDefinition]](
+        val includes = mapTo[Include[ProjectorDefinition]](
           groups.get(
-            classOf[Include[ProjectionDefinition]]
+            classOf[Include[ProjectorDefinition]]
           )
         )
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        Projection(
+        Projector(
           loc,
           id,
           authors,
