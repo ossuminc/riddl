@@ -330,9 +330,9 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       reference.isContainer mustBe false
     }
     "Support Messages" in {
-      AST.errorDescription(message) mustBe "Other of 27 fields"
+      AST.errorDescription(message) mustBe "Record of 27 fields"
       message.format mustBe
-        "Other { integer: Integer, abstract: Abstract, " +
+        "record { integer: Integer, abstract: Abstract, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
         "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +

@@ -381,7 +381,9 @@ trait TypeExpression extends AbstractDefinitions {
     usecase: AggregateUseCase,
     fields: Seq[Field] = Seq.empty[Field]
   ) extends AggregateTypeExpression {
-    override def format: String = { usecase.format + " " + super.format }
+    override def format: String = {
+      usecase.format.toLowerCase() + " " + super.format
+    }
   }
 
   /** Base class of all pre-defined type expressions
