@@ -155,7 +155,7 @@ object Terminals {
     final val parallel = "parallel"
     final val pipe = "pipe"
     final val plant = "plant"
-    final val projection = "projection"
+    final val projector = "projector"
     final val query = "query"
     final val range = "range"
     final val reference = "reference"

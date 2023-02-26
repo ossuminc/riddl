@@ -263,7 +263,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case d: Domain     => mkd.emitDomain(d, parents)
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
-          case p: Projection => mkd.emitProjection(p, parents)
+          case p: Projector => mkd.emitProjection(p, parents)
           case _: Repository => // TODO: mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case s: Story      => mkd.emitStory(s, stack)

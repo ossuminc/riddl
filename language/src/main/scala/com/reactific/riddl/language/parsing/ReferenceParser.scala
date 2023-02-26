@@ -112,7 +112,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
   }
 
   private def projectionRef[u: P]: P[ProjectionRef] = {
-    P(location ~ Keywords.projection ~ pathIdentifier)
+    P(location ~ Keywords.projector ~ pathIdentifier)
       .map(tpl => (ProjectionRef.apply _).tupled(tpl))
   }
 

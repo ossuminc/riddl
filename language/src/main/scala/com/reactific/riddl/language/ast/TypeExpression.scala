@@ -250,7 +250,7 @@ trait TypeExpression extends AbstractDefinitions {
       with SagaDefinition
       with StateDefinition
       with FunctionDefinition
-      with ProjectionDefinition {
+      with ProjectorDefinition {
     override def format: String = s"${id.format}: ${typeEx.format}"
     final val kind: String = "Field"
   }

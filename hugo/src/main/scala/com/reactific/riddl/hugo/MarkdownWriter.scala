@@ -903,10 +903,10 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def emitProjection(
-    projection: Projection,
+    projection: Projector,
     parents: Seq[String]
   ): this.type = {
-    containerHead(projection, "Projection")
+    containerHead(projection, "Projector")
     emitDefDoc(projection, parents)
     if (projection.types.nonEmpty) {
       emitTypesToc(projection)
