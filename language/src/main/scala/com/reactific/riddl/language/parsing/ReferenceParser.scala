@@ -14,7 +14,7 @@ import Terminals.*
 
 private[parsing] trait ReferenceParser extends CommonParser {
 
-  def adaptorRef[u: P]: P[AdaptorRef] = {
+  private def adaptorRef[u: P]: P[AdaptorRef] = {
     P(location ~ Keywords.adaptor ~ pathIdentifier)
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
@@ -39,7 +39,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
-  def recordRef[u: P]: P[RecordRef] = {
+  private def recordRef[u: P]: P[RecordRef] = {
     P(location ~ Keywords.record ~ pathIdentifier)
       .map(tpl => (RecordRef.apply _).tupled(tpl))
   }
@@ -89,11 +89,6 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (ContextRef.apply _).tupled(tpl))
   }
 
-  def domainRef[u: P]: P[DomainRef] = {
-    P(location ~ Keywords.domain ~ pathIdentifier)
-      .map(tpl => (DomainRef.apply _).tupled(tpl))
-  }
-
   def outletRef[u: P]: P[OutletRef] = {
     P(location ~ Keywords.outlet ~ pathIdentifier)
       .map(tpl => (OutletRef.apply _).tupled(tpl))
@@ -116,12 +111,12 @@ private[parsing] trait ReferenceParser extends CommonParser {
     ).map(tpl => (StreamletRef.apply _).tupled(tpl))
   }
 
-  def projectionRef[u: P]: P[ProjectionRef] = {
+  private def projectionRef[u: P]: P[ProjectionRef] = {
     P(location ~ Keywords.projection ~ pathIdentifier)
       .map(tpl => (ProjectionRef.apply _).tupled(tpl))
   }
 
-  def repositoryRef[u: P]: P[RepositoryRef] = {
+  private def repositoryRef[u: P]: P[RepositoryRef] = {
     P(location ~ Keywords.repository ~ pathIdentifier)
       .map(tpl => (RepositoryRef.apply _).tupled(tpl))
   }
@@ -162,7 +157,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .rep(0, ",", 3)
   }
 
-  def messageTakingRef[u: P]: P[MessageTakingRef[Processor[?, ?]]] = {
+  def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
     P(
       adaptorRef | applicationRef | contextRef | entityRef | projectionRef |
         repositoryRef | streamletRef

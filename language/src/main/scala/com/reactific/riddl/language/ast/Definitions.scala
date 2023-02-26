@@ -74,7 +74,7 @@ trait Definitions extends Expressions with Options {
     * @tparam T
     *   The kind of reference needed
     */
-  trait MessageTakingRef[+T <: Processor[?, ?]] extends Reference[T]
+  trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
 
   /** A term definition for the glossary */
   case class Term(
@@ -574,7 +574,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Entity] {
+      extends ProcessorRef[Entity] {
     override def format: String = s"${Keywords.entity} ${pathId.format}"
   }
 
@@ -1047,7 +1047,7 @@ trait Definitions extends Expressions with Options {
   }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Adaptor] {
+      extends ProcessorRef[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${pathId.format}"
   }
 
@@ -1114,7 +1114,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced projection definition
     */
   case class RepositoryRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Projection] {
+      extends ProcessorRef[Projection] {
     override def format: String = s"${Keywords.repository} ${pathId.format}"
   }
 
@@ -1189,7 +1189,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced projection definition
     */
   case class ProjectionRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Projection] {
+      extends ProcessorRef[Projection] {
     override def format: String = s"${Keywords.projection} ${pathId.format}"
   }
 
@@ -1275,7 +1275,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier for the referenced context
     */
   case class ContextRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Context] {
+      extends ProcessorRef[Context] {
     override def format: String = s"context ${pathId.format}"
   }
 
@@ -1505,7 +1505,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier of the referenced projection definition
     */
   case class StreamletRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Streamlet] {
+      extends ProcessorRef[Streamlet] {
     override def format: String = s"${Keywords.streamlet} ${pathId.format}"
   }
 
@@ -2086,7 +2086,7 @@ trait Definitions extends Expressions with Options {
     *   The path identifier that refers to the Application
     */
   case class ApplicationRef(loc: At, pathId: PathIdentifier)
-      extends MessageTakingRef[Application] {
+      extends ProcessorRef[Application] {
     def format: String = s"${Keywords.application} ${pathId.format}"
   }
 
