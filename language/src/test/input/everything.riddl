@@ -22,20 +22,10 @@ domain Everything by author Reid is {
 
   actor Author is "human" briefly "A scoundrel"
 
-  story WritingABook is {
+  epic WritingABook is {
     actor ^Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
-    example one {
-      given "I need to write a book"
-      when "I am writing the book"
-      then "I can easily type words on the screen instead of using a pen"
-    } described by "nothing"
-    example two {
-      given "I need to edit a previously written book"
-      when "I am revising the book"
-      then "I can erase and re-type words on the screen"
-    }
-  } described as "A simple authoring story"
+  } described as "A simple authoring epic"
 
   // Domains are composed of bounded contexts so ...
   context full is {

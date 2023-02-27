@@ -132,7 +132,7 @@ object DefinitionValidator {
           case c: Constant    => validateConstant(state, c, parents)
           case c: Context     => validateContext(state, c, parents)
           case d: Domain      => validateDomain(state, d, parents)
-          case s: Story       => validateStory(state, s, parents)
+          case s: Epic       => validateStory(state, s, parents)
           case t: Term        => validateTerm(state, t, parents)
           case a: Author      => validateAuthorInfo(state, a, parents)
           case a: Actor       => validateActor(state, a, parents)
@@ -582,15 +582,13 @@ object DefinitionValidator {
 
   private def validateStory(
     state: ValidationState,
-    s: Story,
+    s: Epic,
     parents: Seq[Definition]
   ): ValidationState = {
-    val s1: ValidationState =
-      state.checkContainer(parents, s).checkThat(s.userStory.isEmpty) {
-        vs: state.type =>
-          vs.addMissing(s.loc, s"${s.identify} is missing a user story")
-      }
-    s1.checkExamples(s.examples, parents).checkDescription(s)
+    state.checkContainer(parents, s).checkThat(s.userStory.isEmpty) {
+      vs: state.type =>
+        vs.addMissing(s.loc, s"${s.identify} is missing a user story")
+    }.checkDescription(s)
   }
 
   private def validateApplication(
@@ -662,21 +660,21 @@ object DefinitionValidator {
       .stepIf(sc.interactions.nonEmpty) { st: state.type =>
         sc.interactions.foldLeft[st.type](st) { (st, step) =>
           step match {
-            case par: ParallelGroup =>
+            case par: ParallelInteractions =>
               st.stepIf(par.contents.isEmpty) { vs =>
                 vs.addMissing(
                   par.loc,
                   "Parallel interaction should not be empty"
                 )
               }
-            case opt: OptionalGroup =>
+            case opt: OptionalInteractions =>
               st.stepIf(opt.contents.isEmpty) { vs =>
                 vs.addMissing(
                   opt.loc,
                   "Optional interaction should not be empty"
                 )
               }
-            case is: InteractionStep =>
+            case is: GenericInteraction =>
               st
                 .checkPathRef[Definition](is.from.pathId, sc, parents)()()
                 .checkPathRef[Definition](is.to.pathId, sc, parents)()()

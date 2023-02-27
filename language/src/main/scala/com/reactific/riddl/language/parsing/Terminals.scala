@@ -113,6 +113,7 @@ object Terminals {
     final val else_ = "else"
     final val email = "email"
     final val entity = "entity"
+    final val epic = "epic"
     final val error = "error"
     final val event = "event"
     final val example = "example"

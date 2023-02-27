@@ -32,7 +32,7 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
   }
 
   private def messageOrigins[u:P]: P[Reference[Definition]] = {
-    P(inletRef | processorRef | actorRef | storyRef )
+    P(inletRef | processorRef | actorRef | epicRef )
   }
   private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/

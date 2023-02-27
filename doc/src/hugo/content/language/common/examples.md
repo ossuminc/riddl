@@ -14,7 +14,7 @@ the definition that uses it. Gherkin examples are used in these places:
 * [Processors]({{< relref "../root/domain/streaming/processor.md" >}})
 * [Projections]({{< relref "../root/domain/context/projection" >}})
 * [Saga Actions]({{< relref "../root/domain/context/saga" >}})
-* [Story]({{< relref "../root/domain/story" >}})
+* [Epic]({{< relref "../root/domain/epic" >}})
 
 ## Structure
 

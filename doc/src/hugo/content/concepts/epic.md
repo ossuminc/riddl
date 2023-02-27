@@ -1,9 +1,10 @@
 ---
-title: "Stories"
+title: "Epics"
 draft: false
 ---
 
-A story in RIDDL is a definition that defines a user story. This is the same 
+An epic in RIDDL is a definition that defines a large user story with a set 
+of use cases.  This is the same 
 concept as the idea 
 [Kent Beck]({{< relref "../introduction/who-made-riddl-possible.md#kent-beck">}}) 
 [introduced in 1997](https://en.wikipedia.org/wiki/User_story#History). In 

@@ -10,7 +10,7 @@ import com.reactific.riddl.utils.FileBuilder
 
 case class SequenceDiagrammer(
   state: HugoTranslatorState,
-  story: Story,
+  story: Epic,
   parents: Seq[Definition])
     extends FileBuilder {
 
@@ -20,7 +20,7 @@ case class SequenceDiagrammer(
       interaction <- cs.interactions
     } yield {
       interaction match {
-        case is: InteractionStep => Seq[Reference[Definition]](is.from, is.to)
+        case is: GenericInteraction => Seq[Reference[Definition]](is.from, is.to)
         case _                   => Seq.empty[Reference[Definition]]
       }
     }).filterNot(_.isEmpty).flatten.distinctBy(_.pathId.value).map {
@@ -60,13 +60,13 @@ case class SequenceDiagrammer(
   for { cse <- story.cases } {
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl
     for { ntrctn <- cse.interactions } ntrctn match {
-      case is: InteractionStep =>
+      case is: GenericInteraction =>
         val from = participants(is.from.pathId.value)
         val to = participants(is.to.pathId.value)
         sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
         nl
-      case _: ParallelGroup => // TODO: include parallel groups
-      case _: OptionalGroup => // TODO: include optional groups
+      case _: ParallelInteractions => // TODO: include parallel groups
+      case _: OptionalInteractions => // TODO: include optional groups
     }
     sb.append("  end opt"); nl
   }

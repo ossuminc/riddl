@@ -48,13 +48,13 @@ Within a domain, you can define these things:
 * [Contexts]({{< relref "context.md" >}}) - a precisely defined bounded context within the domain
 * [Domains]({{< relref "domain.md" >}}) {{< icon "rotate-left" >}} - domains 
   can have nested domains (subdomains)
+* [Epics]({{< relref "epic.md" >}}) - a story about external entities
+  interacting with the domain
 * [Includes]({{< relref "include.md" >}}) - inclusion of entity content from a
   file
 * [Options]({{< relref "option.md" >}}) - optional declarations about a 
   definition
 * [Plants]({{< relref "plant.md" >}}) - a data processing plant
-* [Stories]({{< relref "story.md" >}}) - a story about external entities
-  interacting with the domain
 * [Terms]({{< relref "term.md" >}}) - definition of a term relevant to the
   domain
 * [Types]({{< relref "type.md" >}}) - information definitions used throughout

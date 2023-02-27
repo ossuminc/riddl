@@ -835,7 +835,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     emitTerms(application.terms)
   }
 
-  def emitStory(story: Story, stack: Seq[Definition]): this.type = {
+  def emitStory(story: Epic, stack: Seq[Definition]): this.type = {
     containerHead(story, "Story")
     val parents = state.makeParents(stack)
     emitBriefly(story, parents)

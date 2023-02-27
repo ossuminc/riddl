@@ -10,30 +10,18 @@ import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.LiteralString
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
-class StoryTest extends ValidatingTest {
+class EpicTest extends ValidatingTest {
 
   "Story" should {
     "parse and validate a case-less example " in {
       val rpi = RiddlParserInput(
         """domain foo is {
           |  actor Author is "human writer"
-          |story WritingABook is {
+          |epic WritingABook is {
           |  actor foo.Author wants "edit on the screen" so that
           |  "revise content more easily"
           |  shown by { http://example.com:80/path/to/WritingABook }
           |  case perfection is { ???  }
-          |  /////////////
-          |    example one {
-          |      given "I need to write a book"
-          |      when "I am writing the book"
-          |      then "I can easily type words on the screen instead of using a pen"
-          |    } described by "nothing"
-          |    example two {
-          |      given "I need to edit a previously written book"
-          |      when "I am revising the book"
-          |      then "I can erase and re-type words on the screen"
-          |    } described as "nothing"
-          |
           |} described as "A simple authoring story"
           |} described as "a parsing convenience"
           |""".stripMargin
@@ -61,7 +49,6 @@ class StoryTest extends ValidatingTest {
           story.cases mustNot be(empty)
           val sc = story.cases.head
           sc.id.value mustBe "perfection"
-          story.examples mustNot be(empty)
       }
     }
 
@@ -108,7 +95,7 @@ class StoryTest extends ValidatingTest {
           |
           |actor Owner is "a person"
           |
-          |story EstablishOrganization by author reid is {
+          |epic EstablishOrganization by author reid is {
           |  actor ^^Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
@@ -181,7 +168,7 @@ class StoryTest extends ValidatingTest {
           |
           |actor Owner is "a person"
           |
-          |story EstablishOrganization by author reid is {
+          |epic EstablishOrganization by author reid is {
           |  actor ^^Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
@@ -249,7 +236,7 @@ class StoryTest extends ValidatingTest {
           |
           |actor Owner is "a person"
           |
-          |story EstablishOrganization is {
+          |epic EstablishOrganization is {
           |  actor ^^Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly

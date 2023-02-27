@@ -95,7 +95,7 @@ case class Finder(root: Definition) {
               case r: Repository =>
                 makeVitalStats(r, state.repositoryStats)
               case s: Saga  => makeVitalStats(s, state.sagaStats)
-              case s: Story => makeVitalStats(s, state.storyStats)
+              case s: Epic => makeVitalStats(s, state.storyStats)
             }
           case t: Term =>
             state.terms_count += 1

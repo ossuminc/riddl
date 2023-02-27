@@ -51,7 +51,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       case _: Saga          => Keywords.saga
       case _: SagaStep      => Keywords.step
       case _: State         => Keywords.state
-      case _: Story         => Keywords.story
+      case _: Epic          => Keywords.epic
       case _: Term          => Keywords.term
       case _: Type          => Keywords.`type`
       case _                => "unknown"
@@ -100,7 +100,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): PrettifyState = {
       container match {
-        case story: Story => openStory(state, story)
+        case story: Epic => openStory(state, story)
         // FIXME: Implement UseCase, Interactions, etc.
         case domain: Domain      => openDomain(state, domain)
         case adaptor: Adaptor    => openAdaptor(state, adaptor)
@@ -155,7 +155,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     ): PrettifyState = {
       container match {
         case _: Type            => state // openContainer did all of it
-        case story: Story       => closeStory(state, story)
+        case story: Epic        => closeStory(state, story)
         case st: State          => state.withCurrent(_.closeDef(st))
         case _: OnMessageClause => closeOnClause(state)
         case include: Include[Definition] @unchecked =>
@@ -196,7 +196,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    private def openStory(state: PrettifyState, story: Story): PrettifyState = {
+    private def openStory(state: PrettifyState, story: Epic): PrettifyState = {
       state.withCurrent { st =>
         if (story.userStory.isEmpty) {
           st.openDef(story, withBrace = false).add(" ??? ")
@@ -218,7 +218,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
 
     private def closeStory(
       state: PrettifyState,
-      story: Story
+      story: Epic
     ): PrettifyState = {
       state.withCurrent(_.closeDef(story))
     }
@@ -336,7 +336,10 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       state: State
     ): PrettifyState = {
       reformatState.withCurrent { st =>
-        st.addSpace().add(s"${keyword(state)} ${state.id.format} of ${state.typ.format} is {")
+        st.addSpace()
+          .add(
+            s"${keyword(state)} ${state.id.format} of ${state.typ.format} is {"
+          )
         if (state.isEmpty) {
           st.add(" ??? }")
         } else {

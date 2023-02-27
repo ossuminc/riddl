@@ -111,7 +111,7 @@ class ASTTest extends AnyWordSpec with Matchers {
     State(At.empty, Identifier(At.empty, "state"), TypeRef())
   val storycase: UseCase =
     UseCase(At.empty, Identifier(At.empty, "storycase"))
-  val story: Story = Story(At.empty, Identifier(At.empty, "story"))
+  val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"))
   val term: Term = Term(At.empty, Identifier(At.empty, "term"))
   "Actor" should {
     "have a test" in {
@@ -184,6 +184,8 @@ class ASTTest extends AnyWordSpec with Matchers {
         types
     }
   }
+
+  "Epic" should { "format correctly" in { epic.format mustBe "epic epic" } }
 
   "Entity" should {
     "contents" should {
@@ -285,7 +287,6 @@ class ASTTest extends AnyWordSpec with Matchers {
   "Saga" should { "have a test" in { pending } }
   "SagaStep" should { "have a test" in { pending } }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
-  "Story" should { "format correctly" in { story.format mustBe "story story" } }
   "UseCase" should {
     "format correctly" in { storycase.format mustBe "case storycase" }
   }
