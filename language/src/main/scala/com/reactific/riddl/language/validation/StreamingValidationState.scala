@@ -130,7 +130,8 @@ trait StreamingValidationState extends ExampleValidationState {
       resolvePathIdentifier[Outlet](send.portlet.pathId, pars)
     }.toSeq
 
-    val unusedOutlets: Set[Outlet] = outlets.toSet -- usedOutlets
+    val unusedOutlets: scala.collection.Set[Outlet] = outlets.toSet --
+      usedOutlets
 
     for { outlet <- unusedOutlets } {
       val message = s"${outlet.identify} has nothing sent to it"

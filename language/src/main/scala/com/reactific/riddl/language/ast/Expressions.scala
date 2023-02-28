@@ -238,7 +238,8 @@ trait Expressions extends TypeExpression {
   case class DecimalValue(loc: At, d: BigDecimal)
       extends NumericExpression(loc) {
     override def format: String = d.toString
-    override def expressionType: TypeExpression = Decimal(loc)
+    override def expressionType: TypeExpression =
+      Decimal(loc, Long.MaxValue, Long.MaxValue)
   }
 
   /** Represents a literal string parsed between quote characters in the input

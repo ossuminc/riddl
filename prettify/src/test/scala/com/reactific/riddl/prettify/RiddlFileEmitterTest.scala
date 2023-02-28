@@ -92,7 +92,8 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
     "emit type expressions" in {
       rfe.clear
-      rfe.emitTypeExpression(Decimal(At.empty)).toString mustBe "Decimal"
+      rfe.emitTypeExpression(Decimal(At.empty,8,3)).toString mustBe
+        "Decimal(8,3)"
       rfe.clear
       rfe.emitTypeExpression(Real(At.empty)).toString mustBe "Real"
       rfe.clear

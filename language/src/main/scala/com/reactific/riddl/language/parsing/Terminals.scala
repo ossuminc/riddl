@@ -177,6 +177,7 @@ object Terminals {
     final val scenario = "scenario"
     final val see = "see"
     final val send = "send"
+    final val sequence = "sequence"
     final val set = "set"
     final val shown = "shown"
     final val sink = "sink"
@@ -217,6 +218,7 @@ object Terminals {
     final val Mass = "Mass" // in kilograms
     final val Mole = "Mole" // in mol (amount of substance)
     final val Nothing = "Nothing"
+    final val Natural = "Natural"
     final val Number = "Number"
     final val Pattern = "Pattern"
     final val Range = "Range"
@@ -227,6 +229,7 @@ object Terminals {
     final val TimeStamp = "TimeStamp"
     final val URL = "URL"
     final val UUID = "UUID"
+    final val Whole = "Whole"
   }
 
   object Readability {

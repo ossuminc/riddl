@@ -104,7 +104,8 @@ class ExpressionsTest extends AnyWordSpec with Matchers {
       false_.expressionType mustBe Bool(At.empty)
       func.expressionType mustBe Abstract(At.empty)
       group.expressionType mustBe Number(At.empty)
-      litDec.expressionType mustBe Decimal(At.empty)
+      litDec.expressionType mustBe Decimal(At.empty, Long.MaxValue, Long
+        .MaxValue)
       not_.expressionType mustBe Bool(At.empty)
       number.expressionType mustBe Number(At.empty)
       string.expressionType mustBe Strng(At.empty)

@@ -22,7 +22,7 @@ class AssignmentCompatibilityTest extends AnyWordSpec with Matchers {
   val number = Number(At.empty)
   val integer = Integer(At.empty)
   val real = Real(At.empty)
-  val decimal = Decimal(At.empty)
+  val decimal = Decimal(At.empty, 8, 3)
   val range = AST.RangeType(At.empty, 0, 100)
   val nothing = AST.Nothing(At.empty)
   val string = AST.Strng(At.empty)
