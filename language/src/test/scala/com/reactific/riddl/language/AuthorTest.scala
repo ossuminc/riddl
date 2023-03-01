@@ -121,13 +121,13 @@ class AuthorTest extends ValidatingTest {
         msgs.isOnlyIgnorable must be(true)
       }
     }
-    "referenced from Story" in {
+    "referenced from an Epic" in {
       val input = """domain Foo is {
                     |  author Reid is {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
-                    |  story Bar by author Reid is { ??? }
+                    |  epic Bar by author Reid is { ??? }
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>

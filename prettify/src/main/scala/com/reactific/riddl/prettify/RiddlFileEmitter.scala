@@ -104,9 +104,12 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitDescription(description: Option[Description]): RiddlFileEmitter = {
     description.foldLeft(this) { (s, desc: Description) =>
       val s2 = s.add(" described as {\n").indent
-      desc.lines.foldLeft(s2) { case (s3, line) =>
-        s3.add(s3.spc + "|" + line.s + "\n")
-      }.outdent.addLine("}")
+      desc.lines
+        .foldLeft(s2) { case (s3, line) =>
+          s3.add(s3.spc + "|" + line.s + "\n")
+        }
+        .outdent
+        .addLine("}")
     }
   }
 
@@ -121,7 +124,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def mkEnumeratorDescription(description: Option[Description]): String = {
     description match {
-      case Some(desc) => " described as { " + {
+      case Some(desc) =>
+        " described as { " + {
           desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
         }
       case None => ""
@@ -130,15 +134,18 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitEnumeration(enumeration: Enumeration): RiddlFileEmitter = {
     val head = this.add(s"any of {\n").indent
-    val enumerators: String = enumeration.enumerators.map { enumerator =>
-      enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
-        mkEnumeratorDescription(enumerator.description)
-    }.mkString(s"$spc", s",\n$spc", s"\n")
+    val enumerators: String = enumeration.enumerators
+      .map { enumerator =>
+        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
+          mkEnumeratorDescription(enumerator.description)
+      }
+      .mkString(s"$spc", s",\n$spc", s"\n")
     head.add(enumerators).outdent.addLine("}")
   }
 
   def emitAlternation(alternation: Alternation): RiddlFileEmitter = {
-    add(s"one of {\n").indent.addIndent("")
+    add(s"one of {\n").indent
+      .addIndent("")
       .emitTypeExpression(alternation.of.head)
     val s5 = alternation.of.tail.foldLeft(this) { (s4, te) =>
       s4.add(" or ").emitTypeExpression(te)
@@ -147,7 +154,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitField(field: Field): RiddlFileEmitter = {
-    this.add(s"${field.id.value}: ").emitTypeExpression(field.typeEx)
+    this
+      .add(s"${field.id.value}: ")
+      .emitTypeExpression(field.typeEx)
       .emitDescription(field.description)
   }
 
@@ -170,8 +179,19 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     emitFields(aggregation.fields)
   }
 
-  def emitMapping(mapping: Mapping): RiddlFileEmitter = {
-    this.add(s"mapping from ").emitTypeExpression(mapping.from).add(" to ")
+  private def emitSequence(sequence: Sequence): RiddlFileEmitter = {
+    this.add("sequence of ").emitTypeExpression(sequence.of)
+  }
+
+  private def emitSet(set: Set): RiddlFileEmitter = {
+    this.add("set of ").emitTypeExpression(set.of)
+  }
+
+  private def emitMapping(mapping: Mapping): RiddlFileEmitter = {
+    this
+      .add(s"mapping from ")
+      .emitTypeExpression(mapping.from)
+      .add(" to ")
       .emitTypeExpression(mapping.to)
   }
 
@@ -194,39 +214,51 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this.add(mr.format)
   }
 
-  def emitTypeRef(tr: TypeRef): RiddlFileEmitter = { this.add(tr.format) }
-
   def emitTypeExpression(typEx: TypeExpression): RiddlFileEmitter = {
     typEx match {
       case string: Strng                => emitString(string)
       case AliasedTypeExpression(_, id) => this.add(id.format)
-      case URL(_, scheme) => this
+      case URL(_, scheme) =>
+        this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
       case enumeration: Enumeration => emitEnumeration(enumeration)
       case alternation: Alternation => emitAlternation(alternation)
       case mapping: Mapping         => emitMapping(mapping)
+      case sequence: Sequence       => emitSequence(sequence)
+      case set: Set                 => emitSet(set)
       case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
-      case EntityReferenceTypeExpression(_, er) => this
+      case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
+      case EntityReferenceTypeExpression(_, er) =>
+        this
           .add(s"${Keywords.reference} to ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
       case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")
       case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => this.emitTypeExpression(typex).add("+")
-      case SpecificRange(_, typex, n, x) => this.emitTypeExpression(typex)
-          .add("{").add(n.toString).add(",").add(x.toString).add("}")
+      case SpecificRange(_, typex, n, x) =>
+        this
+          .emitTypeExpression(typex)
+          .add("{")
+          .add(n.toString)
+          .add(",")
+          .add(x.toString)
+          .add("}")
       case ate: AggregateTypeExpression =>
         ate match {
-          case aggr: Aggregation => emitAggregation(aggr)
-          case mt: AggregateUseCaseTypeExpression      => emitMessageType(mt)
+          case aggr: Aggregation                  => emitAggregation(aggr)
+          case mt: AggregateUseCaseTypeExpression => emitMessageType(mt)
         }
       case p: PredefinedType => this.add(p.kind)
     }
   }
 
   def emitType(t: Type): RiddlFileEmitter = {
-    this.add(s"${spc}type ${t.id.value} is ").emitTypeExpression(t.typ)
-      .emitDescription(t.description).add("\n")
+    this
+      .add(s"${spc}type ${t.id.value} is ")
+      .emitTypeExpression(t.typ)
+      .emitDescription(t.description)
+      .add("\n")
   }
 
   def emitCondition(

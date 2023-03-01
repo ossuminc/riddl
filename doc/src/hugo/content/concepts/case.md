@@ -27,7 +27,8 @@ The following table shows the pairings recognized:
  
 
 ## Occurs In
-* [Stories]({{< relref "story.md" >}})
+* [Epic]({{< relref "epic.md" >}})
+* [Use Case]({{< relref "case.md" >}})
 
 ## Contains)
 * [Examples]({{< relref "example.md" >}})

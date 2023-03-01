@@ -330,13 +330,13 @@ trait Options extends AbstractDefinitions {
 
   ////////////////////////////////////////////////////////////////// DOMAIN
 
-  sealed abstract class StoryOption(val name: String) extends OptionValue
+  sealed abstract class EpicOption(val name: String) extends OptionValue
 
-  case class StoryTechnologyOption(
+  case class EpicTechnologyOption(
     loc: At,
     override val args: Seq[LiteralString])
-      extends StoryOption("technology")
+      extends EpicOption("technology")
 
-  case class StorySynchronousOption(loc: At) extends StoryOption("synch")
+  case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
 
 }

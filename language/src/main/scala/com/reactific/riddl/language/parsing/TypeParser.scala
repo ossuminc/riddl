@@ -237,19 +237,20 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
         Predefined.Luminosity,
         Predefined.Mass,
         Predefined.Mole,
+        Predefined.Natural,
         Predefined.Nothing,
         Predefined.Number,
         Predefined.Real,
         Predefined.Temperature,
         Predefined.TimeStamp,
         Predefined.Time,
-        Predefined.UUID
+        Predefined.UUID,
+        Predefined.Whole
       ).! ~~ !CharPred(_.isLetterOrDigit)
     ).map {
       case (at, Predefined.Abstract)    => AST.Abstract(at)
       case (at, Predefined.Boolean)     => AST.Bool(at)
       case (at, Predefined.Current)     => AST.Current(at)
-      case (at, Predefined.Decimal)     => AST.Decimal(at)
       case (at, Predefined.Duration)    => AST.Duration(at)
       case (at, Predefined.DateTime)    => AST.DateTime(at)
       case (at, Predefined.Date)        => AST.Date(at)
@@ -260,12 +261,14 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
       case (at, Predefined.Mass)        => AST.Mass(at)
       case (at, Predefined.Mole)        => AST.Mole(at)
       case (at, Predefined.Nothing)     => AST.Nothing(at)
+      case (at, Predefined.Natural)     => AST.Natural(at)
       case (at, Predefined.Number)      => AST.Number(at)
       case (at, Predefined.Real)        => AST.Real(at)
       case (at, Predefined.Temperature) => AST.Temperature(at)
       case (at, Predefined.TimeStamp)   => AST.TimeStamp(at)
       case (at, Predefined.Time)        => AST.Time(at)
       case (at, Predefined.UUID)        => AST.UUID(at)
+      case (at, Predefined.Whole)       => AST.Whole(at)
       case (at, _) =>
         error("Unrecognized predefined type")
         AST.Abstract(at)
@@ -273,7 +276,15 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   }
 
   private def simplePredefinedTypes[u: P]: P[TypeExpression] = {
-    P(stringType | currencyType | urlType | oneWordPredefTypes)./
+    P(stringType | currencyType | urlType | oneWordPredefTypes | decimalType)./
+  }
+
+  private def decimalType[u: P]: P[Decimal] = {
+    P(
+      location ~ Predefined.Decimal ~/ Punctuation.roundOpen ~
+        integer ~ Punctuation.comma ~ integer ~
+        Punctuation.roundClose
+    )./.map(tpl => (Decimal.apply _).tupled(tpl))
   }
 
   private def patternType[u: P]: P[Pattern] = {
@@ -332,9 +343,9 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        simplePredefinedTypes./ | patternType | uniqueIdType | enumeration |
-          alternation | entityReferenceType | mappingType | rangeType |
-          aliasedTypeExpression
+        simplePredefinedTypes./ | patternType | uniqueIdType |
+          enumeration | setType | mappingType | sequenceType | rangeType |
+          alternation | entityReferenceType | aliasedTypeExpression
       )
     )
   }
@@ -362,10 +373,6 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     P(location ~ Keywords.fields.? ~ open ~ fields ~ close).map {
       case (loc, fields) => Aggregation(loc, fields)
     }
-  }
-
-  def recordAggregation[u: P]: P[(At, Identifier, Aggregation)] = {
-    P(location ~ Keywords.record ~ identifier ~ is ~ aggregation)
   }
 
   private def aggregateUseCase[u: P]: P[AggregateUseCase] = {
@@ -415,6 +422,26 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     ).map { tpl => (Mapping.apply _).tupled(tpl) }
   }
 
+  /** Parses sets, i.e.
+    * {{{
+    *   set of String
+    * }}}
+    *
+    * @tparam u
+    * @return
+    */
+  private def setType[u: P]: P[Set] = {
+    P(
+      location ~ Keywords.set ~ Readability.of ~ typeExpression
+    )./.map { tpl => (Set.apply _).tupled(tpl) }
+  }
+
+  private def sequenceType[u: P]: P[Sequence] = {
+    P(
+      location ~ Keywords.sequence ~ Readability.of ~ typeExpression
+    )./.map { tpl => (Sequence.apply _).tupled(tpl) }
+  }
+
   /** Parses ranges, i.e.
     * {{{
     *   range(1,2)
@@ -454,12 +481,13 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     }
   }
 
-  def typeExpression[u: P]: P[TypeExpression] = {
+  private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
         simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-          alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression |
-          mappingType | rangeType | aliasedTypeExpression
+          sequenceType | setType | mappingType | rangeType |
+          decimalType | alternation | entityReferenceType |
+          aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
       )
     )
   }

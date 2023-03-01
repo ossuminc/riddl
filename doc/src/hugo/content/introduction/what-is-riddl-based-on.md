@@ -126,8 +126,8 @@ TODO: write this section
 
 ## Agile User Stories
 Agile user stories are used to capture the requirements of various components
-within a system. In RIDDL, user stories are part of a 
-[story]({{< relref "../concepts/story.md" >}}) definition 
+within a system. In RIDDL, user stories are part of an  
+[epic]({{< relref "../concepts/epic.md" >}}) definition 
 
 As a [persona], I [want to], [so that]...
 

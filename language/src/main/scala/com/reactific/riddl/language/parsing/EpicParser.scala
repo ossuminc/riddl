@@ -11,7 +11,10 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait StoryParser extends CommonParser with ReferenceParser with GherkinParser {
+private[parsing] trait EpicParser
+    extends CommonParser
+    with ReferenceParser
+    with GherkinParser {
 
   private def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
     processorRef | sagaRef | functionRef
@@ -35,52 +38,59 @@ private[parsing] trait StoryParser extends CommonParser with ReferenceParser wit
     }
   }
 
-  private def viewOutputStep[u: P]: P[ActivateOutputStep] = {
+  private def takeOutputStep[u: P]: P[TakeOutputStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ outputRef ~
         literalString ~ Readability.to.? ~ actorRef ~ briefly
     )./.map { case (loc, output, rel, actor, brief) =>
-      ActivateOutputStep(loc, output, rel, actor, brief)
+      TakeOutputStep(loc, output, rel, actor, brief)
     }
   }
 
-  private def provideInputStep[u: P]: P[ProvideInputStep] = {
+  private def giveInputStep[u: P]: P[PutInputStep] = {
     P(
       location ~ Keywords.step ~ Readability.from.? ~ actorRef ~ literalString ~
         Readability.to.? ~ inputRef ~ briefly
     )./.map { case (loc, actor, rel, form, brief) =>
-      ProvideInputStep(loc, actor, rel, form, brief)
+      PutInputStep(loc, actor, rel, form, brief)
     }
   }
 
-  private def optionalGroup[u: P]: P[OptionalGroup] = {
+  private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
-      location ~ Keywords.optional./ ~ open ~ interactionExpressions ~ close ~
+      location ~ Keywords.optional./ ~ open ~ interaction ~ close ~
         briefly
-    )./.map { case (loc, steps, brief) => OptionalGroup(loc, steps, brief) }
+    )./.map { case (loc, steps, brief) =>
+      OptionalInteractions(loc, steps, brief)
+    }
   }
 
-  private def parallelGroup[u: P]: P[ParallelGroup] = {
+  private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
-      location ~ Keywords.parallel./ ~ open ~ interactionExpressions ~ close ~
+      location ~ Keywords.parallel./ ~ open ~ interaction ~ close ~
         briefly
-    )./.map { case (loc, steps, brief) => ParallelGroup(loc, steps, brief) }
+    )./.map { case (loc, steps, brief) =>
+      ParallelInteractions(loc, steps, brief)
+    }
   }
 
-  private def interactionExpressions[u: P]: P[Seq[InteractionExpression]] = {
+  private def interaction[u: P]: P[Seq[Interaction]] = {
     P(
-      parallelGroup | optionalGroup | viewOutputStep | provideInputStep |
+      parallelInteractions | optionalInteractions | takeOutputStep | giveInputStep |
         arbitraryStep | selfProcessingStep
     ).rep(0, Punctuation.comma./)
   }
 
-  private def storyCase[u: P]: P[UseCase] = {
+  private def useCase[u: P]: P[UseCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
-        (undefined(Seq.empty[InteractionStep]) | interactionExpressions) ~
+        (undefined(
+          Option.empty[UserStory],
+          Seq.empty[GenericInteraction]
+        ) | (userStory.? ~ interaction)) ~
         close ~ briefly ~ description
-    ).map { case (loc, id, steps, brief, description) =>
-      UseCase(loc, id, steps, brief, description)
+    ).map { case (loc, id, (userStory, steps), brief, description) =>
+      UseCase(loc, id, userStory, steps, brief, description)
     }
   }
 
@@ -100,38 +110,47 @@ private[parsing] trait StoryParser extends CommonParser with ReferenceParser wit
     ).?.map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get }
   }
 
-  private def storyOptions[u: P]: P[Seq[StoryOption]] = {
-    options[u, StoryOption](StringIn(Options.technology, Options.sync).!) {
-      case (loc, Options.sync, _)          => StorySynchronousOption(loc)
-      case (loc, Options.technology, args) => StoryTechnologyOption(loc, args)
+  private def epicOptions[u: P]: P[Seq[EpicOption]] = {
+    options[u, EpicOption](StringIn(Options.technology, Options.sync).!) {
+      case (loc, Options.sync, _)          => EpicSynchronousOption(loc)
+      case (loc, Options.technology, args) => EpicTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
-  private def storyInclude[u: P]: P[Include[StoryDefinition]] = {
-    include[StoryDefinition, u](storyDefinitions(_))
+  private def epicInclude[u: P]: P[Include[EpicDefinition]] = {
+    include[EpicDefinition, u](epicDefinitions(_))
   }
 
-  private def storyDefinitions[u: P]: P[Seq[StoryDefinition]] = {
-    P(storyCase | example | term | storyInclude).rep(0)
+  private def epicDefinitions[u: P]: P[Seq[EpicDefinition]] = {
+    P(useCase | term | epicInclude).rep(0)
   }
 
-  type StoryBody = (
-    Seq[StoryOption],
+  type EpicBody = (
+    Seq[EpicOption],
     Option[UserStory],
     Seq[java.net.URL],
-    Seq[StoryDefinition]
+    Seq[EpicDefinition]
   )
 
-  private def storyBody[u: P]: P[StoryBody] = { P(
-    undefined((Seq.empty[StoryOption], Option.empty[UserStory],
-      Seq.empty[java.net.URL], Seq.empty[StoryDefinition])) |
-      (storyOptions ~ userStory.? ~ shownBy ~ storyDefinitions))./ }
-
-  def story[u: P]: P[Story] = {
+  private def epicBody[u: P]: P[EpicBody] = {
     P(
-      location ~ Keywords.story ~/ identifier ~ authorRefs ~ is ~ open ~
-        storyBody ~ close ~
+      undefined(
+        (
+          Seq.empty[EpicOption],
+          Option.empty[UserStory],
+          Seq.empty[java.net.URL],
+          Seq.empty[EpicDefinition]
+        )
+      ) |
+        (epicOptions ~ userStory.? ~ shownBy ~ epicDefinitions)
+    )./
+  }
+
+  def epic[u: P]: P[Epic] = {
+    P(
+      location ~ Keywords.epic ~/ identifier ~ authorRefs ~ is ~ open ~
+        epicBody ~ close ~
         briefly ~ description
     ).map {
       case (
@@ -144,18 +163,18 @@ private[parsing] trait StoryParser extends CommonParser with ReferenceParser wit
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[StoryDefinition]](groups.get(
-          classOf[Include[StoryDefinition]]
-        ))
-        val examples = mapTo[Example](groups.get(classOf[Example]))
+        val includes = mapTo[Include[EpicDefinition]](
+          groups.get(
+            classOf[Include[EpicDefinition]]
+          )
+        )
         val cases = mapTo[UseCase](groups.get(classOf[UseCase]))
-        Story(
+        Epic(
           loc,
           id,
           userStory,
           shownBy,
           cases,
-          examples,
           authors,
           includes,
           options,

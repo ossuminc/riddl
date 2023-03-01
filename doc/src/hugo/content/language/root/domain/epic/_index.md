@@ -1,5 +1,5 @@
 ---
-title: "Story"
+title: "Epic"
 type: "page"
 draft: "false"
 weight: 20

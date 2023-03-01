@@ -54,7 +54,7 @@ trait Definitions extends Expressions with Options {
   sealed trait StreamletDefinition extends Definition
 
   /** Base trait of definitions that are in the body of a Story definition */
-  sealed trait StoryDefinition extends Definition
+  sealed trait EpicDefinition extends Definition
 
   sealed trait VitalDefinitionDefinition
       extends AdaptorDefinition
@@ -67,7 +67,7 @@ trait Definitions extends Expressions with Options {
       with ProjectorDefinition
       with RepositoryDefinition
       with SagaDefinition
-      with StoryDefinition
+      with EpicDefinition
 
   /** Base trait of definitions that can accept a message directly via a
     * reference
@@ -556,7 +556,7 @@ trait Definitions extends Expressions with Options {
   ) extends LeafDefinition
       with OnClauseDefinition
       with FunctionDefinition
-      with StoryDefinition {
+      with EpicDefinition {
     final val kind: String = "Example"
 
     def format: String = ""
@@ -1680,9 +1680,7 @@ trait Definitions extends Expressions with Options {
     def format: String = s"${Keywords.actor} ${pathId.format}"
   }
 
-  sealed trait InteractionExpression
-      extends RiddlValue
-      with BrieflyDescribedValue
+  sealed trait Interaction extends RiddlValue with BrieflyDescribedValue
 
   /** An interaction expression that specifies that each contained expression
     * should be executed in parallel
@@ -1694,11 +1692,11 @@ trait Definitions extends Expressions with Options {
     * @param brief
     *   A brief description of the parallel group
     */
-  case class ParallelGroup(
+  case class ParallelInteractions(
     loc: At,
-    contents: Seq[InteractionExpression],
+    contents: Seq[Interaction],
     brief: Option[LiteralString]
-  ) extends InteractionExpression {
+  ) extends Interaction {
 
     /** Format the node to a string */
     override def format: String = ""
@@ -1713,11 +1711,11 @@ trait Definitions extends Expressions with Options {
     * @param brief
     *   A brief description of the optional group
     */
-  case class OptionalGroup(
+  case class OptionalInteractions(
     loc: At,
-    contents: Seq[InteractionExpression],
+    contents: Seq[Interaction],
     brief: Option[LiteralString]
-  ) extends InteractionExpression {
+  ) extends Interaction {
     override def format: String = ""
   }
 
@@ -1725,7 +1723,7 @@ trait Definitions extends Expressions with Options {
     * classes associated with this sealed trait provide more type specificity to
     * these three fields.
     */
-  sealed trait InteractionStep extends InteractionExpression {
+  sealed trait GenericInteraction extends Interaction {
     def from: Reference[Definition]
 
     def relationship: RiddlNode
@@ -1752,7 +1750,7 @@ trait Definitions extends Expressions with Options {
     relationship: LiteralString,
     to: Reference[Definition],
     brief: Option[LiteralString] = None
-  ) extends InteractionStep {
+  ) extends GenericInteraction {
     override def format: String = ""
   }
 
@@ -1761,51 +1759,92 @@ trait Definitions extends Expressions with Options {
     from: Reference[Definition],
     relationship: LiteralString,
     brief: Option[LiteralString] = None
-  ) extends InteractionStep {
+  ) extends GenericInteraction {
     override def format: String = ""
 
     override def to: Reference[Definition] = from
   }
 
-  case class ActivateOutputStep(
+  /** An interaction where an Actor receives output
+    * @param loc
+    *   The locaiton of the interaction in the source
+    * @param from
+    *   The output received
+    * @param relationship
+    *   THe name of the relationship
+    * @param to
+    *   THe actor that receives the output
+    * @param brief
+    */
+  case class TakeOutputStep(
     loc: At,
     from: OutputRef,
     relationship: LiteralString,
     to: ActorRef,
     brief: Option[LiteralString] = None
-  ) extends InteractionStep {
+  ) extends GenericInteraction {
     override def format: String = ""
   }
 
-  case class ProvideInputStep(
+  /** A interaction where and Actor provides input
+    *
+    * @param loc
+    *   The location of the interaction in the source
+    * @param from
+    *   The actor providing the input
+    * @param relationship
+    *   A description of the relationship in this interaction
+    * @param to
+    *   The input definition that receives the input
+    * @param brief
+    *   A description of this interaction step
+    */
+  case class PutInputStep(
     loc: At,
     from: ActorRef,
     relationship: LiteralString,
     to: InputRef,
     brief: Option[LiteralString] = None
-  ) extends InteractionStep {
+  ) extends GenericInteraction {
     override def format: String = ""
   }
 
+  /** The definition of a Jacobsen Use Case RIDDL defines these epics by
+    * allowing a linkage between the actor and RIDDL applications or bounded
+    * contexts.
+    * @param loc
+    *   Where in the source this use case occurs
+    * @param id
+    *   The unique identifier for this use case
+    * @param interactions
+    *   The interactions between actors and system components that define the
+    *   use case.
+    * @param brief
+    *   A brief description of this use case
+    * @param description
+    *   A longer description of this use case
+    */
   case class UseCase(
     loc: At,
     id: Identifier,
-    interactions: Seq[InteractionExpression] = Seq.empty[InteractionExpression],
+    userStory: Option[UserStory] = None,
+    interactions: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends LeafDefinition
-      with StoryDefinition {
+      with EpicDefinition {
     override def kind: String = "UseCase"
 
     override def format: String = s"${Keywords.case_} ${id.format}"
   }
 
-  /** An agile user story definition
+  /** An agile user story definition in the usual "As a {role} I want
+    * {capability} so that {benefit}" style.
     *
     * @param loc
     *   Location of the user story
     * @param actor
-    *   The actor, or instigator, of the story
+    *   The actor, or instigator, of the story.
     * @param capability
     *   The capability the actor wishes to utilize
     * @param benefit
@@ -1822,65 +1861,60 @@ trait Definitions extends Expressions with Options {
     override def isEmpty: Boolean = false
   }
 
-  /** The definition of an Jacobsen use case which focuses on a story. Stories
-    * define functionality from the perspective of actor's (man or machine)
-    * interaction with the system that is part of their role. RIDDL defines
-    * these stories by allowing a linkage between the actor and RIDDL
-    * applications or bounded contexts.
+  /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an
+    * overall story about user interactions with the system. This define
+    * functionality from the perspective of actors (men or machines)
+    * interactions with the system that is part of their role.
     *
     * @param loc
-    *   The location of the story definition
+    *   The location of the Epic definition
     * @param id
-    *   The name of the story
+    *   The name of the Epic
     * @param userStory
-    *   The user story per agile and xP (I as a >role< need >feature< so that
-    *   >reason>)
+    *   The [[UserStory]] (per agile and xP) that provides the overall big
+    *   picture of this Epic
     * @param shownBy
-    *   A list of URLs to visualizations or other materials related to the story
+    *   A list of URLs to visualizations or other materials related to the epic
     * @param cases
-    *   A list of UseCase's that define the story
-    * @param examples
-    *   Gherkin examples to specify "done" for the implementation of the user
-    *   story
+    *   A list of UseCase's that define the epic
     * @param brief
-    *   A brief description (one sentence) for use in documentation
+    *   A brief description (one sentence) for use in the glossary and
+    *   summaries.
     * @param description
-    *   An optional description of the
+    *   An more detailed description of the Epic
     */
-  case class Story(
+  case class Epic(
     loc: At,
     id: Identifier,
     userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     cases: Seq[UseCase] = Seq.empty[UseCase],
-    examples: Seq[Example] = Seq.empty[Example],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    includes: Seq[Include[StoryDefinition]] = Seq
-      .empty[Include[StoryDefinition]],
-    options: Seq[StoryOption] = Seq.empty[StoryOption],
+    includes: Seq[Include[EpicDefinition]] = Seq
+      .empty[Include[EpicDefinition]],
+    options: Seq[EpicOption] = Seq.empty[EpicOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[StoryOption, StoryDefinition]
+  ) extends VitalDefinition[EpicOption, EpicDefinition]
       with DomainDefinition {
-    override def contents: Seq[StoryDefinition] = {
-      super.contents ++ cases ++ examples ++ terms
+    override def contents: Seq[EpicDefinition] = {
+      super.contents ++ cases ++ terms
     }
 
     override def isEmpty: Boolean = {
       contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
     }
 
-    final val kind: String = "Story"
+    final val kind: String = "Epic"
 
-    override def format: String = s"${Keywords.story} ${id.format}"
+    override def format: String = s"${Keywords.epic} ${id.format}"
 
     override def maturity: Int = {
       var score = super.maturity
       if (userStory.nonEmpty) score += 3
       if (shownBy.nonEmpty) score += 10
-      if (cases.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 25)
-      if (examples.nonEmpty) score += Math.max(examples.count(_.nonEmpty), 9)
+      if (cases.nonEmpty) score += Math.max(cases.count(_.nonEmpty), 25)
       Math.max(score, maxMaturity)
     }
   }
@@ -1891,9 +1925,8 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path id of the referenced Story
     */
-  case class StoryRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Story] {
-    def format: String = s"${Keywords.story} ${pathId.format}"
+  case class EpicRef(loc: At, pathId: PathIdentifier) extends Reference[Epic] {
+    def format: String = s"${Keywords.epic} ${pathId.format}"
   }
 
   /** Sealed trait for all UI elements that derive from it
@@ -2140,7 +2173,7 @@ trait Definitions extends Expressions with Options {
     constants: Seq[Constant] = Seq.empty[Constant],
     contexts: Seq[Context] = Seq.empty[Context],
     actors: Seq[Actor] = Seq.empty[Actor],
-    stories: Seq[Story] = Seq.empty[Story],
+    stories: Seq[Epic] = Seq.empty[Epic],
     applications: Seq[Application] = Seq.empty[Application],
     domains: Seq[Domain] = Seq.empty[Domain],
     terms: Seq[Term] = Seq.empty[Term],

@@ -266,7 +266,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case p: Projector => mkd.emitProjection(p, parents)
           case _: Repository => // TODO: mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
-          case s: Story      => mkd.emitStory(s, stack)
+          case s: Epic      => mkd.emitStory(s, stack)
           case unknown =>
             require(
               requirement = false,

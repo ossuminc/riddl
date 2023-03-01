@@ -126,9 +126,9 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (SagaRef.apply _).tupled(tpl))
   }
 
-  def storyRef[u: P]: P[StoryRef] = {
-    P(location ~ Keywords.story ~ pathIdentifier)
-      .map(tpl => (StoryRef.apply _).tupled(tpl))
+  def epicRef[u: P]: P[EpicRef] = {
+    P(location ~ Keywords.epic ~ pathIdentifier)
+      .map(tpl => (EpicRef.apply _).tupled(tpl))
   }
 
   def actorRef[u: P]: P[ActorRef] = {

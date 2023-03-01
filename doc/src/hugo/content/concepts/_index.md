@@ -53,7 +53,7 @@ With those clarifying simplifications, here's the hierarchy:
         * [Output]({{< relref "output.md" >}})
         * [Input]({{< relref "input.md" >}})
       * [Handler]({{< relref handler.md >}})
-    * [Story]({{< relref "story.md" >}})
+    * [Epic]({{< relref "epic.md" >}})
       * [Case]({{< relref "case.md" >}})
         * [Example]({{< relref "example.md" >}})
     * [Context]({{< relref "context.md" >}})

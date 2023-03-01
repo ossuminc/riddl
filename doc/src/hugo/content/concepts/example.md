@@ -30,7 +30,6 @@ Since four of those things are optional, it often just comes down to THEN.
 * [Functions]({{< relref "function.md" >}}),
 * [Handlers]({{< relref "handler.md" >}}),
 * [SagaSteps]({{< relref "sagastep.md" >}}),
-* [Stories]({{< relref "story.md" >}}).
 
 
 ## Contains

@@ -62,9 +62,9 @@ class ParsingTestTest extends ParsingTest {
       }
     }
 
-    "parseTopLevelDomain[Story]" in {
-      parseTopLevelDomain[Story](
-        "domain foo is { story X is { ??? } }",
+    "parseTopLevelDomain[Epic]" in {
+      parseTopLevelDomain[Epic](
+        "domain foo is { epic X is { ??? } }",
         _.contents.head.stories.head
       ) match {
         case Left(messages)  => fail(messages.format)

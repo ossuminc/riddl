@@ -21,7 +21,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
   val currency = Currency(At.empty, "CA")
   val date = Date(At.empty)
   val dateTime = DateTime(At.empty)
-  val decimal = Decimal(At.empty)
+  val decimal = Decimal(At.empty, 8, 3)
   val duration = Duration(At.empty)
   val integer = Integer(At.empty)
   val length_ = Length(At.empty)
@@ -80,10 +80,10 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     }
     "support Decimal" in {
       decimal.kind mustBe Predefined.Decimal
-      AST.errorDescription(decimal) mustBe Predefined.Decimal
+      AST.errorDescription(decimal) mustBe s"Decimal(8,3)"
       decimal.isEmpty mustBe true
       decimal.isContainer mustBe false
-      decimal.format mustBe Predefined.Decimal
+      decimal.format mustBe s"Decimal(8,3)"
     }
     "support Duration" in {
       duration.kind mustBe Predefined.Duration
@@ -204,7 +204,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       range.isEmpty mustBe true
       range.isContainer mustBe false
       range.kind mustBe Predefined.Range
-      AST.errorDescription(range) mustBe Predefined.Range
+      AST.errorDescription(range) mustBe "Range(2,4)"
       range.format mustBe "Range(2,4)"
     }
     "support String" in {
@@ -294,7 +294,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       aggregation.format mustBe
         "{ integer: Integer, abstract: Abstract, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
-        "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
+        "dateTime: DateTime, decimal: Decimal(8,3), duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
@@ -334,7 +334,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       message.format mustBe
         "record { integer: Integer, abstract: Abstract, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
-        "dateTime: DateTime, decimal: Decimal, duration: Duration, " +
+        "dateTime: DateTime, decimal: Decimal(8,3), duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +

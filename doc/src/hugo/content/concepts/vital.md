@@ -21,4 +21,4 @@ These are the vital definitions:
 * [Projections]({{< relref "projection.md" >}}),
 * [Repositories]({{< relref "repository.md" >}})
 * [Sagas]({{< relref "saga.md" >}}), and
-* [Stories]({{< relref "story.md" >}}).
+* [Epic]({{< relref "epic.md" >}}).

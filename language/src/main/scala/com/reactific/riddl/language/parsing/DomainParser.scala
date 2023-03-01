@@ -17,7 +17,7 @@ import fastparse.ScalaWhitespace.*
 private[parsing] trait DomainParser
     extends ApplicationParser
     with ContextParser
-    with StoryParser
+    with EpicParser
     with StreamingParser
     with TypeParser {
 
@@ -35,7 +35,7 @@ private[parsing] trait DomainParser
 
   private def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (author | typeDef | context | actor | story | domain | term |
+      (author | typeDef | context | actor | epic | domain | term |
         constant | application | importDef | domainInclude).rep(0)
     )
   }
@@ -62,7 +62,7 @@ private[parsing] trait DomainParser
       val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
       val consts = mapTo[AST.Constant](groups.get(classOf[AST.Constant]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
-      val stories = mapTo[Story](groups.get(classOf[Story]))
+      val stories = mapTo[Epic](groups.get(classOf[Epic]))
       val apps = mapTo[Application](groups.get(classOf[Application]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val actors = mapTo[Actor](groups.get(classOf[Actor]))

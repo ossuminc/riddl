@@ -62,6 +62,8 @@ trait TypeExpression extends AbstractDefinitions {
       case EntityReferenceTypeExpression(_, entity) =>
         s"Reference to entity ${entity.format}"
       case _: Pattern              => Predefined.Pattern
+      case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
+      case RangeType(_, min, max)  => s"Range($min,$max)"
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
         s"${messageKind.format} of ${m.fields.size} fields"
@@ -296,6 +298,16 @@ trait TypeExpression extends AbstractDefinitions {
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   }
 
+  /** A type expression for a sequence of some other type expression
+    * @param loc
+    *   Where this type expression occurs in the source code
+    * @param of
+    *   The type expression of the sequence's elements
+    */
+  case class Sequence(loc: At, of: TypeExpression) extends TypeExpression {
+    override def format: String = s"sequence of ${of.format}"
+  }
+
   /** A type expressions that defines a mapping from a key to a value. The value
     * of a Mapping is the set of mapped key -> value pairs, based on which keys
     * have been provided values.
@@ -310,6 +322,18 @@ trait TypeExpression extends AbstractDefinitions {
   case class Mapping(loc: At, from: TypeExpression, to: TypeExpression)
       extends TypeExpression {
     override def format: String = s"mapping from ${from.format} to ${to.format}"
+  }
+
+  /** A mathematical set of some other type of value
+    * @param loc
+    *   Where the type expression occurs in the source
+    * @param of
+    *   The type of the elements of the set.
+    */
+  case class Set(loc: At, of: TypeExpression) extends TypeExpression {
+
+    /** Format the node to a string */
+    override def format: String = s"set of ${of.format}"
   }
 
   /** A type expression whose value is a reference to an instance of an entity.
@@ -442,7 +466,7 @@ trait TypeExpression extends AbstractDefinitions {
     override def isAssignmentCompatible(other: TypeExpression): Boolean = true
   }
 
-  sealed trait NumericType extends PredefinedType {
+  sealed trait NumericType extends TypeExpression {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
@@ -454,7 +478,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Bool(loc: At) extends NumericType {
+  case class Bool(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Boolean
   }
 
@@ -463,7 +487,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the number type expression
     */
-  case class Number(loc: At) extends NumericType {
+  case class Number(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Number
   }
 
@@ -472,8 +496,16 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the integer type expression
     */
-  case class Integer(loc: At) extends NumericType {
+  case class Integer(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Integer
+  }
+
+  case class Whole(loc: At) extends PredefinedType with NumericType {
+    @inline def kind: String = Predefined.Whole
+  }
+
+  case class Natural(loc: At) extends PredefinedType with NumericType {
+    @inline def kind: String = Predefined.Whole
   }
 
   /** A type expression that defines a set of integer values from a minimum
@@ -500,8 +532,12 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the decimal integer type expression
     */
-  case class Decimal(loc: At) extends NumericType {
+  case class Decimal(loc: At, whole: Long, fractional: Long)
+      extends NumericType {
     @inline def kind: String = Predefined.Decimal
+
+    /** Format the node to a string */
+    override def format: String = s"Decimal($whole,$fractional)"
   }
 
   /** A predefined type expression for a real number value.
@@ -509,7 +545,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the real number type expression
     */
-  case class Real(loc: At) extends NumericType {
+  case class Real(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Real
   }
 
@@ -517,7 +553,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   \- The locaitonof the current type expression
     */
-  case class Current(loc: At) extends NumericType {
+  case class Current(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Current
   }
 
@@ -525,7 +561,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the current type expression
     */
-  case class Length(loc: At) extends NumericType {
+  case class Length(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Length
   }
 
@@ -533,11 +569,11 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   The location of the luminosity expression
     */
-  case class Luminosity(loc: At) extends NumericType {
+  case class Luminosity(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Luminosity
   }
 
-  case class Mass(loc: At) extends NumericType {
+  case class Mass(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Mass
   }
 
@@ -545,7 +581,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   \- The location of the mass type expression
     */
-  case class Mole(loc: At) extends NumericType {
+  case class Mole(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Mole
   }
 
@@ -553,7 +589,7 @@ trait TypeExpression extends AbstractDefinitions {
     * @param loc
     *   \- The location of the mass type expression
     */
-  case class Temperature(loc: At) extends NumericType {
+  case class Temperature(loc: At) extends PredefinedType with NumericType {
     @inline def kind: String = Predefined.Temperature
   }
 
