@@ -13,8 +13,12 @@ import java.nio.file.Path
 /** Run a "from" command on a specific .conf file */
 class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
 
+  // NOTE: This test will succeed if the cwd or config don't exist to allow
+  //  it to pass when run from GitHub workflow. Beware of false positives
+  //  when using it to test locally.
+
   val cwd = "/Users/reid/Code/improving.app/riddl"
-  val config = "src/main/riddl/KalixStudy.conf"
+  val config = "src/main/riddl/ImprovingApp.conf"
 
   "riddlc" should {
     s"run --show-times from $config hugo" in {
