@@ -1702,6 +1702,26 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
+    /** An interaction expression that specifies that each contained expression
+     * should be executed in strict sequential order
+     *
+     * @param loc
+     *   Location of the sequence
+     * @param contents
+     *   The interactions to execute in sequence
+     * @param brief
+     *   A brief description of the sequence group
+     */
+    case class SequentialInteractions(
+      loc: At,
+      contents: Seq[Interaction],
+      brief: Option[LiteralString]
+    ) extends Interaction {
+
+    /** Format the node to a string */
+    override def format: String = ""
+  }
+
   /** An interaction expression that specifies that its contents are optional
     *
     * @param loc
@@ -1775,6 +1795,7 @@ trait Definitions extends Expressions with Options {
     * @param to
     *   THe actor that receives the output
     * @param brief
+   * A brief description of this interaction
     */
   case class TakeOutputStep(
     loc: At,
