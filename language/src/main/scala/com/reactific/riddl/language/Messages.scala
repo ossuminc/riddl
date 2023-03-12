@@ -32,13 +32,13 @@ object Messages {
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
-  final case object Info extends KindOfMessage {
+  case object Info extends KindOfMessage {
     override def isInfo: Boolean = true
     override def toString: String = "Info"
     def severity = 0
   }
 
-  final case object StyleWarning extends KindOfMessage {
+  case object StyleWarning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def isStyle: Boolean = true
@@ -47,7 +47,7 @@ object Messages {
     def severity = 1
   }
 
-  final case object MissingWarning extends KindOfMessage {
+  case object MissingWarning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def isMissing: Boolean = true
@@ -57,21 +57,21 @@ object Messages {
     def severity = 2
   }
 
-  final case object Warning extends KindOfMessage {
+  case object Warning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def toString: String = "Warning"
     def severity = 3
   }
 
-  final case object Error extends KindOfMessage {
+  case object Error extends KindOfMessage {
     override def isError: Boolean = true
 
     override def toString: String = "Error"
     def severity = 4
   }
 
-  final case object SevereError extends KindOfMessage {
+  case object SevereError extends KindOfMessage {
     override def isError: Boolean = true
 
     override def isSevereError: Boolean = true

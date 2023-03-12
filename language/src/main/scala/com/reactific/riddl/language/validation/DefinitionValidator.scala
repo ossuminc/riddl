@@ -329,7 +329,7 @@ object DefinitionValidator {
   ): ValidationState = {
     state
       .checkContainer(parents, s)
-      .checkRefAndExamine[Type](s.typ, s, parents) { typ: Type =>
+      .checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
         typ.typ match {
           case agg: Aggregation =>
             if (agg.fields.isEmpty && !s.isEmpty) {
@@ -586,7 +586,7 @@ object DefinitionValidator {
     parents: Seq[Definition]
   ): ValidationState = {
     state.checkContainer(parents, s).checkThat(s.userStory.isEmpty) {
-      vs: state.type =>
+      (vs: state.type) =>
         vs.addMissing(s.loc, s"${s.identify} is missing a user story")
     }.checkDescription(s)
   }
@@ -598,7 +598,7 @@ object DefinitionValidator {
   ): ValidationState = {
     state
       .checkContainer(parents, app)
-      .checkThat(app.groups.isEmpty) { vs: state.type =>
+      .checkThat(app.groups.isEmpty) { (vs: state.type) =>
         vs.addMissing(app.loc, s"${app.identify} should have a group")
       }
       .checkDescription(app)
@@ -657,7 +657,7 @@ object DefinitionValidator {
   ): ValidationState = {
     state
       .checkDefinition(parents, sc)
-      .stepIf(sc.interactions.nonEmpty) { st: state.type =>
+      .stepIf(sc.interactions.nonEmpty) { (st: state.type) =>
         sc.interactions.foldLeft[st.type](st) { (st, step) =>
           step match {
             case par: ParallelInteractions =>
@@ -678,8 +678,8 @@ object DefinitionValidator {
               st
                 .checkPathRef[Definition](is.from.pathId, sc, parents)()()
                 .checkPathRef[Definition](is.to.pathId, sc, parents)()()
-                .checkThat(is.relationship.isEmpty)(
-                  _.addMissing(
+                .checkThat(is.relationship.isEmpty)( st =>
+                  st.addMissing(
                     step.loc,
                     s"Interactions must have a non-empty relationship"
                   )

@@ -109,7 +109,7 @@ trait StreamingValidationState extends ExampleValidationState {
     val inUseOutlets = connected.map(_._1)
     val unattachedOutlets = outlets.toSet[Outlet] -- inUseOutlets
 
-    val s2 = unattachedOutlets.foldLeft[this.type](this) {
+    val s2: this.type = unattachedOutlets.foldLeft[this.type](this) {
       (st: this.type, outlet) =>
         val message = s"${outlet.identify} is not connected"
         st.addWarning(outlet.loc, message)

@@ -36,12 +36,12 @@ trait ExampleValidationState extends TypeValidationState {
   ): this.type = {
     val Example(_, _, givens, whens, thens, buts, _, _) = example
     this
-      .checkSequence(givens) { (st: this.type, givenClause) =>
+      .checkSequence(givens) { (st, givenClause) =>
         st.checkSequence(givenClause.scenario) { (st, ls) =>
           st.checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
         }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
       }
-      .checkSequence(whens) { (st: this.type, when) =>
+      .checkSequence(whens) { (st, when) =>
         st.checkExpression(when.condition, example, parents)
       }
       .checkThat(example.id.nonEmpty) { st =>
@@ -70,10 +70,10 @@ trait ExampleValidationState extends TypeValidationState {
     val id = messageConstructor.msg.pathId
     val kind = messageConstructor.msg.messageKind.kind
     checkPathRef[Type](id, defn, parents, Some(kind)) {
-      (state: this.type, _, id, _, defn) =>
-        defn match {
-          case Type(_, _, typ, _, _) =>
-            typ match {
+      (state: this.type, _: Class[Type], id, _: Class[?], definition) =>
+        definition match {
+          case Type(_, _, typEx, _, _) =>
+            typEx match {
               case mt: AggregateUseCaseTypeExpression =>
                 val names = messageConstructor.args.args.keys.map(_.value).toSeq
                 val unset = mt.fields.filterNot { fName =>
@@ -172,7 +172,7 @@ trait ExampleValidationState extends TypeValidationState {
   ): this.type = expression match {
     case ValueOperator(_, path) =>
       checkPathRef[Field](path, defn, parents)(
-        nullSingleMatchingValidationFunction
+        nullSingleMatchingValidationFunction[Field]
       )()
     case GroupExpression(_, expressions) =>
       checkSequence(expressions) { (st, expr) =>
@@ -268,7 +268,7 @@ trait ExampleValidationState extends TypeValidationState {
           .checkRef[Entity](entity, defn, parents)
           .checkRef[State](state, defn, parents)
           .checkExpression(value, defn, parents)
-          .step { st: this.type =>
+          .step { (st: this.type) =>
             val maybeEntity =
               st.resolvePathIdentifier[Entity](entity.pathId, parents)
             val maybeState =

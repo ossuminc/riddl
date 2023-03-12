@@ -9,7 +9,7 @@ import scala.math.abs
 /** Unit Tests For DefinitionValidationState */
 trait DefinitionValidationState extends BasicValidationState {
 
-  def checkOptions[T <: OptionValue](options: Seq[T], loc: At): this.type = {
+  def checkOptions[T <: OptionValue](options: Seq[T], loc: At): Unit = {
     check(
       options.sizeIs == options.distinct.size,
       "Options should not be repeated",
@@ -22,13 +22,13 @@ trait DefinitionValidationState extends BasicValidationState {
     opt: Option[A],
     name: String,
     thing: Definition
-  )(folder: (this.type, A) => this.type): this.type = {
+  )(folder: (A) => Unit): Unit = {
     opt match {
       case None =>
         addMissing(thing.loc, s"$name in ${thing.identify} should not be empty")
       case Some(x) =>
-        val s1 = checkNonEmptyValue(x, "Condition", thing, MissingWarning)
-        folder(s1, x)
+        checkNonEmptyValue(x, "Condition", thing, MissingWarning)
+        folder(x)
     }
   }
 
@@ -50,57 +50,62 @@ trait DefinitionValidationState extends BasicValidationState {
   def checkDefinition(
     parents: Seq[Definition],
     definition: Definition
-  ): this.type = {
-    var result: this.type = this
-      .check(
-        definition.id.nonEmpty | definition.isImplicit,
-        "Definitions may not have empty names",
-        Error,
-        definition.loc
-      )
-      .checkIdentifierLength(definition)
-      .checkUniqueContent(definition)
-      .check(
-        !definition.isVital || definition.hasAuthors,
-        "Vital definitions should have an author reference",
-        MissingWarning,
-        definition.loc
-      )
-      .stepIf(definition.isVital) { vs: this.type =>
-        definition.asInstanceOf[WithAuthors].authors.foldLeft[this.type](vs) {
-          case (vs: this.type, authorRef) =>
-            pathIdToDefinition(authorRef.pathId, parents) match {
-              case None =>
-                vs.addError(
-                  authorRef.loc,
-                  s"${authorRef.format} is not defined"
-                )
-              case _ => vs
-            }
-          case (_, _) => vs
-        }
+  ): Unit = {
+    check(
+      definition.id.nonEmpty | definition.isImplicit,
+      "Definitions may not have empty names",
+      Error,
+      definition.loc
+    )
+    .checkIdentifierLength(definition)
+    .checkUniqueContent(definition)
+    .check(
+      !definition.isVital || definition.hasAuthors,
+      "Vital definitions should have an author reference",
+      MissingWarning,
+      definition.loc
+    )
+
+    if (definition.isVital) {
+      definition match {
+        case vd: VitalDefinition[?, ?] =>
+          val authorRefs: Seq[AuthorRef] = vd.authors
+          authorRefs.foldLeft(vs1) {
+            case (vs, authorRef) =>
+              pathIdToDefinition(authorRef.pathId, parents) match {
+                case None =>
+                  vs.addError(
+                    authorRef.loc,
+                    s"${authorRef.format} is not defined"
+                  )
+                case _ => vs
+              }
+            case (_, _) => vs1
+          }
+        case _ => vs1
       }
+    }
 
     val path = symbolTable.pathOf(definition)
     if (!definition.id.isEmpty) {
-      val matches = result.lookup[Definition](path)
+      val matches = vs1.lookup[Definition](path)
       if (matches.isEmpty) {
-        result = result.addSevere(
+        vs1 = vs1.addSevere(
           definition.id.loc,
           s"'${definition.id.value}' evaded inclusion in symbol table!"
         )
       } else if (matches.sizeIs >= 2) {
-        val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
+        val parentGroups = matches.groupBy(vs1.symbolTable.parentOf(_))
         parentGroups.get(parents.headOption) match {
           case Some(head :: tail) if tail.nonEmpty =>
-            result = result.addWarning(
+            vs1 = vs1.addWarning(
               head.id.loc,
               s"${definition.identify} has same name as other definitions " +
                 s"in ${head.identifyWithLoc}:  " +
                 tail.map(x => x.identifyWithLoc).mkString(",  ")
             )
           case Some(head :: tail) if tail.isEmpty =>
-            result = result.addStyle(
+            vs1 = vs1.addStyle(
               head.id.loc,
               s"${definition.identify} has same name as other definitions: " +
                 matches
@@ -113,7 +118,7 @@ trait DefinitionValidationState extends BasicValidationState {
         }
       }
     }
-    result
+    vs1
   }
 
   def checkContainer(

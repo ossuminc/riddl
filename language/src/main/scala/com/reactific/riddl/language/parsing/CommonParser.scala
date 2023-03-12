@@ -43,7 +43,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[Include[K]] = {
-    P(Keywords.include ~/ literalString).map { str: LiteralString =>
+    P(Keywords.include ~/ literalString).map { (str: LiteralString) =>
       doInclude[K](str)(parser)
     }
   }

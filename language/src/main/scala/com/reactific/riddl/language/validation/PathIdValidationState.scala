@@ -34,9 +34,9 @@ trait PathIdValidationState extends UsageValidationState {
     parents: Seq[Definition],
     kind: Option[String] = None
   )(
-    single: SingleMatchValidationFunction = defaultSingleMatchValidationFunction
+    single: SingleMatchValidationFunction[T] = defaultSingleMatchValidationFunction[T]
   )(
-    multi: MultiMatchValidationFunction = defaultMultiMatchValidationFunction
+    multi: MultiMatchValidationFunction = defaultMultiMatchValidationFunction[T]
   ): this.type = {
     val tc = classTag[T].runtimeClass
     if (pid.value.isEmpty) {
@@ -77,7 +77,7 @@ trait PathIdValidationState extends UsageValidationState {
     defn: Definition,
     parents: Seq[Definition]
   )(thing: T => this.type): this.type = {
-    val s2 = this.checkPathRef[T](reference.pathId, defn, parents, None)()()
+    val s2: this.type = this.checkPathRef[T](reference.pathId, defn, parents, None)()()
     s2.resolvePathIdentifier[T](reference.pathId, parents) match {
       case Some(defn) =>
         thing(defn)
@@ -132,7 +132,7 @@ trait PathIdValidationState extends UsageValidationState {
                 s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(defn.kind)} instead"
               )
           }
-      }(defaultMultiMatchValidationFunction)
+      }(defaultMultiMatchValidationFunction[Definition])
     }
   }
 

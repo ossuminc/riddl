@@ -76,7 +76,7 @@ object FileWatcher {
     try {
       registerRecursively(path, watchService)
       var saveKey: WatchKey = null
-      do {
+      while ((saveKey == null || saveKey.isValid) && Instant.now().toEpochMilli < deadline) {
         watchService.take() match {
           case key: WatchKey if key != null =>
             saveKey = key
@@ -84,8 +84,9 @@ object FileWatcher {
             handlePolledEvents(key, events, intervalInMillis)(onEvents)(
               notOnEvents
             )
+          case _ =>
         }
-      } while (saveKey.isValid && Instant.now().toEpochMilli < deadline)
+      }
       System.currentTimeMillis() < deadline
     } finally { watchService.close() }
   }

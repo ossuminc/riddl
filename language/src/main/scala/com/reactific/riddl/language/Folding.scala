@@ -103,12 +103,6 @@ object Folding {
   }
 
   trait State {
-    def step(f: this.type => this.type): this.type = f(this)
-    def stepIf(
-      predicate: Boolean = true
-    )(f: this.type => this.type): this.type = {
-      if (predicate) f(this) else this
-    }
 
     def commonOptions: CommonOptions
 
@@ -116,41 +110,38 @@ object Folding {
 
     def messages: Messages.Messages = msgs.toList
 
-    def addStyle(loc: At, msg: String): this.type = {
+    def addStyle(loc: At, msg: String): Unit = {
       add(Message(loc, msg, StyleWarning))
     }
 
-    def addMissing(loc: At, msg: String): this.type = {
+    def addMissing(loc: At, msg: String): Unit = {
       add(Message(loc, msg, MissingWarning))
     }
 
-    def addWarning(loc: At, msg: String): this.type = {
+    def addWarning(loc: At, msg: String): Unit = {
       add(Message(loc, msg, Warning))
     }
 
-    def addError(loc: At, msg: String): this.type = {
+    def addError(loc: At, msg: String): Unit = {
       add(Message(loc, msg, Error))
     }
 
-    def addSevere(loc: At, msg: String): this.type = {
+    def addSevere(loc: At, msg: String): Unit = {
       add(Message(loc, msg, SevereError))
     }
 
-    def add(msg: Message): this.type = {
+    def add(msg: Message): Unit = {
       msg.kind match {
         case StyleWarning =>
           if (commonOptions.showStyleWarnings) {
             msgs += msg
-            this
-          } else { this }
+          } 
         case MissingWarning =>
           if (commonOptions.showMissingWarnings) {
             msgs += msg
-            this
-          } else { this }
+          } 
         case _ =>
           msgs += msg
-          this
       }
     }
   }
