@@ -16,7 +16,7 @@ trait BasicValidationState extends Folding.PathResolutionState {
   def root: Definition
   def commonOptions: CommonOptions
 
-  def checkOverloads(): Unit = {
+  def checkOverloads(): this.type = {
     symbolTable.foreachOverloadedSymbol[Unit] { (defs: Seq[Seq[Definition]]) =>
       checkSequence(defs) { (aDef) =>
         if (aDef.sizeIs == 2) {
@@ -33,18 +33,20 @@ trait BasicValidationState extends Folding.PathResolutionState {
         }
       }
     }
+    this
   }
 
   def parentOf(definition: Definition): Container[Definition] = {
     symbolTable.parentOf(definition).getOrElse(RootContainer.empty)
   }
 
-  def lookup[T <: Definition : ClassTag](id: Seq[String]): List[T] = {
+  def lookup[T <: Definition: ClassTag](id: Seq[String]): List[T] = {
     symbolTable.lookup[T](id)
   }
 
-  def addIf(predicate: Boolean)(msg: => Message): Unit = {
+  def addIf(predicate: Boolean)(msg: => Message): this.type = {
     if (predicate) add(msg)
+    this
   }
 
   private val vowels: Regex = "[aAeEiIoOuU]".r
@@ -59,29 +61,33 @@ trait BasicValidationState extends Folding.PathResolutionState {
     message: => String,
     kind: KindOfMessage,
     loc: At
-  ): Unit = {
+  ): this.type = {
     if (!predicate) {
       add(Message(loc, message, kind))
     }
+    this
   }
 
-  def checkThat(predicate: Boolean)(f:  => Unit): Unit = {
+  def checkThat(predicate: Boolean)(f: => Unit): this.type = {
     if (predicate) {
       f
     }
+    this
   }
 
-  def checkSequence[A](elements: Seq[A])(check: (A) => Unit): Unit = {
+  def checkSequence[A](elements: Seq[A])(check: (A) => Unit): this.type = {
     elements.foreach { (a: A) => check(a) }
+    this
   }
 
-  def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): Unit = {
+  def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
     if (d.id.value.nonEmpty && d.id.value.length < min) {
       addStyle(
         d.id.loc,
         s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min"
       )
     }
+    this
   }
 
   def checkNonEmptyValue(
@@ -90,7 +96,7 @@ trait BasicValidationState extends Folding.PathResolutionState {
     thing: Definition,
     kind: KindOfMessage = Error,
     required: Boolean = false
-  ): Unit = {
+  ): this.type = {
     check(
       value.nonEmpty,
       message =
@@ -98,6 +104,7 @@ trait BasicValidationState extends Folding.PathResolutionState {
       kind,
       thing.loc
     )
+    this
   }
 
   def checkNonEmpty(
@@ -106,39 +113,42 @@ trait BasicValidationState extends Folding.PathResolutionState {
     thing: Definition,
     kind: KindOfMessage = Error,
     required: Boolean = false
-  ): Unit = {
+  ): this.type = {
     check(
       list.nonEmpty,
       s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
       kind,
       thing.loc
     )
+    this
   }
 
   private def formatDefinitions[T <: Definition](
     list: List[(T, SymbolTable#Parents)]
   ): String = {
-    list.map { case (definition, parents) =>
-      "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
-        definition.id.value + " (" + definition.loc + ")"
-    }.mkString("\n")
+    list
+      .map { case (definition, parents) =>
+        "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
+          definition.id.value + " (" + definition.loc + ")"
+      }
+      .mkString("\n")
   }
 
-
   type SingleMatchValidationFunction[T <: Definition] = (
-      /* expectedClass:*/ Class[T],
-      /* pathIdSought:*/ PathIdentifier,
-      /* foundClass*/ Class[? <: Definition],
-      /* definitionFound*/ Definition
-    ) => Unit
+    /* expectedClass:*/ Class[T],
+    /* pathIdSought:*/ PathIdentifier,
+    /* foundClass*/ Class[? <: Definition],
+    /* definitionFound*/ Definition
+  ) => Unit
 
   type MultiMatchValidationFunction = (
-      /* pid: */ PathIdentifier,
-      /* list: */ List[(Definition, Seq[Definition])]
-    ) => Seq[Definition]
+    /* pid: */ PathIdentifier,
+    /* list: */ List[(Definition, Seq[Definition])]
+  ) => Seq[Definition]
 
-  def nullSingleMatchingValidationFunction[T <: Definition]: SingleMatchValidationFunction[T] = {
-    (_, _, _, _) => { () }
+  def nullSingleMatchingValidationFunction[T <: Definition]
+    : SingleMatchValidationFunction[T] = { (_, _, _, _) =>
+    { () }
   }
 
   def defaultSingleMatchValidationFunction[T <: Definition](
@@ -146,7 +156,7 @@ trait BasicValidationState extends Folding.PathResolutionState {
     pid: PathIdentifier,
     foundClass: Class[? <: Definition],
     @unused definitionFound: Definition
-  ): Unit = {
+  ): this.type = {
     check(
       expectedClass.isAssignableFrom(foundClass),
       s"'${pid.format}' was expected to be ${article(expectedClass.getSimpleName)} but is " +
@@ -154,9 +164,10 @@ trait BasicValidationState extends Folding.PathResolutionState {
       Error,
       pid.loc
     )
+    this
   }
 
-  def defaultMultiMatchValidationFunction[T <: Definition : ClassTag](
+  def defaultMultiMatchValidationFunction[T <: Definition: ClassTag](
     pid: PathIdentifier,
     list: List[(Definition, Seq[Definition])]
   ): Seq[Definition] = {
@@ -169,7 +180,7 @@ trait BasicValidationState extends Folding.PathResolutionState {
       // pick the one that is the right type or the first one
       list.find(_._1.getClass == expectedClass) match {
         case Some((defn, parents)) => defn +: parents
-        case None => list.head._1 +: list.head._2
+        case None                  => list.head._1 +: list.head._2
       }
     } else {
       addError(
@@ -181,4 +192,3 @@ trait BasicValidationState extends Folding.PathResolutionState {
     }
   }
 }
-

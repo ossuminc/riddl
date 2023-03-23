@@ -115,7 +115,7 @@ object DefinitionValidator {
           case e: Entity     => validateEntity(state, e, parents)
           case a: Adaptor    => validateAdaptor(state, a, parents)
           case s: Streamlet  => validateStreamlet(state, s, parents)
-          case p: Projector => validateProjection(state, p, parents)
+          case p: Projector  => validateProjection(state, p, parents)
           case r: Repository => validateRepository(state, r, parents)
           case t: Term       => validateTerm(state, t, parents)
           case s: Saga       => validateSaga(state, s, parents)
@@ -132,7 +132,7 @@ object DefinitionValidator {
           case c: Constant    => validateConstant(state, c, parents)
           case c: Context     => validateContext(state, c, parents)
           case d: Domain      => validateDomain(state, d, parents)
-          case s: Epic       => validateStory(state, s, parents)
+          case s: Epic        => validateStory(state, s, parents)
           case t: Term        => validateTerm(state, t, parents)
           case a: Author      => validateAuthorInfo(state, a, parents)
           case a: Actor       => validateActor(state, a, parents)
@@ -169,13 +169,20 @@ object DefinitionValidator {
     state: ValidationState,
     t: Term,
     parents: Seq[Definition]
-  ): ValidationState = { state.checkDefinition(parents, t).checkDescription(t) }
+  ): ValidationState = {
+    state
+      .checkDefinition(parents, t)
+      .checkDescription(t)
+  }
 
   private def validateEnumerator(
     state: ValidationState,
     e: Enumerator,
     parents: Seq[Definition]
-  ): ValidationState = { state.checkDefinition(parents, e).checkDescription(e) }
+  ): ValidationState = {
+    state.checkDefinition(parents, e)
+    state.checkDescription(e)
+  }
 
   private def validateField(
     state: ValidationState,
@@ -314,10 +321,12 @@ object DefinitionValidator {
       .step { st =>
         val expr = c.value.asInstanceOf[Expression]
         val maybeTypEx = st.getExpressionType(expr, parents)
-        if (!st.isAssignmentCompatible(Some(c.typeEx), maybeTypEx )) {
-          st.addError(expr.
-            loc, s"Expression value for ${c.identify} is not assignment" +
-          s" compatible with declared type ${c.typeEx.format}")
+        if (!st.isAssignmentCompatible(Some(c.typeEx), maybeTypEx)) {
+          st.addError(
+            expr.loc,
+            s"Expression value for ${c.identify} is not assignment" +
+              s" compatible with declared type ${c.typeEx.format}"
+          )
         } else { st }
       }
       .checkDescription(c)
@@ -585,10 +594,12 @@ object DefinitionValidator {
     s: Epic,
     parents: Seq[Definition]
   ): ValidationState = {
-    state.checkContainer(parents, s).checkThat(s.userStory.isEmpty) {
-      (vs: state.type) =>
+    state
+      .checkContainer(parents, s)
+      .checkThat(s.userStory.isEmpty) { (vs: state.type) =>
         vs.addMissing(s.loc, s"${s.identify} is missing a user story")
-    }.checkDescription(s)
+      }
+      .checkDescription(s)
   }
 
   private def validateApplication(
@@ -678,7 +689,7 @@ object DefinitionValidator {
               st
                 .checkPathRef[Definition](is.from.pathId, sc, parents)()()
                 .checkPathRef[Definition](is.to.pathId, sc, parents)()()
-                .checkThat(is.relationship.isEmpty)( st =>
+                .checkThat(is.relationship.isEmpty)(st =>
                   st.addMissing(
                     step.loc,
                     s"Interactions must have a non-empty relationship"

@@ -80,7 +80,9 @@ trait TypeValidationState extends PathIdValidationState {
       java.util.regex.Pattern.compile(compound)
       this
     } catch {
-      case x: PatternSyntaxException => add(Message(p.loc, x.getMessage))
+      case x: PatternSyntaxException =>
+        add(Message(p.loc, x.getMessage))
+        this
     }
   }
 
