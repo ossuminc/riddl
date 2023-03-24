@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
 /** Unit Tests For RegressionTests */
-class RegressionTests extends ParsingTest {
+class RegressionTests extends ValidatingTest {
   "Regressions" should {
     "allow descriptions as a single string" in {
       val input = """domain foo is {
@@ -18,7 +18,8 @@ class RegressionTests extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) => fail(errors.format)
-        case Right((domain, _)) => domain.description match {
+        case Right((domain, _)) =>
+          domain.description match {
             case Some(_) => succeed
             case None    => fail("no description")
           }
@@ -32,7 +33,8 @@ class RegressionTests extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) => fail(errors.format)
-        case Right((domain, _)) => domain.description match {
+        case Right((domain, _)) =>
+          domain.description match {
             case Some(desc) => desc.lines.nonEmpty mustBe true
             case None       => fail("no description")
           }
@@ -140,6 +142,49 @@ class RegressionTests extends ParsingTest {
             None
           )
           typ mustBe expected
+      }
+    }
+    "359: empty names in error message" in {
+      val input = RiddlParserInput(
+        """domain Example is {
+          |  context ErrorsToDemonstrateClutter{
+          |    type IntentionalErrors {
+          |      garbage: Blah,
+          |      moreGarbage: BlahBlah
+          |    }
+          |  }
+          |  context ExampleContext is {
+          |    type Foo {
+          |       name: String
+          |     }
+          |
+          |    type Foo {
+          |      number: Integer
+          |    }
+          |  }
+          |  context WarningsToDemonstrateClutter{
+          |    type Bar is {}
+          |      source UnusedWarningSource is {
+          |        outlet Unused is type Bar
+          |      }
+          |     source SecondUnusedWarningSource is {
+          |        outlet Unused is type Bar
+          |     }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input) { case (_, _, msgs) =>
+        msgs mustNot be(empty)
+        val duplicate =
+          msgs.find(_.message.contains("has duplicate content names"))
+        duplicate mustNot be(empty)
+        val dup = duplicate.get
+        dup.message must include(
+          """Context 'ExampleContext' has duplicate content names:
+              |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
+              |""".stripMargin
+        )
       }
     }
   }
