@@ -94,28 +94,6 @@ trait DefinitionValidationState extends BasicValidationState {
           definition.id.loc,
           s"'${definition.id.value}' evaded inclusion in symbol table!"
         )
-      } else if (matches.sizeIs >= 2) {
-        val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
-        parentGroups.get(parents.headOption) match {
-          case Some(head :: tail) if tail.nonEmpty =>
-            result = result.addError(
-              head.id.loc,
-              s"${definition.identify} has same name as other definitions " +
-                s"in ${head.identifyWithLoc}:  " +
-                tail.map(x => x.identifyWithLoc).mkString(",  ")
-            )
-          case Some(head :: tail) if tail.isEmpty =>
-            result = result.addError(
-              head.id.loc,
-              s"${definition.identify} has same name as other definitions: " +
-                matches
-                  .filterNot(_ == definition)
-                  .map(x => x.identifyWithLoc)
-                  .mkString(",  ")
-            )
-          case _ =>
-          // ignore
-        }
       }
     }
     result
