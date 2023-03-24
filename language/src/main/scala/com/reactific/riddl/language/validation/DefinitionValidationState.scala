@@ -34,17 +34,22 @@ trait DefinitionValidationState extends BasicValidationState {
 
   private def checkUniqueContent(definition: Definition): this.type = {
     val allNames = definition.contents.map(_.id.value)
-    val uniqueNames = allNames.toSet
-    if (allNames.size != uniqueNames.size) {
-      val duplicateNames = allNames.toSet.removedAll(uniqueNames)
-      addError(
-        definition.loc,
-        s"${definition.identify} has duplicate content names:\n${duplicateNames
-            .mkString("  ", ",\n  ", "\n")}"
-      )
-    } else {
-      this
+    if (allNames.distinct.size != allNames.size) {
+      val duplicates: Map[String, Seq[Definition]] =
+        definition.contents.groupBy(_.id.value).filterNot(_._2.size < 2)
+      if (duplicates.nonEmpty) {
+        val details = duplicates
+          .map { case (_: String, defs: Seq[Definition]) =>
+            defs.map(_.identifyWithLoc).mkString(", and ")
+          }
+          .mkString("", "\n  ", "\n")
+        addError(
+          definition.loc,
+          s"${definition.identify} has duplicate content names:\n  $details"
+        )
+      }
     }
+    this
   }
 
   def checkDefinition(
@@ -89,28 +94,6 @@ trait DefinitionValidationState extends BasicValidationState {
           definition.id.loc,
           s"'${definition.id.value}' evaded inclusion in symbol table!"
         )
-      } else if (matches.sizeIs >= 2) {
-        val parentGroups = matches.groupBy(result.symbolTable.parentOf(_))
-        parentGroups.get(parents.headOption) match {
-          case Some(head :: tail) if tail.nonEmpty =>
-            result = result.addWarning(
-              head.id.loc,
-              s"${definition.identify} has same name as other definitions " +
-                s"in ${head.identifyWithLoc}:  " +
-                tail.map(x => x.identifyWithLoc).mkString(",  ")
-            )
-          case Some(head :: tail) if tail.isEmpty =>
-            result = result.addStyle(
-              head.id.loc,
-              s"${definition.identify} has same name as other definitions: " +
-                matches
-                  .filterNot(_ == definition)
-                  .map(x => x.identifyWithLoc)
-                  .mkString(",  ")
-            )
-          case _ =>
-          // ignore
-        }
       }
     }
     result
