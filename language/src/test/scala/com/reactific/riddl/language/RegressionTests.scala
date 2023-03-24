@@ -144,6 +144,54 @@ class RegressionTests extends ValidatingTest {
           typ mustBe expected
       }
     }
+    "357: Nested fields in State constructors do not compile" in {
+      val input = RiddlParserInput(
+        """domain Example is {
+          |   context ExampleContext is {
+          |     type Info {
+          |       name: String
+          |     }
+          |
+          |    command Foo {
+          |     info: Info
+          |    }
+          |
+          |    entity ExampleEntity is {
+          |      handler ExampleHandler is {
+          |          on command Foo {
+          |            then morph entity ExampleEntity to state FooExample
+          |              with !FooExampleState(
+          |                infoThatShouldNotWork = @Foo.info,
+          |                nameThatShouldWork = @Foo.info.name,
+          |                nameThatShouldNotWork = @Foo.info
+          |              )
+          |          }
+          |          on other {
+          |            then error "You must first create an event using ScheduleEvent command."
+          |          }
+          |      }
+          |
+          |      record FooExampleState is {
+          |        info: String,
+          |        name: String
+          |      }
+          |      state FooExample of FooExampleState is {
+          |        handler FooExampleHandler {
+          |          on other {
+          |            then error "You must first create an event using ScheduleEvent command."
+          |          }
+          |        }
+          |      }
+          |		}
+          |	}
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input) { case (_, _, msgs) =>
+        val errors: Messages.Messages = msgs.justErrors
+        errors must be(empty)
+      }
+    }
     "359: empty names in error message" in {
       val input = RiddlParserInput(
         """domain Example is {
