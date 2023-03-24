@@ -660,6 +660,11 @@ object DefinitionValidator {
       .stepIf(sc.interactions.nonEmpty) { st: state.type =>
         sc.interactions.foldLeft[st.type](st) { (st, step) =>
           step match {
+            case seq: SequentialInteractions =>
+              st.stepIf(seq.contents.isEmpty) { vs =>
+                vs.addMissing(seq.loc,
+                  "Sequential interactions should not be empty")
+              }
             case par: ParallelInteractions =>
               st.stepIf(par.contents.isEmpty) { vs =>
                 vs.addMissing(
