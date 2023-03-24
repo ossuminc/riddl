@@ -65,6 +65,7 @@ case class SequenceDiagrammer(
         val to = participants(is.to.pathId.value)
         sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
         nl
+      case _: SequentialInteractions => // TODO: include sequential groups
       case _: ParallelInteractions => // TODO: include parallel groups
       case _: OptionalInteractions => // TODO: include optional groups
     }
