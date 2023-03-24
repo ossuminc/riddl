@@ -32,7 +32,7 @@ private[parsing] trait EpicParser
   private def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
     P(
       location ~ Keywords.step ~ Readability.for_.? ~
-        (arbitraryStoryRef | actorRef) ~ literalString ~ briefly
+        (arbitraryStoryRef | actorRef) ~ is ~ literalString ~ briefly
     )./.map { case (loc, ref, proc, brief) =>
       SelfProcessingStep(loc, ref, proc, brief)
     }
@@ -56,9 +56,18 @@ private[parsing] trait EpicParser
     }
   }
 
+  private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
+    P(
+      location ~ Keywords.optional./ ~ open ~ interactions ~ close ~
+        briefly
+    )./.map { case (loc, steps, brief) =>
+      SequentialInteractions(loc, steps, brief)
+    }
+  }
+
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
-      location ~ Keywords.optional./ ~ open ~ interaction ~ close ~
+      location ~ Keywords.optional./ ~ open ~ interactions ~ close ~
         briefly
     )./.map { case (loc, steps, brief) =>
       OptionalInteractions(loc, steps, brief)
@@ -67,17 +76,17 @@ private[parsing] trait EpicParser
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
-      location ~ Keywords.parallel./ ~ open ~ interaction ~ close ~
+      location ~ Keywords.parallel./ ~ open ~ interactions ~ close ~
         briefly
     )./.map { case (loc, steps, brief) =>
       ParallelInteractions(loc, steps, brief)
     }
   }
 
-  private def interaction[u: P]: P[Seq[Interaction]] = {
+  private def interactions[u: P]: P[Seq[Interaction]] = {
     P(
-      parallelInteractions | optionalInteractions | takeOutputStep | giveInputStep |
-        arbitraryStep | selfProcessingStep
+      parallelInteractions | optionalInteractions | sequentialInteractions |
+        takeOutputStep | giveInputStep | arbitraryStep | selfProcessingStep
     ).rep(0, Punctuation.comma./)
   }
 
@@ -87,7 +96,7 @@ private[parsing] trait EpicParser
         (undefined(
           Option.empty[UserStory],
           Seq.empty[GenericInteraction]
-        ) | (userStory.? ~ interaction)) ~
+        ) | (userStory.? ~ interactions)) ~
         close ~ briefly ~ description
     ).map { case (loc, id, (userStory, steps), brief, description) =>
       UseCase(loc, id, userStory, steps, brief, description)
