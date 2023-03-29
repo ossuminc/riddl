@@ -9,6 +9,8 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.utils.Logger
 
+import scala.collection.mutable
+
 object Messages {
 
   sealed trait KindOfMessage extends Ordered[KindOfMessage] {
@@ -219,4 +221,76 @@ object Messages {
     }
   }
 
+  case class Accumulator(commonOptions: CommonOptions) {
+    val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
+
+    @inline def isEmpty: Boolean = msgs.isEmpty
+    @inline def nonEmpty: Boolean = !isEmpty
+
+    @inline def toMessages: Messages = msgs.toList
+
+    def add(msg: Message): this.type = {
+      msg.kind match {
+        case StyleWarning =>
+          if (commonOptions.showStyleWarnings) {
+            msgs.append(msg)
+            this
+          } else {this}
+        case MissingWarning =>
+          if (commonOptions.showMissingWarnings) {
+            msgs.append(msg)
+            this
+          } else {this}
+        case _ =>
+          msgs.append(msg)
+          this
+      }
+    }
+
+
+    @inline def style(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, StyleWarning))
+    }
+
+    @inline def info(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, Info))
+    }
+
+    @inline def warning(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, Warning))
+    }
+
+    @inline def error(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, Error))
+    }
+
+    @inline def severe(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, SevereError))
+    }
+
+    @inline def addStyle(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, StyleWarning))
+    }
+
+    @inline def addMissing(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, MissingWarning))
+    }
+
+    @inline def addWarning(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, Warning))
+    }
+
+    @inline def addError(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, Error))
+    }
+
+    @inline def addSevere(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, SevereError))
+    }
+  }
+
+  object Accumulator {
+    val empty: Accumulator = new Accumulator(CommonOptions())
+    def apply(commonOptions: CommonOptions): Accumulator = new Accumulator(commonOptions)
+  }
 }

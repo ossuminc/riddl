@@ -1126,7 +1126,7 @@ trait Definitions extends Expressions with Options {
     override def format: String = s"${Keywords.repository} ${pathId.format}"
   }
 
-  /** Projections get their name from Euclidean Geometry but are probably more
+  /** Projectors get their name from Euclidean Geometry but are probably more
     * analogous to a relational database view. The concept is very simple in
     * RIDDL: projectors gather data from entities and other sources, transform
     * that data into a specific record type, and support querying that data
@@ -1135,7 +1135,7 @@ trait Definitions extends Expressions with Options {
     * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
     * @see
-    *   https://en.wikipedia.org/wiki/Projection_(mathematics)
+    *   https://en.wikipedia.org/wiki/Projector_(mathematics)
     * @param loc
     *   Location in the source of the Projector
     * @param id
@@ -1159,7 +1159,7 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
+    options: Seq[ProjectorOption] = Seq.empty[ProjectorOption],
     includes: Seq[Include[ProjectorDefinition]] = Seq
       .empty[Include[ProjectorDefinition]],
     types: Seq[Type] = Seq.empty[Type],
@@ -1171,7 +1171,7 @@ trait Definitions extends Expressions with Options {
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[ProjectionOption, ProjectorDefinition]
+  ) extends Processor[ProjectorOption, ProjectorDefinition]
       with ContextDefinition
       with WithTypes {
     override lazy val contents: Seq[ProjectorDefinition] = {
@@ -1196,7 +1196,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class ProjectionRef(loc: At, pathId: PathIdentifier)
+  case class ProjectorRef(loc: At, pathId: PathIdentifier)
       extends ProcessorRef[Projector] {
     override def format: String = s"${Keywords.projector} ${pathId.format}"
   }
