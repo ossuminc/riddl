@@ -7,8 +7,6 @@ import com.reactific.riddl.language.passes.Pass
 import com.reactific.riddl.language.passes.resolution.ResolutionOutput
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 
-import scala.collection.mutable
-
 /** The ValidationPass
  *
  * @param resolution
@@ -30,44 +28,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
         streamlets, sends.toMap)
   }
 
-  /**
-   * Process one definition from the model. This method validates the provided definition
-   *
-   * @param definition
-   * The definition to consider
-   * @param definitionParents
-   * The parents of the definition as a stack from nearest to the Root
-   */
-  def process(
-    definition: Definition,
-    definitionParents: mutable.Stack[Definition]
-  ): Unit = {
-    val parents = definitionParents.toSeq
-    definition match {
-      case leaf: LeafDefinition => processLeafDefinition(leaf, parents)
-      case ad: ApplicationDefinition => processApplicationDefinitiion(ad, parents)
-      case ed: EntityDefinition => processEntityDefinition(ed, parents)
-      case rd: RepositoryDefinition => processRepositoryDefinition(rd, parents)
-      case sd: SagaDefinition => processSagaDefinition(sd, parents)
-      case cd: ContextDefinition => processContextDefinition(cd, parents)
-      case dd: DomainDefinition => processDomainDefinition(dd, parents)
-      case ad: AdaptorDefinition => processAdaptorDefinition(ad, parents)
-      case hd: HandlerDefinition =>
-        hd match {
-          case oc: OnClause => validateOnClause( oc, parents)
-        }
-      case oc: OnClauseDefinition =>
-        oc match {case e: Example => validateExample( e, parents)}
-
-      case _: RootContainer =>  // ignore
-      case unimplemented: Definition =>
-        throw new NotImplementedError(
-          s"Validation of ${unimplemented.identify} is not implemented."
-        )
-    }
-  }
-
-  private def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit = {
+  def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit = {
     leaf match {
       case f: Field => validateField(f, parents)
       case e: Example => validateExample(e, parents)
@@ -83,7 +44,11 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processApplicationDefinitiion(ad: ApplicationDefinition, parents: Seq[Definition]): Unit = {
+  def processHandlerDefinition(hd: HandlerDefinition, parents: Seq[Definition]): Unit = {
+    // TODO: write this methood
+  }
+
+  def processApplicationDefinition(ad: ApplicationDefinition, parents: Seq[Definition]): Unit = {
     ad match {
       case typ: Type => validateType(typ, parents)
       case grp: Group => validateGroup(grp, parents)
@@ -98,7 +63,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processEntityDefinition(ed: EntityDefinition, parents: Seq[Definition]): Unit = {
+  def processEntityDefinition(ed: EntityDefinition, parents: Seq[Definition]): Unit = {
     ed match {
       case t: Type => validateType(t, parents)
       case s: State => validateState( s, parents)
@@ -114,7 +79,10 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processRepositoryDefinition(rd: RepositoryDefinition, parents: Seq[Definition]): Unit= {
+  def processProjectorDefinition(pd: ProjectorDefinition, parents: Seq[Definition]): Unit = {
+    // TODO: write this method
+  }
+  def processRepositoryDefinition(rd: RepositoryDefinition, parents: Seq[Definition]): Unit= {
     rd match {
       case h: Handler => validateHandler(h, parents)
       case t: Type => validateType(t, parents)
@@ -127,7 +95,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processSagaDefinition(sd: SagaDefinition, parents: Seq[Definition]): Unit = {
+  def processSagaDefinition(sd: SagaDefinition, parents: Seq[Definition]): Unit = {
     sd match {
       case f: Function => validateFunction(f, parents)
       case s: SagaStep => validateSagaStep(s, parents)
@@ -137,7 +105,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processContextDefinition(cd: ContextDefinition, parents: Seq[Definition]): Unit = {
+  def processContextDefinition(cd: ContextDefinition, parents: Seq[Definition]): Unit = {
     cd match {
       case t: Type => validateType(t, parents)
       case c: Constant => validateConstant(c, parents)
@@ -158,7 +126,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processDomainDefinition(dd: DomainDefinition, parents: Seq[Definition]): Unit = {
+  def processDomainDefinition(dd: DomainDefinition, parents: Seq[Definition]): Unit = {
     dd match {
       case a: Application => validateApplication(a, parents)
       case t: Type => validateType(t, parents)
@@ -174,7 +142,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     }
   }
 
-  private def processAdaptorDefinition(ad: AdaptorDefinition, parents: Seq[Definition]): Unit = {
+  def processAdaptorDefinition(ad: AdaptorDefinition, parents: Seq[Definition]): Unit = {
     ad match {
       case h: Handler => validateHandler(h, parents)
       case i: Inlet => validateInlet(i, parents)
@@ -361,7 +329,9 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     h: Handler,
     parents: Seq[Definition]
   ): Unit = {
-    checkContainer(parents, h).checkDescription(h)
+    checkContainer(parents, h)
+    h.clauses.foreach(validateOnClause(_, parents))
+    checkDescription(h)
   }
 
   private def validateOnClause(
@@ -542,8 +512,9 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       Messages.Error,
       s.loc
     )
-    checkExamples(s.doAction, s +: parents)
-    checkExamples(s.undoAction, s +: parents)
+    val parentsSeq = parents.toSeq
+    checkExamples(s.doAction, s +: parentsSeq)
+    checkExamples(s.undoAction, s +: parentsSeq)
     checkDescription(s)
   }
 
@@ -589,8 +560,9 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     in: Input,
     parents: Seq[Definition]
   ): Unit = {
-    checkDefinition(parents, in)
-    checkMessageRef(in.putIn, in, parents, CommandCase)
+    val parentsSeq = parents.toSeq
+    checkDefinition(parentsSeq, in)
+    checkMessageRef(in.putIn, in, parentsSeq, CommandCase)
     checkDescription(in)
   }
 

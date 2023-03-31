@@ -6,6 +6,7 @@
 
 package com.reactific.riddl.language.passes.symbols
 
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.passes.{ParserOutput, Pass}
 import com.reactific.riddl.language.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
@@ -59,6 +60,35 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
     symTab, parentage)
 
   override def close: Unit = ()
+
+  /**
+   * Process one leaf definition from the model. Leaf definitions occur
+   * at the leaves of the definitional hierarchy, and have no further children
+   *
+   * @param leaf
+   * The definition to consider
+   * @param parents
+   * The parents of the definition as a stack from nearest to the Root
+   */
+  override def processLeafDefinition(leaf: AST.LeafDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processHandlerDefinition(hd: AST.HandlerDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processApplicationDefinition(appDef: AST.ApplicationDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processEntityDefinition(entDef: AST.EntityDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processRepositoryDefinition(repoDef: AST.RepositoryDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processProjectorDefinition(pd: AST.ProjectorDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processSagaDefinition(sagaDef: AST.SagaDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processContextDefinition(contextDef: AST.ContextDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processDomainDefinition(domDef: AST.DomainDefinition, parents: Seq[AST.Definition]): Unit = ???
+
+  override def processAdaptorDefinition(adaptDef: AST.AdaptorDefinition, parents: Seq[AST.Definition]): Unit = ???
 }
 
 

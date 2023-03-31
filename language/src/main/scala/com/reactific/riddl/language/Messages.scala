@@ -222,7 +222,7 @@ object Messages {
   }
 
   case class Accumulator(commonOptions: CommonOptions) {
-    val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
+    private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
 
     @inline def isEmpty: Boolean = msgs.isEmpty
     @inline def nonEmpty: Boolean = !isEmpty
@@ -234,17 +234,14 @@ object Messages {
         case StyleWarning =>
           if (commonOptions.showStyleWarnings) {
             msgs.append(msg)
-            this
-          } else {this}
+          }
         case MissingWarning =>
           if (commonOptions.showMissingWarnings) {
             msgs.append(msg)
-            this
-          } else {this}
-        case _ =>
-          msgs.append(msg)
-          this
+          }
+        case _ => msgs.append(msg)
       }
+      this
     }
 
 

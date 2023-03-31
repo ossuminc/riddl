@@ -77,8 +77,8 @@ trait BasicValidation  {
       messages.addError(pid.loc, message)
       Option.empty[T]
     } else {
-      val pars = if (parents.head != container) container +: parents else parents
-      resolvePath[T](pid, pars) match {
+      val pars = if (parents.toSeq.head != container) container +: parents else parents
+      resolvePath[T](pid, pars.toSeq) match {
         case None =>
           notResolved(pid, container, kind)
           Option.empty[T]
@@ -169,8 +169,8 @@ trait BasicValidation  {
     if (pid.value.isEmpty) {
       None
     } else {
-      val newParents: Option[Definition] = resolvePath(pid, parents)
-      val candidate: Option[TypeExpression] = newParents.headOption match {
+      val maybeDef: Option[Definition] = resolvePath(pid, parents)
+      val candidate: Option[TypeExpression] = maybeDef.headOption match {
         case None => None
         case Some(f: Function) => f.output
         case Some(t: Type) => Some(t.typ)
@@ -188,14 +188,14 @@ trait BasicValidation  {
         case Some(streamlet: Streamlet) if streamlet.outlets.size == 1 =>
             resolvePath[Type](
               streamlet.outlets.head.type_.pathId,
-              parents
+              parents.toSeq
             )
             .map(_.typ)
         case Some(_) => Option.empty[TypeExpression]
       }
       candidate match {
         case Some(AliasedTypeExpression(_, pid)) =>
-          getPathIdType(pid, newParents.toSeq)
+          getPathIdType(pid, maybeDef.toSeq)
         case Some(other: TypeExpression) => Some(other)
         case None => None
       }

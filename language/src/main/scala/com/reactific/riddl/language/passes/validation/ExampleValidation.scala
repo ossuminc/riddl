@@ -104,7 +104,7 @@ trait ExampleValidation extends TypeValidation {
     parents: Seq[Definition]
   ): this.type = {
     checkArgList(args, defn, parents)
-      .checkPathRef[Function](pathId, defn, parents)
+      .checkPathRef[Function](pathId, defn, parents.toSeq)
     defn match {
       case f: Function if f.input.nonEmpty =>
         val fid = f.id
