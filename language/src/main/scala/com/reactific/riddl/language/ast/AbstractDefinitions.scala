@@ -24,6 +24,12 @@ trait AbstractDefinitions {
     /** Determine if this node is a container or not */
     def isContainer: Boolean = false
 
+    // Determine if this node has definitions it contains
+    def hasDefinitions: Boolean = false
+
+    // Determine if this ndoe is a definitiono
+    def isDefinition: Boolean = false
+
     /** determine if this node is empty or not. Non-containers are always empty
       */
     def isEmpty: Boolean = true
@@ -190,6 +196,10 @@ trait AbstractDefinitions {
     }
 
     def identifyWithLoc: String = s"$identify at $loc"
+
+    override def isDefinition: Boolean = true
+
+    override def hasDefinitions: Boolean = true
 
     def isImplicit: Boolean = id.value.isEmpty
 

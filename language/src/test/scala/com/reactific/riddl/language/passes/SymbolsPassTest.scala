@@ -10,6 +10,7 @@ import scala.reflect.ClassTag
 /** Unit Tests For SymbolsPassTest */
 class SymbolsPassTest extends ParsingTest {
 
+
   def captureEverythingSymbols: SymbolsOutput = {
     val root = checkFile("everything", "everything.riddl")
     val input: ParserOutput = ParserOutput(root, CommonOptions())

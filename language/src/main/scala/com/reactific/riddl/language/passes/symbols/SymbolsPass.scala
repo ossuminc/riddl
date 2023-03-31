@@ -33,16 +33,16 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
 
   private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
-  private def rootLessParents(parents: mutable.Stack[Definition]): Parents = {
-    parents.toSeq.filter {
+  private def rootLessParents(parents: Seq[Definition]): Parents = {
+    parents.filter {
       case _: RootContainer => false
       case _ => true
     }
   }
 
-  override def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+   def processADefinition(definition: Definition, parents: Seq[Definition]): Unit = {
     definition match {
-      case _ : RootContainer => // RootContainers don't go in the symbol table
+      case _: RootContainer => // ignore
       case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
       case definition: Definition =>
         val name = definition.id.value
@@ -70,25 +70,35 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
    * @param parents
    * The parents of the definition as a stack from nearest to the Root
    */
-  override def processLeafDefinition(leaf: AST.LeafDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processLeafDefinition(leaf: AST.LeafDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(leaf, parents)
 
-  override def processHandlerDefinition(hd: AST.HandlerDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processHandlerDefinition(hndlrDef: AST.HandlerDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(hndlrDef, parents)
 
-  override def processApplicationDefinition(appDef: AST.ApplicationDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processApplicationDefinition(appDef: AST.ApplicationDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(appDef, parents)
 
-  override def processEntityDefinition(entDef: AST.EntityDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processEntityDefinition(entDef: AST.EntityDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(entDef, parents)
 
-  override def processRepositoryDefinition(repoDef: AST.RepositoryDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processRepositoryDefinition(repoDef: AST.RepositoryDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(repoDef, parents)
 
-  override def processProjectorDefinition(pd: AST.ProjectorDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processProjectorDefinition(projDef: AST.ProjectorDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(projDef, parents)
 
-  override def processSagaDefinition(sagaDef: AST.SagaDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processSagaDefinition(sagaDef: AST.SagaDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(sagaDef, parents)
 
-  override def processContextDefinition(contextDef: AST.ContextDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processContextDefinition(contextDef: AST.ContextDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(contextDef, parents)
 
-  override def processDomainDefinition(domDef: AST.DomainDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processDomainDefinition(domDef: AST.DomainDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(domDef, parents)
 
-  override def processAdaptorDefinition(adaptDef: AST.AdaptorDefinition, parents: Seq[AST.Definition]): Unit = ???
+  override def processAdaptorDefinition(adaptDef: AST.AdaptorDefinition, parents: Seq[AST.Definition]): Unit =
+    processADefinition(adaptDef, parents)
 }
 
 

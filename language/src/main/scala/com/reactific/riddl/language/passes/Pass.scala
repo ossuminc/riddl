@@ -45,8 +45,7 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
   def name: String = "unnamed pass"
 
   protected final def processKids(container: Definition, parents: mutable.Stack[Definition]): Unit = {
-    require(container.isVital)
-    require(container.isRootContainer)
+    require(container.isContainer)
     parents.push(container)
     container.contents.foreach { item => process(item, parents) }
     parents.pop()
@@ -74,7 +73,7 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
           s"Validation of ${unimplemented.identify} is not implemented."
         )
     }
-    if (definition.isVital && definition.isContainer) {
+    if (definition.hasDefinitions) {
       processKids(definition, parents)
     }
   }
