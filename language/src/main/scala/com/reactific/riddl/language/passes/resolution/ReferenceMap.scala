@@ -28,6 +28,6 @@ case class ReferenceMap(messages: Messages.Accumulator) {
   }
 
   def definitionOf[T <: Definition](pid: PathIdentifier, parent: Definition): Option[T] = {
-    map.get(pid.value.mkString -> parent).map(_.asInstanceOf[T])
+    map.get(pid.format -> parent).map(_.asInstanceOf[T])
   }
 }

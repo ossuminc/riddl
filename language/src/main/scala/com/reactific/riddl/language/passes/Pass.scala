@@ -45,7 +45,7 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
   def name: String = "unnamed pass"
 
   protected final def processKids(container: Definition, parents: mutable.Stack[Definition]): Unit = {
-    require(container.isContainer)
+    require(container.hasDefinitions)
     parents.push(container)
     container.contents.foreach { item => process(item, parents) }
     parents.pop()

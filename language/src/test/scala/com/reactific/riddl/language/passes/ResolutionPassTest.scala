@@ -65,7 +65,7 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
       parseResult(RiddlParserInput(rpi))
     }
 
-    "resolve a relative path" in {
+    "resolve a relative path, B.C.D" in {
       val rpi =
         """domain A {
           |  domain B {
@@ -79,37 +79,37 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
       parseResult(RiddlParserInput(rpi))
     }
 
-    "resolve ^Name" in {
+    "resolve A.Top" in {
       val input =
         """domain A {
           |  type Top = String
-          |  type aTop = type ^Top
+          |  type aTop = type A.Top
           |}
           |""".stripMargin
       parseResult(RiddlParserInput(input))
     }
 
-    "resolve ^^B.InB" in {
+    "resolve A.B.InB" in {
       val input =
         """domain A {
           |  domain B {
           |    type InB = String
           |  }
           |  domain C {
-          |    type InC = ^^B.InB
+          |    type InC = A.B.InB
           |  }
           |}
           |""".stripMargin
       parseResult(RiddlParserInput(input))
     }
-    "resolve ^^^Name" in {
+    "resolve entity field" in {
       val input =
         """domain A {
           |  context D {
           |    type DSimple = Number
           |    entity E {
-          |      record fields is { a : DSimple }
-          |      state only of fields is {
+          |      record fields is { a : D.DSimple }
+          |      state only of E.fields is {
           |        handler OnlyFoo is { ??? }
           |      }
           |      handler ForE is { ??? }
@@ -124,15 +124,15 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
         """
           |domain D {
           |  type Bottom = { a: String }
-          |  type Middle = { b: ^Bottom }
-          |  type Top = { m: ^Middle }
+          |  type Middle = { b: D.Bottom }
+          |  type Top = { m: D.Middle }
           |
           |  context C {
           |    function foo {
-          |      requires: { t: ^^.Top.m }
+          |      requires: { t: D.Top }
           |      returns: { a: String }
           |      example impl {
-          |        then return @^foo.t.b.a
+          |        then return @foo.t.m.b.a
           |      }
           |    }
           |  }
@@ -152,18 +152,18 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |    }
           |    type Simple = C.Simple // relative to context
           |    type BSimple = A.B.C.Simple // full path
-          |    type CSimple = ^C.Simple // partial path
+          |    type CSimple = B.C.Simple // partial path
           |    context D {
-          |      type ATop = ^^^.Top
-          |      type DSimple = ^E.ESimple // partial path
+          |      type ATop = A.Top
+          |      type DSimple = D.E.ESimple // partial path
           |      entity E {
-          |        type ESimple = ^^^CSimple // partial path
-          |        event blah is { dSimple: ^^^.DSimple }
-          |        record fields is { a : Top }
-          |        state only of ^.fields is {
+          |        type ESimple = B.CSimple // partial path
+          |        event blah is { dSimple: D.DSimple }
+          |        record fields is { a : A.Top }
+          |        state only of E.fields is {
           |          handler foo  is {
-          |            on event ^^^blah {
-          |              then set ^^^only.a to @^^^blah.dSimple
+          |            on event E.blah {
+          |              then set E.fields.a to @E.blah.dSimple
           |            }
           |          }
           |        }
@@ -184,10 +184,10 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |    }
           |    type BSimple = A.B.C.Simple // full path starts from root
           |    context D {
-          |      type DSimple = ^E.ESimple // partial path
+          |      type DSimple = D.E.ESimple // partial path
           |      entity E {
-          |        type ESimple = ^^^C.Simple // E->D->B->C->Simple
-          |        type Complicated = ^^^C^D.DSimple // E->D->B->C->B->D->DSimple
+          |        type ESimple = B.C.Simple // E->D->B->C->Simple
+          |        type Complicated = B.D.DSimple // E->D->B->C->B->D->DSimple
           |        handler foo is { ??? }
           |      }
           |    }
@@ -199,18 +199,18 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
     "deal with cyclic references" in {
       val input =
         """domain A {
-          |  type T is { tp: ^.TPrime }
-          |  type TPrime is { t: ^.T }
+          |  type T is { tp: A.TPrime } // Refers to T.TPrime
+          |  type TPrime is { t: A.T } // Refers to A.T cyclically
           |  command DoIt is {}
           |  context C {
           |    entity E {
           |      record fields is {
-          |        f: ^^^^.TPrime
+          |        f: A.TPrime
           |      }
-          |      state S of ^fields is  {
+          |      state S of E.fields is  {
           |        handler foo is {
           |         on command DoIt {
-          |           then set S.f.t to true
+          |           then set E.S.f.t to true
           |         }
           |        }
           |      }
@@ -220,11 +220,13 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |""".stripMargin
       parseAndResolve(RiddlParserInput(input))(
         { messages =>
-          messages.format matches "^.*requires assignment compatibility"
           println(messages.format)
           messages.size mustBe 1
+          messages.head.format must include("Path resolution encountered a loop")
         },
-        fail("Should have failed")
+        {
+          succeed
+        }
       )
     }
 
@@ -236,7 +238,7 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |    type Info is { g: C.DoIt }
           |    entity E is {
           |      record fields is { f: C.Info }
-          |      state S of ^fields is {
+          |      state S of E.fields is {
           |        handler E_Handler is {
           |          on command C.DoIt {
           |            then set S.f.g.value to @C.DoIt.value
