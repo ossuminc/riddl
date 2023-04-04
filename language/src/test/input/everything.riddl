@@ -69,7 +69,7 @@ domain Everything by author Reid is {
     // transient (memory only) or aggregate (they consume commands and queries)
     entity Something is {
       options (aggregate, transient)
-
+      function misc is { requires { n: Nothing } returns { b: Boolean } }
       type somethingDate is Date
 
       event Inebriated is {}

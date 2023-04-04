@@ -6,7 +6,6 @@
 
 package com.reactific.riddl.language.passes.symbols
 
-import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.passes.{ParserOutput, Pass}
 import com.reactific.riddl.language.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
@@ -42,14 +41,14 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
     }
   }
 
-  def processADefinition(definition: Definition, parents: Seq[Definition]): Unit = {
+  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     definition match {
       case _: RootContainer => // ignore
       case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
       case definition: Definition =>
         val name = definition.id.value
         if (name.nonEmpty) {
-          val copy: Parents = rootLessParents(parents)
+          val copy: Parents = rootLessParents(parents.toSeq)
           val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
           val included: Seq[SymTabItem] = existing :+ (definition -> copy)
           symTab.update(name, included)
@@ -63,65 +62,6 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
 
   override def close: Unit = ()
 
-  /**
-   * Process one leaf definition from the model. Leaf definitions occur
-   * at the leaves of the definitional hierarchy, and have no further children
-   *
-   * @param leaf
-   * The definition to consider
-   * @param parents
-   * The parents of the definition as a stack from nearest to the Root
-   */
-  override def processLeafDefinition(leaf: AST.LeafDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(leaf, parents)
-
-  override def processHandlerDefinition(hndlrDef: AST.HandlerDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(hndlrDef, parents)
-
-  override def processApplicationDefinition(appDef: AST.ApplicationDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(appDef, parents)
-
-  override def processEntityDefinition(entDef: AST.EntityDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(entDef, parents)
-
-  override def processRepositoryDefinition(repoDef: AST.RepositoryDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(repoDef, parents)
-
-  override def processProjectorDefinition(projDef: AST.ProjectorDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(projDef, parents)
-
-  override def processSagaDefinition(sagaDef: AST.SagaDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(sagaDef, parents)
-
-  override def processContextDefinition(contextDef: AST.ContextDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(contextDef, parents)
-
-  override def processDomainDefinition(domDef: AST.DomainDefinition, parents: Seq[AST.Definition]): Unit =
-    processADefinition(domDef, parents)
-
-  override def processAdaptorDefinition(adaptDef: AdaptorDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(adaptDef, parents)
-
-  override def processEpicDefinition(epicDef: EpicDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(epicDef, parents)
-
-  override def processFunctionDefinition(funcDef: FunctionDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(funcDef, parents)
-
-  override def processOnClauseDefinition(ocd: OnClauseDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(ocd, parents)
-
-  override def processRootDefinition(rootDef: RootDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(rootDef, parents)
-
-  override def processStateDefinition(stateDef: StateDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(stateDef, parents)
-
-  override def processStreamletDefinition(streamDef: StreamletDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(streamDef, parents)
-
-  override def processUseCaseDefinition(useCaseDef: UseCaseDefinition, parents: Seq[Definition]): Unit =
-    processADefinition(useCaseDef, parents)
 }
 
 

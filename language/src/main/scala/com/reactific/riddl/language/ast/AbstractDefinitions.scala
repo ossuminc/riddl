@@ -190,7 +190,7 @@ trait AbstractDefinitions {
 
     override def isDefinition: Boolean = true
 
-    override def hasDefinitions: Boolean = true
+    override def hasDefinitions: Boolean = contents.nonEmpty
 
     def isImplicit: Boolean = id.value.isEmpty
 
@@ -224,7 +224,7 @@ trait AbstractDefinitions {
   abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
     def pathId: PathIdentifier
     def identify: String = {
-      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${pathId.format}'${loc.toShort}"
+      s"${classTag[T].runtimeClass.getSimpleName} '${pathId.format}'${loc.toShort}"
     }
     override def isEmpty: Boolean = pathId.isEmpty
   }

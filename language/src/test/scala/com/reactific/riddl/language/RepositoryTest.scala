@@ -9,7 +9,7 @@ import com.reactific.riddl.language.passes.validation.ValidatingTest
 class RepositoryTest extends ValidatingTest {
 
   "RepositoryTest" should {
-    "perform some tests" in {
+    "handl a basic definition" in {
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {

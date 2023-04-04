@@ -1,6 +1,6 @@
 package com.reactific.riddl.language.passes.validation
 
-import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.{CommonOptions, Messages}
 
 /** Test cases for the StreamValidator */
 class StreamValidatorTest extends ValidatingTest {
@@ -11,18 +11,19 @@ class StreamValidatorTest extends ValidatingTest {
                     | type Typ1 = Integer
                     | type Typ2 = Real
                     | context a {
-                    |  inlet in is type Typ1
-                    |  outlet out is type Typ2
+                    |  inlet in is type uno.Typ1
+                    |  outlet out is type uno.Typ2
                     |  connector c1 is { from outlet a.out to inlet a.in }
                     | }
                     |} """.stripMargin
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
-        domain.isEmpty mustBe false
-        messages.isEmpty mustBe false
-        messages.hasErrors mustBe true
-        messages.exists { msg: Messages.Message =>
-          msg.message.startsWith("Type mismatch in Connector 'c1':")
-        } must be(true)
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (domain, _, messages) =>
+          domain.isEmpty mustBe false
+          messages.isEmpty mustBe false
+          messages.hasErrors mustBe true
+          messages.exists { msg: Messages.Message =>
+            msg.message.startsWith("Type mismatch in Connector 'c1':")
+          } must be(true)
       }
     }
     "error on unattached inlets" in {
@@ -37,7 +38,7 @@ class StreamValidatorTest extends ValidatingTest {
                     |  }
                     | }
                     |} """.stripMargin
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
         messages.hasErrors mustBe false
@@ -53,7 +54,7 @@ class StreamValidatorTest extends ValidatingTest {
                     |  outlet out is type T
                     | }
                     |} """.stripMargin
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
         messages.hasErrors mustBe false
@@ -69,7 +70,7 @@ class StreamValidatorTest extends ValidatingTest {
                     |  outlet out is type T
                     | }
                     |} """.stripMargin
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
         messages.hasErrors mustBe false
@@ -91,7 +92,7 @@ class StreamValidatorTest extends ValidatingTest {
                 |   inlet in is type T
                 | }
                 |} """.stripMargin
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
         messages.hasErrors mustBe false
@@ -114,14 +115,15 @@ class StreamValidatorTest extends ValidatingTest {
                 |  }
                 | }
                 |} """.stripMargin
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
-        domain.isEmpty mustBe false
-        messages.isEmpty mustBe false
-        messages.hasErrors mustBe false
-        messages.filter(_.message contains "is not needed") mustNot be(empty)
-        messages.exists(
-          _.message.startsWith("The persistence option on Connector 'c1'")
-        ) mustBe true
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
+        case (domain, _, messages) =>
+          domain.isEmpty mustBe false
+          messages.isEmpty mustBe false
+          messages.hasErrors mustBe false
+          messages.filter(_.message contains "is not needed") mustNot be(empty)
+          messages.exists(
+            _.message.startsWith("The persistence option on Connector 'c1'")
+          ) mustBe true
       }
     }
   }

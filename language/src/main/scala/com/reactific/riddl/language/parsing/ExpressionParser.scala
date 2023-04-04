@@ -160,8 +160,7 @@ private[parsing] trait ExpressionParser
   private def terminalExpression[u: P]: P[Expression] = {
     P(
       terminalCondition | decimalValue | integerValue |
-        stringValue | entityIdValue |
-        valueExpression | undefinedExpression | arbitraryExpression
+        entityIdValue | valueExpression | undefinedExpression | arbitraryExpression
     )
   }
 
@@ -236,7 +235,7 @@ private[parsing] trait ExpressionParser
   }
 
   private def knownStrings[u: P]: P[StringFunction] = {
-    functionCall(StringIn("trim").!).map { tpl =>
+    functionCall(StringIn("trim", "string").!).map { tpl =>
       (StringFunction.apply _).tupled(tpl)
     }
   }

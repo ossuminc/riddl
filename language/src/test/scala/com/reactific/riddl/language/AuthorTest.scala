@@ -30,11 +30,13 @@ class AuthorTest extends ValidatingTest {
     }
     "must be defined" in {
       val input = """domain foo by author Bar is { ??? }"""
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(false)
-        val errs = msgs.filter(_.kind == Messages.Error)
-        errs mustNot be(empty)
-        errs.head.message must include("author Bar is not defined")
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs) =>
+          val errs = msgs.justErrors
+          errs mustNot be(empty)
+          assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
+          assertValidationMessage(errs, Messages.Error,
+            "Path 'Bar' was not resolved, in Domain 'foo', but should refer to an Author")
       }
     }
     "referenced from Application" in {

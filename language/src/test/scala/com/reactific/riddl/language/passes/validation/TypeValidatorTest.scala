@@ -52,10 +52,13 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
     "allow ??? in aggregate bodies without warning" in {
-      parseAndValidateDomain("""domain foo {
-                               |type Empty is { ??? } explained as "empty"
-                               |} explained as "nothing"
-                               |""".stripMargin) {
+      val input = RiddlParserInput(
+        """domain foo {
+          |type Empty is { ??? } explained as "empty"
+          |} explained as "nothing"
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgs: Messages) =>
           msgs mustNot be(empty)
           msgs.size mustBe (3)
@@ -64,23 +67,29 @@ class TypeValidatorTest extends ValidatingTest {
     }
 
     "identify when pattern type does not refer to a valid pattern" in {
-      parseAndValidateDomain("""
-                               |domain foo is {
-                               |type pat is Pattern("[")
-                               |}
-                               |""".stripMargin) {
+      val input = RiddlParserInput(
+        """
+          |domain foo is {
+          |type pat is Pattern("[")
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(msgs, Error, "Unclosed character class")
       }
     }
 
     "identify when unique ID types reference something other than an entity" in {
-      parseAndValidateDomain("""
-                               |domain foo is {
-                               |context TypeTest is { ??? }
-                               |type Order is Id(TypeTest)
-                               |}
-                               |""".stripMargin) {
+      val input = RiddlParserInput(
+        """
+          |domain foo is {
+          |context TypeTest is { ??? }
+          |type Order is Id(TypeTest)
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgs: Messages) => assertValidationMessage(
             msgs,
             Error,

@@ -25,7 +25,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |        f2: D.T,
                     |        f3: C.T
                     |      }
-                    |      state S of ^SFields is {
+                    |      state S of E.SFields is {
                     |        handler H is {
                     |          on command DoIt {
                     |            then set S.f3 to @DoIt.f1
@@ -96,7 +96,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |    command ACommand is { ??? } described as "AC"
                     |    entity fooBar is {
                     |      record fields is { field: Number }
-                    |      state AState of ^fields {
+                    |      state AState of fooBar.fields {
                     |        handler fooBarHandlerForAState is {
                     |          on command ACommand {
                     |            ???

@@ -18,7 +18,7 @@ class ValidationPassTest extends ValidatingTest {
       parseAndValidateAggregate(input,CommonOptions.noMinorWarnings) { vo: AggregateOutput =>
         vo.messages.justErrors.size mustBe(0)
         vo.refMap.size mustBe(23)
-        vo.uses.size mustBe(20)
+        vo.uses.size mustBe(23)
         vo.usedBy.size mustBe(16)
       }
     }

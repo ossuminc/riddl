@@ -10,6 +10,7 @@ import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.passes.Pass.AggregateOutput
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.OutputFile
 
@@ -65,7 +66,7 @@ trait TranslationResult
 trait Translator[OPT <: TranslatingOptions] {
 
   def translate(
-    result: Validation.Result,
+    result: AggregateOutput,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT

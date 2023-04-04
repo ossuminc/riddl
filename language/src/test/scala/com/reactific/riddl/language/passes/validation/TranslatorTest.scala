@@ -4,15 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.Validation.Result
-import com.reactific.riddl.language.passes.validation.ValidatingTest
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.OutputFile
-import com.reactific.riddl.utils.StringLogger
+import com.reactific.riddl.language.*
+import com.reactific.riddl.language.passes.Pass.AggregateOutput
+import com.reactific.riddl.utils.{Logger, OutputFile, StringLogger}
 
 import java.nio.file.Path
 
@@ -39,7 +37,7 @@ class TranslatorTest extends ValidatingTest {
     val defaultOptions: TestTranslatingOptions = TestTranslatingOptions()
 
     override def translate(
-      result: Result,
+      result: AggregateOutput,
       log: Logger,
       commonOptions: CommonOptions,
       options: TestTranslatingOptions

@@ -201,18 +201,18 @@ trait ExampleValidation extends TypeValidation {
 
   private def checkActions(
     actions: Seq[Action],
-    defn: Definition,
+    example: Example,
     parents: Seq[Definition]
   ): this.type = {
     checkSequence(actions) { action =>
-      checkAction(action, defn, parents)
+      checkAction(action, example, example +: parents)
     }
     this
   }
 
   private def checkAction(
     action: Action,
-    defn: Definition,
+    defn: Example,
     parents: Seq[Definition]
   ): this.type = {
     action match {
@@ -226,9 +226,9 @@ trait ExampleValidation extends TypeValidation {
          checkPathRef[Field](path, defn, parents)
       case ReturnAction(_, value) =>
         checkExpression(value, defn, parents)
-      case s @ SendAction(_, msg, portlet) =>
+      case s @ SendAction(_, msg, outlet) =>
         checkMessageConstructor(msg, defn, parents)
-        checkRef[Portlet](portlet, defn, parents)
+        checkRef[Portlet](outlet, defn, parents)
         addSend(s, parents)
       case TellAction(_, msg, entityRef) =>
         checkMessageConstructor(msg, defn, parents)
@@ -240,11 +240,9 @@ trait ExampleValidation extends TypeValidation {
         checkRef[Entity](entity, defn, parents)
         checkRef[Handler](handler, defn, parents)
       case MorphAction(_, entity, state, value) =>
-        checkRef[Entity](entity, defn, parents)
-        checkRef[State](state, defn, parents)
+        val maybeEntity = checkRef[Entity](entity, defn, parents)
+        val maybeState = checkRef[State](state, defn, parents)
         checkExpression(value, defn, parents)
-        val maybeEntity = resolvePath[Entity](entity.pathId, parents)
-        val maybeState = resolvePath[State](state.pathId, parents)
         val maybeExprType = getExpressionType(value, parents)
         if (maybeExprType.isEmpty) {
           messages.addError(

@@ -223,17 +223,18 @@ class RegressionTests extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs mustNot be(empty)
-        val duplicate =
-          msgs.find(_.message.contains("has duplicate content names"))
-        duplicate mustNot be(empty)
-        val dup = duplicate.get
-        dup.message must include(
-          """Context 'ExampleContext' has duplicate content names:
-              |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
-              |""".stripMargin
-        )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
+        case (_, _, msgs) =>
+          msgs mustNot be(empty)
+          val duplicate =
+            msgs.find(_.message.contains("has duplicate content names"))
+          duplicate mustNot be(empty)
+          val dup = duplicate.get
+          dup.message must include(
+            """Context 'ExampleContext' has duplicate content names:
+                |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
+                |""".stripMargin
+          )
       }
     }
   }

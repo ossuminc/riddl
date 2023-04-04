@@ -12,6 +12,8 @@ import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
+import com.reactific.riddl.language.passes.Pass
+import com.reactific.riddl.language.passes.Pass.AggregateOutput
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.SysLogger
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -105,18 +107,21 @@ object Riddl {
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions
-  ): Either[Messages, Validation.Result] = {
+  ): Either[Messages, AggregateOutput] = {
     parse(input, commonOptions).flatMap { root =>
-      val result = validate(root, commonOptions)
-      if (result.messages.isOnlyWarnings) { Right(result) }
-      else { Left(result.messages) }
+      Pass(root, commonOptions) match {
+        case Left(messages) => Left(messages)
+        case Right(result) =>
+          if (result.messages.isOnlyWarnings) {Right(result)}
+          else {Left(result.messages)}
+      }
     }
   }
 
   def parseAndValidate(
     path: Path,
     commonOptions: CommonOptions
-  ): Either[Messages, Validation.Result] = {
+  ): Either[Messages, AggregateOutput] = {
     parseAndValidate(RiddlParserInput(path), commonOptions)
   }
 

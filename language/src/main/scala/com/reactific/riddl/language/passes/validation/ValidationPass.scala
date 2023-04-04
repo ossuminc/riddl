@@ -1,11 +1,13 @@
 package com.reactific.riddl.language.passes.validation
 
-import com.reactific.riddl.language.{AST, Messages}
+import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.{Message, StyleWarning}
 import com.reactific.riddl.language.passes.Pass
 import com.reactific.riddl.language.passes.resolution.ResolutionOutput
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
+
+import scala.collection.mutable
 
 /** The ValidationPass
  *
@@ -33,213 +35,94 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     checkStreaming()
   }
 
-  def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit = {
-    leaf match {
-      case f: Field => validateField(f, parents)
-      case e: Example => validateExample(e, parents)
-      case e: Enumerator => validateEnumerator(e, parents)
-      case i: Invariant => validateInvariant(i, parents)
-      case t: Term => validateTerm(t, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case a: Author => validateAuthorInfo( a, parents)
-      case sa: Actor => validateActor(sa, parents)
-      case uc: UseCase => validateUseCase(uc, parents)
-      case c: Connector => validateConnection(c, parents)
-    }
-  }
-
-  def processHandlerDefinition(hd: HandlerDefinition, parents: Seq[Definition]): Unit = {
-    hd match {
-      case omc@OnMessageClause(_, msg, from, _, _, _) =>
-        checkDefinition(parents, omc)
-        if (msg.nonEmpty) {
-          checkMessageRef(msg, omc, parents, msg.messageKind)
-        }
-        if (from.nonEmpty) {
-          checkRef(from.get, omc, parents)
-        }
+  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+    val parentsAsSeq: Seq[Definition] = parents.toSeq
+    definition match {
+      // TODO: generate some frequency statistics and use them to reorganize this list of cases, most frequent first
+      case f: Field =>
+        validateField(f, parentsAsSeq)
+      case t: Type =>
+        validateType(t, parentsAsSeq)
+      case e: Example =>
+        validateExample(e, parentsAsSeq)
+      case e: Enumerator =>
+        validateEnumerator(e, parentsAsSeq)
+      case i: Invariant =>
+        validateInvariant(i, parentsAsSeq)
+      case t: Term =>
+        validateTerm(t, parentsAsSeq)
+      case sa: Actor =>
+        validateActor(sa, parentsAsSeq)
       case oic: OnInitClause =>
-        checkDefinition(parents, oic)
+        checkDefinition(parentsAsSeq, oic)
       case otc: OnTermClause =>
-        checkDefinition(parents, otc)
+        checkDefinition(parentsAsSeq, otc)
       case ooc: OnOtherClause =>
-        checkDefinition(parents, ooc)
+        checkDefinition(parentsAsSeq, ooc)
+      case mc: OnMessageClause =>
+        validateOnMessageClause(mc, parentsAsSeq)
+      case h: Handler =>
+        validateHandler(h, parentsAsSeq)
+      case c: Constant =>
+        validateConstant(c, parentsAsSeq)
+      case i: Include[ApplicationDefinition]@unchecked =>
+        validateInclude(i)
+      case s: State =>
+        validateState(s, parentsAsSeq)
+      case f: Function =>
+        validateFunction(f, parentsAsSeq)
+      case i: Inlet =>
+        validateInlet(i, parentsAsSeq)
+      case o: Outlet =>
+        validateOutlet(o, parentsAsSeq)
+      case c: Connector =>
+        validateConnector(c, parentsAsSeq)
+      case a: Author =>
+        validateAuthorInfo(a, parentsAsSeq)
+      case s: SagaStep =>
+        validateSagaStep(s, parentsAsSeq)
+      case e: Entity =>
+        validateEntity(e, parentsAsSeq)
+      case a: Adaptor =>
+        validateAdaptor(a, parentsAsSeq)
+      case s: Streamlet =>
+        validateStreamlet(s, parentsAsSeq)
+      case p: Projector =>
+        validateProjection(p, parentsAsSeq)
+      case r: Repository =>
+        validateRepository(r, parentsAsSeq)
+      case s: Saga =>
+        validateSaga(s, parentsAsSeq)
+      case c: Context =>
+        validateContext(c, parentsAsSeq)
+      case d: Domain =>
+        validateDomain(d, parentsAsSeq)
+      case s: Epic =>
+        validateStory(s, parentsAsSeq)
+      case a: Application =>
+        validateApplication(a, parentsAsSeq)
+      case uc: UseCase =>
+        validateUseCase(uc, parentsAsSeq)
+      case grp: Group =>
+        validateGroup(grp, parentsAsSeq)
+      case in: Input =>
+        validateInput(in, parentsAsSeq)
+      case out: Output =>
+        validateOutput(out, parentsAsSeq)
+      case i: Interaction => validateInteraction(i, parentsAsSeq)
+      case _: RootContainer => ()
+
+      // NOTE: Never put a catch-all here, every Definition type must be handled
     }
   }
 
-  def processApplicationDefinition(ad: ApplicationDefinition, parents: Seq[Definition]): Unit = {
-    ad match {
-      case typ: Type => validateType(typ, parents)
-      case grp: Group => validateGroup(grp, parents)
-      case h: Handler => validateHandler(h, parents)
-      case in: Input => validateInput(in, parents)
-      case out: Output => validateOutput(out, parents)
-      case in: Inlet => validateInlet(in, parents)
-      case out: Outlet => validateOutlet( out, parents)
-      case t: Term => validateTerm( t, parents)
-      case c: Constant => validateConstant( c, parents)
-      case i: Include[ApplicationDefinition]@unchecked => validateInclude( i)
+  def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
+    checkDefinition(parents, omc)
+    if (omc.msg.nonEmpty) {
+      checkMessageRef(omc.msg, omc, parents, omc.msg.messageKind)
     }
-  }
-
-  def processEntityDefinition(ed: EntityDefinition, parents: Seq[Definition]): Unit = {
-    ed match {
-      case t: Type => validateType(t, parents)
-      case s: State => validateState( s, parents)
-      case h: Handler => validateHandler( h, parents)
-      case f: Function => validateFunction( f, parents)
-      case i: Invariant => validateInvariant( i, parents)
-      case t: Term => validateTerm( t, parents)
-      case c: Constant => validateConstant( c, parents)
-      case i: Inlet => validateInlet( i, parents)
-      case o: Outlet => validateOutlet( o, parents)
-      case i: Include[EntityDefinition]@unchecked =>
-        validateInclude( i)
-    }
-  }
-
-  def processProjectorDefinition(pd: ProjectorDefinition, parents: Seq[Definition]): Unit = {
-    pd match {
-      case h: Handler => validateHandler(h, parents)
-      case f: Field => validateField(f, parents)
-      case t: Type => validateType(t, parents)
-      case i: Invariant => validateInvariant(i, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case t: Term => validateTerm(t, parents)
-      case c: Constant => validateConstant(c, parents)
-      case i: Include[EntityDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  def processRepositoryDefinition(rd: RepositoryDefinition, parents: Seq[Definition]): Unit= {
-    rd match {
-      case h: Handler => validateHandler(h, parents)
-      case t: Type => validateType(t, parents)
-      case c: Constant => validateConstant(c, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case t: Term => validateTerm(t, parents)
-      case i: Include[RepositoryDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  def processSagaDefinition(sd: SagaDefinition, parents: Seq[Definition]): Unit = {
-    sd match {
-      case f: Function => validateFunction(f, parents)
-      case s: SagaStep => validateSagaStep(s, parents)
-      case f: Field => validateField(f, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case i: Include[SagaDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  def processContextDefinition(cd: ContextDefinition, parents: Seq[Definition]): Unit = {
-    cd match {
-      case t: Type => validateType(t, parents)
-      case c: Constant => validateConstant(c, parents)
-      case h: Handler => validateHandler(h, parents)
-      case f: Function => validateFunction(f, parents)
-      case e: Entity => validateEntity(e, parents)
-      case a: Adaptor => validateAdaptor(a, parents)
-      case s: Streamlet => validateStreamlet(s, parents)
-      case p: Projector => validateProjection(p, parents)
-      case r: Repository => validateRepository(r, parents)
-      case t: Term => validateTerm(t, parents)
-      case s: Saga => validateSaga(s, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case c: Connector => validateConnection(c, parents)
-      case i: Include[ContextDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  def processDomainDefinition(dd: DomainDefinition, parents: Seq[Definition]): Unit = {
-    dd match {
-      case a: Application => validateApplication(a, parents)
-      case t: Type => validateType(t, parents)
-      case c: Constant => validateConstant(c, parents)
-      case c: Context => validateContext(c, parents)
-      case d: Domain => validateDomain(d, parents)
-      case s: Epic => validateStory(s, parents)
-      case t: Term => validateTerm(t, parents)
-      case a: Author => validateAuthorInfo(a, parents)
-      case a: Actor => validateActor(a, parents)
-      case i: Include[DomainDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  def processAdaptorDefinition(ad: AdaptorDefinition, parents: Seq[Definition]): Unit = {
-    ad match {
-      case h: Handler => validateHandler(h, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case t: Type => validateType(t, parents)
-      case t: Term => validateTerm(t, parents)
-      case c: Constant => validateConstant(c, parents)
-      case i: Include[AdaptorDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  override def processEpicDefinition(epicDef: AST.EpicDefinition, parents: Seq[AST.Definition]): Unit = {
-    epicDef match {
-      case e: Example => validateExample(e, parents)
-      case uc: UseCase => validateUseCase(uc, parents)
-      case t: Term => validateTerm(t, parents)
-      case i: Include[AdaptorDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  override def processFunctionDefinition(funcDef: AST.FunctionDefinition, parents: Seq[AST.Definition]): Unit = {
-    funcDef match {
-      case t: Type => validateType(t, parents)
-      case _: Field => () // handled by processLeafDefinition
-      case _: Example => () // handled by recursion
-      case _: Function => () // handled by recursion
-      case i: Include[FunctionDefinition]@unchecked => validateInclude(i)
-    }
-  }
-
-  override def processOnClauseDefinition(ocd: AST.OnClauseDefinition, parents: Seq[AST.Definition]): Unit = {
-    ocd match {
-      case ex: Example => validateExample(ex, parents)
-    }
-  }
-
-  override def processRootDefinition(rootDef: AST.RootDefinition, parents: Seq[AST.Definition]): Unit = {
-    rootDef match {
-      case d: Domain => validateDomain(d, parents)
-      case i: Include[RootDefinition] @unchecked => validateInclude(i)
-      case a: Author => validateAuthorInfo(a, parents)
-    }
-  }
-
-  override def processStateDefinition(stateDef: AST.StateDefinition, parents: Seq[AST.Definition]): Unit = {
-    stateDef match {
-      case f: Field => validateField(f, parents)
-      case h: Handler => validateHandler(h, parents)
-      case i: Invariant => validateInvariant(i, parents)
-      case t: Type => validateType(t, parents)
-    }
-  }
-
-  override def processStreamletDefinition(streamDef: AST.StreamletDefinition, parents: Seq[AST.Definition]): Unit = {
-    streamDef match {
-      case t: Type => validateType(t, parents)
-      case h: Handler => validateHandler(h, parents)
-      case t: Term => validateTerm(t, parents)
-      case c: Constant => validateConstant(c, parents)
-      case i: Inlet => validateInlet(i, parents)
-      case o: Outlet => validateOutlet(o, parents)
-      case i: Include[StreamletDefinition] @unchecked => validateInclude(i)
-    }
-  }
-
-  override def processUseCaseDefinition(useCaseDef: UseCaseDefinition, parents: Seq[Definition]): Unit = {
-    useCaseDef match {
-      case i: Interaction => validateInteraction(i, parents)
+    if (omc.from.nonEmpty) {
+      checkRef(omc.from.get, omc, parents)
     }
   }
 
@@ -313,23 +196,20 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     checkRef[Type](outlet.type_, outlet, parents)
   }
 
-  private def validateConnection(
+  private def validateConnector(
     connector: Connector,
     parents: Seq[Definition]
   ): Unit = {
-    checkMaybeRef[Outlet](connector.from, connector, parents)
-    checkMaybeRef[Inlet](connector.to, connector, parents)
-    addConnection(connector)
-    val maybeOutlet: Option[Outlet] = connector.from.flatMap { outRef =>
-      resolvePath[Outlet](outRef.pathId, parents)
-    }
-    val maybeInlet: Option[Inlet] = connector.to.flatMap { inRef =>
-      resolution.refMap.definitionOf[Inlet](inRef.pathId, parents.head)
-    }
+    addConnector(connector)
+    val refParents = connector +: parents
+    val maybeOutlet = checkMaybeRef[Outlet](connector.from, connector, refParents)
+    val maybeInlet = checkMaybeRef[Inlet](connector.to, connector, refParents)
 
     (maybeOutlet, maybeInlet) match {
       case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
-        if (!areSameType(inlet.type_, outlet.type_, parents)) {
+        val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
+        val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
+        if (!areSameType(inletType, outletType))  {
           messages.addError(
             inlet.loc,
             s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
@@ -659,8 +539,8 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, uc)
-      if (uc.interactions.nonEmpty) {
-        uc.interactions.foreach { step =>
+      if (uc.contents.nonEmpty) {
+        uc.contents.foreach { step =>
           step match {
             case seq: SequentialInteractions =>
               if (seq.contents.isEmpty) {
@@ -694,7 +574,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
         }
       }
       if (uc.nonEmpty) {
-        if (uc.interactions.isEmpty)(
+        if (uc.contents.isEmpty)(
           messages.addMissing(
             uc.loc,
             s"${uc.identify} doesn't define any interactions"

@@ -22,7 +22,7 @@ trait StreamingValidation extends ExampleValidation {
 
   protected var connectors: Seq[Connector] = Seq.empty[Connector]
 
-  def addConnection(conn: Connector): this.type = {
+  def addConnector(conn: Connector): this.type = {
     connectors = connectors :+ conn
     this
   }
@@ -59,10 +59,10 @@ trait StreamingValidation extends ExampleValidation {
       require(maybeConnContext.nonEmpty, "Connector with no Context")
       val pipeContext = maybeConnContext.get
       val maybeToInlet = connector.to.flatMap(inlet =>
-        resolvePath[Inlet](inlet.pathId, connParents)
+        resolvePath[Inlet](inlet.pathId, connector +: connParents)
       )
       val maybeFromOutlet = connector.from.flatMap(outlet =>
-        resolvePath[Outlet](outlet.pathId, connParents)
+        resolvePath[Outlet](outlet.pathId, connector +:connParents)
       )
       val maybeInletContext = maybeToInlet.flatMap(inlet => resolution.symbols.contextOf(inlet))
       val maybeOutletContext = maybeFromOutlet.flatMap(outlet => resolution.symbols.contextOf(outlet))

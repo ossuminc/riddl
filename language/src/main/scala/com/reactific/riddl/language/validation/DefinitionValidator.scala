@@ -657,8 +657,8 @@ object DefinitionValidator {
   ): ValidationState = {
     state
       .checkDefinition(parents, sc)
-      .stepIf(sc.interactions.nonEmpty) { st: state.type =>
-        sc.interactions.foldLeft[st.type](st) { (st, step) =>
+      .stepIf(sc.contents.nonEmpty) { st: state.type =>
+        sc.contents.foldLeft[st.type](st) { (st, step) =>
           step match {
             case seq: SequentialInteractions =>
               st.stepIf(seq.contents.isEmpty) { vs =>
@@ -693,7 +693,7 @@ object DefinitionValidator {
         }
       }
       .stepIf(sc.nonEmpty) { vs =>
-        vs.checkThat(sc.interactions.isEmpty)(
+        vs.checkThat(sc.contents.isEmpty)(
           _.addMissing(
             sc.loc,
             s"${sc.identify} doesn't define any interactions"

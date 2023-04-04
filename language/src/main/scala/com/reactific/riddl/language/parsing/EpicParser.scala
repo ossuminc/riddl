@@ -29,30 +29,36 @@ private[parsing] trait EpicParser
     }
   }
 
+  private def identifierNotKeyword[u:P](keyword: String): P[Identifier] = {
+    P(
+      keyword.?.map(_ => Identifier.empty) | (identifier ~ keyword.?)
+    )
+  }
+
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
-      location ~ Keywords.step ~ identifier.? ~ Readability.for_.? ~
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.for_) ~
         (arbitraryStoryRef | actorRef) ~ is ~ literalString ~ briefly ~ description
     )./.map { case (loc, id, fromTo, proc, brief, desc) =>
-      SelfInteraction(loc, id.getOrElse(Identifier.empty), fromTo, proc, brief, desc)
+      SelfInteraction(loc, id, fromTo, proc, brief, desc)
     }
   }
 
   private def takeOutputStep[u: P]: P[TakeOutputInteraction] = {
     P(
-      location ~ Keywords.step ~ identifier.? ~ Readability.from.? ~ outputRef ~
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ outputRef ~
         literalString ~ Readability.to.? ~ actorRef ~ briefly ~ description
     )./.map { case (loc, id, output, rel, actor, brief, desc) =>
-      TakeOutputInteraction(loc, id.getOrElse(Identifier.empty), output, rel, actor, brief, desc)
+      TakeOutputInteraction(loc, id, output, rel, actor, brief, desc)
     }
   }
 
   private def giveInputStep[u: P]: P[PutInputInteraction] = {
     P(
-      location ~ Keywords.step ~ identifier.? ~ Readability.from.? ~ actorRef ~
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ actorRef ~
         literalString ~ Readability.to.? ~ inputRef ~ briefly ~ description
     )./.map { case (loc, id, actor, rel, form, brief, desc) =>
-      PutInputInteraction(loc, id.getOrElse(Identifier.empty), actor, rel, form, brief, desc)
+      PutInputInteraction(loc, id, actor, rel, form, brief, desc)
     }
   }
 

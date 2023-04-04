@@ -43,71 +43,21 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
    */
   def name: String = "unnamed pass"
 
-  protected final def processKids(container: Definition, parents: mutable.Stack[Definition]): Unit = {
-    require(container.hasDefinitions)
-    parents.push(container)
-    container.contents.foreach { item => process(item, parents) }
-    parents.pop()
+  final def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+    process(definition, parents)
+    if (definition.hasDefinitions) {
+      parents.push(definition)
+      definition.contents.foreach { item => traverse(item, parents) }
+      parents.pop()
+    }
   }
 
   protected def process(
     definition: Definition,
     parents: mutable.Stack[Definition],
-  ): Unit = {
-    val parentsAsSeq = parents.toSeq
-    definition match {
-      case leaf: LeafDefinition => processLeafDefinition(leaf, parentsAsSeq)
-      case hd: HandlerDefinition => processHandlerDefinition(hd, parentsAsSeq)
-      case od: OnClauseDefinition => processOnClauseDefinition(od, parentsAsSeq)
-      case ad: ApplicationDefinition => processApplicationDefinition(ad, parentsAsSeq)
-      case ud: UseCaseDefinition => processUseCaseDefinition(ud, parentsAsSeq)
-      case ed: EntityDefinition => processEntityDefinition(ed, parentsAsSeq)
-      case sd: StateDefinition => processStateDefinition(sd, parentsAsSeq)
-      case rd: RepositoryDefinition => processRepositoryDefinition(rd, parentsAsSeq)
-      case sd: SagaDefinition => processSagaDefinition(sd, parentsAsSeq)
-      case cd: ContextDefinition => processContextDefinition(cd, parentsAsSeq)
-      case sd: StreamletDefinition => processStreamletDefinition(sd, parentsAsSeq)
-      case ad: AdaptorDefinition => processAdaptorDefinition(ad, parentsAsSeq)
-      case pd: ProjectorDefinition => processProjectorDefinition(pd, parentsAsSeq)
-      case fd: FunctionDefinition => processFunctionDefinition(fd, parentsAsSeq)
-      case ed: EpicDefinition => processEpicDefinition(ed, parentsAsSeq)
-      case rd: RootDefinition => processRootDefinition(rd, parentsAsSeq)
-      case dd: DomainDefinition => processDomainDefinition(dd, parentsAsSeq)
-      case _: RootContainer => ()
-    }
-    if (definition.hasDefinitions) {
-      processKids(definition, parents)
-    }
-  }
+  ): Unit
 
   def postProcess(): Unit
-
-  /**
-   * Process one leaf definition from the model. Leaf definitions occur
-   * at the leaves of the definitional hierarchy, and have no further children
-   * @param leaf
-   * The definition to consider
-   * @param parents
-   * The parents of the definition as a stack from nearest to the Root
-   */
-
-  def processAdaptorDefinition(adaptDef: AdaptorDefinition, parents: Seq[Definition]): Unit
-  def processApplicationDefinition(appDef: ApplicationDefinition, parents: Seq[Definition]): Unit
-  def processContextDefinition(contextDef: ContextDefinition, parents: Seq[Definition]): Unit
-  def processDomainDefinition(domDef: DomainDefinition, parents: Seq[Definition]): Unit
-  def processEntityDefinition(entDef: EntityDefinition, parents: Seq[Definition]): Unit
-  def processEpicDefinition(epicDef: EpicDefinition, parents: Seq[Definition]): Unit
-  def processFunctionDefinition(funcDef: FunctionDefinition, parents: Seq[Definition]): Unit
-  def processHandlerDefinition(hd: HandlerDefinition, parents: Seq[Definition]): Unit
-  def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit
-  def processOnClauseDefinition(ocd: OnClauseDefinition, parents: Seq[Definition]): Unit
-  def processProjectorDefinition(pd: ProjectorDefinition, parents: Seq[Definition]): Unit
-  def processRepositoryDefinition(repoDef: RepositoryDefinition, parents: Seq[Definition]): Unit
-  def processRootDefinition(rootDef: RootDefinition, parents: Seq[Definition]): Unit
-  def processSagaDefinition(sagaDef: SagaDefinition, parents: Seq[Definition]): Unit
-  def processStateDefinition(stateDef: StateDefinition, parents: Seq[Definition]): Unit
-  def processStreamletDefinition(streamDef: StreamletDefinition, parents: Seq[Definition]): Unit
-  def processUseCaseDefinition(ucDef: UseCaseDefinition, parents: Seq[Definition]): Unit
 
   /**
    * Generate the output of this Pass. This will only be called after all the calls
@@ -195,7 +145,7 @@ object Pass {
     val pass: Pass[IN,OUT] = mkPass
     Timer.time[OUT](pass.name, in.commonOptions.showTimes, logger) {
       val parents: mutable.Stack[Definition] = mutable.Stack.empty
-      pass.process(in.root, parents)
+      pass.traverse(in.root, parents)
       pass.postProcess()
       pass.result
     }

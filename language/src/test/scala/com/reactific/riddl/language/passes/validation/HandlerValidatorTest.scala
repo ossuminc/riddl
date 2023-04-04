@@ -22,8 +22,8 @@ class HandlerValidatorTest extends ValidatingTest {
           |  type StateFields is { field1: Number, field2: String }
           |  state HamburgerState of StateFields = {
           |    handler foo is {
-          |      on command EntityCommand { example only { then set HamburgerState.field1 to 445 } }
-          |      on event EntityEvent { example only { then set HamburgerState.field1 to 678 } }
+          |      on command EntityCommand { example only { then set HamburgerState.field1 to 345 } }
+          |      on event EntityEvent { example only { then set HamburgerState.field2 to string("678") } }
           |    } described as "Irrelevant"
           |  } described as "Irrelevant"
           |} described as "Irrelevant"
@@ -35,14 +35,14 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityCommand' was not resolved, in OnMessageClause" +
-              " 'On command EntityCommand', but should refer to a Command"
+            "Path 'EntityCommand' was not resolved, in OnMessageClause " +
+              "'On command EntityCommand', but should refer to a Type"
           )
           assertValidationMessage(
             msgs,
             Error,
             "Path 'EntityEvent' was not resolved, in OnMessageClause " +
-              "'On event EntityEvent', but should refer to an Event"
+              "'On event EntityEvent', but should refer to a Type"
           )
       }
     }
@@ -68,8 +68,8 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityContext.Incoming' resolved to 'EntityConext' at empty(3:1), in OnMessageClause " +
-              "'On event EntityContext.Incoming', but a Type was expected:"
+            "Path 'EntityContext.Incoming' resolved to Context 'EntityContext' at empty(3:1), " +
+              "in OnMessageClause 'On event EntityContext.Incoming', but a Type was expected"
           )
       }
     }
@@ -91,13 +91,14 @@ class HandlerValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Reference[Type] 'Incoming'(8:10) should reference an Event but is " +
-            "a String type instead"
-        )
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Type 'Incoming'(8:10) should reference an Event but is " +
+              "a String type instead"
+          )
       }
     }
 
@@ -118,13 +119,14 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'nonExistingField' was not resolved, in Example " +
-            "'only', but should refer to a Field"
-        )
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'nonExistingField' was not resolved, in Example " +
+              "'only', but should refer to a Field"
+          )
       }
     }
 
@@ -147,12 +149,13 @@ class HandlerValidatorTest extends ValidatingTest {
            |}
            |}
            |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'bar' was not resolved, in Example 'only', but should refer to a Field"
-        )
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'bar' was not resolved, in Example 'only', but should refer to a Field"
+          )
       }
     }
 
@@ -174,12 +177,13 @@ class HandlerValidatorTest extends ValidatingTest {
                     |}
                     |}
                     |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "assignment compatibility, but field:\n  field1"
-        )
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "assignment compatibility, but field:\n  field1"
+          )
       }
     }
   }

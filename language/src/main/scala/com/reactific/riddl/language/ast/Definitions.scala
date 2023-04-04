@@ -409,7 +409,7 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    value: ForwardDeclaredExpression,
+    value: Expression,
     brief: Option[LiteralString],
     description: Option[Description]
   ) extends LeafDefinition
@@ -1856,7 +1856,7 @@ trait Definitions extends Expressions with Options {
     *   Where in the source this use case occurs
     * @param id
     *   The unique identifier for this use case
-    * @param interactions
+    * @param contents
     *   The interactions between actors and system components that define the
     *   use case.
     * @param brief
@@ -1868,11 +1868,10 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     userStory: Option[UserStory] = None,
-    interactions: Seq[Interaction] = Seq.empty[Interaction],
+    contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition
-      with EpicDefinition {
+  ) extends EpicDefinition with Container[Interaction] {
     override def kind: String = "UseCase"
     override def format: String = s"${Keywords.case_} ${id.format}"
   }

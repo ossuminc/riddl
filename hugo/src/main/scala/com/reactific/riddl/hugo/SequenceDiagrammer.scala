@@ -17,7 +17,7 @@ case class SequenceDiagrammer(
   val participants: Map[Seq[String], Definition] = {
     (for {
       cs <- story.cases
-      interaction <- cs.interactions
+      interaction <- cs.contents
     } yield {
       interaction match {
         case is: GenericInteraction => Seq[Reference[Definition]](is.from, is.to)
@@ -59,7 +59,7 @@ case class SequenceDiagrammer(
 
   for { cse <- story.cases } {
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl
-    for { ntrctn <- cse.interactions } ntrctn match {
+    for { ntrctn <- cse.contents} ntrctn match {
       case is: GenericInteraction =>
         val from = participants(is.from.pathId.value)
         val to = participants(is.to.pathId.value)
