@@ -11,12 +11,14 @@ case class ReferenceMap(messages: Messages.Accumulator) {
 
   private val map: mutable.HashMap[(String,Definition), Definition] = mutable.HashMap.empty
 
+  def size: Int = map.size
+
   def add[T <: Definition: ClassTag](ref: Reference[T], parent: Definition, definition: T): Unit = {
     add(ref.pathId, parent, definition)
   }
 
   def add[T <: Definition : ClassTag](pathId: PathIdentifier, parent: Definition, definition: T): Unit = {
-    add(pathId.value.mkString, parent, definition)
+    add(pathId.format, parent, definition)
   }
 
   def add[T <: Definition : ClassTag]( pathId: String, parent: Definition, definition: T ): Unit = {
@@ -28,6 +30,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
   }
 
   def definitionOf[T <: Definition](pid: PathIdentifier, parent: Definition): Option[T] = {
-    map.get(pid.format -> parent).map(_.asInstanceOf[T])
+    val key = pid.format -> parent
+    map.get(key).map(_.asInstanceOf[T])
   }
 }

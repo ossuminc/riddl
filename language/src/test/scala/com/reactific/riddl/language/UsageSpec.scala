@@ -78,8 +78,8 @@ class UsageSpec extends AnyWordSpec with Matchers {
             // But let's make sure we get the right results
             result.uses.size mustBe 8
             result.usedBy.size mustBe 7
-            val entityE = model.contents.head.contexts.head.entities.head
-            val command = model.contents.head.contexts.head.types.head
+            val entityE = model.domains.head.contexts.head.entities.head
+            val command = model.domains.head.contexts.head.types.head
             val fieldRef = command.typ match {
               case x: AggregateUseCaseTypeExpression =>
                 x.fields.find(_.id.value == "ref").get

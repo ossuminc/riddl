@@ -3,6 +3,7 @@ package com.reactific.riddl.language
 /** Unit Tests For Repository */
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.passes.validation.ValidatingTest
 
 /** Tests For Repository */
 class RepositoryTest extends ValidatingTest {

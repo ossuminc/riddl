@@ -8,6 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.passes.validation.ValidatingTest
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ValidatingTest {
@@ -73,7 +74,7 @@ class RegressionTests extends ValidatingTest {
                     |}""".stripMargin
 
       def extract(root: AST.RootContainer): Type = {
-        root.contents.head.types.head
+        root.domains.head.types.head
       }
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) => fail(messages.format)
@@ -102,7 +103,7 @@ class RegressionTests extends ValidatingTest {
                     |}
                     |""".stripMargin
       def extract(root: AST.RootContainer): Type = {
-        root.contents.head.types(2)
+        root.domains.head.types(2)
       }
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) => fail(messages.format)
@@ -153,17 +154,17 @@ class RegressionTests extends ValidatingTest {
           |     }
           |
           |    command Foo {
-          |     info: Info
+          |     info: ExampleContext.Info
           |    }
           |
           |    entity ExampleEntity is {
           |      handler ExampleHandler is {
           |          on command Foo {
-          |            then morph entity ExampleEntity to state FooExample
+          |            then morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample
           |              with !FooExampleState(
-          |                infoThatShouldNotWork = @Foo.info,
-          |                nameThatShouldWork = @Foo.info.name,
-          |                nameThatShouldNotWork = @Foo.info
+          |                infoThatShouldNotWork = @Example.Foo.info,
+          |                nameThatShouldWork = @Example.Foo.info.name,
+          |                nameThatShouldNotWork = @Example.Foo.info
           |              )
           |          }
           |          on other {

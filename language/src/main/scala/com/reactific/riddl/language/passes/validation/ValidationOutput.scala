@@ -9,7 +9,7 @@ import com.reactific.riddl.language.passes.resolution.ResolutionOutput
 case class ValidationOutput (
   root: AST.RootContainer,
   commonOptions: CommonOptions,
-  messages: Messages.Accumulator,
+  messages: Messages.Messages,
   resolution: ResolutionOutput,
   inlets: Seq[Inlet],
   outlets: Seq[Outlet],

@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.Domain
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.*
 
 class HandlerValidatorTest extends ValidatingTest {
@@ -21,27 +22,28 @@ class HandlerValidatorTest extends ValidatingTest {
           |  type StateFields is { field1: Number, field2: String }
           |  state HamburgerState of StateFields = {
           |    handler foo is {
-          |      on command EntityCommand { example only { then set field1 to 445 } }
-          |      on event EntityEvent { example only { then set field1 to 678 } }
+          |      on command EntityCommand { example only { then set HamburgerState.field1 to 445 } }
+          |      on event EntityEvent { example only { then set HamburgerState.field1 to 678 } }
           |    } described as "Irrelevant"
           |  } described as "Irrelevant"
           |} described as "Irrelevant"
           |} described as "Irrelevant"
           |} described as "Irrelevant"
           |""".stripMargin
-      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'EntityCommand' was not resolved, in OnMessageClause" +
-            " 'On command EntityCommand', but should refer to a Command"
-        )
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'EntityEvent' was not resolved, in OnMessageClause " +
-            "'On event EntityEvent', but should refer to an Event"
-        )
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'EntityCommand' was not resolved, in OnMessageClause" +
+              " 'On command EntityCommand', but should refer to a Command"
+          )
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'EntityEvent' was not resolved, in OnMessageClause " +
+              "'On event EntityEvent', but should refer to an Event"
+          )
       }
     }
 
@@ -52,22 +54,23 @@ class HandlerValidatorTest extends ValidatingTest {
           |context EntityContext is {
           |entity Hamburger is {
           |  type StateFields is { field1: Number }
-          |  state HamburgerState of StateFields is {
+          |  state HamburgerState of Hamburger.StateFields is {
           |    handler foo is {
-          |      on event Incoming { example only { then set field1 to 678 } }
+          |      on event EntityContext.Incoming { example only { then set HamburgerState.field1 to 678 } }
           |    }
           |  }
           |}
           |}
           |}
           |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'Incoming' was not resolved, in OnMessageClause " +
-            "'On event Incoming', but should refer to an Event"
-        )
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'EntityContext.Incoming' resolved to 'EntityConext' at empty(3:1), in OnMessageClause " +
+              "'On event EntityContext.Incoming', but a Type was expected:"
+          )
       }
     }
 

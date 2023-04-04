@@ -4,19 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 class DefinitionValidatorTest extends ValidatingTest {
 
   "Definition Validation" should {
     "warn when an identifier is less than 3 characters" in {
-      parseAndValidateDomain("""domain po is {
-                               |type Ba is String
-                               |}
-                               |""".stripMargin) {
+      val input = RiddlParserInput(
+        """domain po is {
+          |type Ba is String
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgs: Seq[Message]) =>
           if (msgs.isEmpty) {
             fail(
@@ -26,14 +30,13 @@ class DefinitionValidatorTest extends ValidatingTest {
             val styleWarnings = msgs.filter(_.kind == StyleWarning)
             styleWarnings.size mustEqual 3
             assertValidationMessage(
-              styleWarnings,
-              StyleWarning,
-              "Domain identifier 'po' is too short. The minimum length is 3"
+              styleWarnings, StyleWarning, "Domain identifier 'po' is too short. The minimum length is 3"
             )
             assertValidationMessage(
-              styleWarnings,
-              StyleWarning,
-              "Type identifier 'Ba' is too short. The minimum length is 3"
+              styleWarnings, StyleWarning, "Type identifier 'Ba' is too short. The minimum length is 3"
+            )
+            assertValidationMessage(
+              styleWarnings, StyleWarning, "Models without any streaming data will exhibit minimal effect"
             )
           }
       }

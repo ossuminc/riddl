@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
+import com.reactific.riddl.language.passes.Pass
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -30,10 +31,10 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
     TopLevelParser.parse(input) match {
       case Left(errors) => fail(errors.map(_.format).mkString("\n"))
       case Right(model) =>
-        val result = Validation.validate(model, commonOptions)
-        result.messages match {
-          case msgs: Messages.Messages if msgs.nonEmpty => onFailure(msgs)
-          case _                                        => onSuccess
+        Pass(model, commonOptions) match {
+          case Left(messages) => onFailure(messages)
+          case Right(ao) =>
+            if (ao.messages.nonEmpty) onFailure(ao.messages) else onSuccess
         }
     }
   }
@@ -239,7 +240,7 @@ class PathResolutionSpec extends AnyWordSpec with Matchers {
     "resolve simple path through an include" in {
       val eL = At.empty
       val root = RootContainer(
-        contents = Seq(
+        domains = Seq(
           Domain(
             eL,
             Identifier(eL, "D"),

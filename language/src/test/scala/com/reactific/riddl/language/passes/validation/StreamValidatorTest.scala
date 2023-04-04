@@ -1,4 +1,6 @@
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
+
+import com.reactific.riddl.language.Messages
 
 /** Test cases for the StreamValidator */
 class StreamValidatorTest extends ValidatingTest {

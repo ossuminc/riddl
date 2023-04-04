@@ -19,29 +19,29 @@ trait UsageResolution {
   type UseMap = mutable.HashMap[Definition, Seq[Definition]]
   private def emptyUseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
 
-  private val uses: UseMap = emptyUseMap
+  protected val uses: UseMap = emptyUseMap
 
   def usesAsMap: Map[Definition, Seq[Definition]] = uses.toMap
 
-  private val usedBy: UseMap = emptyUseMap
+  protected val usedBy: UseMap = emptyUseMap
 
   def usedByAsMap: Map[Definition, Seq[Definition]] = usedBy.toMap
 
-  private var entities: Seq[Entity] = Seq.empty[Entity]
+  protected var entities: Seq[Entity] = Seq.empty[Entity]
 
   def addEntity(entity: Entity): this.type = {
     entities = entities :+ entity
     this
   }
 
-  private var types: Seq[Type] = Seq.empty[Type]
+  protected var types: Seq[Type] = Seq.empty[Type]
 
   def addType(ty: Type): this.type = {
     types = types :+ ty
     this
   }
 
-  private var functions: Seq[Function] = Seq.empty[Function]
+  protected var functions: Seq[Function] = Seq.empty[Function]
 
   def addFunction(fun: Function): this.type = {
     functions = functions :+ fun

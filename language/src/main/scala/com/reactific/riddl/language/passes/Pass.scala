@@ -3,7 +3,7 @@ package com.reactific.riddl.language.passes
 import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.passes.resolution.{ResolutionOutput, ResolutionPass}
+import com.reactific.riddl.language.passes.resolution.{ReferenceMap, ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.language.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.{Logger, SysLogger, Timer}
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -17,22 +17,21 @@ import com.reactific.riddl.language.passes.validation.{ValidationOutput, Validat
 /** Description of Parser's Output */
 case class ParserOutput(
   root: RootContainer,
-  commonOptions: CommonOptions,
-) extends PassOutput {
-  val messages: Messages.Accumulator = new Messages.Accumulator(commonOptions)
-}
+  commonOptions: CommonOptions = CommonOptions(),
+  messages: Messages.Messages = Messages.empty
+) extends PassOutput
 
 abstract class PassOutput {
   def root: RootContainer
   def commonOptions: CommonOptions
-  def messages: Messages.Accumulator
+  def messages: Messages.Messages
 }
 
 object PassOutput {
   def empty: PassOutput = new PassOutput {
     def root: RootContainer = RootContainer.empty
     def commonOptions: CommonOptions = CommonOptions()
-    def messages: Messages.Accumulator = Messages.Accumulator.empty
+    def messages: Messages.Messages = Messages.empty
   }
 }
 
@@ -59,25 +58,29 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
     definition match {
       case leaf: LeafDefinition => processLeafDefinition(leaf, parentsAsSeq)
       case hd: HandlerDefinition => processHandlerDefinition(hd, parentsAsSeq)
+      case od: OnClauseDefinition => processOnClauseDefinition(od, parentsAsSeq)
       case ad: ApplicationDefinition => processApplicationDefinition(ad, parentsAsSeq)
+      case ud: UseCaseDefinition => processUseCaseDefinition(ud, parentsAsSeq)
       case ed: EntityDefinition => processEntityDefinition(ed, parentsAsSeq)
+      case sd: StateDefinition => processStateDefinition(sd, parentsAsSeq)
       case rd: RepositoryDefinition => processRepositoryDefinition(rd, parentsAsSeq)
       case sd: SagaDefinition => processSagaDefinition(sd, parentsAsSeq)
       case cd: ContextDefinition => processContextDefinition(cd, parentsAsSeq)
-      case dd: DomainDefinition => processDomainDefinition(dd, parentsAsSeq)
+      case sd: StreamletDefinition => processStreamletDefinition(sd, parentsAsSeq)
       case ad: AdaptorDefinition => processAdaptorDefinition(ad, parentsAsSeq)
       case pd: ProjectorDefinition => processProjectorDefinition(pd, parentsAsSeq)
-      case _: RootContainer => () // ignore
-      case unimplemented: Definition =>
-        throw new NotImplementedError(
-          s"Validation of ${unimplemented.identify} is not implemented."
-        )
+      case fd: FunctionDefinition => processFunctionDefinition(fd, parentsAsSeq)
+      case ed: EpicDefinition => processEpicDefinition(ed, parentsAsSeq)
+      case rd: RootDefinition => processRootDefinition(rd, parentsAsSeq)
+      case dd: DomainDefinition => processDomainDefinition(dd, parentsAsSeq)
+      case _: RootContainer => ()
     }
     if (definition.hasDefinitions) {
       processKids(definition, parents)
     }
   }
 
+  def postProcess(): Unit
 
   /**
    * Process one leaf definition from the model. Leaf definitions occur
@@ -88,18 +91,25 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
    * The parents of the definition as a stack from nearest to the Root
    */
 
-  def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit
-  def processHandlerDefinition(hd: HandlerDefinition, parents: Seq[Definition]): Unit
+  def processAdaptorDefinition(adaptDef: AdaptorDefinition, parents: Seq[Definition]): Unit
   def processApplicationDefinition(appDef: ApplicationDefinition, parents: Seq[Definition]): Unit
-  def processEntityDefinition(entDef: EntityDefinition, parents: Seq[Definition]): Unit
-  def processRepositoryDefinition(repoDef: RepositoryDefinition, parents: Seq[Definition]): Unit
-  def processProjectorDefinition(pd: ProjectorDefinition, parents: Seq[Definition]): Unit
-  def processSagaDefinition(sagaDef: SagaDefinition, parents: Seq[Definition]): Unit
   def processContextDefinition(contextDef: ContextDefinition, parents: Seq[Definition]): Unit
   def processDomainDefinition(domDef: DomainDefinition, parents: Seq[Definition]): Unit
-  def processAdaptorDefinition(adaptDef: AdaptorDefinition, parents: Seq[Definition]): Unit
+  def processEntityDefinition(entDef: EntityDefinition, parents: Seq[Definition]): Unit
+  def processEpicDefinition(epicDef: EpicDefinition, parents: Seq[Definition]): Unit
+  def processFunctionDefinition(funcDef: FunctionDefinition, parents: Seq[Definition]): Unit
+  def processHandlerDefinition(hd: HandlerDefinition, parents: Seq[Definition]): Unit
+  def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit
+  def processOnClauseDefinition(ocd: OnClauseDefinition, parents: Seq[Definition]): Unit
+  def processProjectorDefinition(pd: ProjectorDefinition, parents: Seq[Definition]): Unit
+  def processRepositoryDefinition(repoDef: RepositoryDefinition, parents: Seq[Definition]): Unit
+  def processRootDefinition(rootDef: RootDefinition, parents: Seq[Definition]): Unit
+  def processSagaDefinition(sagaDef: SagaDefinition, parents: Seq[Definition]): Unit
+  def processStateDefinition(stateDef: StateDefinition, parents: Seq[Definition]): Unit
+  def processStreamletDefinition(streamDef: StreamletDefinition, parents: Seq[Definition]): Unit
+  def processUseCaseDefinition(ucDef: UseCaseDefinition, parents: Seq[Definition]): Unit
 
-    /**
+  /**
    * Generate the output of this Pass. This will only be called after all the calls
    * to process have completed.
    * @return an instance of the output type
@@ -114,21 +124,54 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
 
 object Pass {
 
-  type AggregateOutput = (ParserOutput, SymbolsOutput, ResolutionOutput, ValidationOutput)
+  case class AggregateOutput(
+    root: RootContainer,
+    commonOptions: CommonOptions,
+    messages: Messages.Messages,
+    symbols: SymbolsOutput,
+    refMap: ReferenceMap,
+    uses: Map[Definition, Seq[Definition]],
+    usedBy: Map[Definition, Seq[Definition]],
+    inlets: Seq[Inlet],
+    outlets: Seq[Outlet],
+    connectors: Seq[Connector],
+    streamlets: Seq[Streamlet],
+    sends: Map[SendAction, Seq[Definition]]
+  ) extends PassOutput
 
   def apply(
-    input: ParserOutput
-  ): Either[Messages.Message,AggregateOutput]  = {
+    model: RootContainer,
+    options: CommonOptions = CommonOptions(),
+    shouldFailOnErrors: Boolean = true
+  ): Either[Messages.Messages,AggregateOutput]  = {
+    val parserOutput = ParserOutput(model, options)
+    apply(parserOutput, shouldFailOnErrors)
+  }
+
+  def apply(
+    input: ParserOutput,
+    shouldFailOnErrors: Boolean
+  ): Either[Messages.Messages,AggregateOutput]  = {
     try {
-      // Using.Manager { implicit use =>
       val symbolsOutput = runSymbols(input)
       val resolutionOutput = runResolution(symbolsOutput)
       val validationOutput = runValidation(resolutionOutput)
-      Right((input, symbolsOutput, resolutionOutput, validationOutput))
+      val messages = input.messages ++ symbolsOutput.messages ++ resolutionOutput.messages ++ validationOutput.messages
+      val result = AggregateOutput(
+        input.root, input.commonOptions, messages, symbolsOutput, resolutionOutput.refMap,
+        resolutionOutput.uses, resolutionOutput.usedBy, validationOutput.inlets, validationOutput.outlets,
+        validationOutput.connectors, validationOutput.streamlets, validationOutput.sends
+      )
+      if (messages.hasErrors && shouldFailOnErrors) {
+        Left(messages)
+      } else {
+        Right(result)
+      }
     } catch {
       case NonFatal(xcptn) =>
         val message = ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
-        Left(Messages.severe(message, At.empty))
+        val messages: Messages.Messages = List(Messages.severe(message, At.empty))
+        Left(messages)
     }
   }
 
@@ -153,6 +196,7 @@ object Pass {
     Timer.time[OUT](pass.name, in.commonOptions.showTimes, logger) {
       val parents: mutable.Stack[Definition] = mutable.Stack.empty
       pass.process(in.root, parents)
+      pass.postProcess()
       pass.result
     }
   }

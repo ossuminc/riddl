@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.Messages.*
 
 class InvariantValidator extends ValidatingTest {

@@ -23,9 +23,9 @@ private[parsing] trait SagaParser
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
-      location ~ Keywords.step ~/ identifier ~ is ~ open ~ examples ~
-        Keywords.reverted ~ Readability.by.? ~ examples ~ close ~ briefly ~
-        description
+      location ~ Keywords.step ~/ identifier ~ is ~ open ~ examples ~ close ~
+        Keywords.reverted ~ Readability.by.? ~ open ~ examples ~ close ~
+        briefly ~ description
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 

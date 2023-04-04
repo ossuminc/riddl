@@ -33,7 +33,14 @@ case class CommonOptions(
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
   sortMessagesByLocation: Boolean = false,
-  groupMessagesByKind: Boolean = true)
+  groupMessagesByKind: Boolean = true
+)
+
+object CommonOptions {
+  def noWarnings: CommonOptions = CommonOptions(showWarnings = false)
+  def noMinorWarnings: CommonOptions =
+    CommonOptions(showMissingWarnings = false, showStyleWarnings = false, showUnusedWarnings = false)
+}
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {

@@ -1,6 +1,6 @@
 package com.reactific.riddl.language.passes.validation
 
-import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.{Message, StyleWarning}
 import com.reactific.riddl.language.passes.Pass
@@ -24,8 +24,13 @@ case class ValidationPass (resolution: ResolutionOutput) extends
    * @return an instance of the output type
    */
   override def result: ValidationOutput = {
-      ValidationOutput(resolution.root, resolution.commonOptions, messages, resolution, inlets, outlets, connectors,
-        streamlets, sends.toMap)
+      ValidationOutput(resolution.root, resolution.commonOptions, messages.toMessages, resolution, inlets, outlets,
+        connectors, streamlets, sends.toMap)
+  }
+
+  def postProcess(): Unit = {
+    checkOverloads()
+    checkStreaming()
   }
 
   def processLeafDefinition(leaf: LeafDefinition, parents: Seq[Definition]): Unit = {
@@ -39,13 +44,28 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       case o: Outlet => validateOutlet(o, parents)
       case a: Author => validateAuthorInfo( a, parents)
       case sa: Actor => validateActor(sa, parents)
-      case sc: UseCase => validateStoryCase(sc, parents)
+      case uc: UseCase => validateUseCase(uc, parents)
       case c: Connector => validateConnection(c, parents)
     }
   }
 
   def processHandlerDefinition(hd: HandlerDefinition, parents: Seq[Definition]): Unit = {
-    // TODO: write this methood
+    hd match {
+      case omc@OnMessageClause(_, msg, from, _, _, _) =>
+        checkDefinition(parents, omc)
+        if (msg.nonEmpty) {
+          checkMessageRef(msg, omc, parents, msg.messageKind)
+        }
+        if (from.nonEmpty) {
+          checkRef(from.get, omc, parents)
+        }
+      case oic: OnInitClause =>
+        checkDefinition(parents, oic)
+      case otc: OnTermClause =>
+        checkDefinition(parents, otc)
+      case ooc: OnOtherClause =>
+        checkDefinition(parents, ooc)
+    }
   }
 
   def processApplicationDefinition(ad: ApplicationDefinition, parents: Seq[Definition]): Unit = {
@@ -80,8 +100,19 @@ case class ValidationPass (resolution: ResolutionOutput) extends
   }
 
   def processProjectorDefinition(pd: ProjectorDefinition, parents: Seq[Definition]): Unit = {
-    // TODO: write this method
+    pd match {
+      case h: Handler => validateHandler(h, parents)
+      case f: Field => validateField(f, parents)
+      case t: Type => validateType(t, parents)
+      case i: Invariant => validateInvariant(i, parents)
+      case i: Inlet => validateInlet(i, parents)
+      case o: Outlet => validateOutlet(o, parents)
+      case t: Term => validateTerm(t, parents)
+      case c: Constant => validateConstant(c, parents)
+      case i: Include[EntityDefinition]@unchecked => validateInclude(i)
+    }
   }
+
   def processRepositoryDefinition(rd: RepositoryDefinition, parents: Seq[Definition]): Unit= {
     rd match {
       case h: Handler => validateHandler(h, parents)
@@ -90,8 +121,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       case i: Inlet => validateInlet(i, parents)
       case o: Outlet => validateOutlet(o, parents)
       case t: Term => validateTerm(t, parents)
-      case i: Include[RepositoryDefinition]@unchecked =>
-        validateInclude(i)
+      case i: Include[RepositoryDefinition]@unchecked => validateInclude(i)
     }
   }
 
@@ -102,6 +132,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       case f: Field => validateField(f, parents)
       case i: Inlet => validateInlet(i, parents)
       case o: Outlet => validateOutlet(o, parents)
+      case i: Include[SagaDefinition]@unchecked => validateInclude(i)
     }
   }
 
@@ -121,8 +152,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       case i: Inlet => validateInlet(i, parents)
       case o: Outlet => validateOutlet(o, parents)
       case c: Connector => validateConnection(c, parents)
-      case i: Include[ContextDefinition]@unchecked =>
-        validateInclude(i)
+      case i: Include[ContextDefinition]@unchecked => validateInclude(i)
     }
   }
 
@@ -137,8 +167,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       case t: Term => validateTerm(t, parents)
       case a: Author => validateAuthorInfo(a, parents)
       case a: Actor => validateActor(a, parents)
-      case i: Include[DomainDefinition]@unchecked =>
-        validateInclude(i)
+      case i: Include[DomainDefinition]@unchecked => validateInclude(i)
     }
   }
 
@@ -150,8 +179,67 @@ case class ValidationPass (resolution: ResolutionOutput) extends
       case t: Type => validateType(t, parents)
       case t: Term => validateTerm(t, parents)
       case c: Constant => validateConstant(c, parents)
-      case i: Include[AdaptorDefinition]@unchecked =>
-        validateInclude(i)
+      case i: Include[AdaptorDefinition]@unchecked => validateInclude(i)
+    }
+  }
+
+  override def processEpicDefinition(epicDef: AST.EpicDefinition, parents: Seq[AST.Definition]): Unit = {
+    epicDef match {
+      case e: Example => validateExample(e, parents)
+      case uc: UseCase => validateUseCase(uc, parents)
+      case t: Term => validateTerm(t, parents)
+      case i: Include[AdaptorDefinition]@unchecked => validateInclude(i)
+    }
+  }
+
+  override def processFunctionDefinition(funcDef: AST.FunctionDefinition, parents: Seq[AST.Definition]): Unit = {
+    funcDef match {
+      case t: Type => validateType(t, parents)
+      case _: Field => () // handled by processLeafDefinition
+      case _: Example => () // handled by recursion
+      case _: Function => () // handled by recursion
+      case i: Include[FunctionDefinition]@unchecked => validateInclude(i)
+    }
+  }
+
+  override def processOnClauseDefinition(ocd: AST.OnClauseDefinition, parents: Seq[AST.Definition]): Unit = {
+    ocd match {
+      case ex: Example => validateExample(ex, parents)
+    }
+  }
+
+  override def processRootDefinition(rootDef: AST.RootDefinition, parents: Seq[AST.Definition]): Unit = {
+    rootDef match {
+      case d: Domain => validateDomain(d, parents)
+      case i: Include[RootDefinition] @unchecked => validateInclude(i)
+      case a: Author => validateAuthorInfo(a, parents)
+    }
+  }
+
+  override def processStateDefinition(stateDef: AST.StateDefinition, parents: Seq[AST.Definition]): Unit = {
+    stateDef match {
+      case f: Field => validateField(f, parents)
+      case h: Handler => validateHandler(h, parents)
+      case i: Invariant => validateInvariant(i, parents)
+      case t: Type => validateType(t, parents)
+    }
+  }
+
+  override def processStreamletDefinition(streamDef: AST.StreamletDefinition, parents: Seq[AST.Definition]): Unit = {
+    streamDef match {
+      case t: Type => validateType(t, parents)
+      case h: Handler => validateHandler(h, parents)
+      case t: Term => validateTerm(t, parents)
+      case c: Constant => validateConstant(c, parents)
+      case i: Inlet => validateInlet(i, parents)
+      case o: Outlet => validateOutlet(o, parents)
+      case i: Include[StreamletDefinition] @unchecked => validateInclude(i)
+    }
+  }
+
+  override def processUseCaseDefinition(useCaseDef: UseCaseDefinition, parents: Seq[Definition]): Unit = {
+    useCaseDef match {
+      case i: Interaction => validateInteraction(i, parents)
     }
   }
 
@@ -330,32 +418,9 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, h)
-    h.clauses.foreach(validateOnClause(_, parents))
     checkDescription(h)
   }
 
-  private def validateOnClause(
-    oc: OnClause,
-    parents: Seq[Definition]
-  ): Unit = {
-    oc match {
-      case oic: OnInitClause =>
-        checkDefinition(parents, oic)
-      case omc@OnMessageClause(_, msg, from, _, _, _) =>
-        checkDefinition(parents, omc)
-        if (msg.nonEmpty) {
-            checkMessageRef(msg, oc, parents, msg.messageKind)
-          }
-        if (from.nonEmpty) {
-          checkRef(from.get, oc, parents)
-        }
-      case oic: OnTermClause =>
-        checkDefinition(parents, oic)
-      case ooc: OnOtherClause =>
-        checkDefinition(parents, ooc)
-    }
-    checkDescription(oc)
-  }
 
   private def validateInclude[T <: Definition](
     i: Include[T]
@@ -589,13 +654,13 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     checkDescription(actor)
   }
 
-  private def validateStoryCase(
-    sc: UseCase,
+  private def validateUseCase(
+    uc: UseCase,
     parents: Seq[Definition]
   ): Unit = {
-    checkDefinition(parents, sc)
-      if (sc.interactions.nonEmpty) {
-        sc.interactions.foreach { step =>
+    checkDefinition(parents, uc)
+      if (uc.interactions.nonEmpty) {
+        uc.interactions.foreach { step =>
           step match {
             case seq: SequentialInteractions =>
               if (seq.contents.isEmpty) {
@@ -617,8 +682,8 @@ case class ValidationPass (resolution: ResolutionOutput) extends
                 )
               }
             case is: GenericInteraction =>
-              checkPathRef[Definition](is.from.pathId, sc, parents)
-              checkPathRef[Definition](is.to.pathId, sc, parents)
+              checkPathRef[Definition](is.from.pathId, uc, parents)
+              checkPathRef[Definition](is.to.pathId, uc, parents)
               if (is.relationship.isEmpty) {
                 messages.addMissing(
                   step.loc,
@@ -628,14 +693,37 @@ case class ValidationPass (resolution: ResolutionOutput) extends
           }
         }
       }
-      if (sc.nonEmpty) {
-        if (sc.interactions.isEmpty)(
+      if (uc.nonEmpty) {
+        if (uc.interactions.isEmpty)(
           messages.addMissing(
-            sc.loc,
-            s"${sc.identify} doesn't define any interactions"
+            uc.loc,
+            s"${uc.identify} doesn't define any interactions"
           )
         )
       }
-      checkDescription(sc)
+      checkDescription(uc)
   }
+
+  private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
+    checkDefinition(parents, interaction)
+    interaction match {
+      case SelfInteraction(_,_,from,_,_,_) => checkRef[Definition](from, interaction, parents)
+      case PutInputInteraction(_, _, from, _, to, _, _) =>
+        checkRef[Actor](from, interaction, parents)
+        checkRef[Input](to, interaction, parents)
+      case ArbitraryInteraction(_, _, from, _, to, _, _) =>
+        checkRef[Definition](from, interaction, parents)
+        checkRef[Definition](to, interaction, parents)
+      case TakeOutputInteraction(_, _, from, _, to, _, _) =>
+        checkRef[Output](from, interaction, parents)
+        checkRef[Actor](to, interaction, parents)
+      case _ => ()
+        // These are all just containers of other interactions, not needing further validation
+        // OptionalInteractions, ParallelInteractions, SequentialInteractions
+    }
+    checkDescription(interaction)
+  }
+
+
+
 }

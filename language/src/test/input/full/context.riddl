@@ -1,4 +1,4 @@
-context other by authorReid is { ??? }
+context other by author Reid is { ??? }
 context context by author Reid is {
   adaptor adaptor from context other is { ??? }
   term term is briefly "not interesting"
@@ -16,5 +16,8 @@ context context by author Reid is {
   flow flow is { ??? }
   merge merge is { ??? }
   split split is { ??? }
-  saga saga is { ??? }
+  saga saga is {
+   step a is { then "nothing" } reverted by { then "nothing" }
+   step b is { then "nothing" } reverted by { then "nothing" }
+ }
 }

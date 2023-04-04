@@ -34,7 +34,7 @@ trait DefinitionValidation extends BasicValidation  {
   }
 
   private def checkUniqueContent(definition: Definition): this.type = {
-    val allNames = definition.contents.map(_.id.value)
+    val allNames = definition.contents.filterNot(_.isImplicit).map(_.id.value)
     if (allNames.distinct.size != allNames.size) {
       val duplicates: Map[String, Seq[Definition]] =
         definition.contents.groupBy(_.id.value).filterNot(_._2.size < 2)
@@ -72,7 +72,7 @@ trait DefinitionValidation extends BasicValidation  {
       definition.loc
     ).checkWhen(definition.isVital) { () =>
         definition.asInstanceOf[WithAuthors].authors.foreach { authorRef: AuthorRef =>
-          pathIdToDefinition(authorRef.pathId, parents) match {
+          pathIdToDefinition(authorRef.pathId, definition +: parents) match {
             case None =>
               messages.addError(
                 authorRef.loc,

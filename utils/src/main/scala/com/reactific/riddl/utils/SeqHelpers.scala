@@ -16,6 +16,15 @@ object SeqHelpers {
       if (index < 0) { Seq.empty[T] }
       else { seq.drop(index) }
     }
+
+    def dropBefore(f: T => Boolean): Seq[T] = {
+      val index = seq.indexWhere(f)
+      if (index < 0) {Seq.empty[T]}
+      else if (index == 0) {
+        seq
+      } else {seq.drop(index - 1)}
+    }
+
     def allUnique: Boolean = {
       val set = scala.collection.mutable.Set[T]()
       seq.forall { x =>

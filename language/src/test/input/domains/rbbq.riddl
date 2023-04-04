@@ -4,11 +4,11 @@ domain ReactiveBBQ is {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id(Customer.Customer) explained as {
+  type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
     "Unique identifier for a customer"
   }
 
-  type OrderId is Id(Order) described as {
+  type OrderId is Id(ReactiveBBQ.Order.Order) described as {
     |# brief
     |Unique identifier for a customer's order
     |# see
@@ -30,11 +30,11 @@ domain ReactiveBBQ is {
   context Kitchen is {
     type IP4Address is { a: Number, b: Number, c: Number, d: Number}
     type OrderViewType is {
-      address:  type IP4Address
+      address:  type Kitchen.IP4Address
     }
     entity OrderViewer is {
      option is kind("device")
-     record fields is { field: type OrderViewType }
+     record fields is { field: type Kitchen.OrderViewType }
      state OrderState of OrderViewer.fields is {
        handler input is { ??? }
      }
@@ -70,29 +70,29 @@ domain ReactiveBBQ is {
   context Loyalty is {
     type AccrualEvent is {
       when is TimeStamp,
-      who is CustomerId,
+      who is ReactiveBBQ.CustomerId,
       pointsAccrued is Number,
       fromOrder is OrderId
     }
     type AwardEvent is {
       when is TimeStamp,
-      who is CustomerId,
+      who is ReactiveBBQ.CustomerId,
       pointsAwarded is Number,
       toOrder is OrderId
     }
-    type RewardEvent is one of { AccrualEvent or AwardEvent }
+    type RewardEvent is one of { Loyalty.AccrualEvent or Loyalty.AwardEvent }
     entity RewardsAccount is {
       record fields is {
-        id is CustomerId,
+        id is ReactiveBBQ.CustomerId,
         points is Number,
-        rewardEvents is many optional RewardEvent
+        rewardEvents is many optional Loyalty.RewardEvent
       }
       state RewardState of RewardsAccount.fields is {
         handler Inputs is { ??? }
       }
     }
 
-    adaptor PaymentAdapter from context Payment is {
+    adaptor PaymentAdapter from context ReactiveBBQ.Payment is {
       ???
     }
   }
@@ -103,8 +103,8 @@ domain ReactiveBBQ is {
     entity Order is {
       option is aggregate
       record fields is {
-        orderId is OrderId,
-        customerId is CustomerId
+        orderId is ReactiveBBQ.OrderId,
+        customerId is ReactiveBBQ.CustomerId
       }
       state OrderState of Order.fields is {
         handler foo  is {}
@@ -118,7 +118,7 @@ domain ReactiveBBQ is {
     entity Payment is {
       option is aggregate
       record fields is {
-        orderId is OrderId,
+        orderId is ReactiveBBQ.OrderId,
         amount is Number,
         cardToken is String
       }
@@ -133,14 +133,14 @@ domain ReactiveBBQ is {
   context Menu is {
     entity MenuItem is {
       record fields is { something: String }
-      state MenuState of MenuItem.fields is {
+      state MenuState of Menu.MenuItem.fields is {
         handler foo is {}
       }
     }
-    type MenuItemRef is reference to entity MenuItem
+    type MenuItemRef is reference to entity Menu.MenuItem
     entity Menu is {
       option is aggregate
-      record fields is { items: many MenuItemRef }
+      record fields is { items: many Menu.MenuItemRef }
       state typical of Menu.fields is {
         handler foo is { ??? }
       }

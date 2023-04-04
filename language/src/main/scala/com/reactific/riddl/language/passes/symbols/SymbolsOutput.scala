@@ -25,7 +25,7 @@ object Symbols {
 case class SymbolsOutput(
   root: RootContainer,
   commonOptions: CommonOptions,
-  messages: Messages.Accumulator,
+  messages: Messages.Messages,
   symTab: SymTab,
   parentage: Parentage
 ) extends PassOutput {

@@ -257,4 +257,6 @@ trait AbstractDefinitions {
   /** Base trait of any definition that occurs in the body of a projector */
   trait ProjectorDefinition extends Definition
 
+  /** Base trait of definitions in a UseCase, typically interactions */
+  trait UseCaseDefinition extends Definition
 }

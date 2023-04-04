@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
 
 class FunctionValidatorTest extends ValidatingTest {
@@ -60,11 +61,13 @@ class FunctionValidatorTest extends ValidatingTest {
                     |  } described as "foo"
                     |""".stripMargin
 
-      parseAndValidateInContext[Function](input) { case (function, _, msgs) =>
+      parseAndValidateInContext[Function](input, shouldFailOnErrors=false) { case (function, _, msgs) =>
         function.id.value mustBe "AnAspect"
         function.examples mustNot be(empty)
         msgs mustNot be(empty)
-        msgs.format must include("Function 'AnAspect' is unused")
+        val text = msgs.format
+        text must include("Function 'AnAspect' is unused")
+        text must include("Vital definitions should have an author reference")
       }
     }
   }

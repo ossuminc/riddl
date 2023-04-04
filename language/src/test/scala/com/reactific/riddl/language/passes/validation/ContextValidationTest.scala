@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
@@ -207,7 +207,7 @@ class ContextValidationTest extends ValidatingTest {
         case Right(root) =>
           root mustNot be(empty)
           root.contents mustNot be(empty)
-          val d = root.contents.head
+          val d = root.domains.head
           d.contexts mustNot be(empty)
           val c = d.contexts.head
           c.includes mustNot be(empty)

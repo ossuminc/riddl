@@ -85,8 +85,8 @@ class SymbolTableTest extends ParsingTest {
         case Right(result) =>
           val model = result.root
           model.isRootContainer must be(true)
-          model.contents.headOption must not(be(empty))
-          model.contents.head.contexts.size must be(1)
+          model.domains.headOption must not(be(empty))
+          model.domains.head.contexts.size must be(1)
         case Left(errors) => fail(s"""Failed to parse & validate: " +
                                      |${errors.format}""".stripMargin)
       }

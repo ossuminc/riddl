@@ -33,6 +33,8 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
 
   private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
+  override def postProcess(): Unit = ()
+
   private def rootLessParents(parents: Seq[Definition]): Parents = {
     parents.filter {
       case _: RootContainer => false
@@ -40,7 +42,7 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
     }
   }
 
-   def processADefinition(definition: Definition, parents: Seq[Definition]): Unit = {
+  def processADefinition(definition: Definition, parents: Seq[Definition]): Unit = {
     definition match {
       case _: RootContainer => // ignore
       case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
@@ -97,8 +99,29 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
   override def processDomainDefinition(domDef: AST.DomainDefinition, parents: Seq[AST.Definition]): Unit =
     processADefinition(domDef, parents)
 
-  override def processAdaptorDefinition(adaptDef: AST.AdaptorDefinition, parents: Seq[AST.Definition]): Unit =
+  override def processAdaptorDefinition(adaptDef: AdaptorDefinition, parents: Seq[Definition]): Unit =
     processADefinition(adaptDef, parents)
+
+  override def processEpicDefinition(epicDef: EpicDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(epicDef, parents)
+
+  override def processFunctionDefinition(funcDef: FunctionDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(funcDef, parents)
+
+  override def processOnClauseDefinition(ocd: OnClauseDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(ocd, parents)
+
+  override def processRootDefinition(rootDef: RootDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(rootDef, parents)
+
+  override def processStateDefinition(stateDef: StateDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(stateDef, parents)
+
+  override def processStreamletDefinition(streamDef: StreamletDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(streamDef, parents)
+
+  override def processUseCaseDefinition(useCaseDef: UseCaseDefinition, parents: Seq[Definition]): Unit =
+    processADefinition(useCaseDef, parents)
 }
 
 

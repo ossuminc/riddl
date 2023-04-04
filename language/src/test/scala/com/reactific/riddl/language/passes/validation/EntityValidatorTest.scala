@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.*
 
 /** Unit Tests For EntityValidatorTest */
@@ -19,7 +20,7 @@ class EntityValidatorTest extends ValidatingTest {
                     |
                     |}
                     |""".stripMargin
-      parseAndValidateInContext[Entity](input) {
+      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
         case (entity: Entity, rpi, msgs: Messages) =>
           info(msgs.format)
           msgs.count(_.kind.isError) mustBe 1
@@ -40,8 +41,8 @@ class EntityValidatorTest extends ValidatingTest {
         """entity MultiState is {
           |  options(fsm)
           |  record fields is { field: String  }
-          |  state foo of ^fields is { handler x is {???} }
-          |  state bar of ^fields is { handler x is {???} }
+          |  state foo of MultiState.fields is { handler x is {???} }
+          |  state bar of MultiState.fields is { handler x is {???} }
           |  handler fum is { ??? }
           |}""".stripMargin
       parseAndValidateInContext[Entity](input) {
@@ -55,9 +56,9 @@ class EntityValidatorTest extends ValidatingTest {
         """entity MultiState is {
           |  options(fsm)
           |  record fields is { field: String }
-          |  state foo of ^fields is {  handler x is {???}  }
+          |  state foo of MultiState.fields is {  handler x is {???}  }
           |}""".stripMargin
-      parseAndValidateInContext[Entity](input) {
+      parseAndValidateInContext[Entity](input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_: Entity, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
@@ -69,20 +70,20 @@ class EntityValidatorTest extends ValidatingTest {
     }
     "catch missing things" in {
       val input = """entity Hamburger is {
-                    |  record fields is { field:  SomeType }
-                    |  state foo of ^fields
+                    |  record fields is { field: SomeType }
+                    |  state foo of Hamburger.fields
                     |}""".stripMargin
-      parseAndValidateInContext[Entity](input) {
+      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
         case (_: Entity, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
             Error,
-            "Entity 'Hamburger' has 1 state but no handlers"
+            "Entity 'Hamburger' has 1 state but no handlers."
           )
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'SomeType' was not resolved, in Field 'field', " +
+            "Path 'SomeType' was not resolved, in Record 'fields', " +
               "but should refer to a Type"
           )
           assertValidationMessage(
@@ -112,13 +113,13 @@ class EntityValidatorTest extends ValidatingTest {
           |  entity Hamburger  is {
           |    options (aggregate, transient)
           |    record fields is { field: SomeType }
-          |    state field of ^fields is {  handler x is {???}  }
+          |    state field of Hamburger.fields is {  handler x is {???}  }
           |    handler foo is {}
           |  }
           |}
           |}
           |""".stripMargin
-      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           MissingWarning,
@@ -137,7 +138,7 @@ class EntityValidatorTest extends ValidatingTest {
           |    options (aggregate, transient)
           |    outlet ridOfIt is event Message
           |    record fields is { field: SomeType } handler x is { ??? }
-          |    state field of ^fields is { }
+          |    state field of Hamburger.fields is { }
           |    handler baz is {
           |      on command DoIt {
           |        then send event Message() to outlet ridOfIt
@@ -147,14 +148,13 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |}
           |""".stripMargin
-      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
           Error,
           s"Field 'a' was not set in message constructor"
         )
       }
-
     }
   }
 }

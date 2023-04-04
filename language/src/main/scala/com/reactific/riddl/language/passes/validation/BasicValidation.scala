@@ -47,28 +47,10 @@ trait BasicValidation  {
     resolvePath[T](pid, parents)
   }
 
-  private def notResolved[T <: Definition : ClassTag](
-    pid: PathIdentifier,
-    container: Definition,
-    kind: Option[String]
-  ): Unit = {
-    val tc = classTag[T].runtimeClass
-    val message = s"Path '${pid.format}' was not resolved, in ${container.identify}"
-    val referTo = if (kind.nonEmpty) kind.get else tc.getSimpleName
-    messages.addError(
-      pid.loc,
-      {
-        if (referTo.nonEmpty) s"$message, but should refer to ${article(referTo)}"
-        else message
-      }
-    )
-  }
-
   def checkPathRef[T <: Definition : ClassTag](
     pid: PathIdentifier,
     container: Definition,
-    parents: Seq[Definition],
-    kind: Option[String] = None
+    parents: Seq[Definition]
   ): Option[T] = {
     val tc = classTag[T].runtimeClass
     if (pid.value.isEmpty) {
@@ -77,13 +59,8 @@ trait BasicValidation  {
       messages.addError(pid.loc, message)
       Option.empty[T]
     } else {
-      val pars = if (parents.toSeq.head != container) container +: parents else parents
-      resolvePath[T](pid, pars.toSeq) match {
-        case None =>
-          notResolved(pid, container, kind)
-          Option.empty[T]
-        case t: Option[T] => t
-      }
+      val pars = if (parents.head != container) container +: parents else parents
+      resolvePath[T](pid, pars)
     }
   }
 
@@ -91,9 +68,8 @@ trait BasicValidation  {
     reference: Reference[T],
     definition: Definition,
     parents: Seq[Definition],
-    kind: Option[String] = None
   ): Option[T] = {
-    checkPathRef[T](reference.pathId, definition, parents, kind)
+    checkPathRef[T](reference.pathId, definition, parents)
   }
 
   def checkRefAndExamine[T <: Definition : ClassTag](
@@ -101,7 +77,7 @@ trait BasicValidation  {
     defn: Definition,
     parents: Seq[Definition]
   )(examiner: T => Unit): this.type = {
-    checkPathRef[T](reference.pathId, defn, parents, None).map { resolved: T =>
+    checkPathRef[T](reference.pathId, defn, parents).map { resolved: T =>
       resolved match {
         case t: T => examiner(t)
         case _ => assert(classTag[T].runtimeClass == resolved.getClass)
@@ -112,14 +88,12 @@ trait BasicValidation  {
 
   def checkMaybeRef[T <: Definition : ClassTag](
     reference: Option[Reference[T]],
-    defn: Definition,
-    parents: Seq[Definition],
-    kind: Option[String] = None
-  ): this.type = {
-    reference.map { ref =>
-      checkPathRef[T](ref.pathId, defn, parents, kind)
+    definition: Definition,
+    parents: Seq[Definition]
+  ): Option[T] = {
+    reference.flatMap { ref =>
+      checkPathRef[T](ref.pathId, definition, parents)
     }
-    this
   }
 
   def checkMessageRef(

@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.validation.ValidationState
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.validation.ValidationState
+import com.reactific.riddl.language.{ParsingTest, SymbolTable, Validation}
 
 import java.nio.file.Path
 
@@ -78,29 +79,31 @@ class ValidationTest extends ParsingTest {
       }
     }
   }
+
   "Validate All Things" must {
-    var root: RootContainer = null
+    var sharedRoot: RootContainer = RootContainer.empty
+
     "parse correctly" in {
       val rootFile = "language/src/test/input/full/domain.riddl"
       val parseResult = parseTopLevelDomains(Path.of(rootFile))
       parseResult match {
         case Left(errors) => fail(errors.format)
-        case Right(rootContainer) =>
-          root = rootContainer
+        case Right(root) =>
+          sharedRoot = root
           val validationResult = Validation.validate(root)
           validationResult.root mustBe root
           succeed
       }
     }
     "handle includes" in {
-      val incls = root.contents.head.includes
+      val incls = sharedRoot.domains.head.includes
       incls mustNot be(empty)
       incls.head.contents mustNot be(empty)
       incls.head.contents.head.getClass mustBe(classOf[Application])
       incls(1).contents.head.getClass mustBe classOf[Context]
     }
     "have terms and author refs in applications" in {
-      val apps = root.contents.head.contents
+      val apps = sharedRoot.contents.head.contents
       apps mustNot be(empty)
       apps.head mustBe a[Application]
       val app = apps.head.asInstanceOf[Application]

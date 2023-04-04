@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.passes.validation
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.parsing.RiddlParserInput
 
 /** Unit Tests For TypeValidationTest */
 class TypeValidatorTest extends ValidatingTest {
@@ -28,34 +29,26 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
     "identify undefined type references" in {
-      parseAndValidateDomain("""
-                               |domain foo is {
-                               |// type Foo is Number
-                               |// type Bar is Integer
-                               |type Rename is Bar
-                               |type OneOrMore is many Bar
-                               |type ZeroOrMore is many optional Bar
-                               |type Optional is optional Bar
-                               |type Aggregate is {a: Bar, b: Foo}
-                               |type Alternation is one of { Bar or Foo }
-                               |type Order is Id(Bar)
-                               |}
-                               |""".stripMargin) {
+      val input = RiddlParserInput(
+        """
+          |domain foo is {
+          |  type Foo is Number
+          |  type Bar is Integer
+          |  type Rename is Bar
+          |  type OneOrMore is many Bar
+          |  type ZeroOrMore is many optional Bar
+          |  type Optional is optional Bar
+          |  type Aggregate is {a: Bar, b: Foo}
+          |  type Alternation is one of { Bar or Foo }
+          |  type Order is Id(Bar)
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
           val errors = msgsAndWarnings.filter(_.kind == Error)
-          assert(errors.size == 9, "Should have 9 errors")
-          assert(
-            errors.forall(m => m.message.contains("not resolved")),
-            "not resolved"
-          )
-          assert(
-            errors.count(_.message.contains("refer to a Type")) == 8,
-            "refer to a Type"
-          )
-          assert(
-            errors.count(_.message.contains("refer to an Entity")) == 1,
-            "refer to a Type"
-          )
+          errors.size mustBe( 1)
+          errors.head.message must include("but an Entity was expected")
       }
     }
     "allow ??? in aggregate bodies without warning" in {
@@ -91,7 +84,7 @@ class TypeValidatorTest extends ValidatingTest {
         case (_: Domain, _, msgs: Messages) => assertValidationMessage(
             msgs,
             Error,
-            "'TypeTest' was expected to be an Entity but is a Context."
+            "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1), in Type 'Order', but an Entity"
           )
       }
     }

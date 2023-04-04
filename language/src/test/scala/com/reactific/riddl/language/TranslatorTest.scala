@@ -9,6 +9,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.Definition
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.Validation.Result
+import com.reactific.riddl.language.passes.validation.ValidatingTest
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.OutputFile
 import com.reactific.riddl.utils.StringLogger

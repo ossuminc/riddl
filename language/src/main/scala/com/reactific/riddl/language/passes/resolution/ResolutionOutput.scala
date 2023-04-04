@@ -8,7 +8,7 @@ import com.reactific.riddl.language.passes.symbols.SymbolsOutput
 case class ResolutionOutput(
   root: AST.RootContainer,
   commonOptions: CommonOptions,
-  messages: Messages.Accumulator,
+  messages: Messages.Messages,
   symbols: SymbolsOutput,
   refMap: ReferenceMap,
   uses: Map[Definition, Seq[Definition]],

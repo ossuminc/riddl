@@ -9,6 +9,8 @@ package com.reactific.riddl.language
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.reactific.riddl.language.Messages.*
+import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.utils.{Logger, StringLogger}
 
 class MessagesSpec extends AnyWordSpec with Matchers {
@@ -127,6 +129,17 @@ class MessagesSpec extends AnyWordSpec with Matchers {
                          |[info] Severe Errors: 1
                          |[severe] Severe: empty(1:1): nada
                          |""".stripMargin
+      }
+      "format should produce a correct string" in {
+        val msg =
+          Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
+        msg.format mustBe s"Warning: empty(1:2): the_message"
+      }
+      "be ordered based on location" in {
+        val v1 = Message(At(1, 2, "the_source"), "the_message", Warning)
+        val v2 = Message(At(2, 3, "the_source"), "the_message", Warning)
+        v1 < v2 mustBe true
+        v1 == v2 mustBe false
       }
   }
 }

@@ -224,6 +224,8 @@ object Messages {
   case class Accumulator(commonOptions: CommonOptions) {
     private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
 
+    def size: Int = msgs.length
+
     @inline def isEmpty: Boolean = msgs.isEmpty
     @inline def nonEmpty: Boolean = !isEmpty
 

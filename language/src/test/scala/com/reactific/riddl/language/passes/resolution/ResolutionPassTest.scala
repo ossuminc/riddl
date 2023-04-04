@@ -1,55 +1,14 @@
-package com.reactific.riddl.language.passes
+package com.reactific.riddl.language.passes.resolution
 
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.{CommonOptions, Messages}
-import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.language.passes.resolution.ResolutionOutput
-import org.scalatest.Assertion
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.Path
 
 /** Unit Tests For the ResolutionPass */
-class ResolutionPassTest extends AnyWordSpec with Matchers {
-
-  def resolve(root: RootContainer, commonOptions: CommonOptions = CommonOptions(
-    showMissingWarnings = false,
-    showUnusedWarnings = false,
-    showStyleWarnings = false
-  )): ResolutionOutput = {
-    val input = ParserOutput(root, commonOptions)
-    val symbols = Pass.runSymbols(input)
-    Pass.runResolution(symbols)
-  }
-
-  def parseAndResolve(
-    input: RiddlParserInput
-  )(
-    onFailure: Messages.Messages => Assertion,
-    onSuccess: => Assertion
-  ): Assertion = {
-    TopLevelParser.parse(input) match {
-      case Left(errors) =>
-        fail(errors.map(_.format).mkString("\n"))
-      case Right(model) =>
-        val resolutionOutput = resolve(model)
-        val messages = resolutionOutput.symbols.messages.toMessages ++
-          resolutionOutput.messages.toMessages
-        if (messages.isEmpty)
-          onSuccess
-          else onFailure(messages)
-    }
-  }
-
-
-  def parseResult(
-    input: RiddlParserInput
-  ): Assertion = {
-    parseAndResolve(input)(
-      msgs => fail(msgs.map(_.format).mkString("\n")),
-      succeed
-    )
-  }
+class ResolutionPassTest extends ResolvingTest {
 
   "PathResolution" must {
     "resolve a full path" in {
@@ -62,7 +21,17 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |  type APrime = A.B.C.D
           |}""".stripMargin
-      parseResult(RiddlParserInput(rpi))
+      parseAndResolve(RiddlParserInput(rpi)) { ro =>
+        val target: Type = ro.root.domains.head.domains.head.domains.head.types.head
+        val pid: Type = ro.root.domains.head.types.head
+        val parent = ro.root.domains.head
+        ro.refMap.definitionOf[Type](pid.typ.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
+          case Some(definition) =>
+            definition must be(target)
+          case None =>
+            fail("APrime reference not found")
+        }
+      }
     }
 
     "resolve a relative path, B.C.D" in {
@@ -76,7 +45,16 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |
           |}""".stripMargin
-      parseResult(RiddlParserInput(rpi))
+      parseAndResolve(RiddlParserInput(rpi)) { ro =>
+        val target = ro.root.domains.head.domains.head.domains.head.types.head
+        val parent = ro.root.domains.head.domains.head.types.head
+        val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
+        ro.refMap.definitionOf[Type](pid, parent) match {
+          case Some(resolved) =>
+            resolved mustBe(target)
+          case None => fail(s"${pid} not resolved")
+        }
+      }
     }
 
     "resolve A.Top" in {
@@ -86,7 +64,17 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  type aTop = type A.Top
           |}
           |""".stripMargin
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { ro =>
+        val target = ro.root.domains.head.types.find(_.id.value == "Top").get
+        val parent = ro.root.domains.head.types.find(_.id.value == "aTop").get
+        val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
+        ro.refMap.definitionOf[Type](pid, parent) match {
+          case Some(resolvedDef) =>
+            resolvedDef mustBe(target)
+          case None =>
+            fail(s"${pid.format} not resolved")
+        }
+      }
     }
 
     "resolve A.B.InB" in {
@@ -100,8 +88,9 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
     }
+
     "resolve entity field" in {
       val input =
         """domain A {
@@ -117,9 +106,32 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
     }
-    "resolve nested fields" in {
+
+    "resolve nested fields - old " in {
+      val input =
+        """
+          |domain D {
+          |  type Bottom = { a: String }
+          |  type Middle = { b: Bottom }
+          |  type Top = { m: Middle }
+          |
+          |  context C {
+          |    function foo {
+          |      requires: { t: D.Top }
+          |      returns: { a: String }
+          |      example impl {
+          |        then return @C.foo.t.m.b.a
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+    }
+
+    "resolve nested fields - new" in {
       val input =
         """
           |domain D {
@@ -138,7 +150,7 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
     }
 
     "resolve complicated paths" in {
@@ -172,9 +184,19 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { ro: ResolutionOutput =>
+        ro.messages mustBe (Messages.empty)
+        val Top = ro.root.domains.head.types.head
+        val D = ro.root.domains.head.domains.head.contexts.find(_.id.value == "D").get
+        val ATop = D.types.find(_.id.value == "ATop").get
+        val pid = ATop.typ.asInstanceOf[AliasedTypeExpression].pathId
+        ro.refMap.definitionOf[Type](pid, ATop) match {
+          case Some(resolved) => resolved mustBe(Top)
+          case None => fail(s"${pid} not resolved")
+        }
+      }
     }
+
     "resolve doc example" in {
       val input =
         """domain A {
@@ -194,7 +216,7 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
     }
     "deal with cyclic references" in {
       val input =
@@ -218,16 +240,11 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input))(
-        { messages =>
-          println(messages.format)
-          messages.size mustBe 1
-          messages.head.format must include("Path resolution encountered a loop")
-        },
-        {
-          succeed
-        }
-      )
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed } { messages =>
+        println(messages.format)
+        messages.size mustBe 1
+        messages.head.format must include("Path resolution encountered a loop")
+      }
     }
 
     "resolve simple path directly" in {
@@ -249,12 +266,12 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
           |  }
           |}
           |""".stripMargin
-      parseResult(RiddlParserInput(input))
+      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
     }
     "resolve simple path through an include" in {
       val eL = At.empty
       val root = RootContainer(
-        contents = Seq(
+        domains = Seq(
           Domain(
             eL,
             Identifier(eL, "D"),
@@ -287,14 +304,73 @@ class ResolutionPassTest extends AnyWordSpec with Matchers {
             )
           )
         ),
+        Seq.empty[Author],
         Seq.empty[RiddlParserInput]
       )
       root.contents.head.contents.length mustBe 2
       root.contents.head.contents.forall(_.kind == "Context")
       val result = resolve(root, CommonOptions())
-      val messages = result.messages.toMessages
+      val messages = result.messages
       val errors = messages.filter(_.kind >= Messages.Error)
       if (errors.nonEmpty) fail(errors.format) else succeed
+    }
+    "resolve entity references" in {
+      val input = RiddlParserInput(
+        """domain ReactiveBBQ is {
+          |  type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
+          |    "Unique identifier for a customer"
+          |  }
+          |  context Customer is {
+          |    entity Customer is { ??? }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      parseAndResolve(input) { ro =>
+        val entity = ro.root.domains.head.contexts.head.entities.head
+        entity.getClass mustBe (classOf[Entity])
+        val cid = ro.root.domains.head.types.head
+        cid.getClass mustBe (classOf[Type])
+        cid.typ.getClass mustBe (classOf[UniqueId])
+        val pid = cid.typ.asInstanceOf[UniqueId].entityPath
+        pid.value mustBe (Seq("ReactiveBBQ", "Customer", "Customer"))
+        ro.refMap.definitionOf[Entity](pid, cid) match {
+          case Some(definition) =>
+            if (definition == entity) {
+              succeed
+            } else {
+              fail("Didn't resolve to entity")
+            }
+          case None =>
+            fail("reference not found")
+        }
+      }
+    }
+    "resolve rbbq.riddl" in {
+      val input = RiddlParserInput(Path.of("language/src/test/input/domains/rbbq.riddl"))
+      parseAndResolve(input) { _ => succeed }
+    }
+    "resolve references in morph action" in {
+      val input = RiddlParserInput(
+        """domain Ignore is {
+          |  context Ignore2 is {
+          |    entity OfInterest is {
+          |      command MorphIt is {}
+          |      record Data is { field: Integer }
+          |      state First of Data is { ??? }
+          |      state Second of Data is {
+          |        handler only is {
+          |          on command MorphIt {
+          |            then morph entity Ignore2.OfInterest to state OfInterest.First
+          |            with !OfInterest.Data(field=3)
+          |          }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin)
+      parseAndResolve(input)  { _ => succeed }
     }
   }
 }
