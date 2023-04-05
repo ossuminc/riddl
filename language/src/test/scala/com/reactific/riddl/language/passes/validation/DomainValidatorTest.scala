@@ -9,7 +9,7 @@ package com.reactific.riddl.language.passes.validation
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.{CommonOptions, Validation}
+import com.reactific.riddl.language.passes.Pass
 
 /** Unit Tests For ValidatorTest */
 class DomainValidatorTest extends ValidatingTest {
@@ -17,22 +17,25 @@ class DomainValidatorTest extends ValidatingTest {
   "DomainValidator" should {
     "identify duplicate domain definitions" in {
       val rpi = RiddlParserInput.empty
-      val result = Validation.validate(
-        RootContainer(
-          Seq(
-            Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
-            Domain((2, 2, rpi), Identifier((2, 8, rpi), "foo"))
-          ),
-          Seq(rpi)
+      val root = RootContainer(
+        Seq(
+          Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
+          Domain((2, 2, rpi), Identifier((2, 8, rpi), "foo"))
         ),
-        CommonOptions()
+        Seq.empty[Author],
+        Seq(rpi)
       )
-      val theErrors: Messages = result.messages.justErrors
-      theErrors mustBe empty
-      val messages = result.messages.map(_.format)
-      val notOccur =
-        "Style: empty(2:2): Domain 'foo' overloads Domain 'foo' at empty(1:1)"
-      messages.exists(_.startsWith(notOccur)) mustBe true
+
+      Pass(root) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val theErrors: Messages = result.messages.justErrors
+          theErrors mustBe empty
+          val messages = result.messages.map(_.format)
+          val notOccur =
+            "Style: empty(2:2): Domain 'foo' overloads Domain 'foo' at empty(1:1)"
+          messages.exists(_.startsWith(notOccur)) mustBe true
+      }
     }
 
     "allow author information" in {

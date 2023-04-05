@@ -5,8 +5,10 @@
  */
 
 package com.reactific.riddl.language
+
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.passes.AggregateOutput
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -36,57 +38,47 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |  }
                     |}
                     |""".stripMargin
-      Riddl.parse(RiddlParserInput(input), CommonOptions()) match {
+      Riddl.parseAndValidate(RiddlParserInput(input), CommonOptions(), shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
-        case Right(model) =>
-          val result = Validation.validate(model, CommonOptions())
-          val errors = result.messages.filter(_.kind > Messages.Warning)
-          info(
-            "Uses:\n" + result.uses
-              .map { case (key, value) =>
-                s"${key.identify} => ${value.map(_.identify).mkString(",")}"
-              }
-              .mkString("\n")
-          )
-          info(
-            "Used By:\n" + result.usedBy
-              .map { case (key, value) =>
-                s"${key.identify} <= ${value.map(_.identify).mkString(",")}"
-              }
-              .mkString("\n")
-          )
-
+        case Right(result: AggregateOutput) =>
+          val errors = result.messages.justErrors
           if (errors.nonEmpty) { fail(errors.format) }
           else {
+            val usage = result.usage
             // ensure usedBy and uses are reflective
-            for {
-              (user, uses) <- result.uses
-              use <- uses
-            } {
-              result.usedBy.keys must contain(use)
-              result.usedBy(use) must contain(user)
-            }
+            usage.verifyReflective must be(true)
+
             // print it out for debugging
-            println("Uses:")
-            result.uses.foreach { case (k, v) =>
-              println(k.identify + " => " + v.map(_.identify).mkString(", "))
-            }
-            println("\nUsed By:")
-            result.usedBy.foreach { case (k, v) =>
-              println(k.identify + " => " + v.map(_.identify).mkString(", "))
-            }
-            // But let's make sure we get the right results
-            result.uses.size mustBe 8
-            result.usedBy.size mustBe 7
-            val entityE = model.domains.head.contexts.head.entities.head
-            val command = model.domains.head.contexts.head.types.head
-            val fieldRef = command.typ match {
-              case x: AggregateUseCaseTypeExpression =>
-                x.fields.find(_.id.value == "ref").get
-              case _ => fail("Wrong kind of type expression")
-            }
-            result.uses(fieldRef).contains(entityE)
-            result.usedBy(entityE).contains(command)
+            info(
+              "Uses:\n" + result.usage.usesAsString
+            )
+            info(
+              "Used By:\n" + result.usage.usedByAsString
+            )
+
+            // Now let's make sure we get the right results, first extract
+            // all the definitions
+            val model = result.root
+            val domain = model.domains.head
+            val D_T = domain.types.find(_.id.value == "T").get
+            val context = domain.contexts.head
+            val DoIt = context.types.find(_.id.value == "DoIt").get.asInstanceOf[Type]
+            val ref = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
+            val f1 = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
+            val C_T = context.types.find(_.id.value == "T").get
+            val entityE = context.entities.head
+            val SFields = entityE.types.head
+            val f2 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
+            val f3 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f3").get
+            val S = entityE.states.head
+
+            // now validate the containment hierarchy
+            usage.uses(ref, entityE) must be(true)
+            usage.uses(f1, C_T) must be(true)
+            usage.uses(C_T, D_T) must be(true)
+            usage.uses(S, SFields) must be(true)
+            usage.uses(f2, D_T) must be(true)
+            usage.uses(f3, C_T) must be(true)
           }
       }
     }
@@ -107,13 +99,11 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |  } described as "inconsequential"
                     |} described as "inconsequential"
                     |""".stripMargin
-      Riddl.parse(RiddlParserInput(input)) match {
+      Riddl.parseAndValidate(RiddlParserInput(input), shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
-        case Right(model) =>
-          val commonOptions = CommonOptions()
-          val result = Validation.validate(model, commonOptions)
+        case Right(result) =>
           info(result.messages.format)
-          result.messages.isOnlyIgnorable mustBe (false)
+          result.messages.hasErrors mustBe (false)
           val warnings = result.messages.justWarnings
           warnings.size mustBe (1)
           val warnMessage = warnings.head.format
@@ -126,10 +116,9 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |  type Bar = Number described as "consequential"
                     |} described as "inconsequential"
                     |""".stripMargin
-      Riddl.parse(RiddlParserInput(input), CommonOptions()) match {
+      Riddl.parseAndValidate(RiddlParserInput(input), shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
-        case Right(model) =>
-          val result = Validation.validate(model, CommonOptions())
+        case Right(result) =>
           result.messages.isOnlyIgnorable mustBe (false)
           val warnings = result.messages.justWarnings
           warnings.size mustBe (1)

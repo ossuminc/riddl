@@ -34,3 +34,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     map.get(key).map(_.asInstanceOf[T])
   }
 }
+
+object ReferenceMap {
+  val empty: ReferenceMap = ReferenceMap(Messages.Accumulator.empty)
+}

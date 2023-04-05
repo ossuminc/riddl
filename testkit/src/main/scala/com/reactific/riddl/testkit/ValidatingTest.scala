@@ -8,9 +8,7 @@ package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.TopLevelParser
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Validation
+import com.reactific.riddl.language.{CommonOptions, Riddl}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -27,13 +25,12 @@ abstract class ValidatingTest extends ParsingTest {
   ): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
-    TopLevelParser.parse(file) match {
+    Riddl.parseAndValidate(file, options) match {
       case Left(errors) =>
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
-      case Right(root) =>
-        val result = Validation.validate(root, options)
-        validation(root, result.messages)
+      case Right(result) =>
+        validation(result.root, result.messages)
     }
   }
 
@@ -41,10 +38,9 @@ abstract class ValidatingTest extends ParsingTest {
     file: File,
     options: CommonOptions = CommonOptions()
   ): Assertion = {
-    TopLevelParser.parse(file) match {
+    Riddl.parseAndValidate(file, options) match {
       case Left(errors) => fail(errors.format)
-      case Right(root) =>
-        val result = Validation.validate(root, options)
+      case Right(result) =>
         val messages = result.messages
         val errors = messages.filter(_.kind.isError)
         val warnings = messages.filter(_.kind.isWarning)

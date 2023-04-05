@@ -68,9 +68,9 @@ class IncludeAndImportTest extends ParsingTest {
     "handle inclusions into domain" in {
       val rc = checkFile("Domain Includes", "domainIncludes.riddl")
       rc.contents mustNot be(empty)
-      rc.contents.head.includes mustNot be(empty)
-      rc.contents.head.includes.head.contents mustNot be(empty)
-      rc.contents.head.includes.head.contents.head mustBe Type(
+      rc.domains.head.includes mustNot be(empty)
+      rc.domains.head.includes.head.contents mustNot be(empty)
+      rc.domains.head.includes.head.contents.head mustBe Type(
         (1, 1, rc.inputs.head),
         Identifier((1, 6, rc.inputs.head), "foo"),
         Strng((1, 13, rc.inputs.head)),
@@ -79,11 +79,11 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into contexts" in {
       val rc = checkFile("Context Includes", "contextIncludes.riddl")
-      rc.contents mustNot be(empty)
-      rc.contents.head.contexts mustNot be(empty)
-      rc.contents.head.contexts.head.includes mustNot be(empty)
-      rc.contents.head.contexts.head.includes.head.contents mustNot be(empty)
-      rc.contents.head.contexts.head.includes.head.contents.head mustBe Type(
+      rc.domains mustNot be(empty)
+      rc.domains.head.contexts mustNot be(empty)
+      rc.domains.head.contexts.head.includes mustNot be(empty)
+      rc.domains.head.contexts.head.includes.head.contents mustNot be(empty)
+      rc.domains.head.contexts.head.includes.head.contents.head mustBe Type(
         (1, 1, rc.inputs.head),
         Identifier((1, 6, rc.inputs.head), "foo"),
         Strng((1, 12, rc.inputs.head)),
@@ -95,9 +95,9 @@ class IncludeAndImportTest extends ParsingTest {
   "Import" should {
     "work syntactically" in {
       val root = checkFile("Import", "import.riddl")
-      root.contents must not(be(empty))
-      root.contents.head.domains must not(be(empty))
-      root.contents.head.domains.head.id.value must be("NotImplemented")
+      root.domains must not(be(empty))
+      root.domains.head.domains must not(be(empty))
+      root.domains.head.domains.head.id.value must be("NotImplemented")
     }
     "handle missing files" in {
       val input =

@@ -12,15 +12,12 @@ import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
-import com.reactific.riddl.language.passes.Pass
-import com.reactific.riddl.language.passes.Pass.AggregateOutput
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.SysLogger
+import com.reactific.riddl.language.passes.{AggregateOutput, Pass}
+import com.reactific.riddl.utils.Timer
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Clock
 import scala.util.control.NonFatal
 
 case class CommonOptions(
@@ -39,6 +36,7 @@ case class CommonOptions(
 )
 
 object CommonOptions {
+  def empty: CommonOptions = CommonOptions()
   def noWarnings: CommonOptions = CommonOptions(showWarnings = false)
   def noMinorWarnings: CommonOptions =
     CommonOptions(showMissingWarnings = false, showStyleWarnings = false, showUnusedWarnings = false)
@@ -47,32 +45,6 @@ object CommonOptions {
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
-  /** Runs a code block and returns its result, and prints its execution time to
-    * stdout. Execution time is only written if `show` is set to `true`.
-    *
-    * e.g.
-    *
-    * timer("my-stage", true) { 1 + 1 } // 2
-    *
-    * prints: Stage 'my-stage': 0.000 seconds
-    *
-    * @param stage
-    *   The name of the stage, is included in output message
-    * @param show
-    *   if `true`, then message is printed, otherwise not
-    * @param logger
-    *   The logger to which timing messages should be put out.
-    * @param f
-    *   the code block to execute
-    * @return
-    *   The result of running `f`
-    */
-  def timer[T](
-    stage: String,
-    show: Boolean = true,
-    logger: Logger = SysLogger()
-  )(f: => T
-  ): T = { RiddlImpl.timer(Clock.systemUTC(), logger, stage, show)(f) }
 
   def parse(
     path: Path,
@@ -90,26 +62,27 @@ object Riddl {
 
   def parse(
     input: RiddlParserInput,
-    options: CommonOptions = CommonOptions()
+    options: CommonOptions = CommonOptions.empty
   ): Either[Messages, RootContainer] = {
-    timer("parse", options.showTimes) { TopLevelParser.parse(input) }
+    Timer.time("parse", options.showTimes) {
+      TopLevelParser.parse(input)
+    }
   }
 
   def validate(
     root: RootContainer,
-    commonOptions: CommonOptions
-  ): Validation.Result = {
-    timer("validate", commonOptions.showTimes) {
-      Validation.validate(root, commonOptions)
-    }
+    options: CommonOptions
+  ): Either[Messages, AggregateOutput] = {
+    Pass(root, options)
   }
 
   def parseAndValidate(
     input: RiddlParserInput,
-    commonOptions: CommonOptions
+    commonOptions: CommonOptions = CommonOptions.empty,
+    shouldFailOnError: Boolean = true
   ): Either[Messages, AggregateOutput] = {
     parse(input, commonOptions).flatMap { root =>
-      Pass(root, commonOptions) match {
+      Pass(root, commonOptions, shouldFailOnError) match {
         case Left(messages) => Left(messages)
         case Right(result) =>
           if (result.messages.isOnlyWarnings) {Right(result)}
@@ -120,9 +93,10 @@ object Riddl {
 
   def parseAndValidate(
     path: Path,
-    commonOptions: CommonOptions
+    commonOptions: CommonOptions,
+    shouldFailOnError: Boolean
   ): Either[Messages, AggregateOutput] = {
-    parseAndValidate(RiddlParserInput(path), commonOptions)
+    parseAndValidate(RiddlParserInput(path), commonOptions, shouldFailOnError)
   }
 
   case class CategoryStats(
@@ -228,52 +202,5 @@ object Riddl {
         "Other" -> other
       )
     )
-  }
-}
-
-/** Private implementation details which allow for more testability */
-private[language] object RiddlImpl {
-
-  /** Runs a code block and returns its result, while recording its execution
-    * time, according to the passed clock. Execution time is written to `out`,
-    * if `show` is set to `true`.
-    *
-    * e.g.
-    *
-    * timer(Clock.systemUTC(), System.out, "my-stage", true) { 1 + 1 } // 2
-    *
-    * prints: Stage 'my-stage': 0.000 seconds
-    *
-    * @param clock
-    *   the clock that provides the start/end times to compute execution time
-    * @param out
-    *   the PrintStream to write execution time information to
-    * @param stage
-    *   The name of the stage, is included in output message
-    * @param show
-    *   if `true`, then message is printed, otherwise not
-    * @param f
-    *   the code block to execute
-    *
-    * @return
-    *   The result of running `f`
-    */
-  def timer[T](
-    clock: Clock,
-    out: Logger,
-    stage: String,
-    show: Boolean
-  )(f: => T
-  ): T = {
-    if (show) {
-      val start = clock.millis()
-      val result = f
-      val stop = clock.millis()
-      val delta = stop - start
-      val seconds = delta / 1000
-      val milliseconds = delta % 1000
-      out.info(f"Stage '$stage': $seconds.$milliseconds%03d seconds")
-      result
-    } else { f }
   }
 }

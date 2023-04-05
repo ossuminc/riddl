@@ -8,19 +8,13 @@ package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.Messages.SevereError
 import com.reactific.riddl.language.Messages.errors
 import com.reactific.riddl.language.Messages.highestSeverity
 import com.reactific.riddl.language.Messages.severes
 import com.reactific.riddl.utils.StringHelpers.toPrettyString
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.Plugin
-import com.reactific.riddl.utils.PluginInterface
-import com.reactific.riddl.utils.RiddlBuildInfo
-import com.reactific.riddl.utils.StringLogger
-import com.reactific.riddl.utils.SysLogger
+import com.reactific.riddl.utils.{Logger, Plugin, PluginInterface, RiddlBuildInfo, StringLogger, SysLogger, Timer}
 import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import scopt.OParser
@@ -301,7 +295,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
         if (commonOptions.verbose) { println(s"Running command: $command") }
-        val result = Riddl.timer(command, show = commonOptions.showTimes, log) {
+        val result = Timer.time(command, show = commonOptions.showTimes, log) {
           run(opts, commonOptions, log, outputDirOverride)
         }
         result

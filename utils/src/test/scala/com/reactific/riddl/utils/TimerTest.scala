@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
-import com.reactific.riddl.utils.StringLogger
-import com.reactific.riddl.utils.SysLogger
-import com.reactific.riddl.utils.StringBuildingPrintStream
+package com.reactific.riddl.utils
+
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -21,7 +19,7 @@ class TimerTest extends AnyWordSpec with Matchers {
       val clock = new AdjustableClock(start)
 
       val logger = StringLogger()
-      val result = RiddlImpl.timer(clock, logger, "MyStage", show = true) {
+      val result = Timer.time("MyStage", show = true, logger) {
         clock.updateInstant(_.plusSeconds(2))
         123
       }
@@ -36,8 +34,7 @@ class TimerTest extends AnyWordSpec with Matchers {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = RiddlImpl
-        .timer(clock, SysLogger(), "MyStage", show = false) {
+      val result = Timer.time( "MyStage", show = false) {
           clock.updateInstant(_.plusSeconds(2))
           123
         }

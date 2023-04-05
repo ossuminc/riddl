@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.Include
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.*
+import com.reactific.riddl.language.passes.AggregateOutput
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.PathUtils
 import com.reactific.riddl.utils.Tar
@@ -177,7 +178,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   }
 
   override def translate(
-    result: Validation.Result,
+    result: AggregateOutput,
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options
@@ -189,7 +190,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     )
     makeDirectoryStructure(options.inputFile.get, log, options, commonOptions)
     val root = result.root
-    val someAuthors = root.contents.headOption match {
+    val someAuthors = root.domains.headOption match {
       case Some(domain) => domain.authorDefs
       case None         => Seq.empty[Author]
     }

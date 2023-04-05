@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.language.passes.Pass
-import com.reactific.riddl.language.passes.Pass.AggregateOutput
+import com.reactific.riddl.language.passes.AggregateOutput
 import com.reactific.riddl.language.{CommonOptions, ParsingTest}
 import org.scalatest.Assertion
 

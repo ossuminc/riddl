@@ -6,24 +6,27 @@ import com.reactific.riddl.language.Messages.*
 
 import scala.collection.mutable
 
+trait UsageBase {
+
+  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
+
+  private def emptyUseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
+
+  protected val uses: UseMap = emptyUseMap
+  protected val usedBy: UseMap = emptyUseMap
+}
+
 /** Validation State for Uses/UsedBy Tracking. During parsing, when usage is
   * detected, call associateUsage. After parsing ends, call checkUnused.
   * Collects entities, types and functions too
   */
-trait UsageResolution {
+trait UsageResolution extends UsageBase {
 
   def commonOptions: CommonOptions
 
   def messages: Messages.Accumulator
 
-  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
-  private def emptyUseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
-
-  protected val uses: UseMap = emptyUseMap
-
   def usesAsMap: Map[Definition, Seq[Definition]] = uses.toMap
-
-  protected val usedBy: UseMap = emptyUseMap
 
   def usedByAsMap: Map[Definition, Seq[Definition]] = usedBy.toMap
 
@@ -51,13 +54,14 @@ trait UsageResolution {
   def associateUsage(user: Definition, use: Definition): this.type = {
 
     val used = uses.getOrElse(user, Seq.empty[Definition])
-    val new_used = used :+ use
-    uses.update(user, new_used)
+    if (!used.contains(use)) {
+      uses.update(user,used :+ use)
+    }
 
     val usages = usedBy.getOrElse(use, Seq.empty[Definition])
-    val new_usages = usages :+ user
-    usedBy.update(use, new_usages)
-
+    if (!usages.contains(user)) {
+      usedBy.update(use, usages :+ user)
+    }
     this
   }
 

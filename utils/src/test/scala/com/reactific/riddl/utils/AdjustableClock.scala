@@ -4,11 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.utils
 
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneId
+import java.time.{Clock, Instant, ZoneId}
 
 /** An implementation of java.time.Clock which only moves through time via calls
   * to `updateInstant`. This allows fine-grained, side-effect-free deterministic

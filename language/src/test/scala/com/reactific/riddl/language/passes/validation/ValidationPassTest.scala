@@ -3,7 +3,7 @@ package com.reactific.riddl.language.passes.validation
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.passes.Pass.AggregateOutput
+import com.reactific.riddl.language.passes.AggregateOutput
 import com.reactific.riddl.language.passes.Pass
 
 import java.nio.file.Path
@@ -17,9 +17,9 @@ class ValidationPassTest extends ValidatingTest {
       val input = RiddlParserInput(Path.of("language/src/test/input/domains/rbbq.riddl"))
       parseAndValidateAggregate(input,CommonOptions.noMinorWarnings) { vo: AggregateOutput =>
         vo.messages.justErrors.size mustBe(0)
-        vo.refMap.size mustBe(23)
-        vo.uses.size mustBe(23)
-        vo.usedBy.size mustBe(16)
+        vo.refMap.size mustBe(24)
+        vo.usage.usesSize mustBe(24)
+        vo.usage.usedBySize mustBe(17)
       }
     }
   }

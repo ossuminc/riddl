@@ -3,7 +3,7 @@ package com.reactific.riddl.language.passes
 import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.passes.resolution.{ReferenceMap, ResolutionOutput, ResolutionPass}
+import com.reactific.riddl.language.passes.resolution.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.reactific.riddl.language.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.{Logger, SysLogger, Timer}
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -13,6 +13,8 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.passes.validation.{ValidationOutput, ValidationPass}
+
+import scala.collection.immutable.Map
 
 /** Description of Parser's Output */
 case class ParserOutput(
@@ -72,22 +74,26 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
   def close: Unit = ()
 }
 
-object Pass {
+case class AggregateOutput(
+  root: RootContainer = RootContainer.empty,
+  commonOptions: CommonOptions = CommonOptions.empty,
+  messages: Messages.Messages = Messages.empty,
+  symbols: SymbolsOutput = SymbolsOutput(),
+  refMap: ReferenceMap = ReferenceMap.empty,
+  usage: Usages = Usages.empty,
+  inlets: Seq[Inlet] = Seq.empty,
+  outlets: Seq[Outlet] = Seq.empty,
+  connectors: Seq[Connector] = Seq.empty,
+  streamlets: Seq[Streamlet] = Seq.empty,
+  sends: Map[SendAction, Seq[Definition]] = Map.empty
+) extends PassOutput
 
-  case class AggregateOutput(
-    root: RootContainer,
-    commonOptions: CommonOptions,
-    messages: Messages.Messages,
-    symbols: SymbolsOutput,
-    refMap: ReferenceMap,
-    uses: Map[Definition, Seq[Definition]],
-    usedBy: Map[Definition, Seq[Definition]],
-    inlets: Seq[Inlet],
-    outlets: Seq[Outlet],
-    connectors: Seq[Connector],
-    streamlets: Seq[Streamlet],
-    sends: Map[SendAction, Seq[Definition]]
-  ) extends PassOutput
+object AggregateOutput {
+  val empty: AggregateOutput = AggregateOutput()
+}
+
+
+object Pass {
 
   def apply(
     model: RootContainer,
@@ -109,7 +115,7 @@ object Pass {
       val messages = input.messages ++ symbolsOutput.messages ++ resolutionOutput.messages ++ validationOutput.messages
       val result = AggregateOutput(
         input.root, input.commonOptions, messages, symbolsOutput, resolutionOutput.refMap,
-        resolutionOutput.uses, resolutionOutput.usedBy, validationOutput.inlets, validationOutput.outlets,
+        resolutionOutput.usage, validationOutput.inlets, validationOutput.outlets,
         validationOutput.connectors, validationOutput.streamlets, validationOutput.sends
       )
       if (messages.hasErrors && shouldFailOnErrors) {

@@ -8,12 +8,8 @@ package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.parsing.TopLevelParser
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Validation
-
-import com.reactific.riddl.testkit.ValidatingTest
-
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.{CommonOptions, Riddl}
 import org.scalatest.Assertion
 
 import java.io.File
@@ -39,14 +35,13 @@ class CheckMessagesTest extends ValidatingTest {
     options: CommonOptions = CommonOptions()
   )(validation: (RootContainer, Messages) => Assertion
   ): Assertion = {
-    val file = new File(fileName)
-    TopLevelParser.parse(file) match {
+    val input = RiddlParserInput(Path.of(fileName))
+    Riddl.parseAndValidate(input) match {
       case Left(errors) =>
-        val msgs = errors.iterator.map(_.format).mkString("\n")
+        val msgs = errors.format
         fail(s"In $label:\n$msgs")
-      case Right(root) =>
-        val result = Validation.validate(root, options)
-        validation(root, result.messages)
+      case Right(result) =>
+        validation(result.root, result.messages)
     }
   }
 

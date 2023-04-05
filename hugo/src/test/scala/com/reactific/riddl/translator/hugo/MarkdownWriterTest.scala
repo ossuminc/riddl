@@ -10,12 +10,10 @@ import com.reactific.riddl.hugo.GlossaryEntry
 import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.hugo.HugoTranslatorState
 import com.reactific.riddl.hugo.MarkdownWriter
-import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.SymbolTable
-import com.reactific.riddl.language.Validation
+import com.reactific.riddl.language.passes.AggregateOutput
 import com.reactific.riddl.testkit.ParsingTest
+
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.file.Path
@@ -41,10 +39,8 @@ class MarkdownWriterTest extends ParsingTest {
           fail("Parse Failed:\n" + errors.map(_.format).mkString("\n"))
         case Right(root) =>
           root.contents mustNot be(empty)
-          val domain = root.contents.head
-          val symtab = SymbolTable(root)
-          val result = Validation
-            .Result(Messages.empty, root, symtab, Map.empty, Map.empty)
+          val domain = root.domains.head
+          val result = AggregateOutput.empty
           val state =
             HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
           val mkd = MarkdownWriter(output, state)
@@ -106,12 +102,8 @@ class MarkdownWriterTest extends ParsingTest {
           "https://example.com/blob/main/src/main/riddl/two"
         )
       }
-      val root = RootContainer.empty
-      val symtab = SymbolTable(root)
-      val result = Validation
-        .Result(Messages.empty, root, symtab, Map.empty, Map.empty)
-      val state =
-        HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
+      val result = AggregateOutput.empty
+      val state = HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
       val mdw = MarkdownWriter(Path.of("foo.md"), state)
       mdw.emitGlossary(10, Seq(term1, term2))
       val strw = new StringWriter()

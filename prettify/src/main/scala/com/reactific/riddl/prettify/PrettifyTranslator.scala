@@ -12,8 +12,8 @@ import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Folding
 import com.reactific.riddl.language.Translator
-import com.reactific.riddl.language.Validation
 import com.reactific.riddl.language.parsing.Terminals.*
+import com.reactific.riddl.language.passes.AggregateOutput
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -59,7 +59,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
   }
 
   def translate(
-    results: Validation.Result,
+    results: AggregateOutput,
     @unused log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
@@ -68,7 +68,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
   }
 
   private def doTranslation(
-    results: Validation.Result,
+    results: AggregateOutput,
     @unused log: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options
@@ -79,7 +79,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
   }
 
   def translateToString(
-    results: Validation.Result,
+    results: AggregateOutput,
     logger: Logger,
     commonOptions: CommonOptions,
     options: PrettifyCommand.Options

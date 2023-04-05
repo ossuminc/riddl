@@ -13,6 +13,9 @@ object Symbols {
   type Parentage = mutable.HashMap[Definition, Parents]
   type SymTabItem = (Definition, Parents)
   type SymTab = mutable.HashMap[String, Seq[SymTabItem]]
+
+  val emptySymTab = mutable.HashMap.empty[String, Seq[SymTabItem]]
+  val emptyParentage = mutable.HashMap.empty[Definition,Parents]
 }
 
 /**
@@ -23,11 +26,11 @@ object Symbols {
  * The SymbolTable that handles identifier translation to definitions
  */
 case class SymbolsOutput(
-  root: RootContainer,
-  commonOptions: CommonOptions,
-  messages: Messages.Messages,
-  symTab: SymTab,
-  parentage: Parentage
+  root: RootContainer = RootContainer.empty,
+  commonOptions: CommonOptions = CommonOptions(),
+  messages: Messages.Messages = Messages.empty,
+  symTab: SymTab = Symbols.emptySymTab,
+  parentage: Parentage = Symbols.emptyParentage
 ) extends PassOutput {
   /** Get the parent of a definition
    *

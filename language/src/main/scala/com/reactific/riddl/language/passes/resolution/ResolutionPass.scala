@@ -18,7 +18,7 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
   val refMap: ReferenceMap = ReferenceMap(messages)
 
   override def result: ResolutionOutput =
-    ResolutionOutput(input.root, input.commonOptions, messages.toMessages, input, refMap, usesAsMap, usedByAsMap)
+    ResolutionOutput(input.root, input.commonOptions, messages.toMessages, input, refMap, Usages(uses, usedBy))
 
   override def close: Unit = ()
 
@@ -27,91 +27,95 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
   }
 
   def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-      val parentsAsSeq: Seq[Definition] = definition +: parents.toSeq
-      definition match {
-        case f: Field =>
-          f.typeEx match {
-            case AliasedTypeExpression(_, pathId) =>
-              resolveAPathId[Type](pathId, parentsAsSeq)
-            case _ =>
-          }
-        case t: Type =>
-          resolveType(t, parentsAsSeq)
-        case e: Example => resolveExample(e, parentsAsSeq)
-        case ic: OnInitClause =>
-          ic.examples.foreach(resolveExample(_, parentsAsSeq))
-        case tc: OnTermClause =>
-          tc.examples.foreach(resolveExample(_, parentsAsSeq))
-        case oc: OnOtherClause =>
-          oc.examples.foreach(resolveExample(_, parentsAsSeq))
-        case mc: OnMessageClause =>
-          resolveOnMessageClause(mc, parentsAsSeq)
-        case h: Handler =>
-          h.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case e: Entity =>
-          e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-          addEntity(e)
-        case s: State =>
-          resolveARef[Type](s.typ, parentsAsSeq)
-        case f: Function =>
-          resolveFunction(f, parentsAsSeq)
-        case i: Inlet =>
-          resolveARef[Type](i.type_, parentsAsSeq)
-        case o: Outlet =>
-          resolveARef[Type](o.type_, parentsAsSeq)
-        case c: Connector =>
-          resolveConnector(c, parentsAsSeq)
-        case i: Invariant =>
-          resolveMaybeExpr(i.expression, parentsAsSeq)
-        case c: Constant =>
-          resolveTypeExpression(c.typeEx, parentsAsSeq)
-          resolveExpr(c.value, parentsAsSeq)
-        case a: Adaptor =>
-          resolveARef[Context](a.context, parentsAsSeq)
-          a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case s: Streamlet =>
-          s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case p: Projector =>
-          p.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case r: Repository =>
-          r.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case s: Saga =>
-          s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case d: Domain =>
-          d.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case a: Application =>
-          a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case c: Context =>
-          c.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case e: Epic =>
-          e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
-        case uc: UseCase =>
-          uc.userStory.map(userStory => resolveARef[Actor](userStory.actor, parentsAsSeq))
-        case in: Input =>
-          resolveARef[Type](in.putIn, parentsAsSeq)
-        case out: Output =>
-          resolveARef[Type](out.putOut, parentsAsSeq)
-        case ti: TakeOutputInteraction =>
-          resolveARef[Actor](ti.to, parentsAsSeq)
-          resolveARef[Output](ti.from, parentsAsSeq)
-        case pi: PutInputInteraction =>
-          resolveARef[Actor](pi.from, parentsAsSeq)
-          resolveARef[Input](pi.to, parentsAsSeq)
-        case si: SelfInteraction =>
-          resolveARef[Definition](si.from, parentsAsSeq)
-        case _: Author => () // no references
-        case _: Actor => () // no references
-        case _: Enumerator => () // no references
-        case _: Group => () // no references
-        case _: Include[_] => () // no references
-        case _: OptionalInteractions => () // no references
-        case _: ParallelInteractions => () // no references
-        case _: RootContainer => () // no references
-        case _: SagaStep => () // no references
-        case _: SequentialInteractions => () // no references
-        case _: Term => () // no references
-        // case _ => () // NOTE: Never have this catchall
-      }
+    val parentsAsSeq: Seq[Definition] = definition +: parents.toSeq
+    definition match {
+      case f: Field =>
+        f.typeEx match {
+          case AliasedTypeExpression(_, pathId) =>
+            resolveAPathId[Type](pathId, parentsAsSeq)
+          case EntityReferenceTypeExpression(_, entity) =>
+            resolveAPathId[Entity](entity, parentsAsSeq)
+          case UniqueId(_, entity) =>
+            resolveAPathId[Entity](entity, parentsAsSeq)
+          case _ =>
+        }
+      case t: Type =>
+        resolveType(t, parentsAsSeq)
+      case e: Example => resolveExample(e, parentsAsSeq)
+      case ic: OnInitClause =>
+        ic.examples.foreach(resolveExample(_, parentsAsSeq))
+      case tc: OnTermClause =>
+        tc.examples.foreach(resolveExample(_, parentsAsSeq))
+      case oc: OnOtherClause =>
+        oc.examples.foreach(resolveExample(_, parentsAsSeq))
+      case mc: OnMessageClause =>
+        resolveOnMessageClause(mc, parentsAsSeq)
+      case h: Handler =>
+        h.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case e: Entity =>
+        e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        addEntity(e)
+      case s: State =>
+        resolveARef[Type](s.typ, parentsAsSeq)
+      case f: Function =>
+        resolveFunction(f, parentsAsSeq)
+      case i: Inlet =>
+        resolveARef[Type](i.type_, parentsAsSeq)
+      case o: Outlet =>
+        resolveARef[Type](o.type_, parentsAsSeq)
+      case c: Connector =>
+        resolveConnector(c, parentsAsSeq)
+      case i: Invariant =>
+        resolveMaybeExpr(i.expression, parentsAsSeq)
+      case c: Constant =>
+        resolveTypeExpression(c.typeEx, parentsAsSeq)
+        resolveExpr(c.value, parentsAsSeq)
+      case a: Adaptor =>
+        resolveARef[Context](a.context, parentsAsSeq)
+        a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case s: Streamlet =>
+        s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case p: Projector =>
+        p.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case r: Repository =>
+        r.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case s: Saga =>
+        s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case d: Domain =>
+        d.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case a: Application =>
+        a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case c: Context =>
+        c.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case e: Epic =>
+        e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case uc: UseCase =>
+        uc.userStory.map(userStory => resolveARef[Actor](userStory.actor, parentsAsSeq))
+      case in: Input =>
+        resolveARef[Type](in.putIn, parentsAsSeq)
+      case out: Output =>
+        resolveARef[Type](out.putOut, parentsAsSeq)
+      case ti: TakeOutputInteraction =>
+        resolveARef[Actor](ti.to, parentsAsSeq)
+        resolveARef[Output](ti.from, parentsAsSeq)
+      case pi: PutInputInteraction =>
+        resolveARef[Actor](pi.from, parentsAsSeq)
+        resolveARef[Input](pi.to, parentsAsSeq)
+      case si: SelfInteraction =>
+        resolveARef[Definition](si.from, parentsAsSeq)
+      case _: Author => () // no references
+      case _: Actor => () // no references
+      case _: Enumerator => () // no references
+      case _: Group => () // no references
+      case _: Include[_] => () // no references
+      case _: OptionalInteractions => () // no references
+      case _: ParallelInteractions => () // no references
+      case _: RootContainer => () // no references
+      case _: SagaStep => () // no references
+      case _: SequentialInteractions => () // no references
+      case _: Term => () // no references
+      // case _ => () // NOTE: Never have this catchall
+    }
   }
 
   private def resolveFunction(f: Function, parents: Seq[Definition]): Unit = {
