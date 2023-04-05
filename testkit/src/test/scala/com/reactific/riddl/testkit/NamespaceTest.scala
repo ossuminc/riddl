@@ -20,10 +20,8 @@ class NamespaceTest
   }
 
   "FooBarTwoDomains" should {
-    "error w/ highest severity level 5" in {
-      intercept[TestFailedException] {
-        runTest("FooBarTwoDomains")
-      }
+    "succeed in validation" in {
+      runTest("FooBarTwoDomains")
     }
   }
 

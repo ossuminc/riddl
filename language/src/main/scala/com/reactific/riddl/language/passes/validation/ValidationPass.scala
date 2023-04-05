@@ -17,6 +17,8 @@ import scala.collection.mutable
 case class ValidationPass (resolution: ResolutionOutput) extends
   Pass[ResolutionOutput,ValidationOutput](resolution) with StreamingValidation {
 
+  override def name: String = "validation"
+
   val messages: Messages.Accumulator = Messages.Accumulator(resolution.commonOptions)
 
   /**

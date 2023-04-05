@@ -13,6 +13,8 @@ import scala.reflect.{ClassTag, classTag}
 case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, ResolutionOutput](input) with
   UsageResolution {
 
+  override def name: String = "resolution"
+
   val commonOptions: CommonOptions = input.commonOptions
   val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
   val refMap: ReferenceMap = ReferenceMap(messages)
