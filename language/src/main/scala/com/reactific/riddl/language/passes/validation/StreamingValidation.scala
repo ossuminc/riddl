@@ -99,8 +99,8 @@ trait StreamingValidation extends ExampleValidation {
       inletRef <- maybeInletRef
       maybeOutletRef = conn.from
       outletRef <- maybeOutletRef
-      inlet <- resolvePath[Inlet](inletRef.pathId, parents)
-      outlet <- resolvePath[Outlet](outletRef.pathId, parents)
+      inlet <- resolvePath[Inlet](inletRef.pathId, conn +: parents)
+      outlet <- resolvePath[Outlet](outletRef.pathId, conn +: parents)
     } yield {
       (outlet, inlet)
     }

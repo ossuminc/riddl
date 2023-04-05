@@ -315,9 +315,8 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
         case (d, _) :: Nil =>
           wrongType[T](pathId, parent, d)
           Seq.empty[Definition]
-        case _ =>
-          notResolved[T](pathId, parent)
-          Seq.empty[Definition]
+        case list =>
+          ambiguous[T](pathId, list)
       }
     }
   }
@@ -361,6 +360,37 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
       }
     )
   }
+
+  private def ambiguous[T <: Definition : ClassTag](
+    pid: PathIdentifier,
+    list: List[(Definition, Seq[Definition])]
+  ): Seq[Definition] = {
+    // Extract all the definitions that were found
+    val definitions = list.map(_._1)
+    val allDifferent = definitions.map(_.kind).distinct.sizeIs ==
+      definitions.size
+    val expectedClass = classTag[T].runtimeClass
+    if (allDifferent || definitions.head.isImplicit) {
+      // pick the one that is the right type or the first one
+      list.find(_._1.getClass == expectedClass) match {
+        case Some((defn, parents)) => defn +: parents
+        case None => list.head._1 +: list.head._2
+      }
+    } else {
+      val ambiguity =
+        list.map { case (definition, parents) =>
+          "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
+            definition.id.value + " (" + definition.loc + ")"
+        }.mkString("\n")
+
+      messages.addError(
+        pid.loc,
+        s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity"
+      )
+      Seq.empty[Definition]
+    }
+  }
+
 
   private val vowels: String = "aAeEiIoOuU"
 

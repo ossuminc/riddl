@@ -4,14 +4,14 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.passes.resolution.ResolutionOutput
-import com.reactific.riddl.language.{AST, Messages, SymbolTable}
+import com.reactific.riddl.language.{AST, Messages}
 
-import scala.annotation.{tailrec, unused}
+import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
 /** Unit Tests For BasicValidationState */
-trait BasicValidation  {
+trait BasicValidation {
 
   def resolution: ResolutionOutput
 
@@ -160,10 +160,10 @@ trait BasicValidation  {
             .map(typeRef => AliasedTypeExpression(typeRef.loc, typeRef.pathId))
             .orElse(Option.empty[TypeExpression])
         case Some(streamlet: Streamlet) if streamlet.outlets.size == 1 =>
-            resolvePath[Type](
-              streamlet.outlets.head.type_.pathId,
-              parents.toSeq
-            )
+          resolvePath[Type](
+            streamlet.outlets.head.type_.pathId,
+            parents.toSeq
+          )
             .map(_.typ)
         case Some(_) => Option.empty[TypeExpression]
       }
@@ -226,7 +226,6 @@ trait BasicValidation  {
   }
 
 
-
   def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
     if (d.id.value.nonEmpty && d.id.value.length < min) {
       messages.addStyle(
@@ -266,68 +265,5 @@ trait BasicValidation  {
       kind,
       thing.loc
     )
-  }
-
-  private def formatDefinitions[T <: Definition](
-    list: List[(T, SymbolTable#Parents)]
-  ): String = {
-    list.map { case (definition, parents) =>
-      "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
-        definition.id.value + " (" + definition.loc + ")"
-    }.mkString("\n")
-  }
-
-  type SingleMatchValidationFunction = (
-    /* expectedClass:*/ Class[?],
-    /* pathIdSought:*/ PathIdentifier,
-    /* foundClass*/ Class[? <: Definition],
-    /* definitionFound*/ Definition
-    ) => Unit
-
-  type MultiMatchValidationFunction = (
-    /* pid: */ PathIdentifier,
-    /* list: */ List[(Definition, Seq[Definition])]
-    ) => Seq[Definition]
-
-  val nullSingleMatchingValidationFunction: SingleMatchValidationFunction = ( _, _, _, _) => { () }
-
-  def defaultSingleMatchValidationFunction(
-    expectedClass: Class[?],
-    pid: PathIdentifier,
-    foundClass: Class[? <: Definition],
-    @unused definitionFound: Definition
-  ): this.type = {
-    check(
-      expectedClass.isAssignableFrom(foundClass),
-      s"'${pid.format}' was expected to be ${article(expectedClass.getSimpleName)} but is " +
-        s"${article(foundClass.getSimpleName)}.",
-      Error,
-      pid.loc
-    )
-  }
-
-  def defaultMultiMatchValidationFunction[T <: Definition : ClassTag](
-    pid: PathIdentifier,
-    list: List[(Definition, Seq[Definition])]
-  ): Seq[Definition] = {
-    // Extract all the definitions that were found
-    val definitions = list.map(_._1)
-    val allDifferent = definitions.map(_.kind).distinct.sizeIs ==
-      definitions.size
-    val expectedClass = classTag[T].runtimeClass
-    if (allDifferent || definitions.head.isImplicit) {
-      // pick the one that is the right type or the first one
-      list.find(_._1.getClass == expectedClass) match {
-        case Some((defn, parents)) => defn +: parents
-        case None => list.head._1 +: list.head._2
-      }
-    } else {
-      messages.addError(
-        pid.loc,
-        s"""Path reference '${pid.format}' is ambiguous. Definitions are:
-           |${formatDefinitions(list)}""".stripMargin
-      )
-      Seq.empty[Definition]
-    }
   }
 }
