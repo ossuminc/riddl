@@ -7,7 +7,7 @@
 package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.{RiddlParserInput, StringParserInput}
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
@@ -41,7 +41,8 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle non existent URL" in {
-      val emptyURL = new java.net.URL("https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl")
+      val emptyURL = new java.net.URL(
+        "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl")
       parseDomainDefinition(
         RiddlParserInput(emptyURL),
         identity
@@ -54,7 +55,8 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle existing URL" in {
-      val fullURL = new java.net.URL("https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain.riddl")
+      val fullURL = new java.net.URL(
+        "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain.riddl")
       parseDomainDefinition(
         RiddlParserInput(fullURL),
         identity
@@ -67,28 +69,34 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into domain" in {
       val rc = checkFile("Domain Includes", "domainIncludes.riddl")
-      rc.contents mustNot be(empty)
+      val inc = StringParserInput("", "domainIncluded.riddl")
+      rc.domains mustNot be(empty)
       rc.domains.head.includes mustNot be(empty)
       rc.domains.head.includes.head.contents mustNot be(empty)
-      rc.domains.head.includes.head.contents.head mustBe Type(
-        (1, 1, rc.inputs.head),
-        Identifier((1, 6, rc.inputs.head), "foo"),
-        Strng((1, 13, rc.inputs.head)),
+      val actual = rc.domains.head.includes.head.contents.head
+      val expected= Type(
+        (1, 1, inc),
+        Identifier((1, 6, inc), "foo"),
+        Strng((1, 13, inc)),
         None
       )
+      actual == expected mustBe(true)
     }
     "handle inclusions into contexts" in {
       val rc = checkFile("Context Includes", "contextIncludes.riddl")
+      val inc = StringParserInput("", "contextIncluded.riddl")
       rc.domains mustNot be(empty)
       rc.domains.head.contexts mustNot be(empty)
       rc.domains.head.contexts.head.includes mustNot be(empty)
       rc.domains.head.contexts.head.includes.head.contents mustNot be(empty)
-      rc.domains.head.contexts.head.includes.head.contents.head mustBe Type(
-        (1, 1, rc.inputs.head),
-        Identifier((1, 6, rc.inputs.head), "foo"),
-        Strng((1, 12, rc.inputs.head)),
+      val actual = rc.domains.head.contexts.head.includes.head.contents.head
+      val expected = Type(
+        (1, 1, inc),
+        Identifier((1, 6, inc), "foo"),
+        Strng((1, 12, inc)),
         None
       )
+      actual mustBe( expected )
     }
   }
 
