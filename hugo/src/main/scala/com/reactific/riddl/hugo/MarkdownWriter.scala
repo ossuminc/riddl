@@ -306,13 +306,14 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def emitUsage(definition: Definition): this.type = {
-    state.result.usedBy.get(definition) match {
-      case Some(users) => listOf("Used By", users)
-      case None        => h2("Used By None")
+    state.result.usage.getUsers(definition) match {
+      case users: Seq[Definition] if users.nonEmpty =>
+        listOf("Used By", users)
+      case _ => h2("Used By None")
     }
-    state.result.uses.get(definition) match {
-      case Some(usages) => listOf("Uses", usages)
-      case None         => h2("Uses Nothing")
+    state.result.usage.getUses(definition) match {
+      case usages: Seq[Definition] if usages.nonEmpty => listOf("Uses", usages)
+      case _         => h2("Uses Nothing")
     }
     this
   }
