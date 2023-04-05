@@ -4,11 +4,11 @@ domain ReactiveBBQ is {
 // #domains
 
   // Create some types with better names than just "Id"
-  type CustomerId is Id(Customer.Customer) explained as {
+  type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
     "Unique identifier for a customer"
   }
 
-  type OrderId is Id(Order) described as {
+  type OrderId is Id(ReactiveBBQ.Order.Order) described as {
     |# brief
     |Unique identifier for a customer's order
     |# see
