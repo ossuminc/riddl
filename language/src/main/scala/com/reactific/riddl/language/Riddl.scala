@@ -85,8 +85,15 @@ object Riddl {
       Pass(root, commonOptions, shouldFailOnError) match {
         case Left(messages) => Left(messages)
         case Right(result) =>
-          if (result.messages.isOnlyWarnings) {Right(result)}
-          else {Left(result.messages)}
+          if (result.messages.hasErrors) {
+            if (shouldFailOnError) {
+              Left(result.messages)
+            } else {
+              Right(result)
+            }
+          } else {
+            Right(result)
+          }
       }
     }
   }
