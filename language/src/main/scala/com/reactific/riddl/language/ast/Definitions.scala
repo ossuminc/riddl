@@ -960,7 +960,7 @@ trait Definitions extends Expressions with Options {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     states: Seq[State] = Seq.empty[State],
     types: Seq[Type] = Seq.empty[Type],
-    constnats: Seq[Constant] = Seq.empty[Constant],
+    constants: Seq[Constant] = Seq.empty[Constant],
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],

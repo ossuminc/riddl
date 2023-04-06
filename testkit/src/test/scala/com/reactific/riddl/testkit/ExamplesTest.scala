@@ -26,6 +26,7 @@ class ExamplesTest extends ValidatingTest {
         showStyleWarnings = false
       )
     )
+    succeed
   }
 
   "Examples" should {

@@ -104,8 +104,8 @@ class UsageSpec extends AnyWordSpec with Matchers {
         case Right(result) =>
           info(result.messages.format)
           result.messages.hasErrors mustBe (false)
-          val warnings = result.messages.justWarnings
-          warnings.size mustBe (1)
+          val warnings = result.messages.justUsage
+          warnings.size mustBe (2)
           val warnMessage = warnings.head.format
           warnMessage must include("Entity 'fooBar' is unused")
       }
@@ -116,12 +116,13 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |  type Bar = Number described as "consequential"
                     |} described as "inconsequential"
                     |""".stripMargin
-      Riddl.parseAndValidate(RiddlParserInput(input), shouldFailOnError = false) match {
+      val options = CommonOptions(showStyleWarnings = false, showMissingWarnings = false)
+      Riddl.parseAndValidate(RiddlParserInput(input), options, shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
         case Right(result) =>
-          result.messages.isOnlyIgnorable mustBe (false)
+          result.messages.isOnlyIgnorable mustBe (true)
           val warnings = result.messages.justWarnings
-          warnings.size mustBe (1)
+          warnings.size mustBe (2)
           val warnMessage = warnings.head.format
           warnMessage must include("Type 'Bar' is unused")
       }

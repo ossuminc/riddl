@@ -157,7 +157,7 @@ object CommandOptions {
             shouldShowWarnings,
             shouldShowMissing,
             shouldShowStyle,
-            showUnusedWarnings = showUnusedWarnings
+            showUsageWarnings = showUnusedWarnings
               .getOrElse(default.showStyleWarnings),
             debug,
             pluginsDir,

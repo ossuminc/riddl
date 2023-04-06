@@ -232,7 +232,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
             mkd.emitConnection(c, parents)
             state.addToGlossary(c, stack)
           case sa: Actor   => state.addToGlossary(sa, stack)
-          case sc: UseCase => state.addToGlossary(sc, stack)
+          case i: Interaction => state.addToGlossary(i, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")
             state
@@ -267,7 +267,8 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
           case p: Projector => mkd.emitProjection(p, parents)
           case _: Repository => // TODO: mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
-          case s: Epic      => mkd.emitStory(s, stack)
+          case s: Epic      => mkd.emitEpic(s, stack)
+          case uc: UseCase => mkd.emitUseCase(uc, stack)
           case unknown =>
             require(
               requirement = false,

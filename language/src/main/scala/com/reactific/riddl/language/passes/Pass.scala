@@ -59,7 +59,7 @@ abstract class Pass[IN <: PassOutput, OUT <: PassOutput](@unused in: IN) {
     parents: mutable.Stack[Definition],
   ): Unit
 
-  def postProcess(): Unit
+  def postProcess(root: RootContainer): Unit
 
   /**
    * Generate the output of this Pass. This will only be called after all the calls
@@ -152,7 +152,7 @@ object Pass {
     Timer.time[OUT](pass.name, in.commonOptions.showTimes, logger) {
       val parents: mutable.Stack[Definition] = mutable.Stack.empty
       pass.traverse(in.root, parents)
-      pass.postProcess()
+      pass.postProcess(in.root)
       pass.result
     }
   }

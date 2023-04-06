@@ -1,4 +1,3 @@
-Style: empty(1:1): Models without any streaming data will exhibit minimal effect
 Missing: ambiguity.riddl(3:5): Entity 'Product' in Context 'ProductInventory' should have content:
      entity Product is {???}
      ^
@@ -25,13 +24,13 @@ Error: ambiguity.riddl(9:19): Path reference 'Product' is ambiguous. Definitions
 Missing: ambiguity.riddl(6:5): Entity 'Product' in Context 'Vendor' should have content:
      entity Product is {???}
      ^
-Warning: ambiguity.riddl(3:5): Entity 'Product' is unused:
+Usage: ambiguity.riddl(3:5): Entity 'Product' is unused:
      entity Product is {???}
      ^
-Warning: ambiguity.riddl(6:5): Entity 'Product' is unused:
+Usage: ambiguity.riddl(6:5): Entity 'Product' is unused:
      entity Product is {???}
      ^
-Warning: ambiguity.riddl(9:3): Type 'Alias' is unused:
+Usage: ambiguity.riddl(9:3): Type 'Alias' is unused:
    type Alias = Id(Product)
    ^
 Missing: ambiguity.riddl(1:1): Vital definitions should have an author reference:
@@ -49,3 +48,6 @@ Missing: ambiguity.riddl(5:3): Vital definitions should have an author reference
 Missing: ambiguity.riddl(6:5): Vital definitions should have an author reference:
      entity Product is {???}
      ^
+Usage: ambiguity.riddl(1:8): Models without any streaming data will exhibit minimal effect:
+ domain Inventory is {
+        ^

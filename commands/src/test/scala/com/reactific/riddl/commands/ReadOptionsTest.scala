@@ -82,7 +82,7 @@ class ReadOptionsTest extends AnyWordSpec with Matchers {
           options.showWarnings must be(true)
           options.showMissingWarnings must be(false)
           options.showStyleWarnings must be(false)
-          options.showUnusedWarnings must be(true)
+          options.showUsageWarnings must be(true)
           options.pluginsDir must be(None)
           options.sortMessagesByLocation must be(false)
       }

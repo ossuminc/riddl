@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.passes.{ParserOutput, Pass}
 import com.reactific.riddl.language.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
+import scala.annotation.unused
 import scala.collection.mutable
 
 /** Symbol Table for Validation and other purposes. This symbol table is built
@@ -32,7 +33,7 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
 
   private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
-  override def postProcess(): Unit = ()
+  override def postProcess(root: RootContainer @unused): Unit = ()
 
   private def rootLessParents(parents: Seq[Definition]): Parents = {
     parents.filter {

@@ -27,16 +27,13 @@ class DefinitionValidatorTest extends ValidatingTest {
               "Identifiers with less than 3 characters should generate a warning"
             )
           } else {
-            val styleWarnings = msgs.filter(_.kind == StyleWarning)
-            styleWarnings.size mustEqual 3
+            val styleWarnings = msgs.filter(_.isStyle)
+            styleWarnings.size mustEqual 2
             assertValidationMessage(
               styleWarnings, StyleWarning, "Domain identifier 'po' is too short. The minimum length is 3"
             )
             assertValidationMessage(
               styleWarnings, StyleWarning, "Type identifier 'Ba' is too short. The minimum length is 3"
-            )
-            assertValidationMessage(
-              styleWarnings, StyleWarning, "Models without any streaming data will exhibit minimal effect"
             )
           }
       }

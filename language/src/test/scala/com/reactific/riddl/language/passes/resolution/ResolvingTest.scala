@@ -15,7 +15,7 @@ class ResolvingTest extends AnyWordSpec with Matchers {
   def resolve(
     root: RootContainer, commonOptions: CommonOptions = CommonOptions(
     showMissingWarnings = false,
-    showUnusedWarnings = false,
+    showUsageWarnings = false,
     showStyleWarnings = false
   )): ResolutionOutput = {
     val input = ParserOutput(root, commonOptions)

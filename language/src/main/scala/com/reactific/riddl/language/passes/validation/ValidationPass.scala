@@ -32,9 +32,9 @@ case class ValidationPass (resolution: ResolutionOutput) extends
         connectors, streamlets, sends.toMap)
   }
 
-  def postProcess(): Unit = {
+  def postProcess(root: RootContainer): Unit = {
     checkOverloads()
-    checkStreaming()
+    checkStreaming(root)
   }
 
   def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
@@ -126,6 +126,7 @@ case class ValidationPass (resolution: ResolutionOutput) extends
     if (omc.from.nonEmpty) {
       checkRef(omc.from.get, omc, parents)
     }
+    checkDescription(omc)
   }
 
   private def validateTerm(

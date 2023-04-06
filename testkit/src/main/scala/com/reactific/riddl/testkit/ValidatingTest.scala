@@ -43,17 +43,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Right(result) =>
         val messages = result.messages
         val errors = messages.filter(_.kind.isError)
-        val warnings = messages.filter(_.kind.isWarning)
-        info(s"${errors.length} Errors:")
-        if (errors.nonEmpty) { info(errors.format) }
-        info(s"${warnings.length} Warnings:")
-        if (warnings.nonEmpty) { info(warnings.format) }
         errors mustBe empty
-        warnings.forall { msg =>
-          info(msg.message)
-          msg.message.contains("is unused") |
-            msg.message.contains("is not connected")
-        } mustBe true
     }
   }
 

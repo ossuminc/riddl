@@ -34,19 +34,20 @@ trait StreamingValidation extends ExampleValidation {
     this
   }
 
-  def checkStreaming(): Unit = {
-    checkStreamingUsage()
+  def checkStreaming(root: RootContainer): Unit = {
+    val start = root.domains.headOption.map(_.id.loc).getOrElse(At.empty)
+    checkStreamingUsage(start)
     checkConnectorPersistence()
     checkUnattachedOutlets()
     checkUnusedOutlets()
   }
 
-  private def checkStreamingUsage(): Unit = {
+  private def checkStreamingUsage(loc: At): Unit = {
     if (inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty) {
       messages.add(
-        Messages.style(
+        Messages.usage(
           "Models without any streaming data will exhibit minimal effect",
-          At.empty
+          loc
         )
       )
     }
@@ -77,7 +78,7 @@ trait StreamingValidation extends ExampleValidation {
             s"The persistence option on ${connector.identify} is not " +
               s"needed since both ends of the connector connect within the same " +
               s"context"
-          messages.addStyle(connector.loc, message)
+          messages.addWarning(connector.loc, message)
         }
       } else {
         if (!outletIsSameContext || !inletIsSameContext) {
@@ -85,7 +86,7 @@ trait StreamingValidation extends ExampleValidation {
             s"The persistence option on ${connector.identify} should be " +
             s"specified because an end of the connector is not connected " +
             s"within the same context"
-          messages.addStyle(connector.loc, message)
+          messages.addWarning(connector.loc, message)
         }
       }
     }
@@ -133,7 +134,7 @@ trait StreamingValidation extends ExampleValidation {
 
     for { outlet <- unusedOutlets } {
       val message = s"${outlet.identify} has nothing sent to it"
-      messages.addMissing(outlet.loc, message)
+      messages.addUsage(outlet.loc, message)
     }
   }
 }

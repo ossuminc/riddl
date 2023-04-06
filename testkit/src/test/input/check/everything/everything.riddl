@@ -73,16 +73,11 @@ domain Everything is {
         returns { b: Boolean }
       }
 
-      function misc is {
-        requires { n: Nothing }
-        returns { b: Boolean }
-      }
-
       handler foo is {
         on command ACommand {
           example only {
             given "Something arrives"
-            when misc()
+            when whenUnderTheInfluence()
             then {
               send event full.SomeOtherThing.ItHappened(when=string("foo")) to
                 inlet Everything.full.SomeOtherThing.SOT_in
@@ -99,7 +94,7 @@ domain Everything is {
       handler fee is {
         on event ItHappened {
           example only {
-            then set SomeOtherThing.otherThingState.someField1 to @ItHappened.when
+            then set SomeOtherThing.otherThingState to @ItHappened.when
           }
         }
       }

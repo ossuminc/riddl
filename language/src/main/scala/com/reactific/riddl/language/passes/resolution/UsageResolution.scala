@@ -2,7 +2,6 @@ package com.reactific.riddl.language.passes.resolution
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.{CommonOptions, Messages}
-import com.reactific.riddl.language.Messages.*
 
 import scala.collection.mutable
 
@@ -66,7 +65,7 @@ trait UsageResolution extends UsageBase {
   }
 
   def checkUnused(): this.type = {
-    if (commonOptions.showUnusedWarnings) {
+    if (commonOptions.showUsageWarnings) {
       def hasUsages(definition: Definition): Boolean = {
         val result = usedBy.get(definition) match {
           case None        => false
@@ -75,10 +74,8 @@ trait UsageResolution extends UsageBase {
         result
       }
       def checkList(definitions: Seq[Definition]): Unit = {
-        for { defn <- definitions } {
-          if (!hasUsages(defn)) {
-            messages.add(Message(defn.loc, s"${defn.identify} is unused", Warning))
-          }
+        for { defn <- definitions if !hasUsages(defn) } {
+          messages.addUsage(defn.loc, s"${defn.identify} is unused")
         }
       }
       checkList(entities)

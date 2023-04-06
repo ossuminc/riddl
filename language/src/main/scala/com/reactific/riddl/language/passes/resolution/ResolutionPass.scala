@@ -24,7 +24,7 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
 
   override def close: Unit = ()
 
-  def postProcess(): Unit = {
+  def postProcess(root: RootContainer): Unit = {
     checkUnused()
   }
 
@@ -43,7 +43,8 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
         }
       case t: Type =>
         resolveType(t, parentsAsSeq)
-      case e: Example => resolveExample(e, parentsAsSeq)
+      case e: Example =>
+        resolveExample(e, parentsAsSeq)
       case ic: OnInitClause =>
         ic.examples.foreach(resolveExample(_, parentsAsSeq))
       case tc: OnTermClause =>
@@ -264,50 +265,57 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
     parents: Seq[Definition]
   ): Seq[Definition] = {
     val parent = parents.head
-    val maybeFound: Seq[Definition] = pathId.value.size match {
-      case 0 =>
-        notResolved[Definition](pathId, parents.head)
-        Seq.empty[Definition]
-      // case 1 =>
-      //  val sought = pathId.value.head
-      //   parent.contents.find(_.id.value == sought).toSeq
-      case _ =>
-        // Caputure the first name we're looking for
-        val topName = pathId.value.head
-
-        // Define a function to identify the starting point in the parents
-        def startingPoint(defn: Definition): Boolean = {
-          defn.id.value == topName || defn.contents.exists(_.id.value == topName)
-        }
-
-        // Drop parents until starting point found
-        val newParents = parents.dropUntil(startingPoint(_))
-
-        // If we dropped all the parents then the path isn't valid
-        if (newParents.isEmpty) {
-          // Signal not found
-          Seq.empty[Definition]
-        } else {
-          // we found the starting point, and adjusted the parent stack correspondingly
-          // use resolveRelativePath to descend through names
-          val pid = PathIdentifier(pathId.loc, pathId.value)
-          resolveRelativePath(pid, newParents)
-        }
-    }
-    if (maybeFound.nonEmpty) {
-      val head = maybeFound.head
-      if (isSameKind[T](head)) {
-        // a candidate was found and it has the same type as expected
-        resolved[T](pathId, parent, head)
-        maybeFound
-      } else {
-        wrongType[T](pathId, parent, head)
-        Seq.empty[Definition]
-      }
+    val maybeFound: Seq[Definition] = if (pathId.value.isEmpty) {
+      notResolved[Definition](pathId, parents.head)
+      Seq.empty[Definition]
     } else {
-      val symTabCompatibleNameSearch = pathId.value.filterNot(_.isEmpty)
+      // Capture the first name we're looking for
+      val topName = pathId.value.head
+
+      // Define a function to identify the starting point in the parents
+      def startingPoint(defn: Definition): Boolean = {
+        defn.id.value == topName || defn.contents.exists(_.id.value == topName)
+      }
+
+      // Drop parents until starting point found
+      val newParents = parents.dropUntil(startingPoint(_))
+
+      // If we dropped all the parents then the path isn't valid
+      if (newParents.isEmpty) {
+        // Signal not found
+        Seq.empty[Definition]
+      } else {
+        // we found the starting point, and adjusted the parent stack correspondingly
+        // use resolveRelativePath to descend through names
+        val pid = PathIdentifier(pathId.loc, pathId.value)
+        resolveRelativePath(pid, newParents)
+      }
+    }
+
+    val isFound: Boolean = if (maybeFound.nonEmpty) {
+      val head = maybeFound.head
+      val hasRightName = head.id.value == pathId.value.last
+      val hasSameType = isSameKind[T](head)
+      if (hasRightName) {
+        if (hasSameType) {
+          // a candidate was found and it has the same type as expected
+          resolved[T](pathId, parent, head)
+        } else {
+          wrongType[T](pathId, parent, head)
+        }
+        true
+      } else {
+        false
+      }
+    } else { false }
+
+    if (!isFound) {
+      val symTabCompatibleNameSearch = pathId.value.reverse
       val list = input.lookupParentage(symTabCompatibleNameSearch)
       list match {
+        case Nil =>
+          notResolved[T](pathId, parent)
+          maybeFound
         case (d, _) :: Nil if isSameKind[T](d) => // exact match
           // Found
           resolved[T](pathId, parent, d)
@@ -318,6 +326,8 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
         case list =>
           ambiguous[T](pathId, list)
       }
+    } else {
+      maybeFound
     }
   }
 
@@ -474,8 +484,10 @@ case class ResolutionPass(input: SymbolsOutput) extends Pass[SymbolsOutput, Reso
           f.input.get.fields
         case d: Definition =>
           d.contents.flatMap {
-            case Include(_, contents, _) => contents
-            case d: Definition => Seq(d)
+            case Include(_, contents, _) =>
+              contents
+            case d: Definition =>
+              Seq(d)
           }
       }
     }

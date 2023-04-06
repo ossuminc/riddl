@@ -100,8 +100,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       parents: Seq[Definition]
     ): PrettifyState = {
       container match {
-        case story: Epic => openStory(state, story)
-        // FIXME: Implement UseCase, Interactions, etc.
+        case epic: Epic => openEpic(state, epic)
+        case uc: UseCase => openUseCase(state, uc)
         case domain: Domain      => openDomain(state, domain)
         case adaptor: Adaptor    => openAdaptor(state, adaptor)
         case typ: Type           => state.current.emitType(typ); state
@@ -137,6 +137,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
           )
         case conn: Connector => doConnector(state, conn)
         case actor: Actor    => doActor(state, actor)
+        case i: Interaction => doInteraction(state, i)
         case _: Field => state // was handled by Type case in openContainer
         case _        =>
           // inlets and outlets handled by openProcessor
@@ -155,7 +156,8 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
     ): PrettifyState = {
       container match {
         case _: Type            => state // openContainer did all of it
-        case story: Epic        => closeStory(state, story)
+        case epic: Epic        => closeEpic(state, epic)
+        case uc: UseCase      => closeUseCase(state, uc)
         case st: State          => state.withCurrent(_.closeDef(st))
         case _: OnMessageClause => closeOnClause(state)
         case include: Include[Definition] @unchecked =>
@@ -196,7 +198,7 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    private def openStory(state: PrettifyState, story: Epic): PrettifyState = {
+    private def openEpic(state: PrettifyState, story: Epic): PrettifyState = {
       state.withCurrent { st =>
         if (story.userStory.isEmpty) {
           st.openDef(story, withBrace = false).add(" ??? ")
@@ -216,11 +218,19 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       }
     }
 
-    private def closeStory(
+    private def closeEpic(
       state: PrettifyState,
       story: Epic
     ): PrettifyState = {
       state.withCurrent(_.closeDef(story))
+    }
+
+    private def openUseCase(state: PrettifyState, @unused useCase: UseCase ): PrettifyState = {
+      // TODO: write openUseCase
+      state
+    }
+    private def closeUseCase(state: PrettifyState, @unused useCase: UseCase ): PrettifyState = {
+      state
     }
 
     private def openAdaptor(
@@ -316,6 +326,11 @@ object PrettifyTranslator extends Translator[PrettifyCommand.Options] {
       state.withCurrent(
         _.addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
       )
+    }
+
+    private def doInteraction(state: PrettifyState, @unused interaction: Interaction ): PrettifyState = {
+      // TODOO: write dooInteraction
+      state
     }
 
     private def openFunction[TCD <: Definition](

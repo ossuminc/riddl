@@ -90,7 +90,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(true)
         msgs.isOnlyWarnings must be(true)
       }
     }
@@ -106,7 +106,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(true)
         msgs.isOnlyWarnings must be(true)
       }
     }

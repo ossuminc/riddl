@@ -19,9 +19,9 @@ Missing: streaming.riddl(4:3): Vital definitions should have an author reference
 Missing: streaming.riddl(8:3): Vital definitions should have an author reference:
    flow GetCurrentTemperature is {
    ^
-Missing: streaming.riddl(10:5): Outlet 'OutTemp' has nothing sent to it:
+Usage: streaming.riddl(10:5): Outlet 'OutTemp' has nothing sent to it:
      outlet OutTemp is type Temperature
      ^
-Missing: streaming.riddl(5:5): Outlet 'WeatherSink' has nothing sent to it:
+Usage: streaming.riddl(5:5): Outlet 'WeatherSink' has nothing sent to it:
      outlet WeatherSink is type Forecast
      ^

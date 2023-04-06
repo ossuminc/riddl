@@ -51,16 +51,16 @@ class HandlerValidatorTest extends ValidatingTest {
       val input =
         """
           |domain entityTest is {
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  type StateFields is { field1: Number }
-          |  state HamburgerState of Hamburger.StateFields is {
+          | context EntityContext is {
+          |  entity Hamburger is {
+          |   type StateFields is { field1: Number }
+          |   state HamburgerState of Hamburger.StateFields is {
           |    handler foo is {
-          |      on event EntityContext.Incoming { example only { then set HamburgerState.field1 to 678 } }
+          |     on event EntityContext.Incoming { example only { then set HamburgerState.field1 to 678 } }
           |    }
+          |   }
           |  }
-          |}
-          |}
+          | }
           |}
           |""".stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
@@ -68,8 +68,8 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityContext.Incoming' resolved to Context 'EntityContext' at empty(3:1), " +
-              "in OnMessageClause 'On event EntityContext.Incoming', but a Type was expected"
+            "Path 'EntityContext.Incoming' was not resolved, in OnMessageClause " +
+              "'On event EntityContext.Incoming', but should refer to a Type"
           )
       }
     }

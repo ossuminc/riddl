@@ -46,7 +46,7 @@ class TypeValidatorTest extends ValidatingTest {
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
-          val errors = msgsAndWarnings.filter(_.kind == Error)
+          val errors = msgsAndWarnings.justErrors
           errors.size mustBe( 1)
           errors.head.message must include("but an Entity was expected")
       }
@@ -62,7 +62,7 @@ class TypeValidatorTest extends ValidatingTest {
         case (_: Domain, _, msgs: Messages) =>
           msgs mustNot be(empty)
           msgs.size mustBe (3)
-          msgs.filter(_.kind == Messages.Warning).head.format must include("is unused")
+          msgs.filter(_.kind == Messages.UsageWarning).head.format must include("is unused")
       }
     }
 
