@@ -31,26 +31,26 @@ class PrettifyTest extends RiddlFilesTestBase {
     file: File,
     singleFile: Boolean = true
   ): Assertion = {
-    val input = RiddlParserInput(file)
-    Riddl.parseAndValidate(input) match {
+    val input1 = RiddlParserInput(file)
+    Riddl.parseAndValidate(input1) match {
       case Left(errors) =>
         fail(errors.format)
-      case Right(result) =>
+      case Right(result1) =>
         val options = PrettifyCommand
           .Options(inputFile = Some(file.toPath), singleFile = singleFile)
         val common: CommonOptions = CommonOptions()
         val log = SysLogger()
-        val output = PrettifyTranslator
-          .translateToString(result, log, common, options)
-        val file1 = Files.createTempFile(file.getName, ".riddl")
-        Files.write(file1, output.getBytes(StandardCharsets.UTF_8))
-        val input2 = RiddlParserInput(file1)
+        val output1 = PrettifyTranslator
+          .translateToString(result1, log, common, options)
+        val file2 = Files.createTempFile(file.getName, ".riddl")
+        Files.write(file2, output1.getBytes(StandardCharsets.UTF_8))
+        val input2 = RiddlParserInput(file2)
         Riddl.parseAndValidate(input2) match {
           case Left(errors) =>
             val message = errors.format
             fail(
               s"In '${file.getPath}': on first generation:\n" + message +
-                "\nIn Source:\n" + output + "\n"
+                "\nIn Source:\n" + output1 + "\n"
             )
           case Right(result2) =>
             val input3 = PrettifyTranslator.translateToString(result2, log, common, options)
@@ -61,7 +61,8 @@ class PrettifyTest extends RiddlFilesTestBase {
                   s"In '${file.getPath}': on second generation: " + messages +
                     "\nIn Source:\n" + input3 + "\n"
                 )
-              case Right(_) => output mustEqual input3
+              case Right(_) =>
+                output1 mustEqual input3
             }
         }
     }
