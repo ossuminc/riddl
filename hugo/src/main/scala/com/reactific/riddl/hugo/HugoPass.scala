@@ -23,6 +23,11 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
+  val geekDoc_version = "v0.38.1"
+  val geekDoc_file = "hugo-geekdoc.tar.gz"
+  val geekDoc_url = new URL(
+    s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
+  )
 }
 
 case class HugoOutput(
@@ -36,11 +41,6 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   requires(ValidationPass)
   requires(StatsPass)
 
-  val geekDoc_version = "v0.38.1"
-  val geekDoc_file = "hugo-geekdoc.tar.gz"
-  val geekDoc_url = new URL(
-    s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
-  )
   val commonOptions: CommonOptions = state.commonOptions
   val options: HugoCommand.Options = state.options
 

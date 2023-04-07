@@ -36,7 +36,7 @@ object HugoCommand {
     siteLogoURL: Option[URL] = None,
     baseUrl: Option[URL] = Option(new URL("https://example.com/")),
     themes: Seq[(String, Option[URL])] =
-      Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url)),
+    Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url)),
     sourceURL: Option[URL] = None,
     editPath: Option[String] = Some("edit/main/src/main/riddl"),
     viewPath: Option[String] = Some("blob/main/src/main/riddl"),
@@ -190,7 +190,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
 
       val themes =
         if (themesMap.isEmpty) {
-          Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url))
+          Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url))
         } else {
           val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
           themesEither.map { case (name, maybeUrl) =>
