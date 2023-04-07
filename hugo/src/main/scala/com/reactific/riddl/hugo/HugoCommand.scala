@@ -7,12 +7,13 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.CommandOptions.optional
-import com.reactific.riddl.commands.CommandOptions
-import com.reactific.riddl.commands.TranslationCommand
-import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.commands.{CommandOptions, PassCommand, PassCommandOptions}
+import com.reactific.riddl.language.{CommonOptions, TranslatingOptions}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
+import com.reactific.riddl.language.passes.{PassInput, PassesResult}
 import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.stats.StatsPass
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -43,18 +44,25 @@ object HugoCommand {
     withTODOList: Boolean = true,
     withGraphicalTOC: Boolean = false,
     withStatistics: Boolean = true)
-      extends CommandOptions with TranslationCommand.Options {
+    extends CommandOptions with PassCommandOptions with TranslatingOptions {
     def command: String = "hugo"
+
     def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
+
     def contentRoot: Path = outputRoot.resolve("content")
+
     def staticRoot: Path = outputRoot.resolve("static")
+
     def themesRoot: Path = outputRoot.resolve("themes")
+
     def configFile: Path = outputRoot.resolve("config.toml")
   }
 }
 
-class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
+class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
+
   import HugoCommand.Options
+
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("hugo").text(
@@ -223,13 +231,20 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  override def translateImpl(
-    result: PassesResult,
+
+  def getPasses(
     log: Logger,
     commonOptions: CommonOptions,
     options: Options
-  ): Either[Messages, Unit] = {
-    HugoTranslator.translate(result, log, commonOptions, options).map(_ => ())
+  ): PassesCreator = {
+    standardPasses ++ Seq(
+      { input: PassInput => StatsPass(input) },
+      { input: PassInput =>
+        val result = PassesResult(input)
+        val state = HugoTranslatorState(result, options, commonOptions, log)
+        HugoPass(input, state)
+      }
+    )
   }
 
   override def replaceInputFile(

@@ -12,6 +12,7 @@ import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.*
 import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.language.passes.symbols.SymbolsOutput
+import com.reactific.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.Path
 
@@ -28,7 +29,9 @@ import java.nio.file.Path
 case class HugoTranslatorState(
   result: PassesResult,
   options: HugoCommand.Options = HugoCommand.Options(),
-  commonOptions: CommonOptions = CommonOptions())
+  commonOptions: CommonOptions = CommonOptions(),
+  logger: Logger = SysLogger()
+)
     extends TranslatingState[MarkdownWriter]
     with PathResolutionState
     with TranslationResult {

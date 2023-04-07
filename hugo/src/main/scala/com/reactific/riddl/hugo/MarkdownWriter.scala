@@ -6,8 +6,8 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.stats.{StatsOutput, StatsPass}
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
@@ -1000,7 +1000,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       Some("Statistical information about the RIDDL model documented")
     )
 
-    val stats = Riddl.collectStats(root)
+    val stats = state.result.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
     emitTableHead(
       Seq(
         "Category" -> 'L',

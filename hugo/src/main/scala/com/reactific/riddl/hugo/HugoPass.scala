@@ -6,34 +6,138 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.AST.Include
-import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.{AST, *}
+import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.*
-import com.reactific.riddl.language.passes.PassesResult
-import com.reactific.riddl.utils.Logger
-import com.reactific.riddl.utils.PathUtils
-import com.reactific.riddl.utils.Tar
-import com.reactific.riddl.utils.TreeCopyFileVisitor
-import com.reactific.riddl.utils.Zip
+import com.reactific.riddl.language.passes.resolve.ResolutionPass
+import com.reactific.riddl.language.passes.symbols.SymbolsPass
+import com.reactific.riddl.language.passes.validate.ValidationPass
+import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.stats.StatsPass
+import com.reactific.riddl.utils.*
 
 import java.io.File
 import java.net.URL
 import java.nio.file.*
 import scala.collection.mutable
 
-object HugoTranslator extends Translator[HugoCommand.Options] {
+object HugoPass extends PassInfo {
+  val name: String = "hugo"
+}
 
-  val geekDoc_version = "v0.36.1"
+case class HugoOutput(
+  messages: Messages = Messages.empty
+) extends PassOutput
+
+case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(input) {
+
+  requires(SymbolsPass)
+  requires(ResolutionPass)
+  requires(ValidationPass)
+  requires(StatsPass)
+
+  val geekDoc_version = "v0.38.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
   )
+  val commonOptions: CommonOptions = state.commonOptions
+  val options: HugoCommand.Options = state.options
+
+  require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
+  require(
+    options.outputRoot.getFileName.toString.nonEmpty,
+    "Output path is empty"
+  )
+  makeDirectoryStructure(options.inputFile.get, state.logger, options, commonOptions)
+  val root = input.root
+
+  val maybeAuthor = root.authors.headOption.orElse {root.domains.headOption.flatMap(_.authorDefs.headOption)}
+  writeConfigToml(options, maybeAuthor)
+
+  val name: String = HugoPass.name
+
+  override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
+    val stack = parents.toSeq
+    definition match {
+      case f: Field => state.addToGlossary(f, stack)
+      case i: Invariant => state.addToGlossary(i, stack)
+      case e: Enumerator => state.addToGlossary(e, stack)
+      case ss: SagaStep => state.addToGlossary(ss, stack)
+      case t: Term => state.addToGlossary(t, stack)
+      case _: Example | _: Inlet | _: Outlet | _: Author | _: OnMessageClause |
+           _: OnOtherClause | _: Include[Definition]@unchecked |
+           _: RootContainer =>
+      // All these cases do not generate a file as their content contributes
+      // to the content of their parent container
+      case leaf: LeafDefinition =>
+        // These are leaf nodes, they get their own file or other special
+        // handling.
+        leaf match {
+          // handled by definition that contains the term
+          case c: Connector =>
+            val (mkd, parents) = setUpLeaf(leaf, state, stack)
+            mkd.emitConnection(c, parents)
+            state.addToGlossary(c, stack)
+          case sa: Actor => state.addToGlossary(sa, stack)
+          case i: Interaction => state.addToGlossary(i, stack)
+          case unknown =>
+            require(requirement = false, s"Failed to handle Leaf: $unknown")
+        }
+      case container: Definition =>
+        // Everything else is a container and definitely needs its own page
+        // and glossary entry.
+        val (mkd, parents) = setUpContainer(container, state, stack)
+        container match {
+          case a: Application => mkd.emitApplication(a, stack)
+          case out: Output => state.addToGlossary(out, stack)
+          case in: Input => state.addToGlossary(in, stack)
+          case grp: Group => state.addToGlossary(grp, stack)
+          case t: Type => mkd.emitType(t, stack)
+          case s: State =>
+            val maybeType = state.resolvePathIdentifier[Type](s.typ.pathId, s +: stack)
+            maybeType match {
+              case Some(typ: AggregateTypeExpression) =>
+                mkd.emitState(s, typ.fields, stack)
+              case Some(_) =>
+                mkd.emitState(s, Seq.empty[Field], stack)
+              case _ =>
+                throw new IllegalStateException("State aggregate not resolved")
+            }
+          case h: Handler => mkd.emitHandler(h, parents)
+          case f: Function => mkd.emitFunction(f, parents)
+          case e: Entity => mkd.emitEntity(e, parents)
+          case c: Context => mkd.emitContext(c, stack)
+          case d: Domain => mkd.emitDomain(d, parents)
+          case a: Adaptor => mkd.emitAdaptor(a, parents)
+          case s: Streamlet => mkd.emitStreamlet(s, stack)
+          case p: Projector => mkd.emitProjection(p, parents)
+          case _: Repository => // TODO: mkd.emitRepository(r, parents)
+          case s: Saga => mkd.emitSaga(s, parents)
+          case s: Epic => mkd.emitEpic(s, stack)
+          case uc: UseCase => mkd.emitUseCase(uc, stack)
+          case unknown =>
+            require(
+              requirement = false,
+              s"Failed to handle Definition: $unknown"
+            )
+            state
+
+        }
+        state.addToGlossary(container, stack)
+    }
+  }
+
+  override def postProcess(root: AST.RootContainer): Unit = {
+    state.close(root)
+  }
+
+  override def result: HugoOutput = HugoOutput()
 
   private def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
     if (maybeFiles.nonEmpty) {
-      for (file <- maybeFiles.get) { deleteAll(file) }
+      for (file <- maybeFiles.get) {deleteAll(file)}
     }
     directory.delete
   }
@@ -133,15 +237,15 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
     commonOptions: CommonOptions
   ): Unit = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) { if (options.eraseOutput) { deleteAll(outDir) } }
-    else { outDir.mkdirs() }
+    if (outDir.exists()) {if (options.eraseOutput) {deleteAll(outDir)}}
+    else {outDir.mkdirs()}
 
     val parent = outDir.getParentFile
     require(
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if (commonOptions.verbose) { println(s"Generating output to: $outDir") }
+    if (commonOptions.verbose) {println(s"Generating output to: $outDir")}
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)
@@ -175,110 +279,6 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   ): (MarkdownWriter, Seq[String]) = {
     val pars = state.makeParents(stack)
     state.addFile(pars, d.id.format + ".md") -> pars
-  }
-
-  override def translate(
-    result: PassesResult,
-    logger: Logger,
-    commonOptions: CommonOptions,
-    options: HugoCommand.Options
-  ): Either[Messages, HugoTranslatorState] = {
-    require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
-    require(
-      options.outputRoot.getFileName.toString.nonEmpty,
-      "Output path is empty"
-    )
-    makeDirectoryStructure(options.inputFile.get, logger, options, commonOptions)
-    val root = result.root
-    val someAuthors = root.domains.headOption match {
-      case Some(domain) => domain.authorDefs
-      case None         => Seq.empty[Author]
-    }
-    writeConfigToml(options, someAuthors.headOption)
-
-    val state = HugoTranslatorState(result, options, commonOptions, logger)
-    val parentStack = mutable.Stack[Definition]()
-
-    val newState = Folding
-      .foldLeftWithStack(state, parentStack)(root)(processingFolder)
-    newState.close(root)
-    Right(newState)
-  }
-
-  private def processingFolder(
-    state: HugoTranslatorState,
-    defn: Definition,
-    stack: Seq[Definition]
-  ): HugoTranslatorState = {
-    defn match {
-      case f: Field      => state.addToGlossary(f, stack)
-      case i: Invariant  => state.addToGlossary(i, stack)
-      case e: Enumerator => state.addToGlossary(e, stack)
-      case ss: SagaStep  => state.addToGlossary(ss, stack)
-      case t: Term       => state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _: Outlet | _: Author | _: OnMessageClause |
-          _: OnOtherClause | _: Include[Definition] @unchecked |
-          _: RootContainer =>
-        // All these cases do not generate a file as their content contributes
-        // to the content of their parent container
-        state
-      case leaf: LeafDefinition =>
-        // These are leaf nodes, they get their own file or other special
-        // handling.
-        leaf match {
-          // handled by definition that contains the term
-          case c: Connector =>
-            val (mkd, parents) = setUpLeaf(leaf, state, stack)
-            mkd.emitConnection(c, parents)
-            state.addToGlossary(c, stack)
-          case sa: Actor   => state.addToGlossary(sa, stack)
-          case i: Interaction => state.addToGlossary(i, stack)
-          case unknown =>
-            require(requirement = false, s"Failed to handle Leaf: $unknown")
-            state
-        }
-      case container: Definition =>
-        // Everything else is a container and definitely needs its own page
-        // and glossary entry.
-        val (mkd, parents) = setUpContainer(container, state, stack)
-        container match {
-          case a: Application => mkd.emitApplication(a, stack)
-          case out: Output    => state.addToGlossary(out, stack)
-          case in: Input      => state.addToGlossary(in, stack)
-          case grp: Group     => state.addToGlossary(grp, stack)
-          case t: Type        => mkd.emitType(t, stack)
-          case s: State =>
-            val maybeType = state.resolvePathIdentifier[Type](s.typ.pathId, s +: stack)
-            maybeType match {
-              case Some(typ: AggregateTypeExpression) =>
-                mkd.emitState(s, typ.fields, stack)
-              case Some(_) =>
-                mkd.emitState(s, Seq.empty[Field], stack)
-              case _ =>
-                throw new IllegalStateException("State aggregate not resolved")
-            }
-          case h: Handler    => mkd.emitHandler(h, parents)
-          case f: Function   => mkd.emitFunction(f, parents)
-          case e: Entity     => mkd.emitEntity(e, parents)
-          case c: Context    => mkd.emitContext(c, stack)
-          case d: Domain     => mkd.emitDomain(d, parents)
-          case a: Adaptor    => mkd.emitAdaptor(a, parents)
-          case s: Streamlet  => mkd.emitStreamlet(s, stack)
-          case p: Projector => mkd.emitProjection(p, parents)
-          case _: Repository => // TODO: mkd.emitRepository(r, parents)
-          case s: Saga       => mkd.emitSaga(s, parents)
-          case s: Epic      => mkd.emitEpic(s, stack)
-          case uc: UseCase => mkd.emitUseCase(uc, stack)
-          case unknown =>
-            require(
-              requirement = false,
-              s"Failed to handle Definition: $unknown"
-            )
-            state
-
-        }
-        state.addToGlossary(container, stack)
-    }
   }
 
   // scalastyle:off method.length
@@ -432,10 +432,12 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
        |  # (Optional, default true) Display a "Back to top" link in the site footer.
        |  geekdocBackToTop = true
        |
-       |  # (Optional, default false) Enable or disable adding tags for post pages automatically to the navigation sidebar.
+       |  # (Optional, default false) Enable or disable adding tags for post pages automatically to the navigation
+       |  sidebar.
        |  geekdocTagsToMenu = true
        |
-       |  # (Optional, default 'title') Configure how to sort file-tree menu entries. Possible options are 'title', 'linktitle',
+       |  # (Optional, default 'title') Configure how to sort file-tree menu entries. Possible options are 'title',
+       |  'linktitle',
        |  # 'date', 'publishdate', 'expirydate' or 'lastmod'. Every option can be used with a reverse modifier as well
        |  # e.g. 'title_reverse'.
        |  geekdocFileTreeSortBy = "title"
