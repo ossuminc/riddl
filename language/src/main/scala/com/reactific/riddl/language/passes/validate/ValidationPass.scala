@@ -3,14 +3,14 @@ package com.reactific.riddl.language.passes.validate
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.{Message, StyleWarning}
-import com.reactific.riddl.language.passes.{Pass, PassInput}
+import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput}
 import com.reactific.riddl.language.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.language.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 
 import scala.collection.mutable
 
-object ValidationPass {
+object ValidationPass extends PassInfo {
   val name: String = "validation"
 }
 /** The ValidationPass
@@ -19,6 +19,9 @@ object ValidationPass {
  * Output of the prior Resolution pass including Symbols and Resolution passes
  */
 case class ValidationPass (input: PassInput) extends Pass(input) with StreamingValidation {
+
+  requires(SymbolsPass)
+  requires(ResolutionPass)
 
   override def name: String = ValidationPass.name
   val resolution: ResolutionOutput = input.outputOf[ResolutionOutput](ResolutionPass.name)

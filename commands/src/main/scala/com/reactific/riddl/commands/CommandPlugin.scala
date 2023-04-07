@@ -185,8 +185,7 @@ object CommandPlugin {
     }
   }
 
-  def runMain(args: Array[String]): Int = {
-    val log = SysLogger()
+  def runMain(args: Array[String], log: Logger = SysLogger()): Int = {
     try {
       val (common, remaining) = com.reactific.riddl.commands.CommonOptionsHelper
         .parseCommonOptions(args)

@@ -1,27 +1,11 @@
 package com.reactific.riddl.commands
-import org.scalatest.Assertion
+
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path
 
 /** Unit Tests For ReadOptionsTest */
-class ReadOptionsTest extends AnyWordSpec with Matchers {
-
-  val inputDir = "commands/src/test/input/"
-  val confFile = s"$inputDir/cmdoptions.conf"
-
-  def check[OPTS <: CommandOptions](
-    cmd: CommandPlugin[?],
-    expected: OPTS,
-    file: Path = Path.of(confFile)
-  ): Assertion = {
-    cmd.loadOptionsFrom(file) match {
-      case Left(errors)   => fail(errors.format)
-      case Right(options) => options must be(expected)
-    }
-  }
+class ReadOptionsTest extends CommandTestBase {
 
   "Options" should {
     "read for dump" in {
@@ -60,11 +44,6 @@ class ReadOptionsTest extends AnyWordSpec with Matchers {
       val expected = InputFileCommandPlugin
         .Options(Some(Path.of(s"$inputDir/parse.riddl")), "parse")
       check(new ParseCommand, expected)
-    }
-    "read for stats" in {
-      val expected = InputFileCommandPlugin
-        .Options(Some(Path.of(s"$inputDir/stats.riddl")), "stats")
-      check(new StatsCommand, expected)
     }
     "read for validate" in {
       val expected = InputFileCommandPlugin

@@ -8,13 +8,13 @@ package com.reactific.riddl.language.passes.symbols
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.passes.{Pass, PassInput}
+import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput}
 import com.reactific.riddl.language.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
 import scala.annotation.unused
 import scala.collection.mutable
 
-object SymbolsPass {
+object SymbolsPass  extends PassInfo {
   val name: String = "symbols"
 }
 /** Symbol Table for Validation and other purposes. This symbol table is built

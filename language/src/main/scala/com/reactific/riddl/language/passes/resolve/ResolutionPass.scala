@@ -2,8 +2,8 @@ package com.reactific.riddl.language.passes.resolve
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.{CommonOptions, Messages}
-import com.reactific.riddl.language.passes.{Pass, PassInput, PassOutput}
-import com.reactific.riddl.language.passes.symbols.SymbolsOutput
+import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.language.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 
 import scala.collection.mutable
@@ -15,7 +15,7 @@ case class ResolutionOutput(
   usage: Usages,
 ) extends PassOutput
 
-object ResolutionPass {
+object ResolutionPass extends PassInfo {
   val name: String = "resolution"
 }
 /** The Reference Resolution Pass */
@@ -23,6 +23,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
   UsageResolution {
 
   override def name: String = ResolutionPass.name
+
+  requires(SymbolsPass)
 
   val commonOptions: CommonOptions = input.commonOptions
   val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)

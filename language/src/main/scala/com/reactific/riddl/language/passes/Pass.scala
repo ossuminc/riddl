@@ -15,7 +15,9 @@ import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.passes.validate.{ValidationOutput, ValidationPass}
 
-trait PassOptions extends AnyRef
+trait PassInfo {
+  def name: String
+}
 
 /**
  * An abstract notion of the minimum notion
@@ -34,6 +36,10 @@ case class PassInput(root: RootContainer, commonOptions: CommonOptions = CommonO
 
   def outputIs(passName: String, output: PassOutput): Unit = {
     priorOutputs.put(passName, output)
+  }
+
+  def hasPassOutput(passName: String): Boolean = {
+    priorOutputs.get(passName).nonEmpty
   }
 }
 
@@ -55,7 +61,11 @@ case class PassesResult(
   refMap: ReferenceMap = ReferenceMap.empty,
   usage: Usages = Usages.empty,
   others: Map[String, PassOutput] = Map.empty
-) extends PassOutput
+) extends PassOutput {
+  def outputOf[T <: PassOutput](passName: String): Option[T] = {
+    others.get(passName).map(_.asInstanceOf[T])
+  }
+}
 
 object PassesResult {
   val empty: PassesResult = PassesResult()
@@ -76,9 +86,17 @@ abstract class Pass(@unused in: PassInput) {
    * THe name of the pass for inclusion in messages it produces
    * @return A string value giving the name of this pass
    */
-  def name: String = "unnamed pass"
+  def name: String
 
-  def requires: Pass.PassesCreator = Seq()
+  /**
+   * If your pass requires the output from other passes, call this function from your pass's constructor.
+   * It will ensure that your pass will fail construction if the input doesn't contain that required pass's output.
+   * @param passInfo
+   *   The pass's companion object from which this function will obtain the pass's name
+   */
+  protected final def requires(passInfo: PassInfo): Unit = {
+    require(in.hasPassOutput(passInfo.name), s"Required pass '${passInfo.name}' was not run prior to $name'")
+  }
 
   protected def process(
     definition: Definition,
