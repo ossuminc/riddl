@@ -1,6 +1,6 @@
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.passes.validation.ValidatingTest
+import com.reactific.riddl.language.passes.validate.ValidatingTest
 
 class AuthorTest extends ValidatingTest {
 

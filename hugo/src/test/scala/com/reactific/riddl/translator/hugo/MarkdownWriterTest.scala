@@ -11,7 +11,7 @@ import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.hugo.HugoTranslatorState
 import com.reactific.riddl.hugo.MarkdownWriter
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.testkit.ParsingTest
 
 import java.io.PrintWriter
@@ -40,7 +40,7 @@ class MarkdownWriterTest extends ParsingTest {
         case Right(root) =>
           root.contents mustNot be(empty)
           val domain = root.domains.head
-          val result = AggregateOutput.empty
+          val result = PassesResult.empty
           val state =
             HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
           val mkd = MarkdownWriter(output, state)
@@ -102,7 +102,7 @@ class MarkdownWriterTest extends ParsingTest {
           "https://example.com/blob/main/src/main/riddl/two"
         )
       }
-      val result = AggregateOutput.empty
+      val result = PassesResult.empty
       val state = HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
       val mdw = MarkdownWriter(Path.of("foo.md"), state)
       mdw.emitGlossary(10, Seq(term1, term2))

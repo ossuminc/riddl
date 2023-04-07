@@ -1,6 +1,6 @@
 package com.reactific.riddl.language.passes.symbols
 
-import com.reactific.riddl.language.{CommonOptions, Messages}
+import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.passes.PassOutput
 import com.reactific.riddl.language.passes.symbols.Symbols.{Parentage, SymTab}
@@ -26,8 +26,6 @@ object Symbols {
  * The SymbolTable that handles identifier translation to definitions
  */
 case class SymbolsOutput(
-  root: RootContainer = RootContainer.empty,
-  commonOptions: CommonOptions = CommonOptions(),
   messages: Messages.Messages = Messages.empty,
   symTab: SymTab = Symbols.emptySymTab,
   parentage: Parentage = Symbols.emptyParentage

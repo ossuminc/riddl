@@ -8,7 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -40,7 +40,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |""".stripMargin
       Riddl.parseAndValidate(RiddlParserInput(input), CommonOptions(), shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
-        case Right(result: AggregateOutput) =>
+        case Right(result: PassesResult) =>
           val errors = result.messages.justErrors
           if (errors.nonEmpty) { fail(errors.format) }
           else {

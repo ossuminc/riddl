@@ -8,7 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.passes.validation.ValidatingTest
+import com.reactific.riddl.language.passes.validate.ValidatingTest
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ValidatingTest {

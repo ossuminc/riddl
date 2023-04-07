@@ -9,7 +9,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.LiteralString
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.passes.validation.ValidatingTest
+import com.reactific.riddl.language.passes.validate.ValidatingTest
 
 class EpicTest extends ValidatingTest {
 

@@ -11,7 +11,7 @@ import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.TranslationCommand
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -224,7 +224,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
   }
 
   override def translateImpl(
-    result: AggregateOutput,
+    result: PassesResult,
     log: Logger,
     commonOptions: CommonOptions,
     options: Options

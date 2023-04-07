@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.Include
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.*
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.PathUtils
 import com.reactific.riddl.utils.Tar
@@ -178,7 +178,7 @@ object HugoTranslator extends Translator[HugoCommand.Options] {
   }
 
   override def translate(
-    result: AggregateOutput,
+    result: PassesResult,
     log: Logger,
     commonOptions: CommonOptions,
     options: HugoCommand.Options

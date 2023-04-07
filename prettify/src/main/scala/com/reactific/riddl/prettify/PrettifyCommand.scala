@@ -11,7 +11,7 @@ import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.TranslationCommand
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.prettify.PrettifyCommand.cmdName
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
@@ -44,7 +44,7 @@ class PrettifyCommand
   }
 
   override def translateImpl(
-    results: AggregateOutput,
+    results: PassesResult,
     log: Logger,
     commonOptions: CommonOptions,
     options: Options

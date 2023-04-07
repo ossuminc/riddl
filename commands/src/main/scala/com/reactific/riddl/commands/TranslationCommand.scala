@@ -11,7 +11,7 @@ import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.TranslatingOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.{Logger, Timer}
 
 import java.nio.file.Path
@@ -50,7 +50,7 @@ abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](
     *   A Right[Unit] if successful or Left[Messages] if not
     */
   protected def translateImpl(
-    validationResult: AggregateOutput,
+    validationResult: PassesResult,
     log: Logger,
     commonOptions: CommonOptions,
     options: OPT

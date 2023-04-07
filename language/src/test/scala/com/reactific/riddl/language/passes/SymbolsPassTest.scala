@@ -13,7 +13,7 @@ class SymbolsPassTest extends ParsingTest {
 
   def captureEverythingSymbols: SymbolsOutput = {
     val root = checkFile("everything", "everything.riddl")
-    val input: ParserOutput = ParserOutput(root, CommonOptions())
+    val input: PassInput = PassInput(root, CommonOptions())
     Pass.runSymbols(input)
   }
 

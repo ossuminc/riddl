@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.*
-import com.reactific.riddl.language.passes.AggregateOutput
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.language.passes.symbols.SymbolsOutput
 
 import java.nio.file.Path
@@ -26,7 +26,7 @@ import java.nio.file.Path
   *   The common options all commands use
   */
 case class HugoTranslatorState(
-  result: AggregateOutput,
+  result: PassesResult,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions())
     extends TranslatingState[MarkdownWriter]

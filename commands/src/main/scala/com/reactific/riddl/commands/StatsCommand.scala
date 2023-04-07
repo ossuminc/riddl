@@ -49,3 +49,4 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
     }
   }
 }
+

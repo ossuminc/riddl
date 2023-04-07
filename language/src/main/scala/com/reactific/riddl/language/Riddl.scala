@@ -12,8 +12,9 @@ import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.TopLevelParser
-import com.reactific.riddl.language.passes.{AggregateOutput, Pass}
-import com.reactific.riddl.utils.Timer
+import com.reactific.riddl.language.passes.Pass.PassesCreator
+import com.reactific.riddl.language.passes.{PassesResult, Pass, PassInput}
+import com.reactific.riddl.utils.{Logger, Timer, SysLogger}
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.nio.file.Files
@@ -45,7 +46,6 @@ object CommonOptions {
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
-
   def parse(
     path: Path,
     options: CommonOptions
@@ -71,39 +71,35 @@ object Riddl {
 
   def validate(
     root: RootContainer,
-    options: CommonOptions
-  ): Either[Messages, AggregateOutput] = {
-    Pass(root, options)
+    options: CommonOptions = CommonOptions.empty,
+    shouldFailOnError: Boolean = true,
+  ): Either[Messages, PassesResult] = {
+    Pass(root, options, shouldFailOnError)
   }
 
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,
-    shouldFailOnError: Boolean = true
-  ): Either[Messages, AggregateOutput] = {
-    parse(input, commonOptions).flatMap { root =>
-      Pass(root, commonOptions, shouldFailOnError) match {
-        case Left(messages) => Left(messages)
-        case Right(result) =>
-          if (result.messages.hasErrors) {
-            if (shouldFailOnError) {
-              Left(result.messages)
-            } else {
-              Right(result)
-            }
-          } else {
-            Right(result)
-          }
-      }
+    shouldFailOnError: Boolean = true,
+    passes: PassesCreator = Pass.standardPasses,
+    logger: Logger = SysLogger(),
+  ): Either[Messages, PassesResult] = {
+    parse(input, commonOptions) match {
+      case Left(messages) => Left(messages)
+      case Right(root) =>
+       val input = PassInput(root, commonOptions)
+       Pass(input, shouldFailOnError, passes, logger)
     }
   }
 
-  def parseAndValidate(
+  def parseAndValidatePath(
     path: Path,
-    commonOptions: CommonOptions,
-    shouldFailOnError: Boolean
-  ): Either[Messages, AggregateOutput] = {
-    parseAndValidate(RiddlParserInput(path), commonOptions, shouldFailOnError)
+    commonOptions: CommonOptions = CommonOptions.empty,
+    shouldFailOnError: Boolean = true,
+    passes: PassesCreator = Pass.standardPasses,
+    logger: Logger = SysLogger(),
+  ): Either[Messages, PassesResult] = {
+    parseAndValidate(RiddlParserInput(path), commonOptions, shouldFailOnError, passes, logger)
   }
 
   case class CategoryStats(

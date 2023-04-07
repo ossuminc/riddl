@@ -7,12 +7,16 @@
 package com.reactific.riddl.language.passes.symbols
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.passes.{ParserOutput, Pass}
+import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.passes.{Pass, PassInput}
 import com.reactific.riddl.language.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
 import scala.annotation.unused
 import scala.collection.mutable
 
+object SymbolsPass {
+  val name: String = "symbols"
+}
 /** Symbol Table for Validation and other purposes. This symbol table is built
   * from the AST model after syntactic parsing is complete. It will also work
   * for any sub-tree of the model that is rooted by a ParentDefOf[Definition]
@@ -25,9 +29,9 @@ import scala.collection.mutable
   * @param input
   *   The output of the parser pass is the input to SymbolPass
   */
-case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOutput](input) {
+case class SymbolsPass(input: PassInput) extends Pass(input) {
 
-  override def name: String = "symbols"
+  override def name: String = SymbolsPass.name
 
   private val symTab: SymTab = mutable.HashMap.empty[String, Seq[SymTabItem]]
 
@@ -58,8 +62,7 @@ case class SymbolsPass(input: ParserOutput) extends Pass[ParserOutput,SymbolsOut
     }
   }
 
-  override def result: SymbolsOutput = SymbolsOutput(input.root, input.commonOptions, input.messages,
-    symTab, parentage)
+  override def result: SymbolsOutput = SymbolsOutput(Messages.empty, symTab, parentage)
 
   override def close: Unit = ()
 
