@@ -10,6 +10,7 @@ import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.Messages.errors
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -163,21 +164,22 @@ class OnChangeCommand
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug
     * output
-    * @param options
+   *
+   * @param options
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
-    * @return
-    *   Either a set of Messages on error or a Unit on success
-    */
+   * @param log
+   *    A logger for logging errors, warnings, and info
+   * @return
+   * Either a set of Messages on error or a Unit on success
+   */
   override def run(
     options: Options,
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = { Left(errors("Not Implemented")) }
+  ): Either[Messages, PassesResult] = {Left(errors("Not Implemented"))}
 
   private final val timeStampFileName: String = ".riddl-timestamp"
   def getTimeStamp(dir: Path): FileTime = {

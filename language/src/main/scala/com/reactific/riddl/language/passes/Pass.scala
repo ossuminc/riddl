@@ -1,6 +1,6 @@
 package com.reactific.riddl.language.passes
 
-import com.reactific.riddl.language.{CommonOptions, Messages}
+import com.reactific.riddl.language.{AST, CommonOptions, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
@@ -117,7 +117,7 @@ abstract class Pass(@unused in: PassInput) {
    */
   def close: Unit = ()
 
-  protected final def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+  protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     process(definition, parents)
     if (definition.hasDefinitions) {
       parents.push(definition)
@@ -125,9 +125,47 @@ abstract class Pass(@unused in: PassInput) {
       parents.pop()
     }
   }
-
 }
 
+/**
+ * A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
+ *   - openContainer at the start of container's processing
+ *   - processLeaf for any leaf node
+ *   - closeContainer after all the container's contents have been processed
+ *     This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all
+ *     their content (openContainer) and also after all its content (closeContainer). This is necessary for passes that
+ *     must maintain the hierarchical structure of the AST model in their processing
+ *
+ * @param input
+ * The PassInput to process
+ */
+abstract class HierarchyPass(input: PassInput) extends Pass(input) {
+
+  // not required in this kind of pass, final override it
+  override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
+
+  // Instead traverse will use these three methods:
+  protected def openContainer(definition: Definition, parents: Seq[Definition]): Unit
+
+  protected def processLeaf(definition: LeafDefinition, parents: Seq[Definition]): Unit
+
+  protected def closeContainer(definition: Definition, parents: Seq[Definition]): Unit
+
+  override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+    definition match {
+      case leaf: LeafDefinition =>
+        processLeaf(leaf, parents.toSeq)
+      case container: Definition =>
+        openContainer(container, parents.toSeq)
+        if (container.hasDefinitions) {
+          parents.push(definition)
+          definition.contents.foreach { item => traverse(item, parents) }
+          parents.pop()
+        }
+        closeContainer(container, parents.toSeq)
+    }
+  }
+}
 
 
 object Pass {

@@ -8,7 +8,7 @@ package com.reactific.riddl.stats
 
 import com.reactific.riddl.commands.InputFileCommandPlugin
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.Pass
+import com.reactific.riddl.language.passes.{Pass, PassesResult}
 import com.reactific.riddl.language.{CommonOptions, Riddl}
 import com.reactific.riddl.utils.Logger
 
@@ -23,10 +23,10 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     options.withInputFile { inputFile: Path =>
-      val passes = Pass.standardPasses ++ Seq( { input => StatsPass(input) })
-      Riddl.parseAndValidatePath(inputFile, commonOptions, passes=passes, logger = log) match {
+      val passes = Pass.standardPasses ++ Seq({ input => StatsPass(input) })
+      Riddl.parseAndValidatePath(inputFile, commonOptions, passes = passes, logger = log) match {
         case Left(messages) => Left(messages)
         case Right(result) =>
           result.outputOf[StatsOutput](StatsPass.name) match {
@@ -40,7 +40,7 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
               println()
             case None => println("No statistics generated")
           }
-          Right(())
+          Right(result)
       }
     }
   }

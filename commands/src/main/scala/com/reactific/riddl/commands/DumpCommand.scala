@@ -9,6 +9,7 @@ package com.reactific.riddl.commands
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Riddl
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.StringHelpers.toPrettyString
 
@@ -22,17 +23,18 @@ object DumpCommand {
   */
 class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
   import InputFileCommandPlugin.Options
+
   override def run(
     options: Options,
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      Riddl.parseAndValidate(inputFile, commonOptions).map { root =>
+      Riddl.parseAndValidate(inputFile, commonOptions).map { result =>
         log.info(s"AST of $inputFile is:")
-        log.info(toPrettyString(root, 1, None))
-        ()
+        log.info(toPrettyString(result, 1, None))
+        result
       }
     }
   }

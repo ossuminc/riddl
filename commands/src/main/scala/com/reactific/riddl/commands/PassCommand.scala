@@ -9,21 +9,16 @@ package com.reactific.riddl.commands
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Riddl
-import com.reactific.riddl.language.Messages.{Messages}
-import com.reactific.riddl.language.passes.Pass.{PassesCreator}
-import com.reactific.riddl.language.passes.{Pass, PassInput}
+import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.Pass.PassesCreator
+import com.reactific.riddl.language.passes.{Pass, PassInput, PassesResult}
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
 import scala.reflect.ClassTag
 
 trait PassCommandOptions extends CommandOptions {
-  def inputFile: Option[Path]
-
   def outputDir: Option[Path]
-
-  def projectName: Option[String]
-
 }
 
 /** An abstract base class for translation style commands. That is, they
@@ -44,15 +39,15 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
 
   def overrideOptions(options: OPT, newOutputDir: Path): OPT
 
-  private final def doRun(
+  protected final def doRun(
     options: OPT,
     commonOptions: CommonOptions,
     log: Logger
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     options.withInputFile { inputFile: Path =>
       Riddl.parse(inputFile, commonOptions) match {
         case Left(errors) =>
-          Left[Messages, Unit](errors)
+          Left[Messages, PassesResult](errors)
         case Right(root) =>
           val input: PassInput = PassInput(root, commonOptions)
           val passes = getPasses(log, commonOptions, options)
@@ -64,7 +59,8 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
                 println(result.messages.format)
               }
           }
-          Right(())
+          val output = PassesResult(input)
+          Right(output)
       }
     }
   }
@@ -74,7 +70,7 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     val options =
       if (outputDirOverride.nonEmpty) {
         overrideOptions(originalOptions, outputDirOverride.get)
@@ -83,7 +79,7 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     val messages = checkOptions(options)
 
     if (messages.nonEmpty) {
-      Left[Messages, Unit](messages) // no point even parsing if there are option errors
+      Left[Messages, PassesResult](messages) // no point even parsing if there are option errors
     } else {
       doRun(options, commonOptions, log)
     }

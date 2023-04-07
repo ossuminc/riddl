@@ -7,11 +7,10 @@
 package com.reactific.riddl.prettify
 
 import com.reactific.riddl.commands.CommandOptions.optional
-import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.TranslationCommand
-import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
+import com.reactific.riddl.language.passes.PassInput
 import com.reactific.riddl.prettify.PrettifyCommand.cmdName
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
@@ -28,29 +27,19 @@ object PrettifyCommand {
       Some(Path.of(System.getProperty("java.io.tmpdir"))),
     projectName: Option[String] = None,
     singleFile: Boolean = true)
-      extends CommandOptions with TranslationCommand.Options {
+    extends TranslationCommand.Options {
     def command: String = cmdName
 
   }
 }
 
 /** A command to Prettify RIDDL Source */
-class PrettifyCommand
-    extends TranslationCommand[PrettifyCommand.Options](cmdName) {
+class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdName) {
+
   import PrettifyCommand.Options
 
   def overrideOptions(options: Options, newOutputDir: Path): Options = {
     options.copy(outputDir = Some(newOutputDir))
-  }
-
-  override def translateImpl(
-    results: PassesResult,
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: Options
-  ): Either[Messages, Unit] = {
-    PrettifyTranslator.translate(results, log, commonOptions, options)
-      .map(_ => ())
   }
 
   override def getOptions: (OParser[Unit, Options], Options) = {
@@ -93,6 +82,15 @@ class PrettifyCommand
       Option(Path.of(outputPath)),
       Option(projectName),
       singleFile
+    )
+  }
+
+  override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
+    standardPasses ++ Seq(
+      { input: PassInput =>
+        val state = PrettifyState(commonOptions, options)
+        PrettifyPass(input, state)
+      }
     )
   }
 }

@@ -7,8 +7,8 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.CommandOptions.optional
-import com.reactific.riddl.commands.{CommandOptions, PassCommand, PassCommandOptions}
-import com.reactific.riddl.language.{CommonOptions, TranslatingOptions}
+import com.reactific.riddl.commands.{CommandOptions, PassCommand, TranslatingOptions}
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
 import com.reactific.riddl.language.passes.{PassInput, PassesResult}
@@ -44,7 +44,7 @@ object HugoCommand {
     withTODOList: Boolean = true,
     withGraphicalTOC: Boolean = false,
     withStatistics: Boolean = true)
-    extends CommandOptions with PassCommandOptions with TranslatingOptions {
+    extends CommandOptions with TranslatingOptions {
     def command: String = "hugo"
 
     def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath

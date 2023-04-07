@@ -6,10 +6,11 @@
 
 package com.reactific.riddl.hugo
 
+import com.reactific.riddl.commands.{TranslatingState}
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.{AST, Finder, CommonOptions}
 import com.reactific.riddl.language.Folding.PathResolutionState
 import com.reactific.riddl.language.parsing.FileParserInput
-import com.reactific.riddl.language.*
 import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.language.passes.symbols.SymbolsOutput
 import com.reactific.riddl.utils.{Logger, SysLogger}
@@ -33,8 +34,7 @@ case class HugoTranslatorState(
   logger: Logger = SysLogger()
 )
     extends TranslatingState[MarkdownWriter]
-    with PathResolutionState
-    with TranslationResult {
+    with PathResolutionState {
 
   final val symbolTable: SymbolsOutput = result.symbols
 

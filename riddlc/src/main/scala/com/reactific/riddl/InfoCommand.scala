@@ -10,6 +10,7 @@ import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.RiddlBuildInfo
 import pureconfig.ConfigCursor
@@ -50,7 +51,7 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     log.info("About riddlc:")
     log.info(s"           name: riddlc")
     log.info(s"        version: ${RiddlBuildInfo.version}")
@@ -64,6 +65,6 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
     log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
     log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
     log.info(s"  operating sys: ${System.getProperty("os.name")}")
-    Right(())
+    Right(PassesResult())
   }
 }

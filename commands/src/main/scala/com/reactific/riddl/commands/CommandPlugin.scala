@@ -13,6 +13,7 @@ import com.reactific.riddl.language.Messages.SevereError
 import com.reactific.riddl.language.Messages.errors
 import com.reactific.riddl.language.Messages.highestSeverity
 import com.reactific.riddl.language.Messages.severes
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.StringHelpers.toPrettyString
 import com.reactific.riddl.utils.{Logger, Plugin, PluginInterface, RiddlBuildInfo, StringLogger, SysLogger, Timer}
 import pureconfig.ConfigReader
@@ -56,7 +57,7 @@ object CommandPlugin {
     log: Logger,
     commonOptions: CommonOptions,
     pluginsDir: Path = Plugin.pluginsDir
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     val result = loadCommandNamed(name, commonOptions, pluginsDir)
       .flatMap { cmd => cmd.run(args, commonOptions, log) }
     if (commonOptions.verbose) {
@@ -119,7 +120,7 @@ object CommandPlugin {
     commonOptions: CommonOptions,
     log: Logger,
     commandName: String
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     val result = CommandOptions.withInputFile(configFile, commandName) { path =>
       val candidate = CommandPlugin.loadCandidateCommands(path, commonOptions)
         .flatMap { names =>
@@ -140,13 +141,13 @@ object CommandPlugin {
             ))
           }
         }
-      candidate
+      candidate.map(_ => PassesResult())
     }
     result
   }
 
   private def handleCommandResult(
-    result: Either[Messages, Unit],
+    result: Either[Messages, PassesResult],
     commonOptions: CommonOptions,
     log: Logger
   ): Int = {
@@ -261,21 +262,22 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
   /** Execute the command given the options. Error should be returned as
     * Left(messages) and not directly logged. The log is for verbose or debug
     * output
-    * @param options
+   *
+   * @param options
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
-    * @return
-    *   Either a set of Messages on error or a Unit on success
-    */
+   * @param log
+   *    A logger for logging errors, warnings, and info
+   * @return
+   * Either a set of Messages on error or a Unit on success
+   */
   def run(
     @unused options: OPT,
     @unused commonOptions: CommonOptions,
     @unused log: Logger,
     @unused outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     Left(severes(
       s"""In command '$pluginName':
          |the CommandPlugin.run(OPT,CommonOptions,Logger) method was not overridden"""
@@ -288,12 +290,12 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path] = None
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match {
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
-        if (commonOptions.verbose) { println(s"Running command: $command") }
+        if (commonOptions.verbose) {println(s"Running command: $command")}
         val result = Timer.time(command, show = commonOptions.showTimes, log) {
           run(opts, commonOptions, log, outputDirOverride)
         }

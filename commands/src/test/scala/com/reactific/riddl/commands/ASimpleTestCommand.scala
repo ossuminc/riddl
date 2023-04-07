@@ -8,6 +8,7 @@ package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -54,8 +55,8 @@ class ASimpleTestCommand
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     println(s"arg1: '${options.arg1}''")
-    Right(())
+    Right(PassesResult())
   }
 }

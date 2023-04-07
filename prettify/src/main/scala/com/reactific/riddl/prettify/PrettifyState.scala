@@ -6,9 +6,7 @@
 
 package com.reactific.riddl.prettify
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Folding
-import com.reactific.riddl.language.TranslatingState
-import com.reactific.riddl.language.TranslationResult
+import com.reactific.riddl.commands.TranslatingState
 
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -19,9 +17,7 @@ import scala.collection.mutable
 case class PrettifyState(
   commonOptions: CommonOptions,
   options: PrettifyCommand.Options)
-    extends Folding.State
-    with TranslatingState[RiddlFileEmitter]
-    with TranslationResult {
+  extends TranslatingState[RiddlFileEmitter] {
 
   require(options.inputFile.nonEmpty, "No input file specified")
   require(options.outputDir.nonEmpty, "No output directory specified")
