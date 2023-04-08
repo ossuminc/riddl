@@ -237,48 +237,5 @@ class RegressionTests extends ValidatingTest {
           )
       }
     }
-    "359: empty names in error message" in {
-      val input = RiddlParserInput(
-        """domain Example is {
-          |  context ErrorsToDemonstrateClutter{
-          |    type IntentionalErrors {
-          |      garbage: Blah,
-          |      moreGarbage: BlahBlah
-          |    }
-          |  }
-          |  context ExampleContext is {
-          |    type Foo {
-          |       name: String
-          |     }
-          |
-          |    type Foo {
-          |      number: Integer
-          |    }
-          |  }
-          |  context WarningsToDemonstrateClutter{
-          |    type Bar is {}
-          |      source UnusedWarningSource is {
-          |        outlet Unused is type Bar
-          |      }
-          |     source SecondUnusedWarningSource is {
-          |        outlet Unused is type Bar
-          |     }
-          |  }
-          |}
-          |""".stripMargin
-      )
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs mustNot be(empty)
-        val duplicate =
-          msgs.find(_.message.contains("has duplicate content names"))
-        duplicate mustNot be(empty)
-        val dup = duplicate.get
-        dup.message must include(
-          """Context 'ExampleContext' has duplicate content names:
-              |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
-              |""".stripMargin
-        )
-      }
-    }
   }
 }

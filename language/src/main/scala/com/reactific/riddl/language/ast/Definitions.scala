@@ -1717,10 +1717,14 @@ trait Definitions extends Expressions with Options {
      *
      * @param loc
      *   Location of the sequence
+     * @param id
+     *    Identifier for the interaction
      * @param contents
      *   The interactions to execute in sequence
      * @param brief
      *   A brief description of the sequence group
+     * @param description
+     *   A longer description of the sequence
      */
     case class SequentialInteractions(
       loc: At,
@@ -1730,26 +1734,6 @@ trait Definitions extends Expressions with Options {
       description: Option[Description] = None
     ) extends Interaction {
       override def kind: String = "Sequential Interaction"
-  }
-
-    /** An interaction expression that specifies that each contained expression
-     * should be executed in strict sequential order
-     *
-     * @param loc
-     *   Location of the sequence
-     * @param contents
-     *   The interactions to execute in sequence
-     * @param brief
-     *   A brief description of the sequence group
-     */
-    case class SequentialInteractions(
-      loc: At,
-      contents: Seq[Interaction],
-      brief: Option[LiteralString]
-    ) extends Interaction {
-
-    /** Format the node to a string */
-    override def format: String = ""
   }
 
   /** An interaction expression that specifies that its contents are optional
