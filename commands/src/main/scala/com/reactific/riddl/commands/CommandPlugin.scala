@@ -300,9 +300,6 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
           run(opts, commonOptions, log, outputDirOverride)
         }
         result
-      case Some(_) => Left(
-          errors(s"Failed to match option type ${optionsClass.getSimpleName}")
-        )
       case None => Left(errors(s"Failed to parse $pluginName options"))
     }
   }

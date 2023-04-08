@@ -151,9 +151,6 @@ trait ParsingContext {
         case failure: Failure =>
           makeParseFailureError(failure)
           Left(errors.toList)
-        case _ => throw new IllegalStateException(
-          "Parsed[T] should have matched Success or Failure"
-        )
       }
     } catch {
       case NonFatal(exception) =>

@@ -79,12 +79,7 @@ trait BasicValidation {
     defn: Definition,
     parents: Seq[Definition]
   )(examiner: T => Unit): this.type = {
-    checkPathRef[T](reference.pathId, defn, parents).map { resolved: T =>
-      resolved match {
-        case t: T => examiner(t)
-        case _ => assert(classTag[T].runtimeClass == resolved.getClass)
-      }
-    }
+    checkPathRef[T](reference.pathId, defn, parents).map { (resolved: T) => examiner(resolved) }
     this
   }
 
@@ -108,7 +103,7 @@ trait BasicValidation {
       messages.addError(ref.pathId.loc, s"${ref.identify} is empty")
       this
     } else {
-      checkRefAndExamine[Type](ref, topDef, parents) { definition: Definition =>
+      checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition) =>
         definition match {
           case Type(_, _, typ, _, _) =>
             typ match {
@@ -208,7 +203,7 @@ trait BasicValidation {
   }
 
   def checkOverloads(): this.type = {
-    symbols.foreachOverloadedSymbol { defs: Seq[Seq[Definition]] =>
+    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
       this.checkSequence(defs) { defs2 =>
         val first = defs2.head
         if (defs2.sizeIs == 2) {

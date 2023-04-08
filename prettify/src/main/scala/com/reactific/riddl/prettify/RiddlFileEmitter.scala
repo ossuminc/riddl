@@ -97,12 +97,12 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitBrief(brief: Option[LiteralString]): this.type = {
-    brief.map { ls: LiteralString => this.add(s" briefly ${ls.format}") }
+    brief.map { (ls: LiteralString) => this.add(s" briefly ${ls.format}") }
     this
   }
 
   def emitDescription(description: Option[Description]): this.type = {
-    description.map { desc: Description =>
+    description.map { (desc: Description) =>
       add(" described as {\n")
       indent
       desc.lines.foreach { line =>
@@ -142,6 +142,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       }
       .mkString(s"$spc", s",\n$spc", s"\n")
     head.add(enumerators).outdent.addLine("}")
+    this
   }
 
   def emitAlternation(alternation: Alternation): this.type = {
@@ -277,7 +278,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitActions(actions: Seq[Action]): this.type = {
-    actions.foreach { a: Action => emitAction(a) }
+    actions.foreach { (a: Action) => emitAction(a) }
     this
   }
 
@@ -349,10 +350,10 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitStreamlets(proc: Processor[_, _]): this.type = {
-    proc.inlets.foreach { inlet: Inlet =>
+    proc.inlets.foreach { (inlet: Inlet) =>
       addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
     }
-    proc.outlets.foreach { outlet: Outlet =>
+    proc.outlets.foreach { (outlet: Outlet) =>
       addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
     }
     this

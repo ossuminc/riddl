@@ -279,7 +279,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, s)
-    checkRefAndExamine[Type](s.typ, s, parents) { typ: Type =>
+    checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
       typ.typ match {
         case agg: Aggregation =>
           if (agg.fields.isEmpty && !s.isEmpty) {
@@ -364,7 +364,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, p)
-    check(p.types.exists { typ: Type =>
+    check(p.types.exists { (typ: Type) =>
       typ.typ match {
         case auc: AggregateUseCaseTypeExpression =>
           auc.usecase == RecordCase
@@ -399,7 +399,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, a)
-        resolvePath(a.context.pathId, parents).map { target: Context =>
+        resolvePath(a.context.pathId, parents).map { (target: Context) =>
           if (target == c) {
             val message =
               s"${a.identify} may not specify a target context that is " +

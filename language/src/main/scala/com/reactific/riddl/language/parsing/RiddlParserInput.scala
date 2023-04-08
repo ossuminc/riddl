@@ -48,7 +48,6 @@ abstract class RiddlParserInput extends ParserInput {
       case Searching.Found(foundIndex) => foundIndex
       case Searching.InsertionPoint(insertionPoint) =>
         if (insertionPoint > 0) insertionPoint - 1 else insertionPoint
-      case _ => 0
     }
   }
 

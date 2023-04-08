@@ -21,7 +21,7 @@ class StreamValidatorTest extends ValidatingTest {
           domain.isEmpty mustBe false
           messages.isEmpty mustBe false
           messages.hasErrors mustBe true
-          messages.exists { msg: Messages.Message =>
+          messages.exists { (msg: Messages.Message) =>
             msg.message.startsWith("Type mismatch in Connector 'c1':")
           } must be(true)
       }

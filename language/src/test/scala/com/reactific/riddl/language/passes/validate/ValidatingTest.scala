@@ -56,10 +56,9 @@ abstract class ValidatingTest extends ParsingTest {
             fail(messages.format)
           case Right(ao) =>
             val msgs = ao.messages
-            model.contexts.head.contents.filter(_.getClass == clazz).map {
-              d: ContextDefinition =>
-                val reducedMessages = msgs.filterNot(_.loc.line == 1)
-                validator(d.asInstanceOf[D], rpi, reducedMessages)
+            model.contexts.head.contents.filter(_.getClass == clazz).map { (d: ContextDefinition) =>
+              val reducedMessages = msgs.filterNot(_.loc.line == 1)
+              validator(d.asInstanceOf[D], rpi, reducedMessages)
             }
         }
     }

@@ -76,7 +76,7 @@ object C {
   }
 
   lazy val scala3_2_Options: Seq[String] =
-    Seq("-deprecation", "-feature", "-Werror" /*, "-explain" */)
+    Seq("-deprecation", "-feature", "-Werror", "-rewrite", "-source", "3.0-migration" /*, "-explain" */)
   lazy val scala2_13_Options: Seq[String] = Seq(
     "-release:17",
     // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(

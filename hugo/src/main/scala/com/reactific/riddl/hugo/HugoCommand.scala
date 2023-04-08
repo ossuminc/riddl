@@ -238,8 +238,8 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     options: Options
   ): PassesCreator = {
     standardPasses ++ Seq(
-      { input: PassInput => StatsPass(input) },
-      { input: PassInput =>
+      { (input: PassInput) => StatsPass(input) },
+      { (input: PassInput) =>
         val result = PassesResult(input)
         val state = HugoTranslatorState(result, options, commonOptions, log)
         HugoPass(input, state)

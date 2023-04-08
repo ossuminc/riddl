@@ -35,56 +35,56 @@ class ConditionParserTest extends ParsingTest {
 
   "ConditionParser" should {
     "accept true" in {
-      parseCondition("true") { cond: Condition => cond mustBe True(At(1 -> 1)) }
+      parseCondition("true") { (cond: Condition) => cond mustBe True(At(1 -> 1)) }
     }
     "accept false" in {
-      parseCondition("false") { cond: Condition =>
+      parseCondition("false") { (cond: Condition) =>
         cond mustBe False(At(1 -> 1))
       }
     }
     "accept literal string" in {
-      parseCondition("\"decide\"") { cond: Condition =>
+      parseCondition("\"decide\"") { (cond: Condition) =>
         cond mustBe
           ArbitraryCondition(At(1 -> 1), LiteralString(At(1 -> 1), "decide"))
       }
     }
     "accept and(true,false)" in {
-      parseCondition("and(true,false)") { cond: Condition =>
+      parseCondition("and(true,false)") { (cond: Condition) =>
         cond mustBe
           AndCondition(At(1 -> 1), Seq(True(At(1 -> 5)), False(At(1 -> 10))))
       }
     }
     "accept or(true,false)" in {
-      parseCondition("or(true,false)") { cond: Condition =>
+      parseCondition("or(true,false)") { (cond: Condition) =>
         cond mustBe
           OrCondition(At(1 -> 1), Seq(True(At(1 -> 4)), False(At(1 -> 9))))
       }
     }
     "accept xor(true,false)" in {
-      parseCondition("xor(true,false)") { cond: Condition =>
+      parseCondition("xor(true,false)") { (cond: Condition) =>
         cond mustBe
           XorCondition(At(1 -> 1), Seq(True(At(1 -> 5)), False(At(1 -> 10))))
       }
     }
     "accept not(true,false)" in {
-      parseCondition("not(true)") { cond: Condition =>
+      parseCondition("not(true)") { (cond: Condition) =>
         cond mustBe NotCondition(At(1 -> 1), True(At(1 -> 5)))
       }
     }
     "accept function call" in {
-      parseCondition("This.That(x=42)") { cond: Condition =>
+      parseCondition("This.That(x=42)") { (cond: Condition) =>
         cond mustBe FunctionCallCondition(
           At(1 -> 1),
           PathIdentifier(At(1 -> 1), Seq("This", "That")),
           ArgList(ListMap(
             Identifier(At(1 -> 11), "x") ->
-                IntegerValue(At(1 -> 13), BigInt(42))
+              IntegerValue(At(1 -> 13), BigInt(42))
           ))
         )
       }
     }
     "accept comparison expressions" in {
-      parseCondition("or(<(@a,42),<(@b,SomeFunc()))") { cond: Condition =>
+      parseCondition("or(<(@a,42),<(@b,SomeFunc()))") { (cond: Condition) =>
         cond mustBe OrCondition(
           1 -> 1,
           Seq(
@@ -111,7 +111,7 @@ class ConditionParserTest extends ParsingTest {
     "accept complicated conditional expression" in {
       val input =
         """or(and(not(==("sooth", false)),SomeFunc(x=42)),true)""".stripMargin
-      parseCondition(input) { cond: Condition =>
+      parseCondition(input) { (cond: Condition) =>
         cond mustBe OrCondition(
           1 -> 1,
           Seq(

@@ -174,9 +174,9 @@ object Pass {
   type PassesCreator = Seq[PassCreator]
 
   val standardPasses: PassesCreator = Seq(
-    { input: PassInput => SymbolsPass(input) },
-    { input: PassInput => ResolutionPass(input) },
-    { input: PassInput => ValidationPass(input)  }
+    { (input: PassInput) => SymbolsPass(input) },
+    { (input: PassInput) => ResolutionPass(input) },
+    { (input: PassInput) => ValidationPass(input) }
   )
 
   val standardPassNames = Seq(SymbolsPass.name, ResolutionPass.name, ValidationPass.name)

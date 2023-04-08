@@ -226,7 +226,7 @@ case class HugoTranslatorState(
         author =
           if (authors.isEmpty) { "Unspecified Author" }
           else {
-            authors.map { ref: AuthorRef =>
+            authors.map { (ref: AuthorRef) =>
               resolvePathIdentifier[Author](ref.pathId, pars)
             }.filterNot(_.isEmpty).map(_.get)
               .map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")

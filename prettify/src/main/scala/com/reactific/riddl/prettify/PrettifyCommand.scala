@@ -87,7 +87,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdNam
 
   override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
     standardPasses ++ Seq(
-      { input: PassInput =>
+      { (input: PassInput) =>
         val state = PrettifyState(commonOptions, options)
         PrettifyPass(input, state)
       }

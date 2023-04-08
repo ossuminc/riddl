@@ -100,7 +100,7 @@ class CheckMessagesTest extends ValidatingTest {
       val checkFileLines = checkFiles.iterator.flatMap { file =>
         java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
       }
-      val fixedLines = checkFileLines.filterNot { l: String => l.isEmpty }
+      val fixedLines = checkFileLines.filterNot { (l: String) => l.isEmpty }
         .foldLeft(Seq.empty[String]) { (list, next) =>
           if (next.startsWith(" ")) {
             val last = list.last + "\n" + next.drop(1)

@@ -35,17 +35,18 @@ trait ExampleValidation extends TypeValidation {
     parents: Seq[Definition]
   ): this.type = {
     val Example(_, _, givens, whens, thens, buts, _, _) = example
-    checkSequence(givens) { givenClause: GivenClause =>
-        checkSequence(givenClause.scenario) { ls =>
-          checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
-        }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
-      }
-      checkSequence(whens) { when: WhenClause =>
-        checkExpression(when.condition, example, parents)
-      }
-      checkWhen(example.id.nonEmpty) { () =>
-        checkNonEmpty(thens, "Thens", example, required = true)
-      }
+
+    checkSequence(givens) { (givenClause: GivenClause) =>
+      checkSequence(givenClause.scenario) { ls =>
+        checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
+      }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
+    }
+    checkSequence(whens) { (when: WhenClause) =>
+      checkExpression(when.condition, example, parents)
+    }
+    checkWhen(example.id.nonEmpty) { () =>
+      checkNonEmpty(thens, "Thens", example, required = true)
+    }
       .checkActions(thens.map(_.action), example, parents)
       .checkActions(buts.map(_.action), example, parents)
       .checkDescription(example)
@@ -261,8 +262,7 @@ trait ExampleValidation extends TypeValidation {
                   )
                 } else {
                   val pid = resolvedState.typ.pathId
-                  val maybeType =
-                    resolvePidRelativeTo[Type](pid, resolvedState)
+                  val maybeType = resolvePidRelativeTo[Type](pid, resolvedState)
                     maybeType match {
                       case Some(typ) =>
                         if (

@@ -25,7 +25,7 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { inputFile: Path =>
+    options.withInputFile { (inputFile: Path) =>
       Riddl.parseAndValidate(inputFile, commonOptions)
     }
   }

@@ -294,12 +294,12 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def openFunction[TCD <: Definition](
     function: Function
   ): Unit = {
-    val s1 = state.withCurrent(_.openDef(function))
-    val s2 = function.input.fold[state.type](s1)(te =>
-      s1.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
+    state.withCurrent(_.openDef(function))
+    function.input.foreach(te =>
+      state.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
     )
-    function.output.fold(s2)(te =>
-      s2.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
+    function.output.foreach(te =>
+      state.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
     )
   }
 

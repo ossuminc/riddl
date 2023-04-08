@@ -19,8 +19,7 @@ object ResolutionPass extends PassInfo {
   val name: String = "resolution"
 }
 /** The Reference Resolution Pass */
-case class ResolutionPass(input: PassInput) extends Pass(input) with
-  UsageResolution {
+case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolution {
 
   override def name: String = ResolutionPass.name
 

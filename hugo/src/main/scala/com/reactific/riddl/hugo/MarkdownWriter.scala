@@ -352,7 +352,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     parents: Seq[Definition]
   ): this.type = {
     val name = defntn.identify
-    val brief: Definition => String = { defn: Definition =>
+    val brief: Definition => String = { (defn: Definition) =>
       defn.brief.fold(s"$name is not described.")(_.s)
     }
 
@@ -507,17 +507,17 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       case uid: UniqueId =>
         s"Unique identifier for entity ${makePathIdRef(uid.entityPath, parents)}"
       case alt: Alternation =>
-        val data = alt.of.map { te: AliasedTypeExpression =>
+        val data = alt.of.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         s"Alternation of: " + data.mkString(", ")
       case agg: Aggregation =>
-        val data = agg.fields.map { f: Field =>
+        val data = agg.fields.map { (f: Field) =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
         "Aggregation of:" + data.mkString(", ")
       case mt: AggregateUseCaseTypeExpression =>
-        val data = mt.fields.map { f: Field =>
+        val data = mt.fields.map { (f: Field) =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
         s"${mt.usecase.kind} message of: " + data.mkString(", ")
@@ -542,20 +542,20 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
         p(s"Entity ${makePathIdRef(uid.entityPath, parents)}")
       case alt: Alternation =>
         heading("Alternation Of", headLevel)
-        val data = alt.of.map { te: AliasedTypeExpression =>
+        val data = alt.of.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         list(data)
       case agg: Aggregation =>
         heading("Aggregation Of", headLevel)
-        val data = agg.fields.map { f: Field =>
+        val data = agg.fields.map { (f: Field) =>
           val pars = f +: parents
           (f.id.format, resolveTypeExpression(f.typeEx, pars))
         }
         list("Fields", data, headLevel + 1)
       case mt: AggregateUseCaseTypeExpression =>
         h2(s"${mt.usecase.format} Of")
-        val data = mt.fields.map { f: Field =>
+        val data = mt.fields.map { (f: Field) =>
           val pars = f +: parents
           (f.id.format, resolveTypeExpression(f.typeEx, pars))
         }
@@ -566,9 +566,9 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
         val to = resolveTypeExpression(map.to, parents)
         p(s"From:\n: $from").nl
         p(s"To:\n: $to")
-      case enum: Enumeration =>
+      case en: Enumeration =>
         heading("Enumeration Of", headLevel)
-        val data = enum.enumerators.map { e: Enumerator =>
+        val data = en.enumerators.map { (e: Enumerator) =>
           val docBlock = e.brief.map(_.s).toSeq ++
             e.description.map(_.lines.map(_.s)).toSeq.flatten
           (e.id.format, docBlock)
@@ -658,8 +658,8 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     emitShortDefDoc(example)
     if (example.givens.nonEmpty) {
       heading("GIVEN", level)
-      list(example.givens.map { given =>
-        given.scenario.map("    *" + _.s + "\n")
+      list(example.givens.map { a_given =>
+        a_given.scenario.map("    *" + _.s + "\n")
       })
     }
     if (example.whens.nonEmpty) {

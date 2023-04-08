@@ -61,7 +61,7 @@ object Messages {
     def severity = 2
   }
 
-  final case object UsageWarning extends KindOfMessage {
+  case object UsageWarning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def isUsage: Boolean = true

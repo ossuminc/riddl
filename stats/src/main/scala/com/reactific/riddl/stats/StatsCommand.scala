@@ -24,7 +24,7 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { inputFile: Path =>
+    options.withInputFile { (inputFile: Path) =>
       val passes = Pass.standardPasses ++ Seq({ input => StatsPass(input) })
       Riddl.parseAndValidatePath(inputFile, commonOptions, passes = passes, logger = log) match {
         case Left(messages) => Left(messages)

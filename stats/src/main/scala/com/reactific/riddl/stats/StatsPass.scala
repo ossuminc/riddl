@@ -93,7 +93,6 @@ case class StatsPass(input: PassInput) extends Pass(input) {
           case e: Epic => makeVitalStats(e, storyStats)
           case f: Function => makeVitalStats(f, functionStats)
           case d: Domain => makeVitalStats(d, domainStats)
-          case h: Handler => makeVitalStats(h, handlerStats)
           case s: Saga => makeVitalStats(s, sagaStats)
         }
       case t: Term =>
@@ -103,7 +102,6 @@ case class StatsPass(input: PassInput) extends Pass(input) {
       case d: Definition =>
         other_stats.count += 1
         if (d.nonEmpty) other_stats.completed += 1
-      case _ => // ignore
     }
   }
 

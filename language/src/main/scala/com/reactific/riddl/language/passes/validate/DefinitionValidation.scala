@@ -83,7 +83,7 @@ trait DefinitionValidation extends BasicValidation  {
           checkSequence(authorRefs) { (authorRef) =>
             pathIdToDefinition(authorRef.pathId, parents) match {
               case None =>
-                addError(
+                messages.addError(
                   authorRef.loc,
                   s"${authorRef.format} is not defined"
                 )
@@ -183,6 +183,7 @@ trait DefinitionValidation extends BasicValidation  {
           sInlet(req_ins) + s" but it has " + sOutlet(outs) + " and " +
           sInlet(ins)
       )
+      this
     }
 
     if (!proc.isEmpty) {
