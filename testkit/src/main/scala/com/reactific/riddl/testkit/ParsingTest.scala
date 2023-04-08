@@ -92,7 +92,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   }
 }
 
-/** Unit Tests For ParsingTest */
+/** Base class for tests that need parsing help */
 class ParsingTest extends ParsingTestBase {
 
   def parse[T <: RiddlNode, U <: RiddlNode](

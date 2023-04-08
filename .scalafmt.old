@@ -1,6 +1,6 @@
 version=3.6.0
 preset = default
-maxColumn = 80
+maxColumn = 120
 docstrings.style = SpaceAsterisk
 
 
@@ -59,7 +59,7 @@ continuationIndent {
 }
 
 verticalMultiline {
-  arityThreshold = 100
+  arityThreshold = 250
   newlineAfterOpenParen = false
   atDefnSite = true
 }

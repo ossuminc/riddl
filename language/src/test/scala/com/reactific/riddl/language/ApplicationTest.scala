@@ -8,6 +8,7 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.passes.validate.ValidatingTest
 
 class ApplicationTest extends ValidatingTest {
 

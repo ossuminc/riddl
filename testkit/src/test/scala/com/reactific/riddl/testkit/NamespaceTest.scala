@@ -11,10 +11,8 @@ import org.scalatest.exceptions.TestFailedException
 
 /** Compilation Tests For Includes Examples */
 class NamespaceTest
-    extends RunCommandOnExamplesTest[
-      ASimpleTestCommand.Options,
-      ASimpleTestCommand
-    ](commandName = "validate") {
+    extends RunCommandOnExamplesTest
+      [ASimpleTestCommand.Options, ASimpleTestCommand](commandName = "validate") {
   "FooBarSameDomain" should {
     "error w/ highest severity level 5" in {
       intercept[TestFailedException] { runTest("FooBarSameDomain") }
@@ -22,8 +20,8 @@ class NamespaceTest
   }
 
   "FooBarTwoDomains" should {
-    "error w/ highest severity level 5" in {
-      intercept[TestFailedException] { runTest("FooBarTwoDomains") }
+    "succeed in validation" in {
+      runTest("FooBarTwoDomains")
     }
   }
 

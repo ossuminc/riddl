@@ -15,14 +15,14 @@ context SensorMaintenance is {
   } explained as "This is a Sink for making sensor adjustments based on temperature"
 
   connector WeatherForecast is {
-    from outlet GetWeatherForecast.WeatherSink
-    to inlet GetCurrentTemperature.WeatherSource
+    from outlet SensorMaintenance.GetWeatherForecast.WeatherSink
+    to inlet SensorMaintenance.GetCurrentTemperature.WeatherSource
   } explained as "Carries changes in the current weather forecast"
 
   connector TemperatureChanges is {
     flows type Temperature
-    from outlet GetCurrentTemperature.OutTemp
-    to inlet AttenuateSensor.InTemp
+    from outlet SensorMaintenance.GetCurrentTemperature.OutTemp
+    to inlet SensorMaintenance.AttenuateSensor.InTemp
   } explained as "Carries changes in the current temperature"
 } explained as
 "A complete plant definition for temperature based sensor attenuation."

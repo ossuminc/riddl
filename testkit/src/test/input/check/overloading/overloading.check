@@ -1,4 +1,7 @@
-Style: empty(1:1): Models without any streaming data will exhibit minimal effect
+Usage: overloading.riddl(1:8): Models without any streaming data will exhibit minimal effect:
+ domain ignore = {
+        ^
+
 Missing: overloading.riddl(2:1): Type 'Locale' should have a description:
  type Locale is String
  ^
@@ -11,10 +14,10 @@ Missing: overloading.riddl(4:1): Type 'Device' should have a description:
 Style: overloading.riddl(4:25): Enumerator 'Keyboard' overloads Type 'Keyboard' at overloading.riddl(3:1):
  type Device is any of { Keyboard, Mouse, Monitor}
                          ^
-Warning: overloading.riddl(3:1): Type 'Keyboard' is unused:
+Usage: overloading.riddl(3:1): Type 'Keyboard' is unused:
  type Keyboard is {locale: Locale}
  ^
-Warning: overloading.riddl(4:1): Type 'Device' is unused:
+Usage: overloading.riddl(4:1): Type 'Device' is unused:
  type Device is any of { Keyboard, Mouse, Monitor}
  ^
 Missing: overloading.riddl(1:1): Vital definitions should have an author reference:

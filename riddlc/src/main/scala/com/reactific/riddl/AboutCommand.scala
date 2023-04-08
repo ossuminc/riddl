@@ -11,6 +11,7 @@ import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.commands.CommonOptionsHelper
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -49,7 +50,7 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
       val about: String = {
         CommonOptionsHelper.blurb ++ System.lineSeparator() ++
@@ -57,6 +58,6 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
       }
       println(about)
     }
-    Right(())
+    Right(PassesResult())
   }
 }

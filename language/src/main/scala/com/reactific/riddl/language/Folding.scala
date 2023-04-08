@@ -9,6 +9,7 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.passes.symbols.SymbolsOutput
 import com.reactific.riddl.utils.SeqHelpers.*
 
 import scala.annotation.unused
@@ -148,7 +149,7 @@ object Folding {
 
   trait PathResolutionState extends State {
 
-    def symbolTable: SymbolTable
+    def symbolTable: SymbolsOutput
 
     def pathIdToDefinition(
       pid: PathIdentifier,

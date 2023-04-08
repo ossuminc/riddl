@@ -66,7 +66,7 @@ domain Everything is {
 
       command ACommand is {}
 
-      state someState of type ^^^StateType is { ??? }
+      state someState of type Everything.StateType is { ??? }
 
       function whenUnderTheInfluence is {
         requires { n: Nothing }
@@ -77,9 +77,9 @@ domain Everything is {
         on command ACommand {
           example only {
             given "Something arrives"
-            when misc()
+            when whenUnderTheInfluence()
             then {
-              send event ItHappend() to
+              send event full.SomeOtherThing.ItHappened(when=string("foo")) to
                 inlet Everything.full.SomeOtherThing.SOT_in
             }
           }
@@ -90,11 +90,11 @@ domain Everything is {
     entity SomeOtherThing is {
       inlet SOT_In is SomeOtherThing.ItHappened
       type ItHappened is event { when: String }
-      state otherThingState of type ^^^StateType is { ??? }
+      state otherThingState of type Everything.StateType is { ??? }
       handler fee is {
         on event ItHappened {
           example only {
-            then set SomeOtherThing.otherThingState.then to @ItHappened.when
+            then set SomeOtherThing.otherThingState to @ItHappened.when
           }
         }
       }

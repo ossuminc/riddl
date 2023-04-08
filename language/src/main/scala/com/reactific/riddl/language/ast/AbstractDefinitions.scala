@@ -24,6 +24,12 @@ trait AbstractDefinitions {
     /** Determine if this node is a container or not */
     def isContainer: Boolean = false
 
+    // Determine if this node has definitions it contains
+    def hasDefinitions: Boolean = false
+
+    // Determine if this ndoe is a definitiono
+    def isDefinition: Boolean = false
+
     /** determine if this node is empty or not. Non-containers are always empty
       */
     def isEmpty: Boolean = true
@@ -88,16 +94,7 @@ trait AbstractDefinitions {
     *   The list of strings that make up the path identifier
     */
   case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue {
-    override def format: String = {
-      value
-        .foldLeft(Seq.empty[String]) { case (r: Seq[String], s: String) =>
-          if (s.isEmpty) { r :+ "^" }
-          else if (r.isEmpty) { Seq(s) }
-          else if (r.last != "^") { r ++ Seq(".", s) }
-          else { r :+ s }
-        }
-        .mkString
-    }
+    override def format: String = { value.mkString(".") }
 
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
   }
@@ -191,6 +188,10 @@ trait AbstractDefinitions {
 
     def identifyWithLoc: String = s"$identify at $loc"
 
+    override def isDefinition: Boolean = true
+
+    override def hasDefinitions: Boolean = contents.nonEmpty
+
     def isImplicit: Boolean = id.value.isEmpty
 
     def isVital: Boolean = false
@@ -223,7 +224,7 @@ trait AbstractDefinitions {
   abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
     def pathId: PathIdentifier
     def identify: String = {
-      s"Reference[${classTag[T].runtimeClass.getSimpleName}] '${pathId.format}'${loc.toShort}"
+      s"${classTag[T].runtimeClass.getSimpleName} '${pathId.format}'${loc.toShort}"
     }
     override def isEmpty: Boolean = pathId.isEmpty
   }
@@ -256,4 +257,6 @@ trait AbstractDefinitions {
   /** Base trait of any definition that occurs in the body of a projector */
   trait ProjectorDefinition extends Definition
 
+  /** Base trait of definitions in a UseCase, typically interactions */
+  trait UseCaseDefinition extends Definition
 }

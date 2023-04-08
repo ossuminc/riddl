@@ -69,12 +69,12 @@ trait Options extends AbstractDefinitions {
 
   /////////////////////////////////////////////////////////////////// PROJECTION
 
-  sealed abstract class ProjectionOption(val name: String) extends OptionValue
+  sealed abstract class ProjectorOption(val name: String) extends OptionValue
 
-  case class ProjectionTechnologyOption(
+  case class ProjectorTechnologyOption(
     loc: At,
     override val args: Seq[LiteralString])
-      extends ProjectionOption("technology")
+      extends ProjectorOption("technology")
 
   /////////////////////////////////////////////////////////////////// PROJECTION
 

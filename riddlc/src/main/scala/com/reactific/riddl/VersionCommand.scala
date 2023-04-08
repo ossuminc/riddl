@@ -10,6 +10,7 @@ import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.RiddlBuildInfo
 import pureconfig.ConfigCursor
@@ -49,10 +50,10 @@ class VersionCommand extends CommandPlugin[VersionCommand.Options]("version") {
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     if (commonOptions.verbose || !commonOptions.quiet) {
       println(RiddlBuildInfo.version)
     }
-    Right(())
+    Right(PassesResult())
   }
 }

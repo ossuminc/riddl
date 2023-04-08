@@ -8,9 +8,10 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.passes.validate.ValidatingTest
 
 /** Unit Tests For RegressionTests */
-class RegressionTests extends ParsingTest {
+class RegressionTests extends ValidatingTest {
   "Regressions" should {
     "allow descriptions as a single string" in {
       val input = """domain foo is {
@@ -18,7 +19,8 @@ class RegressionTests extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) => fail(errors.format)
-        case Right((domain, _)) => domain.description match {
+        case Right((domain, _)) =>
+          domain.description match {
             case Some(_) => succeed
             case None    => fail("no description")
           }
@@ -32,7 +34,8 @@ class RegressionTests extends ParsingTest {
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) => fail(errors.format)
-        case Right((domain, _)) => domain.description match {
+        case Right((domain, _)) =>
+          domain.description match {
             case Some(desc) => desc.lines.nonEmpty mustBe true
             case None       => fail("no description")
           }
@@ -71,7 +74,7 @@ class RegressionTests extends ParsingTest {
                     |}""".stripMargin
 
       def extract(root: AST.RootContainer): Type = {
-        root.contents.head.types.head
+        root.domains.head.types.head
       }
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) => fail(messages.format)
@@ -100,7 +103,7 @@ class RegressionTests extends ParsingTest {
                     |}
                     |""".stripMargin
       def extract(root: AST.RootContainer): Type = {
-        root.contents.head.types(2)
+        root.domains.head.types(2)
       }
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) => fail(messages.format)
@@ -140,6 +143,98 @@ class RegressionTests extends ParsingTest {
             None
           )
           typ mustBe expected
+      }
+    }
+    "357: Nested fields in State constructors do not compile" in {
+      val input = RiddlParserInput(
+        """domain Example is {
+          |   context ExampleContext is {
+          |     type Info {
+          |       name: String
+          |     }
+          |
+          |    command Foo {
+          |     info: ExampleContext.Info
+          |    }
+          |
+          |    entity ExampleEntity is {
+          |      handler ExampleHandler is {
+          |          on command Foo {
+          |            then morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample
+          |              with !FooExampleState(
+          |                infoThatShouldNotWork = @Example.Foo.info,
+          |                nameThatShouldWork = @Example.Foo.info.name,
+          |                nameThatShouldNotWork = @Example.Foo.info
+          |              )
+          |          }
+          |          on other {
+          |            then error "You must first create an event using ScheduleEvent command."
+          |          }
+          |      }
+          |
+          |      record FooExampleState is {
+          |        info: String,
+          |        name: String
+          |      }
+          |      state FooExample of FooExampleState is {
+          |        handler FooExampleHandler {
+          |          on other {
+          |            then error "You must first create an event using ScheduleEvent command."
+          |          }
+          |        }
+          |      }
+          |		}
+          |	}
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input) { case (_, _, msgs) =>
+        val errors: Messages.Messages = msgs.justErrors
+        errors must be(empty)
+      }
+    }
+    "359: empty names in error message" in {
+      val input = RiddlParserInput(
+        """domain Example is {
+          |  context ErrorsToDemonstrateClutter{
+          |    type IntentionalErrors {
+          |      garbage: Blah,
+          |      moreGarbage: BlahBlah
+          |    }
+          |  }
+          |  context ExampleContext is {
+          |    type Foo {
+          |       name: String
+          |     }
+          |
+          |    type Foo {
+          |      number: Integer
+          |    }
+          |  }
+          |  context WarningsToDemonstrateClutter{
+          |    type Bar is {}
+          |      source UnusedWarningSource is {
+          |        outlet Unused is type Bar
+          |      }
+          |     source SecondUnusedWarningSource is {
+          |        outlet Unused is type Bar
+          |     }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
+        case (_, _, msgs) =>
+          msgs mustNot be(empty)
+          val duplicate =
+            msgs.find(_.message.contains("has duplicate content names"))
+          duplicate mustNot be(empty)
+          val dup = duplicate.get
+          dup.message must include(
+            """Context 'ExampleContext' has duplicate content names:
+                |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
+                |""".stripMargin
+          )
       }
     }
   }

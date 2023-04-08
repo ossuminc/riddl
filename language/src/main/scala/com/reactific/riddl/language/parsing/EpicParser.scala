@@ -16,68 +16,83 @@ private[parsing] trait EpicParser
     with ReferenceParser
     with GherkinParser {
 
-  private def arbitraryStoryRef[u: P]: P[Reference[Definition]] = {
+  private def arbitraryStoryRef[u: P]: P[Reference[VitalDefinition[_,_]]] = {
     processorRef | sagaRef | functionRef
   }
 
-  private def arbitraryStep[u: P]: P[ArbitraryStep] = {
+  private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
-      location ~ Keywords.step ~ Readability.from.? ~ arbitraryStoryRef ~
-        literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly
-    )./.map { case (loc, from, ls, to, brief) =>
-      ArbitraryStep(loc, from, ls, to, brief)
+      location ~ Keywords.step ~ identifier.? ~ Readability.from.? ~ arbitraryStoryRef ~
+        literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly ~ description
+    )./.map { case (loc, id, from, ls, to, brief, desc) =>
+      ArbitraryInteraction(loc, id.getOrElse(Identifier.empty), from, ls, to, brief, desc)
     }
   }
 
-  private def selfProcessingStep[u: P]: P[SelfProcessingStep] = {
+  private def identifierNotKeyword[u:P](keyword: String): P[Identifier] = {
     P(
-      location ~ Keywords.step ~ Readability.for_.? ~
-        (arbitraryStoryRef | actorRef) ~ literalString ~ briefly
-    )./.map { case (loc, ref, proc, brief) =>
-      SelfProcessingStep(loc, ref, proc, brief)
+      keyword.?.map(_ => Identifier.empty) | (identifier ~ keyword.?)
+    )
+  }
+
+  private def selfProcessingStep[u: P]: P[SelfInteraction] = {
+    P(
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.for_) ~
+        (arbitraryStoryRef | actorRef) ~ is ~ literalString ~ briefly ~ description
+    )./.map { case (loc, id, fromTo, proc, brief, desc) =>
+      SelfInteraction(loc, id, fromTo, proc, brief, desc)
     }
   }
 
-  private def takeOutputStep[u: P]: P[TakeOutputStep] = {
+  private def takeOutputStep[u: P]: P[TakeOutputInteraction] = {
     P(
-      location ~ Keywords.step ~ Readability.from.? ~ outputRef ~
-        literalString ~ Readability.to.? ~ actorRef ~ briefly
-    )./.map { case (loc, output, rel, actor, brief) =>
-      TakeOutputStep(loc, output, rel, actor, brief)
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ outputRef ~
+        literalString ~ Readability.to.? ~ actorRef ~ briefly ~ description
+    )./.map { case (loc, id, output, rel, actor, brief, desc) =>
+      TakeOutputInteraction(loc, id, output, rel, actor, brief, desc)
     }
   }
 
-  private def giveInputStep[u: P]: P[PutInputStep] = {
+  private def giveInputStep[u: P]: P[PutInputInteraction] = {
     P(
-      location ~ Keywords.step ~ Readability.from.? ~ actorRef ~ literalString ~
-        Readability.to.? ~ inputRef ~ briefly
-    )./.map { case (loc, actor, rel, form, brief) =>
-      PutInputStep(loc, actor, rel, form, brief)
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ actorRef ~
+        literalString ~ Readability.to.? ~ inputRef ~ briefly ~ description
+    )./.map { case (loc, id, actor, rel, form, brief, desc) =>
+      PutInputInteraction(loc, id, actor, rel, form, brief, desc)
+    }
+  }
+
+  private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
+    P(
+      location ~ Keywords.sequence./ ~identifier.? ~ open ~ interactions ~ close ~
+        briefly ~ description
+    )./.map { case (loc, id, steps, brief, desc) =>
+      SequentialInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
     }
   }
 
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
-      location ~ Keywords.optional./ ~ open ~ interaction ~ close ~
-        briefly
-    )./.map { case (loc, steps, brief) =>
-      OptionalInteractions(loc, steps, brief)
+      location ~ Keywords.optional./ ~identifier.? ~ open ~ interactions ~ close ~
+        briefly ~ description
+    )./.map { case (loc, id, steps, brief, desc) =>
+      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
     }
   }
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
-      location ~ Keywords.parallel./ ~ open ~ interaction ~ close ~
-        briefly
-    )./.map { case (loc, steps, brief) =>
-      ParallelInteractions(loc, steps, brief)
+      location ~ Keywords.parallel./ ~identifier.? ~ open ~
+        interactions ~ close ~ briefly ~ description
+    )./.map { case (loc, id, steps, brief, desc) =>
+      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
     }
   }
 
-  private def interaction[u: P]: P[Seq[Interaction]] = {
+  private def interactions[u: P]: P[Seq[Interaction]] = {
     P(
-      parallelInteractions | optionalInteractions | takeOutputStep | giveInputStep |
-        arbitraryStep | selfProcessingStep
+      parallelInteractions | optionalInteractions | sequentialInteractions |
+        takeOutputStep | giveInputStep | arbitraryStep | selfProcessingStep
     ).rep(0, Punctuation.comma./)
   }
 
@@ -87,7 +102,7 @@ private[parsing] trait EpicParser
         (undefined(
           Option.empty[UserStory],
           Seq.empty[GenericInteraction]
-        ) | (userStory.? ~ interaction)) ~
+        ) | (userStory.? ~ interactions)) ~
         close ~ briefly ~ description
     ).map { case (loc, id, (userStory, steps), brief, description) =>
       UseCase(loc, id, userStory, steps, brief, description)

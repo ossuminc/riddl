@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import fastparse.*
 import fastparse.ScalaWhitespace.*
@@ -20,9 +20,12 @@ class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
   push(rpi)
 
   def fileRoot[u: P]: P[RootContainer] = {
-    P(Start ~ domain.rep(0) ~ End).map { domains =>
+    P(Start ~ (domain | author).rep(0) ~ End).map { contents =>
       pop
-      RootContainer(domains, inputSeen)
+      val groups = contents.groupBy(_.getClass == classOf[Domain])
+      val domains: Seq[Domain] = groups.getOrElse(true, Seq.empty[Domain]).asInstanceOf[Seq[Domain]]
+      val authors: Seq[Author] = groups.getOrElse(false, Seq.empty[Author]).asInstanceOf[Seq[Author]]
+      RootContainer(domains, authors, Seq(rpi))
     }
   }
 }

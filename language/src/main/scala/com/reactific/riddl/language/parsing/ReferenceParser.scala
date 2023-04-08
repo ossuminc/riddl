@@ -111,9 +111,9 @@ private[parsing] trait ReferenceParser extends CommonParser {
     ).map(tpl => (StreamletRef.apply _).tupled(tpl))
   }
 
-  private def projectionRef[u: P]: P[ProjectionRef] = {
+  private def projectorRef[u: P]: P[ProjectorRef] = {
     P(location ~ Keywords.projector ~ pathIdentifier)
-      .map(tpl => (ProjectionRef.apply _).tupled(tpl))
+      .map(tpl => (ProjectorRef.apply _).tupled(tpl))
   }
 
   private def repositoryRef[u: P]: P[RepositoryRef] = {
@@ -159,7 +159,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
     P(
-      adaptorRef | applicationRef | contextRef | entityRef | projectionRef |
+      adaptorRef | applicationRef | contextRef | entityRef | projectorRef |
         repositoryRef | streamletRef
     )
   }

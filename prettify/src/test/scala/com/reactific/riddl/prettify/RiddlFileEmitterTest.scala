@@ -170,13 +170,19 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.emitExamples(examples)
       val expected =
         """example ex-maple is {
-          |  given  "It's like this, see"  when not(<("one","two"))
+          |  given  "It's like this, see"
+          |  when not(<("one","two"))
           |  then "ya gots ta do betta"
-          |  and "ya gots ta do betta"  but "no at familia expense"}
+          |  and "ya gots ta do betta"
+          |  but "no at familia expense"
+          |}
           |example ex-maple is {
-          |  given  "It's like this, see"  when not(<("one","two"))
+          |  given  "It's like this, see"
+          |  when not(<("one","two"))
           |  then "ya gots ta do betta"
-          |  and "ya gots ta do betta"  but "no at familia expense"}
+          |  and "ya gots ta do betta"
+          |  but "no at familia expense"
+          |}
           |""".stripMargin
       rfe.toString mustBe expected
     }

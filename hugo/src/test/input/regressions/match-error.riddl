@@ -4,7 +4,7 @@ domain PersonalBanking is {
   epic CreateAccount is {
     actor Member wants to "establish an account" so that "they can apply for a loan"
     case HappyPath {
-      step output PersonalBanking.PersonalBankingApp.Test.AccountDetailsPage
+      step output PersonalBanking.PersonalBankingApp.Test.HomePage.AccountDetailsPage
         "is shown to" actor PersonalBanking.Member
     }
   }

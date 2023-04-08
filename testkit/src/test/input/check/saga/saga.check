@@ -61,7 +61,7 @@ Style: saga.riddl(20:17): Example identifier 'A' is too short. The minimum lengt
 Style: saga.riddl(28:17): Example identifier 'B' is too short. The minimum length is 3:
          example B is {
                  ^
-Warning: saga.riddl(12:5): Entity 'blah' is unused:
+Usage: saga.riddl(12:5): Entity 'blah' is unused:
      entity blah is {
      ^
 Warning: saga.riddl(13:7): Inlet 'in' is not connected:

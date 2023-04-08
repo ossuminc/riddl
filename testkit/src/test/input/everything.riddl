@@ -19,7 +19,7 @@ domain Everything is {
   actor Author is "human" briefly "An exemplar"
 
   epic WritingABook is {
-    actor ^Author wants "to edit on the screen" so that "he can revise content more easily"
+    actor Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
   } described as "A simple authoring story"
 
@@ -76,12 +76,12 @@ domain Everything is {
       event Inebriated is {}
 
       record fields is { field:  SomeType }
-      state someState of ^fields is {
+      state someState of Something.fields is {
         handler foo is {
           on command ACommand {
             example only {
               given "Something arrives "
-              when misc()
+              when full.misc()
               then send event Inebriated() to
                 inlet Everything.full.input
             }
@@ -91,14 +91,14 @@ domain Everything is {
 
       function whenUnderTheInfluence is {
         requires {n:Nothing}
-        returns: {b: Boolean}
+        returns {b: Boolean}
       }
     }
 
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
       record fields is { field: String }
-      state otherThingState of ^fields is {
+      state otherThingState of SomeOtherThing.fields is {
         handler fee is {
           on event ItHappened {
             example only {
@@ -107,6 +107,10 @@ domain Everything is {
           }
         }
       }
+    }
+    function misc is {
+      requires { n: Nothing }
+      returns { b: Boolean }
     }
   }
 }
