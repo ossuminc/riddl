@@ -111,7 +111,7 @@ val Prettify = config("prettify")
 lazy val prettify = project.in(file("prettify")).configure(C.withCoverage(0))
   .configure(C.mavenPublish)
   .settings(name := "riddl-prettify", libraryDependencies ++= Dep.testing)
-  .dependsOn(commands % "compile->compile;test->test", testkit % "test->compile").dependsOn(utils)
+  .dependsOn(commands, testkit % "test->compile").dependsOn(utils)
 
 val HugoTrans = config("hugo")
 lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage(0))

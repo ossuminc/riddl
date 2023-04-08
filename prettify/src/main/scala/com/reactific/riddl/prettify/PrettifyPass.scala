@@ -97,11 +97,10 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         openInclude(include)
       case streamlet: Streamlet => openStreamlet(streamlet)
       case _: RootContainer => () // ignore
-      case container: Definition with WithOptions[?] =>
-        // Applies To: Context, Entity, Interactions
-        state.withCurrent(_.openDef(container).emitOptions(container))
+      case processor: Processor[_, _] =>
+        state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
       case container: Definition =>
-        // Applies To: Saga, Plant, Handler, Streamlet
+        // Applies To: Saga, Handler
         state.withCurrent(_.openDef(container))
     }
   }
@@ -145,7 +144,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
       case _: RootContainer => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
-        // Plant, Processor, Function, SagaStep
+        // Plant, Streamlet, Function, SagaStep
         state.withCurrent(_.closeDef(container))
     }
   }
@@ -228,18 +227,18 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     )
     if (adaptor.isEmpty) {
       state.withCurrent(_.emitUndefined().add(" }\n"))
-    } else {
-      state.withCurrent(_.add("\n").indent)
-    }
+    } else
+      state.withCurrent { rfe =>
+        rfe.add("\n").indent.emitStreamlets(adaptor)
+      }
+
   }
 
   private def openStreamlet(
     streamlet: Streamlet
   ): Unit = {
     state.withCurrent { file =>
-      file.openDef(streamlet)
-      streamlet.inlets.foreach(doInlet(_))
-      streamlet.outlets.foreach(doOutlet(_))
+      file.openDef(streamlet).emitStreamlets(streamlet)
     }
   }
 
@@ -270,6 +269,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     state.withCurrent { file =>
       file
         .openDef(conn)
+        .addSpace()
         .add {
           val flows =
             if (conn.flows.nonEmpty)
@@ -285,23 +285,11 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
             else ""
           flows + from + to
         }
+        .nl.addSpace()
         .closeDef(conn)
     }
   }
 
-  private def doInlet(inlet: Inlet): Unit = {
-    state.withCurrent(
-      _.addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
-    )
-  }
-
-  private def doOutlet(
-    outlet: Outlet
-  ): Unit = {
-    state.withCurrent(
-      _.addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
-    )
-  }
 
   private def openFunction[TCD <: Definition](
     function: Function

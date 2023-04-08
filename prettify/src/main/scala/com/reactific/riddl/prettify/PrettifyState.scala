@@ -5,6 +5,7 @@
  */
 
 package com.reactific.riddl.prettify
+
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.commands.TranslatingState
 

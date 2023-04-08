@@ -9,7 +9,7 @@ package com.reactific.riddl.prettify
 import com.reactific.riddl.language.{CommonOptions, Riddl}
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.passes.Pass.standardPasses
-import com.reactific.riddl.language.passes.{PassInput}
+import com.reactific.riddl.language.passes.PassInput
 import com.reactific.riddl.testkit.RiddlFilesTestBase
 import org.scalatest.Assertion
 
@@ -26,8 +26,7 @@ class PrettifyTest extends RiddlFilesTestBase {
       .mkString("\n")
   }
 
-  def runPrettify(file: File, source: RiddlParserInput, run: String): String
-  = {
+  def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
       { input: PassInput =>
         val options = PrettifyCommand.Options(inputFile = Some(Path.of("aFile")))
@@ -38,8 +37,8 @@ class PrettifyTest extends RiddlFilesTestBase {
     Riddl.parseAndValidate(source, CommonOptions(), shouldFailOnError = true, passes) match {
       case Left(errors) =>
         fail(
-          s"In '${file.getPath}': on $run generation:\n" + errors.format +
-            s"\nIn Source: ${source.origin}\n" + "\n"
+          s"Errors on $run generation:\n" + errors.format +
+            s"\nIn Source:\n ${source.data}\n" + "\n"
         )
       case Right(result) =>
         val prettifyOutput = result.outputOf[PrettifyOutput](PrettifyPass.name).get
@@ -51,11 +50,11 @@ class PrettifyTest extends RiddlFilesTestBase {
     file: File,
   ): Assertion = {
     val input1 = RiddlParserInput(file.toPath)
-    val output1 = runPrettify(file, input1, "first")
+    val output1 = runPrettify(input1, "first")
     val input2 = RiddlParserInput(output1)
-    val output2 = runPrettify(file, input2, "second")
+    val output2 = runPrettify(input2, "second")
     val input3 = RiddlParserInput(output2)
-    val output3 = runPrettify(file, input3, "third")
+    val output3 = runPrettify(input3, "third")
     output1 mustEqual output3
   }
 

@@ -103,12 +103,13 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitDescription(description: Option[Description]): this.type = {
     description.map { desc: Description =>
-      add(" described as {\n").indent
+      add(" described as {\n")
+      indent
       desc.lines.foreach { line =>
         add(spc + "|" + line.s + "\n")
-        outdent
-        addLine("}")
       }
+      outdent
+      addLine("}")
     }
     this
   }
@@ -306,23 +307,27 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   ): this.type = {
     clauses.size match {
       case 0 => this
-      case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
+      case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head).nl
       case _ =>
-        add("\n").addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
+        addIndent(kind).add(" ").emitAGherkinClause(clauses.head).nl
         clauses.tail.foreach { clause =>
-          nl.addIndent("and ").emitAGherkinClause(clause)
+          addIndent("and ").emitAGherkinClause(clause).nl
         }
         this
     }
   }
 
   def emitExample(example: Example): this.type = {
-    if (!example.isImplicit) {openDef(example)}
+    if (!example.isImplicit) {
+      openDef(example)
+    }
     emitGherkinClauses("given ", example.givens)
       .emitGherkinClauses("when", example.whens)
       .emitGherkinClauses("then", example.thens)
       .emitGherkinClauses("but", example.buts)
-    if (!example.isImplicit) {closeDef(example)}
+    if (!example.isImplicit) {
+      closeDef(example)
+    }
     this
   }
 
@@ -341,5 +346,15 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     Files.createDirectories(filePath.getParent)
     Files.writeString(filePath, sb.toString(), StandardCharsets.UTF_8)
     filePath
+  }
+
+  def emitStreamlets(proc: Processor[_, _]): this.type = {
+    proc.inlets.foreach { inlet: Inlet =>
+      addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
+    }
+    proc.outlets.foreach { outlet: Outlet =>
+      addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
+    }
+    this
   }
 }
