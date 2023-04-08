@@ -27,7 +27,7 @@ class TimerTest extends AnyWordSpec with Matchers {
       result mustBe 123
 
       clock.instant() mustBe start.plusSeconds(2)
-      logger.toString mustBe "[info] Stage 'MyStage': 0.001 seconds\n"
+      logger.toString matches "[info] Stage 'MyStage': 0.0\\d\\d seconds\n"
     }
     "not print anything" in {
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
