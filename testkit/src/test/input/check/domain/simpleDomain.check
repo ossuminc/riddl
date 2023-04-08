@@ -1,1 +1,3 @@
-Style: empty(1:1): Models without any streaming data will exhibit minimal effect
+Usage: simpleDomain.riddl(1:8): Models without any streaming data will exhibit minimal effect:
+ domain foo by author foo.Nada is {
+        ^

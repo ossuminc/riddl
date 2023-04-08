@@ -4,16 +4,13 @@ Missing: everything.riddl(30:5): Type 'ident' should have a description:
 Missing: everything.riddl(71:7): Vital definitions should have an author reference:
        function whenUnderTheInfluence is {
        ^
-Warning: everything.riddl(71:7): Function 'whenUnderTheInfluence' is unused:
-       function whenUnderTheInfluence is {
-       ^
 Missing: everything.riddl(33:5): Type 'stamp' should have a description:
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
 Missing: everything.riddl(38:5): Type 'enum' should have a description:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
      ^
-Warning: everything.riddl(51:5): Type 'oneOrMore' is unused:
+Usage: everything.riddl(51:5): Type 'oneOrMore' is unused:
      type oneOrMore is many agg
      ^
 Missing: everything.riddl(41:5): Type 'alt' should have a description:
@@ -31,13 +28,13 @@ Missing: everything.riddl(92:7): Event 'ItHappened' should have a description:
 Missing: everything.riddl(13:5): Vital definitions should have an author reference:
      sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
      ^
-Warning: everything.riddl(27:5): Type 'str' is unused:
+Usage: everything.riddl(27:5): Type 'str' is unused:
      type str is String             // Define str as a String
      ^
 Missing: everything.riddl(19:3): Type 'StateType' should have a description:
    type StateType is { someField1: SomeType }
    ^
-Warning: everything.riddl(62:5): Entity 'Something' is unused:
+Usage: everything.riddl(62:5): Entity 'Something' is unused:
      entity Something is {
      ^
 Style: everything.riddl(28:5): Type 'num' should start with a capital letter:
@@ -55,10 +52,10 @@ Missing: everything.riddl(94:15): Handler 'fee' should have a description:
 Missing: everything.riddl(34:5): Type 'url' should have a description:
      type url is URL
      ^
-Warning: everything.riddl(41:5): Type 'alt' is unused:
+Usage: everything.riddl(41:5): Type 'alt' is unused:
      type alt is one of { enum or stamp or url }
      ^
-Warning: everything.riddl(65:7): Type 'somethingDate' is unused:
+Usage: everything.riddl(65:7): Type 'somethingDate' is unused:
        type somethingDate is Date
        ^
 Style: everything.riddl(34:5): Type 'url' should start with a capital letter:
@@ -70,7 +67,7 @@ Style: everything.riddl(53:5): Type 'optional' should start with a capital lette
 Style: everything.riddl(33:5): Type 'stamp' should start with a capital letter:
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
-Warning: everything.riddl(29:5): Type 'boo' is unused:
+Usage: everything.riddl(29:5): Type 'boo' is unused:
      type boo is Boolean            // Define boo as a Boolean
      ^
 Missing: everything.riddl(12:5): Vital definitions should have an author reference:
@@ -85,14 +82,14 @@ Missing: everything.riddl(28:5): Type 'num' should have a description:
 Missing: everything.riddl(51:5): Type 'oneOrMore' should have a description:
      type oneOrMore is many agg
      ^
-Warning: everything.riddl(31:5): Type 'dat' is unused:
+Usage: everything.riddl(31:5): Type 'dat' is unused:
      type dat is Date               // Define dat as a Date
      ^
-Warning: everything.riddl(37:5): Type 'PeachType' is unused:
+Usage: everything.riddl(37:5): Type 'PeachType' is unused:
      type PeachType is { a: Integer }
      ^
 Missing: everything.riddl(93:7): State 'otherThingState' in Entity 'SomeOtherThing' should have content:
-       state otherThingState of type ^^^StateType is { ??? }
+       state otherThingState of type Everything.StateType is { ??? }
        ^
 Missing: everything.riddl(29:5): Type 'boo' should have a description:
      type boo is Boolean            // Define boo as a Boolean
@@ -115,21 +112,18 @@ Missing: everything.riddl(67:7): Command 'ACommand' should have a description:
 Missing: everything.riddl(3:1): Vital definitions should have an author reference:
  domain Everything is {
  ^
-Warning: everything.riddl(53:5): Type 'optional' is unused:
+Usage: everything.riddl(53:5): Type 'optional' is unused:
      type optional is agg?
      ^
 Missing: everything.riddl(69:7): State 'someState' in Entity 'Something' should have content:
-       state someState of type ^^^StateType is { ??? }
+       state someState of type Everything.StateType is { ??? }
        ^
-Warning: everything.riddl(32:5): Type 'tim' is unused:
+Usage: everything.riddl(32:5): Type 'tim' is unused:
      type tim is Time               // Define tim as a Time
      ^
 Style: everything.riddl(38:5): Type 'enum' should start with a capital letter:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
      ^
-Error: everything.riddl(82:26): Path 'ItHappend' was not resolved, in Example 'only', but should refer to an Event:
-               send event ItHappend() to
-                          ^
 Style: everything.riddl(37:25): Field identifier 'a' is too short. The minimum length is 3:
      type PeachType is { a: Integer }
                          ^
@@ -145,7 +139,7 @@ Missing: everything.riddl(32:5): Type 'tim' should have a description:
 Missing: everything.riddl(62:5): Entity 'Something' should have a description:
      entity Something is {
      ^
-Missing: everything.riddl(12:24): Outlet 'Commands' has nothing sent to it:
+Usage: everything.riddl(12:24): Outlet 'Commands' has nothing sent to it:
      source Source is { outlet Commands is DoAThing } described by "Data Source"
                         ^
 Missing: everything.riddl(71:7): Function 'whenUnderTheInfluence' should have a description:
@@ -214,23 +208,16 @@ Missing: everything.riddl(53:5): Type 'optional' should have a description:
 Missing: everything.riddl(23:3): Context 'full' should have a description:
    context full is {
    ^
-Error: everything.riddl(97:22): 'SomeOtherThing.otherThingState.then' was expected to be a Field but is a Type.:
-             then set SomeOtherThing.otherThingState.then to @ItHappened.when
+Error: everything.riddl(97:22): Path 'SomeOtherThing.otherThingState' resolved to State 'otherThingState' at everything.riddl(93:7), in Example 'only', but a Field was expected:
+             then set SomeOtherThing.otherThingState to @ItHappened.when
                       ^
 Missing: everything.riddl(3:1): Domain 'Everything' should have a description:
  domain Everything is {
  ^
-Error: everything.riddl(97:22): Setting a value requires assignment compatibility, but field:
-   SomeOtherThing.otherThingState.then ({ someField1: SomeType })
- is not assignment compatible with expression:
-   @ItHappened.when (String(,))
- :
-             then set SomeOtherThing.otherThingState.then to @ItHappened.when
-                      ^
-Warning: everything.riddl(52:5): Type 'zeroOrMore' is unused:
+Usage: everything.riddl(52:5): Type 'zeroOrMore' is unused:
      type zeroOrMore is agg*
      ^
-Error: everything.riddl(83:23): 'Everything.full.SomeOtherThing.SOT_in' was expected to be a Portlet but is an Entity.:
+Error: everything.riddl(83:23): Path 'Everything.full.SomeOtherThing.SOT_in' was not resolved, in Example 'only', but should refer to a Portlet:
                  inlet Everything.full.SomeOtherThing.SOT_in
                        ^
 Style: everything.riddl(31:5): Type 'dat' should start with a capital letter:
@@ -248,3 +235,25 @@ Missing: everything.riddl(52:5): Type 'zeroOrMore' should have a description:
 Style: everything.riddl(73:19): Field identifier 'b' is too short. The minimum length is 3:
          returns { b: Boolean }
                    ^
+Usage: everything.riddl(33:5): Type 'stamp' is unused:
+     type stamp is TimeStamp        // Define stamp as a TimeStamp
+     ^
+Usage: everything.riddl(34:5): Type 'url' is unused:
+     type url is URL
+     ^
+Usage: everything.riddl(38:5): Type 'enum' is unused:
+     type enum is any of { Apple Pear Peach(21) Persimmon(42) }
+     ^
+Usage: everything.riddl(44:5): Type 'agg' is unused:
+     type agg is {
+     ^
+Usage: everything.riddl(90:5): Entity 'SomeOtherThing' is unused:
+     entity SomeOtherThing is {
+     ^
+Error: everything.riddl(97:22): Setting a value requires assignment compatibility, but field:
+   SomeOtherThing.otherThingState (<not found>)
+ is not assignment compatible with expression:
+   @ItHappened.when (String(,))
+ :
+             then set SomeOtherThing.otherThingState to @ItHappened.when
+                      ^

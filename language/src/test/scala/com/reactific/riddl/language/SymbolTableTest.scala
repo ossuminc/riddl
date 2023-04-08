@@ -23,10 +23,8 @@ class SymbolTableTest extends ParsingTest {
 
     val st = captureEverythingSymbols
 
-    def assertRefWithParent[
-      T <: Definition: ClassTag,
-      P <: Definition: ClassTag
-    ](names: Seq[String],
+    def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
+      names: Seq[String],
       parentName: String
     ): Assertion = {
       val lookupResult = st.lookup[T](names)
@@ -87,8 +85,8 @@ class SymbolTableTest extends ParsingTest {
         case Right(result) =>
           val model = result.root
           model.isRootContainer must be(true)
-          model.contents.headOption must not(be(empty))
-          model.contents.head.contexts.size must be(1)
+          model.domains.headOption must not(be(empty))
+          model.domains.head.contexts.size must be(1)
         case Left(errors) => fail(s"""Failed to parse & validate: " +
                                      |${errors.format}""".stripMargin)
       }

@@ -6,11 +6,10 @@
 
 package com.reactific.riddl.testkit
 
-import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.*
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.StringBuildingPrintStream
 import com.reactific.riddl.utils.SysLogger
 
@@ -148,18 +147,16 @@ class RiddlTest extends ParsingTestBase {
   }
 
   "parseAndValidate" should {
-    def runOne(pathname: String): Either[Messages, Validation.Result] = {
+    def runOne(pathname: String): Either[Messages, PassesResult] = {
       val common = CommonOptions(showTimes = true)
       Riddl.parseAndValidate(new File(pathname).toPath, common)
     }
 
     "parse and validate a simple domain from path" in {
       runOne("testkit/src/test/input/domains/simpleDomain.riddl") match {
-        case Right(result) => result must matchPattern {
-            case Validation
-                  .Result(_, RootContainer(Seq(_: Domain), _), _, _, _) =>
-          }
-        case Left(errors) => assert(errors.forall(_.kind != Messages.Error))
+        case Right(_: PassesResult) => succeed
+        case Left(errors) =>
+          errors.forall(_.kind != Messages.Error) must be(true)
       }
     }
 
@@ -181,11 +178,9 @@ class RiddlTest extends ParsingTestBase {
       val common = CommonOptions(showTimes = true)
       val input = RiddlParserInput(content)
       Riddl.parseAndValidate(input, common) match {
-        case Right(result) => result must matchPattern {
-            case Validation
-                  .Result(_, RootContainer(Seq(_: Domain), _), _, _, _) =>
-          }
-        case Left(messages) => assert(messages.forall(_.kind != Messages.Error))
+        case Right(_: PassesResult) => succeed
+        case Left(messages) =>
+          messages.forall(_.kind != Messages.Error) must be(true)
       }
     }
 

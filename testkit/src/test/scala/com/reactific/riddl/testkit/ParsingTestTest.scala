@@ -45,7 +45,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Domain]" in {
       parseTopLevelDomain[Domain](
         "domain foo is { ??? }",
-        _.contents.head
+        _.domains.head
       ) match {
         case Left(messages)     => fail(messages.format)
         case Right((domain, _)) => domain mustBe empty
@@ -55,7 +55,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Application]" in {
       parseTopLevelDomain[Application](
         "domain foo is { application X is { ??? } }",
-        _.contents.head.applications.head
+        _.domains.head.applications.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -65,7 +65,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Epic]" in {
       parseTopLevelDomain[Epic](
         "domain foo is { epic X is { ??? } }",
-        _.contents.head.stories.head
+        _.domains.head.stories.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -75,7 +75,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Type]" in {
       parseTopLevelDomain[Type](
         "domain foo is { type X is String }",
-        _.contents.head.types.head
+        _.domains.head.types.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -85,7 +85,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Context]" in {
       parseTopLevelDomain[Context](
         "domain foo is { context X is { ??? } }",
-        _.contents.head.contexts.head
+        _.domains.head.contexts.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -95,7 +95,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Entity]" in {
       parseTopLevelDomain[Entity](
         "domain foo is { context C is { entity X is { ??? } } }",
-        _.contents.head.contexts.head.entities.head
+        _.domains.head.contexts.head.entities.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -105,7 +105,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Adaptor]" in {
       parseTopLevelDomain[Adaptor](
         "domain foo is { context C is { adaptor X to context C is { ??? } } }",
-        _.contents.head.contexts.head.adaptors.head
+        _.domains.head.contexts.head.adaptors.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -115,7 +115,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Function]" in {
       parseTopLevelDomain[Function](
         "domain foo is { context C is { function X is { ??? } } }",
-        _.contents.head.contexts.head.functions.head
+        _.domains.head.contexts.head.functions.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -125,7 +125,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Saga]" in {
       parseTopLevelDomain[Saga](
         "domain foo is { context C is { saga X is { ??? } } }",
-        _.contents.head.contexts.head.sagas.head
+        _.domains.head.contexts.head.sagas.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -135,7 +135,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Processor]" in {
       parseTopLevelDomain[Streamlet](
         "domain foo is { context C is { source X is { ??? } } }",
-        _.contents.head.contexts.head.streamlets.head
+        _.domains.head.contexts.head.streamlets.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((src, _)) => src.id.value mustBe "X"
@@ -145,7 +145,7 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Projector]" in {
       parseTopLevelDomain[Projector](
         "domain foo is { context C is { projector X is { ??? } } }",
-        _.contents.head.contexts.head.
+        _.domains.head.contexts.head.
           projectors.head
       ) match {
         case Left(messages)  => fail(messages.format)

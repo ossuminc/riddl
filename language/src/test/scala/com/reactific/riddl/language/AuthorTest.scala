@@ -1,5 +1,7 @@
 package com.reactific.riddl.language
 
+import com.reactific.riddl.language.passes.validate.ValidatingTest
+
 class AuthorTest extends ValidatingTest {
 
   "Authors" should {
@@ -28,11 +30,13 @@ class AuthorTest extends ValidatingTest {
     }
     "must be defined" in {
       val input = """domain foo by author Bar is { ??? }"""
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(false)
-        val errs = msgs.filter(_.kind == Messages.Error)
-        errs mustNot be(empty)
-        errs.head.message must include("author Bar is not defined")
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs) =>
+          val errs = msgs.justErrors
+          errs mustNot be(empty)
+          assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
+          assertValidationMessage(errs, Messages.Error,
+            "Path 'Bar' was not resolved, in Domain 'foo', but should refer to an Author")
       }
     }
     "referenced from Application" in {
@@ -86,7 +90,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(true)
         msgs.isOnlyWarnings must be(true)
       }
     }
@@ -102,7 +106,7 @@ class AuthorTest extends ValidatingTest {
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(false)
+        msgs.isOnlyIgnorable must be(true)
         msgs.isOnlyWarnings must be(true)
       }
     }

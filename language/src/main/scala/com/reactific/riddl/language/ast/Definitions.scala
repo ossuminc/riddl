@@ -163,6 +163,7 @@ trait Definitions extends Expressions with Options {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends LeafDefinition
+      with RootDefinition
       with DomainDefinition {
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
@@ -278,7 +279,8 @@ trait Definitions extends Expressions with Options {
     *   The sequence of domains contained by this root container
     */
   case class RootContainer(
-    contents: Seq[Domain] = Nil,
+    domains: Seq[Domain] = Nil,
+    authors: Seq[Author] = Nil,
     inputs: Seq[RiddlParserInput] = Nil
   ) extends Definition {
 
@@ -299,11 +301,16 @@ trait Definitions extends Expressions with Options {
     final val kind: String = "Root"
 
     def format: String = ""
+
+    def contents: Seq[Definition] = domains ++ authors
   }
 
   object RootContainer {
+    def apply(domains: Seq[Domain], inputs: Seq[RiddlParserInput]): RootContainer = {
+      RootContainer(domains, Seq.empty[Author], inputs)
+    }
     val empty: RootContainer =
-      RootContainer(Seq.empty[Domain], Seq.empty[RiddlParserInput])
+      RootContainer(Seq.empty[Domain], Seq.empty[Author], Seq.empty[RiddlParserInput])
   }
 
   /** Base trait for the four kinds of message references */
@@ -402,7 +409,7 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    value: ForwardDeclaredExpression,
+    value: Expression,
     brief: Option[LiteralString],
     description: Option[Description]
   ) extends LeafDefinition
@@ -953,7 +960,7 @@ trait Definitions extends Expressions with Options {
     options: Seq[EntityOption] = Seq.empty[EntityOption],
     states: Seq[State] = Seq.empty[State],
     types: Seq[Type] = Seq.empty[Type],
-    constnats: Seq[Constant] = Seq.empty[Constant],
+    constants: Seq[Constant] = Seq.empty[Constant],
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
@@ -1126,7 +1133,7 @@ trait Definitions extends Expressions with Options {
     override def format: String = s"${Keywords.repository} ${pathId.format}"
   }
 
-  /** Projections get their name from Euclidean Geometry but are probably more
+  /** Projectors get their name from Euclidean Geometry but are probably more
     * analogous to a relational database view. The concept is very simple in
     * RIDDL: projectors gather data from entities and other sources, transform
     * that data into a specific record type, and support querying that data
@@ -1135,7 +1142,7 @@ trait Definitions extends Expressions with Options {
     * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
     * @see
-    *   https://en.wikipedia.org/wiki/Projection_(mathematics)
+    *   https://en.wikipedia.org/wiki/Projector_(mathematics)
     * @param loc
     *   Location in the source of the Projector
     * @param id
@@ -1159,7 +1166,7 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    options: Seq[ProjectionOption] = Seq.empty[ProjectionOption],
+    options: Seq[ProjectorOption] = Seq.empty[ProjectorOption],
     includes: Seq[Include[ProjectorDefinition]] = Seq
       .empty[Include[ProjectorDefinition]],
     types: Seq[Type] = Seq.empty[Type],
@@ -1171,7 +1178,7 @@ trait Definitions extends Expressions with Options {
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[ProjectionOption, ProjectorDefinition]
+  ) extends Processor[ProjectorOption, ProjectorDefinition]
       with ContextDefinition
       with WithTypes {
     override lazy val contents: Seq[ProjectorDefinition] = {
@@ -1196,7 +1203,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class ProjectionRef(loc: At, pathId: PathIdentifier)
+  case class ProjectorRef(loc: At, pathId: PathIdentifier)
       extends ProcessorRef[Projector] {
     override def format: String = s"${Keywords.projector} ${pathId.format}"
   }
@@ -1680,7 +1687,10 @@ trait Definitions extends Expressions with Options {
     def format: String = s"${Keywords.actor} ${pathId.format}"
   }
 
-  sealed trait Interaction extends RiddlValue with BrieflyDescribedValue
+  sealed trait Interaction extends UseCaseDefinition {
+    /** Format the node to a string */
+    override def format: String = s"$kind ${id.format}"
+  }
 
   /** An interaction expression that specifies that each contained expression
     * should be executed in parallel
@@ -1694,12 +1704,12 @@ trait Definitions extends Expressions with Options {
     */
   case class ParallelInteractions(
     loc: At,
-    contents: Seq[Interaction],
-    brief: Option[LiteralString]
+    id: Identifier = Identifier.empty,
+    contents: Seq[Interaction] = Seq.empty[Interaction],
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
   ) extends Interaction {
-
-    /** Format the node to a string */
-    override def format: String = ""
+    override def kind: String = "Parallel Interaction"
   }
 
     /** An interaction expression that specifies that each contained expression
@@ -1714,12 +1724,12 @@ trait Definitions extends Expressions with Options {
      */
     case class SequentialInteractions(
       loc: At,
-      contents: Seq[Interaction],
-      brief: Option[LiteralString]
+      id: Identifier = Identifier.empty,
+      contents: Seq[Interaction] = Seq.empty[Interaction],
+      brief: Option[LiteralString],
+      description: Option[Description] = None
     ) extends Interaction {
-
-    /** Format the node to a string */
-    override def format: String = ""
+      override def kind: String = "Sequential Interaction"
   }
 
   /** An interaction expression that specifies that its contents are optional
@@ -1733,17 +1743,19 @@ trait Definitions extends Expressions with Options {
     */
   case class OptionalInteractions(
     loc: At,
-    contents: Seq[Interaction],
-    brief: Option[LiteralString]
+    id: Identifier = Identifier.empty,
+    contents: Seq[Interaction] = Seq.empty[Interaction],
+    brief: Option[LiteralString],
+    description: Option[Description] = None
   ) extends Interaction {
-    override def format: String = ""
+    override def kind: String = "Optional Interaction"
   }
 
   /** One abstract step in an Interaction between things. The set of case
     * classes associated with this sealed trait provide more type specificity to
     * these three fields.
     */
-  sealed trait GenericInteraction extends Interaction {
+  sealed trait GenericInteraction extends Interaction with LeafDefinition {
     def from: Reference[Definition]
 
     def relationship: RiddlNode
@@ -1764,24 +1776,27 @@ trait Definitions extends Expressions with Options {
     * @param brief
     *   A brief description of the interaction step
     */
-  case class ArbitraryStep(
+  case class ArbitraryInteraction(
     loc: At,
+    id: Identifier = Identifier.empty,
     from: Reference[Definition],
     relationship: LiteralString,
     to: Reference[Definition],
-    brief: Option[LiteralString] = None
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
   ) extends GenericInteraction {
-    override def format: String = ""
+    override def kind: String = "Arbitrary Interaction"
   }
 
-  case class SelfProcessingStep(
+  case class SelfInteraction(
     loc: At,
+    id: Identifier = Identifier.empty,
     from: Reference[Definition],
     relationship: LiteralString,
-    brief: Option[LiteralString] = None
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
   ) extends GenericInteraction {
-    override def format: String = ""
-
+    override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
   }
 
@@ -1797,14 +1812,16 @@ trait Definitions extends Expressions with Options {
     * @param brief
    * A brief description of this interaction
     */
-  case class TakeOutputStep(
+  case class TakeOutputInteraction(
     loc: At,
+    id: Identifier = Identifier.empty,
     from: OutputRef,
     relationship: LiteralString,
     to: ActorRef,
-    brief: Option[LiteralString] = None
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
   ) extends GenericInteraction {
-    override def format: String = ""
+    override def kind: String = "Take Output Interaction"
   }
 
   /** A interaction where and Actor provides input
@@ -1820,14 +1837,16 @@ trait Definitions extends Expressions with Options {
     * @param brief
     *   A description of this interaction step
     */
-  case class PutInputStep(
+  case class PutInputInteraction(
     loc: At,
+    id: Identifier = Identifier.empty,
     from: ActorRef,
     relationship: LiteralString,
     to: InputRef,
-    brief: Option[LiteralString] = None
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
   ) extends GenericInteraction {
-    override def format: String = ""
+    override def kind: String = "Put Input Interaction"
   }
 
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by
@@ -1837,7 +1856,7 @@ trait Definitions extends Expressions with Options {
     *   Where in the source this use case occurs
     * @param id
     *   The unique identifier for this use case
-    * @param interactions
+    * @param contents
     *   The interactions between actors and system components that define the
     *   use case.
     * @param brief
@@ -1849,13 +1868,11 @@ trait Definitions extends Expressions with Options {
     loc: At,
     id: Identifier,
     userStory: Option[UserStory] = None,
-    interactions: Seq[Interaction] = Seq.empty[Interaction],
+    contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition
-      with EpicDefinition {
+  ) extends EpicDefinition with Container[Interaction] {
     override def kind: String = "UseCase"
-
     override def format: String = s"${Keywords.case_} ${id.format}"
   }
 

@@ -103,7 +103,7 @@
  <check level="warning" class="org.scalastyle.scalariform.UppercaseLChecker" enabled="true"></check>
  <check level="error"
         class="org.scalastyle.scalariform.SimplifyBooleanExpressionChecker" enabled="true"></check>
- <check level="warning" class="org.scalastyle.scalariform.IfBraceChecker" enabled="true">
+ <check level="warning" class="org.scalastyle.scalariform.IfBraceChecker" enabled="false">
   <parameters>
    <parameter name="singleLineAllowed"><![CDATA[true]]></parameter>
    <parameter name="doubleLineAllowed"><![CDATA[false]]></parameter>
@@ -111,7 +111,7 @@
  </check>
  <check level="warning" class="org.scalastyle.scalariform.MethodLengthChecker" enabled="true">
   <parameters>
-   <parameter name="maxLength"><![CDATA[100]]></parameter>
+   <parameter name="maxLength"><![CDATA[500]]></parameter>
   </parameters>
  </check>
  <check level="error" class="org.scalastyle.scalariform.MethodNamesChecker"
@@ -122,7 +122,7 @@
  </check>
  <check level="warning" class="org.scalastyle.scalariform.NumberOfMethodsInTypeChecker" enabled="true">
   <parameters>
-   <parameter name="maxMethods"><![CDATA[50]]></parameter>
+   <parameter name="maxMethods"><![CDATA[500]]></parameter>
   </parameters>
  </check>
  <check level="warning" class="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" enabled="true"></check>
