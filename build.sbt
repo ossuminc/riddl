@@ -101,6 +101,12 @@ lazy val testkit: Project = project.in(file("testkit"))
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
   .dependsOn(commands % "compile->compile;test->test")
 
+val StatsTrans = config("stats")
+lazy val stats: Project = project.in(file("stats")).configure(C.withCoverage(0))
+  .configure(C.mavenPublish)
+  .settings(name := "riddl-stats", libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
+  .dependsOn(commands % "compile->compile;test->test", testkit % "test->compile")
+
 val Prettify = config("prettify")
 lazy val prettify = project.in(file("prettify")).configure(C.withCoverage(0))
   .configure(C.mavenPublish)
@@ -110,15 +116,14 @@ lazy val prettify = project.in(file("prettify")).configure(C.withCoverage(0))
 val HugoTrans = config("hugo")
 lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage(0))
   .configure(C.mavenPublish).settings(
-    name := "riddl-hugo",
-    Compile / unmanagedResourceDirectories += {
-      baseDirectory.value / "resources"
-    },
-    Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  )
-  .dependsOn(language % "compile->compile", commands, testkit % "test->compile")
-  .dependsOn(utils)
+  name := "riddl-hugo",
+  Compile / unmanagedResourceDirectories += {
+    baseDirectory.value / "resources"
+  },
+  Test / parallelExecution := false,
+  libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+)
+  .dependsOn(language % "compile->compile", commands, testkit % "test->compile", stats)
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),

@@ -6,8 +6,8 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.Riddl
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.stats.{StatsOutput, StatsPass}
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
@@ -306,13 +306,14 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def emitUsage(definition: Definition): this.type = {
-    state.result.usedBy.get(definition) match {
-      case Some(users) => listOf("Used By", users)
-      case None        => h2("Used By None")
+    state.result.usage.getUsers(definition) match {
+      case users: Seq[Definition] if users.nonEmpty =>
+        listOf("Used By", users)
+      case _ => h2("Used By None")
     }
-    state.result.uses.get(definition) match {
-      case Some(usages) => listOf("Uses", usages)
-      case None         => h2("Uses Nothing")
+    state.result.usage.getUses(definition) match {
+      case usages: Seq[Definition] if usages.nonEmpty => listOf("Uses", usages)
+      case _         => h2("Uses Nothing")
     }
     this
   }
@@ -835,12 +836,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     emitTerms(application.terms)
   }
 
-  def emitStory(story: Epic, stack: Seq[Definition]): this.type = {
-    containerHead(story, "Story")
+  def emitEpic(epic: Epic, stack: Seq[Definition]): this.type = {
+    containerHead(epic, "Epic")
     val parents = state.makeParents(stack)
-    emitBriefly(story, parents)
-    if (story.userStory.nonEmpty) {
-      val actorPid = story.userStory.get.actor.pathId
+    emitBriefly(epic, parents)
+    if (epic.userStory.nonEmpty) {
+      val actorPid = epic.userStory.get.actor.pathId
       val maybeActor = state.resolvePathIdentifier[Actor](actorPid, stack)
       h2("User Story")
       maybeActor match {
@@ -848,7 +849,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
         case Some(actor) =>
           val name = actor.id.value
           val role = actor.is_a.s
-          val us = story.userStory.get
+          val us = epic.userStory.get
           val benefit = us.benefit.s
           val capability = us.capability.s
           val storyText =
@@ -856,14 +857,22 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
           p(italic(storyText))
       }
     }
-    list("Visualizations", story.shownBy.map(u => s"($u)[$u]"))
+    list("Visualizations", epic.shownBy.map(u => s"($u)[$u]"))
+    listOf("Use Cases", epic.cases)
     h2("Sequence Diagram")
-    val diagram = SequenceDiagrammer(state, story, stack)
+    val diagram = SequenceDiagrammer(state, epic, stack)
     val lines = diagram.toLines
     emitMermaidDiagram(lines)
-    emitUsage(story)
-    emitTerms(story.terms)
-    emitDescription(story.description)
+    emitUsage(epic)
+    emitTerms(epic.terms)
+    emitDescription(epic.description)
+  }
+
+  def emitUseCase(uc: UseCase, parents: Seq[Definition]): this.type = {
+    leafHead(uc, weight = 20)
+    val parList = state.makeParents(parents)
+    emitDefDoc(uc, parList)
+   // TODO: Finish emitting a UseCase page
   }
 
   def emitConnection(conn: Connector, parents: Seq[String]): this.type = {
@@ -991,7 +1000,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       Some("Statistical information about the RIDDL model documented")
     )
 
-    val stats = Riddl.collectStats(root)
+    val stats = state.result.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
     emitTableHead(
       Seq(
         "Category" -> 'L',

@@ -46,11 +46,9 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   * @param commandName
   *   The name of the command to run.
   */
-abstract class RunCommandOnExamplesTest[
-  OPT <: CommandOptions,
-  CMD <: CommandPlugin[OPT]
-](val commandName: String)
-    extends AnyWordSpec with Matchers with BeforeAndAfterAll {
+abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlugin[OPT]](
+  val commandName: String
+)  extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   val examplesRepo: String =
     "https://github.com/reactific/riddl-examples/archive/refs/heads/main.zip"

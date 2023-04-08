@@ -7,6 +7,7 @@
 package com.reactific.riddl.commands
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.StringHelpers
 import pureconfig.ConfigCursor
@@ -62,7 +63,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     val loadedCO =
       CommandOptions.loadCommonOptions(options.inputFile.get) match {
         case Right(newCO: CommonOptions) =>

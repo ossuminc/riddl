@@ -7,12 +7,13 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.CommandOptions.optional
-import com.reactific.riddl.commands.CommandOptions
-import com.reactific.riddl.commands.TranslationCommand
+import com.reactific.riddl.commands.{CommandOptions, PassCommand, TranslatingOptions}
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Validation
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
+import com.reactific.riddl.language.passes.{PassInput, PassesResult}
 import com.reactific.riddl.utils.Logger
+import com.reactific.riddl.stats.StatsPass
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -35,7 +36,7 @@ object HugoCommand {
     siteLogoURL: Option[URL] = None,
     baseUrl: Option[URL] = Option(new URL("https://example.com/")),
     themes: Seq[(String, Option[URL])] =
-      Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url)),
+    Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url)),
     sourceURL: Option[URL] = None,
     editPath: Option[String] = Some("edit/main/src/main/riddl"),
     viewPath: Option[String] = Some("blob/main/src/main/riddl"),
@@ -43,18 +44,25 @@ object HugoCommand {
     withTODOList: Boolean = true,
     withGraphicalTOC: Boolean = false,
     withStatistics: Boolean = true)
-      extends CommandOptions with TranslationCommand.Options {
+    extends CommandOptions with TranslatingOptions {
     def command: String = "hugo"
+
     def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
+
     def contentRoot: Path = outputRoot.resolve("content")
+
     def staticRoot: Path = outputRoot.resolve("static")
+
     def themesRoot: Path = outputRoot.resolve("themes")
+
     def configFile: Path = outputRoot.resolve("config.toml")
   }
 }
 
-class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
+class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
+
   import HugoCommand.Options
+
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("hugo").text(
@@ -182,7 +190,7 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
 
       val themes =
         if (themesMap.isEmpty) {
-          Seq("hugo-geekdoc" -> Option(HugoTranslator.geekDoc_url))
+          Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url))
         } else {
           val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
           themesEither.map { case (name, maybeUrl) =>
@@ -223,13 +231,20 @@ class HugoCommand extends TranslationCommand[HugoCommand.Options]("hugo") {
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  override def translateImpl(
-    result: Validation.Result,
+
+  def getPasses(
     log: Logger,
     commonOptions: CommonOptions,
     options: Options
-  ): Either[Messages, Unit] = {
-    HugoTranslator.translate(result, log, commonOptions, options).map(_ => ())
+  ): PassesCreator = {
+    standardPasses ++ Seq(
+      { input: PassInput => StatsPass(input) },
+      { input: PassInput =>
+        val result = PassesResult(input)
+        val state = HugoTranslatorState(result, options, commonOptions, log)
+        HugoPass(input, state)
+      }
+    )
   }
 
   override def replaceInputFile(

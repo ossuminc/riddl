@@ -9,10 +9,11 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.AST.Domain
 import com.reactific.riddl.language.AST.LiteralString
 import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.passes.validate.ValidatingTest
 
 class EpicTest extends ValidatingTest {
 
-  "Story" should {
+  "Epic" should {
     "parse and validate a case-less example " in {
       val rpi = RiddlParserInput(
         """domain foo is {
@@ -96,18 +97,18 @@ class EpicTest extends ValidatingTest {
           |actor Owner is "a person"
           |
           |epic EstablishOrganization by author reid is {
-          |  actor ^^Owner wants "to establish an organization" so that
+          |  actor ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    optional {
-          |      step from actor ^^Owner "creates an Organization" to
+          |      step from actor ImprovingApp.Owner "creates an Organization" to
           |        input ImprovingApp.Improving_app.OrganizationPage.accept
           |        briefly "create org",
           |      step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |        "presented" to actor ^^Owner
+          |        "presented" to actor ImprovingApp.Owner
           |        briefly "organization added"
           |    }
           |  }
@@ -116,13 +117,12 @@ class EpicTest extends ValidatingTest {
           |} briefly "A placeholder" described by "Not important"
           |""".stripMargin
       )
-      parseAndValidateDomain(rpi) {
+      parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
           if (msgs.nonEmpty) { info(msgs.format) }
-          msgs.isOnlyIgnorable mustBe true
-          succeed
+          msgs.hasErrors mustBe false
       }
     }
     "handle parallel group" in {
@@ -169,18 +169,18 @@ class EpicTest extends ValidatingTest {
           |actor Owner is "a person"
           |
           |epic EstablishOrganization by author reid is {
-          |  actor ^^Owner wants "to establish an organization" so that
+          |  actor ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    parallel {
-          |      step from actor ^^Owner "creates an Organization" to
+          |      step from actor ImprovingApp.Owner "creates an Organization" to
           |        input ImprovingApp.Improving_app.OrganizationPage.accept
           |        briefly "create org",
           |      step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |        "presented" to actor ^^Owner
+          |        "presented" to actor ImprovingApp.Owner
           |        briefly "organization added"
           |     }
           |  }
@@ -189,12 +189,12 @@ class EpicTest extends ValidatingTest {
           |} briefly "A placeholder" described by "Not important"
           |""".stripMargin
       )
-      parseAndValidateDomain(rpi) {
+      parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
           if (msgs.nonEmpty) { info(msgs.format) }
-          msgs.isOnlyIgnorable mustBe true
+          msgs.hasErrors mustBe false
           succeed
       }
     }
@@ -237,19 +237,19 @@ class EpicTest extends ValidatingTest {
           |actor Owner is "a person"
           |
           |epic EstablishOrganization is {
-          |  actor ^^Owner wants "to establish an organization" so that
+          |  actor ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
-          |    step from actor ^^Owner "creates an Organization" to
+          |    step from actor ImprovingApp.Owner "creates an Organization" to
           |      input ImprovingApp.Improving_app.OrganizationPage.accept
           |      briefly "create org",
-          |    step for actor ^^Owner "contemplates his navel"
+          |    step for actor ImprovingApp.Owner is "contemplates his navel"
           |      briefly "self-processing",
           |    step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |      "presented" to actor ^^Owner
+          |      "presented" to actor ImprovingApp.Owner
           |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
@@ -257,12 +257,12 @@ class EpicTest extends ValidatingTest {
           |} briefly "A placeholder" described by "Not important"
           |""".stripMargin
       )
-      parseAndValidateDomain(rpi) {
+      parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
           if (msgs.nonEmpty) { info(msgs.format) }
-          msgs.isOnlyIgnorable mustBe true
+          msgs.hasErrors mustBe false
           succeed
       }
     }

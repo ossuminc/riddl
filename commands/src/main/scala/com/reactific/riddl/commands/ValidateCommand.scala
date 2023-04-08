@@ -9,6 +9,7 @@ package com.reactific.riddl.commands
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Riddl
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -17,14 +18,15 @@ import scala.annotation.unused
 /** Validate Command */
 class ValidateCommand extends InputFileCommandPlugin("validate") {
   import InputFileCommandPlugin.Options
+
   override def run(
     options: Options,
     @unused commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     options.withInputFile { inputFile: Path =>
-      Riddl.parseAndValidate(inputFile, commonOptions).map(_ => ())
+      Riddl.parseAndValidate(inputFile, commonOptions)
     }
   }
 

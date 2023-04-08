@@ -24,22 +24,24 @@ import java.nio.file.Path
   */
 trait CommandOptions {
   def command: String
+
   def inputFile: Option[Path]
 
-  def withInputFile(
-    f: Path => Either[Messages, Unit]
-  ): Either[Messages, Unit] = {
+  def withInputFile[S](
+    f: Path => Either[Messages, S]
+  ): Either[Messages, S] = {
     CommandOptions.withInputFile(inputFile, command)(f)
   }
 }
 
 object CommandOptions {
 
-  def withInputFile(
+  def withInputFile[S](
     inputFile: Option[Path],
     commandName: String
-  )(f: Path => Either[Messages, Unit]
-  ): Either[Messages, Unit] = {
+  )(
+    f: Path => Either[Messages, S]
+  ): Either[Messages, S] = {
     inputFile match {
       case Some(inputFile) => f(inputFile)
       case None =>
@@ -157,7 +159,7 @@ object CommandOptions {
             shouldShowWarnings,
             shouldShowMissing,
             shouldShowStyle,
-            showUnusedWarnings = showUnusedWarnings
+            showUsageWarnings = showUnusedWarnings
               .getOrElse(default.showStyleWarnings),
             debug,
             pluginsDir,

@@ -1,5 +1,6 @@
+author Reid is { name: "Reid Spencer" email: "reid@ossum.biz" }
+
 domain full by author Reid is {
-  author Reid is { name: "Reid Spencer" email: "reid@ossum.biz" }
   actor Doer is "that which does"
   type Something is Abstract
   term Idea is briefly "an abstract notion"

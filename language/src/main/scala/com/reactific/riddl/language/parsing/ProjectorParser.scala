@@ -17,10 +17,10 @@ private[parsing] trait ProjectorParser
     with HandlerParser
     with StreamingParser {
 
-  private def projectionOptions[u: P]: P[Seq[ProjectionOption]] = {
-    options[u, ProjectionOption](StringIn(Options.technology).!) {
+  private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
+    options[u, ProjectorOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
-        ProjectionTechnologyOption(loc, args)
+        ProjectorTechnologyOption(loc, args)
       case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
@@ -37,13 +37,13 @@ private[parsing] trait ProjectorParser
   }
 
   private type ProjectionBody =
-    (Seq[ProjectionOption], Seq[Type], Seq[ProjectorDefinition])
+    (Seq[ProjectorOption], Seq[Type], Seq[ProjectorDefinition])
 
   private def projectionBody[u: P]: P[ProjectionBody] = {
     P(
       undefined(
         (
-          Seq.empty[ProjectionOption],
+          Seq.empty[ProjectorOption],
           Seq.empty[Type],
           Seq.empty[ProjectorDefinition]
         )

@@ -9,6 +9,8 @@ package com.reactific.riddl.language
 import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.utils.Logger
 
+import scala.collection.mutable
+
 object Messages {
 
   sealed trait KindOfMessage extends Ordered[KindOfMessage] {
@@ -21,6 +23,8 @@ object Messages {
     def isMissing: Boolean = false
 
     def isStyle: Boolean = false
+
+    def isUsage: Boolean = false
 
     def isInfo: Boolean = false
 
@@ -57,18 +61,31 @@ object Messages {
     def severity = 2
   }
 
+  final case object UsageWarning extends KindOfMessage {
+    override def isWarning: Boolean = true
+
+    override def isUsage: Boolean = true
+
+    override def isMissing: Boolean = false
+
+    override def toString: String = "Usage"
+
+    def severity = 3
+
+  }
+
   final case object Warning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def toString: String = "Warning"
-    def severity = 3
+    def severity = 4
   }
 
   final case object Error extends KindOfMessage {
     override def isError: Boolean = true
 
     override def toString: String = "Error"
-    def severity = 4
+    def severity = 5
   }
 
   final case object SevereError extends KindOfMessage {
@@ -77,7 +94,7 @@ object Messages {
     override def isSevereError: Boolean = true
 
     override def toString: String = "Severe"
-    def severity = 5
+    def severity = 6
   }
 
   case class Message(
@@ -91,6 +108,7 @@ object Messages {
     def isMissing: Boolean = kind.isMissing
     def isWarning: Boolean = kind.isWarning
     def isStyle: Boolean = kind.isStyle
+    def isUsage: Boolean = kind.isUsage
     def isError: Boolean = kind.isError
     def isSevere: Boolean = kind.isSevereError
 
@@ -115,6 +133,15 @@ object Messages {
   def style(message: String, loc: At = At.empty): Message = {
     Message(loc, message, StyleWarning)
   }
+
+  def missing(message: String, loc: At = At.empty): Message = {
+    Message(loc, message, MissingWarning)
+  }
+
+  def usage(message: String, loc: At = At.empty): Message = {
+    Message(loc, message, UsageWarning)
+  }
+
   def info(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Info)
   }
@@ -156,9 +183,10 @@ object Messages {
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
     def justMissing: Messages = msgs.filter(_.isMissing)
-    def justWarnings: Messages = msgs
-      .filter(x => x.isWarning && !x.isMissing && !x.isStyle)
-    def justErrors: Messages = msgs.filter(_.isError)
+    def justStyle: Messages = msgs.filter(_.isStyle)
+    def justUsage: Messages = msgs.filter(_.isUsage)
+    def justWarnings: Messages = msgs.filter(m => m.kind < Error && m.kind > Info)
+    def justErrors: Messages = msgs.filter(_.kind >= Error)
   }
 
   val empty: Messages = List.empty[Message]
@@ -184,6 +212,7 @@ object Messages {
         case Info           => log.info(msg.format)
         case StyleWarning   => log.warn(msg.format)
         case MissingWarning => log.warn(msg.format)
+        case UsageWarning   => log.warn(msg.format)
         case Warning        => log.warn(msg.format)
         case Error          => log.error(msg.format)
         case SevereError    => log.severe(msg.format)
@@ -196,27 +225,120 @@ object Messages {
     commonOptions: CommonOptions,
     log: Logger
   ): Unit = {
+    def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
+      if (maybeMessages.nonEmpty) {
+        val messages = maybeMessages.get
+        if (messages.nonEmpty) {
+          log.info(s"""$kind Message Count: ${messages.length}""")
+
+          messages.map(_.format).foreach { message =>
+            kind match {
+              case Info => log.info(message)
+              case SevereError => log.severe(message)
+              case Error => log.error(message)
+              case _ => log.warn(message)
+            }
+          }
+        }
+      }
+    }
     if (messages.nonEmpty) {
-      val (warns, errs) = messages.partition(_.kind.isWarning)
-      val (severe, errors) = errs.partition(_.kind.isSevereError)
-      val missing = warns.filter(_.kind.isMissing)
-      val style = warns.filter(_.kind.isStyle)
-      val warnings = warns.filterNot(x => x.kind.isMissing | x.kind.isStyle)
-      log.info(s"""Warnings: ${warns.length}""")
+      val groups = messages.groupBy(_.kind)
+      logMsgs(SevereError, groups.get(SevereError))
+      logMsgs(Error, groups.get(Error))
+
       if (commonOptions.showWarnings) {
-        warnings.map(_.format).foreach(log.warn(_))
+        if (commonOptions.showUsageWarnings) {
+          logMsgs(UsageWarning, groups.get(UsageWarning))
+        }
+        if (commonOptions.showMissingWarnings) {
+          logMsgs(MissingWarning, groups.get(MissingWarning))
+        }
+        if (commonOptions.showStyleWarnings) {
+          logMsgs(StyleWarning, groups.get(StyleWarning))
+        }
       }
-      if (commonOptions.showMissingWarnings) {
-        missing.map(_.format).foreach(log.warn(_))
-      }
-      if (commonOptions.showStyleWarnings) {
-        style.map(_.format).foreach(log.warn(_))
-      }
-      log.info(s"""Errors: ${errors.length}""")
-      errors.map(_.format).foreach(log.error(_))
-      log.info(s"""Severe Errors: ${severe.length}""")
-      severe.map(_.format).foreach(log.severe(_))
+      logMsgs(Info, groups.get(Info))
     }
   }
 
+  case class Accumulator(commonOptions: CommonOptions) {
+    private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
+
+    def size: Int = msgs.length
+
+    @inline def isEmpty: Boolean = msgs.isEmpty
+    @inline def nonEmpty: Boolean = !isEmpty
+
+    @inline def toMessages: Messages = msgs.toList
+
+    def add(msg: Message): this.type = {
+      msg.kind match {
+        case StyleWarning =>
+          if (commonOptions.showStyleWarnings) {
+            msgs.append(msg)
+          }
+        case MissingWarning =>
+          if (commonOptions.showMissingWarnings) {
+            msgs.append(msg)
+          }
+        case UsageWarning =>
+          if (commonOptions.showUsageWarnings) {
+            msgs.append(msg)
+          }
+        case _ => msgs.append(msg)
+      }
+      this
+    }
+
+
+    @inline def style(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, StyleWarning))
+    }
+
+    @inline def info(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, Info))
+    }
+
+    @inline def warning(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, Warning))
+    }
+
+    @inline def error(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, Error))
+    }
+
+    @inline def severe(message: String, loc: At = At.empty): this.type = {
+      add(Message(loc, message, SevereError))
+    }
+
+    @inline def addStyle(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, StyleWarning))
+    }
+
+    @inline def addUsage(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, UsageWarning))
+    }
+
+    @inline def addMissing(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, MissingWarning))
+    }
+
+    @inline def addWarning(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, Warning))
+    }
+
+    @inline def addError(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, Error))
+    }
+
+    @inline def addSevere(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, SevereError))
+    }
+  }
+
+  object Accumulator {
+    val empty: Accumulator = new Accumulator(CommonOptions())
+    def apply(commonOptions: CommonOptions): Accumulator = new Accumulator(commonOptions)
+  }
 }

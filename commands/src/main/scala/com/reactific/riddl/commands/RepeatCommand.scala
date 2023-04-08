@@ -9,6 +9,7 @@ package com.reactific.riddl.commands
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.passes.PassesResult
 import com.reactific.riddl.utils.{Interrupt, Logger}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -139,17 +140,17 @@ class RepeatCommand
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
-    * @return
-    *   Either a set of Messages on error or a Unit on success
-    */
+   * @param log
+   *    A logger for logging errors, warnings, and info
+   * @return
+   * Either a set of Messages on error or a Unit on success
+   */
   override def run(
     options: Options,
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, Unit] = {
+  ): Either[Messages, PassesResult] = {
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate
     val sleepTime = refresh.toMillis
@@ -181,6 +182,6 @@ class RepeatCommand
       }
       if (result.isLeft) { shouldContinue = false }
     }
-    Right(())
+    Right(PassesResult())
   }
 }

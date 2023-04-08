@@ -33,7 +33,7 @@ class MermaidDiagramsPlugin {
           .map(list => list.map(_.s))
       case e: Entity => e.getOptionValue[EntityTechnologyOption]
           .map(list => list.map(_.s))
-      case p: Projector => p.getOptionValue[ProjectionTechnologyOption]
+      case p: Projector => p.getOptionValue[ProjectorTechnologyOption]
           .map(list => list.map(_.s))
       case _ => Option.empty[Seq[String]]
     }

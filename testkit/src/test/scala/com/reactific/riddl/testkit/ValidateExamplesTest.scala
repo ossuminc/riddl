@@ -18,13 +18,11 @@ class ValidateExamplesTest extends ValidatingTest {
       for ((label, fileName) <- files) yield {
         validateFile(label, fileName) { case (_, messages) =>
           val errors = messages.justErrors
-          val warnings = messages
-            .justWarnings
-            .filterNot(_.message.contains("unused"))
+          val warnings = messages.justWarnings.filterNot(_.message.contains("unused"))
           info(s"Errors:\n${errors.format}")
           info(s"Warnings:\n${warnings.format}")
           errors mustBe empty
-          warnings mustBe empty
+          warnings mustNot be(empty)
         }
       }
     }

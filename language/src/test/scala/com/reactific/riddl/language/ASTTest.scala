@@ -57,9 +57,8 @@ class ASTTest extends AnyWordSpec with Matchers {
   "PathIdentifier" should {
     "format" in {
       PathIdentifier(At(), Nil).format mustBe ""
-      PathIdentifier(At(), List("", "foo", "baz")).format mustBe "^foo.baz"
-      PathIdentifier(At(), List("foo", "bar", "baz")).format mustBe
-        "foo.bar.baz"
+      PathIdentifier(At(), List("foo", "baz")).format mustBe "foo.baz"
+      PathIdentifier(At(), List("foo", "bar", "baz")).format mustBe "foo.bar.baz"
       PathIdentifier(At(), List("foo")).format mustBe "foo"
     }
   }
@@ -122,7 +121,15 @@ class ASTTest extends AnyWordSpec with Matchers {
     Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
   val context: AST.Context = Context(At(), Identifier(At(), "test"))
 
-  "Adaptor" should { "have a test" in { pending } }
+  "Adaptor" should {
+    "have a test" in {
+      adaptor.loc mustBe At.empty
+      adaptor.id.value mustBe "adaptor"
+      adaptor.direction mustBe InboundAdaptor(At.empty)
+      adaptor.context.pathId.value mustBe Seq("a", "b", "context")
+    }
+  }
+  // TODO: Finish the pending cases
   "Application" should { "have a test" in { pending } }
   "Author" should {
     "be sane" in {

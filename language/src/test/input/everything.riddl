@@ -23,7 +23,7 @@ domain Everything by author Reid is {
   actor Author is "human" briefly "A scoundrel"
 
   epic WritingABook is {
-    actor ^Author wants "to edit on the screen" so that "he can revise content more easily"
+    actor Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
   } described as "A simple authoring epic"
 
@@ -69,13 +69,13 @@ domain Everything by author Reid is {
     // transient (memory only) or aggregate (they consume commands and queries)
     entity Something is {
       options (aggregate, transient)
-
+      function misc is { requires { n: Nothing } returns { b: Boolean } }
       type somethingDate is Date
 
       event Inebriated is {}
 
       record someData is { field:  SomeType }
-      state someState of ^someData is {
+      state someState of Something.someData is {
         handler foo is {
           on command ACommand {
             example only {
@@ -96,7 +96,7 @@ domain Everything by author Reid is {
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
       record otherThingData is { field: String }
-      state otherThingState of ^otherThingData is {
+      state otherThingState of SomeOtherThing.otherThingData is {
         handler fee is {
           on event ItHappened {
             example only {

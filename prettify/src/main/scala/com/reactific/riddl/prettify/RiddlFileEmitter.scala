@@ -9,7 +9,7 @@ package com.reactific.riddl.prettify
 import java.nio.file.Files
 import java.nio.file.Path
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.prettify.PrettifyTranslator.keyword
+import com.reactific.riddl.prettify.PrettifyPass.keyword
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.charset.StandardCharsets
@@ -28,22 +28,22 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def spc: String = { " ".repeat(indentLevel) }
 
-  def add(str: String): RiddlFileEmitter = {
+  def add(str: String): this.type = {
     sb.append(str)
     this
   }
 
-  def addSpace(): RiddlFileEmitter = add(spc)
+  def addSpace(): this.type = add(spc)
 
-  def add(strings: Seq[LiteralString]): RiddlFileEmitter = {
+  def add(strings: Seq[LiteralString]): this.type = {
     if (strings.sizeIs > 1) {
       sb.append("\n")
       strings.foreach(s => sb.append(s"""$spc"${s.s}"$newLine"""))
-    } else { strings.foreach(s => sb.append(s""" "${s.s}" """)) }
+    } else {strings.foreach(s => sb.append(s""" "${s.s}" """))}
     this
   }
 
-  def add[T](opt: Option[T])(map: T => String): RiddlFileEmitter = {
+  def add[T](opt: Option[T])(map: T => String): this.type = {
     opt match {
       case None => this
       case Some(t) =>
@@ -52,23 +52,24 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def addIndent(): RiddlFileEmitter = {
+  def addIndent(): this.type = {
     sb.append(s"$spc")
     this
   }
 
-  def addIndent(str: String): RiddlFileEmitter = {
+  def addIndent(str: String): this.type = {
     sb.append(s"$spc$str")
     this
   }
 
-  def addLine(str: String): RiddlFileEmitter = {
+  def addLine(str: String): this.type = {
     sb.append(s"$spc$str\n")
     this
   }
-  def indent: RiddlFileEmitter = { indentLevel = indentLevel + 2; this }
 
-  def outdent: RiddlFileEmitter = {
+  def indent: this.type = {indentLevel = indentLevel + 2; this}
+
+  def outdent: this.type = {
     require(indentLevel > 1, "unmatched indents")
     indentLevel = indentLevel - 2
     this
@@ -77,11 +78,11 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def openDef(
     definition: Definition,
     withBrace: Boolean = true
-  ): RiddlFileEmitter = {
+  ): this.type = {
     addSpace().add(s"${keyword(definition)} ${definition.id.format} is ")
     if (withBrace) {
-      if (definition.isEmpty) { add("{ ??? }") }
-      else { add("{\n").indent }
+      if (definition.isEmpty) {add("{ ??? }")}
+      else {add("{\n").indent}
     }
     this
   }
@@ -89,36 +90,36 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def closeDef(
     definition: Definition,
     withBrace: Boolean = true
-  ): RiddlFileEmitter = {
-    if (withBrace && !definition.isEmpty) { outdent.addIndent("}") }
+  ): this.type = {
+    if (withBrace && !definition.isEmpty) {outdent.addIndent("}")}
     emitBrief(definition.brief)
     emitDescription(definition.description).add("\n")
   }
 
-  def emitBrief(brief: Option[LiteralString]): RiddlFileEmitter = {
-    brief.foldLeft(this) { (s, ls: LiteralString) =>
-      s.add(s" briefly ${ls.format}")
-    }
+  def emitBrief(brief: Option[LiteralString]): this.type = {
+    brief.map { ls: LiteralString => this.add(s" briefly ${ls.format}") }
+    this
   }
 
-  def emitDescription(description: Option[Description]): RiddlFileEmitter = {
-    description.foldLeft(this) { (s, desc: Description) =>
-      val s2 = s.add(" described as {\n").indent
-      desc.lines
-        .foldLeft(s2) { case (s3, line) =>
-          s3.add(s3.spc + "|" + line.s + "\n")
-        }
-        .outdent
-        .addLine("}")
+  def emitDescription(description: Option[Description]): this.type = {
+    description.map { desc: Description =>
+      add(" described as {\n")
+      indent
+      desc.lines.foreach { line =>
+        add(spc + "|" + line.s + "\n")
+      }
+      outdent
+      addLine("}")
     }
+    this
   }
 
-  def emitString(s: Strng): RiddlFileEmitter = {
+  def emitString(s: Strng): this.type = {
     (s.min, s.max) match {
       case (Some(n), Some(x)) => this.add(s"String($n,$x)")
-      case (None, Some(x))    => this.add(s"String(,$x)")
-      case (Some(n), None)    => this.add(s"String($n)")
-      case (None, None)       => this.add(s"String")
+      case (None, Some(x)) => this.add(s"String(,$x)")
+      case (Some(n), None) => this.add(s"String($n)")
+      case (None, None) => this.add(s"String")
     }
   }
 
@@ -132,7 +133,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def emitEnumeration(enumeration: Enumeration): RiddlFileEmitter = {
+  def emitEnumeration(enumeration: Enumeration): this.type = {
     val head = this.add(s"any of {\n").indent
     val enumerators: String = enumeration.enumerators
       .map { enumerator =>
@@ -143,7 +144,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     head.add(enumerators).outdent.addLine("}")
   }
 
-  def emitAlternation(alternation: Alternation): RiddlFileEmitter = {
+  def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {\n").indent
       .addIndent("")
       .emitTypeExpression(alternation.of.head)
@@ -151,43 +152,45 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       s4.add(" or ").emitTypeExpression(te)
     }
     s5.add("\n").outdent.addIndent("}")
+    this
   }
 
-  def emitField(field: Field): RiddlFileEmitter = {
+  def emitField(field: Field): this.type = {
     this
       .add(s"${field.id.value}: ")
       .emitTypeExpression(field.typeEx)
       .emitDescription(field.description)
   }
 
-  def emitFields(of: Seq[Field]): RiddlFileEmitter = {
-    if (of.isEmpty) { this.add("{ ??? }") }
+  def emitFields(of: Seq[Field]): this.type = {
+    if (of.isEmpty) {this.add("{ ??? }")}
     else if (of.sizeIs == 1) {
       val f: Field = of.head
       add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
     } else {
       this.add("{\n").indent
-      val result = of.foldLeft(this) { case (s, f) =>
+      of.foldLeft(this) { case (s, f) =>
         s.add(spc).emitField(f).emitDescription(f.description).add(",\n")
       }
-      result.sb.deleteCharAt(result.sb.length - 2)
-      result.outdent.add(s"$spc} ")
+      sb.deleteCharAt(sb.length - 2)
+      outdent.add(s"$spc} ")
     }
+    this
   }
 
-  def emitAggregation(aggregation: Aggregation): RiddlFileEmitter = {
+  def emitAggregation(aggregation: Aggregation): this.type = {
     emitFields(aggregation.fields)
   }
 
-  private def emitSequence(sequence: Sequence): RiddlFileEmitter = {
+  private def emitSequence(sequence: Sequence): this.type = {
     this.add("sequence of ").emitTypeExpression(sequence.of)
   }
 
-  private def emitSet(set: Set): RiddlFileEmitter = {
+  private def emitSet(set: Set): this.type = {
     this.add("set of ").emitTypeExpression(set.of)
   }
 
-  private def emitMapping(mapping: Mapping): RiddlFileEmitter = {
+  private def emitMapping(mapping: Mapping): this.type = {
     this
       .add(s"mapping from ")
       .emitTypeExpression(mapping.from)
@@ -195,7 +198,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .emitTypeExpression(mapping.to)
   }
 
-  def emitPattern(pattern: Pattern): RiddlFileEmitter = {
+  def emitPattern(pattern: Pattern): this.type = {
     val line =
       if (pattern.pattern.sizeIs == 1) {
         "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
@@ -206,25 +209,25 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this.add(line)
   }
 
-  def emitMessageType(mt: AggregateUseCaseTypeExpression): RiddlFileEmitter = {
+  def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
     this.add(mt.usecase.kind.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
-  def emitMessageRef(mr: MessageRef): RiddlFileEmitter = {
+  def emitMessageRef(mr: MessageRef): this.type = {
     this.add(mr.format)
   }
 
-  def emitTypeExpression(typEx: TypeExpression): RiddlFileEmitter = {
+  def emitTypeExpression(typEx: TypeExpression): this.type = {
     typEx match {
-      case string: Strng                => emitString(string)
+      case string: Strng => emitString(string)
       case AliasedTypeExpression(_, id) => this.add(id.format)
       case URL(_, scheme) =>
         this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
       case enumeration: Enumeration => emitEnumeration(enumeration)
       case alternation: Alternation => emitAlternation(alternation)
-      case mapping: Mapping         => emitMapping(mapping)
-      case sequence: Sequence       => emitSequence(sequence)
+      case mapping: Mapping => emitMapping(mapping)
+      case sequence: Sequence => emitSequence(sequence)
       case set: Set                 => emitSet(set)
       case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
@@ -253,7 +256,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def emitType(t: Type): RiddlFileEmitter = {
+  def emitType(t: Type): this.type = {
     this
       .add(s"${spc}type ${t.id.value} is ")
       .emitTypeExpression(t.typ)
@@ -263,17 +266,22 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitCondition(
     condition: Condition
-  ): RiddlFileEmitter = { this.add(condition.format) }
+  ): this.type = {
+    add(condition.format)
+  }
 
   def emitAction(
     action: Action
-  ): RiddlFileEmitter = { this.add(action.format) }
-
-  def emitActions(actions: Seq[Action]): RiddlFileEmitter = {
-    actions.foldLeft(this)((s, a) => s.emitAction(a))
+  ): this.type = {
+    add(action.format)
   }
 
-  def emitGherkinStrings(strings: Seq[LiteralString]): RiddlFileEmitter = {
+  def emitActions(actions: Seq[Action]): this.type = {
+    actions.foreach { a: Action => emitAction(a) }
+    this
+  }
+
+  def emitGherkinStrings(strings: Seq[LiteralString]): this.type = {
     strings.size match {
       case 0 => add("\"\"")
       case 1 => add(strings.head.format)
@@ -284,48 +292,53 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def emitAGherkinClause(ghc: GherkinClause): RiddlFileEmitter = {
+  def emitAGherkinClause(ghc: GherkinClause): this.type = {
     ghc match {
-      case GivenClause(_, strings)  => emitGherkinStrings(strings)
+      case GivenClause(_, strings) => emitGherkinStrings(strings)
       case WhenClause(_, condition) => emitCondition(condition)
-      case ThenClause(_, action)    => emitAction(action)
-      case ButClause(_, action)     => emitAction(action)
+      case ThenClause(_, action) => emitAction(action)
+      case ButClause(_, action) => emitAction(action)
     }
   }
 
   def emitGherkinClauses(
     kind: String,
     clauses: Seq[GherkinClause]
-  ): RiddlFileEmitter = {
+  ): this.type = {
     clauses.size match {
       case 0 => this
-      case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
+      case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head).nl
       case _ =>
-        add("\n").addIndent(kind).add(" ").emitAGherkinClause(clauses.head)
-        clauses.tail.foldLeft(this) { (next, clause) =>
-          next.nl.addIndent("and ").emitAGherkinClause(clause)
+        addIndent(kind).add(" ").emitAGherkinClause(clauses.head).nl
+        clauses.tail.foreach { clause =>
+          addIndent("and ").emitAGherkinClause(clause).nl
         }
+        this
     }
   }
 
-  def emitExample(example: Example): RiddlFileEmitter = {
-    if (!example.isImplicit) { openDef(example) }
+  def emitExample(example: Example): this.type = {
+    if (!example.isImplicit) {
+      openDef(example)
+    }
     emitGherkinClauses("given ", example.givens)
       .emitGherkinClauses("when", example.whens)
       .emitGherkinClauses("then", example.thens)
       .emitGherkinClauses("but", example.buts)
-    if (!example.isImplicit) { closeDef(example) }
+    if (!example.isImplicit) {
+      closeDef(example)
+    }
     this
   }
 
-  def emitExamples(examples: Seq[Example]): RiddlFileEmitter = {
+  def emitExamples(examples: Seq[Example]): this.type = {
     examples.foreach(emitExample)
     this
   }
 
-  def emitUndefined(): RiddlFileEmitter = { add(" ???") }
+  def emitUndefined(): this.type = {add(" ???")}
 
-  def emitOptions(optionDef: WithOptions[?]): RiddlFileEmitter = {
+  def emitOptions(optionDef: WithOptions[?]): this.type = {
     if (optionDef.options.nonEmpty) this.addLine(optionDef.format) else this
   }
 
@@ -333,5 +346,15 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     Files.createDirectories(filePath.getParent)
     Files.writeString(filePath, sb.toString(), StandardCharsets.UTF_8)
     filePath
+  }
+
+  def emitStreamlets(proc: Processor[_, _]): this.type = {
+    proc.inlets.foreach { inlet: Inlet =>
+      addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
+    }
+    proc.outlets.foreach { outlet: Outlet =>
+      addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
+    }
+    this
   }
 }
