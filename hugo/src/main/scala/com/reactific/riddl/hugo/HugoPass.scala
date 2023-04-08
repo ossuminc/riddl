@@ -432,14 +432,13 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
        |  # (Optional, default true) Display a "Back to top" link in the site footer.
        |  geekdocBackToTop = true
        |
-       |  # (Optional, default false) Enable or disable adding tags for post pages automatically to the navigation
-       |  sidebar.
+       |  # (Optional, default false) Enable or disable adding tags for post pages automatically to the
+       |  # navigation sidebar.
        |  geekdocTagsToMenu = true
        |
        |  # (Optional, default 'title') Configure how to sort file-tree menu entries. Possible options are 'title',
-       |  'linktitle',
-       |  # 'date', 'publishdate', 'expirydate' or 'lastmod'. Every option can be used with a reverse modifier as well
-       |  # e.g. 'title_reverse'.
+       |  # 'linktitle', 'date', 'publishdate', 'expirydate' or 'lastmod'. Every option can be used with a reverse
+       |  # modifier as well e.g. 'title_reverse'.
        |  geekdocFileTreeSortBy = "title"
        |
        |""".stripMargin

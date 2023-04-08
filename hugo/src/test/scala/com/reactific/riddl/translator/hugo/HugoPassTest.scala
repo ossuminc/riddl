@@ -16,12 +16,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
 
-class HugoTranslatorTest
-    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
-      commandName = "hugo"
-    ) {
+class HugoPassTest
+  extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
+    commandName = "hugo"
+  ) {
 
-  "HugoTranslator" should { "handle all example sources" in { runTests() } }
+  "HugoTranslator" should {"handle all example sources" in {runTests()}}
 
   override def validate(name: String): Boolean = name == "ReactiveBBQ"
 
