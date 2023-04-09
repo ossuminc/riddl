@@ -332,46 +332,62 @@ trait Definitions extends Expressions with Options {
   }
 
   /** A Reference to a command message type
-    *
-    * @param loc
-    *   The location of the reference
-    * @param pathId
-    *   The path identifier to the event type
-    */
-  case class CommandRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+   *
+   * @param loc
+   * The location of the reference
+   * @param pathId
+   * The path identifier to the event type
+   */
+  case class CommandRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = CommandCase
   }
 
   /** A Reference to an event message type
-    *
-    * @param loc
-    *   The location of the reference
-    * @param pathId
-    *   The path identifier to the event type
-    */
-  case class EventRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+   *
+   * @param loc
+   * The location of the reference
+   * @param pathId
+   * The path identifier to the event type
+   */
+  case class EventRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = EventCase
   }
 
   /** A reference to a query message type
-    *
-    * @param loc
-    *   The location of the reference
-    * @param pathId
-    *   The path identifier to the query type
-    */
-  case class QueryRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+   *
+   * @param loc
+   * The location of the reference
+   * @param pathId
+   * The path identifier to the query type
+   */
+  case class QueryRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = QueryCase
   }
 
   /** A reference to a result message type
-    *
-    * @param loc
-    *   The location of the reference
-    * @param pathId
-    *   The path identifier to the result type
-    */
-  case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+   *
+   * @param loc
+   * The location of the reference
+   * @param pathId
+   * The path identifier to the result type
+   */
+  case class ResultRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = ResultCase
   }
 
@@ -383,8 +399,9 @@ trait Definitions extends Expressions with Options {
     *   The path identifier to the result type
     */
   case class RecordRef(
-    loc: At = At.empty,
-    pathId: PathIdentifier = PathIdentifier.empty
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
   ) extends MessageRef {
     def messageKind: AggregateUseCase = RecordCase
     override def isEmpty: Boolean =
@@ -792,6 +809,10 @@ trait Definitions extends Expressions with Options {
     def format: String = ""
 
     final val kind: String = "OnMessageClause"
+
+    override def resolveNameTo(name: String): Option[Definition] = {
+      if (msg.id.nonEmpty && msg.id.get.value == name) Some(this) else None
+    }
   }
 
   /** Defines the actions to be taken when the component this OnClause occurs in

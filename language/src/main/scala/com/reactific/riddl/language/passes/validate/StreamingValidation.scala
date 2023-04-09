@@ -3,40 +3,9 @@ package com.reactific.riddl.language.passes.validate
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.passes.PassInput
-import com.reactific.riddl.language.passes.symbols.SymbolsOutput
 
 trait StreamingValidation extends ExampleValidation {
 
-  def input: PassInput
-  def symbols: SymbolsOutput
-  protected var inlets: Seq[Inlet] = Seq.empty[Inlet]
-
-  def addInlet(in: Inlet): this.type = {
-    inlets = inlets :+ in
-    this
-  }
-
-  protected var outlets: Seq[Outlet] = Seq.empty[Outlet]
-
-  def addOutlet(out: Outlet): this.type = {
-    outlets = outlets :+ out
-    this
-  }
-
-  protected var connectors: Seq[Connector] = Seq.empty[Connector]
-
-  def addConnector(conn: Connector): this.type = {
-    connectors = connectors :+ conn
-    this
-  }
-
-  protected var streamlets: Seq[Streamlet] = Seq.empty[Streamlet]
-
-  def addStreamlet(proc: Streamlet): this.type = {
-    streamlets = streamlets :+ proc
-    this
-  }
 
   def checkStreaming(root: RootContainer): Unit = {
     val start = root.domains.headOption.map(_.id.loc).getOrElse(At.empty)
@@ -45,6 +14,11 @@ trait StreamingValidation extends ExampleValidation {
     checkUnattachedOutlets()
     checkUnusedOutlets()
   }
+
+  val inlets: Seq[Inlet] = resolution.kindMap.definitionsOfKind[Inlet]
+  val outlets: Seq[Outlet] = resolution.kindMap.definitionsOfKind[Outlet]
+  val streamlets: Seq[Streamlet] = resolution.kindMap.definitionsOfKind[Streamlet]
+  val connectors: Seq[Connector] = resolution.kindMap.definitionsOfKind[Connector]
 
   private def checkStreamingUsage(loc: At): Unit = {
     if (inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty) {

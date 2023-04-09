@@ -4,15 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.parsing.{
-  RiddlParserInput,
-  StringParserInput,
-  TopLevelParser
-}
+import com.reactific.riddl.language.{AST, ParsingTestBase}
 
 import java.io.File
 import scala.io.Source
