@@ -6,12 +6,12 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.commands.{TranslatingState}
+import com.reactific.riddl.commands.TranslatingState
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.{AST, Finder, CommonOptions}
-import com.reactific.riddl.language.Folding.PathResolutionState
+import com.reactific.riddl.language.{AST, CommonOptions, Finder}
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.language.passes.resolve.ReferenceMap
 import com.reactific.riddl.language.passes.symbols.SymbolsOutput
 import com.reactific.riddl.utils.{Logger, SysLogger}
 
@@ -33,10 +33,10 @@ case class HugoTranslatorState(
   commonOptions: CommonOptions = CommonOptions(),
   logger: Logger = SysLogger()
 )
-    extends TranslatingState[MarkdownWriter]
-    with PathResolutionState {
+  extends TranslatingState[MarkdownWriter] {
 
   final val symbolTable: SymbolsOutput = result.symbols
+  final val refMap: ReferenceMap = result.refMap
 
   final val root: RootContainer = result.root // base class compliance
 
@@ -226,9 +226,10 @@ case class HugoTranslatorState(
         author =
           if (authors.isEmpty) { "Unspecified Author" }
           else {
-            authors.map { (ref: AuthorRef) =>
-              resolvePathIdentifier[Author](ref.pathId, pars)
-            }.filterNot(_.isEmpty).map(_.get)
+            authors
+              .map { (ref: AuthorRef) => refMap.definitionOf[Author](ref
+                .pathId, pars.head) }
+              .filterNot(_.isEmpty).map(_.get)
               .map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
           }
         parents = makeParents(pars)

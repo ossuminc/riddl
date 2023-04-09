@@ -96,29 +96,29 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Type 'Incoming'(8:10) should reference an Event but is " +
-              "a String type instead"
+            "Type 'Incoming'(8:10) should reference an Event but is a String type instead"
           )
       }
     }
 
     "produce an error when on clause references a state field that does not exist" in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  record Fields is { field1: Number }
-                    |  state HamburgerState of Fields = {
-                    |    handler foo is {
-                    |      on command EntityCommand { example only {
-                    |        then set nonExistingField to 123
-                    |      } }
-                    |    }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  record Fields is { field1: Number }
+          |  state HamburgerState of Fields = {
+          |    handler foo is {
+          |      on command EntityCommand { example only {
+          |        then set nonExistingField to 123
+          |      } }
+          |    }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
           assertValidationMessage(
@@ -133,22 +133,22 @@ class HandlerValidatorTest extends ValidatingTest {
     "produce an error when on clause sets state from a message field that does not exist" in {
       val input =
         """
-           |domain entityTest is {
-           |context EntityContext is {
-           |entity Hamburger is {
-           |  type EntityCommand is command { foo: Number }
-           |  record Fields is {  field1: Number  }
-           |  state HamburgerState of Fields = {
-           |    handler foo is {
-           |      on command EntityCommand { example only {
-           |        then set field1 to @bar
-           |      } }
-           |    }
-           |  }
-           |}
-           |}
-           |}
-           |""".stripMargin
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type EntityCommand is command { foo: Number }
+          |  record Fields is {  field1: Number  }
+          |  state HamburgerState of Fields = {
+          |    handler foo is {
+          |      on command EntityCommand { example only {
+          |        then set field1 to @bar
+          |      } }
+          |    }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
           assertValidationMessage(
@@ -160,23 +160,24 @@ class HandlerValidatorTest extends ValidatingTest {
     }
 
     "produce an error when on clause sets state from incompatible type of message field" in {
-      val input = """
-                    |domain entityTest is {
-                    |context EntityContext is {
-                    |entity Hamburger is {
-                    |  type EntityCommand is command { foo: String }
-                    |  record Fields is { field1: Number }
-                    |  state HamburgerState of Fields = {
-                    |    handler doit is {
-                    |      on command EntityCommand { example only {
-                    |        then set field1 to @foo
-                    |      } }
-                    |    }
-                    |  }
-                    |}
-                    |}
-                    |}
-                    |""".stripMargin
+      val input =
+        """
+          |domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type EntityCommand is command { foo: String }
+          |  record Fields is { field1: Number }
+          |  state HamburgerState of Fields = {
+          |    handler doit is {
+          |      on command EntityCommand { example only {
+          |        then set field1 to @foo
+          |      } }
+          |    }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
           assertValidationMessage(
@@ -184,6 +185,29 @@ class HandlerValidatorTest extends ValidatingTest {
             Error,
             "assignment compatibility, but field:\n  field1"
           )
+      }
+    }
+    "allow message clauses to name the message and it resolves" in {
+      val input =
+        """domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type EntityCommand is command { foo: String }
+          |  record Fields is { field1: String }
+          |  state HamburgerState of Fields = {
+          |    handler doit is {
+          |      on command ec:EntityCommand { example only {
+          |        then set Fields.field1 to @ec.foo
+          |      } }
+          |    }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          msgs.justErrors.format mustBe (empty)
       }
     }
   }

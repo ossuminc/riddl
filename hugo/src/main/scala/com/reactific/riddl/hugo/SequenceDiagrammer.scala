@@ -23,13 +23,17 @@ case class SequenceDiagrammer(
         case is: GenericInteraction => Seq[Reference[Definition]](is.from, is.to)
         case _ => Seq.empty[Reference[Definition]]
       }
-    }).filterNot(_.isEmpty).flatten.distinctBy(_.pathId.value).map { (ref: Reference[Definition]) =>
-      state.pathIdToDefinition(ref.pathId, parents) match {
-        case Some(definition) => ref.pathId.value -> definition
-        case None => throw new IllegalStateException(
-          s"Pre-validated PathId not found: ${ref.identify}"
-        )
-      }
+    })
+      .filterNot(_.isEmpty)
+      .flatten
+      .distinctBy(_.pathId.value)
+      .map { (ref: Reference[Definition]) =>
+        state.refMap.definitionOf[Definition](ref.pathId, parents.head) match {
+          case Some(definition) => ref.pathId.value -> definition
+          case None => throw new IllegalStateException(
+            s"Pre-validated PathId not found: ${ref.identify}"
+          )
+        }
     }
   }.toMap
 

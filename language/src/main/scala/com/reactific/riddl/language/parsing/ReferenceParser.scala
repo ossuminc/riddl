@@ -19,28 +19,32 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
 
+  private def maybeName[u: P]: P[Option[Identifier]] = {
+    P((identifier ~ Punctuation.colon).?)
+  }
+
   private def commandRef[u: P]: P[CommandRef] = {
-    P(location ~ Keywords.command ~ pathIdentifier)
+    P(location ~ Keywords.command ~ maybeName ~ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }
 
   private def eventRef[u: P]: P[EventRef] = {
-    P(location ~ Keywords.event ~ pathIdentifier)
+    P(location ~ Keywords.event ~ maybeName ~ pathIdentifier)
       .map(tpl => (EventRef.apply _).tupled(tpl))
   }
 
   private def queryRef[u: P]: P[QueryRef] = {
-    P(location ~ Keywords.query ~ pathIdentifier)
+    P(location ~ Keywords.query ~ maybeName ~ pathIdentifier)
       .map(tpl => (QueryRef.apply _).tupled(tpl))
   }
 
   private def resultRef[u: P]: P[ResultRef] = {
-    P(location ~ Keywords.result ~ pathIdentifier)
+    P(location ~ Keywords.result ~ maybeName ~ pathIdentifier)
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
   private def recordRef[u: P]: P[RecordRef] = {
-    P(location ~ Keywords.record ~ pathIdentifier)
+    P(location ~ Keywords.record ~ maybeName ~ pathIdentifier)
       .map(tpl => (RecordRef.apply _).tupled(tpl))
   }
 

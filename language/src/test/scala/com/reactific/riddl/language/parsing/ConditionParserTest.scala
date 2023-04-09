@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.{AST, ParsingTest}
 import org.scalatest.Assertion
 
 import scala.collection.immutable.ListMap

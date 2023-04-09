@@ -9,7 +9,7 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.{AST, *}
 import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.resolve.ResolutionPass
+import com.reactific.riddl.language.passes.resolve.{ReferenceMap, ResolutionPass, ResolutionOutput}
 import com.reactific.riddl.language.passes.symbols.SymbolsPass
 import com.reactific.riddl.language.passes.validate.ValidationPass
 import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
@@ -41,8 +41,9 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   requires(ValidationPass)
   requires(StatsPass)
 
-  val commonOptions: CommonOptions = state.commonOptions
-  val options: HugoCommand.Options = state.options
+  lazy val commonOptions: CommonOptions = state.commonOptions
+  lazy val options: HugoCommand.Options = state.options
+  lazy val refMap: ReferenceMap = input.outputOf[ResolutionOutput](ResolutionPass.name).refMap
 
   require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
   require(
@@ -95,7 +96,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
           case grp: Group => state.addToGlossary(grp, stack)
           case t: Type => mkd.emitType(t, stack)
           case s: State =>
-            val maybeType = state.resolvePathIdentifier[Type](s.typ.pathId, s +: stack)
+            val maybeType = refMap.definitionOf[Type](s.typ.pathId, s)
             maybeType match {
               case Some(typ: AggregateTypeExpression) =>
                 mkd.emitState(s, typ.fields, stack)
