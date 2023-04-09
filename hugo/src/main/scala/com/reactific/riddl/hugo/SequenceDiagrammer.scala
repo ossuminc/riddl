@@ -25,11 +25,11 @@ case class SequenceDiagrammer(
       }
     }).filterNot(_.isEmpty).flatten.distinctBy(_.pathId.value).map {
       ref: Reference[Definition] =>
-        state.pathIdToDefinition(ref.pathId, parents) match {
+        state.refMap.definitionOf[Definition](ref.pathId, parents.head) match {
           case Some(definition) => ref.pathId.value -> definition
           case None => throw new IllegalStateException(
-              s"Pre-validated PathId not found: ${ref.identify}"
-            )
+            s"Pre-validated PathId not found: ${ref.identify}"
+          )
         }
     }
   }.toMap

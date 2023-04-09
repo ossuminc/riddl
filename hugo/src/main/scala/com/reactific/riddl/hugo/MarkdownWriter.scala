@@ -456,12 +456,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    val resolved = state.resolvePath(pid, parents)()()
+    val resolved = state.refMap.definitionOf[Definition](pid, parents.head)
     if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
     else {
       val slink = state.makeSourceLink(resolved.head)
       val link = state
-        .makeDocLink(resolved.head, state.makeParents(resolved.tail))
+        .makeDocLink(resolved.head, state.makeParents(parents.tail))
       s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
     }
   }
@@ -470,8 +470,8 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    state.resolvePathIdentifier[Definition](pid, parents) match {
-      case None       => s"unresolved path: ${pid.format}"
+    state.refMap.definitionOf[Definition](pid, parents.head) match {
+      case None => s"unresolved path: ${pid.format}"
       case Some(defn) => defn.id.format
     }
   }
@@ -842,7 +842,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     emitBriefly(epic, parents)
     if (epic.userStory.nonEmpty) {
       val actorPid = epic.userStory.get.actor.pathId
-      val maybeActor = state.resolvePathIdentifier[Actor](actorPid, stack)
+      val maybeActor = state.refMap.definitionOf[Actor](actorPid, stack.head)
       h2("User Story")
       maybeActor match {
         case None => p(s"Unresolvable Actor id: ${actorPid.format}")
