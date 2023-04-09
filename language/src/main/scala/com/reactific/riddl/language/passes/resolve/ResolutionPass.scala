@@ -12,6 +12,7 @@ import scala.reflect.{ClassTag, classTag}
 case class ResolutionOutput(
   messages: Messages.Messages,
   refMap: ReferenceMap,
+  kindMap: KindMap,
   usage: Usages,
 ) extends PassOutput
 
@@ -29,10 +30,11 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
   val commonOptions: CommonOptions = input.commonOptions
   val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
   val refMap: ReferenceMap = ReferenceMap(messages)
+  val kindMap: KindMap = KindMap()
   val symbols: SymbolsOutput = input.outputOf[SymbolsOutput]("symbols")
 
   override def result: ResolutionOutput =
-    ResolutionOutput(messages.toMessages, refMap, Usages(uses, usedBy))
+    ResolutionOutput(messages.toMessages, refMap, kindMap, Usages(uses, usedBy))
 
   override def close: Unit = ()
 
@@ -41,6 +43,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
   }
 
   def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+    kindMap.add(definition)
     val parentsAsSeq: Seq[Definition] = definition +: parents.toSeq
     definition match {
       case f: Field =>
@@ -129,7 +132,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
       case _: SagaStep => () // no references
       case _: SequentialInteractions => () // no references
       case _: Term => () // no references
-      // case _ => () // NOTE: Never have this catchall
+      // case _ => () // NOTE: Never have this catchall! Want compile time errors.
     }
   }
 
@@ -216,8 +219,10 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
 
   private def resolveExpr(expr: Expression, parents: Seq[Definition]): Unit = {
     expr match {
-      case ValueOperator(_, path) => resolveAPathId[Field](path, parents)
-      case ValueCondition(_, path) => resolveAPathId[Field](path, parents)
+      case ValueOperator(_, path) =>
+        resolveAPathId[Field](path, parents)
+      case ValueCondition(_, path) =>
+        resolveAPathId[Field](path, parents)
       case AggregateConstructionExpression(_, msg, _) => resolveAPathId[Type](msg, parents)
       case NewEntityIdOperator(_, entityId) => resolveAPathId[Entity](entityId, parents)
       case FunctionCallExpression(_, func, args) =>
@@ -286,11 +291,11 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
 
       // Define a function to identify the starting point in the parents
       def startingPoint(defn: Definition): Boolean = {
-        defn.id.value == topName || defn.contents.exists(_.id.value == topName)
+        defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
       }
 
       // Drop parents until starting point found
-      val newParents = parents.dropUntil(startingPoint(_))
+      val newParents = parents.dropUntil(startingPoint)
 
       // If we dropped all the parents then the path isn't valid
       if (newParents.isEmpty) {
@@ -299,8 +304,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
       } else {
         // we found the starting point, and adjusted the parent stack correspondingly
         // use resolveRelativePath to descend through names
-        val pid = PathIdentifier(pathId.loc, pathId.value)
-        resolveRelativePath(pid, newParents)
+        resolveRelativePath(pathId, newParents)
       }
     }
 
@@ -483,7 +487,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
           // its fields so we need to push that typeRef's name on the name stack.
           adjustStacksForPid[Type](st.typ.pathId, parentStack)
         case oc: OnMessageClause =>
-          // if we're at an onClause that references a message then we
+          // if we're at an onClause that references a named message then we
           // need to push that message's path on the name stack
           adjustStacksForPid[Type](oc.msg.pathId, parentStack)
         case f: Field =>
@@ -505,7 +509,12 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
     }
   }
 
-  // final val maxTraversal = 10
+  private def findResolution(soughtName: String, candidate: Definition): Boolean = {
+    candidate match {
+      case omc: OnMessageClause if omc.msg.id.nonEmpty => omc.msg.id.get.value == soughtName
+      case other: Definition => other.id.value == soughtName
+    }
+  }
 
   /** Resolve a Relative PathIdentifier. If the path is already resolved or it
    * has no empty components then we can resolve it from the map or the
@@ -571,7 +580,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
           val candidates = findCandidates(parentStack)
 
           // Now find the match, if any, and handle appropriately
-          val found = candidates.find(_.id.value == soughtName)
+          val found = candidates.find(candidate => findResolution(soughtName, candidate))
           found match {
             case Some(q: Definition) =>
               // found the named item, and it is a Container, so put it on

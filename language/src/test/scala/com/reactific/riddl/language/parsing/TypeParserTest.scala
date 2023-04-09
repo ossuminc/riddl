@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language
+package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.AST.Field
-import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.AST.{Field, *}
+import com.reactific.riddl.language.ParsingTest
 
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {
