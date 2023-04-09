@@ -16,7 +16,6 @@ trait BasicValidation {
 
   def symbols: SymbolsOutput
   def resolution: ResolutionOutput
-
   def messages: Messages.Accumulator
 
   def parentOf(definition: Definition): Container[Definition] = {

@@ -24,10 +24,10 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
   requires(ResolutionPass)
 
   override def name: String = ValidationPass.name
-  val resolution: ResolutionOutput = input.outputOf[ResolutionOutput](ResolutionPass.name)
-  val symbols: SymbolsOutput = input.outputOf[SymbolsOutput](SymbolsPass.name)
 
-  val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
+  lazy val resolution: ResolutionOutput = input.outputOf[ResolutionOutput](ResolutionPass.name)
+  lazy val symbols: SymbolsOutput = input.outputOf[SymbolsOutput](SymbolsPass.name)
+  lazy val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
 
   /**
    * Generate the output of this Pass. This will only be called after all the calls
@@ -36,8 +36,8 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
    * @return an instance of the output type
    */
   override def result: ValidationOutput = {
-      ValidationOutput(messages.toMessages, inlets, outlets,
-        connectors, streamlets, sends.toMap)
+    ValidationOutput(messages.toMessages, inlets, outlets,
+      connectors, streamlets, sends.toMap)
   }
 
   def postProcess(root: RootContainer): Unit = {
@@ -193,7 +193,6 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     inlet: Inlet,
     parents: Seq[Definition]
   ): Unit = {
-    addInlet(inlet)
     checkDefinition(parents, inlet)
     checkRef[Type](inlet.type_, inlet, parents)
   }
@@ -202,7 +201,6 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     outlet: Outlet,
     parents: Seq[Definition]
   ): Unit = {
-    addOutlet(outlet)
     checkDefinition(parents, outlet)
     checkRef[Type](outlet.type_, outlet, parents)
   }
@@ -211,7 +209,6 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     connector: Connector,
     parents: Seq[Definition]
   ): Unit = {
-    addConnector(connector)
     val refParents = connector +: parents
     val maybeOutlet = checkMaybeRef[Outlet](connector.from, connector, refParents)
     val maybeInlet = checkMaybeRef[Inlet](connector.to, connector, refParents)
@@ -417,7 +414,6 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     s: Streamlet,
     parents: Seq[Definition]
   ): Unit = {
-    addStreamlet(s)
     checkContainer(parents, s)
     checkStreamletShape(s)
     checkDescription(s)
