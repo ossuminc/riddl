@@ -65,7 +65,7 @@ class AuthorTest extends ValidatingTest {
                     |  context Bar by author Reid is { ??? }
                     |}
                     |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
     }

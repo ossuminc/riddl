@@ -83,8 +83,7 @@ class CommonParserTest extends ParsingTest {
           |""".stripMargin.filterNot(_ == '\n')
       parseDefinition[Type](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
+          fail(errors.format)
         case Right((content, _)) => content.typ match {
             case Pattern(_, Seq(LiteralString(_, str))) =>
               str.head mustBe '('
