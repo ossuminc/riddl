@@ -57,7 +57,7 @@ trait TypeValidation extends DefinitionValidation {
       case Ternary(loc, _, expr1, expr2) =>
         val expr1Ty = getExpressionType(expr1, parents)
         val expr2Ty = getExpressionType(expr2, parents)
-        if (isAssignmentCompatible(expr1Ty, expr2Ty)) {
+        if isAssignmentCompatible(expr1Ty, expr2Ty) then {
           expr1Ty
         } else {
           messages.addError(

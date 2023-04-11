@@ -18,7 +18,7 @@ object V {
   val compress = "1.23.0"
   val config = "1.4.2"
   val fastparse = "3.0.1"
-  val jgit = "6.3.0.202209071007-r"
+  val jgit = "6.5.0"
   val lang3 = "3.12.0"
   val pureconfig = "0.17.2"
   val scalacheck = "1.17.0"
@@ -76,7 +76,19 @@ object C {
   }
 
   lazy val scala3_2_Options: Seq[String] =
-    Seq("-deprecation", "-feature", "-Werror", "-rewrite", "-source", "3.0-migration" /*, "-explain" */)
+    Seq(
+      "-deprecation",
+      "-feature",
+      "-new-syntax",
+      "-rewrite",
+      "-source",
+      "3.0-migration",
+      "-explain",
+      "-Werror",
+      "-pagewidth",
+      "120"
+      /*, "-explain" */
+    )
   lazy val scala2_13_Options: Seq[String] = Seq(
     "-release:17",
     // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(

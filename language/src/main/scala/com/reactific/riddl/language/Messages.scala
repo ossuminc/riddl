@@ -114,17 +114,17 @@ object Messages {
 
     override def compare(that: Message): Int = {
       val comparison = this.loc.compare(that.loc)
-      if (comparison == 0) { this.kind.compare(that.kind) }
+      if comparison == 0 then { this.kind.compare(that.kind) }
       else comparison
     }
 
     def format: String = {
       val nl = System.lineSeparator()
       val ctxt =
-        if (context.nonEmpty) { s"${nl}Context: $context" }
+        if context.nonEmpty then { s"${nl}Context: $context" }
         else ""
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
-      if (loc.isEmpty || loc.source.isEmpty || errorLine.isEmpty) {
+      if loc.isEmpty || loc.source.isEmpty || errorLine.isEmpty then {
         s"$kind: $loc: $message$ctxt"
       } else { s"$kind: $loc: $message:$nl$errorLine$ctxt" }
     }
@@ -200,8 +200,8 @@ object Messages {
     log: Logger,
     options: CommonOptions
   ): Int = {
-    val list = if (options.sortMessagesByLocation) messages.sorted else messages
-    if (options.groupMessagesByKind) { logMessagesByGroup(list, options, log) }
+    val list = if options.sortMessagesByLocation then messages.sorted else messages
+    if options.groupMessagesByKind then { logMessagesByGroup(list, options, log) }
     else { logMessagesRetainingOrder(list, log) }
     highestSeverity(list)
   }
@@ -226,9 +226,9 @@ object Messages {
     log: Logger
   ): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
-      if (maybeMessages.nonEmpty) {
+      if maybeMessages.nonEmpty then {
         val messages = maybeMessages.get
-        if (messages.nonEmpty) {
+        if messages.nonEmpty then {
           log.info(s"""$kind Message Count: ${messages.length}""")
 
           messages.map(_.format).foreach { message =>
@@ -242,19 +242,19 @@ object Messages {
         }
       }
     }
-    if (messages.nonEmpty) {
+    if messages.nonEmpty then {
       val groups = messages.groupBy(_.kind)
       logMsgs(SevereError, groups.get(SevereError))
       logMsgs(Error, groups.get(Error))
 
-      if (commonOptions.showWarnings) {
-        if (commonOptions.showUsageWarnings) {
+      if commonOptions.showWarnings then {
+        if commonOptions.showUsageWarnings then {
           logMsgs(UsageWarning, groups.get(UsageWarning))
         }
-        if (commonOptions.showMissingWarnings) {
+        if commonOptions.showMissingWarnings then {
           logMsgs(MissingWarning, groups.get(MissingWarning))
         }
-        if (commonOptions.showStyleWarnings) {
+        if commonOptions.showStyleWarnings then {
           logMsgs(StyleWarning, groups.get(StyleWarning))
         }
       }
@@ -275,15 +275,15 @@ object Messages {
     def add(msg: Message): this.type = {
       msg.kind match {
         case StyleWarning =>
-          if (commonOptions.showStyleWarnings) {
+          if commonOptions.showStyleWarnings then {
             msgs.append(msg)
           }
         case MissingWarning =>
-          if (commonOptions.showMissingWarnings) {
+          if commonOptions.showMissingWarnings then {
             msgs.append(msg)
           }
         case UsageWarning =>
-          if (commonOptions.showUsageWarnings) {
+          if commonOptions.showUsageWarnings then {
             msgs.append(msg)
           }
         case _ => msgs.append(msg)

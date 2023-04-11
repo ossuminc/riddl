@@ -134,11 +134,11 @@ object Folding {
     def add(msg: Message): Unit = {
       msg.kind match {
         case StyleWarning =>
-          if (commonOptions.showStyleWarnings) {
+          if commonOptions.showStyleWarnings then {
             msgs += msg
           } 
         case MissingWarning =>
-          if (commonOptions.showMissingWarnings) {
+          if commonOptions.showMissingWarnings then {
             msgs += msg
           } 
         case _ =>
@@ -173,7 +173,7 @@ object Folding {
       // Get the next name to resolve
       val top = pid.value.head
       // If it is a resolvable name and that name is on the parent stack
-      if (top.nonEmpty && parentStack.exists(_.id.value == top)) {
+      if top.nonEmpty && parentStack.exists(_.id.value == top) then {
         // Remove the top of stack name we just pushed, because we just found it
         nameStack.pop()
         // Drop up the stack until we find the name we just found
@@ -187,7 +187,7 @@ object Folding {
       parentStack: mutable.Stack[Definition],
       nameStack: mutable.Stack[String]
     ): Seq[Definition] = {
-      if (parentStack.isEmpty) {
+      if parentStack.isEmpty then {
         // Nothing in the parent stack so we're done searching and
         // we return empty to signal nothing found
         Seq.empty[Definition]
@@ -283,25 +283,25 @@ object Folding {
       // Loop over the names in the stack. Note that mutable stacks are used
       // here because the algorithm can adjust them as it finds intermediary
       // definitions. If the name stack becomes empty, we're done searching.
-      while (nameStack.nonEmpty) {
+      while nameStack.nonEmpty do {
         // Pop the name we're currently looking for and save it
         val soughtName = nameStack.pop()
 
         // if the name indicates we are supposed to pop parent off the stack ...
-        if (soughtName.isEmpty) {
+        if soughtName.isEmpty then {
           // if there is a parent to pop off the stack
-          if (parentStack.nonEmpty) {
+          if parentStack.nonEmpty then {
             // pop it and the result is the new head, if there's no more names
             parentStack.pop()
           }
         } else {
           // We have a name to search for if the parent stack is not empty
-          if (parentStack.nonEmpty) {
+          if parentStack.nonEmpty then {
             val definition =
               parentStack.head // get the next definition of the parentStack
 
             // If we have already visited this definition, its an error
-            if (visitedStack.contains(definition)) {
+            if visitedStack.contains(definition) then {
               // Generate the error message
               this.addError(
                 pid.loc,
@@ -325,7 +325,7 @@ object Folding {
 
               // If the name stack grew because findCandidates added to it
               val newSoughtName =
-                if (candidates.isEmpty) {
+                if candidates.isEmpty then {
                   // then push the definition on the visited stack because we
                   // already resolved this one and looked for candidates, no
                   // point looping through here again.
@@ -358,9 +358,9 @@ object Folding {
 
       // if there is a single thing left on the stack and that things is
       // a RootContainer
-      if (
+      if
         parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer]
-      ) {
+      then {
         // then pop it off because RootContainers don't count and we want to
         // rightfully return an empty sequence for "not found"
         parentStack.pop()
@@ -376,9 +376,9 @@ object Folding {
       // First, scan up through the parent stack to find the starting place
       val top = pid.value.head
       val newParents = parents.dropUntil(_.id.value == top)
-      if (newParents.isEmpty) {
+      if newParents.isEmpty then {
         newParents // is empty, signalling "not found"
-      } else if (pid.value.length == 1) {
+      } else if pid.value.length == 1 then {
         // we found the only name so let's just return it because the found
         // definition is just the head of the adjusted newParents
         Seq(newParents.head)
@@ -415,8 +415,8 @@ object Folding {
         d.getClass == clazz
       }
 
-      if (pid.value.isEmpty) { None }
-      else if (pid.value.exists(_.isEmpty)) {
+      if pid.value.isEmpty then { None }
+      else if pid.value.exists(_.isEmpty) then {
         resolveRelativePath(pid, parents).headOption match {
           case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
           case _                              => None
@@ -448,13 +448,13 @@ object Folding {
       onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
         doNothingMultiple
     ): Seq[Definition] = {
-      if (pid.value.isEmpty) { Seq.empty[Definition] }
-      else if (pid.value.exists(_.isEmpty)) {
+      if pid.value.isEmpty then { Seq.empty[Definition] }
+      else if pid.value.exists(_.isEmpty) then {
         val resolution = resolveRelativePath(pid, parents)
         onSingle(resolution)
       } else {
         val result = resolvePathFromHierarchy(pid, parents)
-        if (result.nonEmpty) { onSingle(result) }
+        if result.nonEmpty then { onSingle(result) }
         else {
           val symTabCompatibleNameSearch = pid.value.reverse
           val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)

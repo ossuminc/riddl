@@ -93,13 +93,13 @@ class RepeatCommand
   //  interactive = true
 
   private class OptionsReader extends ConfigReader[Options] {
-    override def from(cur: ConfigCursor): Result[Options] = for {
+    override def from(cur: ConfigCursor): Result[Options] = for
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)
       objCur <- topRes.asObjectCursor
       inputPathRes <- objCur.atKey("input-file")
       inputPath <- inputPathRes.asString.flatMap { inputPath =>
-        if (inputPath.isEmpty) {
+        if inputPath.isEmpty then {
           ConfigReader.Result.fail[String](
             CannotParse("'input-path' requires a non-empty value", None)
           )
@@ -109,7 +109,7 @@ class RepeatCommand
       refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString)
         .flatMap { rr =>
           val dur = Duration.create(rr)
-          if (dur.isFinite) { Right(dur.asInstanceOf[FiniteDuration]) }
+          if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
           else {
             ConfigReader.Result.fail[FiniteDuration](CannotParse(
               s"'refresh-rate' must be a finite duration, not $rr",
@@ -119,7 +119,7 @@ class RepeatCommand
         }
       maxCycles <- optional(objCur, "max-cycles", 100)(_.asInt)
       interactive <- optional(objCur, "interactive", true)(_.asBoolean)
-    } yield {
+    yield {
       RepeatCommand.Options(
         Some(Path.of(inputPath)),
         targetCommand,
@@ -161,7 +161,7 @@ class RepeatCommand
 
     var shouldContinue = true
     var i: Int = 0
-    while (i < maxCycles && shouldContinue && !userHasCancelled) {
+    while i < maxCycles && shouldContinue && !userHasCancelled do {
       val result = CommandPlugin.runFromConfig(
         options.inputFile,
         options.targetCommand,
@@ -169,18 +169,18 @@ class RepeatCommand
         log,
         pluginName
       ).map { _ =>
-        if (!userHasCancelled) {
+        if !userHasCancelled then {
           cancel.map(_.apply())
           shouldContinue = false
         } else {
           i += 1
-          if (commonOptions.verbose) {
+          if commonOptions.verbose then {
             println(s"Waiting for $refresh, cycle # $i of $maxCycles")
           }
           Thread.sleep(sleepTime)
         }
       }
-      if (result.isLeft) { shouldContinue = false }
+      if result.isLeft then { shouldContinue = false }
     }
     Right(PassesResult())
   }

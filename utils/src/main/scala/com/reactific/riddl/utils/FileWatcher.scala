@@ -45,7 +45,7 @@ object FileWatcher {
   ): Unit = {
     events match {
       case x: Seq[WatchEvent[?]] if x.isEmpty =>
-        if (notOnEvents) {
+        if notOnEvents then {
           key.reset()
           Thread.sleep(interval)
         } else {
@@ -53,7 +53,7 @@ object FileWatcher {
           key.cancel()
         }
       case events =>
-        if (onEvents(events)) {
+        if onEvents(events) then {
           // reset the key for the next trip around
           key.reset()
         } else {
@@ -76,7 +76,7 @@ object FileWatcher {
     try {
       registerRecursively(path, watchService)
       var saveKey: WatchKey = null
-      while ((saveKey == null || saveKey.isValid) && Instant.now().toEpochMilli < deadline) {
+      while (saveKey == null || saveKey.isValid) && (Instant.now().toEpochMilli < deadline) {
         watchService.take() match {
           case key: WatchKey if key != null =>
             saveKey = key

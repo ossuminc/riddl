@@ -124,7 +124,7 @@ trait Expressions extends TypeExpression {
     args: ArgList = ArgList()
   ) extends Expression {
     override def format: String = msg.format + {
-      if (args.nonEmpty) { args.format }
+      if args.nonEmpty then { args.format }
       else { "()" }
     }
     def expressionType: TypeExpression = Abstract(loc)

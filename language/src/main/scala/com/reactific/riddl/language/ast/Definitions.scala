@@ -203,7 +203,7 @@ trait Definitions extends Expressions with Options {
       *   The boolean to convert to an Int
       * @return
       */
-    implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
+    implicit def bool2int(b: Boolean): Int = if b then 1 else 0
 
     /** Compute the completeness of this definition. Vital definitions should
       * have options, terms, and authors but includes are optional.
@@ -233,13 +233,13 @@ trait Definitions extends Expressions with Options {
       */
     def maturity: Int = {
       var score = 0
-      if (hasOptions) score += 5
-      if (hasTerms) score += 5
-      if (description.nonEmpty) {
+      if hasOptions then score += 5
+      if hasTerms then score += 5
+      if description.nonEmpty then {
         score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
       }
-      if (brief.nonEmpty) score += 5
-      if (includes.nonEmpty) score += 3
+      if brief.nonEmpty then score += 5
+      if includes.nonEmpty then score += 3
       score += authors.size
       score
     }
@@ -668,11 +668,11 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (input.nonEmpty) score += 2
-      if (output.nonEmpty) score += 3
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 13)
-      if (examples.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
-      if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 12)
+      if input.nonEmpty then score += 2
+      if output.nonEmpty then score += 3
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 13)
+      if examples.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
+      if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 12)
       Math.max(score, maxMaturity)
     }
   }
@@ -811,7 +811,7 @@ trait Definitions extends Expressions with Options {
     final val kind: String = "OnMessageClause"
 
     override def resolveNameTo(name: String): Option[Definition] = {
-      if (msg.id.nonEmpty && msg.id.get.value == name) Some(this) else None
+      if msg.id.nonEmpty && msg.id.get.value == name then Some(this) else None
     }
   }
 
@@ -1007,13 +1007,13 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (states.nonEmpty) score += Math.max(states.count(_.nonEmpty), 10)
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
-      if (handlers.nonEmpty) score += 1
-      if (invariants.nonEmpty)
+      if states.nonEmpty then score += Math.max(states.count(_.nonEmpty), 10)
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
+      if handlers.nonEmpty then score += 1
+      if invariants.nonEmpty then
         score +=
           Math.max(invariants.count(_.nonEmpty), 10)
-      if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 5)
+      if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 5)
       Math.max(score, maxMaturity)
     }
   }
@@ -1075,7 +1075,7 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (handlers.nonEmpty)
+      if handlers.nonEmpty then
         score +=
           Math.max(handlers.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
@@ -1210,7 +1210,7 @@ trait Definitions extends Expressions with Options {
     override def maturity: Int = {
       var score = super.maturity
       val records: Seq[Type] = types.filter(_.typ.isContainer)
-      if (records.nonEmpty)
+      if records.nonEmpty then
         score +=
           Math.max(types.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
@@ -1292,13 +1292,13 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
-      if (adaptors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
-      if (sagas.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
-      if (streamlets.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
-      if (functions.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
-      if (handlers.nonEmpty) score += 10
-      if (projectors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
+      if adaptors.nonEmpty then score += Math.max(types.count(_.nonEmpty), 5)
+      if sagas.nonEmpty then score += Math.max(types.count(_.nonEmpty), 5)
+      if streamlets.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
+      if functions.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
+      if handlers.nonEmpty then score += 10
+      if projectors.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
   }
@@ -1487,9 +1487,9 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (inlets.nonEmpty) score += Math.max(inlets.count(_.nonEmpty), 5)
-      if (outlets.nonEmpty) score += Math.max(outlets.count(_.nonEmpty), 5)
-      if (handlers.nonEmpty) score += Math.max(handlers.count(_.nonEmpty), 40)
+      if inlets.nonEmpty then score += Math.max(inlets.count(_.nonEmpty), 5)
+      if outlets.nonEmpty then score += Math.max(outlets.count(_.nonEmpty), 5)
+      if handlers.nonEmpty then score += Math.max(handlers.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
 
@@ -1658,9 +1658,9 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (input.nonEmpty) score += 10
-      if (output.nonEmpty) score += 10
-      if (sagaSteps.nonEmpty) score += Math.max(sagaSteps.count(_.nonEmpty), 40)
+      if input.nonEmpty then score += 10
+      if output.nonEmpty then score += 10
+      if sagaSteps.nonEmpty then score += Math.max(sagaSteps.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
   }
@@ -1975,9 +1975,9 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (userStory.nonEmpty) score += 3
-      if (shownBy.nonEmpty) score += 10
-      if (cases.nonEmpty) score += Math.max(cases.count(_.nonEmpty), 25)
+      if userStory.nonEmpty then score += 3
+      if shownBy.nonEmpty then score += 10
+      if cases.nonEmpty then score += Math.max(cases.count(_.nonEmpty), 25)
       Math.max(score, maxMaturity)
     }
   }
@@ -2257,11 +2257,11 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 15)
-      if (contexts.nonEmpty) score += Math.max(contexts.count(_.nonEmpty), 15)
-      if (stories.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 15)
-      if (applications.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 5)
-      if (domains.nonEmpty) score += Math.max(domains.count(_.nonEmpty), 10)
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 15)
+      if contexts.nonEmpty then score += Math.max(contexts.count(_.nonEmpty), 15)
+      if stories.nonEmpty then score += Math.max(stories.count(_.nonEmpty), 15)
+      if applications.nonEmpty then score += Math.max(stories.count(_.nonEmpty), 5)
+      if domains.nonEmpty then score += Math.max(domains.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
   }

@@ -37,13 +37,13 @@ abstract class InputFileCommandPlugin(
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
     {
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(name)
         objCur <- topRes.asObjectCursor
         inFileRes <- objCur.atKey("input-file").map(_.asString)
         inFile <- inFileRes
-      } yield { Options(command = name, inputFile = Some(Path.of(inFile))) }
+      yield { Options(command = name, inputFile = Some(Path.of(inFile))) }
     }
   }
 }

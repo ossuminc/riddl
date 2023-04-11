@@ -43,17 +43,17 @@ object PathUtils {
 
   def copyURLToDir(from: URL, destDir: Path): String = {
     val nameParts = from.getFile.split('/')
-    if (nameParts.nonEmpty) {
+    if nameParts.nonEmpty then {
       val fileName = scala.util.Random.self.nextLong.toString ++ nameParts.last
       Files.createDirectories(destDir)
       val dl_path = destDir.resolve(fileName)
       val in: InputStream = from.openStream
-      if (in == null) { "" }
+      if in == null then { "" }
       else {
         try { Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING) }
-        finally if (in != null) in.close()
+        finally if in != null then in.close()
       }
-      if (Files.isRegularFile(dl_path)) { fileName }
+      if Files.isRegularFile(dl_path) then { fileName }
       else { "" }
     } else { "" }
   }
@@ -68,18 +68,18 @@ object PathUtils {
     var exit = false
     val sourceFiles = Files.list(a).toScala(Accumulator).toList
       .filterNot(_.getFileName.toString.startsWith("."))
-    for { fileA <- sourceFiles } {
+    for  fileA <- sourceFiles  do {
       val fileNameA = fileA.getFileName
       val fileB = b.resolve(fileNameA)
-      if (!Files.exists(fileB)) { exit = missing(fileB) }
+      if !Files.exists(fileB) then { exit = missing(fileB) }
       else {
         val sizeA = Files.size(fileA)
         val sizeB = Files.size(fileB)
-        if (sizeA != sizeB) { exit = differentSize(fileA, fileB) }
+        if sizeA != sizeB then { exit = differentSize(fileA, fileB) }
         else {
           val bytesA = Files.readAllBytes(fileA)
           val bytesB = Files.readAllBytes(fileB)
-          if (bytesA != bytesB) { exit = differentContent(fileA, fileB) }
+          if bytesA != bytesB then { exit = differentContent(fileA, fileB) }
         }
       }
     }

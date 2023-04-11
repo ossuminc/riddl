@@ -56,7 +56,7 @@ case class HugoTranslatorState(
     d: Definition,
     stack: Seq[Definition]
   ): HugoTranslatorState = {
-    if (options.withGlossary) {
+    if options.withGlossary then {
       val parents = makeParents(stack)
       val entry = GlossaryEntry(
         d.id.value,
@@ -89,7 +89,7 @@ case class HugoTranslatorState(
       case Some(inFile) =>
         val pathAsString = path.toAbsolutePath.toString
         val inDirAsString = inFile.getParent.toAbsolutePath.toString
-        if (pathAsString.startsWith(inDirAsString)) {
+        if pathAsString.startsWith(inDirAsString) then {
           val result = pathAsString.drop(inDirAsString.length + 1)
           Some(result)
         } else { Option.empty[String] }
@@ -146,7 +146,7 @@ case class HugoTranslatorState(
   def makeDocAndParentsLinks(definition: Definition): String = {
     val parents = symbolTable.parentsOf(definition)
     val docLink = makeDocLink(definition, makeParents(parents))
-    if (parents.isEmpty) { s"[${definition.identify}]($docLink)" }
+    if parents.isEmpty then { s"[${definition.identify}]($docLink)" }
     else {
       val parent = parents.head
       val parentLink = makeDocLink(parent, makeParents(parents.tail))
@@ -162,7 +162,7 @@ case class HugoTranslatorState(
       case _: Field | _: Enumerator | _: Invariant | _: Author | _: SagaStep |
           _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
       case _ =>
-        if (parents.isEmpty) pars + definition.id.value.toLowerCase
+        if parents.isEmpty then pars + definition.id.value.toLowerCase
         else pars + "/" + definition.id.value.toLowerCase
     }
     // deal with Geekdoc's url processor
@@ -184,14 +184,14 @@ case class HugoTranslatorState(
     mdw.list(domains)
     mdw.h2("Indices")
     val glossary =
-      if (options.withGlossary) { Seq("[Glossary](glossary)") }
+      if options.withGlossary then { Seq("[Glossary](glossary)") }
       else { Seq.empty[String] }
     val todoList = {
-      if (options.withTODOList) { Seq("[To Do List](todolist)") }
+      if options.withTODOList then { Seq("[To Do List](todolist)") }
       else { Seq.empty[String] }
     }
     val statistics = {
-      if (options.withStatistics) { Seq("[Statistics](statistics)") }
+      if options.withStatistics then { Seq("[Statistics](statistics)") }
       else { Seq.empty[String] }
     }
     mdw.list(glossary ++ todoList ++ statistics)
@@ -203,28 +203,28 @@ case class HugoTranslatorState(
   val statsWeight = 990
 
   def makeStatistics(): Unit = {
-    if (options.withStatistics) {
+    if options.withStatistics then {
       val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
       mdw.emitStatistics(statsWeight, result.root)
     }
   }
 
   def makeGlossary(): Unit = {
-    if (options.withGlossary) {
+    if options.withGlossary then {
       val mdw = addFile(Seq.empty[String], "glossary.md")
       mdw.emitGlossary(glossaryWeight, terms)
     }
   }
 
   def makeToDoList(root: RootContainer): Unit = {
-    if (options.withTODOList) {
+    if options.withTODOList then {
       val finder = Finder(root)
-      val items: Seq[(String, String, String, String)] = for {
+      val items: Seq[(String, String, String, String)] = for
         (defn, pars) <- finder.findEmpty
         item = defn.identify
         authors = AST.findAuthors(defn, pars)
         author =
-          if (authors.isEmpty) { "Unspecified Author" }
+          if authors.isEmpty then { "Unspecified Author" }
           else {
             authors
               .map { (ref: AuthorRef) => refMap.definitionOf[Author](ref
@@ -235,7 +235,7 @@ case class HugoTranslatorState(
         parents = makeParents(pars)
         path = parents.mkString(".")
         link = makeDocLink(defn, parents)
-      } yield { (item, author, path, link) }
+      yield { (item, author, path, link) }
 
       val map = items.groupBy(_._2).view.mapValues(_.map {
         case (item, _, path, link) => s"[$item In $path]($link)"

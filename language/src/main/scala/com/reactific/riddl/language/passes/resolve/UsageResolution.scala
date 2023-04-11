@@ -53,19 +53,19 @@ trait UsageResolution extends UsageBase {
   def associateUsage(user: Definition, use: Definition): this.type = {
 
     val used = uses.getOrElse(user, Seq.empty[Definition])
-    if (!used.contains(use)) {
+    if !used.contains(use) then {
       uses.update(user,used :+ use)
     }
 
     val usages = usedBy.getOrElse(use, Seq.empty[Definition])
-    if (!usages.contains(user)) {
+    if !usages.contains(user) then {
       usedBy.update(use, usages :+ user)
     }
     this
   }
 
   def checkUnused(): this.type = {
-    if (commonOptions.showUsageWarnings) {
+    if commonOptions.showUsageWarnings then {
       def hasUsages(definition: Definition): Boolean = {
         val result = usedBy.get(definition) match {
           case None        => false
@@ -74,7 +74,7 @@ trait UsageResolution extends UsageBase {
         result
       }
       def checkList(definitions: Seq[Definition]): Unit = {
-        for { defn <- definitions if !hasUsages(defn) } {
+        for  defn <- definitions if !hasUsages(defn)  do {
           messages.addUsage(defn.loc, s"${defn.identify} is unused")
         }
       }

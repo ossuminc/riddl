@@ -116,7 +116,7 @@ case class SymbolsOutput(
         }.map { case (d: Definition, _: Seq[Definition]) =>
         // If a name match is also the same type as desired by the caller
         // then give them the definition in the requested type, optionally
-        if (clazz.isInstance(d)) {(d, Option(d.asInstanceOf[D]))}
+        if clazz.isInstance(d) then {(d, Option(d.asInstanceOf[D]))}
         else {(d, None)}
       }.toList
       case None =>
@@ -167,7 +167,7 @@ case class SymbolsOutput(
     symTab.get(leafName) match {
       case Some(set) =>
         val result = set.filter { case (d: Definition, parents: Symbols.Parents) =>
-          if (clazz.isInstance(d)) {
+          if clazz.isInstance(d) then {
             // It is in the result set as long as the container names
             // given in the provided id are the same as the container
             // names in the symbol table.

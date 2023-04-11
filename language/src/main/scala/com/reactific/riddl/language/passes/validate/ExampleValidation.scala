@@ -44,7 +44,7 @@ trait ExampleValidation extends TypeValidation {
     checkSequence(whens) { (when: WhenClause) =>
       checkExpression(when.condition, example, parents)
     }
-    if (example.id.nonEmpty) {
+    if example.id.nonEmpty then {
       checkNonEmpty(thens, "Thens", example, required = true)
     }
     checkActions(thens.map(_.action), example, parents)
@@ -76,7 +76,7 @@ trait ExampleValidation extends TypeValidation {
             val unset = mt.fields.filterNot { fName =>
               names.contains(fName.id.value)
             }
-            if (unset.nonEmpty) {
+            if unset.nonEmpty then {
               unset.filterNot(_.isImplicit).foreach { field =>
                 messages.addError(
                   messageConstructor.loc,
@@ -245,7 +245,7 @@ trait ExampleValidation extends TypeValidation {
         val maybeState = checkRef[State](state, defn, parents)
         checkExpression(value, defn, parents)
         val maybeExprType = getExpressionType(value, parents)
-        if (maybeExprType.isEmpty) {
+        if maybeExprType.isEmpty then {
           messages.addError(
             value.loc,
             s"Unable to determine type of expression ${value.format}"
@@ -255,7 +255,7 @@ trait ExampleValidation extends TypeValidation {
           maybeEntity.flatMap { entity =>
             maybeState
               .map { resolvedState =>
-                if (!entity.states.contains(resolvedState)) {
+                if !entity.states.contains(resolvedState) then {
                   messages.addError(
                     state.loc,
                     s"${entity.identify} does not contain ${resolvedState.identify}"
@@ -265,12 +265,12 @@ trait ExampleValidation extends TypeValidation {
                   val maybeType = resolvePidRelativeTo[Type](pid, resolvedState)
                     maybeType match {
                       case Some(typ) =>
-                        if (
+                        if
                           !this.isAssignmentCompatible(
                             Some(typ.typ),
                             Some(exprType)
                           )
-                        ) {
+                        then {
                           messages.addError(
                             value.loc,
                             s"Morph value of type ${exprType.format} " +
@@ -307,7 +307,7 @@ trait ExampleValidation extends TypeValidation {
   ): this.type = {
     val pidType = getPathIdType(path, parents)
     val exprType = getExpressionType(expr, parents)
-    if (!isAssignmentCompatible(pidType, exprType)) {
+    if !isAssignmentCompatible(pidType, exprType) then {
       messages.addError(
         path.loc,
         s"""Setting a value requires assignment compatibility, but field:

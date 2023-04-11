@@ -21,7 +21,7 @@ trait StreamingValidation extends ExampleValidation {
   val connectors: Seq[Connector] = resolution.kindMap.definitionsOfKind[Connector]
 
   private def checkStreamingUsage(loc: At): Unit = {
-    if (inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty) {
+    if inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty then {
       messages.add(
         Messages.usage(
           "Models without any streaming data will exhibit minimal effect",
@@ -50,8 +50,8 @@ trait StreamingValidation extends ExampleValidation {
       val outletIsSameContext = maybeOutletContext.nonEmpty &&
         (pipeContext == maybeOutletContext.get)
 
-      if (connector.hasOption[ConnectorPersistentOption]) {
-        if (outletIsSameContext && inletIsSameContext) {
+      if connector.hasOption[ConnectorPersistentOption] then {
+        if outletIsSameContext && inletIsSameContext then {
           val message =
             s"The persistence option on ${connector.identify} is not " +
               s"needed since both ends of the connector connect within the same " +
@@ -59,7 +59,7 @@ trait StreamingValidation extends ExampleValidation {
           messages.addWarning(connector.loc, message)
         }
       } else {
-        if (!outletIsSameContext || !inletIsSameContext) {
+        if !outletIsSameContext || !inletIsSameContext then {
           val message =
             s"The persistence option on ${connector.identify} should be " +
             s"specified because an end of the connector is not connected " +
@@ -71,7 +71,7 @@ trait StreamingValidation extends ExampleValidation {
   }
 
   private def checkUnattachedOutlets(): Unit = {
-    val connected: Seq[(Outlet, Inlet)] = for {
+    val connected: Seq[(Outlet, Inlet)] = for
       conn <- connectors
       parents = symbols.parentsOf(conn)
       maybeInletRef = conn.to
@@ -80,7 +80,7 @@ trait StreamingValidation extends ExampleValidation {
       outletRef <- maybeOutletRef
       inlet <- resolvePath[Inlet](inletRef.pathId, conn +: parents)
       outlet <- resolvePath[Outlet](outletRef.pathId, conn +: parents)
-    } yield {
+    yield {
       (outlet, inlet)
     }
 
@@ -110,7 +110,7 @@ trait StreamingValidation extends ExampleValidation {
     val unusedOutlets: scala.collection.Set[Outlet] = outlets.toSet --
       usedOutlets
 
-    for { outlet <- unusedOutlets } {
+    for  outlet <- unusedOutlets  do {
       val message = s"${outlet.identify} has nothing sent to it"
       messages.addUsage(outlet.loc, message)
     }

@@ -182,7 +182,7 @@ trait AbstractDefinitions {
     def kind: String
 
     def identify: String = {
-      if (id.isEmpty) { s"Anonymous $kind" }
+      if id.isEmpty then { s"Anonymous $kind" }
       else { s"$kind '${id.format}'" }
     }
 
@@ -238,7 +238,7 @@ trait AbstractDefinitions {
      */
     def identify: String = {
       s"${classTag[T].runtimeClass.getSimpleName} ${
-        if (id.nonEmpty) {id.map(_.format + ": ")} else ""
+        if id.nonEmpty then {id.map(_.format + ": ")} else ""
       }'${pathId.format}'${loc.toShort}"
     }
 

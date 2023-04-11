@@ -40,11 +40,11 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
 
   override def getConfigReader: ConfigReader[HelpCommand.Options] = {
     (cur: ConfigCursor) =>
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
         cmd <- topRes.asObjectCursor
-      } yield { Options(cmd.path) }
+      yield { Options(cmd.path) }
   }
 
   override def run(
@@ -53,17 +53,17 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if (commonOptions.verbose || !commonOptions.quiet) {
+    if commonOptions.verbose || !commonOptions.quiet then {
       val usage: String = {
         val common = OParser.usage(commonOptionsParser, OneColumn)
         val commands = OParser.usage(commandOptionsParser, OneColumn)
         val improved_commands = commands.split(System.lineSeparator())
           .flatMap { line =>
-            if (line.isEmpty || line.forall(_.isWhitespace)) {
+            if line.isEmpty || line.forall(_.isWhitespace) then {
               Seq.empty[String]
-            } else if (line.startsWith("Command:")) {
+            } else if line.startsWith("Command:") then {
               Seq(System.lineSeparator() + line)
-            } else if (line.startsWith("Usage:")) { Seq(line) }
+            } else if line.startsWith("Usage:") then { Seq(line) }
             else { Seq("  " + line) }
           }.mkString(System.lineSeparator())
         common ++ "\n\n" ++ improved_commands

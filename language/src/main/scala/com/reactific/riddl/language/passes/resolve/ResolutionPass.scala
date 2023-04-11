@@ -165,7 +165,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
   private def resolveOnMessageClause(mc: OnMessageClause, parents: Seq[Definition]): Unit = {
     resolveARef[Type](mc.msg, parents)
-    if (mc.from.nonEmpty) {
+    if mc.from.nonEmpty then {
       resolveARef[Definition](mc.from.get, parents)
     }
     mc.examples.foreach(resolveExample(_, parents))
@@ -282,7 +282,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     parents: Seq[Definition]
   ): Seq[Definition] = {
     val parent = parents.head
-    val maybeFound: Seq[Definition] = if (pathId.value.isEmpty) {
+    val maybeFound: Seq[Definition] = if pathId.value.isEmpty then {
       notResolved[Definition](pathId, parents.head)
       Seq.empty[Definition]
     } else {
@@ -298,7 +298,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       val newParents = parents.dropUntil(startingPoint)
 
       // If we dropped all the parents then the path isn't valid
-      if (newParents.isEmpty) {
+      if newParents.isEmpty then {
         // Signal not found
         Seq.empty[Definition]
       } else {
@@ -308,12 +308,12 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       }
     }
 
-    val isFound: Boolean = if (maybeFound.nonEmpty) {
+    val isFound: Boolean = if maybeFound.nonEmpty then {
       val head = maybeFound.head
       val hasRightName = head.id.value == pathId.value.last
       val hasSameType = isSameKind[T](head)
-      if (hasRightName) {
-        if (hasSameType) {
+      if hasRightName then {
+        if hasSameType then {
           // a candidate was found and it has the same type as expected
           resolved[T](pathId, parent, head)
         } else {
@@ -325,7 +325,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       }
     } else { false }
 
-    if (!isFound) {
+    if !isFound then {
       val symTabCompatibleNameSearch = pathId.value.reverse
       val list = symbols.lookupParentage(symTabCompatibleNameSearch)
       list match {
@@ -381,7 +381,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     messages.addError(
       pid.loc,
       message + {
-        if (referTo.nonEmpty) s", but should refer to ${article(referTo)}"
+        if referTo.nonEmpty then s", but should refer to ${article(referTo)}"
         else ""
       }
     )
@@ -396,7 +396,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     val allDifferent = definitions.map(_.kind).distinct.sizeIs ==
       definitions.size
     val expectedClass = classTag[T].runtimeClass
-    if (allDifferent || definitions.head.isImplicit) {
+    if allDifferent || definitions.head.isImplicit then {
       // pick the one that is the right type or the first one
       list.find(_._1.getClass == expectedClass) match {
         case Some((defn, parents)) => defn +: parents
@@ -422,7 +422,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private val vowels: String = "aAeEiIoOuU"
 
   private def article(thing: String): String = {
-    val article = if (vowels.contains(thing.head)) "an" else "a"
+    val article = if vowels.contains(thing.head) then "an" else "a"
     s"$article $thing"
   }
 
@@ -435,7 +435,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     val path: Seq[Definition] = resolveAPathId[T](pid, parentStack.toSeq)
 
     // if we found the definition
-    if (path.nonEmpty) {
+    if path.nonEmpty then {
       // Replace the parent stack with the resolved one
       parentStack.clear()
       parentStack.pushAll(path.reverse)
@@ -476,7 +476,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private def findCandidates(
     parentStack: mutable.Stack[Definition]
   ): Seq[Definition] = {
-    if (parentStack.isEmpty) {
+    if parentStack.isEmpty then {
       // Nothing in the parent stack so we're done searching and
       // we return empty to signal nothing found
       Seq.empty[Definition]
@@ -549,16 +549,16 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     // Loop over the names in the stack. Note that mutable stacks are used
     // here because the algorithm can adjust them as it finds intermediary
     // definitions. If the name stack becomes empty, we're done searching.
-    while (nameStack.nonEmpty) {
+    while nameStack.nonEmpty do {
       // Pop the name we're currently looking for and save it
       val soughtName = nameStack.pop()
 
       // We have a name to search for if the parent stack is not empty
-      if (parentStack.nonEmpty) {
+      if parentStack.nonEmpty then {
         val definition = parentStack.head // get the next definition of the parentStack
 
         // If we have already visited this definition, its a looping error
-        if (visitedStack.contains(definition)) {
+        if visitedStack.contains(definition) then {
           // Generate the error message
           messages.addError(
             pid.loc,
@@ -598,7 +598,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
     // if there is a single thing left on the stack and that things is
     // a RootContainer
-    if (parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer]) {
+    if parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer] then {
       // then pop it off because RootContainers don't count and we want to
       // rightfully return an empty sequence for "not found"
       parentStack.pop()

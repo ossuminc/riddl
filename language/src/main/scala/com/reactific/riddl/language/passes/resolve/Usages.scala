@@ -51,10 +51,10 @@ case class Usages (
 
   def verifyReflective: Boolean = {
     // ensure usedBy and uses are reflective
-    (for {
+    (for
       (user, user_uses) <- uses
       use <- user_uses
-    } yield {
+    yield {
       usedBy.keySet.contains(use) && usedBy(use).contains(user)
     }).forall { identity }
   }

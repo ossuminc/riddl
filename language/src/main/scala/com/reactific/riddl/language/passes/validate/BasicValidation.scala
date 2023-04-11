@@ -54,13 +54,13 @@ trait BasicValidation {
     parents: Seq[Definition]
   ): Option[T] = {
     val tc = classTag[T].runtimeClass
-    if (pid.value.isEmpty) {
+    if pid.value.isEmpty then {
       val message =
         s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
       messages.addError(pid.loc, message)
       Option.empty[T]
     } else {
-      val pars = if (parents.head != container) container +: parents else parents
+      val pars = if parents.head != container then container +: parents else parents
       resolvePath[T](pid, pars)
     }
   }
@@ -98,7 +98,7 @@ trait BasicValidation {
     parents: Seq[Definition],
     kind: AggregateUseCase
   ): this.type = {
-    if (ref.isEmpty) {
+    if ref.isEmpty then {
       messages.addError(ref.pathId.loc, s"${ref.identify} is empty")
       this
     } else {
@@ -137,7 +137,7 @@ trait BasicValidation {
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): Option[TypeExpression] = {
-    if (pid.value.isEmpty) {
+    if pid.value.isEmpty then {
       None
     } else {
       val maybeDef: Option[Definition] = resolvePath(pid, parents)
@@ -176,7 +176,7 @@ trait BasicValidation {
   private val vowels: Regex = "[aAeEiIoOuU]".r
 
   def article(thing: String): String = {
-    val article = if (vowels.matches(thing.substring(0, 1))) "an" else "a"
+    val article = if vowels.matches(thing.substring(0, 1)) then "an" else "a"
     s"$article $thing"
   }
 
@@ -186,13 +186,13 @@ trait BasicValidation {
     kind: KindOfMessage,
     loc: At
   ): this.type = {
-    if (!predicate)
+    if !predicate then
       messages.add(Message(loc, message, kind))
     this
   }
 
   def checkWhen(predicate: Boolean)(checker: () => Unit): this.type = {
-    if (predicate) checker()
+    if predicate then checker()
     this
   }
 
@@ -205,14 +205,14 @@ trait BasicValidation {
     symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
       this.checkSequence(defs) { defs2 =>
         val first = defs2.head
-        if (defs2.sizeIs == 2) {
+        if defs2.sizeIs == 2 then {
           val last = defs2.last
           messages.addStyle(
             last.loc,
             s"${last.identify} overloads ${first.identifyWithLoc}"
           )
         } else {
-          if (defs2.sizeIs > 2) {
+          if defs2.sizeIs > 2 then {
             val tail = defs2.tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
             messages.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
           }
@@ -224,7 +224,7 @@ trait BasicValidation {
 
 
   def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
-    if (d.id.value.nonEmpty && d.id.value.length < min) {
+    if d.id.value.nonEmpty && d.id.value.length < min then {
       messages.addStyle(
         d.id.loc,
         s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min"
@@ -243,7 +243,7 @@ trait BasicValidation {
     check(
       value.nonEmpty,
       message =
-        s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
+        s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
       thing.loc
     )
@@ -258,7 +258,7 @@ trait BasicValidation {
   ): this.type = {
     check(
       list.nonEmpty,
-      s"$name in ${thing.identify} ${if (required) "must" else "should"} not be empty",
+      s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
       thing.loc
     )

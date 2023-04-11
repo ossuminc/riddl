@@ -269,12 +269,12 @@ trait TypeExpression extends AbstractDefinitions {
       super.isAssignmentCompatible(other) || {
         other match {
           case oate: AggregateTypeExpression =>
-            val validity: Seq[Boolean] = for {
+            val validity: Seq[Boolean] = for
               ofield <- oate.fields
               myField <- fields.find(_.id.value == ofield.id.value)
               myTypEx = myField.typeEx
               oTypeEx = ofield.typeEx
-            } yield {
+            yield {
               myTypEx.isAssignmentCompatible(oTypeEx)
             }
             (validity.size == oate.fields.size) && validity.forall(_ == true)

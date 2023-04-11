@@ -37,8 +37,8 @@ abstract class RiddlParserInput extends ParserInput {
   private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
   private[language] def offsetOf(line: Int): Int = {
-    if (line < 0) { lineNumberLookup(line) }
-    else if (line < lineNumberLookup.length) { lineNumberLookup(line) }
+    if line < 0 then { lineNumberLookup(line) }
+    else if line < lineNumberLookup.length then { lineNumberLookup(line) }
     else { lineNumberLookup(lineNumberLookup.length - 1) }
   }
 
@@ -47,7 +47,7 @@ abstract class RiddlParserInput extends ParserInput {
     result match {
       case Searching.Found(foundIndex) => foundIndex
       case Searching.InsertionPoint(insertionPoint) =>
-        if (insertionPoint > 0) insertionPoint - 1 else insertionPoint
+        if insertionPoint > 0 then insertionPoint - 1 else insertionPoint
     }
   }
 
@@ -62,8 +62,8 @@ abstract class RiddlParserInput extends ParserInput {
     require(loc.line > 0)
     val start = lineNumberLookup(loc.line - 1)
     val end =
-      if (lineNumberLookup.length == 1) { data.length }
-      else if (loc.line >= lineNumberLookup.length) {
+      if lineNumberLookup.length == 1 then { data.length }
+      else if loc.line >= lineNumberLookup.length then {
         // actually out of bounds but go to last line
         lineNumberLookup(lineNumberLookup.length - 1)
       } else { lineNumberLookup(loc.line) }
@@ -77,10 +77,10 @@ abstract class RiddlParserInput extends ParserInput {
   val nl: String = System.getProperty("line.separator")
 
   def annotateErrorLine(index: At): String = {
-    if (index.source.nonEmpty) {
+    if index.source.nonEmpty then {
       val (start, end) = rangeOf(index)
       val quoted = slice(start, end).stripTrailing()
-      if (quoted.isEmpty) ""
+      if quoted.isEmpty then ""
       else {
         val col = index.col - 1
         quoted + nl + " ".repeat(col) + "^" + nl

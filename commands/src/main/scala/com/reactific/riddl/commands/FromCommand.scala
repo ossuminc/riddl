@@ -45,7 +45,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
 
   override def getConfigReader: ConfigReader[FromCommand.Options] = {
     (cur: ConfigCursor) =>
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
         objCur <- topRes.asObjectCursor
@@ -53,7 +53,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
         inFile <- inFileRes
         targetRes <- objCur.atKey("target-command").map(_.asString)
         target <- targetRes
-      } yield {
+      yield {
         Options(inputFile = Some(Path.of(inFile)), targetCommand = target)
       }
   }
@@ -67,7 +67,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
     val loadedCO =
       CommandOptions.loadCommonOptions(options.inputFile.get) match {
         case Right(newCO: CommonOptions) =>
-          if (commonOptions.verbose) {
+          if commonOptions.verbose then {
             println(
               s"Read new common options from ${options.inputFile.get} as:\n" +
                 StringHelpers.toPrettyString(newCO)
@@ -75,7 +75,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
           }
           newCO
         case Left(messages) =>
-          if (commonOptions.debug) {
+          if commonOptions.debug then {
             println(
               s"Failed to read common options from ${options.inputFile.get} because:\n" ++
                 messages.format

@@ -34,7 +34,7 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
               println(s"Number of Definitions: ${stats.count}")
               println(s"Number of Terms: ${stats.term_count}")
               println(s"Maximum Depth: ${stats.maximum_depth}")
-              for {(k, v) <- stats.categories} {
+              for (k, v) <- stats.categories do {
                 println(s"$k: $v")
               }
               println()

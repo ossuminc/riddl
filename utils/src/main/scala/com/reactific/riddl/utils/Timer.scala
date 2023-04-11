@@ -36,7 +36,7 @@ object Timer {
     out: Logger = SysLogger(),
   )(f: => T
   ): T = {
-    if (show) {
+    if show then {
       val clock = Clock.systemUTC()
       val start = clock.millis()
       val result = f

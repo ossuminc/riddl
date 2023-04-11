@@ -52,7 +52,7 @@ case class SymbolsPass(input: PassInput) extends Pass(input) {
       case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
       case definition: Definition =>
         val name = definition.id.value
-        if (name.nonEmpty) {
+        if name.nonEmpty then {
           val copy: Parents = rootLessParents(parents.toSeq)
           val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
           val included: Seq[SymTabItem] = existing :+ (definition -> copy)

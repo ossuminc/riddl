@@ -23,10 +23,10 @@ object Tar {
     val bis = new BufferedInputStream(fi, bufferSize)
 
     val taris: TarArchiveInputStream = {
-      if (fname.endsWith(".tar.gz")) {
+      if fname.endsWith(".tar.gz") then {
         val gzis = new GzipCompressorInputStream(bis)
         new TarArchiveInputStream(gzis)
-      } else if (fname.endsWith(".tar")) { new TarArchiveInputStream(bis) }
+      } else if fname.endsWith(".tar") then { new TarArchiveInputStream(bis) }
       else {
         return Left(s"Tar file name ${tarFile} must end in .tar.gz or .tar")
       }
@@ -34,14 +34,14 @@ object Tar {
 
     var counter = 0
     var tae = taris.getNextTarEntry
-    while (tae != null) {
-      if (taris.canReadEntryData(tae)) {
+    while tae != null do {
+      if taris.canReadEntryData(tae) then {
         val path = destDir.resolve(Path.of(tae.getName))
-        if (tae.isDirectory) {
-          if (!Files.isDirectory(path)) { Files.createDirectories(path) }
+        if tae.isDirectory then {
+          if !Files.isDirectory(path) then { Files.createDirectories(path) }
         } else {
           val parent = path.getParent
-          if (!Files.isDirectory(parent)) { Files.createDirectories(parent) }
+          if !Files.isDirectory(parent) then { Files.createDirectories(parent) }
           val o = Files.newOutputStream(path)
           try { IOUtils.copy(taris, o) }
           finally { o.close() }

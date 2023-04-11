@@ -31,16 +31,16 @@ object Plugin {
   }
 
   def getClassLoader(pluginsDir: Path = pluginsDir): ClassLoader = {
-    if (Files.isDirectory(pluginsDir)) {
+    if Files.isDirectory(pluginsDir) then {
       val stream = Files.list(pluginsDir)
 
       val jars = stream.filter(_.getFileName.toString.endsWith(".jar"))
         .toScala(List).sortBy(_.toString)
       stream.close()
 
-      val urls = for {
+      val urls = for
         path <- jars
-      } yield {
+      yield {
         require(
           Files.isRegularFile(path),
           s"Candidate plugin $path is not a regular file"
@@ -66,9 +66,9 @@ object Plugin {
         Thread.currentThread.setContextClassLoader(pluginClassLoader)
         val loader = ServiceLoader.load(svcType, pluginClassLoader)
         val list = loader.iterator().asScala.toList
-        val result = for {
+        val result = for
           plugin <- list
-        } yield {
+        yield {
           require(
             plugin.interfaceVersion <= interfaceVersion,
             s"Plugin ${plugin.getClass.getSimpleName} of interface version ${plugin.interfaceVersion} cannot be supported by Plugin system at " ++
