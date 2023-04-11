@@ -13,10 +13,11 @@ import fastparse.ScalaWhitespace.*
 
 private[parsing] trait ApplicationParser
     extends CommonParser
-    with ReferenceParser
-    with StreamingParser
-    with HandlerParser
-    with TypeParser {
+      with ReferenceParser
+      with StreamingParser
+      with FunctionParser
+      with HandlerParser
+      with TypeParser {
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](StringIn(Options.technology).!) {
@@ -55,7 +56,7 @@ private[parsing] trait ApplicationParser
 
   private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
     P(
-      group | handler | inlet | outlet | term | typeDef |
+      group | handler | function | inlet | outlet | term | typeDef |
         constant | applicationInclude
     )
   }
@@ -85,6 +86,7 @@ private[parsing] trait ApplicationParser
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
       val grps = mapTo[Group](groups.get(classOf[Group]))
       val handlers = mapTo[Handler](groups.get(classOf[Group]))
+      val functions = mapTo[Function](groups.get(classOf[Function]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
@@ -104,6 +106,7 @@ private[parsing] trait ApplicationParser
         handlers,
         inlets,
         outlets,
+        functions,
         authorRefs,
         terms,
         includes,
