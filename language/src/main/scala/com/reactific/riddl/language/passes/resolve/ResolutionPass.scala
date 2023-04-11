@@ -13,12 +13,13 @@ case class ResolutionOutput(
   messages: Messages.Messages,
   refMap: ReferenceMap,
   kindMap: KindMap,
-  usage: Usages,
+  usage: Usages
 ) extends PassOutput
 
 object ResolutionPass extends PassInfo {
   val name: String = "resolution"
 }
+
 /** The Reference Resolution Pass */
 case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolution {
 
@@ -107,7 +108,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case e: Epic =>
         e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case uc: UseCase =>
-        uc.userStory.map(userStory => resolveARef[Actor](userStory.actor, parentsAsSeq))
+        uc.userStory.foreach(userStory => resolveARef[Actor](userStory.actor, parentsAsSeq))
       case in: Input =>
         resolveARef[Type](in.putIn, parentsAsSeq)
       case out: Output =>
@@ -120,17 +121,17 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveARef[Input](pi.to, parentsAsSeq)
       case si: SelfInteraction =>
         resolveARef[Definition](si.from, parentsAsSeq)
-      case _: Author => () // no references
-      case _: Actor => () // no references
-      case _: Enumerator => () // no references
-      case _: Group => () // no references
-      case _: Include[_] => () // no references
-      case _: OptionalInteractions => () // no references
-      case _: ParallelInteractions => () // no references
-      case _: RootContainer => () // no references
-      case _: SagaStep => () // no references
+      case _: Author                 => () // no references
+      case _: Actor                  => () // no references
+      case _: Enumerator             => () // no references
+      case _: Group                  => () // no references
+      case _: Include[_]             => () // no references
+      case _: OptionalInteractions   => () // no references
+      case _: ParallelInteractions   => () // no references
+      case _: RootContainer          => () // no references
+      case _: SagaStep               => () // no references
       case _: SequentialInteractions => () // no references
-      case _: Term => () // no references
+      case _: Term                   => () // no references
       // case _ => () // NOTE: Never have this catchall! Want compile time errors.
     }
   }
@@ -138,7 +139,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private def resolveFunction(f: Function, parents: Seq[Definition]): Unit = {
     f.authors.foreach(resolveARef[Author](_, parents))
     addFunction(f)
-    f.input.map(resolveTypeExpression(_, parents))
+    f.input.foreach(resolveTypeExpression(_, parents))
   }
 
   private def resolveConnector(connector: Connector, parents: Seq[Definition]): Unit = {
@@ -207,13 +208,13 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveARef[Handler](handler, parents)
       case CompoundAction(_, actions: Seq[Action]) =>
         actions.foreach(resolveAction(_, parents))
-      case _: ErrorAction => () // no references
+      case _: ErrorAction     => () // no references
       case _: ArbitraryAction => () // no references
     }
   }
 
   private def resolveMaybeExpr(maybeExpr: Option[Expression], parents: Seq[Definition]): Unit = {
-    maybeExpr.map(resolveExpr(_, parents))
+    maybeExpr.foreach(resolveExpr(_, parents))
   }
 
   private def resolveExpr(expr: Expression, parents: Seq[Definition]): Unit = {
@@ -223,7 +224,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case ValueCondition(_, path) =>
         resolveAPathId[Field](path, parents)
       case AggregateConstructionExpression(_, msg, _) => resolveAPathId[Type](msg, parents)
-      case NewEntityIdOperator(_, entityId) => resolveAPathId[Entity](entityId, parents)
+      case NewEntityIdOperator(_, entityId)           => resolveAPathId[Entity](entityId, parents)
       case FunctionCallExpression(_, func, args) =>
         resolveAPathId[Function](func, parents)
         args.args.values.foreach(resolveExpr(_, parents))
@@ -253,7 +254,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     }
   }
 
-  private def resolveMaybeRef[T <: Definition : ClassTag](
+  private def resolveMaybeRef[T <: Definition: ClassTag](
     maybeRef: Option[Reference[T]],
     parents: Seq[Definition]
   ): Unit = {
@@ -264,19 +265,19 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     }
   }
 
-  private def resolveARef[T <: Definition : ClassTag](
+  private def resolveARef[T <: Definition: ClassTag](
     ref: Reference[T],
     parents: Seq[Definition]
   ): Unit = {
     resolveAPathId[T](ref.pathId, parents)
   }
 
-  private def isSameKind[DEF <: Definition : ClassTag](d: Definition): Boolean = {
+  private def isSameKind[DEF <: Definition: ClassTag](d: Definition): Boolean = {
     val clazz = classTag[DEF].runtimeClass
     clazz.isAssignableFrom(d.getClass)
   }
 
-  private def resolveAPathId[T <: Definition : ClassTag](
+  private def resolveAPathId[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition]
   ): Seq[Definition] = {
@@ -346,7 +347,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     }
   }
 
-  private def resolved[T <: Definition : ClassTag](
+  private def resolved[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parent: Definition,
     definition: Definition
@@ -358,7 +359,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     Some(t)
   }
 
-  private def wrongType[T <: Definition : ClassTag](
+  private def wrongType[T <: Definition: ClassTag](
     pid: PathIdentifier,
     container: Definition,
     foundDef: Definition
@@ -369,7 +370,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     messages.addError(pid.loc, message)
   }
 
-  private def notResolved[T <: Definition : ClassTag](
+  private def notResolved[T <: Definition: ClassTag](
     pid: PathIdentifier,
     container: Definition
   ): Unit = {
@@ -386,7 +387,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     )
   }
 
-  private def ambiguous[T <: Definition : ClassTag](
+  private def ambiguous[T <: Definition: ClassTag](
     pid: PathIdentifier,
     list: List[(Definition, Seq[Definition])]
   ): Seq[Definition] = {
@@ -399,14 +400,16 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       // pick the one that is the right type or the first one
       list.find(_._1.getClass == expectedClass) match {
         case Some((defn, parents)) => defn +: parents
-        case None => list.head._1 +: list.head._2
+        case None                  => list.head._1 +: list.head._2
       }
     } else {
       val ambiguity =
-        list.map { case (definition, parents) =>
-          "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
-            definition.id.value + " (" + definition.loc + ")"
-        }.mkString("\n")
+        list
+          .map { case (definition, parents) =>
+            "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
+              definition.id.value + " (" + definition.loc + ")"
+          }
+          .mkString("\n")
 
       messages.addError(
         pid.loc,
@@ -416,7 +419,6 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     }
   }
 
-
   private val vowels: String = "aAeEiIoOuU"
 
   private def article(thing: String): String = {
@@ -424,8 +426,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     s"$article $thing"
   }
 
-
-  private def adjustStacksForPid[T <: Definition : ClassTag](
+  private def adjustStacksForPid[T <: Definition: ClassTag](
     pid: PathIdentifier,
     parentStack: mutable.Stack[Definition]
   ): Seq[Definition] = {
@@ -511,21 +512,20 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private def findResolution(soughtName: String, candidate: Definition): Boolean = {
     candidate match {
       case omc: OnMessageClause if omc.msg.id.nonEmpty => omc.msg.id.get.value == soughtName
-      case other: Definition => other.id.value == soughtName
+      case other: Definition                           => other.id.value == soughtName
     }
   }
 
-  /** Resolve a Relative PathIdentifier. If the path is already resolved or it
-   * has no empty components then we can resolve it from the map or the
-   * symbol table.
-   *
-   * @param pid
-   * The path to consider
-   * @param parents
-   * The parent stack to provide the context from which the search starts
-   * @return
-   * Either an error or a definition
-   */
+  /** Resolve a Relative PathIdentifier. If the path is already resolved or it has no empty components then we can
+    * resolve it from the map or the symbol table.
+    *
+    * @param pid
+    *   The path to consider
+    * @param parents
+    *   The parent stack to provide the context from which the search starts
+    * @return
+    *   Either an error or a definition
+    */
   private def resolveRelativePath(
     pid: PathIdentifier,
     parents: Seq[Definition]
@@ -562,12 +562,9 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
           // Generate the error message
           messages.addError(
             pid.loc,
-            msg =
-              s"""Path resolution encountered a loop at ${definition.identify}
+            msg = s"""Path resolution encountered a loop at ${definition.identify}
                  |  for name '$soughtName' when resolving ${pid.format}
-                 |  in definition context: ${
-                parents.map(_.identify).mkString("\n    ", "\n    ", "\n")
-              }
+                 |  in definition context: ${parents.map(_.identify).mkString("\n    ", "\n    ", "\n")}
                  |""".stripMargin
           )
           // Signal we're done searching with no result
@@ -601,9 +598,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
     // if there is a single thing left on the stack and that things is
     // a RootContainer
-    if (
-      parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer]
-    ) {
+    if (parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer]) {
       // then pop it off because RootContainers don't count and we want to
       // rightfully return an empty sequence for "not found"
       parentStack.pop()

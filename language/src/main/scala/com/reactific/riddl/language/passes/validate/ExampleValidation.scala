@@ -44,12 +44,12 @@ trait ExampleValidation extends TypeValidation {
     checkSequence(whens) { (when: WhenClause) =>
       checkExpression(when.condition, example, parents)
     }
-    checkWhen(example.id.nonEmpty) { () =>
+    if (example.id.nonEmpty) {
       checkNonEmpty(thens, "Thens", example, required = true)
     }
-      .checkActions(thens.map(_.action), example, parents)
-      .checkActions(buts.map(_.action), example, parents)
-      .checkDescription(example)
+    checkActions(thens.map(_.action), example, parents)
+    checkActions(buts.map(_.action), example, parents)
+    checkDescription(example)
   }
 
   private def checkArgList(

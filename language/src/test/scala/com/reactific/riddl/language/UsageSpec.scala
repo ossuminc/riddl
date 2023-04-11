@@ -29,8 +29,8 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |      }
                     |      state S of E.SFields is {
                     |        handler H is {
-                    |          on command DoIt {
-                    |            then set S.f3 to @DoIt.f1
+                    |          on command di:C.DoIt {
+                    |            then set S.f2 to @di.f1
                     |          }
                     |        }
                     |      }
@@ -38,48 +38,44 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |  }
                     |}
                     |""".stripMargin
-      Riddl.parseAndValidate(RiddlParserInput(input), CommonOptions(), shouldFailOnError = false) match {
+      Riddl.parseAndValidate(RiddlParserInput(input), CommonOptions()) match {
         case Left(messages) => fail(messages.format)
         case Right(result: PassesResult) =>
-          val errors = result.messages.justErrors
-          if (errors.nonEmpty) { fail(errors.format) }
-          else {
-            val usage = result.usage
-            // ensure usedBy and uses are reflective
-            usage.verifyReflective must be(true)
+          val usage = result.usage
+          // ensure usedBy and uses are reflective
+          usage.verifyReflective must be(true)
 
-            // print it out for debugging
-            info(
-              "Uses:\n" + result.usage.usesAsString
-            )
-            info(
-              "Used By:\n" + result.usage.usedByAsString
-            )
+          // print it out for debugging
+          info(
+            "Uses:\n" + result.usage.usesAsString
+          )
+          info(
+            "Used By:\n" + result.usage.usedByAsString
+          )
 
-            // Now let's make sure we get the right results, first extract
-            // all the definitions
-            val model = result.root
-            val domain = model.domains.head
-            val D_T = domain.types.find(_.id.value == "T").get
-            val context = domain.contexts.head
-            val DoIt = context.types.find(_.id.value == "DoIt").get.asInstanceOf[Type]
-            val ref = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
-            val f1 = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
-            val C_T = context.types.find(_.id.value == "T").get
-            val entityE = context.entities.head
-            val SFields = entityE.types.head
-            val f2 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
-            val f3 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f3").get
-            val S = entityE.states.head
+          // Now let's make sure we get the right results, first extract
+          // all the definitions
+          val model = result.root
+          val domain = model.domains.head
+          val D_T = domain.types.find(_.id.value == "T").get
+          val context = domain.contexts.head
+          val DoIt = context.types.find(_.id.value == "DoIt").get.asInstanceOf[Type]
+          val ref = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
+          val f1 = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
+          val C_T = context.types.find(_.id.value == "T").get
+          val entityE = context.entities.head
+          val SFields = entityE.types.head
+          val f2 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
+          val f3 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f3").get
+          val S = entityE.states.head
 
-            // now validate the containment hierarchy
-            usage.uses(ref, entityE) must be(true)
-            usage.uses(f1, C_T) must be(true)
-            usage.uses(C_T, D_T) must be(true)
-            usage.uses(S, SFields) must be(true)
-            usage.uses(f2, D_T) must be(true)
-            usage.uses(f3, C_T) must be(true)
-          }
+          // now validate the containment hierarchy
+          usage.uses(ref, entityE) must be(true)
+          usage.uses(f1, C_T) must be(true)
+          usage.uses(C_T, D_T) must be(true)
+          usage.uses(S, SFields) must be(true)
+          usage.uses(f2, D_T) must be(true)
+          usage.uses(f3, C_T) must be(true)
       }
     }
     "unused entities generate a warning" in {

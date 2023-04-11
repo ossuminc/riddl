@@ -75,22 +75,16 @@ trait DefinitionValidation extends BasicValidation  {
       MissingWarning,
       definition.loc
     )
-
     if (definition.isVital) {
-      definition match {
-        case vd: VitalDefinition[?, ?] =>
-          val authorRefs: Seq[AuthorRef] = vd.authors
-          checkSequence(authorRefs) { (authorRef) =>
-            pathIdToDefinition(authorRef.pathId, parents) match {
-              case None =>
-                messages.addError(
-                  authorRef.loc,
-                  s"${authorRef.format} is not defined"
-                )
-              case _ => ()
-            }
-
-          }
+      definition.asInstanceOf[WithAuthors].authors.foreach { (authorRef: AuthorRef) =>
+        pathIdToDefinition(authorRef.pathId, definition +: parents) match {
+          case None =>
+            messages.addError(
+              authorRef.loc,
+              s"${authorRef.format} is not defined"
+            )
+          case _ =>
+        }
       }
     }
 
