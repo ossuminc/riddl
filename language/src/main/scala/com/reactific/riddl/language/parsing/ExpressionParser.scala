@@ -187,8 +187,8 @@ private[parsing] trait ExpressionParser
     P(
       location ~
         (Operators.plus.! | Operators.minus.! | Operators.times.! |
-          Operators.div.! | Operators.mod.!) ~ Punctuation.roundOpen ~
-        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose
+          Operators.div.! | Operators.mod.!) ~ Punctuation.roundOpen./ ~
+        expression.rep(0, Punctuation.comma) ~ Punctuation.roundClose./
     ).map { tpl => (ArithmeticOperator.apply _).tupled(tpl) }
   }
 
