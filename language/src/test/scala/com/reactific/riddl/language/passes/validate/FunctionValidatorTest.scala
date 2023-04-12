@@ -45,6 +45,23 @@ class FunctionValidatorTest extends ValidatingTest {
         )
       }
     }
+    "validate simple function" in {
+      val input =
+        """function percent {
+        |  requires { number: Number }
+        |  returns { result: Number }
+        |  example calc is {
+        |    then set percent.result to /(@percent.number , 100.0)
+        |  }
+        |}
+        |""".stripMargin
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = true) { case (function, _, msgs) =>
+        function.id.value mustBe "percent"
+        function.examples mustNot be(empty)
+        msgs.justErrors must be(empty)
+      }
+
+    }
     "validate function examples" in {
       val input = """
                     |  function AnAspect is {
@@ -61,7 +78,7 @@ class FunctionValidatorTest extends ValidatingTest {
                     |  } described as "foo"
                     |""".stripMargin
 
-      parseAndValidateInContext[Function](input, shouldFailOnErrors=false) { case (function, _, msgs) =>
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
         function.id.value mustBe "AnAspect"
         function.examples mustNot be(empty)
         msgs mustNot be(empty)

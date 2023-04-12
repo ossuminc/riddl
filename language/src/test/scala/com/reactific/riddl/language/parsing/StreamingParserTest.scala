@@ -38,6 +38,7 @@ class StreamingParserTest extends ParsingTest {
         )
       ),
       List.empty[Handler],
+      List.empty[Function],
       List.empty[Type],
       Seq.empty[Include[StreamletDefinition]],
       Seq.empty[AuthorRef],
@@ -136,6 +137,7 @@ class StreamingParserTest extends ParsingTest {
               )
             ),
             List.empty[Handler],
+            List.empty[Function],
             List.empty[Type],
             Seq.empty[Include[StreamletDefinition]],
             Seq.empty[AuthorRef],
@@ -179,6 +181,7 @@ class StreamingParserTest extends ParsingTest {
               )
             ),
             List.empty[Handler],
+            List.empty[Function],
             List.empty[Type],
             Seq.empty[Include[StreamletDefinition]],
             Seq.empty[AuthorRef],
@@ -213,6 +216,7 @@ class StreamingParserTest extends ParsingTest {
             ),
             List.empty[Outlet],
             List.empty[Handler],
+            List.empty[Function],
             List.empty[Type],
             Seq.empty[Include[StreamletDefinition]],
             Seq.empty[AuthorRef],
