@@ -14,8 +14,9 @@ import Terminals.*
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectorParser
     extends TypeParser
-    with HandlerParser
-    with StreamingParser {
+      with HandlerParser
+      with FunctionParser
+      with StreamingParser {
 
   private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
     options[u, ProjectorOption](StringIn(Options.technology).!) {
@@ -31,7 +32,7 @@ private[parsing] trait ProjectorParser
 
   private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
-      term | projectionInclude | handler | inlet | outlet | invariant |
+      term | projectionInclude | handler | function | inlet | outlet | invariant |
         constant | typeDef
     ).rep(0)
   }
@@ -75,6 +76,7 @@ private[parsing] trait ProjectorParser
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+        val functions = mapTo[Function](groups.get(classOf[Function]))
         val constants = mapTo[Constant](groups.get(classOf[Constant]))
         val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
         val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
@@ -96,6 +98,7 @@ private[parsing] trait ProjectorParser
           inlets,
           outlets,
           handlers,
+          functions,
           invariants,
           terms,
           briefly,

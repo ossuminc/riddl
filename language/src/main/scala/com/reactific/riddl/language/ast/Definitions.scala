@@ -650,11 +650,16 @@ trait Definitions extends Expressions with Options {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[FunctionOption, FunctionDefinition]
-      with WithTypes
-      with SagaDefinition
-      with EntityDefinition
-      with ContextDefinition
-      with FunctionDefinition {
+    with WithTypes
+    with AdaptorDefinition
+    with ApplicationDefinition
+    with ContextDefinition
+    with EntityDefinition
+    with FunctionDefinition
+    with ProjectorDefinition
+    with RepositoryDefinition
+    with SagaDefinition
+    with StreamletDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
@@ -1059,6 +1064,7 @@ trait Definitions extends Expressions with Options {
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
+    functions: Seq[Function] = Seq.empty[Function],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -1127,6 +1133,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    functions: Seq[Function] = Seq.empty[Function],
     includes: Seq[Include[RepositoryDefinition]] = Seq
       .empty[Include[RepositoryDefinition]],
     options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
@@ -1195,6 +1202,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -1470,6 +1478,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    functions: Seq[Function] = Seq.empty[Function],
     types: Seq[Type] = Seq.empty[Type],
     includes: Seq[Include[StreamletDefinition]] = Seq
       .empty[Include[StreamletDefinition]],
@@ -2168,6 +2177,7 @@ trait Definitions extends Expressions with Options {
     handlers: Seq[Handler] = Seq.empty[Handler],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
+    functions: Seq[Function] = Seq.empty[Function],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
