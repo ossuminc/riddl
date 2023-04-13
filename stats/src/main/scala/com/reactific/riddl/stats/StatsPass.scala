@@ -3,9 +3,9 @@ package com.reactific.riddl.stats
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
-import com.reactific.riddl.language.passes.resolve.ResolutionPass
-import com.reactific.riddl.language.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.resolve.ResolutionPass
+import com.reactific.riddl.passes.symbols.SymbolsPass
 
 import scala.collection.mutable
 

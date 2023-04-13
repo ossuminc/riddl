@@ -9,8 +9,8 @@ package com.reactific.riddl.prettify
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.TranslationCommand
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.language.passes.PassInput
+import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
+import com.reactific.riddl.passes.PassInput
 import com.reactific.riddl.prettify.PrettifyCommand.cmdName
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
