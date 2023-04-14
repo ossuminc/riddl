@@ -841,14 +841,14 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     val parents = state.makeParents(stack)
     emitBriefly(epic, parents)
     if (epic.userStory.nonEmpty) {
-      val actorPid = epic.userStory.get.actor.pathId
-      val maybeActor = state.refMap.definitionOf[Actor](actorPid, stack.head)
+      val userPid = epic.userStory.get.user.pathId
+      val maybeUser = state.refMap.definitionOf[User](userPid, stack.head)
       h2("User Story")
-      maybeActor match {
-        case None => p(s"Unresolvable Actor id: ${actorPid.format}")
-        case Some(actor) =>
-          val name = actor.id.value
-          val role = actor.is_a.s
+      maybeUser match {
+        case None => p(s"Unresolvable User id: ${userPid.format}")
+        case Some(user) =>
+          val name = user.id.value
+          val role = user.is_a.s
           val us = epic.userStory.get
           val benefit = us.benefit.s
           val capability = us.capability.s

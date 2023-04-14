@@ -4,7 +4,7 @@ draft: "false"
 ---
 
 An Output definition is concerned with providing information to the user
-(an [actor]({{< relref actor.md >}})) without regard to the form of that 
+(an [user]({{< relref user.md >}})) without regard to the form of that 
 information when presented to the user. To make this more tangible, an 
 Output could be implemented as any of the following:
 
@@ -20,7 +20,7 @@ the user.
 
 An Output is a named component of an [application]({{< relref application.md>}})
 that sends data of a specific [type]({{< relref type.md >}}) from the 
-application to its user (an [actor]({{< relref actor.md>}}))  
+application to its user (an [user]({{< relref user.md>}}))  
 Each input can define data [types]({{< relref type.md >}}) and declares a
 [result message]({{< relref "message.md#result" >}}) as the data sent to the 
 user.

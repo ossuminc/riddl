@@ -135,9 +135,9 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (EpicRef.apply _).tupled(tpl))
   }
 
-  def actorRef[u: P]: P[ActorRef] = {
-    P(location ~ Keywords.actor ~ pathIdentifier)
-      .map(tpl => (ActorRef.apply _).tupled(tpl))
+  def userRef[u: P]: P[UserRef] = {
+    P(location ~ Keywords.user ~ pathIdentifier)
+      .map(tpl => (UserRef.apply _).tupled(tpl))
   }
 
   private def applicationRef[u: P]: P[ApplicationRef] = {

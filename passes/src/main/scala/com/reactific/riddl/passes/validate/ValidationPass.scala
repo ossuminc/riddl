@@ -61,8 +61,8 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
         validateInvariant(i, parentsAsSeq)
       case t: Term =>
         validateTerm(t, parentsAsSeq)
-      case sa: Actor =>
-        validateActor(sa, parentsAsSeq)
+      case sa: User =>
+        validateUser(sa, parentsAsSeq)
       case oic: OnInitClause =>
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTermClause =>
@@ -527,18 +527,18 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     checkDescription(out)
   }
 
-  private def validateActor(
-    actor: Actor,
+  private def validateUser(
+    user: User,
     parents: Seq[Definition]
   ): Unit = {
-    checkDefinition(parents, actor)
-    if (actor.is_a.isEmpty) {
+    checkDefinition(parents, user)
+    if (user.is_a.isEmpty) {
       messages.addMissing(
-        actor.loc,
-        s"${actor.identify} is missing its role kind ('is a')"
+        user.loc,
+        s"${user.identify} is missing its role kind ('is a')"
       )
     }
-    checkDescription(actor)
+    checkDescription(user)
   }
 
   private def validateUseCase(
@@ -596,14 +596,14 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     interaction match {
       case SelfInteraction(_,_,from,_,_,_) => checkRef[Definition](from, interaction, parents)
       case PutInputInteraction(_, _, from, _, to, _, _) =>
-        checkRef[Actor](from, interaction, parents)
+        checkRef[User](from, interaction, parents)
         checkRef[Input](to, interaction, parents)
       case ArbitraryInteraction(_, _, from, _, to, _, _) =>
         checkRef[Definition](from, interaction, parents)
         checkRef[Definition](to, interaction, parents)
       case TakeOutputInteraction(_, _, from, _, to, _, _) =>
         checkRef[Output](from, interaction, parents)
-        checkRef[Actor](to, interaction, parents)
+        checkRef[User](to, interaction, parents)
       case _ => ()
         // These are all just containers of other interactions, not needing further validation
         // OptionalInteractions, ParallelInteractions, SequentialInteractions

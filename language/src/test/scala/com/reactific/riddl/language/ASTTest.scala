@@ -80,9 +80,9 @@ class ASTTest extends AnyWordSpec with Matchers {
     }
   }
 
-  val actor: Actor = Actor(
+  val actor: User = User(
     At.empty,
-    Identifier(At.empty, "actor"),
+    Identifier(At.empty, "user"),
     LiteralString(At.empty, "role")
   )
   val adaptor: Adaptor = Adaptor(
@@ -112,9 +112,9 @@ class ASTTest extends AnyWordSpec with Matchers {
     UseCase(At.empty, Identifier(At.empty, "storycase"))
   val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"))
   val term: Term = Term(At.empty, Identifier(At.empty, "term"))
-  "Actor" should {
+  "User" should {
     "have a test" in {
-      actor.format mustBe s"actor ${actor.id.format} is ${actor.is_a.format}"
+      actor.format mustBe s"user ${actor.id.format} is ${actor.is_a.format}"
     }
   }
   val domain: AST.Domain =

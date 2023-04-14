@@ -16,9 +16,9 @@ class EpicTest extends ValidatingTest {
     "parse and validate a case-less example " in {
       val rpi = RiddlParserInput(
         """domain foo is {
-          |  actor Author is "human writer"
+          |  user Author is "human writer"
           |epic WritingABook is {
-          |  actor foo.Author wants "edit on the screen" so that
+          |  user foo.Author wants "edit on the screen" so that
           |  "revise content more easily"
           |  shown by { http://example.com:80/path/to/WritingABook }
           |  case perfection is { ???  }
@@ -39,8 +39,8 @@ class EpicTest extends ValidatingTest {
           story.userStory mustNot be(empty)
           val us = story.userStory.get
           us mustNot be(empty)
-          us.actor.pathId.value mustBe Seq("foo", "Author")
-          us.capability mustBe LiteralString((4, 26, rpi), "edit on the screen")
+          us.user.pathId.value mustBe Seq("foo", "Author")
+          us.capability mustBe LiteralString((4, 25, rpi), "edit on the screen")
           us.benefit mustBe
             LiteralString((5, 3, rpi), "revise content more easily")
           story.shownBy mustNot be(empty)
@@ -93,21 +93,21 @@ class EpicTest extends ValidatingTest {
           |  email: "reid.spencer@ossum.biz"
           |} briefly "nada" described as "nada"
           |
-          |actor Owner is "a person"
+          |user Owner is "a person"
           |
           |epic EstablishOrganization by author reid is {
-          |  actor ImprovingApp.Owner wants "to establish an organization" so that
+          |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    optional {
-          |      step from actor ImprovingApp.Owner "creates an Organization" to
+          |      step from user ImprovingApp.Owner "creates an Organization" to
           |        input ImprovingApp.Improving_app.OrganizationPage.accept
           |        briefly "create org",
           |      step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |        "presented" to actor ImprovingApp.Owner
+          |        "presented" to user ImprovingApp.Owner
           |        briefly "organization added"
           |    }
           |  }
@@ -165,21 +165,21 @@ class EpicTest extends ValidatingTest {
           |  email: "reid.spencer@ossum.biz"
           |} briefly "nada" described as "nada"
           |
-          |actor Owner is "a person"
+          |user Owner is "a person"
           |
           |epic EstablishOrganization by author reid is {
-          |  actor ImprovingApp.Owner wants "to establish an organization" so that
+          |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    parallel {
-          |      step from actor ImprovingApp.Owner "creates an Organization" to
+          |      step from user ImprovingApp.Owner "creates an Organization" to
           |        input ImprovingApp.Improving_app.OrganizationPage.accept
           |        briefly "create org",
           |      step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |        "presented" to actor ImprovingApp.Owner
+          |        "presented" to user ImprovingApp.Owner
           |        briefly "organization added"
           |     }
           |  }
@@ -233,22 +233,22 @@ class EpicTest extends ValidatingTest {
           |  }
           |}
           |
-          |actor Owner is "a person"
+          |user Owner is "a person"
           |
           |epic EstablishOrganization is {
-          |  actor ImprovingApp.Owner wants "to establish an organization" so that
+          |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
-          |    step from actor ImprovingApp.Owner "creates an Organization" to
+          |    step from user ImprovingApp.Owner "creates an Organization" to
           |      input ImprovingApp.Improving_app.OrganizationPage.accept
           |      briefly "create org",
-          |    step for actor ImprovingApp.Owner is "contemplates his navel"
+          |    step for user ImprovingApp.Owner is "contemplates his navel"
           |      briefly "self-processing",
           |    step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |      "presented" to actor ImprovingApp.Owner
+          |      "presented" to user ImprovingApp.Owner
           |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
