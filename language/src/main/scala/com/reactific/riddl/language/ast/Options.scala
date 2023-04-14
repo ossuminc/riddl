@@ -176,7 +176,7 @@ trait Options extends AbstractDefinitions {
 
   /** An [[EntityOption]] that indicates the general kind of entity being
     * defined. This option takes a value which provides the kind. Examples of
-    * useful kinds are "device", "actor", "concept", "machine", and similar
+    * useful kinds are "device", "user", "concept", "machine", and similar
     * kinds of entities. This entity option may be used by downstream AST
     * processors, especially code generators.
     *

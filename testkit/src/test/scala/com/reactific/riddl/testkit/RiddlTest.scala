@@ -20,6 +20,7 @@ import scala.io.Source
 
 class RiddlTest extends ParsingTestBase {
 
+  // FIXME: This test is showing signs of a rare race condition
   "parse" should {
     "parse a file" in {
       Parser.parse(
@@ -57,9 +58,8 @@ class RiddlTest extends ParsingTestBase {
     }
   }
 
-  /** Executes a function while capturing system's stderr, return the result of
-    * the function and the captured output. Switches stderr back once code block
-    * finishes or throws exception e.g.
+  /** Executes a function while capturing system's stderr, return the result of the function and the captured output.
+    * Switches stderr back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.err.println("hi there!")
@@ -80,9 +80,8 @@ class RiddlTest extends ParsingTestBase {
     } finally { System.setErr(out) }
   }
 
-  /** Executes a function while capturing system's stdout, return the result of
-    * the function and the captured output. Switches stdout back once code block
-    * finishes or throws exception e.g.
+  /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
+    * Switches stdout back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.out.println("hi there!")
@@ -169,9 +168,11 @@ class RiddlTest extends ParsingTestBase {
 
     "parse and validate a simple domain from input" in {
       val content: String = {
-        val source = Source.fromFile(new File(
-          "testkit/src/test/input/domains/simpleDomain.riddl"
-        ))
+        val source = Source.fromFile(
+          new File(
+            "testkit/src/test/input/domains/simpleDomain.riddl"
+          )
+        )
         try source.mkString
         finally source.close()
       }

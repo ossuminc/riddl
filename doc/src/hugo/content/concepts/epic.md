@@ -11,14 +11,14 @@ concept as the idea
 RIDDL, a story gets a little more involved than the 
 [usual formulations](https://en.wikipedia.org/wiki/User_story#Common_templates) 
 of a user story:
-> As an _{actor}_, I would like _{capability}_, so that _{benefit}_
+> As an _{user}_, I would like _{capability}_, so that _{benefit}_
 
 or
  
-> In order to receive _{benefit}_, as an _{actor}_, I can _{capability}_
+> In order to receive _{benefit}_, as an _{user}_, I can _{capability}_
 
 which have these three ideas:
-* An `actor` that provides the role played by the narrator of the story
+* An `user` that provides the role played by the narrator of the story
 * A `capability` that provides the capability used by the narrator
 * A `benefit` that provides the reason why the narrator wants to 
   use the `capability`
@@ -33,7 +33,7 @@ the interactions between other RIDDL definitions such as
 [examples]({{<relref "example" >}}), to outline user acceptance testing.
 
 Stories are designed to produce sequence diagrams. This allows the intended 
-interaction of some actor (human or not) with the system being 
+interaction of some user (human or not) with the system being 
 designed in RIDDL to support a detailed definition of a
 [user story](https://en.wikipedia.org/wiki/User_story).
 

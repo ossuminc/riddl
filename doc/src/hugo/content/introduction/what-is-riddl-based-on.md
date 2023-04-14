@@ -108,7 +108,7 @@ RIDDL uses many of the design artifacts detailed under the UML specification
 to help communicate the design and intent of a system. For example, Sequence
 Diagrams are used extensively to document the interactions between bounded
 contexts in a system. A State Machine Diagram may be used to document the 
-lifecycle of an entity or actor in a system, and so on. However, RIDDL's
+lifecycle of an entity or user in a system, and so on. However, RIDDL's
 diagram output is not limited to UML diagrams. Peter Chen's 1971 invention of 
 the entity relationship diagram is very well adapted to the concept of entity
 in DDD. DDD also has its own diagrams:

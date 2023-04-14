@@ -60,7 +60,7 @@ private[parsing] trait EntityParser
   private def state[u: P]: P[State] = {
     P(
       location ~ Keywords.state ~ identifier ~/ Readability.of ~
-        typeRef ~ (is ~ open ~ stateBody ~ close).? ~
+        typeRef ~/ is ~ (open ~ stateBody ~ close).? ~/
         briefly ~ description
     )./.map { case (loc, id, typRef, body, brief, desc) =>
       body match {

@@ -117,7 +117,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
           _.openDef(invariant).closeDef(invariant, withBrace = false)
         )
       case conn: Connector => doConnector(conn)
-      case actor: Actor => doActor(actor)
+      case user: User => doUser(user)
       case i: Interaction => doInteraction(i)
       case _: Field =>
       case _ => ()
@@ -180,10 +180,10 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         st.openDef(epic, withBrace = false).add(" ??? ")
       } else {
         val us = epic.userStory.get
-        val actor = us.actor.pathId
+        val user = us.user.pathId
         st.openDef(epic)
-          .addIndent("actor")
-          .add(actor.format)
+          .addIndent("user")
+          .add(user.format)
           .add(" ")
           .add(Readability.wants)
           .add(" ")
@@ -254,11 +254,11 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     state.withCurrent(_.outdent.addIndent("}\n"))
   }
 
-  private def doActor(actor: Actor): Unit = {
+  private def doUser(user: User): Unit = {
     state.withCurrent(
-      _.add(s"actor ${actor.id.value} is \"${actor.is_a.s}\"")
-        .emitBrief(actor.brief)
-        .emitDescription(actor.description)
+      _.add(s"user ${user.id.value} is \"${user.is_a.s}\"")
+        .emitBrief(user.brief)
+        .emitDescription(user.description)
         .nl
     )
   }

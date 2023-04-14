@@ -16,10 +16,10 @@ domain Everything is {
     } explained as "A Channel"
   }
 
-  actor Author is "human" briefly "An exemplar"
+  user Author is "human" briefly "An exemplar"
 
   epic WritingABook is {
-    actor Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
+    user Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
   } described as "A simple authoring story"
 

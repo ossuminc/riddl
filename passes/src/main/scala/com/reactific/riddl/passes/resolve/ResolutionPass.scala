@@ -108,21 +108,21 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with
       case e: Epic =>
         e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case uc: UseCase =>
-        uc.userStory.map(userStory => resolveARef[Actor](userStory.actor, parentsAsSeq))
+        uc.userStory.map(userStory => resolveARef[User](userStory.user, parentsAsSeq))
       case in: Input =>
         resolveARef[Type](in.putIn, parentsAsSeq)
       case out: Output =>
         resolveARef[Type](out.putOut, parentsAsSeq)
       case ti: TakeOutputInteraction =>
-        resolveARef[Actor](ti.to, parentsAsSeq)
+        resolveARef[User](ti.to, parentsAsSeq)
         resolveARef[Output](ti.from, parentsAsSeq)
       case pi: PutInputInteraction =>
-        resolveARef[Actor](pi.from, parentsAsSeq)
+        resolveARef[User](pi.from, parentsAsSeq)
         resolveARef[Input](pi.to, parentsAsSeq)
       case si: SelfInteraction =>
         resolveARef[Definition](si.from, parentsAsSeq)
       case _: Author => () // no references
-      case _: Actor => () // no references
+      case _: User => () // no references
       case _: Enumerator => () // no references
       case _: Group => () // no references
       case _: Include[_] => () // no references
