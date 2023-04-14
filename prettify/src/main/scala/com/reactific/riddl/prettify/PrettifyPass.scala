@@ -10,10 +10,10 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.parsing.Terminals.*
-import com.reactific.riddl.language.passes.resolve.ResolutionPass
-import com.reactific.riddl.language.passes.symbols.SymbolsPass
-import com.reactific.riddl.language.passes.validate.ValidationPass
-import com.reactific.riddl.language.passes.{HierarchyPass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.resolve.ResolutionPass
+import com.reactific.riddl.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.validate.ValidationPass
 
 import java.nio.file.Path
 import scala.annotation.unused

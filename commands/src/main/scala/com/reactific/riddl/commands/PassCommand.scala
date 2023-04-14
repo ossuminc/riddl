@@ -6,12 +6,10 @@
 
 package com.reactific.riddl.commands
 
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.Riddl
+import com.reactific.riddl.language.{CommonOptions, Messages, Parser}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.Pass.PassesCreator
-import com.reactific.riddl.language.passes.{Pass, PassInput, PassesResult}
+import com.reactific.riddl.passes.Pass.PassesCreator
+import com.reactific.riddl.passes.{Pass, PassInput, PassesResult}
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -39,13 +37,13 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
 
   def overrideOptions(options: OPT, newOutputDir: Path): OPT
 
-  protected final def doRun(
+  private  final def doRun(
     options: OPT,
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, PassesResult] = {
     options.withInputFile { inputFile: Path =>
-      Riddl.parse(inputFile, commonOptions) match {
+      Parser.parse(inputFile, commonOptions) match {
         case Left(errors) =>
           Left[Messages, PassesResult](errors)
         case Right(root) =>

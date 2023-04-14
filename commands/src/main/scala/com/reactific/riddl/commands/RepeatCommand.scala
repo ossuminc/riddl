@@ -9,7 +9,7 @@ package com.reactific.riddl.commands
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.{Interrupt, Logger}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader

@@ -6,13 +6,13 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.{AST, *}
+import com.reactific.riddl.language.*
 import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.resolve.{ReferenceMap, ResolutionPass, ResolutionOutput}
-import com.reactific.riddl.language.passes.symbols.SymbolsPass
-import com.reactific.riddl.language.passes.validate.ValidationPass
-import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass}
+import com.reactific.riddl.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.validate.ValidationPass
 import com.reactific.riddl.stats.StatsPass
 import com.reactific.riddl.utils.*
 

@@ -11,7 +11,7 @@ import com.reactific.riddl.hugo.HugoCommand
 import com.reactific.riddl.hugo.HugoTranslatorState
 import com.reactific.riddl.hugo.MarkdownWriter
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.testkit.ParsingTest
 
 import java.io.PrintWriter

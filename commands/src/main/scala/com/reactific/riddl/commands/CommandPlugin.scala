@@ -13,7 +13,7 @@ import com.reactific.riddl.language.Messages.SevereError
 import com.reactific.riddl.language.Messages.errors
 import com.reactific.riddl.language.Messages.highestSeverity
 import com.reactific.riddl.language.Messages.severes
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.StringHelpers.toPrettyString
 import com.reactific.riddl.utils.{Logger, Plugin, PluginInterface, RiddlBuildInfo, StringLogger, SysLogger, Timer}
 import pureconfig.ConfigReader
