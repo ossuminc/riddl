@@ -80,7 +80,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitConnection(c, parents)
             state.addToGlossary(c, stack)
-          case sa: Actor => state.addToGlossary(sa, stack)
+          case sa: User => state.addToGlossary(sa, stack)
           case i: Interaction => state.addToGlossary(i, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")

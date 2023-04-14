@@ -40,12 +40,12 @@ private[parsing] trait DomainParser
     )
   }
 
-  private def user[u: P]: P[Actor] = {
+  private def user[u: P]: P[User] = {
     P(
-      location ~ Keywords.actor ~ identifier ~/ is ~ literalString ~ briefly ~
+      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~ briefly ~
         description
     ).map { case (loc, id, is_a, brief, description) =>
-      Actor(loc, id, is_a, brief, description)
+      User(loc, id, is_a, brief, description)
     }
   }
 
@@ -65,7 +65,7 @@ private[parsing] trait DomainParser
       val stories = mapTo[Epic](groups.get(classOf[Epic]))
       val apps = mapTo[Application](groups.get(classOf[Application]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val actors = mapTo[Actor](groups.get(classOf[Actor]))
+      val users = mapTo[User](groups.get(classOf[User]))
       val includes = mapTo[Include[DomainDefinition]](
         groups.get(
           classOf[Include[DomainDefinition]]
@@ -80,7 +80,7 @@ private[parsing] trait DomainParser
         types,
         consts,
         contexts,
-        actors,
+        users,
         stories,
         apps,
         subdomains,

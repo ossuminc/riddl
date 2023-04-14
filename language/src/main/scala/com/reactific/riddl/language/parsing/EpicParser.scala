@@ -38,7 +38,7 @@ private[parsing] trait EpicParser
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
       location ~ Keywords.step ~ identifierNotKeyword(Readability.for_) ~
-        (arbitraryStoryRef | actorRef) ~ is ~ literalString ~ briefly ~ description
+        (arbitraryStoryRef | userRef) ~ is ~ literalString ~ briefly ~ description
     )./.map { case (loc, id, fromTo, proc, brief, desc) =>
       SelfInteraction(loc, id, fromTo, proc, brief, desc)
     }
@@ -47,18 +47,18 @@ private[parsing] trait EpicParser
   private def takeOutputStep[u: P]: P[TakeOutputInteraction] = {
     P(
       location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ outputRef ~
-        literalString ~ Readability.to.? ~ actorRef ~ briefly ~ description
-    )./.map { case (loc, id, output, rel, actor, brief, desc) =>
-      TakeOutputInteraction(loc, id, output, rel, actor, brief, desc)
+        literalString ~ Readability.to.? ~ userRef  ~ briefly ~ description
+    )./.map { case (loc, id, output, rel, user, brief, desc) =>
+      TakeOutputInteraction(loc, id, output, rel, user, brief, desc)
     }
   }
 
   private def giveInputStep[u: P]: P[PutInputInteraction] = {
     P(
-      location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ actorRef ~
+      location ~ Keywords.step ~ identifierNotKeyword(Readability.from) ~ userRef ~
         literalString ~ Readability.to.? ~ inputRef ~ briefly ~ description
-    )./.map { case (loc, id, actor, rel, form, brief, desc) =>
-      PutInputInteraction(loc, id, actor, rel, form, brief, desc)
+    )./.map { case (loc, id, user, rel, form, brief, desc) =>
+      PutInputInteraction(loc, id, user, rel, form, brief, desc)
     }
   }
 
@@ -111,10 +111,10 @@ private[parsing] trait EpicParser
 
   def userStory[u: P]: P[UserStory] = {
     P(
-      location ~ actorRef ~ Readability.wants ~ Readability.to.? ~
+      location ~ userRef ~ Readability.wants ~ Readability.to.? ~
         literalString ~ Readability.so ~ Readability.that.? ~ is ~ literalString
-    ).map { case (loc, actor, capability, benefit) =>
-      UserStory(loc, actor, capability, benefit)
+    ).map { case (loc, user, capability, benefit) =>
+      UserStory(loc, user, capability, benefit)
     }
   }
 

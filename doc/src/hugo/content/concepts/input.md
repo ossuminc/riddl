@@ -4,7 +4,7 @@ draft: "false"
 ---
 
 An Input is the abstract notion of some information provided to an 
-application by its user (an [actor]({{< relref actor.md>}})). To make this more
+application by its user (an [user]({{< relref user.md>}})). To make this more
 tangible, inputs could be implemented as any of the following:
 * the submission of a typical htML form a user could fill in,
 * the tap of a button on a mobile device,
@@ -23,7 +23,7 @@ the application.
 
 An input is a named component of an [application]({{< relref application.md>}}) 
 that receives data of a specific [type]({{< relref type.md >}}) from an  
-[actor]({{< relref actor.md>}}) (user) of the application. Each input can define 
+[user]({{< relref user.md>}}) (user) of the application. Each input can define 
 data [types]({{< relref type.md >}}) and declares a 
 [command message]({{< relref "message.md#command" >}}) as the data received
 by the application's input.

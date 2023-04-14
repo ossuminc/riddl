@@ -32,12 +32,12 @@ There are three main aspects to this definition of entity:
 An entity is the fundamental processor of work in a reactive system and in a
 RIDDL model. Entities are most often implemented in software using one of 
 these techniques:
-* using the actor model where actors process messages and encapsulate state.
+* using the user model where actors process messages and encapsulate state.
 * object-oriented programming which also encapsulate states and defines 
   functions to manipulate that state. 
 * functional programming where a collection of functions process messages or 
   function calls using exclusive access to some data and a queue of messages;
-  this simulates the actor model.  
+  this simulates the user model.  
 
 ## Identity
 Entities have a unique immutable persistent identifier, much like people have 
@@ -132,7 +132,7 @@ log of change events
 * *Arguments:* one string indicating the kind of entity
 * *Implications*: The general kind of entity being defined. This option takes a
   single value which provides the kind of entity.  Examples of useful kinds 
-  are "device", "actor", "concept", "machine". This entity option may be used
+  are "device", "user", "concept", "machine". This entity option may be used
   by downstream AST processors, especially code generators. Downstream processors may
   require additional entity kind values.
 

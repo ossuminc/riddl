@@ -1,11 +1,11 @@
 domain PersonalBanking is {
-  actor Member is "A person holding an account at Personal Bank"
+  user Member is "A person holding an account at Personal Bank"
 
   epic CreateAccount is {
-    actor Member wants to "establish an account" so that "they can apply for a loan"
+    user Member wants to "establish an account" so that "they can apply for a loan"
     case HappyPath {
       step output PersonalBanking.PersonalBankingApp.Test.HomePage.AccountDetailsPage
-        "is shown to" actor PersonalBanking.Member
+        "is shown to" user PersonalBanking.Member
     }
   }
 

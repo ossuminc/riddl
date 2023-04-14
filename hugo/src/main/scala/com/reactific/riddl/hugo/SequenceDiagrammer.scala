@@ -40,7 +40,7 @@ case class SequenceDiagrammer(
   def makeParticipant(definition: Definition): Unit = {
     val name = definition.id.value
     definition match {
-      case _: Actor      => sb.append(s"  actor $name"); nl
+      case _: User      => sb.append(s"  user $name"); nl
       case _: Definition => sb.append(s"  participant $name"); nl
     }
   }
@@ -49,7 +49,7 @@ case class SequenceDiagrammer(
     val name = definition.identify
     val link = state.makeDocLink(definition)
     definition match {
-      case _: Actor      => sb.append(s"  link $name:  @ $link"); nl
+      case _: User      => sb.append(s"  link $name:  @ $link"); nl
       case _: Definition => sb.append(s"  link $name: Definition @ $link"); nl
     }
   }

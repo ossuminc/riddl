@@ -7,7 +7,7 @@ draft: "false"
 
 The optional entity kind prefix is a directive that suggests how the entity
 might handle its state and received messages. In the example above, we
-expect the "Printer" entity to be a physical device. An "actor" entity in
+expect the "Printer" entity to be a physical device. An "user" entity in
 of the same name could be expected to be a person who prints.
 
 The options available suggest how the entity might handle its state and
