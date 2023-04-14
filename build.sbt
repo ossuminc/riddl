@@ -33,6 +33,7 @@ lazy val riddl = (project in file("."))
   .aggregate(
     utils,
     language,
+    passes,
     commands,
     testkit,
     prettify,
@@ -101,6 +102,18 @@ lazy val language = project
   )
   .dependsOn(utils)
 
+val Passes = config("passes")
+lazy val passes = project
+  .in(file("passes"))
+  .configure(C.withCoverage(0))
+  .configure(C.mavenPublish)
+  .settings(
+    name := "riddl-passes",
+    coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
+    libraryDependencies ++= Dep.testing
+  )
+  .dependsOn(language % "compile->compile;test->test")
+
 val Commands = config("commands")
 
 lazy val commands: Project = project
@@ -111,7 +124,10 @@ lazy val commands: Project = project
     name := "riddl-commands",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(utils % "compile->compile;test->test", language)
+  .dependsOn(
+    utils % "compile->compile;test->test",
+    passes% "compile->compile;test->test"
+  )
 
 val TestKit = config("testkit")
 
@@ -151,11 +167,14 @@ lazy val hugo: Project = project
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(language % "compile->compile", commands, testkit % "test->compile", stats)
+  .dependsOn(
+    passes % "compile->compile;test->test",
+    commands, testkit % "test->compile", stats)
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),
   (language, Language),
+  (passes, Passes),
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
@@ -211,7 +230,7 @@ lazy val riddlc: Project = project
   .dependsOn(
     utils % "compile->compile;test->test",
     commands,
-    language,
+    passes,
     hugo,
     testkit % "test->compile"
   )

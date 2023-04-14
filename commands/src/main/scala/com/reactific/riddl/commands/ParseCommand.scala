@@ -7,9 +7,8 @@
 package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Riddl
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.language.{CommonOptions, Parser}
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -30,7 +29,8 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      Riddl.parse(inputFile, commonOptions).map(_ => PassesResult())
+      Parser.parse(inputFile, commonOptions)
+        .map(_ => PassesResult()).map(_ => PassesResult())
     }
   }
 

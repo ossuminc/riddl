@@ -10,8 +10,8 @@ import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.{CommandOptions, PassCommand, TranslatingOptions}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.language.passes.{PassInput, PassesResult}
+import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
+import com.reactific.riddl.passes.{PassInput, PassesResult}
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.stats.StatsPass
 import pureconfig.ConfigCursor

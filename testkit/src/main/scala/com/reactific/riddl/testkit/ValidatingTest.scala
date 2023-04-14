@@ -8,7 +8,8 @@ package com.reactific.riddl.testkit
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.passes.Riddl
 import org.scalatest.Assertion
 
 import java.io.File

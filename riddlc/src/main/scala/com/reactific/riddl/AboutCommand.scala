@@ -11,7 +11,7 @@ import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.commands.CommonOptionsHelper
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader

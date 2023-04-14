@@ -8,11 +8,12 @@ package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.TranslatingState
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.{AST, CommonOptions, Finder}
+import com.reactific.riddl.language.{AST, CommonOptions}
 import com.reactific.riddl.language.parsing.FileParserInput
-import com.reactific.riddl.language.passes.PassesResult
-import com.reactific.riddl.language.passes.resolve.ReferenceMap
-import com.reactific.riddl.language.passes.symbols.SymbolsOutput
+import com.reactific.riddl.passes.PassesResult
+import com.reactific.riddl.passes.resolve.ReferenceMap
+import com.reactific.riddl.passes.symbols.SymbolsOutput
+import com.reactific.riddl.passes.Finder
 import com.reactific.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.Path
