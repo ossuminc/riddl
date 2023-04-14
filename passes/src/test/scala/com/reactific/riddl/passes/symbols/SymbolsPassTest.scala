@@ -29,7 +29,7 @@ class SymbolsPassTest extends ParsingTest {
         case None => fail(s"Symbol '${names.mkString(".")}' not found")
         case Some(definition) =>
           val p = st.parentOf(definition)
-          if (p.isEmpty) fail(s"Symbol '${names.mkString(".")}' has no parent")
+          if p.isEmpty then fail(s"Symbol '${names.mkString(".")}' has no parent")
           p.get mustBe a[P]
           p.get.id.value mustEqual parentName
       }

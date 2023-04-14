@@ -32,7 +32,7 @@ class InterruptTest extends AnyWordSpec with Matchers {
             case _: CancellationException => succeed
             case x: Throwable             => fail(s"Wrong exception: $x")
           }
-          while (!interrupt.ready) Thread.sleep(5)
+          while !interrupt.ready do Thread.sleep(5)
           interrupt.cancel
           Await.result(f2, 2.seconds)
         case None => fail("Unexpected result")

@@ -80,10 +80,8 @@ object C {
       "-deprecation",
       "-feature",
       "-new-syntax",
-      "-rewrite",
-      "-source",
-      "3.0-migration",
       "-explain",
+      "-explain-types",
       "-Werror",
       "-pagewidth",
       "120"

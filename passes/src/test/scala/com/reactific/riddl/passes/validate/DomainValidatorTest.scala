@@ -7,10 +7,11 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.passes.Pass
+import com.reactific.riddl.passes.Riddl
 
 /** Unit Tests For ValidatorTest */
 class DomainValidatorTest extends ValidatingTest {

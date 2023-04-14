@@ -34,20 +34,20 @@ class ASimpleTestCommand
     import builder.*
     OParser.sequence(cmd("test").children(
       arg[String]("arg1").action((s, to) => to.copy(arg1 = s)).validate { a1 =>
-        if (a1.nonEmpty) { Right(()) }
+        if a1.nonEmpty then { Right(()) }
         else { Left("All argument keys must be nonempty") }
       }
     )) -> Options()
   }
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    for {
+    for
       objCur <- cur.asObjectCursor
       contentCur <- objCur.atKey("test")
       contentObjCur <- contentCur.asObjectCursor
       arg1Res <- contentObjCur.atKey("arg1")
       str <- arg1Res.asString
-    } yield { Options(arg1 = str) }
+    yield { Options(arg1 = str) }
   }
 
   override def run(

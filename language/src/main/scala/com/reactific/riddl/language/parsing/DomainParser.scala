@@ -35,12 +35,12 @@ private[parsing] trait DomainParser
 
   private def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (author | typeDef | context | actor | epic | domain | term |
+      (author | typeDef | context | user | epic | domain | term |
         constant | application | importDef | domainInclude).rep(0)
     )
   }
 
-  private def actor[u: P]: P[Actor] = {
+  private def user[u: P]: P[Actor] = {
     P(
       location ~ Keywords.actor ~ identifier ~/ is ~ literalString ~ briefly ~
         description

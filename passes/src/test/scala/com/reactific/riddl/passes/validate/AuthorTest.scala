@@ -1,8 +1,7 @@
 package com.reactific.riddl.passes.validate
 import com.reactific.riddl.language.{CommonOptions, Messages}
-
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.passes.validate.ValidatingTest
+import com.reactific.riddl.passes.Riddl
 
 class AuthorTest extends ValidatingTest {
 

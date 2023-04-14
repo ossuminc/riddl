@@ -171,9 +171,9 @@ abstract class ValidatingTest extends ParsingTest {
             val errors = messages.filter(_.kind.isError)
             val warnings = messages.filter(_.kind.isWarning)
             info(s"${errors.length} Errors:")
-            if (errors.nonEmpty) {info(errors.format)}
+            if errors.nonEmpty then {info(errors.format)}
             info(s"${warnings.length} Warnings:")
-            if (warnings.nonEmpty) {info(warnings.format)}
+            if warnings.nonEmpty then {info(warnings.format)}
             errors mustBe empty
             warnings mustBe empty
         }

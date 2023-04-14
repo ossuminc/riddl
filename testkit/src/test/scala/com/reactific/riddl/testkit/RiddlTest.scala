@@ -18,7 +18,7 @@ import java.nio.file.Path
 import java.util.UUID
 import scala.io.Source
 
-class RiddlTest extends ParsingTestBase {
+class RiddlTest extends ParsingTest {
 
   "parse" should {
     "parse a file" in {

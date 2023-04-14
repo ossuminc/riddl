@@ -42,7 +42,7 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { inputFile: Path =>
+    options.withInputFile { (inputFile: Path) =>
       Parser.parse(inputFile, commonOptions) match {
         case Left(errors) =>
           Left[Messages, PassesResult](errors)

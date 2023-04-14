@@ -174,7 +174,7 @@ class FoldingTest extends ParsingTest {
         container: Definition,
         stack: Seq[Definition]
       ): Tracker = {
-        if (print) {
+        if print then {
           info(
             "> " + container.identify + "(" + stack
               .map(_.identify)
@@ -189,7 +189,7 @@ class FoldingTest extends ParsingTest {
         definition: Definition,
         stack: Seq[Definition]
       ): Tracker = {
-        if (print) {
+        if print then {
           info(
             "==" + definition.identify + "(" + stack
               .map(_.identify)
@@ -204,7 +204,7 @@ class FoldingTest extends ParsingTest {
         container: Definition,
         stack: Seq[Definition]
       ): Tracker = {
-        if (print) {
+        if print then {
           info(
             "< " + container.identify + "(" + stack
               .map(_.identify)

@@ -32,7 +32,7 @@ class HugoPassTest
     command: CommandPlugin[CommandOptions],
     outputDir: Path
   ): Assertion = {
-    if (commandName == "hugo") {
+    if commandName == "hugo" then {
       command.loadOptionsFrom(configFile) match {
         case Right(_)     => runHugo(outputDir, tmpDir)
         case Left(errors) => fail(errors.format)
@@ -52,7 +52,7 @@ class HugoPassTest
     }
 
     val logger = ProcessLogger(fout, ferr)
-    if (!Files.exists(outputDir)) { Files.createDirectories(outputDir) }
+    if !Files.exists(outputDir) then { Files.createDirectories(outputDir) }
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
     val command = "hugo"
@@ -60,7 +60,7 @@ class HugoPassTest
     val proc = Process(command, cwd = Option(cwdFile))
     proc.!<(logger) match {
       case 0 =>
-        if (hadErrorOutput) {
+        if hadErrorOutput then {
           fail("hugo wrote to stderr:\n  " + output.mkString("\n  "))
         } else { info("hugo issued warnings:\n  " + output.mkString("\n  ")) }
         succeed

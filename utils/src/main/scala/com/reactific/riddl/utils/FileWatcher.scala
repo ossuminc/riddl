@@ -76,7 +76,7 @@ object FileWatcher {
     try {
       registerRecursively(path, watchService)
       var saveKey: WatchKey = null
-      while (saveKey == null || saveKey.isValid) && (Instant.now().toEpochMilli < deadline) {
+      while ((saveKey == null || saveKey.isValid) && (Instant.now().toEpochMilli < deadline)) do {
         watchService.take() match {
           case key: WatchKey if key != null =>
             saveKey = key

@@ -28,7 +28,7 @@ class CheckMessagesTest extends ValidatingTest {
 
   val checkPathStr = "testkit/src/test/input/check"
   val checkPath: Path = Path.of(checkPathStr)
-  if (!Files.isDirectory(checkPath)) {
+  if !Files.isDirectory(checkPath) then {
     fail(s"Path of pos test cases must exist and be a directory, not a file.")
   }
 
@@ -52,7 +52,7 @@ class CheckMessagesTest extends ValidatingTest {
     val expectedMessages = readMessages.map(_.trim)
     validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
       val msgSet = msgs.map(_.format).filter(_.nonEmpty).map(_.trim).toSet
-      if (msgSet == expectedMessages) {succeed}
+      if msgSet == expectedMessages then {succeed}
       else {
         val missingMessages = expectedMessages.diff(msgSet).toSeq.sorted
         val unexpectedMessages = msgSet.diff(expectedMessages).toSeq.sorted
@@ -61,14 +61,14 @@ class CheckMessagesTest extends ValidatingTest {
         errMsg
           .append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
         errMsg.append("\nBUT\n")
-        if (missingMessages.nonEmpty) {
+        if missingMessages.nonEmpty then {
           errMsg.append(missingMessages.mkString(
             "Expected to find the following messages and did not:\n\t",
             "\n\t",
             "\n"
           ))
         }
-        if (unexpectedMessages.nonEmpty) {
+        if unexpectedMessages.nonEmpty then {
           errMsg.append(unexpectedMessages.mkString(
             "Found the following messages which were not expected: \n\t",
             "\n\t",
@@ -88,9 +88,9 @@ class CheckMessagesTest extends ValidatingTest {
     val riddlFiles = dirContents
       .filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
 
-    if (riddlFiles.isEmpty) {
+    if riddlFiles.isEmpty then {
       fail(s"No riddl files in directory $dirName.")
-    } else if (riddlFiles.length > 1) {
+    } else if riddlFiles.length > 1 then {
       fail(
         s"Multiple root-level riddl files in directory $dirName not allowed"
       )
@@ -103,10 +103,11 @@ class CheckMessagesTest extends ValidatingTest {
       }
       val fixedLines = checkFileLines.filterNot { (l: String) => l.isEmpty }
         .foldLeft(Seq.empty[String]) { (list, next) =>
-          if (next.startsWith(" ")) {
+          if next.startsWith(" ") then
             val last = list.last + "\n" + next.drop(1)
             list.dropRight(1) :+ last
-          } else {list :+ next}
+          else
+            list :+ next
         }.toSet
 
       runForFile(riddlFile, fixedLines)

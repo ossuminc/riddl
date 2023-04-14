@@ -176,7 +176,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
 
   private def openEpic(epic: Epic): Unit = {
     state.withCurrent { st =>
-      if (epic.userStory.isEmpty) {
+      if epic.userStory.isEmpty then {
         st.openDef(epic, withBrace = false).add(" ??? ")
       } else {
         val us = epic.userStory.get
@@ -225,7 +225,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .add(adaptor.context.format)
         .add(" is {")
     )
-    if (adaptor.isEmpty) {
+    if adaptor.isEmpty then {
       state.withCurrent(_.emitUndefined().add(" }\n"))
     } else
       state.withCurrent { rfe =>
@@ -272,15 +272,15 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .addSpace()
         .add {
           val flows =
-            if (conn.flows.nonEmpty)
+            if conn.flows.nonEmpty then
               s"flows ${conn.flows.get.format} "
             else ""
           val from =
-            if (conn.from.nonEmpty)
+            if conn.from.nonEmpty then
               s"from ${conn.from.get.format} "
             else ""
           val to =
-            if (conn.to.nonEmpty)
+            if conn.to.nonEmpty then
               s"to ${conn.to.get.format}"
             else ""
           flows + from + to
@@ -311,7 +311,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .add(
           s"${PrettifyPass.keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format} is {"
         )
-      if (riddl_state.isEmpty) {
+      if riddl_state.isEmpty then {
         st.add(" ??? }")
       } else {
         st.nl.indent
@@ -333,7 +333,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def openInclude[T <: Definition](
     @unused include: Include[T]
   ): Unit = {
-    if (!state.options.singleFile) {
+    if !state.options.singleFile then {
       include.source match {
         case Some(path: String) if path.startsWith("http") =>
           val url = new java.net.URL(path)
@@ -355,6 +355,6 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def closeInclude[T <: Definition](
     @unused include: Include[T]
   ): Unit = {
-    if (!state.options.singleFile) {state.popFile()}
+    if !state.options.singleFile then {state.popFile()}
   }
 }
