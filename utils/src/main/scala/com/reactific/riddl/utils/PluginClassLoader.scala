@@ -20,8 +20,8 @@ case class PluginClassLoader(
     resolve: Boolean
   ): Class[_] = { // has the class loaded already?
     var loadedClass: Class[_] = findLoadedClass(name)
-    if (loadedClass == null) { loadedClass = super.loadClass(name, resolve) }
-    if (resolve) { // marked to resolve
+    if loadedClass == null then { loadedClass = super.loadClass(name, resolve) }
+    if resolve then { // marked to resolve
       resolveClass(loadedClass)
     }
     loadedClass

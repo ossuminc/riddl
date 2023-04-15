@@ -57,7 +57,7 @@ trait TypeValidation extends DefinitionValidation {
       case Ternary(loc, _, expr1, expr2) =>
         val expr1Ty = getExpressionType(expr1, parents)
         val expr2Ty = getExpressionType(expr2, parents)
-        if (isAssignmentCompatible(expr1Ty, expr2Ty)) {
+        if isAssignmentCompatible(expr1Ty, expr2Ty) then {
           expr1Ty
         } else {
           messages.addError(
@@ -88,7 +88,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkEnumeration(
     enumerators: Seq[Enumerator]
   ): this.type = {
-    this.checkSequence(enumerators) { enumerator: Enumerator =>
+    this.checkSequence(enumerators) { (enumerator: Enumerator) =>
       val id = enumerator.id
       checkIdentifierLength(enumerator)
         .check(
@@ -107,7 +107,7 @@ trait TypeValidation extends DefinitionValidation {
     typeDef: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    checkSequence(alternation.of) { typex: TypeExpression =>
+    checkSequence(alternation.of) { (typex: TypeExpression) =>
       checkTypeExpression(typex, typeDef, parents)
     }
     this
@@ -129,15 +129,15 @@ trait TypeValidation extends DefinitionValidation {
   }
 
   private def checkAggregation(agg: Aggregation): this.type = {
-    checkSequence(agg.fields) { field: Field =>
+    checkSequence(agg.fields) { (field: Field) =>
       checkIdentifierLength(field)
-      .check(
-        field.id.value.head.isLower,
-        "Field names in aggregates should start with a lower case letter",
-        StyleWarning,
-        field.loc
-      )
-      .checkDescription(field)
+        .check(
+          field.id.value.head.isLower,
+          "Field names in aggregates should start with a lower case letter",
+          StyleWarning,
+          field.loc
+        )
+        .checkDescription(field)
     }
     this
   }
@@ -147,16 +147,16 @@ trait TypeValidation extends DefinitionValidation {
     typeDef: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    checkSequence(mt.fields) { field: Field =>
+    checkSequence(mt.fields) { (field: Field) =>
       checkIdentifierLength(field)
-      .check(
-        field.id.value.head.isLower,
-        s"Field names in ${mt.usecase.kind} should start with a lower case letter",
-        StyleWarning,
-        field.loc
-      )
-      .checkTypeExpression(field.typeEx, typeDef, parents)
-      .checkDescription(field)
+        .check(
+          field.id.value.head.isLower,
+          s"Field names in ${mt.usecase.kind} should start with a lower case letter",
+          StyleWarning,
+          field.loc
+        )
+        .checkTypeExpression(field.typeEx, typeDef, parents)
+        .checkDescription(field)
     }
     this
   }

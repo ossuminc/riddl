@@ -11,7 +11,7 @@ object Parser {
     path: Path,
     options: CommonOptions
   ): Either[Messages, RootContainer] = {
-    if (Files.exists(path)) {
+    if Files.exists(path) then {
       val input = new FileParserInput(path)
       parse(input, options)
     } else {

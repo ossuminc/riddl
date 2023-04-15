@@ -128,10 +128,10 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
 
   def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, omc)
-    if (omc.msg.nonEmpty) {
+    if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, omc, parents, omc.msg.messageKind)
     }
-    if (omc.from.nonEmpty) {
+    if omc.from.nonEmpty then {
       checkRef(omc.from.get, omc, parents)
     }
     checkDescription(omc)
@@ -156,7 +156,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, f)
-    if (f.id.value.matches("^[^a-z].*")) {
+    if f.id.value.matches("^[^a-z].*") then {
       messages.add(
         Message(
           f.id.loc,
@@ -217,7 +217,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
       case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
         val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
         val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
-        if (!areSameType(inletType, outletType))  {
+        if !areSameType(inletType, outletType) then  {
           messages.addError(
             inlet.loc,
             s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
@@ -251,7 +251,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
       StyleWarning,
       t.loc
     )
-    if (!t.typ.isInstanceOf[AggregateTypeExpression]) {
+    if !t.typ.isInstanceOf[AggregateTypeExpression] then {
         checkTypeExpression(t.typ, t, parents)
     }
     checkDescription(t)
@@ -264,7 +264,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     checkDefinition(parents, c)
     val expr = c.value.asInstanceOf[Expression]
     val maybeTypEx = getExpressionType(expr, parents)
-    if (!isAssignmentCompatible(Some(c.typeEx), maybeTypEx)) {
+    if !isAssignmentCompatible(Some(c.typeEx), maybeTypEx) then {
       messages.addError(expr. loc,
         s"Expression value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}")
     }
@@ -276,10 +276,10 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, s)
-    checkRefAndExamine[Type](s.typ, s, parents) { typ: Type =>
+    checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
       typ.typ match {
         case agg: Aggregation =>
-          if (agg.fields.isEmpty && !s.isEmpty) {
+          if agg.fields.isEmpty && !s.isEmpty then {
             messages.addError(
               s.typ.loc,
               s"${s.identify} references an empty aggregate but must have " +
@@ -323,31 +323,31 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
   ): Unit = {
     checkContainer(parents, e)
     checkOptions[EntityOption](e.options, e.loc)
-    if (e.states.isEmpty && !e.isEmpty) {
+    if e.states.isEmpty && !e.isEmpty then {
       messages.add(Message(
         e.loc,
         s"${e.identify} must define at least one state",
         Messages.MissingWarning
       ))
     }
-    if (e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty)) {
+    if e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty) then {
       messages.add(
         Message(e.loc, s"${e.identify} has only empty handlers", Messages.MissingWarning)
       )
     }
-    if (e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2) {
+    if e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2 then {
       messages.add(Message(
         e.loc,
         s"${e.identify} is declared as an fsm, but doesn't have at least two states",
         Messages.Error
       ))
     }
-    if (e.states.nonEmpty && e.states.forall(_.handlers.isEmpty) && e.handlers.isEmpty) {
+    if e.states.nonEmpty && e.states.forall(_.handlers.isEmpty) && e.handlers.isEmpty then {
       messages.add(
         Message(
           e.loc,
           s"${e.identify} has ${e.states.size} state${
-            if (e.states.size != 1) "s"
+            if e.states.size != 1 then "s"
             else ""
           } but no handlers.",
           Messages.Error
@@ -361,7 +361,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, p)
-    check(p.types.exists { typ: Type =>
+    check(p.types.exists { (typ: Type) =>
       typ.typ match {
         case auc: AggregateUseCaseTypeExpression =>
           auc.usecase == RecordCase
@@ -396,8 +396,8 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, a)
-        resolvePath(a.context.pathId, parents).map { target: Context =>
-          if (target == c) {
+        resolvePath(a.context.pathId, parents).map { (target: Context) =>
+          if target == c then {
             val message =
               s"${a.identify} may not specify a target context that is " +
                 s"the same as the containing ${c.identify}"
@@ -428,7 +428,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
       d.domains.isEmpty || d.domains.size > 2,
       "Singly nested domains do not add value",
       StyleWarning,
-      if (d.domains.isEmpty) d.loc else d.domains.head.loc
+      if d.domains.isEmpty then d.loc else d.domains.head.loc
     )
     checkDescription(d)
   }
@@ -484,7 +484,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, s)
-    if (s.userStory.isEmpty) {
+    if s.userStory.isEmpty then {
       messages.addMissing(s.loc, s"${s.identify} is missing a user story")
     }
     checkDescription(s)
@@ -495,7 +495,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, app)
-    if (app.groups.isEmpty) {
+    if app.groups.isEmpty then {
       messages.addMissing(app.loc, s"${app.identify} should have a group")
     }
     checkDescription(app)
@@ -532,7 +532,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, user)
-    if (user.is_a.isEmpty) {
+    if user.is_a.isEmpty then {
       messages.addMissing(
         user.loc,
         s"${user.identify} is missing its role kind ('is a')"
@@ -546,23 +546,23 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, uc)
-      if (uc.contents.nonEmpty) {
+      if uc.contents.nonEmpty then {
         uc.contents.foreach { step =>
           step match {
             case seq: SequentialInteractions =>
-              if (seq.contents.isEmpty) {
+              if seq.contents.isEmpty then {
                 messages.addMissing(seq.loc,
                   "Sequential interactions should not be empty")
               }
             case par: ParallelInteractions =>
-              if (par.contents.isEmpty) {
+              if par.contents.isEmpty then {
                 messages.addMissing(
                   par.loc,
                   "Parallel interaction should not be empty"
                 )
               }
             case opt: OptionalInteractions =>
-              if (opt.contents.isEmpty) {
+              if opt.contents.isEmpty then {
                 messages.addMissing(
                   opt.loc,
                   "Optional interaction should not be empty"
@@ -571,7 +571,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
             case is: GenericInteraction =>
               checkPathRef[Definition](is.from.pathId, uc, parents)
               checkPathRef[Definition](is.to.pathId, uc, parents)
-              if (is.relationship.isEmpty) {
+              if is.relationship.isEmpty then {
                 messages.addMissing(
                   step.loc,
                   s"Interactions must have a non-empty relationship"
@@ -580,8 +580,8 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
           }
         }
       }
-      if (uc.nonEmpty) {
-        if (uc.contents.isEmpty)(
+      if uc.nonEmpty then {
+        if uc.contents.isEmpty then (
           messages.addMissing(
             uc.loc,
             s"${uc.identify} doesn't define any interactions"

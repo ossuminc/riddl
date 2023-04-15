@@ -43,7 +43,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[Include[K]] = {
-    P(Keywords.include ~/ literalString).map { str: LiteralString =>
+    P(Keywords.include ~/ literalString).map { (str: LiteralString) =>
       doInclude[K](str)(parser)
     }
   }
@@ -84,7 +84,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   private def fileDescription[u: P]: P[FileDescription] = {
     P(location ~ Keywords.file ~ literalString).map { tpl =>
       val path = current.root.toPath.resolve(tpl._2.s)
-      if (Files.isReadable(path) && Files.isRegularFile(path)) {
+      if Files.isReadable(path) && Files.isRegularFile(path) then {
         FileDescription(tpl._1, path)
       } else {
         error(tpl._1, s"Description file cannot be read: $path ")

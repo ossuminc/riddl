@@ -1,5 +1,7 @@
 package com.reactific.riddl.passes.validate
 import com.reactific.riddl.language.{CommonOptions, Messages}
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.passes.Riddl
 
 class AuthorTest extends ValidatingTest {
 
@@ -39,16 +41,19 @@ class AuthorTest extends ValidatingTest {
       }
     }
     "referenced from Application" in {
-      val input = """domain Foo is {
-                    |  author Reid is {
+      val input = RiddlParserInput(
+                  """author Reid is {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
+                    |domain Foo is {
                     |  application Bar by author Reid is { ??? }
                     |}
-                    |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(true)
+                    |""".stripMargin)
+      Riddl.parseAndValidate(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          result.messages.isOnlyIgnorable must be(true)
       }
     }
     "referenced from Context" in {
@@ -60,24 +65,37 @@ class AuthorTest extends ValidatingTest {
                     |  context Bar by author Reid is { ??? }
                     |}
                     |""".stripMargin
-      parseAndValidateDomain(input) { case (_, _, msgs) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
     }
-    "referenced from Domain" in {
+    "referencable from neighbor Domain" in {
       val input = """domain Foo is {
                     |  author Reid is {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
-                    |  domain Bar by author Reid is { ??? }
+                    |}
+                    |domain Bar by author Reid is { ??? }
+                    |""".stripMargin
+      parseAndValidateDomain(input) { case (_, _, msgs) =>
+        msgs.hasErrors must be(false)
+      }
+    }
+    "referenced from sub-domain" in {
+      val input = """domain Foo is {
+                    |  author Reid is {
+                    |    name: "Reid Spencer"
+                    |    email: "reid@ossum.biz"
+                    |  }
+                    |  domain Bar by author Foo.Reid is { ??? }
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
     }
-    "referenced from Entity" in {
+      "referenced from Entity" in {
       val input = """domain Foo is {
                     |  author Reid is {
                     |    name: "Reid Spencer"

@@ -120,7 +120,7 @@ class EpicTest extends ValidatingTest {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
-          if (msgs.nonEmpty) { info(msgs.format) }
+          if msgs.nonEmpty then { info(msgs.format) }
           msgs.hasErrors mustBe false
       }
     }
@@ -192,7 +192,7 @@ class EpicTest extends ValidatingTest {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
-          if (msgs.nonEmpty) { info(msgs.format) }
+          if msgs.nonEmpty then { info(msgs.format) }
           msgs.hasErrors mustBe false
           succeed
       }
@@ -260,7 +260,7 @@ class EpicTest extends ValidatingTest {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.stories mustNot be(empty)
-          if (msgs.nonEmpty) { info(msgs.format) }
+          if msgs.nonEmpty then { info(msgs.format) }
           msgs.hasErrors mustBe false
           succeed
       }

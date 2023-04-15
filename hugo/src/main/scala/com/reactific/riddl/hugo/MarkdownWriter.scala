@@ -42,7 +42,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   private def containerWeight: Int = 2 * 5
 
   private def tbd(definition: Definition): this.type = {
-    if (definition.isEmpty) { p("TBD: To Be Defined") }
+    if definition.isEmpty then { p("TBD: To Be Defined") }
     else { this }
   }
 
@@ -145,12 +145,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
 
   def list[T](items: Seq[T]): this.type = {
     def emitPair(prefix: String, body: String): Unit = {
-      if (prefix.startsWith("[") && body.startsWith("(")) {
+      if prefix.startsWith("[") && body.startsWith("(") then {
         sb.append(s"* $prefix$body\n")
       } else { sb.append(s"* ${italic(prefix)}: $body\n") }
     }
 
-    for { item <- items } {
+    for item <- items  do {
       item match {
         case (
               prefix: String,
@@ -160,7 +160,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
             ) =>
           emitPair(prefix, description)
           sublist.foreach(s => sb.append(s"    * $s\n"))
-          if (desc.nonEmpty) {
+          if desc.nonEmpty then {
             sb.append(desc.get.lines.map(line => s"  ${line.s}\n"))
           }
         case (
@@ -169,7 +169,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
               description: Option[Description] @unchecked
             ) =>
           emitPair(prefix, definition)
-          if (description.nonEmpty) {
+          if description.nonEmpty then {
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
         case (
@@ -182,7 +182,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
             prefix,
             definition ++ " - " ++ briefly.map(_.s).getOrElse("{no brief}")
           )
-          if (description.nonEmpty) {
+          if description.nonEmpty then {
             sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
           }
         case (prefix: String, body: String) => emitPair(prefix, body)
@@ -198,7 +198,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def list[T](typeOfThing: String, items: Seq[T], level: Int = 2): this.type = {
-    if (items.nonEmpty) {
+    if items.nonEmpty then {
       heading(typeOfThing, level)
       list(items)
     }
@@ -210,7 +210,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     contents: Seq[String],
     level: Int = 2
   ): this.type = {
-    if (contents.nonEmpty) {
+    if contents.nonEmpty then {
       val items = contents.map { name =>
         s"[$name]" -> s"(${name.toLowerCase})"
       }
@@ -230,7 +230,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     p("{{< mermaid class=\"text-center\">}}")
     lines.foreach(p)
     p("{{< /mermaid >}}")
-    if (state.commonOptions.debug) {
+    if state.commonOptions.debug then {
       p("```")
       lines.foreach(p)
       p("```")
@@ -243,20 +243,20 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     parents: Seq[Definition]
   ): String = {
     val typeName = makeTypeName(to.typeEx, parents)
-    if (typeName.nonEmpty) {
+    if typeName.nonEmpty then {
       to.typeEx match {
         case _: OneOrMore =>
-          if (typeName.isEmpty) typeName
+          if typeName.isEmpty then typeName
           else { from + " ||--|{ " + typeName + " : references" }
         case _: ZeroOrMore =>
-          if (typeName.isEmpty) typeName
+          if typeName.isEmpty then typeName
           else { from + " ||--o{ " + typeName + " : references" }
         case _: Optional =>
-          if (typeName.isEmpty) typeName
+          if typeName.isEmpty then typeName
           else { from + " ||--o| " + typeName + " : references" }
         case _: AliasedTypeExpression | _: EntityReferenceTypeExpression |
             _: UniqueId =>
-          if (typeName.isEmpty) typeName
+          if typeName.isEmpty then typeName
           else { from + " ||--|| " + typeName + " : references" }
         case _ => ""
       }
@@ -323,7 +323,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     top: Definition,
     parents: Seq[String]
   ): this.type = {
-    if (state.options.withGraphicalTOC) {
+    if state.options.withGraphicalTOC then {
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
       val resourceName = "js/tree-map-hierarchy2.js"
@@ -352,7 +352,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     parents: Seq[Definition]
   ): this.type = {
     val name = defntn.identify
-    val brief: Definition => String = { defn: Definition =>
+    val brief: Definition => String = { (defn: Definition) =>
       defn.brief.fold(s"$name is not described.")(_.s)
     }
 
@@ -364,7 +364,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     val systemBoundaries = containers.zipWithIndex
     val openedBoundaries = systemBoundaries.map { case (dom, n) =>
       val nm = dom.id.format
-      val keyword = if (n == 0) "Enterprise_Boundary" else "System_Boundary"
+      val keyword = if n == 0 then "Enterprise_Boundary" else "System_Boundary"
       " ".repeat((n + 1) * 2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
     }
     val closedBoundaries = systemBoundaries.reverse.map { case (_, n) =>
@@ -408,7 +408,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     val brief: String =
       d.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
-    if (d.isVital) {
+    if d.isVital then {
       val authors = d.asInstanceOf[VitalDefinition[?, ?]].authors
       emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
     }
@@ -419,7 +419,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def emitDescription(d: Option[Description], level: Int = 2): this.type = {
-    if (d.nonEmpty) {
+    if d.nonEmpty then {
       heading("Description", level)
       val description = d.get.lines.map(_.s)
       description.foreach(p)
@@ -457,7 +457,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     parents: Seq[Definition]
   ): String = {
     val resolved = state.refMap.definitionOf[Definition](pid, parents.head)
-    if (resolved.isEmpty) { s"unresolved path: ${pid.format}" }
+    if resolved.isEmpty then { s"unresolved path: ${pid.format}" }
     else {
       val slink = state.makeSourceLink(resolved.head)
       val link = state
@@ -507,17 +507,17 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       case uid: UniqueId =>
         s"Unique identifier for entity ${makePathIdRef(uid.entityPath, parents)}"
       case alt: Alternation =>
-        val data = alt.of.map { te: AliasedTypeExpression =>
+        val data = alt.of.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         s"Alternation of: " + data.mkString(", ")
       case agg: Aggregation =>
-        val data = agg.fields.map { f: Field =>
+        val data = agg.fields.map { (f: Field) =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
         "Aggregation of:" + data.mkString(", ")
       case mt: AggregateUseCaseTypeExpression =>
-        val data = mt.fields.map { f: Field =>
+        val data = mt.fields.map { (f: Field) =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
         s"${mt.usecase.kind} message of: " + data.mkString(", ")
@@ -542,20 +542,20 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
         p(s"Entity ${makePathIdRef(uid.entityPath, parents)}")
       case alt: Alternation =>
         heading("Alternation Of", headLevel)
-        val data = alt.of.map { te: AliasedTypeExpression =>
+        val data = alt.of.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         list(data)
       case agg: Aggregation =>
         heading("Aggregation Of", headLevel)
-        val data = agg.fields.map { f: Field =>
+        val data = agg.fields.map { (f: Field) =>
           val pars = f +: parents
           (f.id.format, resolveTypeExpression(f.typeEx, pars))
         }
         list("Fields", data, headLevel + 1)
       case mt: AggregateUseCaseTypeExpression =>
         h2(s"${mt.usecase.format} Of")
-        val data = mt.fields.map { f: Field =>
+        val data = mt.fields.map { (f: Field) =>
           val pars = f +: parents
           (f.id.format, resolveTypeExpression(f.typeEx, pars))
         }
@@ -566,9 +566,9 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
         val to = resolveTypeExpression(map.to, parents)
         p(s"From:\n: $from").nl
         p(s"To:\n: $to")
-      case enum: Enumeration =>
+      case en: Enumeration =>
         heading("Enumeration Of", headLevel)
-        val data = enum.enumerators.map { e: Enumerator =>
+        val data = en.enumerators.map { (e: Enumerator) =>
           val docBlock = e.brief.map(_.s).toSeq ++
             e.description.map(_.lines.map(_.s)).toSeq.flatten
           (e.id.format, docBlock)
@@ -605,12 +605,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       .toSeq
       .sortBy(_._1)
     h2("Types")
-    for { (label, list) <- groups } { toc(label, mkTocSeq(list), 3) }
+    for  (label, list) <- groups  do { toc(label, mkTocSeq(list), 3) }
     this
   }
 
   def emitAuthorInfo(authors: Seq[Author], level: Int = 2): this.type = {
-    for (a <- authors) {
+    for a <- authors do {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
         a.organization.fold(Seq.empty[(String, String)])(ls =>
           Seq("Organization" -> ls.s)
@@ -642,7 +642,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     heading("Examples", level)
     var count = 0
     examples.foreach { example =>
-      if (example.isImplicit) {
+      if example.isImplicit then {
         count += 1
         heading(s"Anonymous Example $count", level + 1)
       } else { heading(example.id.format, level) }
@@ -656,21 +656,21 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     level: Int = 2
   ): this.type = {
     emitShortDefDoc(example)
-    if (example.givens.nonEmpty) {
+    if example.givens.nonEmpty then {
       heading("GIVEN", level)
-      list(example.givens.map { given =>
-        given.scenario.map("    *" + _.s + "\n")
+      list(example.givens.map { a_given =>
+        a_given.scenario.map("    *" + _.s + "\n")
       })
     }
-    if (example.whens.nonEmpty) {
+    if example.whens.nonEmpty then {
       heading("WHEN", level)
       list(example.whens.map { when => when.condition.format })
     }
-    if (example.thens.nonEmpty) {
+    if example.thens.nonEmpty then {
       heading("THEN", level)
       list(example.thens.map { then_ => then_.action.format })
     }
-    if (example.buts.nonEmpty) {
+    if example.buts.nonEmpty then {
       heading("BUT", level)
       list(example.buts.map { but => but.action.format })
     }
@@ -681,11 +681,11 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     input: Option[Aggregation],
     output: Option[Aggregation]
   ): this.type = {
-    if (input.nonEmpty) {
+    if input.nonEmpty then {
       h4("Requires (Input)")
       emitFields(input.get.fields)
     }
-    if (output.nonEmpty) {
+    if output.nonEmpty then {
       h4("Yields (Output)")
       emitFields(output.get.fields)
     }
@@ -744,7 +744,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def emitInvariants(invariants: Seq[Invariant]): this.type = {
-    if (invariants.nonEmpty) {
+    if invariants.nonEmpty then {
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
@@ -783,7 +783,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     containerHead(entity, "Entity")
     emitDefDoc(entity, parents)
     emitOptions(entity.options)
-    if (entity.hasOption[EntityIsFiniteStateMachine]) {
+    if entity.hasOption[EntityIsFiniteStateMachine] then {
       h2("Finite State Machine")
       emitFiniteStateMachine(entity)
     }
@@ -828,7 +828,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     containerHead(application, "Application")
     val parents = state.makeParents(stack)
     emitDefDoc(application, parents)
-    for { group <- application.groups } {
+    for  group <- application.groups  do {
       h2(group.identify)
       list(group.elements.map(_.format))
     }
@@ -840,7 +840,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     containerHead(epic, "Epic")
     val parents = state.makeParents(stack)
     emitBriefly(epic, parents)
-    if (epic.userStory.nonEmpty) {
+    if epic.userStory.nonEmpty then {
       val userPid = epic.userStory.get.user.pathId
       val maybeUser = state.refMap.definitionOf[User](userPid, stack.head)
       h2("User Story")
@@ -878,9 +878,9 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   def emitConnection(conn: Connector, parents: Seq[String]): this.type = {
     leafHead(conn, weight = 20)
     emitDefDoc(conn, parents)
-    if (conn.from.nonEmpty && conn.to.nonEmpty) {
+    if conn.from.nonEmpty && conn.to.nonEmpty then {
       val prefix =
-        if (conn.flows.nonEmpty) s"flows ${conn.flows.get.format}"
+        if conn.flows.nonEmpty then s"flows ${conn.flows.get.format}"
         else ""
       p(s"$prefix from ${conn.from.get.format} to ${conn.to.get.format}")
 
@@ -917,7 +917,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   ): this.type = {
     containerHead(projection, "Projector")
     emitDefDoc(projection, parents)
-    if (projection.types.nonEmpty) {
+    if projection.types.nonEmpty then {
       emitTypesToc(projection)
     }
     listOf("Handlers", projection.handlers)
@@ -955,7 +955,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   }
 
   def makeIconLink(id: String, title: String, link: String): String = {
-    if (link.nonEmpty) { s"[{{< icon \"$id\" >}}]($link \"$title\")" }
+    if link.nonEmpty then { s"[{{< icon \"$id\" >}}]($link \"$title\")" }
     else { "" }
   }
 
@@ -986,7 +986,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       Option("A list of definitions needing more work")
     )
     h2("Definitions With Missing Content")
-    for { (key, items) <- map } {
+    for  (key, items) <- map  do {
       h3(key)
       list(items)
     }

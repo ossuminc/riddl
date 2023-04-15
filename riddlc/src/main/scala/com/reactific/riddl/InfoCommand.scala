@@ -39,11 +39,11 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
 
   override def getConfigReader: ConfigReader[InfoCommand.Options] = {
     (cur: ConfigCursor) =>
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
         cmd <- topRes.asObjectCursor
-      } yield { Options(cmd.path) }
+      yield { Options(cmd.path) }
   }
 
   override def run(

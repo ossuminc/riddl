@@ -13,7 +13,7 @@ case class Finder(root: Definition) {
   def find(select: Definition => Boolean): Seq[Definition] = {
     Folding.foldEachDefinition(root, root, Seq.empty[Definition]) {
       case (_, definition, state) =>
-        if (select(definition)) state :+ definition else state
+        if select(definition) then state :+ definition else state
     }
   }
 
@@ -24,7 +24,7 @@ case class Finder(root: Definition) {
   ): DefWithParents = {
     Folding.foldLeftWithStack(Seq.empty[(Definition, Seq[Definition])])(root) {
       case (state, definition, parents) =>
-        if (select(definition)) state :+ (definition -> parents) else state
+        if select(definition) then state :+ (definition -> parents) else state
     }
   }
 

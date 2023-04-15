@@ -18,7 +18,7 @@ import java.nio.file.Path
 import java.util.UUID
 import scala.io.Source
 
-class RiddlTest extends ParsingTestBase {
+class RiddlTest extends ParsingTest {
 
   // FIXME: This test is showing signs of a rare race condition
   "parse" should {

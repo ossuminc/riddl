@@ -68,7 +68,7 @@ final class Interrupt extends (() => Boolean) {
   def ready: Boolean = thread.nonEmpty
 
   def cancel: Unit = {
-    if (thread.nonEmpty) thread.get.interrupt()
+    if thread.nonEmpty then thread.get.interrupt()
     else throw new IllegalStateException("Thread not obtained yet.")
   }
 
@@ -76,7 +76,7 @@ final class Interrupt extends (() => Boolean) {
     * CancellationException if the block was interrupted.
     */
   def interruptibly[T](block: => T): T = {
-    if (enter()) {
+    if enter() then {
       thread = Some(Thread.currentThread())
       try block
       catch {
@@ -85,7 +85,7 @@ final class Interrupt extends (() => Boolean) {
       } finally {
         thread = None
         // If we were interrupted and flag was not cleared
-        if (!exit() && Thread.interrupted()) { () }
+        if !exit() && Thread.interrupted() then { () }
       }
     } else { throw new CancellationException() }
   }
@@ -104,12 +104,12 @@ object Interrupt {
   def allowCancel(
     isInteractive: Boolean
   ): (Future[Boolean], Option[Interrupt]) = {
-    if (!isInteractive) { Future.successful(false) -> None }
+    if !isInteractive then { Future.successful(false) -> None }
     else {
       val result = aFuture[Boolean] {
-        while (
+        while
           Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
-        ) {}
+        do {}
         true
       }
       result._1 -> Some(result._2)

@@ -26,7 +26,7 @@ class FileWatcherTest extends AnyWordSpec with Matchers {
       // Resolve the file to
       val changeFile = dir.resolve("change.file")
       // Make sure it doesn't exist
-      if (Files.exists(changeFile)) { Files.delete(changeFile) }
+      if Files.exists(changeFile) then { Files.delete(changeFile) }
       // watch for changes
       val f = Future[Boolean] {
         FileWatcher.watchForChanges(dir, 2, 10)(onEvents)(notOnEvents)

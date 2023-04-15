@@ -76,14 +76,14 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
         .action((v, c) => c.copy(projectName = Option(v)))
         .text("optional project name to associate with the generated output")
         .validate(n =>
-          if (n.isBlank) {
+          if n.isBlank then {
             Left("option project-name cannot be blank or empty")
           } else { Right(()) }
         ),
       opt[String]('E', "enterprise-name").optional()
         .action((v, c) => c.copy(projectName = Option(v)))
         .text("optional enterprise name for C4 diagram output").validate(n =>
-          if (n.isBlank) {
+          if n.isBlank then {
             Left("option enterprise-name cannot be blank or empty")
           } else { Right(()) }
         ),
@@ -124,7 +124,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
   }
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    for {
+    for
       topCur <- cur.asObjectCursor
       topRes <- topCur.atKey(pluginName)
       objCur <- topRes.asObjectCursor
@@ -182,14 +182,14 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
       withGraphicalTOC <- optional(objCur, "with-graphical-toc", false) { cc =>
         cc.asBoolean
       }
-    } yield {
+    yield {
       def handleURL(url: Option[String]): Option[URL] = {
-        if (url.isEmpty || url.get.isEmpty) None
+        if url.isEmpty || url.get.isEmpty then None
         else Option(new java.net.URL(url.get))
       }
 
       val themes =
-        if (themesMap.isEmpty) {
+        if themesMap.isEmpty then {
           Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url))
         } else {
           val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
@@ -238,8 +238,8 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     options: Options
   ): PassesCreator = {
     standardPasses ++ Seq(
-      { input: PassInput => StatsPass(input) },
-      { input: PassInput =>
+      { (input: PassInput) => StatsPass(input) },
+      { (input: PassInput) =>
         val result = PassesResult(input)
         val state = HugoTranslatorState(result, options, commonOptions, log)
         HugoPass(input, state)

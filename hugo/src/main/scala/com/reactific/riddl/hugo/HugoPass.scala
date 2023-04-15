@@ -137,17 +137,17 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
 
   private def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
-    if (maybeFiles.nonEmpty) {
-      for (file <- maybeFiles.get) {deleteAll(file)}
+    if maybeFiles.nonEmpty then {
+      for file <- maybeFiles.get do {deleteAll(file)}
     }
     directory.delete
   }
 
   private def loadATheme(from: URL, destDir: Path): Unit = {
     val fileName = PathUtils.copyURLToDir(from, destDir)
-    if (fileName.nonEmpty) {
+    if fileName.nonEmpty then {
       val zip_path = destDir.resolve(fileName)
-      if (Files.isRegularFile(zip_path)) {
+      if Files.isRegularFile(zip_path) then {
         fileName match {
           case name if name.endsWith(".zip") =>
             Zip.unzip(zip_path, destDir)
@@ -169,7 +169,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   }
 
   private def loadThemes(options: HugoCommand.Options): Unit = {
-    for ((name, url) <- options.themes if url.nonEmpty) {
+    for (name, url) <- options.themes if url.nonEmpty do {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url.get, destDir)
     }
@@ -184,12 +184,12 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     val sourceDir: Path = inputRoot.getParent.resolve("static")
 
     val targetDir = options.staticRoot
-    if (Files.exists(sourceDir) && Files.isDirectory(sourceDir)) {
+    if Files.exists(sourceDir) && Files.isDirectory(sourceDir) then {
       val img = sourceDir
         .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
         .toAbsolutePath
       Files.createDirectories(img.getParent)
-      if (!Files.exists(img)) {
+      if !Files.exists(img) then {
         copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
       }
       // copy source to target using Files Class
@@ -199,7 +199,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   }
 
   def copyResource(destination: Path, src: String = ""): Unit = {
-    val name = if (src.isEmpty) destination.getFileName.toString else src
+    val name = if src.isEmpty then destination.getFileName.toString else src
     PathUtils.copyResource(name, destination)
   }
 
@@ -238,7 +238,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     commonOptions: CommonOptions
   ): Unit = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) {if (options.eraseOutput) {deleteAll(outDir)}}
+    if outDir.exists() then {if options.eraseOutput then {deleteAll(outDir)}}
     else {outDir.mkdirs()}
 
     val parent = outDir.getParentFile
@@ -246,7 +246,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if (commonOptions.verbose) {println(s"Generating output to: $outDir")}
+    if commonOptions.verbose then {println(s"Generating output to: $outDir")}
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)

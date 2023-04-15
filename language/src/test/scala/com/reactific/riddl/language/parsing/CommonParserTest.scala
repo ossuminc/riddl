@@ -29,10 +29,12 @@ class CommonParserTest extends ParsingTest {
           val expected = Domain(
             (1, 1),
             Identifier((1, 8), "foo"),
-            description = Some(URLDescription(
-              (2, 1),
-              new java.net.URL("https://www.wordnik.com/words/phi")
-            ))
+            description = Some(
+              URLDescription(
+                (2, 1),
+                new java.net.URL("https://www.wordnik.com/words/phi")
+              )
+            )
           )
           domain.toString mustBe expected.toString
       }
@@ -63,7 +65,8 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((domain, _)) => domain.description match {
+        case Right((domain, _)) =>
+          domain.description match {
             case Some(BlockDescription(_, lines)) =>
               lines.size mustBe 1
               lines.head.s mustBe "this is an \\\"explanation\\\""
@@ -71,30 +74,25 @@ class CommonParserTest extends ParsingTest {
           }
       }
     }
-    "literal strings can successfully handle a complicated email address pattern" in { // OC-137
+    "OWASP email address works" in {
       val input =
-        """
-          |type EmailAddress = Pattern("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-](?:\|.[a-z0-9!#$%&'*+/=?^_`{|}~-])|\"
-          |(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])
-          |\")@(?:(?:[a-z0-9](?:[a-z0-9-][a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-][a-z0-9])?|[(?:(?:25[0-5]|2[0-4]
-          |[0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:
-          |(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])")
-          |""".stripMargin.filterNot(_ == '\n')
+        """type EmailAddress = Pattern("
+          |^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}
+          |")
+          |""".stripMargin
       parseDefinition[Type](input) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right((content, _)) => content.typ match {
+          fail(errors.format)
+        case Right((content, _)) =>
+          content.typ match {
             case Pattern(_, Seq(LiteralString(_, str))) =>
-              str.head mustBe '('
-              str.last mustBe ')'
-              str.contains("\\\"") mustBe true
+              java.util.regex.Pattern.compile(str)
             case _ => fail("Expected a Pattern")
           }
       }
     }
-    "literal strings can contain whitespace and unicode escapes" in {
-      val input = """"\\b\\n\\r\\t\\f\\u0000"""".stripMargin
+    "literal strings can contain whitespace, hex and unicode escapes" in {
+      val input = """"\\b\\n\\r\\t\\f\\x04\\u000a"""".stripMargin
       parse[LiteralString, LiteralString](
         input,
         StringParser("").literalString(_),
@@ -103,7 +101,8 @@ class CommonParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((actual, rpi)) => actual mustBe
+        case Right((actual, rpi)) =>
+          actual mustBe
             LiteralString((1, 1, rpi), input.drop(1).dropRight(1))
       }
     }

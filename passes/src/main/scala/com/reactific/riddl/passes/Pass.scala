@@ -118,7 +118,7 @@ abstract class Pass(@unused in: PassInput) {
 
   protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     process(definition, parents)
-    if (definition.hasDefinitions) {
+    if definition.hasDefinitions then {
       parents.push(definition)
       definition.contents.foreach { item => traverse(item, parents) }
       parents.pop()
@@ -156,7 +156,7 @@ abstract class HierarchyPass(input: PassInput) extends Pass(input) {
         processLeaf(leaf, parents.toSeq)
       case container: Definition =>
         openContainer(container, parents.toSeq)
-        if (container.hasDefinitions) {
+        if container.hasDefinitions then {
           parents.push(definition)
           definition.contents.foreach { item => traverse(item, parents) }
           parents.pop()
@@ -173,9 +173,9 @@ object Pass {
   type PassesCreator = Seq[PassCreator]
 
   val standardPasses: PassesCreator = Seq(
-    { input: PassInput => SymbolsPass(input) },
-    { input: PassInput => ResolutionPass(input) },
-    { input: PassInput => ValidationPass(input)  }
+    { (input: PassInput) => SymbolsPass(input) },
+    { (input: PassInput) => ResolutionPass(input) },
+    { (input: PassInput) => ValidationPass(input) }
   )
 
   val standardPassNames: Seq[String] = Seq(SymbolsPass.name, ResolutionPass.name, ValidationPass.name)
@@ -187,13 +187,13 @@ object Pass {
     logger: Logger = SysLogger()
   ): Either[Messages.Messages,PassesResult] = {
     try {
-      for { pass <- passes } yield {
+      for  pass <- passes  yield {
         val aPass = pass(input)
         val output = runOnePass(input, aPass, logger)
         input.outputIs(aPass.name, output)
       }
       val messages = input.getMessages
-      if (messages.hasErrors && shouldFailOnErrors) {
+      if messages.hasErrors && shouldFailOnErrors then {
         Left(messages)
       } else {
         Right(PassesResult(input))

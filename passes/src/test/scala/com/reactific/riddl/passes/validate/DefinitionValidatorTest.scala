@@ -22,7 +22,7 @@ class DefinitionValidatorTest extends ValidatingTest {
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgs: Seq[Message]) =>
-          if (msgs.isEmpty) {
+          if msgs.isEmpty then {
             fail(
               "Identifiers with less than 3 characters should generate a warning"
             )

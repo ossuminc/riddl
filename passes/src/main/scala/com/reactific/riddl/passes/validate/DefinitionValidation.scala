@@ -19,6 +19,7 @@ trait DefinitionValidation extends BasicValidation  {
       Error,
       loc
     )
+    this
   }
 
   def checkOption[A <: RiddlValue](
@@ -38,10 +39,10 @@ trait DefinitionValidation extends BasicValidation  {
 
   private def checkUniqueContent(definition: Definition): this.type = {
     val allNames = definition.contents.filterNot(_.isImplicit).map(_.id.value)
-    if (allNames.distinct.size != allNames.size) {
+    if allNames.distinct.size != allNames.size then {
       val duplicates: Map[String, Seq[Definition]] =
         definition.contents.groupBy(_.id.value).filterNot(_._2.size < 2)
-      if (duplicates.nonEmpty) {
+      if duplicates.nonEmpty then {
         val details = duplicates
           .map { case (_: String, defs: Seq[Definition]) =>
             defs.map(_.identifyWithLoc).mkString(", and ")
@@ -73,23 +74,24 @@ trait DefinitionValidation extends BasicValidation  {
       "Vital definitions should have an author reference",
       MissingWarning,
       definition.loc
-    ).checkWhen(definition.isVital) { () =>
-        definition.asInstanceOf[WithAuthors].authors.foreach { authorRef: AuthorRef =>
-          pathIdToDefinition(authorRef.pathId, definition +: parents) match {
-            case None =>
-              messages.addError(
-                authorRef.loc,
-                s"${authorRef.format} is not defined"
-              )
-            case _ =>
-          }
+    )
+    if definition.isVital then {
+      definition.asInstanceOf[WithAuthors].authors.foreach { (authorRef: AuthorRef) =>
+        pathIdToDefinition(authorRef.pathId, definition +: parents) match {
+          case None =>
+            messages.addError(
+              authorRef.loc,
+              s"${authorRef.format} is not defined"
+            )
+          case _ =>
         }
       }
+    }
 
     val path = symbols.pathOf(definition)
-    if (!definition.id.isEmpty) {
+    if !definition.id.isEmpty then {
       val matches = symbols.lookup[Definition](path)
-      if (matches.isEmpty) {
+      if matches.isEmpty then {
         messages.addSevere(
           definition.id.loc,
           s"'${definition.id.value}' evaded inclusion in symbol table!"
@@ -121,14 +123,14 @@ trait DefinitionValidation extends BasicValidation  {
       value.isInstanceOf[Type] |
         (value.isInstanceOf[Definition] && value.nonEmpty)
     }
-    if (description.isEmpty && shouldCheck) {
+    if description.isEmpty && shouldCheck then {
       this.check(
         predicate = false,
         s"$id should have a description",
         MissingWarning,
         value.loc
       )
-    } else if (description.nonEmpty) {
+    } else if description.nonEmpty then {
       val desc = description.get
       this.check(
         desc.nonEmpty,
@@ -154,17 +156,17 @@ trait DefinitionValidation extends BasicValidation  {
       proc: Streamlet,
       req_ins: Int,
       req_outs: Int
-    ): Unit = {
+    ): this.type = {
       def sOutlet(n: Int): String = {
-        if (n == 1) s"1 outlet"
-        else if (n < 0) {
+        if n == 1 then s"1 outlet"
+        else if n < 0 then {
           s"at least ${abs(n)} outlets"
         } else s"$n outlets"
       }
 
       def sInlet(n: Int): String = {
-        if (n == 1) s"1 inlet"
-        else if (n < 0) {
+        if n == 1 then s"1 inlet"
+        else if n < 0 then {
           s"at least ${abs(n)} outlets"
         } else s"$n inlets"
       }
@@ -175,36 +177,37 @@ trait DefinitionValidation extends BasicValidation  {
           sInlet(req_ins) + s" but it has " + sOutlet(outs) + " and " +
           sInlet(ins)
       )
+      this
     }
 
-    if (!proc.isEmpty) {
+    if !proc.isEmpty then {
       proc.shape match {
         case _: Source =>
-          if (ins != 0 || outs != 1) {
+          if ins != 0 || outs != 1 then {
             generateError(proc, 0, 1)
           }
         case _: Flow =>
-          if (ins != 1 || outs != 1) {
+          if ins != 1 || outs != 1 then {
             generateError(proc, 1, 1)
           }
         case _: Sink =>
-          if (ins != 1 || outs != 0) {
+          if ins != 1 || outs != 0 then {
             generateError(proc, 1, 0)
           }
         case _: Merge =>
-          if (ins < 2 || outs != 1) {
+          if ins < 2 || outs != 1 then {
             generateError(proc, -2, 1)
           }
         case _: Split =>
-          if (ins != 1 || outs < 2) {
+          if ins != 1 || outs < 2 then {
             generateError(proc, 1, -2)
           }
         case _: Router =>
-          if (ins < 2 || outs < 2) {
+          if ins < 2 || outs < 2 then {
             generateError(proc, -2, -2)
           }
         case _: Void =>
-          if (ins > 0 || outs > 0) {
+          if ins > 0 || outs > 0 then {
             generateError(proc, 0, 0)
           }
       }

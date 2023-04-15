@@ -19,9 +19,9 @@ object Zip {
   def unzip(zipPath: Path, outputPath: Path): mutable.HashSet[Path] = {
     val set = mutable.HashSet.empty[Path]
     val zipFile = new ZipFile(zipPath.toFile)
-    for (entry <- zipFile.entries.asScala) {
+    for entry <- zipFile.entries.asScala do {
       val path = outputPath.resolve(entry.getName)
-      if (entry.isDirectory) { Files.createDirectories(path) }
+      if entry.isDirectory then { Files.createDirectories(path) }
       else {
         Files.createDirectories(path.getParent)
         Files.copy(zipFile.getInputStream(entry), path)

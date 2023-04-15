@@ -89,7 +89,7 @@ trait Actions extends Definitions {
     args: ArgList = ArgList()
   ) extends RiddlNode {
     override def format: String = msg.format + {
-      if (args.nonEmpty) {
+      if args.nonEmpty then {
         args.format
       } else {
         "()"

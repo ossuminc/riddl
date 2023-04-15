@@ -38,11 +38,11 @@ class VersionCommand extends CommandPlugin[VersionCommand.Options]("version") {
 
   override def getConfigReader: ConfigReader[VersionCommand.Options] = {
     (cur: ConfigCursor) =>
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
         cmd <- topRes.asObjectCursor
-      } yield { Options(cmd.path) }
+      yield { Options(cmd.path) }
   }
 
   override def run(
@@ -51,7 +51,7 @@ class VersionCommand extends CommandPlugin[VersionCommand.Options]("version") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if (commonOptions.verbose || !commonOptions.quiet) {
+    if commonOptions.verbose || !commonOptions.quiet then {
       println(RiddlBuildInfo.version)
     }
     Right(PassesResult())

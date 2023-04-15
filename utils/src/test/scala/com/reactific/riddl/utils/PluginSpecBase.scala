@@ -59,7 +59,7 @@ abstract class PluginSpecBase(
       s"jar cvf ${jarFile.toAbsolutePath} $implClassPath $providerRelativePath"
     val process = Process.apply(command, testClassesDir.toFile).run()
     val rc = process.exitValue()
-    if (rc != 0) { fail(s"'$command' failed with RC $rc != 0\n") }
+    if rc != 0 then { fail(s"'$command' failed with RC $rc != 0\n") }
   }
   override def afterAll(): Unit = {
     Files.deleteIfExists(jarFile)

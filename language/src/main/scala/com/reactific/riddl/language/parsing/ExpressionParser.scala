@@ -31,11 +31,11 @@ private[parsing] trait ExpressionParser
   }
 
   def trueCondition[u: P]: P[True] = {
-    P(location ~ IgnoreCase("true")).map(True)./
+    P(location ~ IgnoreCase("true")).map( (loc) => True(loc))./
   }
 
   def falseCondition[u: P]: P[False] = {
-    P(location ~ IgnoreCase("false")).map(False)./
+    P(location ~ IgnoreCase("false")).map( loc => AST.False(loc))./
   }
 
   private def arbitraryCondition[u: P]: P[ArbitraryCondition] = {
@@ -51,7 +51,7 @@ private[parsing] trait ExpressionParser
       emptyArgList |
         (identifier ~ Punctuation.equalsSign ~ expression)
           .rep(min = 0, Punctuation.comma)
-          .map { s: Seq[(Identifier, Expression)] =>
+          .map { (s: Seq[(Identifier, Expression)]) =>
             s.foldLeft(ListMap.empty[Identifier, Expression]) {
               case (b, (id, exp)) => b + (id -> exp)
             }
@@ -136,7 +136,7 @@ private[parsing] trait ExpressionParser
   }
 
   private def undefinedExpression[u: P]: P[UndefinedOperator] = {
-    P(location ~ Punctuation.undefinedMark).map(UndefinedOperator)
+    P(location ~ Punctuation.undefinedMark).map(loc => AST.UndefinedOperator(loc))
   }
 
   private def valueExpression[u: P]: P[ValueOperator] = {

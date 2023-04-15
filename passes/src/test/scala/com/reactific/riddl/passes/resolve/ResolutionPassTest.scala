@@ -316,7 +316,7 @@ class ResolutionPassTest extends ResolvingTest {
       val in = resolve(root, CommonOptions())
       val messages = in.getMessages
       val errors = messages.filter(_.kind >= Messages.Error)
-      if (errors.nonEmpty) fail(errors.format) else succeed
+      if errors.nonEmpty then fail(errors.format) else succeed
     }
     "resolve entity references" in {
       val input = RiddlParserInput(
@@ -341,7 +341,7 @@ class ResolutionPassTest extends ResolvingTest {
         val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
         resolution.refMap.definitionOf[Entity](pid, cid) match {
           case Some(definition) =>
-            if (definition == entity) {
+            if definition == entity then {
               succeed
             } else {
               fail("Didn't resolve to entity")

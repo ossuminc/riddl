@@ -28,7 +28,7 @@ class PrettifyTest extends RiddlFilesTestBase {
 
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
-      { input: PassInput =>
+      { (input: PassInput) =>
         val options = PrettifyCommand.Options(inputFile = Some(Path.of("aFile")))
         val state = PrettifyState(CommonOptions(), options)
         PrettifyPass(input, state)

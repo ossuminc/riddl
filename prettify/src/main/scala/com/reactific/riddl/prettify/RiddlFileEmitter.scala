@@ -36,7 +36,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def addSpace(): this.type = add(spc)
 
   def add(strings: Seq[LiteralString]): this.type = {
-    if (strings.sizeIs > 1) {
+    if strings.sizeIs > 1 then {
       sb.append("\n")
       strings.foreach(s => sb.append(s"""$spc"${s.s}"$newLine"""))
     } else {strings.foreach(s => sb.append(s""" "${s.s}" """))}
@@ -80,8 +80,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     withBrace: Boolean = true
   ): this.type = {
     addSpace().add(s"${keyword(definition)} ${definition.id.format} is ")
-    if (withBrace) {
-      if (definition.isEmpty) {add("{ ??? }")}
+    if withBrace then {
+      if definition.isEmpty then {add("{ ??? }")}
       else {add("{\n").indent}
     }
     this
@@ -91,18 +91,18 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    if (withBrace && !definition.isEmpty) {outdent.addIndent("}")}
+    if withBrace && !definition.isEmpty then {outdent.addIndent("}")}
     emitBrief(definition.brief)
     emitDescription(definition.description).add("\n")
   }
 
   def emitBrief(brief: Option[LiteralString]): this.type = {
-    brief.map { ls: LiteralString => this.add(s" briefly ${ls.format}") }
+    brief.map { (ls: LiteralString) => this.add(s" briefly ${ls.format}") }
     this
   }
 
   def emitDescription(description: Option[Description]): this.type = {
-    description.map { desc: Description =>
+    description.map { (desc: Description) =>
       add(" described as {\n")
       indent
       desc.lines.foreach { line =>
@@ -142,6 +142,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       }
       .mkString(s"$spc", s",\n$spc", s"\n")
     head.add(enumerators).outdent.addLine("}")
+    this
   }
 
   def emitAlternation(alternation: Alternation): this.type = {
@@ -163,8 +164,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitFields(of: Seq[Field]): this.type = {
-    if (of.isEmpty) {this.add("{ ??? }")}
-    else if (of.sizeIs == 1) {
+    if of.isEmpty then {this.add("{ ??? }")}
+    else if of.sizeIs == 1 then {
       val f: Field = of.head
       add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
     } else {
@@ -200,7 +201,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitPattern(pattern: Pattern): this.type = {
     val line =
-      if (pattern.pattern.sizeIs == 1) {
+      if pattern.pattern.sizeIs == 1 then {
         "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
       } else {
         s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
@@ -277,7 +278,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitActions(actions: Seq[Action]): this.type = {
-    actions.foreach { a: Action => emitAction(a) }
+    actions.foreach { (a: Action) => emitAction(a) }
     this
   }
 
@@ -318,14 +319,14 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitExample(example: Example): this.type = {
-    if (!example.isImplicit) {
+    if !example.isImplicit then {
       openDef(example)
     }
     emitGherkinClauses("given ", example.givens)
       .emitGherkinClauses("when", example.whens)
       .emitGherkinClauses("then", example.thens)
       .emitGherkinClauses("but", example.buts)
-    if (!example.isImplicit) {
+    if !example.isImplicit then {
       closeDef(example)
     }
     this
@@ -339,7 +340,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitUndefined(): this.type = {add(" ???")}
 
   def emitOptions(optionDef: WithOptions[?]): this.type = {
-    if (optionDef.options.nonEmpty) this.addLine(optionDef.format) else this
+    if optionDef.options.nonEmpty then this.addLine(optionDef.format) else this
   }
 
   def emit(): Path = {
@@ -349,10 +350,10 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitStreamlets(proc: Processor[_, _]): this.type = {
-    proc.inlets.foreach { inlet: Inlet =>
+    proc.inlets.foreach { (inlet: Inlet) =>
       addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
     }
-    proc.outlets.foreach { outlet: Outlet =>
+    proc.outlets.foreach { (outlet: Outlet) =>
       addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
     }
     this

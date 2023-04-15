@@ -42,7 +42,7 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { inputFile: Path =>
+    options.withInputFile { (inputFile: Path) =>
       Parser.parse(inputFile, commonOptions) match {
         case Left(errors) =>
           Left[Messages, PassesResult](errors)
@@ -52,7 +52,7 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
           Pass(input, true, passes, log) match {
             case Left(messages) => Left(messages)
             case Right(result) =>
-              if (commonOptions.debug) {
+              if commonOptions.debug then {
                 println("Errors after running validation:")
                 println(result.messages.format)
               }
@@ -70,13 +70,13 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val options =
-      if (outputDirOverride.nonEmpty) {
+      if outputDirOverride.nonEmpty then {
         overrideOptions(originalOptions, outputDirOverride.get)
       } else {originalOptions}
 
     val messages = checkOptions(options)
 
-    if (messages.nonEmpty) {
+    if messages.nonEmpty then {
       Left[Messages, PassesResult](messages) // no point even parsing if there are option errors
     } else {
       doRun(options, commonOptions, log)
@@ -85,11 +85,11 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
 
   private final def checkOptions(options: OPT): Messages = {
     val msgs1: Messages =
-      if (options.inputFile.isEmpty) {
+      if options.inputFile.isEmpty then {
         Messages.errors("An input path was not provided.")
       } else {Messages.empty}
     val msgs2: Messages =
-      if (options.outputDir.isEmpty) {
+      if options.outputDir.isEmpty then {
         Messages.errors("An output path was not provided.")
       } else {Messages.empty}
     msgs1 ++ msgs2

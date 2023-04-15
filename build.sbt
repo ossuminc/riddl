@@ -79,7 +79,9 @@ lazy val utils = project
       scalaVersion,
       sbtVersion,
       BuildInfoKey.map(scalaVersion) { case (k, v) =>
-        "scalaCompatVersion" -> v.substring(0, v.lastIndexOf('.'))
+        val version = if (v.head == '2') { v.substring(0, v.lastIndexOf('.')) }
+        else v
+        "scalaCompatVersion" -> version
       },
       BuildInfoKey.map(licenses) { case (k, v) =>
         k -> v.map(_._1).mkString(", ")

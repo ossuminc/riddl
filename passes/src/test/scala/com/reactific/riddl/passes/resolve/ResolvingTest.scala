@@ -35,7 +35,7 @@ class ResolvingTest extends AnyWordSpec with Matchers {
       case Right(model) =>
         val input = resolve(model)
         val messages = input.getMessages
-        if (messages.isEmpty)
+        if messages.isEmpty then
           onSuccess(input)
         else onFailure(messages)
     }

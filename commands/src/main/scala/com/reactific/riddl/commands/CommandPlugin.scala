@@ -35,10 +35,10 @@ object CommandPlugin {
     commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
-    if (commonOptions.verbose) { println(s"Loading command: $name") }
+    if commonOptions.verbose then { println(s"Loading command: $name") }
     val loaded = Plugin
       .loadPluginsFrom[CommandPlugin[CommandOptions]](pluginsDir)
-    if (loaded.isEmpty) { Left(errors(s"No command found for '$name'")) }
+    if loaded.isEmpty then { Left(errors(s"No command found for '$name'")) }
     else {
       loaded.find(_.pluginName == name) match {
         case Some(pl) if pl.isInstanceOf[CommandPlugin[CommandOptions]] =>
@@ -60,8 +60,8 @@ object CommandPlugin {
   ): Either[Messages, PassesResult] = {
     val result = loadCommandNamed(name, commonOptions, pluginsDir)
       .flatMap { cmd => cmd.run(args, commonOptions, log) }
-    if (commonOptions.verbose) {
-      val rc = if (result.isRight) "yes" else "no"
+    if commonOptions.verbose then {
+      val rc = if result.isRight then "yes" else "no"
       println(s"Ran: ${args.mkString(" ")}: success=$rc")
     }
     result
@@ -75,14 +75,14 @@ object CommandPlugin {
     pluginsDir: Path = Plugin.pluginsDir,
     outputDirOverride: Option[Path] = None
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
-    if (commonOptions.verbose) {
+    if commonOptions.verbose then {
       println(s"About to run $name with options from $optionsPath")
     }
     loadCommandNamed(name, commonOptions, pluginsDir).flatMap { cmd =>
       cmd.loadOptionsFrom(optionsPath, commonOptions).flatMap { opts =>
         cmd.run(opts, commonOptions, log, outputDirOverride) match {
           case Left(errors) =>
-            if (commonOptions.debug) {
+            if commonOptions.debug then {
               println(s"Errors after running '$name':")
               println(errors.format)
             }
@@ -101,7 +101,7 @@ object CommandPlugin {
       .map(_.keySet().asScala.toSeq)
     names match {
       case Right(value) =>
-        if (commonOptions.verbose) {
+        if commonOptions.verbose then {
           println(
             s"Found candidate commands in $configFile: ${value.mkString(" ")}"
           )
@@ -124,11 +124,11 @@ object CommandPlugin {
     val result = CommandOptions.withInputFile(configFile, commandName) { path =>
       val candidate = CommandPlugin.loadCandidateCommands(path, commonOptions)
         .flatMap { names =>
-          if (names.contains(targetCommand)) {
+          if names.contains(targetCommand) then {
             CommandPlugin
               .runCommandNamed(targetCommand, path, log, commonOptions) match {
               case Left(errors) =>
-                if (commonOptions.debug) {
+                if commonOptions.debug then {
                   println(s"Errors after running `$targetCommand`:")
                   println(errors.format)
                 }
@@ -153,10 +153,10 @@ object CommandPlugin {
   ): Int = {
     result match {
       case Right(_) =>
-        if (commonOptions.quiet) { System.out.println(log.summary) }
+        if commonOptions.quiet then { System.out.println(log.summary) }
         0
       case Left(messages) =>
-        if (commonOptions.quiet) { highestSeverity(messages) + 1 }
+        if commonOptions.quiet then { highestSeverity(messages) + 1 }
         else { Messages.logMessages(messages, log, commonOptions) + 1 }
     }
   }
@@ -167,19 +167,19 @@ object CommandPlugin {
   ): Int = {
     var log: Logger = SysLogger()
 
-    if (remaining.isEmpty) {
-      if (!commonOptions.quiet) {
+    if remaining.isEmpty then {
+      if !commonOptions.quiet then {
         log.error("No command argument was provided")
       }
       1
     } else {
       val name = remaining.head
-      if (commonOptions.dryRun) {
-        if (!commonOptions.quiet) {
+      if commonOptions.dryRun then {
+        if !commonOptions.quiet then {
           log.info(s"Would have executed: ${remaining.mkString(" ")}")
         }
       }
-      if (commonOptions.quiet) { log = StringLogger() }
+      if commonOptions.quiet then { log = StringLogger() }
       val result = CommandPlugin
         .runCommandWithArgs(name, remaining, log, commonOptions)
       handleCommandResult(result, commonOptions, log)
@@ -240,15 +240,15 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     configFile: Path,
     commonOptions: CommonOptions = CommonOptions()
   ): Either[Messages, OPT] = {
-    if (commonOptions.verbose) {
+    if commonOptions.verbose then {
       println(s"Reading command options from: $configFile")
     }
     ConfigSource.file(configFile).load[OPT](getConfigReader) match {
       case Right(value) =>
-        if (commonOptions.verbose) {
+        if commonOptions.verbose then {
           println(s"Read command options from $configFile")
         }
-        if (commonOptions.debug) {
+        if commonOptions.debug then {
           import com.reactific.riddl.utils.StringHelpers.toPrettyString
           println(toPrettyString(value, 1))
         }
@@ -295,14 +295,11 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     maybeOptions match {
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
-        if (commonOptions.verbose) {println(s"Running command: $command")}
+        if commonOptions.verbose then {println(s"Running command: $command")}
         val result = Timer.time(command, show = commonOptions.showTimes, log) {
           run(opts, commonOptions, log, outputDirOverride)
         }
         result
-      case Some(_) => Left(
-          errors(s"Failed to match option type ${optionsClass.getSimpleName}")
-        )
       case None => Left(errors(s"Failed to parse $pluginName options"))
     }
   }
@@ -339,7 +336,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
         }
         val input = parent.resolve(inFile)
         val result = replaceInputFile(options, input)
-        if (commonOptions.debug) {
+        if commonOptions.debug then {
           val pretty = toPrettyString(
             result,
             1,

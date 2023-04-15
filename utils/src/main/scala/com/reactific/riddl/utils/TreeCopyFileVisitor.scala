@@ -24,7 +24,7 @@ case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
     attrs: BasicFileAttributes
   ): FileVisitResult = {
     val resolve = target.resolve(source.relativize(dir))
-    if (Files.notExists(resolve)) { Files.createDirectories(resolve) }
+    if Files.notExists(resolve) then { Files.createDirectories(resolve) }
     FileVisitResult.CONTINUE
   }
 
@@ -34,8 +34,8 @@ case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
     attrs: BasicFileAttributes
   ): FileVisitResult = {
     val resolve = target.resolve(source.relativize(file))
-    if (!file.getFileName.startsWith(".")) {
-      if (Files.exists(resolve)) { Files.delete(resolve) }
+    if !file.getFileName.startsWith(".") then {
+      if Files.exists(resolve) then { Files.delete(resolve) }
       Files.copy(file, resolve, StandardCopyOption.REPLACE_EXISTING)
     }
     FileVisitResult.CONTINUE

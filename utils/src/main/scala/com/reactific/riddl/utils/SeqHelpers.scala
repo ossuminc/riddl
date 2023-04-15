@@ -13,14 +13,14 @@ object SeqHelpers {
   implicit class SeqHelpers[T](seq: Seq[T]) {
     def dropUntil(f: T => Boolean): Seq[T] = {
       val index = seq.indexWhere(f)
-      if (index < 0) { Seq.empty[T] }
+      if index < 0 then { Seq.empty[T] }
       else { seq.drop(index) }
     }
 
     def dropBefore(f: T => Boolean): Seq[T] = {
       val index = seq.indexWhere(f)
-      if (index < 0) {Seq.empty[T]}
-      else if (index == 0) {
+      if index < 0 then {Seq.empty[T]}
+      else if index == 0 then {
         seq
       } else {seq.drop(index - 1)}
     }
@@ -28,7 +28,7 @@ object SeqHelpers {
     def allUnique: Boolean = {
       val set = scala.collection.mutable.Set[T]()
       seq.forall { x =>
-        if (set(x)) false
+        if set(x) then false
         else {
           set += x
           true
@@ -40,8 +40,8 @@ object SeqHelpers {
   implicit class StackHelpers[T](stack: mutable.Stack[T]) {
     def popUntil(f: T => Boolean): mutable.Stack[T] = {
       val index = stack.indexWhere(f) - 1
-      if (index < 0) { stack.clearAndShrink() }
-      else { for (_ <- 0 to index) { stack.pop() }; stack }
+      if index < 0 then { stack.clearAndShrink() }
+      else { for _ <- 0 to index do { stack.pop() }; stack }
     }
   }
 }

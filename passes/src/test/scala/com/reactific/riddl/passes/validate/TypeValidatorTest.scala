@@ -20,10 +20,10 @@ class TypeValidatorTest extends ValidatingTest {
                                |}
                                |""".stripMargin) {
         case (_: Domain, _, msgs: Seq[Message]) =>
-          if (msgs.isEmpty) fail("Type 'bar' should have generated warning")
-          else if (
+          if msgs.isEmpty then fail("Type 'bar' should have generated warning")
+          else if
             msgs.map(_.message).exists(_.contains("should start with"))
-          ) { succeed }
+          then { succeed }
           else { fail("No such message") }
       }
     }

@@ -13,11 +13,11 @@ class ValidationPassTest extends ValidatingTest {
   "ValidationPass" should {
     "parse and validation rbbq.riddl" in {
       val input = RiddlParserInput(Path.of("language/src/test/input/domains/rbbq.riddl"))
-      parseAndValidateAggregate(input,CommonOptions.noMinorWarnings) { vo: PassesResult =>
-        vo.messages.justErrors.size mustBe(0)
-        vo.refMap.size mustBe(24)
-        vo.usage.usesSize mustBe(24)
-        vo.usage.usedBySize mustBe(17)
+      parseAndValidateAggregate(input, CommonOptions.noMinorWarnings) { (vo: PassesResult) =>
+        vo.messages.justErrors.size mustBe (0)
+        vo.refMap.size mustBe (24)
+        vo.usage.usesSize mustBe (24)
+        vo.usage.usedBySize mustBe (17)
       }
     }
   }

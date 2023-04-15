@@ -122,7 +122,7 @@ private[parsing] trait EpicParser
     P(
       Keywords.shown ~ Readability.by ~ open ~
         httpUrl.rep(0, Punctuation.comma) ~ close
-    ).?.map { x => if (x.isEmpty) Seq.empty[java.net.URL] else x.get }
+    ).?.map { x => if x.isEmpty then Seq.empty[java.net.URL] else x.get }
   }
 
   private def epicOptions[u: P]: P[Seq[EpicOption]] = {
