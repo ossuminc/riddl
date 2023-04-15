@@ -711,4 +711,19 @@ trait TypeExpression extends AbstractDefinitions {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false
   }
+
+  /** A predefined type expression for a type that is distributed around a
+   * cluster
+   * @param loc
+   *   The location of the CRDT type expression
+   * @param typEx
+   *   The type stored in the CRDT
+   */
+  case class CRDT(loc: At, typEx: TypeExpression) extends PredefinedType {
+    @inline def kind: String = Predefined.CRDT
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean =
+      typEx.isAssignmentCompatible(other)
+
+  }
 }

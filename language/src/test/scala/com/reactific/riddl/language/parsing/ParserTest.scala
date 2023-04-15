@@ -7,6 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.{ParsingTest, TestParser}
 
 /** Unit Tests For ParserTest */
@@ -66,8 +67,7 @@ class ParserTest extends ParsingTest {
             Domain(
               (1, 1, input),
               Identifier((1, 8, input), "foo"),
-              domains =
-                Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
+              domains = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
       }
@@ -397,6 +397,20 @@ class ParserTest extends ParsingTest {
                   None
                 ) =>
           }
+      }
+    }
+    "support CRDTs" in {
+      val input = """type crdt is CRDT(Integer)""".stripMargin
+      parseDefinition[Type](input) match {
+        case Left(errors) => fail(errors.format)
+        case Right((typ, rpi)) =>
+          val expected: Type = Type(
+            (1, 1, rpi),
+            Identifier((1, 6, rpi), "crdt"),
+            AliasedTypeExpression((1, 14, rpi), PathIdentifier((1, 14, rpi), List("CRDT")))
+          )
+          typ mustBe expected
+
       }
     }
   }
