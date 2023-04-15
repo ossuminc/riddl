@@ -126,7 +126,7 @@ lazy val commands: Project = project
   )
   .dependsOn(
     utils % "compile->compile;test->test",
-    passes% "compile->compile;test->test"
+    passes % "compile->compile;test->test"
   )
 
 val TestKit = config("testkit")
@@ -167,9 +167,7 @@ lazy val hugo: Project = project
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(
-    passes % "compile->compile;test->test",
-    commands, testkit % "test->compile", stats)
+  .dependsOn(passes % "compile->compile;test->test", commands, testkit % "test->compile", stats)
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),
@@ -255,7 +253,7 @@ lazy val plugin = (project in file("sbt-riddl"))
   .settings(
     name := "sbt-riddl",
     sbtPlugin := true,
-    scalaVersion := "2.12.17",
+    scalaVersion := "2.13.10",
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.reactific.riddl.sbt",
     buildInfoOptions := Seq(BuildTime),
