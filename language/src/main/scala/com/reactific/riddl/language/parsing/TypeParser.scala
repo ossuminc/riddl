@@ -239,7 +239,6 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
       location ~ (
         StringIn(
           Predefined.Current,
-          Predefined.Duration,
           Predefined.Length,
           Predefined.Luminosity,
           Predefined.Mass,
@@ -272,13 +271,13 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     ).map {
       case (at: At, Predefined.Duration) => Duration(at)
       case (at, Predefined.DateTime) => DateTime(at)
-      case (at, Predefined.Date) => DateTime(at)
-      case (at, Predefined.TimeStamp) => DateTime(at)
-      case (at, Predefined.Time) => DateTime(at)
+      case (at, Predefined.Date) => Date(at)
+      case (at, Predefined.TimeStamp) => TimeStamp(at)
+      case (at, Predefined.Time) => Time(at)
     }
   }
 
-  private def oneWordPredefTypes[u: P]: P[TypeExpression] = {
+  private def otherTypes[u: P]: P[TypeExpression] = {
     P(
       location ~ StringIn(
         // order matters in this list, because of common prefixes
@@ -304,7 +303,7 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
 
   private def simplePredefinedTypes[u: P]: P[TypeExpression] = {
     P(stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
-      decimalType)./
+      decimalType | otherTypes)./
   }
 
   private def decimalType[u: P]: P[Decimal] = {
