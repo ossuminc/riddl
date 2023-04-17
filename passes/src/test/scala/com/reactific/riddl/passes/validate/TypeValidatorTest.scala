@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Unit Tests For TypeValidationTest */
 class TypeValidatorTest extends ValidatingTest {
 
@@ -18,13 +19,11 @@ class TypeValidatorTest extends ValidatingTest {
       parseAndValidateDomain("""domain foo is {
                                |type bar is String
                                |}
-                               |""".stripMargin) {
-        case (_: Domain, _, msgs: Seq[Message]) =>
-          if msgs.isEmpty then fail("Type 'bar' should have generated warning")
-          else if
-            msgs.map(_.message).exists(_.contains("should start with"))
-          then { succeed }
-          else { fail("No such message") }
+                               |""".stripMargin) { case (_: Domain, _, msgs: Seq[Message]) =>
+        if msgs.isEmpty then fail("Type 'bar' should have generated warning")
+        else if msgs.map(_.message).exists(_.contains("should start with"))
+        then { succeed }
+        else { fail("No such message") }
       }
     }
     "identify undefined type references" in {
@@ -46,7 +45,7 @@ class TypeValidatorTest extends ValidatingTest {
       parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
           val errors = msgsAndWarnings.justErrors
-          errors.size mustBe( 1)
+          errors.size mustBe (1)
           errors.head.message must include("but an Entity was expected")
       }
     }
@@ -57,11 +56,10 @@ class TypeValidatorTest extends ValidatingTest {
           |} explained as "nothing"
           |""".stripMargin
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgs: Messages) =>
-          msgs mustNot be(empty)
-          msgs.size mustBe (3)
-          msgs.filter(_.kind == Messages.UsageWarning).head.format must include("is unused")
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+        msgs mustNot be(empty)
+        msgs.size mustBe (3)
+        msgs.filter(_.kind == Messages.UsageWarning).head.format must include("is unused")
       }
     }
 
@@ -73,9 +71,8 @@ class TypeValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgs: Messages) =>
-          assertValidationMessage(msgs, Error, "Unclosed character class")
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "Unclosed character class")
       }
     }
 
@@ -88,12 +85,12 @@ class TypeValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgs: Messages) => assertValidationMessage(
-            msgs,
-            Error,
-            "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1), in Type 'Order', but an Entity"
-          )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1), in Type 'Order', but an Entity"
+        )
       }
     }
   }

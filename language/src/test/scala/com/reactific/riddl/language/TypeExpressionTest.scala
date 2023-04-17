@@ -19,7 +19,6 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
   val bool = Bool(At.empty)
   val current = Current(At.empty)
   val currency = Currency(At.empty, "CA")
-  val crdt = CRDT(At.empty, integer)
   val date = Date(At.empty)
   val dateTime = DateTime(At.empty)
   val decimal = Decimal(At.empty, 8, 3)
@@ -350,9 +349,6 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       alias.format mustBe "a.b.foo"
       alias.isEmpty mustBe true
       alias.isContainer mustBe false
-    }
-    "Support CRDTs" in {
-      crdt.typEx mustBe Integer
     }
   }
 

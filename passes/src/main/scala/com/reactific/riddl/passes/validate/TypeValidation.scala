@@ -120,12 +120,12 @@ trait TypeValidation extends DefinitionValidation {
       Warning,
       rt.loc
     )
-    .check(
-      rt.max <= BigInt.long2bigInt(Long.MaxValue),
-      "Maximum value might be too large to store in a Long",
-      Warning,
-      rt.loc
-    )
+      .check(
+        rt.max <= BigInt.long2bigInt(Long.MaxValue),
+        "Maximum value might be too large to store in a Long",
+        Warning,
+        rt.loc
+      )
   }
 
   private def checkAggregation(agg: Aggregation): this.type = {
@@ -161,6 +161,14 @@ trait TypeValidation extends DefinitionValidation {
     this
   }
 
+  private def checkSet(set: Set, definition: Definition, parents: Seq[Definition]): Unit = {
+    checkTypeExpression(set.of, definition, parents)
+  }
+
+  private def checkSeq(sequence: Sequence, definition: Definition, parents: Seq[Definition]): Unit = {
+    checkTypeExpression(sequence.of, definition, parents)
+  }
+  
   private def checkMapping(
     mapping: Mapping,
     typeDef: Definition,
@@ -183,13 +191,15 @@ trait TypeValidation extends DefinitionValidation {
         checkAggregateUseCase(mt, defn, parents)
       case agg: Aggregation            => checkAggregation(agg)
       case alt: Alternation            => checkAlternation(alt, defn, parents)
+      case set: Set                    => checkSet(set, defn, parents)
+      case seq: Sequence               => checkSeq(seq, defn, parents)
       case mapping: Mapping            => checkMapping(mapping, defn, parents)
       case rt: RangeType               => checkRangeType(rt)
       case p: Pattern                  => checkPattern(p)
       case Enumeration(_, enumerators) => checkEnumeration(enumerators)
-      case Optional(_, tye)   => checkTypeExpression(tye, defn, parents)
-      case OneOrMore(_, tye)  => checkTypeExpression(tye, defn, parents)
-      case ZeroOrMore(_, tye) => checkTypeExpression(tye, defn, parents)
+      case Optional(_, tye)            => checkTypeExpression(tye, defn, parents)
+      case OneOrMore(_, tye)           => checkTypeExpression(tye, defn, parents)
+      case ZeroOrMore(_, tye)          => checkTypeExpression(tye, defn, parents)
       case SpecificRange(_, typex: TypeExpression, min, max) =>
         checkTypeExpression(typex, defn, parents)
         check(

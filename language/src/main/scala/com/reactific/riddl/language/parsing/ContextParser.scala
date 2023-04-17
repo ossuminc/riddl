@@ -37,7 +37,7 @@ private[parsing] trait ContextParser
       case (loc, Options.service, _)       => ServiceOption(loc)
       case (loc, Options.package_, args)   => ContextPackageOption(loc, args)
       case (loc, Options.technology, args) => ContextTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+      case (_, _, _)                       => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -80,6 +80,7 @@ private[parsing] trait ContextParser
       val projections = mapTo[Projector](groups.get(classOf[Projector]))
       val repos = mapTo[Repository](groups.get(classOf[Repository]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
+      val replicas = mapTo[Replica](groups.get(classOf[Replica]))
       Context(
         loc,
         id,
@@ -99,6 +100,7 @@ private[parsing] trait ContextParser
         inlets,
         outlets,
         connections,
+        replicas,
         authorRefs,
         briefly,
         desc
