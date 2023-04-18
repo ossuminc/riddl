@@ -87,6 +87,7 @@ object C {
       "120"
       /*, "-explain" */
     )
+
   lazy val scalaDocOptions: Seq[String] = Seq(
     "-project", "RIDDL",
     "-project-version", "",
@@ -95,11 +96,41 @@ object C {
     "-author"
   )
 
+  lazy val scala2_13_Options: Seq[String] = Seq(
+    "-release:17",
+    // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
+    "-Xsource:3",
+    "-Wdead-code",
+    "-deprecation",
+    "-feature",
+    "-Werror",
+    "-Wunused:imports", // Warn if an import selector is not referenced.
+    "-Wunused:patvars", // Warn if a variable bound in a pattern is unused.
+    "-Wunused:privates", // Warn if a private member is unused.
+    "-Wunused:locals", // Warn if a local definition is unused.
+    "-Wunused:explicits", // Warn if an explicit parameter is unused.
+    "-Wunused:implicits", // Warn if an implicit parameter is unused.
+    "-Wunused:params", // Enable -Wunused:explicits,implicits.
+    "-Xlint:nonlocal-return", // A return statement used an exception for flow control.
+    "-Xlint:implicit-not-found", // Check @implicitNotFound and @implicitAmbiguous messages.
+    "-Xlint:serial", // @SerialVersionUID on traits and non-serializable classes.
+    "-Xlint:valpattern", // Enable pattern checks in val definitions.
+    "-Xlint:eta-zero", // Warn on eta-expansion (rather than auto-application) of zero-ary method.
+    "-Xlint:eta-sam", // Warn on eta-expansion to meet a Java-defined functional
+    // interface that is not explicitly annotated with @FunctionalInterface.
+    "-Xlint:deprecation" // Enable linted deprecations.
+  )
+
   def withScalaCompile(p: Project): Project = {
     p.configure(withInfo)
       .settings(
         scalaVersion := "3.2.2",
-        Compile / scalacOptions := scala3_2_Options,
+        // crossScalaVersions := Seq("2.13.10", "3.2.2"),
+        scalacOptions := {
+          if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
+          else if (scalaVersion.value.startsWith("2.13")) {scala2_13_Options}
+          else Seq.empty[String]
+        },
         Compile / doc / scalacOptions := scalaDocOptions,
         scalafmtLogOnEachError := true
       )
