@@ -36,5 +36,10 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
         succeed
       }
     }
+
+    s"run --show-times from example hugo" in {
+      val args = Seq("--show-times", "from", "example.riddl", "hugo")
+      runWith(args)
+    }
   }
 }
