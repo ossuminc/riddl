@@ -196,7 +196,7 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow command, event, query, and result message aggregations" in {
-      for { mk <- Seq("command", "event", "query", "result") } {
+      for  mk <- Seq("command", "event", "query", "result")  do {
         val prefix = s"type mkt = $mk {"
         val rip = RiddlParserInput(prefix + """
                                               |  key: Number,

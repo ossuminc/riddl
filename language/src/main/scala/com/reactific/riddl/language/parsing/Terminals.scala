@@ -51,7 +51,6 @@ object Terminals {
   }
 
   object Options {
-    final val actor = "actor"
     final val aggregate = "aggregate"
     final val async = "async"
     final val available = "available"
@@ -75,11 +74,12 @@ object Terminals {
     final val tail_recursive = "tail-recursive"
     final val technology = "technology"
     final val transient = "transient"
+    final val user = "user"
   }
 
   object Keywords {
     final val acquires = "acquires"
-    final val actor = "actor"
+    final val user = "user"
     final val adaptor = "adaptor"
     final val all = "all"
     final val any = "any"

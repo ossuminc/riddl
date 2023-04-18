@@ -86,7 +86,7 @@ object CommandOptions {
   implicit val commonOptionsReader: ConfigReader[CommonOptions] = {
     (cur: ConfigCursor) =>
       {
-        for {
+        for
           topCur <- cur.asObjectCursor
           topRes <- topCur.atKey("common")
           objCur <- topRes.asObjectCursor
@@ -137,7 +137,7 @@ object CommandOptions {
           pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path]) {
             cc => cc.asString.map(f => Option(Path.of(f)))
           }
-        } yield {
+        yield {
           val default = CommonOptions()
           val shouldShowWarnings = suppressWarnings.map(!_)
             .getOrElse(hideWarnings.map(!_).getOrElse(showWarnings.getOrElse(
@@ -174,7 +174,7 @@ object CommandOptions {
   ): Either[Messages, CommonOptions] = {
     ConfigSource.file(path.toFile).load[CommonOptions] match {
       case Right(options) =>
-        if (options.debug) {
+        if options.debug then {
           import com.reactific.riddl.utils.StringHelpers.toPrettyString
           println(toPrettyString(options, 1, Some("Loaded common options:")))
         }
@@ -203,7 +203,7 @@ object CommandOptions {
   val commandOptionsParser: OParser[Unit, CommandOptions] = {
     val plugins = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]]()
     val list =
-      for { plugin <- plugins } yield { plugin.pluginName -> plugin.getOptions }
+      for  plugin <- plugins  yield { plugin.pluginName -> plugin.getOptions }
     val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
     OParser.sequence(parsers.head, parsers.tail*)
   }

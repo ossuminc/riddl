@@ -10,7 +10,7 @@ import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.Messages.errors
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -90,13 +90,13 @@ class OnChangeCommand
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
     {
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(OnChangeCommand.cmdName)
         objCur <- topRes.asObjectCursor
         configFileRes <- objCur.atKey("config-file")
         configFile <- configFileRes.asString.flatMap { inputPath =>
-          if (inputPath.isEmpty) {
+          if inputPath.isEmpty then {
             ConfigReader.Result.fail[String](
               CannotParse("'config-filew' requires a non-empty value", None)
             )
@@ -104,7 +104,7 @@ class OnChangeCommand
         }
         watchDirRes <- objCur.atKey("watch-directory")
         watchDir <- watchDirRes.asString.flatMap { watchDir =>
-          if (watchDir.isEmpty) {
+          if watchDir.isEmpty then {
             ConfigReader.Result.fail[String](
               CannotParse("'watch-directory' requires a non-empty value", None)
             )
@@ -112,7 +112,7 @@ class OnChangeCommand
         }
         targetCommandRes <- objCur.atKey("target-command")
         targetCmd <- targetCommandRes.asString.flatMap { targetCmd =>
-          if (targetCmd.isEmpty) {
+          if targetCmd.isEmpty then {
             ConfigReader.Result.fail[String](
               CannotParse("'target-command' requires a non-empty value", None)
             )
@@ -121,7 +121,7 @@ class OnChangeCommand
         refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString)
           .flatMap { rr =>
             val dur = Duration.create(rr)
-            if (dur.isFinite) { Right(dur.asInstanceOf[FiniteDuration]) }
+            if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
             else {
               ConfigReader.Result.fail[FiniteDuration](CannotParse(
                 s"'refresh-rate' must be a finite duration, not $rr",
@@ -134,7 +134,7 @@ class OnChangeCommand
             _.asInt
           )
         interactive <- optional(objCur, "interactive", true)(_.asBoolean)
-      } yield {
+      yield {
         OnChangeCommand.Options(
           configFile = Path.of(configFile),
           watchDirectory = Path.of(watchDir),
@@ -184,7 +184,7 @@ class OnChangeCommand
   private final val timeStampFileName: String = ".riddl-timestamp"
   def getTimeStamp(dir: Path): FileTime = {
     val filePath = dir.resolve(timeStampFileName)
-    if (Files.notExists(filePath)) {
+    if Files.notExists(filePath) then {
       Files.createFile(filePath)
       FileTime.from(Instant.MIN)
     } else {
@@ -206,11 +206,11 @@ class OnChangeCommand
     minTime: FileTime
   ): Boolean = {
     val potentiallyChangedFiles = dir.toFile.listFiles().map(_.toPath)
-    val maybeModified = for {
+    val maybeModified = for
       fName <- potentiallyChangedFiles
       timestamp = Files.getLastModifiedTime(fName)
       isModified = timestamp.compareTo(minTime) > 0
-    } yield { isModified }
+    yield { isModified }
     maybeModified.exists(x => x)
   }
 

@@ -42,8 +42,8 @@ might devise a domain hierarchy like this:
 
 Within a domain, you can define these things:
 
-* [Actors]({{< relref "actor.md" >}}) - someone or thing that uses the domain
-* [Applications]({{< relref application.md >}}) - an actor interface  
+* [Actors]({{< relref "user.md" >}}) - someone or thing that uses the domain
+* [Applications]({{< relref application.md >}}) - an user interface  
 * [Authors]({{< relref "author.md" >}}) - who defined the domain
 * [Contexts]({{< relref "context.md" >}}) - a precisely defined bounded context within the domain
 * [Domains]({{< relref "domain.md" >}}) {{< icon "rotate-left" >}} - domains 

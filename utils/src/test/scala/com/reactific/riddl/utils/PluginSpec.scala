@@ -14,7 +14,13 @@ class PluginSpec extends PluginSpecBase() {
       val plugin = new TestPlugin // required empty constructor
       val plugins = Plugin.loadPluginsFrom[PluginInterface](tmpDir)
       plugins mustNot be(empty)
-      plugins.forall(_.getClass == plugin.getClass) mustBe true
+      plugins.exists(_.getClass == plugin.getClass) mustBe true
+      plugins.find(_.getClass == plugin.getClass) match {
+        case Some(plugin) =>
+          plugin.asInstanceOf[TestPlugin].pluginVersion mustBe("0.0.0")
+        case None => fail("Didn't find the plugin class")
+      }
+
     }
   }
 }

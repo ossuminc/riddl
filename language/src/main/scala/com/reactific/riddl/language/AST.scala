@@ -20,7 +20,7 @@ object AST extends ast.Actions  {
     defn: Definition,
     parents: Seq[Definition]
   ): Seq[AuthorRef] = {
-    if (defn.hasAuthors) {
+    if defn.hasAuthors then {
       defn.asInstanceOf[WithAuthors].authors
     }
     else {

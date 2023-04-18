@@ -41,14 +41,14 @@ object TextFileWriter {
     val builder = new mutable.StringBuilder(textLength)
 
     @tailrec def loop(text: String): mutable.StringBuilder = {
-      if (text.isEmpty) { builder }
-      else if (text.startsWith("${")) {
+      if text.isEmpty then { builder }
+      else if text.startsWith("${") then {
         val endBrace = text.indexOf("}")
-        if (endBrace < 0) { builder.append(text) }
+        if endBrace < 0 then { builder.append(text) }
         else {
           val replacement = substitutions.get(text.substring(2, endBrace))
             .orNull
-          if (replacement != null) {
+          if replacement != null then {
             builder.append(replacement)
             loop(text.substring(endBrace + 1))
           } else {
@@ -58,7 +58,7 @@ object TextFileWriter {
         }
       } else {
         val brace = text.indexOf("${")
-        if (brace < 0) { builder.append(text) }
+        if brace < 0 then { builder.append(text) }
         else {
           builder.append(text.substring(0, brace))
           loop(text.substring(brace))

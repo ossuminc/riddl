@@ -19,7 +19,7 @@ import java.nio.file.Path
 class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
   push(rpi)
 
-  def fileRoot[u: P]: P[RootContainer] = {
+  def root[u: P]: P[RootContainer] = {
     P(Start ~ (domain | author).rep(0) ~ End).map { contents =>
       pop
       val groups = contents.groupBy(_.getClass == classOf[Domain])
@@ -36,7 +36,7 @@ object TopLevelParser {
     input: RiddlParserInput
   ): Either[Messages, RootContainer] = {
     val tlp = new TopLevelParser(input)
-    tlp.expect(tlp.fileRoot(_)).map(_._1)
+    tlp.expect(tlp.root(_)).map(_._1)
   }
 
   def parse(file: File): Either[Messages, RootContainer] = {

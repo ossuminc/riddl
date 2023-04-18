@@ -124,7 +124,7 @@ trait Expressions extends TypeExpression {
     args: ArgList = ArgList()
   ) extends Expression {
     override def format: String = msg.format + {
-      if (args.nonEmpty) { args.format }
+      if args.nonEmpty then { args.format }
       else { "()" }
     }
     def expressionType: TypeExpression = Abstract(loc)
@@ -325,27 +325,27 @@ trait Expressions extends TypeExpression {
 
   sealed trait Comparator extends RiddlNode
 
-  final case object lt extends Comparator {
+  case object lt extends Comparator {
     override def format: String = "<"
   }
 
-  final case object gt extends Comparator {
+  case object gt extends Comparator {
     override def format: String = ">"
   }
 
-  final case object le extends Comparator {
+  case object le extends Comparator {
     override def format: String = "<="
   }
 
-  final case object ge extends Comparator {
+  case object ge extends Comparator {
     override def format: String = ">="
   }
 
-  final case object eq extends Comparator {
+  case object eq extends Comparator {
     override def format: String = "=="
   }
 
-  final case object ne extends Comparator {
+  case object ne extends Comparator {
     override def format: String = "!="
   }
 

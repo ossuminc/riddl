@@ -9,7 +9,7 @@ package com.reactific.riddl.testkit
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.*
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.{PassesResult, Riddl}
 import com.reactific.riddl.utils.StringBuildingPrintStream
 import com.reactific.riddl.utils.SysLogger
 
@@ -18,11 +18,12 @@ import java.nio.file.Path
 import java.util.UUID
 import scala.io.Source
 
-class RiddlTest extends ParsingTestBase {
+class RiddlTest extends ParsingTest {
 
+  // FIXME: This test is showing signs of a rare race condition
   "parse" should {
     "parse a file" in {
-      Riddl.parse(
+      Parser.parse(
         path = Path.of("testkit/src/test/input/rbbq.riddl"),
         options = CommonOptions(showTimes = true)
       ) match {
@@ -34,7 +35,7 @@ class RiddlTest extends ParsingTestBase {
     "return an error when file does not exist" in {
       val options = CommonOptions(showTimes = true)
       val path = new File(UUID.randomUUID().toString).toPath
-      Riddl.parse(path, options) match {
+      Parser.parse(path, options) match {
         case Right(root) => fail(s"File doesn't exist, can't be \n$root")
         case Left(errors) =>
           require(errors.size == 1)
@@ -45,7 +46,7 @@ class RiddlTest extends ParsingTestBase {
       val riddlParserInput: RiddlParserInput =
         RiddlParserInput(UUID.randomUUID().toString)
       val options = CommonOptions(showTimes = true)
-      Riddl.parse(input = riddlParserInput, options) match {
+      Parser.parse(input = riddlParserInput, options) match {
         case Right(_) => succeed
         case Left(errors) if errors.nonEmpty =>
           require(
@@ -57,9 +58,8 @@ class RiddlTest extends ParsingTestBase {
     }
   }
 
-  /** Executes a function while capturing system's stderr, return the result of
-    * the function and the captured output. Switches stderr back once code block
-    * finishes or throws exception e.g.
+  /** Executes a function while capturing system's stderr, return the result of the function and the captured output.
+    * Switches stderr back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.err.println("hi there!")
@@ -80,9 +80,8 @@ class RiddlTest extends ParsingTestBase {
     } finally { System.setErr(out) }
   }
 
-  /** Executes a function while capturing system's stdout, return the result of
-    * the function and the captured output. Switches stdout back once code block
-    * finishes or throws exception e.g.
+  /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
+    * Switches stdout back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.out.println("hi there!")
@@ -169,9 +168,11 @@ class RiddlTest extends ParsingTestBase {
 
     "parse and validate a simple domain from input" in {
       val content: String = {
-        val source = Source.fromFile(new File(
-          "testkit/src/test/input/domains/simpleDomain.riddl"
-        ))
+        val source = Source.fromFile(
+          new File(
+            "testkit/src/test/input/domains/simpleDomain.riddl"
+          )
+        )
         try source.mkString
         finally source.close()
       }

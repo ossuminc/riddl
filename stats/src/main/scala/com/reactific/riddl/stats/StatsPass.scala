@@ -3,9 +3,9 @@ package com.reactific.riddl.stats
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
-import com.reactific.riddl.language.passes.resolve.ResolutionPass
-import com.reactific.riddl.language.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.resolve.ResolutionPass
+import com.reactific.riddl.passes.symbols.SymbolsPass
 
 import scala.collection.mutable
 
@@ -73,9 +73,9 @@ case class StatsPass(input: PassInput) extends Pass(input) {
 
   override protected def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     all_stats.count += 1
-    if (parents.size >= maximum_depth) maximum_depth = parents.size + 1
-    if (!definition.isEmpty) all_stats.completed += 1
-    if (definition.brief.nonEmpty && definition.description.nonEmpty) all_stats.documented += 1
+    if parents.size >= maximum_depth then maximum_depth = parents.size + 1
+    if !definition.isEmpty then all_stats.completed += 1
+    if definition.brief.nonEmpty && definition.description.nonEmpty then all_stats.documented += 1
 
     definition match {
       case vd: VitalDefinition[?, ?] =>
@@ -93,17 +93,15 @@ case class StatsPass(input: PassInput) extends Pass(input) {
           case e: Epic => makeVitalStats(e, storyStats)
           case f: Function => makeVitalStats(f, functionStats)
           case d: Domain => makeVitalStats(d, domainStats)
-          case h: Handler => makeVitalStats(h, handlerStats)
           case s: Saga => makeVitalStats(s, sagaStats)
         }
       case t: Term =>
         term_count += 1
         other_stats.count += 1
-        if (t.nonEmpty) other_stats.completed += 1
+        if t.nonEmpty then other_stats.completed += 1
       case d: Definition =>
         other_stats.count += 1
-        if (d.nonEmpty) other_stats.completed += 1
-      case _ => // ignore
+        if d.nonEmpty then other_stats.completed += 1
     }
   }
 
@@ -113,8 +111,8 @@ case class StatsPass(input: PassInput) extends Pass(input) {
   ): Unit = {
     stats.count += 1
     stats.maturitySum += v.maturity
-    if (v.nonEmpty) stats.completed += 1
-    if (v.brief.nonEmpty && v.description.nonEmpty) stats.documented += 1
+    if v.nonEmpty then stats.completed += 1
+    if v.brief.nonEmpty && v.description.nonEmpty then stats.documented += 1
   }
 
   def postProcess(root: RootContainer): Unit = ()
@@ -178,7 +176,7 @@ case class StatsPass(input: PassInput) extends Pass(input) {
     stats: KindStats,
     all_stats: KindStats
   ): CategoryStats = {
-    if (stats.count > 0) {
+    if stats.count > 0 then {
       val average_maturity = (stats.maturitySum.toFloat / stats.count)
       val percent_of_all = (stats.count.toDouble / all_stats.count) * 100.0d
       val percent_completed = (stats.completed.toDouble / stats.count) * 100.0d

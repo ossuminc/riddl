@@ -25,7 +25,7 @@ trait RunHugoTestBase extends Matchers {
 
     def fout(line: String): Unit = {
       lineBuffer.append(line)
-      if (!hadWarningOutput && line.contains("WARN")) hadWarningOutput = true
+      if !hadWarningOutput && line.contains("WARN") then hadWarningOutput = true
     }
 
     def ferr(line: String): Unit = {
@@ -38,9 +38,9 @@ trait RunHugoTestBase extends Matchers {
     val proc = Process("hugo", cwd = Option(cwdFile))
     proc.!(logger) match {
       case 0 =>
-        if (hadErrorOutput) {
+        if hadErrorOutput then {
           fail("hugo wrote to stderr:\n  " + lineBuffer.mkString("\n  "))
-        } else if (hadWarningOutput) {
+        } else if hadWarningOutput then {
           fail("hugo issued warnings:\n  " + lineBuffer.mkString("\n  "))
         } else { succeed }
       case rc: Int =>

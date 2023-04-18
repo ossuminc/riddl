@@ -81,26 +81,26 @@ trait TypeExpression extends AbstractDefinitions {
   }
 
   /** An enumerator value for command types */
-  final case object CommandCase extends AggregateUseCase {
+  case object CommandCase extends AggregateUseCase {
     @inline def kind: String = "Command"
   }
 
   /** An enumerator value for event types */
-  final case object EventCase extends AggregateUseCase {
+  case object EventCase extends AggregateUseCase {
     @inline def kind: String = "Event"
   }
 
   /** An enumerator value for query types */
-  final case object QueryCase extends AggregateUseCase {
+  case object QueryCase extends AggregateUseCase {
     @inline def kind: String = "Query"
   }
 
   /** An enumerator value for result types */
-  final case object ResultCase extends AggregateUseCase {
+  case object ResultCase extends AggregateUseCase {
     @inline def kind: String = "Result"
   }
 
-  final case object RecordCase extends AggregateUseCase {
+  case object RecordCase extends AggregateUseCase {
     @inline def kind: String = "Record"
   }
 
@@ -269,12 +269,12 @@ trait TypeExpression extends AbstractDefinitions {
       super.isAssignmentCompatible(other) || {
         other match {
           case oate: AggregateTypeExpression =>
-            val validity: Seq[Boolean] = for {
+            val validity: Seq[Boolean] = for
               ofield <- oate.fields
               myField <- fields.find(_.id.value == ofield.id.value)
               myTypEx = myField.typeEx
               oTypeEx = ofield.typeEx
-            } yield {
+            yield {
               myTypEx.isAssignmentCompatible(oTypeEx)
             }
             (validity.size == oate.fields.size) && validity.forall(_ == true)

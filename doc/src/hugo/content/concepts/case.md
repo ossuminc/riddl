@@ -21,9 +21,9 @@ The following table shows the pairings recognized:
 |  publish  |  any  |  pipe   | Publish a message to a pipe                 |
 | subscribe |  any  |  pipe   | Subscribe to a pipe                         |
 |   saga    |  any  |  saga   | Initiate a saga                             |
-|  select   | actor | element | Select an item from application element     |
-|  provide  | actor | element | Provide input data too application          |
-|  present  | actor | element | Cause an application to present info        |
+|  select   | user | element | Select an item from application element     |
+|  provide  | user | element | Provide input data too application          |
+|  present  | user | element | Cause an application to present info        |
  
 
 ## Occurs In

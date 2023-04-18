@@ -35,18 +35,18 @@ class ExpressionParserTest extends ParsingTest {
 
   "ExpressionParser" should {
     "accept literal integer" in {
-      parseExpression("42") { expr: Expression =>
+      parseExpression("42") { (expr: Expression) =>
         expr mustBe IntegerValue(At(1 -> 1), BigInt(magic))
       }
     }
     "accept literal decimal" in {
-      parseExpression("42.21") { expr: Expression =>
+      parseExpression("42.21") { (expr: Expression) =>
         expr mustBe
           DecimalValue(At(1 -> 1), BigDecimal(magic.toDouble + 0.21))
       }
     }
     "accept plus binary" in {
-      parseExpression("+(1,1)") { expr: Expression =>
+      parseExpression("+(1,1)") { (expr: Expression) =>
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "+",
@@ -55,25 +55,25 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept minus binary" in {
-      parseExpression("-(1,1)") { expr: Expression =>
+      parseExpression("-(1,1)") { (expr: Expression) =>
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
-            "-",
+          "-",
           Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
     "accept times binary" in {
-      parseExpression("*(1,1)") { expr: Expression =>
+      parseExpression("*(1,1)") { (expr: Expression) =>
         expr mustBe ArithmeticOperator(
-            At(1 -> 1),
+          At(1 -> 1),
           "*",
           Seq(IntegerValue(At(1 -> 3), 1), IntegerValue(At(1 -> 5), 1))
         )
       }
     }
     "accept div binary" in {
-      parseExpression("/(1,1)") { expr: Expression =>
+      parseExpression("/(1,1)") { (expr: Expression) =>
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "/",
@@ -82,7 +82,7 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept mod binary" in {
-      parseExpression("%(1,1)") { expr: Expression =>
+      parseExpression("%(1,1)") { (expr: Expression) =>
         expr mustBe ArithmeticOperator(
           At(1 -> 1),
           "%",
@@ -91,7 +91,7 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept pow abstract binary" in {
-      parseExpression("pow(2,3)") { expr: Expression =>
+      parseExpression("pow(2,3)") { (expr: Expression) =>
         expr mustBe NumberFunction(
           At(1 -> 1),
           "pow",
@@ -100,8 +100,8 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept function call expression " in {
-      parseExpression("Entity.Function(i=42, j=21)") { expr: Expression =>
-          expr mustBe FunctionCallExpression(
+      parseExpression("Entity.Function(i=42, j=21)") { (expr: Expression) =>
+        expr mustBe FunctionCallExpression(
           At(1 -> 1),
           PathIdentifier(At(1 -> 1), Seq("Entity", "Function")),
           ArgList(
@@ -118,7 +118,7 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept arbitrary expression with many  args" in {
-      parseExpression("wow(a=0,b=0,c=0)") { expr: Expression =>
+      parseExpression("wow(a=0,b=0,c=0)") { (expr: Expression) =>
         expr mustBe ArbitraryOperator(
           At(1 -> 1),
           LiteralString(1 -> 1, "wow"),
@@ -133,8 +133,8 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept a ternary operator" in {
-      parseExpression("if(<(@a,@b),42,21)") { cond: Expression =>
-        cond mustBe Ternary(
+      parseExpression("if(<(@a,@b),42,21)") { (expr: Expression) =>
+        expr mustBe Ternary(
           1 -> 1,
           Comparison(
             1 -> 4,
@@ -148,27 +148,27 @@ class ExpressionParserTest extends ParsingTest {
       }
     }
     "accept the now() operator" in {
-      parseExpression("now()") { expr: Expression =>
+      parseExpression("now()") { (expr: Expression) =>
         expr mustBe TimeStampFunction(1 -> 1, "now", Seq.empty[Expression])
       }
     }
     "accept the today() operator" in {
-      parseExpression("today()") { expr: Expression =>
+      parseExpression("today()") { (expr: Expression) =>
         expr mustBe DateFunction(1 -> 1, "today", Seq.empty[Expression])
       }
     }
     "accept the random() operator" in {
-      parseExpression("random()") { expr: Expression =>
+      parseExpression("random()") { (expr: Expression) =>
         expr mustBe NumberFunction(1 -> 1, "random", Seq.empty[Expression])
       }
     }
     "accept the length() operator" in {
-      parseExpression("length()") { expr: Expression =>
+      parseExpression("length()") { (expr: Expression) =>
         expr mustBe NumberFunction(1 -> 1, "length", Seq.empty[Expression])
       }
     }
     "accept the trim() operator" in {
-      parseExpression("trim()") { expr: Expression =>
+      parseExpression("trim()") { (expr: Expression) =>
         expr mustBe StringFunction(1 -> 1, "trim", Seq.empty[Expression])
       }
     }

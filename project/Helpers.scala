@@ -17,8 +17,8 @@ object V {
   val commons_io = "2.11.0"
   val compress = "1.23.0"
   val config = "1.4.2"
-  val fastparse = "2.3.3"
-  val jgit = "6.3.0.202209071007-r"
+  val fastparse = "3.0.1"
+  val jgit = "6.5.0"
   val lang3 = "3.12.0"
   val pureconfig = "0.17.2"
   val scalacheck = "1.17.0"
@@ -30,11 +30,10 @@ object V {
 object Dep {
   val compress = "org.apache.commons" % "commons-compress" % V.compress
   val commons_io = "commons-io" % "commons-io" % V.commons_io
-  val config = "com.typesafe" % "config" % V.config
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
-  val pureconfig = "com.github.pureconfig" %% "pureconfig" % V.pureconfig
+  val pureconfig = "com.github.pureconfig" %% "pureconfig-core" % V.pureconfig
   val scalactic = "org.scalactic" %% "scalactic" % V.scalatest
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
@@ -77,7 +76,17 @@ object C {
   }
 
   lazy val scala3_2_Options: Seq[String] =
-    Seq("-deprecation", "-feature", "-Werror")
+    Seq(
+      "-deprecation",
+      "-feature",
+      "-new-syntax",
+      "-explain",
+      "-explain-types",
+      "-Werror",
+      "-pagewidth",
+      "120"
+      /*, "-explain" */
+    )
   lazy val scala2_13_Options: Seq[String] = Seq(
     "-release:17",
     // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
@@ -106,7 +115,8 @@ object C {
   def withScalaCompile(p: Project): Project = {
     p.configure(withInfo)
       .settings(
-        scalaVersion := "2.13.10",
+        scalaVersion := "3.2.2",
+        // crossScalaVersions := Seq("2.13.10", "3.2.2"),
         scalacOptions := {
           if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
           else if (scalaVersion.value.startsWith("2.13")) { scala2_13_Options }

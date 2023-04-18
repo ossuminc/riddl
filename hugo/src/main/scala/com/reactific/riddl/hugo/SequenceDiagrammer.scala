@@ -15,16 +15,19 @@ case class SequenceDiagrammer(
     extends FileBuilder {
 
   val participants: Map[Seq[String], Definition] = {
-    (for {
+    (for
       cs <- story.cases
       interaction <- cs.contents
-    } yield {
+    yield {
       interaction match {
         case is: GenericInteraction => Seq[Reference[Definition]](is.from, is.to)
-        case _                   => Seq.empty[Reference[Definition]]
+        case _ => Seq.empty[Reference[Definition]]
       }
-    }).filterNot(_.isEmpty).flatten.distinctBy(_.pathId.value).map {
-      ref: Reference[Definition] =>
+    })
+      .filterNot(_.isEmpty)
+      .flatten
+      .distinctBy(_.pathId.value)
+      .map { (ref: Reference[Definition]) =>
         state.refMap.definitionOf[Definition](ref.pathId, parents.head) match {
           case Some(definition) => ref.pathId.value -> definition
           case None => throw new IllegalStateException(
@@ -37,7 +40,7 @@ case class SequenceDiagrammer(
   def makeParticipant(definition: Definition): Unit = {
     val name = definition.id.value
     definition match {
-      case _: Actor      => sb.append(s"  actor $name"); nl
+      case _: User      => sb.append(s"  user $name"); nl
       case _: Definition => sb.append(s"  participant $name"); nl
     }
   }
@@ -46,7 +49,7 @@ case class SequenceDiagrammer(
     val name = definition.identify
     val link = state.makeDocLink(definition)
     definition match {
-      case _: Actor      => sb.append(s"  link $name:  @ $link"); nl
+      case _: User      => sb.append(s"  link $name:  @ $link"); nl
       case _: Definition => sb.append(s"  link $name: Definition @ $link"); nl
     }
   }
@@ -57,9 +60,9 @@ case class SequenceDiagrammer(
   parts.foreach(x => makeParticipant(x))
   parts.foreach(x => makeLink(x))
 
-  for { cse <- story.cases } {
+  for  cse <- story.cases  do {
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl
-    for { ntrctn <- cse.contents} ntrctn match {
+    for  ntrctn <- cse.contents do ntrctn match {
       case is: GenericInteraction =>
         val from = participants(is.from.pathId.value)
         val to = participants(is.to.pathId.value)

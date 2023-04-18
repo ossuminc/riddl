@@ -13,6 +13,6 @@ object RIDDLC {
 
   final def main(args: Array[String]): Unit = {
     val resultCode = CommandPlugin.runMain(args)
-    if (resultCode != 0) { System.exit(resultCode) }
+    if resultCode != 0 then { System.exit(resultCode) }
   }
 }

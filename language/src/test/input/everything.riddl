@@ -20,10 +20,10 @@ domain Everything by author Reid is {
     } explained as "A Channel"
   } briefly "A bunch of data flow connections"
 
-  actor Author is "human" briefly "A scoundrel"
+  user Author is "human" briefly "A scoundrel"
 
   epic WritingABook is {
-    actor Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
+    user Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
   } described as "A simple authoring epic"
 

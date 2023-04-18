@@ -25,7 +25,7 @@ object D3Diagrams {
   def overview(staticDir: Path, levels: Level): String = {
     val resourceName = "hugo/static/js/tree-map-hierarchy2.js"
     val jsPath = staticDir.resolve(resourceName)
-    if (!Files.exists(jsPath)) {
+    if !Files.exists(jsPath) then {
       Files.createDirectories(jsPath.getParent)
       PathUtils.copyResource(resourceName, jsPath)
     }

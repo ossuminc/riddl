@@ -22,7 +22,7 @@ trait OutputFile extends FileBuilder {
 
   private def mkDirs(): Unit = {
     val dirFile = filePath.getParent.toFile
-    if (!dirFile.exists) { dirFile.mkdirs() }
+    if !dirFile.exists then { dirFile.mkdirs() }
   }
 
   def write(): Unit = {

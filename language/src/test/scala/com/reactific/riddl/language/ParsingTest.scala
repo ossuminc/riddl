@@ -47,6 +47,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Streamlet] => streamlet(_)
       case x if x == classOf[AST.Saga]      => saga(_)
       case x if x == classOf[AST.Example]   => example(_)
+      case x if x == classOf[AST.Saga]      => repository(_)
+      case x if x == classOf[AST.Saga]      => projector(_)
       case x if x == classOf[AST.Epic]      => epic(_)
       case _ =>
         throw new RuntimeException(
@@ -57,13 +59,13 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   }
 
   def parseTopLevelDomains: Either[Messages, RootContainer] = {
-    expect(fileRoot(_)).map(_._1)
+    expect(root(_)).map(_._1)
   }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     extract: RootContainer => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    expect[RootContainer](fileRoot(_)).map(x => extract(x._1) -> x._2)
+    expect[RootContainer](root(_)).map(x => extract(x._1) -> x._2)
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](

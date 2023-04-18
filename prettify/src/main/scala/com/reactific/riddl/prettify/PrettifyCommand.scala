@@ -9,8 +9,8 @@ package com.reactific.riddl.prettify
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.TranslationCommand
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.language.passes.PassInput
+import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
+import com.reactific.riddl.passes.PassInput
 import com.reactific.riddl.prettify.PrettifyCommand.cmdName
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
@@ -62,7 +62,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdNam
   }
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    for {
+    for
       topCur <- cur.asObjectCursor
       cmdCur <- topCur.atKey(cmdName)
       objCur <- cmdCur.asObjectCursor
@@ -77,7 +77,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdNam
         }
       singleFileRes <- objCur.atKey("single-file")
       singleFile <- singleFileRes.asBoolean
-    } yield PrettifyCommand.Options(
+    yield PrettifyCommand.Options(
       Option(Path.of(inputPath)),
       Option(Path.of(outputPath)),
       Option(projectName),
@@ -87,7 +87,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdNam
 
   override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
     standardPasses ++ Seq(
-      { input: PassInput =>
+      { (input: PassInput) =>
         val state = PrettifyState(commonOptions, options)
         PrettifyPass(input, state)
       }

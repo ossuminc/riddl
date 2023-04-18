@@ -20,15 +20,20 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 // IT IS HANDLED BY: sbt-dynver
 ThisBuild / dynverSeparator := "-"
 
-lazy val riddl = (project in file(".")).enablePlugins(ScoverageSbtPlugin)
-  .enablePlugins(AutomateHeaderPlugin).configure(C.withInfo).settings(
+lazy val riddl = (project in file("."))
+  .enablePlugins(ScoverageSbtPlugin)
+  .enablePlugins(AutomateHeaderPlugin)
+  .configure(C.withInfo)
+  .settings(
     publish := {},
     publishLocal := {},
     pgpSigner / skip := true,
     publishTo := Some(Resolver.defaultLocal)
-  ).aggregate(
+  )
+  .aggregate(
     utils,
     language,
+    passes,
     commands,
     testkit,
     prettify,
@@ -39,8 +44,12 @@ lazy val riddl = (project in file(".")).enablePlugins(ScoverageSbtPlugin)
   )
 
 lazy val Utils = config("utils")
-lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
-  .configure(C.withCoverage(0)).enablePlugins(BuildInfoPlugin).settings(
+lazy val utils = project
+  .in(file("utils"))
+  .configure(C.mavenPublish)
+  .configure(C.withCoverage(0))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
     name := "riddl-utils",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
     buildInfoObject := "RiddlBuildInfo",
@@ -64,12 +73,15 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
       },
       BuildInfoKey.map(startYear) { case (k, v) =>
         "copyright" -> s"© ${v.map(_.toString).getOrElse("2019")}-${Calendar
-            .getInstance().get(Calendar.YEAR)} Ossum Inc."
+            .getInstance()
+            .get(Calendar.YEAR)} Ossum Inc."
       },
       scalaVersion,
       sbtVersion,
       BuildInfoKey.map(scalaVersion) { case (k, v) =>
-        "scalaCompatVersion" -> v.substring(0, v.lastIndexOf('.'))
+        val version = if (v.head == '2') { v.substring(0, v.lastIndexOf('.')) }
+        else v
+        "scalaCompatVersion" -> version
       },
       BuildInfoKey.map(licenses) { case (k, v) =>
         k -> v.map(_._1).mkString(", ")
@@ -78,56 +90,91 @@ lazy val utils = project.in(file("utils")).configure(C.mavenPublish)
   )
 
 val Language = config("language")
-lazy val language = project.in(file("language")).configure(C.withCoverage(0))
-  .configure(C.mavenPublish).settings(
+lazy val language = project
+  .in(file("language"))
+  .configure(C.withCoverage(0))
+  .configure(C.mavenPublish)
+  .settings(
     name := "riddl-language",
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++
       Dep.testing
-  ).dependsOn(utils)
+  )
+  .dependsOn(utils)
+
+val Passes = config("passes")
+lazy val passes = project
+  .in(file("passes"))
+  .configure(C.withCoverage(0))
+  .configure(C.mavenPublish)
+  .settings(
+    name := "riddl-passes",
+    coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
+    libraryDependencies ++= Dep.testing
+  )
+  .dependsOn(language % "compile->compile;test->test")
 
 val Commands = config("commands")
 
-lazy val commands: Project = project.in(file("commands"))
-  .configure(C.withCoverage(0)).configure(C.mavenPublish).settings(
+lazy val commands: Project = project
+  .in(file("commands"))
+  .configure(C.withCoverage(0))
+  .configure(C.mavenPublish)
+  .settings(
     name := "riddl-commands",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
-  ).dependsOn(utils % "compile->compile;test->test", language)
+  )
+  .dependsOn(
+    utils % "compile->compile;test->test",
+    passes% "compile->compile;test->test"
+  )
 
 val TestKit = config("testkit")
 
-lazy val testkit: Project = project.in(file("testkit"))
+lazy val testkit: Project = project
+  .in(file("testkit"))
   .configure(C.mavenPublish)
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
   .dependsOn(commands % "compile->compile;test->test")
 
 val StatsTrans = config("stats")
-lazy val stats: Project = project.in(file("stats")).configure(C.withCoverage(0))
+lazy val stats: Project = project
+  .in(file("stats"))
+  .configure(C.withCoverage(0))
   .configure(C.mavenPublish)
   .settings(name := "riddl-stats", libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
   .dependsOn(commands % "compile->compile;test->test", testkit % "test->compile")
 
 val Prettify = config("prettify")
-lazy val prettify = project.in(file("prettify")).configure(C.withCoverage(0))
+lazy val prettify = project
+  .in(file("prettify"))
+  .configure(C.withCoverage(0))
   .configure(C.mavenPublish)
   .settings(name := "riddl-prettify", libraryDependencies ++= Dep.testing)
-  .dependsOn(commands, testkit % "test->compile").dependsOn(utils)
+  .dependsOn(commands, testkit % "test->compile")
+  .dependsOn(utils)
 
 val HugoTrans = config("hugo")
-lazy val hugo: Project = project.in(file("hugo")).configure(C.withCoverage(0))
-  .configure(C.mavenPublish).settings(
-  name := "riddl-hugo",
-  Compile / unmanagedResourceDirectories += {
-    baseDirectory.value / "resources"
-  },
-  Test / parallelExecution := false,
-  libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-)
-  .dependsOn(language % "compile->compile", commands, testkit % "test->compile", stats)
+lazy val hugo: Project = project
+  .in(file("hugo"))
+  .configure(C.withCoverage(0))
+  .configure(C.mavenPublish)
+  .settings(
+    name := "riddl-hugo",
+    Compile / unmanagedResourceDirectories += {
+      baseDirectory.value / "resources"
+    },
+    Test / parallelExecution := false,
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+  )
+  .dependsOn(
+    passes % "compile->compile;test->test",
+    commands, testkit % "test->compile", stats)
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),
   (language, Language),
+  (passes, Passes),
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
@@ -144,10 +191,14 @@ lazy val scaladocSiteSettings = scaladocSiteProjects
     )
   }
 
-lazy val doc = project.in(file("doc"))
+lazy val doc = project
+  .in(file("doc"))
   .enablePlugins(ScalaUnidocPlugin, SitePlugin, SiteScaladocPlugin, HugoPlugin)
-  .disablePlugins(ScoverageSbtPlugin).configure(C.withInfo)
-  .configure(C.withScalaCompile).settings(scaladocSiteSettings).settings(
+  .disablePlugins(ScoverageSbtPlugin)
+  .configure(C.withInfo)
+  .configure(C.withScalaCompile)
+  .settings(scaladocSiteSettings)
+  .settings(
     name := "riddl-doc",
     publishTo := Option(Resolver.defaultLocal),
     // Hugo / baseURL := uri("https://riddl.tech"),
@@ -166,19 +217,24 @@ lazy val doc = project.in(file("doc"))
     //   ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc
     // ),
     publishSite
-  ).dependsOn(hugo % "test->test", riddlc)
+  )
+  .dependsOn(hugo % "test->test", riddlc)
 
 val Riddlc = config("riddlc")
-lazy val riddlc: Project = project.in(file("riddlc"))
+lazy val riddlc: Project = project
+  .in(file("riddlc"))
   .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
   .enablePlugins(MiniDependencyTreePlugin, GraalVMNativeImagePlugin)
-  .configure(C.mavenPublish).configure(C.withCoverage(0)).dependsOn(
+  .configure(C.mavenPublish)
+  .configure(C.withCoverage(0))
+  .dependsOn(
     utils % "compile->compile;test->test",
     commands,
-    language,
+    passes,
     hugo,
     testkit % "test->compile"
-  ).settings(
+  )
+  .settings(
     name := "riddlc",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     mainClass := Option("com.reactific.riddl.RIDDLC"),
@@ -193,8 +249,10 @@ lazy val riddlc: Project = project.in(file("riddlc"))
   )
 
 lazy val plugin = (project in file("sbt-riddl"))
-  .enablePlugins(SbtPlugin, BuildInfoPlugin).disablePlugins(ScoverageSbtPlugin)
-  .configure(C.mavenPublish).settings(
+  .enablePlugins(SbtPlugin, BuildInfoPlugin)
+  .disablePlugins(ScoverageSbtPlugin)
+  .configure(C.mavenPublish)
+  .settings(
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.17",

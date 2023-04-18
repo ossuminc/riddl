@@ -6,10 +6,10 @@
 
 package com.reactific.riddl.prettify
 
-import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.passes.Pass.standardPasses
-import com.reactific.riddl.language.passes.PassInput
+import com.reactific.riddl.passes.Pass.standardPasses
+import com.reactific.riddl.passes.{PassInput, Riddl}
 import com.reactific.riddl.testkit.RiddlFilesTestBase
 import org.scalatest.Assertion
 
@@ -28,7 +28,7 @@ class PrettifyTest extends RiddlFilesTestBase {
 
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
-      { input: PassInput =>
+      { (input: PassInput) =>
         val options = PrettifyCommand.Options(inputFile = Some(Path.of("aFile")))
         val state = PrettifyState(CommonOptions(), options)
         PrettifyPass(input, state)
