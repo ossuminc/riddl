@@ -121,6 +121,7 @@ class CheckMessagesTest extends ValidatingTest {
     "check domain" in { checkADirectory("domain") }
     "check everything" in { checkADirectory("everything") }
     "check overloading" in { checkADirectory("overloading") }
+    "check references" in { checkADirectory("references") }
     "check saga" in { checkADirectory("saga") }
     "check streaming" in { checkADirectory("streaming") }
     "check t0001" in { checkADirectory("t0001") }
