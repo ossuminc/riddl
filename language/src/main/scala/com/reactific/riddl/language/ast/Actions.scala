@@ -89,7 +89,7 @@ trait Actions extends Definitions {
     args: ArgList = ArgList()
   ) extends RiddlNode {
     override def format: String = msg.format + {
-      if (args.nonEmpty) {
+      if args.nonEmpty then {
         args.format
       } else {
         "()"
@@ -162,7 +162,7 @@ trait Actions extends Definitions {
 
   /** An action that changes the behavior of an entity by making it use a new
     * handler for its messages; named for the "become" operation in Akka that
-    * does the same for an actor.
+    * does the same for an user.
     *
     * @param loc
     *   The location in the source of the become action

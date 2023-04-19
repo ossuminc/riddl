@@ -51,7 +51,7 @@ class MermaidDiagramsPlugin {
       }
     }
     val mid = contents.foldLeft("") { case (s, c) => s + openBox(c, level + 1) }
-    if (!definition.isImplicit) {
+    if !definition.isImplicit then {
       val technology = getTechnology(definition)
       val name = definition.id.value
       val head = "  ".repeat(level) +

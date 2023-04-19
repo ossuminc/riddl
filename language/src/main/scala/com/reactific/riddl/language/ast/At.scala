@@ -25,15 +25,15 @@ case class At(
   @inline def toShort: String = { s"($line:$col)" }
 
   override def compare(that: At): Int = {
-    if (this.source.origin == that.source.origin) { this.offset - that.offset }
+    if this.source.origin == that.source.origin then { this.offset - that.offset }
     else { this.source.origin.compare(that.source.origin) }
   }
 
   override def equals(obj: Any): Boolean = {
-    if (obj.getClass != classOf[At]) { false }
+    if obj.getClass != classOf[At] then { false }
     else {
       val that = obj.asInstanceOf[At]
-      if (offset != that.offset) { false }
+      if offset != that.offset then { false }
       else { this.source.origin == that.source.origin }
     }
   }

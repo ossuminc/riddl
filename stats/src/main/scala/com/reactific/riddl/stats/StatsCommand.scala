@@ -8,8 +8,8 @@ package com.reactific.riddl.stats
 
 import com.reactific.riddl.commands.InputFileCommandPlugin
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.{Pass, PassesResult}
-import com.reactific.riddl.language.{CommonOptions, Riddl}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.passes.{Pass, PassesResult, Riddl}
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -24,7 +24,7 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { inputFile: Path =>
+    options.withInputFile { (inputFile: Path) =>
       val passes = Pass.standardPasses ++ Seq({ input => StatsPass(input) })
       Riddl.parseAndValidatePath(inputFile, commonOptions, passes = passes, logger = log) match {
         case Left(messages) => Left(messages)
@@ -34,7 +34,7 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
               println(s"Number of Definitions: ${stats.count}")
               println(s"Number of Terms: ${stats.term_count}")
               println(s"Maximum Depth: ${stats.maximum_depth}")
-              for {(k, v) <- stats.categories} {
+              for (k, v) <- stats.categories do {
                 println(s"$k: $v")
               }
               println()

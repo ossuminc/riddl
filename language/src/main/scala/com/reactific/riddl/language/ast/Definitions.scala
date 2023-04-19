@@ -69,8 +69,7 @@ trait Definitions extends Expressions with Options {
       with SagaDefinition
       with EpicDefinition
 
-  /** Base trait of definitions that can accept a message directly via a
-    * reference
+  /** Base trait of definitions that can accept a message directly via a reference
     * @tparam T
     *   The kind of reference needed
     */
@@ -174,8 +173,7 @@ trait Definitions extends Expressions with Options {
     def format: String = s"${Keywords.author} ${id.format}"
   }
 
-  case class AuthorRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Author] {
+  case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author] {
     override def format: String = s"${Keywords.author} ${pathId.format}"
 
     def kind: String = ""
@@ -196,18 +194,16 @@ trait Definitions extends Expressions with Options {
 
     import scala.language.implicitConversions
 
-    /** Implicit conversion of boolean to Int for easier computation of
-      * statistics below
+    /** Implicit conversion of boolean to Int for easier computation of statistics below
       *
       * @param b
       *   The boolean to convert to an Int
       * @return
       */
-    implicit def bool2int(b: Boolean): Int = if (b) 1 else 0
+    implicit def bool2int(b: Boolean): Int = if b then 1 else 0
 
-    /** Compute the completeness of this definition. Vital definitions should
-      * have options, terms, and authors but includes are optional.
-      * Incompleteness is signalled by child definitions that are empty.
+    /** Compute the completeness of this definition. Vital definitions should have options, terms, and authors but
+      * includes are optional. Incompleteness is signalled by child definitions that are empty.
       *
       * @return
       *   A numerator and denominator for percent complete
@@ -218,11 +214,9 @@ trait Definitions extends Expressions with Options {
         description.nonEmpty) -> 5
     }
 
-    /** Compute the 'maturity' of a definition. Maturity is a score with no
-      * maximum but with scoring rules that target 100 points per definition.
-      * Maturity is broken down this way:
-      *   - has a description - up to 50 points depending on # of non empty
-      *     lines
+    /** Compute the 'maturity' of a definition. Maturity is a score with no maximum but with scoring rules that target
+      * 100 points per definition. Maturity is broken down this way:
+      *   - has a description - up to 50 points depending on # of non empty lines
       *   - has a brief description - 5 points
       *   - has options specified - 5 points
       *   - has terms defined -
@@ -233,13 +227,13 @@ trait Definitions extends Expressions with Options {
       */
     def maturity: Int = {
       var score = 0
-      if (hasOptions) score += 5
-      if (hasTerms) score += 5
-      if (description.nonEmpty) {
+      if hasOptions then score += 5
+      if hasTerms then score += 5
+      if description.nonEmpty then {
         score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
       }
-      if (brief.nonEmpty) score += 5
-      if (includes.nonEmpty) score += 3
+      if brief.nonEmpty then score += 5
+      if includes.nonEmpty then score += 3
       score += authors.size
       score
     }
@@ -257,13 +251,10 @@ trait Definitions extends Expressions with Options {
     override def hasTypes: Boolean = types.nonEmpty
   }
 
-  /** Definition of a Processor. This is a base class for all Processor
-    * definitions (things that have inlets, outlets, handlers, and take messages
-    * directly with a reference).
+  /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
+    * handlers, and take messages directly with a reference).
     */
-  trait Processor[OPT <: OptionValue, DEF <: Definition]
-      extends VitalDefinition[OPT, DEF]
-      with WithTypes {
+  trait Processor[OPT <: OptionValue, DEF <: Definition] extends VitalDefinition[OPT, DEF] with WithTypes {
 
     def handlers: Seq[Handler]
 
@@ -272,11 +263,14 @@ trait Definitions extends Expressions with Options {
     def outlets: Seq[Outlet]
   }
 
-  /** The root of the containment hierarchy, corresponding roughly to a level
-    * about a file.
+  /** The root of the containment hierarchy, corresponding roughly to a level about a file.
     *
-    * @param contents
+    * @param domains
     *   The sequence of domains contained by this root container
+    * @param authors
+    *   The sequence of authors defined at root scope
+    * @param inputs
+    *   The inputs for this root scope
     */
   case class RootContainer(
     domains: Seq[Domain] = Nil,
@@ -338,7 +332,11 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier to the event type
     */
-  case class CommandRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+  case class CommandRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = CommandCase
   }
 
@@ -349,7 +347,11 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier to the event type
     */
-  case class EventRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+  case class EventRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = EventCase
   }
 
@@ -360,7 +362,11 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier to the query type
     */
-  case class QueryRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+  case class QueryRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = QueryCase
   }
 
@@ -371,7 +377,11 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier to the result type
     */
-  case class ResultRef(loc: At, pathId: PathIdentifier) extends MessageRef {
+  case class ResultRef(
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
+  ) extends MessageRef {
     def messageKind: AggregateUseCase = ResultCase
   }
 
@@ -383,8 +393,9 @@ trait Definitions extends Expressions with Options {
     *   The path identifier to the result type
     */
   case class RecordRef(
-    loc: At = At.empty,
-    pathId: PathIdentifier = PathIdentifier.empty
+    loc: At,
+    override val id: Option[Identifier] = None,
+    pathId: PathIdentifier
   ) extends MessageRef {
     def messageKind: AggregateUseCase = RecordCase
     override def isEmpty: Boolean =
@@ -451,7 +462,7 @@ trait Definitions extends Expressions with Options {
         case Aggregation(_, fields)                       => fields
         case Enumeration(_, enumerators)                  => enumerators
         case AggregateUseCaseTypeExpression(_, _, fields) => fields
-        case _ => Seq.empty[TypeDefinition]
+        case _                                            => Seq.empty[TypeDefinition]
       }
     }
 
@@ -488,8 +499,7 @@ trait Definitions extends Expressions with Options {
     * @param scenario
     *   The strings that define the scenario
     */
-  case class GivenClause(loc: At, scenario: Seq[LiteralString])
-      extends GherkinClause {
+  case class GivenClause(loc: At, scenario: Seq[LiteralString]) extends GherkinClause {
     def format: String = ""
   }
 
@@ -504,8 +514,8 @@ trait Definitions extends Expressions with Options {
     def format: String = ""
   }
 
-  /** A [[GherkinClause]] for the Then part of a Gherkin [[Example]]. This part
-    * specifies what should be done if the [[WhenClause]] evaluates to true.
+  /** A [[GherkinClause]] for the Then part of a Gherkin [[Example]]. This part specifies what should be done if the
+    * [[WhenClause]] evaluates to true.
     *
     * @param loc
     *   The location of the Then clause
@@ -516,8 +526,8 @@ trait Definitions extends Expressions with Options {
     def format: String = ""
   }
 
-  /** A [[GherkinClause]] for the But part of a Gherkin [[Example]]. This part
-    * specifies what should be done if the [[WhenClause]] evaluates to false.
+  /** A [[GherkinClause]] for the But part of a Gherkin [[Example]]. This part specifies what should be done if the
+    * [[WhenClause]] evaluates to false.
     *
     * @param loc
     *   The location of the But clause
@@ -528,9 +538,8 @@ trait Definitions extends Expressions with Options {
     def format: String = ""
   }
 
-  /** A Gherkin example. Examples have names, [[id]], and a sequence of each of
-    * the four kinds of Gherkin clauses: [[GivenClause]], [[WhenClause]],
-    * [[ThenClause]], [[ButClause]]
+  /** A Gherkin example. Examples have names, [[id]], and a sequence of each of the four kinds of Gherkin clauses:
+    * [[GivenClause]], [[WhenClause]], [[ThenClause]], [[ButClause]]
     *
     * @see
     *   [[https://cucumber.io/docs/gherkin/reference/ The Gherkin Reference]]
@@ -581,8 +590,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced entity.
     */
-  case class EntityRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Entity] {
+  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
     override def format: String = s"${Keywords.entity} ${pathId.format}"
   }
 
@@ -593,8 +601,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced function.
     */
-  case class FunctionRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Function] {
+  case class FunctionRef(loc: At, pathId: PathIdentifier) extends Reference[Function] {
     override def format: String = s"${Keywords.function} ${pathId.format}"
   }
 
@@ -605,11 +612,9 @@ trait Definitions extends Expressions with Options {
     * @param id
     *   The identifier that names the function
     * @param input
-    *   An optional type expression that names and types the fields of the input
-    *   of the function
+    *   An optional type expression that names and types the fields of the input of the function
     * @param output
-    *   An optional type expression that names and types the fields of the
-    *   output of the function
+    *   An optional type expression that names and types the fields of the output of the function
     * @param examples
     *   The set of examples that define the behavior of the function.
     * @param brief
@@ -634,10 +639,15 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends VitalDefinition[FunctionOption, FunctionDefinition]
       with WithTypes
-      with SagaDefinition
-      with EntityDefinition
+      with AdaptorDefinition
+      with ApplicationDefinition
       with ContextDefinition
-      with FunctionDefinition {
+      with EntityDefinition
+      with FunctionDefinition
+      with ProjectorDefinition
+      with RepositoryDefinition
+      with SagaDefinition
+      with StreamletDefinition {
     override lazy val contents: Seq[FunctionDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
@@ -651,18 +661,17 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (input.nonEmpty) score += 2
-      if (output.nonEmpty) score += 3
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 13)
-      if (examples.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
-      if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 12)
+      if input.nonEmpty then score += 2
+      if output.nonEmpty then score += 3
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 13)
+      if examples.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
+      if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 12)
       Math.max(score, maxMaturity)
     }
   }
 
-  /** An invariant expression that can be used in the definition of an entity.
-    * Invariants provide conditional expressions that must be true at all times
-    * in the lifecycle of an entity.
+  /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional
+    * expressions that must be true at all times in the lifecycle of an entity.
     *
     * @param loc
     *   The location of the invariant definition
@@ -692,16 +701,14 @@ trait Definitions extends Expressions with Options {
     final val kind: String = "Invariant"
   }
 
-  /** A sealed trait for the kinds of OnClause that can occur within a Handler
-    * definition.
+  /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
   sealed trait OnClause extends HandlerDefinition {
     def examples: Seq[Example]
   }
 
-  /** Defines the actions to be taken when a message does not match any of the
-    * OnMessageClauses. OnOtherClause corresponds to the "other" case of an
-    * [[Handler]].
+  /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
+    * corresponds to the "other" case of an [[Handler]].
     *
     * @param loc
     *   THe location of the "on other" clause
@@ -729,8 +736,7 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
-  /** Defines the actions to be taken when the component this OnClause occurs in
-    * is initialized.
+  /** Defines the actions to be taken when the component this OnClause occurs in is initialized.
     *
     * @param loc
     *   THe location of the "on other" clause
@@ -758,9 +764,8 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
-  /** Defines the actions to be taken when a particular message is received by
-    * an entity. [[OnMessageClause]]s are used in the definition of a
-    * [[Handler]] with one for each kind of message that handler deals with.
+  /** Defines the actions to be taken when a particular message is received by an entity. [[OnMessageClause]]s are used
+    * in the definition of a [[Handler]] with one for each kind of message that handler deals with.
     *
     * @param loc
     *   The location of the "on" clause
@@ -792,10 +797,13 @@ trait Definitions extends Expressions with Options {
     def format: String = ""
 
     final val kind: String = "OnMessageClause"
+
+    override def resolveNameTo(name: String): Option[Definition] = {
+      if msg.id.nonEmpty && msg.id.get.value == name then Some(this) else None
+    }
   }
 
-  /** Defines the actions to be taken when the component this OnClause occurs in
-    * is initialized.
+  /** Defines the actions to be taken when the component this OnClause occurs in is initialized.
     *
     * @param loc
     *   THe location of the "on other" clause
@@ -823,19 +831,16 @@ trait Definitions extends Expressions with Options {
     override def format: String = ""
   }
 
-  /** A named handler of messages (commands, events, queries) that bundles
-    * together a set of [[OnMessageClause]] definitions and by doing so defines
-    * the behavior of an entity. Note that entities may define multiple handlers
-    * and switch between them to change how it responds to messages over time or
-    * in response to changing conditions
+  /** A named handler of messages (commands, events, queries) that bundles together a set of [[OnMessageClause]]
+    * definitions and by doing so defines the behavior of an entity. Note that entities may define multiple handlers and
+    * switch between them to change how it responds to messages over time or in response to changing conditions
     *
     * @param loc
     *   The location of the handler definition
     * @param id
     *   The name of the handler.
     * @param clauses
-    *   The set of [[OnMessageClause]] definitions that define how the entity
-    *   responds to received messages.
+    *   The set of [[OnMessageClause]] definitions that define how the entity responds to received messages.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -873,28 +878,25 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced handler
     */
-  case class HandlerRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Handler] {
+  case class HandlerRef(loc: At, pathId: PathIdentifier) extends Reference[Handler] {
     override def format: String = s"${Keywords.handler} ${pathId.format}"
   }
 
-  /** Represents the state of an entity. The MorphAction can cause the state
-    * definition of an entity to change.
+  /** Represents the state of an entity. The MorphAction can cause the state definition of an entity to change.
     *
     * @param loc
     *   The location of the state definition
     * @param id
     *   The name of the state definition
     * @param typ
-    *   A reference to a type definition that provides the range of values that
-    *   the state may assume.
+    *   A reference to a type definition that provides the range of values that the state may assume.
     * @param types
     *   Types defined within the body of the state
     * @param handlers
     *   The handler definitions that may occur when this state is active
     * @param invariants
-    *   Expressions of boolean logic that must always evaluate to true before
-    *   and after an entity changes when this state is active.
+    *   Expressions of boolean logic that must always evaluate to true before and after an entity changes when this
+    *   state is active.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -926,8 +928,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced state definition
     */
-  case class StateRef(loc: At, pathId: PathIdentifier)
-      extends Reference[State] {
+  case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State] {
     override def format: String = s"${Keywords.state} ${pathId.format}"
   }
 
@@ -986,13 +987,13 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (states.nonEmpty) score += Math.max(states.count(_.nonEmpty), 10)
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 25)
-      if (handlers.nonEmpty) score += 1
-      if (invariants.nonEmpty)
+      if states.nonEmpty then score += Math.max(states.count(_.nonEmpty), 10)
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
+      if handlers.nonEmpty then score += 1
+      if invariants.nonEmpty then
         score +=
           Math.max(invariants.count(_.nonEmpty), 10)
-      if (functions.nonEmpty) score += Math.max(functions.count(_.nonEmpty), 5)
+      if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 5)
       Math.max(score, maxMaturity)
     }
   }
@@ -1007,11 +1008,9 @@ trait Definitions extends Expressions with Options {
     def format: String = "to"
   }
 
-  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert
-    * messages from another bounded context. Adaptors translate incoming
-    * messages into corresponding messages using the ubiquitous language of the
-    * defining bounded context. There should be one Adapter for each external
-    * Context
+  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
+    * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
+    * bounded context. There should be one Adapter for each external Context
     *
     * @param loc
     *   Location in the parsing input
@@ -1038,6 +1037,7 @@ trait Definitions extends Expressions with Options {
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
+    functions: Seq[Function] = Seq.empty[Function],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -1054,25 +1054,22 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (handlers.nonEmpty)
+      if handlers.nonEmpty then
         score +=
           Math.max(handlers.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
     }
   }
 
-  case class AdaptorRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Adaptor] {
+  case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
     override def format: String = s"${Keywords.adaptor} ${pathId.format}"
   }
 
-  /** A RIDDL repository is an abstraction for anything that can retain
-    * information(e.g. messages for retrieval at a later time. This might be a
-    * relational database, NoSQL database, data lake, API, or something not yet
-    * invented. There is no specific technology implied other than the retention
-    * and retrieval of information. You should think of repositories more like a
-    * message-oriented version of the Java Repository Pattern than any
-    * particular kind ofdatabase.
+  /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
+    * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
+    * There is no specific technology implied other than the retention and retrieval of information. You should think of
+    * repositories more like a message-oriented version of the Java Repository Pattern than any particular kind
+    * ofdatabase.
     *
     * @see
     *   https://java-design-patterns.com/patterns/repository/#explanation
@@ -1083,8 +1080,7 @@ trait Definitions extends Expressions with Options {
     * @param types
     *   The types, typically messages, that the Repository uses
     * @param handlers
-    *   The handler for specifying how messages should be handled by the
-    *   repository
+    *   The handler for specifying how messages should be handled by the repository
     * @param authors
     *   The author(s) who wrote this repository specification.
     * @param includes
@@ -1106,6 +1102,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    functions: Seq[Function] = Seq.empty[Function],
     includes: Seq[Include[RepositoryDefinition]] = Seq
       .empty[Include[RepositoryDefinition]],
     options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
@@ -1128,16 +1125,13 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class RepositoryRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Projector] {
+  case class RepositoryRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
     override def format: String = s"${Keywords.repository} ${pathId.format}"
   }
 
-  /** Projectors get their name from Euclidean Geometry but are probably more
-    * analogous to a relational database view. The concept is very simple in
-    * RIDDL: projectors gather data from entities and other sources, transform
-    * that data into a specific record type, and support querying that data
-    * arbitrarily.
+  /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
+    * The concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data
+    * into a specific record type, and support querying that data arbitrarily.
     *
     * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
@@ -1174,6 +1168,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    functions: Seq[Function] = Seq.empty[Function],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -1189,7 +1184,7 @@ trait Definitions extends Expressions with Options {
     override def maturity: Int = {
       var score = super.maturity
       val records: Seq[Type] = types.filter(_.typ.isContainer)
-      if (records.nonEmpty)
+      if records.nonEmpty then
         score +=
           Math.max(types.count(_.nonEmpty), maxMaturity)
       Math.max(score, maxMaturity)
@@ -1203,16 +1198,14 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class ProjectorRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Projector] {
+  case class ProjectorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
     override def format: String = s"${Keywords.projector} ${pathId.format}"
   }
 
-  /** A bounded context definition. Bounded contexts provide a definitional
-    * boundary on the language used to describe some aspect of a system. They
-    * imply a tightly integrated ecosystem of one or more microservices that
-    * share a common purpose. Context can be used to house entities, read side
-    * projectors, sagas, adaptations to other contexts, apis, and etc.
+  /** A bounded context definition. Bounded contexts provide a definitional boundary on the language used to describe
+    * some aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a
+    * common purpose. Context can be used to house entities, read side projectors, sagas, adaptations to other contexts,
+    * apis, and etc.
     *
     * @param loc
     *   The location of the bounded context definition
@@ -1271,13 +1264,13 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
-      if (adaptors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
-      if (sagas.nonEmpty) score += Math.max(types.count(_.nonEmpty), 5)
-      if (streamlets.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
-      if (functions.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
-      if (handlers.nonEmpty) score += 10
-      if (projectors.nonEmpty) score += Math.max(types.count(_.nonEmpty), 10)
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
+      if adaptors.nonEmpty then score += Math.max(types.count(_.nonEmpty), 5)
+      if sagas.nonEmpty then score += Math.max(types.count(_.nonEmpty), 5)
+      if streamlets.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
+      if functions.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
+      if handlers.nonEmpty then score += 10
+      if projectors.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
   }
@@ -1289,8 +1282,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier for the referenced context
     */
-  case class ContextRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Context] {
+  case class ContextRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Context] {
     override def format: String = s"context ${pathId.format}"
   }
 
@@ -1419,11 +1411,9 @@ trait Definitions extends Expressions with Options {
     def keyword: String = Keywords.router
   }
 
-  /** Definition of a Streamlet. A computing element for processing data from
-    * [[Inlet]]s to [[Outlet]]s. A processor's processing is specified by
-    * Gherkin [[Example]]s. Streamlets come in various shapes: Source, Sink,
-    * Flow, Merge, Split, and Router depending on how many inlets and outlets
-    * they have
+  /** Definition of a Streamlet. A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A processor's
+    * processing is specified by Gherkin [[Example]]s. Streamlets come in various shapes: Source, Sink, Flow, Merge,
+    * Split, and Router depending on how many inlets and outlets they have
     *
     * @param loc
     *   The location of the Processor definition
@@ -1449,6 +1439,7 @@ trait Definitions extends Expressions with Options {
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
+    functions: Seq[Function] = Seq.empty[Function],
     types: Seq[Type] = Seq.empty[Type],
     includes: Seq[Include[StreamletDefinition]] = Seq
       .empty[Include[StreamletDefinition]],
@@ -1466,9 +1457,9 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (inlets.nonEmpty) score += Math.max(inlets.count(_.nonEmpty), 5)
-      if (outlets.nonEmpty) score += Math.max(outlets.count(_.nonEmpty), 5)
-      if (handlers.nonEmpty) score += Math.max(handlers.count(_.nonEmpty), 40)
+      if inlets.nonEmpty then score += Math.max(inlets.count(_.nonEmpty), 5)
+      if outlets.nonEmpty then score += Math.max(outlets.count(_.nonEmpty), 5)
+      if handlers.nonEmpty then score += Math.max(handlers.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
 
@@ -1519,8 +1510,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class StreamletRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Streamlet] {
+  case class StreamletRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Streamlet] {
     override def format: String = s"${Keywords.streamlet} ${pathId.format}"
   }
 
@@ -1538,8 +1528,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced [[Inlet]]
     */
-  case class InletRef(loc: At, pathId: PathIdentifier)
-      extends PortletRef[Inlet] {
+  case class InletRef(loc: At, pathId: PathIdentifier) extends PortletRef[Inlet] {
     override def format: String = s"${Keywords.inlet} ${pathId.format}"
   }
 
@@ -1550,8 +1539,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier of the referenced [[Outlet]]
     */
-  case class OutletRef(loc: At, pathId: PathIdentifier)
-      extends PortletRef[Outlet] {
+  case class OutletRef(loc: At, pathId: PathIdentifier) extends PortletRef[Outlet] {
     override def format: String = s"${Keywords.outlet} ${pathId.format}"
   }
 
@@ -1585,10 +1573,9 @@ trait Definitions extends Expressions with Options {
     final val kind: String = "SagaStep"
   }
 
-  /** The definition of a Saga based on inputs, outputs, and the set of
-    * [[SagaStep]]s involved in the saga. Sagas define a computing action based
-    * on a variety of related commands that must all succeed atomically or have
-    * their effects undone.
+  /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define
+    * a computing action based on a variety of related commands that must all succeed atomically or have their effects
+    * undone.
     *
     * @param loc
     *   The location of the Saga definition
@@ -1597,11 +1584,9 @@ trait Definitions extends Expressions with Options {
     * @param options
     *   The options of the saga
     * @param input
-    *   A definition of the aggregate input values needed to invoke the saga, if
-    *   any.
+    *   A definition of the aggregate input values needed to invoke the saga, if any.
     * @param output
-    *   A definition of the aggregate output values resulting from invoking the
-    *   saga, if any.
+    *   A definition of the aggregate output values resulting from invoking the saga, if any.
     * @param sagaSteps
     *   The set of [[SagaStep]]s that comprise the saga.
     * @param brief
@@ -1637,9 +1622,9 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (input.nonEmpty) score += 10
-      if (output.nonEmpty) score += 10
-      if (sagaSteps.nonEmpty) score += Math.max(sagaSteps.count(_.nonEmpty), 40)
+      if input.nonEmpty then score += 10
+      if output.nonEmpty then score += 10
+      if sagaSteps.nonEmpty then score += Math.max(sagaSteps.count(_.nonEmpty), 40)
       Math.max(score, maxMaturity)
     }
   }
@@ -1648,21 +1633,20 @@ trait Definitions extends Expressions with Options {
     def format: String = s"${Keywords.saga} ${pathId.format}"
   }
 
-  /** An StoryActor (Role) who is the initiator of the user story. Actors may be
-    * persons or machines
+  /** An User (Role) who is the initiator of the user story. Users may be persons or machines
     *
     * @param loc
-    *   The location of the actor in the source
+    *   The location of the user in the source
     * @param id
-    *   The name (role) of the actor
+    *   The name (role) of the user
     * @param is_a
-    *   What kind of thing the actor is
+    *   What kind of thing the user is
     * @param brief
-    *   A brief description of the actor
+    *   A brief description of the user
     * @param description
-    *   A longer description of the actor and its role
+    *   A longer description of the user and its role
     */
-  case class Actor(
+  case class User(
     loc: At,
     id: Identifier,
     is_a: LiteralString,
@@ -1670,30 +1654,29 @@ trait Definitions extends Expressions with Options {
     description: Option[Description] = None
   ) extends LeafDefinition
       with DomainDefinition {
-    def format: String = s"${Keywords.actor} ${id.format} is ${is_a.format}"
+    def format: String = s"${Keywords.user} ${id.format} is ${is_a.format}"
 
-    override def kind: String = "Actor"
+    override def kind: String = "User"
   }
 
-  /** A reference to an StoryActor using a path identifier
+  /** A reference to an User using a path identifier
     *
     * @param loc
-    *   THe location of the StoryActor in the source code
+    *   THe location of the User in the source code
     * @param pathId
-    *   The path identifier that locates the references StoryActor
+    *   The path identifier that locates the User
     */
-  case class ActorRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Actor] {
-    def format: String = s"${Keywords.actor} ${pathId.format}"
+  case class UserRef(loc: At, pathId: PathIdentifier) extends Reference[User] {
+    def format: String = s"${Keywords.user} ${pathId.format}"
   }
 
   sealed trait Interaction extends UseCaseDefinition {
+
     /** Format the node to a string */
     override def format: String = s"$kind ${id.format}"
   }
 
-  /** An interaction expression that specifies that each contained expression
-    * should be executed in parallel
+  /** An interaction expression that specifies that each contained expression should be executed in parallel
     *
     * @param loc
     *   Location of the parallel group
@@ -1712,28 +1695,28 @@ trait Definitions extends Expressions with Options {
     override def kind: String = "Parallel Interaction"
   }
 
-    /** An interaction expression that specifies that each contained expression
-     * should be executed in strict sequential order
-     *
-     * @param loc
-     *   Location of the sequence
-     * @param id
-     *    Identifier for the interaction
-     * @param contents
-     *   The interactions to execute in sequence
-     * @param brief
-     *   A brief description of the sequence group
-     * @param description
-     *   A longer description of the sequence
-     */
-    case class SequentialInteractions(
-      loc: At,
-      id: Identifier = Identifier.empty,
-      contents: Seq[Interaction] = Seq.empty[Interaction],
-      brief: Option[LiteralString],
-      description: Option[Description] = None
-    ) extends Interaction {
-      override def kind: String = "Sequential Interaction"
+  /** An interaction expression that specifies that each contained expression should be executed in strict sequential
+    * order
+    *
+    * @param loc
+    *   Location of the sequence
+    * @param id
+    *   Identifier for the interaction
+    * @param contents
+    *   The interactions to execute in sequence
+    * @param brief
+    *   A brief description of the sequence group
+    * @param description
+    *   A longer description of the sequence
+    */
+  case class SequentialInteractions(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    contents: Seq[Interaction] = Seq.empty[Interaction],
+    brief: Option[LiteralString],
+    description: Option[Description] = None
+  ) extends Interaction {
+    override def kind: String = "Sequential Interaction"
   }
 
   /** An interaction expression that specifies that its contents are optional
@@ -1755,9 +1738,8 @@ trait Definitions extends Expressions with Options {
     override def kind: String = "Optional Interaction"
   }
 
-  /** One abstract step in an Interaction between things. The set of case
-    * classes associated with this sealed trait provide more type specificity to
-    * these three fields.
+  /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
+    * provide more type specificity to these three fields.
     */
   sealed trait GenericInteraction extends Interaction with LeafDefinition {
     def from: Reference[Definition]
@@ -1804,7 +1786,7 @@ trait Definitions extends Expressions with Options {
     override def to: Reference[Definition] = from
   }
 
-  /** An interaction where an Actor receives output
+  /** An interaction where an User receives output
     * @param loc
     *   The locaiton of the interaction in the source
     * @param from
@@ -1812,28 +1794,28 @@ trait Definitions extends Expressions with Options {
     * @param relationship
     *   THe name of the relationship
     * @param to
-    *   THe actor that receives the output
+    *   THe user that receives the output
     * @param brief
-   * A brief description of this interaction
+    *   A brief description of this interaction
     */
   case class TakeOutputInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
     from: OutputRef,
     relationship: LiteralString,
-    to: ActorRef,
+    to: UserRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
     override def kind: String = "Take Output Interaction"
   }
 
-  /** A interaction where and Actor provides input
+  /** A interaction where and User provides input
     *
     * @param loc
     *   The location of the interaction in the source
     * @param from
-    *   The actor providing the input
+    *   The user providing the input
     * @param relationship
     *   A description of the relationship in this interaction
     * @param to
@@ -1844,7 +1826,7 @@ trait Definitions extends Expressions with Options {
   case class PutInputInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
-    from: ActorRef,
+    from: UserRef,
     relationship: LiteralString,
     to: InputRef,
     brief: Option[LiteralString] = None,
@@ -1853,16 +1835,14 @@ trait Definitions extends Expressions with Options {
     override def kind: String = "Put Input Interaction"
   }
 
-  /** The definition of a Jacobsen Use Case RIDDL defines these epics by
-    * allowing a linkage between the actor and RIDDL applications or bounded
-    * contexts.
+  /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between the user and RIDDL
+    * applications or bounded contexts.
     * @param loc
     *   Where in the source this use case occurs
     * @param id
     *   The unique identifier for this use case
     * @param contents
-    *   The interactions between actors and system components that define the
-    *   use case.
+    *   The interactions between users and system components that define the use case.
     * @param brief
     *   A brief description of this use case
     * @param description
@@ -1875,26 +1855,26 @@ trait Definitions extends Expressions with Options {
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends EpicDefinition with Container[Interaction] {
+  ) extends EpicDefinition
+      with Container[Interaction] {
     override def kind: String = "UseCase"
     override def format: String = s"${Keywords.case_} ${id.format}"
   }
 
-  /** An agile user story definition in the usual "As a {role} I want
-    * {capability} so that {benefit}" style.
+  /** An agile user story definition in the usual "As a {role} I want {capability} so that {benefit}" style.
     *
     * @param loc
     *   Location of the user story
-    * @param actor
-    *   The actor, or instigator, of the story.
+    * @param user
+    *   The user, or instigator, of the story.
     * @param capability
-    *   The capability the actor wishes to utilize
+    *   The capability the user wishes to utilize
     * @param benefit
     *   The benefit of that utilization
     */
   case class UserStory(
     loc: At,
-    actor: ActorRef,
+    user: UserRef,
     capability: LiteralString,
     benefit: LiteralString
   ) extends RiddlValue {
@@ -1903,25 +1883,22 @@ trait Definitions extends Expressions with Options {
     override def isEmpty: Boolean = false
   }
 
-  /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an
-    * overall story about user interactions with the system. This define
-    * functionality from the perspective of actors (men or machines)
-    * interactions with the system that is part of their role.
+  /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
+    * with the system. This define functionality from the perspective of users (men or machines) interactions with the
+    * system that is part of their role.
     *
     * @param loc
     *   The location of the Epic definition
     * @param id
     *   The name of the Epic
     * @param userStory
-    *   The [[UserStory]] (per agile and xP) that provides the overall big
-    *   picture of this Epic
+    *   The [[UserStory]] (per agile and xP) that provides the overall big picture of this Epic
     * @param shownBy
     *   A list of URLs to visualizations or other materials related to the epic
     * @param cases
     *   A list of UseCase's that define the epic
     * @param brief
-    *   A brief description (one sentence) for use in the glossary and
-    *   summaries.
+    *   A brief description (one sentence) for use in the glossary and summaries.
     * @param description
     *   An more detailed description of the Epic
     */
@@ -1954,9 +1931,9 @@ trait Definitions extends Expressions with Options {
 
     override def maturity: Int = {
       var score = super.maturity
-      if (userStory.nonEmpty) score += 3
-      if (shownBy.nonEmpty) score += 10
-      if (cases.nonEmpty) score += Math.max(cases.count(_.nonEmpty), 25)
+      if userStory.nonEmpty then score += 3
+      if shownBy.nonEmpty then score += 10
+      if cases.nonEmpty then score += Math.max(cases.count(_.nonEmpty), 25)
       Math.max(score, maxMaturity)
     }
   }
@@ -1975,8 +1952,7 @@ trait Definitions extends Expressions with Options {
     */
   sealed trait UIElement extends ApplicationDefinition
 
-  /** A group of UIElement that can be treated as a whole. For example, a form,
-    * a button group, etc.
+  /** A group of UIElement that can be treated as a whole. For example, a form, a button group, etc.
     * @param loc
     *   The location of the group
     * @param id
@@ -2014,8 +1990,7 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path to the referenced group
     */
-  case class GroupRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Group] {
+  case class GroupRef(loc: At, pathId: PathIdentifier) extends Reference[Group] {
     def format: String = s"${Keywords.group} ${pathId.format}"
   }
 
@@ -2057,13 +2032,11 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier that refers to the View
     */
-  case class OutputRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Output] {
+  case class OutputRef(loc: At, pathId: PathIdentifier) extends Reference[Output] {
     def format: String = s"${Keywords.output} ${pathId.format}"
   }
 
-  /** A Give is a UI Element to allow the user to 'give' some data to the
-    * application. It is analogous to a form in HTML
+  /** A Give is a UI Element to allow the user to 'give' some data to the application. It is analogous to a form in HTML
     *
     * @param loc
     *   Location of the Give
@@ -2101,14 +2074,12 @@ trait Definitions extends Expressions with Options {
     * @param pathId
     *   The path identifier that refers to the Give
     */
-  case class InputRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Input] {
+  case class InputRef(loc: At, pathId: PathIdentifier) extends Reference[Input] {
     def format: String = s"${Keywords.input} ${pathId.format}"
   }
 
-  /** An application from which a person, robot, or other active agent (the
-    * user) will obtain information, or to which that user will provided
-    * information.
+  /** An application from which a person, robot, or other active agent (the user) will obtain information, or to which
+    * that user will provided information.
     * @param loc
     *   The location of the application in the source
     * @param id
@@ -2126,8 +2097,7 @@ trait Definitions extends Expressions with Options {
     * @param outlets
     *   Message outlets for the application
     * @param authors
-    *   Author definitions for the application, for attribution of application
-    *   components.
+    *   Author definitions for the application, for attribution of application components.
     * @param terms
     *   Definitions of terms useful in comprehending the application's purpose
     * @param includes
@@ -2147,6 +2117,7 @@ trait Definitions extends Expressions with Options {
     handlers: Seq[Handler] = Seq.empty[Handler],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
+    functions: Seq[Function] = Seq.empty[Function],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
@@ -2164,19 +2135,17 @@ trait Definitions extends Expressions with Options {
   /** A reference to an Application using a path identifier
     *
     * @param loc
-    *   THe location of the StoryActor in the source code
-    * @param id
+    *   THe location of the ApplicationRef in the source code
+    * @param pathId
     *   The path identifier that refers to the Application
     */
-  case class ApplicationRef(loc: At, pathId: PathIdentifier)
-      extends ProcessorRef[Application] {
+  case class ApplicationRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Application] {
     def format: String = s"${Keywords.application} ${pathId.format}"
   }
 
-  /** The definition of a domain. Domains are the highest building block in
-    * RIDDL and may be nested inside each other to form a hierarchy of domains.
-    * Generally, domains follow hierarchical organization structure but other
-    * taxonomies and ontologies may be modelled with domains too.
+  /** The definition of a domain. Domains are the highest building block in RIDDL and may be nested inside each other to
+    * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies
+    * and ontologies may be modelled with domains too.
     *
     * @param loc
     *   The location of the domain definition
@@ -2185,12 +2154,11 @@ trait Definitions extends Expressions with Options {
     * @param options
     *   Options for the domain
     * @param types
-    *   Type definitions with a domain (nearly global) scope, with applicability
-    *   to many contexts or subdomains
+    *   Type definitions with a domain (nearly global) scope, with applicability to many contexts or subdomains
     * @param contexts
     *   The contexts defined in the scope of the domain
-    * @param actors
-    *   Actor definitions for use in stories
+    * @param users
+    *   User definitions for use in stories
     * @param stories
     *   Story definitions for this domain
     * @param applications
@@ -2198,8 +2166,7 @@ trait Definitions extends Expressions with Options {
     * @param domains
     *   Nested sub-domains within this domain
     * @param terms
-    *   Definition of terms pertaining to this domain that provide explanation
-    *   of concepts from the domain.
+    *   Definition of terms pertaining to this domain that provide explanation of concepts from the domain.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2214,7 +2181,7 @@ trait Definitions extends Expressions with Options {
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
     contexts: Seq[Context] = Seq.empty[Context],
-    actors: Seq[Actor] = Seq.empty[Actor],
+    users: Seq[User] = Seq.empty[User],
     stories: Seq[Epic] = Seq.empty[Epic],
     applications: Seq[Application] = Seq.empty[Application],
     domains: Seq[Domain] = Seq.empty[Domain],
@@ -2229,18 +2196,18 @@ trait Definitions extends Expressions with Options {
       with DomainDefinition {
 
     override lazy val contents: Seq[DomainDefinition] = {
-      super.contents ++ domains ++ types ++ constants ++ contexts ++ actors ++
+      super.contents ++ domains ++ types ++ constants ++ contexts ++ users ++
         stories ++ applications ++ terms ++ authorDefs
     }
     final val kind: String = "Domain"
 
     override def maturity: Int = {
       var score = super.maturity
-      if (types.nonEmpty) score += Math.max(types.count(_.nonEmpty), 15)
-      if (contexts.nonEmpty) score += Math.max(contexts.count(_.nonEmpty), 15)
-      if (stories.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 15)
-      if (applications.nonEmpty) score += Math.max(stories.count(_.nonEmpty), 5)
-      if (domains.nonEmpty) score += Math.max(domains.count(_.nonEmpty), 10)
+      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 15)
+      if contexts.nonEmpty then score += Math.max(contexts.count(_.nonEmpty), 15)
+      if stories.nonEmpty then score += Math.max(stories.count(_.nonEmpty), 15)
+      if applications.nonEmpty then score += Math.max(stories.count(_.nonEmpty), 5)
+      if domains.nonEmpty then score += Math.max(domains.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }
   }
@@ -2249,11 +2216,10 @@ trait Definitions extends Expressions with Options {
     *
     * @param loc
     *   The location at which the domain definition occurs
-    * @param id
+    * @param pathId
     *   The path identifier for the referenced domain.
     */
-  case class DomainRef(loc: At, pathId: PathIdentifier)
-      extends Reference[Domain] {
+  case class DomainRef(loc: At, pathId: PathIdentifier) extends Reference[Domain] {
     override def format: String = s"${Keywords.domain} ${pathId.format}"
   }
 }

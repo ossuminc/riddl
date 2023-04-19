@@ -56,7 +56,7 @@ trait ParsingContext {
   ): Domain = {
     val name = fileName.s
     val file = new File(current.root, name)
-    if (!file.exists()) {
+    if !file.exists() then {
       error(s"File '$name` does not exist, can't be imported.")
       Domain(loc, domainName)
     } else { importDomain(file) }
@@ -73,7 +73,7 @@ trait ParsingContext {
     str: LiteralString
   )(rule: P[?] => P[Seq[T]]
   ): Include[T] = {
-    val source = if (str.s.startsWith("http")) {
+    val source = if str.s.startsWith("http") then {
       val url = new java.net.URL(str.s)
       push(url)
       str.s
@@ -142,7 +142,7 @@ trait ParsingContext {
     try {
       fastparse.parse(input, parser(_)) match {
         case Success(content, _) =>
-          if (errors.nonEmpty) {
+          if errors.nonEmpty then {
             Left(errors.toList)
           }
           else {
@@ -151,9 +151,6 @@ trait ParsingContext {
         case failure: Failure =>
           makeParseFailureError(failure)
           Left(errors.toList)
-        case _ => throw new IllegalStateException(
-          "Parsed[T] should have matched Success or Failure"
-        )
       }
     } catch {
       case NonFatal(exception) =>

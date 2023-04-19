@@ -8,8 +8,7 @@ package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.language.Riddl
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.{PassesResult, Riddl}
 import com.reactific.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -25,7 +24,7 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { inputFile: Path =>
+    options.withInputFile { (inputFile: Path) =>
       Riddl.parseAndValidate(inputFile, commonOptions)
     }
   }

@@ -6,13 +6,13 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.language.{AST, *}
+import com.reactific.riddl.language.*
 import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.resolve.ResolutionPass
-import com.reactific.riddl.language.passes.symbols.SymbolsPass
-import com.reactific.riddl.language.passes.validate.ValidationPass
-import com.reactific.riddl.language.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass}
+import com.reactific.riddl.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.validate.ValidationPass
 import com.reactific.riddl.stats.StatsPass
 import com.reactific.riddl.utils.*
 
@@ -41,8 +41,9 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   requires(ValidationPass)
   requires(StatsPass)
 
-  val commonOptions: CommonOptions = state.commonOptions
-  val options: HugoCommand.Options = state.options
+  lazy val commonOptions: CommonOptions = state.commonOptions
+  lazy val options: HugoCommand.Options = state.options
+  lazy val refMap: ReferenceMap = input.outputOf[ResolutionOutput](ResolutionPass.name).refMap
 
   require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
   require(
@@ -79,7 +80,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitConnection(c, parents)
             state.addToGlossary(c, stack)
-          case sa: Actor => state.addToGlossary(sa, stack)
+          case sa: User => state.addToGlossary(sa, stack)
           case i: Interaction => state.addToGlossary(i, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")
@@ -95,7 +96,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
           case grp: Group => state.addToGlossary(grp, stack)
           case t: Type => mkd.emitType(t, stack)
           case s: State =>
-            val maybeType = state.resolvePathIdentifier[Type](s.typ.pathId, s +: stack)
+            val maybeType = refMap.definitionOf[Type](s.typ.pathId, s)
             maybeType match {
               case Some(typ: AggregateTypeExpression) =>
                 mkd.emitState(s, typ.fields, stack)
@@ -136,17 +137,17 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
 
   private def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
-    if (maybeFiles.nonEmpty) {
-      for (file <- maybeFiles.get) {deleteAll(file)}
+    if maybeFiles.nonEmpty then {
+      for file <- maybeFiles.get do {deleteAll(file)}
     }
     directory.delete
   }
 
   private def loadATheme(from: URL, destDir: Path): Unit = {
     val fileName = PathUtils.copyURLToDir(from, destDir)
-    if (fileName.nonEmpty) {
+    if fileName.nonEmpty then {
       val zip_path = destDir.resolve(fileName)
-      if (Files.isRegularFile(zip_path)) {
+      if Files.isRegularFile(zip_path) then {
         fileName match {
           case name if name.endsWith(".zip") =>
             Zip.unzip(zip_path, destDir)
@@ -168,7 +169,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   }
 
   private def loadThemes(options: HugoCommand.Options): Unit = {
-    for ((name, url) <- options.themes if url.nonEmpty) {
+    for (name, url) <- options.themes if url.nonEmpty do {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url.get, destDir)
     }
@@ -183,12 +184,12 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     val sourceDir: Path = inputRoot.getParent.resolve("static")
 
     val targetDir = options.staticRoot
-    if (Files.exists(sourceDir) && Files.isDirectory(sourceDir)) {
+    if Files.exists(sourceDir) && Files.isDirectory(sourceDir) then {
       val img = sourceDir
         .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
         .toAbsolutePath
       Files.createDirectories(img.getParent)
-      if (!Files.exists(img)) {
+      if !Files.exists(img) then {
         copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
       }
       // copy source to target using Files Class
@@ -198,7 +199,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   }
 
   def copyResource(destination: Path, src: String = ""): Unit = {
-    val name = if (src.isEmpty) destination.getFileName.toString else src
+    val name = if src.isEmpty then destination.getFileName.toString else src
     PathUtils.copyResource(name, destination)
   }
 
@@ -237,7 +238,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     commonOptions: CommonOptions
   ): Unit = {
     val outDir = options.outputRoot.toFile
-    if (outDir.exists()) {if (options.eraseOutput) {deleteAll(outDir)}}
+    if outDir.exists() then {if options.eraseOutput then {deleteAll(outDir)}}
     else {outDir.mkdirs()}
 
     val parent = outDir.getParentFile
@@ -245,7 +246,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if (commonOptions.verbose) {println(s"Generating output to: $outDir")}
+    if commonOptions.verbose then {println(s"Generating output to: $outDir")}
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)

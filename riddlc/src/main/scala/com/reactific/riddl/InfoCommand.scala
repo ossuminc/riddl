@@ -10,7 +10,7 @@ import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.utils.RiddlBuildInfo
 import pureconfig.ConfigCursor
@@ -39,11 +39,11 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
 
   override def getConfigReader: ConfigReader[InfoCommand.Options] = {
     (cur: ConfigCursor) =>
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
         cmd <- topRes.asObjectCursor
-      } yield { Options(cmd.path) }
+      yield { Options(cmd.path) }
   }
 
   override def run(

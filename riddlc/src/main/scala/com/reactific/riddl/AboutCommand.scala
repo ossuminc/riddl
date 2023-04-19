@@ -11,7 +11,7 @@ import com.reactific.riddl.commands.CommandPlugin
 import com.reactific.riddl.commands.CommonOptionsHelper
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.passes.PassesResult
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -38,11 +38,11 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
 
   override def getConfigReader: ConfigReader[AboutCommand.Options] = {
     (cur: ConfigCursor) =>
-      for {
+      for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey(pluginName)
         cmd <- topRes.asObjectCursor
-      } yield { Options(cmd.path) }
+      yield { Options(cmd.path) }
   }
 
   override def run(
@@ -51,7 +51,7 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if (commonOptions.verbose || !commonOptions.quiet) {
+    if commonOptions.verbose || !commonOptions.quiet then {
       val about: String = {
         CommonOptionsHelper.blurb ++ System.lineSeparator() ++
           "Extensive Documentation here: https://riddl.tech"

@@ -3,7 +3,7 @@ title: "Application Element"
 draft: "false"
 ---
 
-*Elements* are the definitions that define the actor interface for an
+*Elements* are the definitions that define the user interface for an
 [application]({{< relref application.md >}}). Every element is associated 
 with a data [type]({{< relref type.md >}}) for either input or output. 
 Actors using an application are either sending information

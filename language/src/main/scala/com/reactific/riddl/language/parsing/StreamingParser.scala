@@ -136,6 +136,7 @@ private[parsing] trait StreamingParser
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val functions = mapTo[Function](groups.get(classOf[Function]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[StreamletDefinition]](
@@ -150,6 +151,7 @@ private[parsing] trait StreamingParser
         inlets,
         outlets,
         handlers,
+        functions,
         types,
         includes,
         auths,

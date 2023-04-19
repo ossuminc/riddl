@@ -4,8 +4,8 @@ draft: false
 ---
 
 An application in RIDDL represents an interface portion of a system where an 
-actor (human or machine) initiates an action on the system. Applications 
-only define the net result of the interaction between the actor and the 
+user (human or machine) initiates an action on the system. Applications 
+only define the net result of the interaction between the user and the 
 application. They are abstract on purpose. That is, there is nothing in RIDDL 
 that defines how information is provided to a user nor received from a user. 
 This gives free latitude to the user interface 
@@ -34,7 +34,7 @@ to define the structure of a user interface.
 Applications have message 
 [handlers]({{< relref handler.md >}}) like many other RIDDL definitions. 
 However, application handlers only receive their messages from 
-[actors]({{< relref actor.md >}}), unlike other handlers. Typically, the 
+[actors]({{< relref user.md >}}), unlike other handlers. Typically, the 
 handling of messages in handlers will ultimately send further messages to 
 other components, like a [context]({{< relref context.md >}}) or
 [entity]({{< relref entity.md >}})

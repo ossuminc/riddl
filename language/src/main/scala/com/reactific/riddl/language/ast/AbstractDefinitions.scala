@@ -182,7 +182,7 @@ trait AbstractDefinitions {
     def kind: String
 
     def identify: String = {
-      if (id.isEmpty) { s"Anonymous $kind" }
+      if id.isEmpty then { s"Anonymous $kind" }
       else { s"$kind '${id.format}'" }
     }
 
@@ -202,7 +202,7 @@ trait AbstractDefinitions {
 
     def hasTypes: Boolean = false
 
-    def find(name: String): Option[Definition] = {
+    def resolveNameTo(name: String): Option[Definition] = {
       contents.find(_.id.value == name)
     }
   }
@@ -222,10 +222,26 @@ trait AbstractDefinitions {
     *   The type of definition to which the references refers.
     */
   abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
+    /**
+     * The Path identifier to the referenced definition
+     */
     def pathId: PathIdentifier
+
+    /**
+     * The optional identifier of the reference to be used locally in some other reference.
+     */
+    def id: Option[Identifier] = None
+
+    /**
+     * @return String
+     *         A string that describes this reference
+     */
     def identify: String = {
-      s"${classTag[T].runtimeClass.getSimpleName} '${pathId.format}'${loc.toShort}"
+      s"${classTag[T].runtimeClass.getSimpleName} ${
+        if id.nonEmpty then {id.map(_.format + ": ")} else ""
+      }'${pathId.format}'${loc.toShort}"
     }
+
     override def isEmpty: Boolean = pathId.isEmpty
   }
 

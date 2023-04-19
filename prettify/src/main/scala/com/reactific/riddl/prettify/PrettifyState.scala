@@ -29,7 +29,7 @@ case class PrettifyState(
   def relativeToInPath(path: Path): Path = inPath.relativize(path)
 
   def outPathFor(path: Path): Path = {
-    val suffixPath = if (path.isAbsolute) relativeToInPath(path) else path
+    val suffixPath = if path.isAbsolute then relativeToInPath(path) else path
     outPath.resolve(suffixPath)
   }
 
@@ -40,11 +40,11 @@ case class PrettifyState(
 
   def fileList: Seq[Path] = {
     closeStack()
-    if (options.singleFile) {
+    if options.singleFile then {
       val content = filesAsString
       Files.writeString(firstFile.filePath, content, StandardCharsets.UTF_8)
       Seq(firstFile.filePath)
-    } else { for { emitter <- files } yield { emitter.emit() } }.toSeq
+    } else { for  emitter <- files  yield { emitter.emit() } }.toSeq
   }
 
   def filesAsString: String = {
@@ -56,7 +56,7 @@ case class PrettifyState(
   private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack
     .empty[RiddlFileEmitter]
 
-  private def closeStack(): Unit = { while (fileStack.nonEmpty) popFile() }
+  private def closeStack(): Unit = { while fileStack.nonEmpty do popFile() }
 
   def current: RiddlFileEmitter = fileStack.head
 

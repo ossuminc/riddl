@@ -22,9 +22,9 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
 
   "riddlc" should {
     s"run --show-times from $config hugo" in {
-      if (Files.isDirectory(Path.of(cwd))) {
+      if Files.isDirectory(Path.of(cwd)) then {
         val fullPath = Path.of(cwd, config)
-        if (Files.isReadable(fullPath)) {
+        if Files.isReadable(fullPath) then {
           val args = Seq("--show-times", "from", fullPath.toString, "hugo")
           runWith(args)
         } else {

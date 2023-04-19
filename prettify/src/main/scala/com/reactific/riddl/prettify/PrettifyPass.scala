@@ -10,10 +10,10 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.parsing.Terminals.*
-import com.reactific.riddl.language.passes.resolve.ResolutionPass
-import com.reactific.riddl.language.passes.symbols.SymbolsPass
-import com.reactific.riddl.language.passes.validate.ValidationPass
-import com.reactific.riddl.language.passes.{HierarchyPass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.resolve.ResolutionPass
+import com.reactific.riddl.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.validate.ValidationPass
 
 import java.nio.file.Path
 import scala.annotation.unused
@@ -117,7 +117,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
           _.openDef(invariant).closeDef(invariant, withBrace = false)
         )
       case conn: Connector => doConnector(conn)
-      case actor: Actor => doActor(actor)
+      case user: User => doUser(user)
       case i: Interaction => doInteraction(i)
       case _: Field =>
       case _ => ()
@@ -176,14 +176,14 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
 
   private def openEpic(epic: Epic): Unit = {
     state.withCurrent { st =>
-      if (epic.userStory.isEmpty) {
+      if epic.userStory.isEmpty then {
         st.openDef(epic, withBrace = false).add(" ??? ")
       } else {
         val us = epic.userStory.get
-        val actor = us.actor.pathId
+        val user = us.user.pathId
         st.openDef(epic)
-          .addIndent("actor")
-          .add(actor.format)
+          .addIndent("user")
+          .add(user.format)
           .add(" ")
           .add(Readability.wants)
           .add(" ")
@@ -225,7 +225,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .add(adaptor.context.format)
         .add(" is {")
     )
-    if (adaptor.isEmpty) {
+    if adaptor.isEmpty then {
       state.withCurrent(_.emitUndefined().add(" }\n"))
     } else
       state.withCurrent { rfe =>
@@ -254,11 +254,11 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     state.withCurrent(_.outdent.addIndent("}\n"))
   }
 
-  private def doActor(actor: Actor): Unit = {
+  private def doUser(user: User): Unit = {
     state.withCurrent(
-      _.add(s"actor ${actor.id.value} is \"${actor.is_a.s}\"")
-        .emitBrief(actor.brief)
-        .emitDescription(actor.description)
+      _.add(s"user ${user.id.value} is \"${user.is_a.s}\"")
+        .emitBrief(user.brief)
+        .emitDescription(user.description)
         .nl
     )
   }
@@ -272,15 +272,15 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .addSpace()
         .add {
           val flows =
-            if (conn.flows.nonEmpty)
+            if conn.flows.nonEmpty then
               s"flows ${conn.flows.get.format} "
             else ""
           val from =
-            if (conn.from.nonEmpty)
+            if conn.from.nonEmpty then
               s"from ${conn.from.get.format} "
             else ""
           val to =
-            if (conn.to.nonEmpty)
+            if conn.to.nonEmpty then
               s"to ${conn.to.get.format}"
             else ""
           flows + from + to
@@ -294,12 +294,12 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def openFunction[TCD <: Definition](
     function: Function
   ): Unit = {
-    val s1 = state.withCurrent(_.openDef(function))
-    val s2 = function.input.fold[state.type](s1)(te =>
-      s1.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
+    state.withCurrent(_.openDef(function))
+    function.input.foreach(te =>
+      state.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
     )
-    function.output.fold(s2)(te =>
-      s2.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
+    function.output.foreach(te =>
+      state.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
     )
   }
 
@@ -311,7 +311,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .add(
           s"${PrettifyPass.keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format} is {"
         )
-      if (riddl_state.isEmpty) {
+      if riddl_state.isEmpty then {
         st.add(" ??? }")
       } else {
         st.nl.indent
@@ -333,7 +333,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def openInclude[T <: Definition](
     @unused include: Include[T]
   ): Unit = {
-    if (!state.options.singleFile) {
+    if !state.options.singleFile then {
       include.source match {
         case Some(path: String) if path.startsWith("http") =>
           val url = new java.net.URL(path)
@@ -355,6 +355,6 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def closeInclude[T <: Definition](
     @unused include: Include[T]
   ): Unit = {
-    if (!state.options.singleFile) {state.popFile()}
+    if !state.options.singleFile then {state.popFile()}
   }
 }

@@ -50,7 +50,7 @@ In the future we expect to produce translators that will also provide:
 
     When the delivery team begins building, the system specification outputs become their guide posts as they build. Undoubtedly, the implementation team will need to engage with domain experts to get additional information and clarity as they develop. Specification outputs provide the baseline from which these conversations happen. The insights gained should be captured in the RIDDL file and new specification outputs generated to reflect these learnings. 
 * **Implementation:** Implementation outputs are intended to accelerate the efforts of the delivery team. As such, these outputs tend to be more technical in nature. Examples of these outputs would include:
-    * Scala/Akka code stubs including actor definitions, value objects, message definitions (case classes), and so on.
+    * Scala/Akka code stubs including user definitions, value objects, message definitions (case classes), and so on.
     * Test cases derived from user stories in the RIDDL spec.
     * [Protobuf (Protocol Buffer)](https://developers.google.com/protocol-buffers) definitions. 
     * [Open API Specifications (AKA Swagger)](https://swagger.io/specification/)

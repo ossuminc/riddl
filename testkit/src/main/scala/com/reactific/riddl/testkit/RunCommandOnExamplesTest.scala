@@ -88,14 +88,14 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
   ): Seq[Either[(String, Messages), T]] = {
     val configs = FileUtils
       .iterateFiles(srcDir.toFile, Array[String](suffix), true).asScala.toSeq
-    for {
+    for
       config <- configs
       name = config.getName.dropRight(suffix.length + 1)
-    } yield {
-      if (validate(name)) {
+    yield {
+      if validate(name) then {
         CommandPlugin.loadCandidateCommands(config.toPath) match {
           case Right(commands) =>
-            if (commands.contains(commandName)) {
+            if commands.contains(commandName) then {
               Right(f(name, config.toPath))
             } else {
               Left(name -> errors(s"Command $commandName not found in $config"))
@@ -125,7 +125,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
           folder.listFiles.toSeq.find(_.getName.endsWith(".conf")) match {
             case Some(config) => CommandPlugin
                 .loadCandidateCommands(config.toPath).flatMap { cmds =>
-                  if (cmds.contains(commandName)) {
+                  if cmds.contains(commandName) then {
                     Right(f(folderName, config.toPath))
                   } else {
                     Left(errors(s"Command $commandName not found in $config"))
@@ -164,12 +164,12 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
           onFailure(commandName, name, path, messages, outputDir) -> name
       }
     }
-    for { result <- results } {
+    for  result <- results  do {
       result match {
         case Right(_) => // do nothing
         case Left((name, messages)) =>
           val errors = messages.justErrors
-          if (errors.nonEmpty) {
+          if errors.nonEmpty then {
             fail(s"Test case $name failed:\n${errors.format}")
           } else { info(messages.format) }
       }

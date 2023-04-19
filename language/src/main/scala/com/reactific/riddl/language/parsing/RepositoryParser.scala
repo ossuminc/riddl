@@ -12,7 +12,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait RepositoryParser extends HandlerParser with StreamingParser {
+private[parsing] trait RepositoryParser extends HandlerParser with StreamingParser with FunctionParser {
 
   private def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
     options[u, RepositoryOption](StringIn(Options.technology).!) {
@@ -27,7 +27,7 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
   }
 
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
-    P(typeDef | handler | term | repositoryInclude | inlet | outlet ).rep(0)
+    P(typeDef | handler | function | term | repositoryInclude | inlet | outlet).rep(0)
   }
 
   def repository[u: P]: P[Repository] = {
@@ -40,6 +40,7 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val functions = mapTo[Function](groups.get(classOf[Function]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
@@ -55,6 +56,7 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
         inlets,
         outlets,
         authors,
+        functions,
         includes,
         opts,
         terms,
