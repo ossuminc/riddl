@@ -87,6 +87,15 @@ object C {
       "120"
       /*, "-explain" */
     )
+
+  lazy val scalaDocOptions: Seq[String] = Seq(
+    "-project", "RIDDL",
+    "-project-version", "",
+    "-project-logo", "",
+    "-source-links:docs=github://reactific/riddl/master",
+    "-author"
+  )
+
   lazy val scala2_13_Options: Seq[String] = Seq(
     "-release:17",
     // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
@@ -119,14 +128,17 @@ object C {
         // crossScalaVersions := Seq("2.13.10", "3.2.2"),
         scalacOptions := {
           if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
-          else if (scalaVersion.value.startsWith("2.13")) { scala2_13_Options }
+          else if (scalaVersion.value.startsWith("2.13")) {scala2_13_Options}
           else Seq.empty[String]
         },
+        Compile / doc / scalacOptions := scalaDocOptions,
         scalafmtLogOnEachError := true
       )
   }
 
-  def withCoverage(percent: Int = 50)(p: Project): Project = {
+  final val defaultPercentage: Int = 50
+
+  def withCoverage(percent: Int = defaultPercentage)(p: Project): Project = {
     p.settings(
       coverageFailOnMinimum := true,
       coverageMinimumStmtTotal := percent,

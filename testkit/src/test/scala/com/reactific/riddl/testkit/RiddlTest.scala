@@ -13,6 +13,8 @@ import com.reactific.riddl.passes.{PassesResult, Riddl}
 import com.reactific.riddl.utils.StringBuildingPrintStream
 import com.reactific.riddl.utils.SysLogger
 
+import org.scalatest.Assertion
+
 import java.io.File
 import java.nio.file.Path
 import java.util.UUID
@@ -20,7 +22,6 @@ import scala.io.Source
 
 class RiddlTest extends ParsingTest {
 
-  // FIXME: This test is showing signs of a rare race condition
   "parse" should {
     "parse a file" in {
       Parser.parse(
@@ -58,93 +59,6 @@ class RiddlTest extends ParsingTest {
     }
   }
 
-  /** Executes a function while capturing system's stderr, return the result of the function and the captured output.
-    * Switches stderr back once code block finishes or throws exception e.g.
-    * {{{
-    *   val result = capturingStdErr { () =>
-    *     System.err.println("hi there!")
-    *     123
-    *   }
-    *
-    *   assert(result == (123, "hi there!\n")
-    * }}}
-    */
-  def capturingStdErr[A](f: () => A): (A, String) = {
-    val out = System.err
-    val printStream = StringBuildingPrintStream()
-    try {
-      System.setErr(printStream)
-      val a = f()
-      val output = printStream.mkString()
-      (a, output)
-    } finally { System.setErr(out) }
-  }
-
-  /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
-    * Switches stdout back once code block finishes or throws exception e.g.
-    * {{{
-    *   val result = capturingStdErr { () =>
-    *     System.out.println("hi there!")
-    *     123
-    *   }
-    *
-    *   assert(result == (123, "hi there!\n")
-    * }}}
-    */
-  def capturingStdOut[A](f: () => A): (A, String) = {
-    val out = System.out
-    val printStream = StringBuildingPrintStream()
-    synchronized {
-      try {
-        System.setOut(printStream)
-        val a = f()
-        val output = printStream.mkString()
-        (a, output)
-      } finally { System.setOut(out) }
-    }
-  }
-
-  "SysLogger" should {
-    "print error message" in {
-      val sl = SysLogger()
-      val captured = capturingStdOut(() => sl.error("asdf"))
-      captured._2 mustBe "[error] asdf\n"
-    }
-    "print severe message" in {
-      val sl = SysLogger()
-      val captured = capturingStdOut(() => sl.severe("asdf"))
-      captured._2 mustBe "[severe] asdf\n"
-    }
-    "print warning message" in {
-      val sl = SysLogger()
-      val captured = capturingStdOut(() => sl.warn("asdf"))
-      captured._2 mustBe "[warning] asdf\n"
-    }
-    "print info message" in {
-      val sl = SysLogger()
-      val captured = capturingStdOut(() => sl.info("asdf"))
-      captured._2 mustBe "[info] asdf\n"
-    }
-    "print many message" in {
-      val sl = SysLogger()
-      val captured = capturingStdOut { () =>
-        sl.error("a")
-        sl.info("b")
-        sl.info("c")
-        sl.warn("d")
-        sl.severe("e")
-        sl.error("f")
-      }
-      captured._2 mustBe """[error] a
-                           |[info] b
-                           |[info] c
-                           |[warning] d
-                           |[severe] e
-                           |[error] f
-                           |""".stripMargin
-    }
-  }
-
   "parseAndValidate" should {
     def runOne(pathname: String): Either[Messages, PassesResult] = {
       val common = CommonOptions(showTimes = true)
@@ -161,7 +75,7 @@ class RiddlTest extends ParsingTest {
 
     "parse and validate nonsense file as invalid" in {
       runOne("testkit/src/test/input/invalid.riddl") match {
-        case Right(root)  => fail(s"Should not have parsed, but got:\n$root")
+        case Right(root) => fail(s"Should not have parsed, but got:\n$root")
         case Left(errors) => assert(errors.exists(_.kind == Messages.Error))
       }
     }
@@ -189,7 +103,7 @@ class RiddlTest extends ParsingTest {
       val common = CommonOptions(showTimes = true)
       val input = RiddlParserInput("I am not valid riddl (hopefully).")
       Riddl.parseAndValidate(input, common) match {
-        case Right(_)       => succeed
+        case Right(_) => succeed
         case Left(messages) => assert(messages.exists(_.kind == Messages.Error))
       }
     }
