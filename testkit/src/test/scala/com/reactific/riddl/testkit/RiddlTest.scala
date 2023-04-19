@@ -13,6 +13,8 @@ import com.reactific.riddl.passes.{PassesResult, Riddl}
 import com.reactific.riddl.utils.StringBuildingPrintStream
 import com.reactific.riddl.utils.SysLogger
 
+import org.scalatest.Assertion
+
 import java.io.File
 import java.nio.file.Path
 import java.util.UUID
@@ -20,7 +22,6 @@ import scala.io.Source
 
 class RiddlTest extends ParsingTest {
 
-  // FIXME: This test is showing signs of a rare race condition
   "parse" should {
     "parse a file" in {
       Parser.parse(
@@ -92,10 +93,10 @@ class RiddlTest extends ParsingTest {
     * }}}
     */
   def capturingStdOut[A](f: () => A): (A, String) = {
-    val out = System.out
-    val printStream = StringBuildingPrintStream()
     synchronized {
+      val out = System.out
       try {
+        val printStream = StringBuildingPrintStream()
         System.setOut(printStream)
         val a = f()
         val output = printStream.mkString()
@@ -121,9 +122,13 @@ class RiddlTest extends ParsingTest {
       captured._2 mustBe "[warning] asdf\n"
     }
     "print info message" in {
-      val sl = SysLogger()
-      val captured = capturingStdOut(() => sl.info("asdf"))
-      captured._2 mustBe "[info] asdf\n"
+      val expected = "[info] asdf\n"
+      for j <- 1 to 1000 do
+        val sl = SysLogger()
+        val captured = capturingStdOut(() => sl.info("asdf"))
+        if captured._2 != expected then
+          fail(s"Expected: $expected, Received: $captured._2")
+      succeed
     }
     "print many message" in {
       val sl = SysLogger()
