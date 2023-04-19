@@ -94,11 +94,13 @@ class RiddlTest extends ParsingTest {
     */
   def capturingStdOut[A](f: () => A): (A, String) = {
     synchronized {
+      System.out.flush()
       val out = System.out
       try {
         val printStream = StringBuildingPrintStream()
         System.setOut(printStream)
         val a = f()
+        printStream.flush()
         val output = printStream.mkString()
         (a, output)
       } finally { System.setOut(out) }
