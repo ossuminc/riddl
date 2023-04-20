@@ -7,6 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.{ParsingTest, TestParser}
 
 /** Unit Tests For ParserTest */
@@ -66,8 +67,7 @@ class ParserTest extends ParsingTest {
             Domain(
               (1, 1, input),
               Identifier((1, 8, input), "foo"),
-              domains =
-                Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
+              domains = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
       }
@@ -397,6 +397,21 @@ class ParserTest extends ParsingTest {
                   None
                 ) =>
           }
+      }
+    }
+    "support Replica values in Contexts" in {
+      val input: String =
+        """domain foo {
+          |  context bar is {
+          |    replica crdt is Integer
+          |  }
+          |}
+          |""".stripMargin
+      parseDefinition[Domain](input) match {
+        case Left(errors) => fail(errors.format)
+        case Right((domain, rpi)) =>
+          val r = domain.contexts.head.replicas.head
+          r.typeExp mustBe Integer((3,21,rpi))
       }
     }
   }

@@ -32,9 +32,9 @@ class EpicTest extends ValidatingTest {
               rpi: RiddlParserInput,
               messages: Messages.Messages
             ) =>
-          domain.stories mustNot be(empty)
+          domain.epics mustNot be(empty)
           messages.isOnlyIgnorable mustBe true
-          val story = domain.stories.head
+          val story = domain.epics.head
           story.id.format mustBe "WritingABook"
           story.userStory mustNot be(empty)
           val us = story.userStory.get
@@ -119,7 +119,7 @@ class EpicTest extends ValidatingTest {
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
-          domain.stories mustNot be(empty)
+          domain.epics mustNot be(empty)
           if msgs.nonEmpty then { info(msgs.format) }
           msgs.hasErrors mustBe false
       }
@@ -191,7 +191,7 @@ class EpicTest extends ValidatingTest {
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
-          domain.stories mustNot be(empty)
+          domain.epics mustNot be(empty)
           if msgs.nonEmpty then { info(msgs.format) }
           msgs.hasErrors mustBe false
           succeed
@@ -259,7 +259,7 @@ class EpicTest extends ValidatingTest {
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
-          domain.stories mustNot be(empty)
+          domain.epics mustNot be(empty)
           if msgs.nonEmpty then { info(msgs.format) }
           msgs.hasErrors mustBe false
           succeed

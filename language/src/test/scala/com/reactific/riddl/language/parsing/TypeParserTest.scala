@@ -74,13 +74,13 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow renames of Id(path)" in {
-      val input = "type ident = Id()"
+      val input = "type ident = Id(entity foo)"
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "ident"),
         UniqueId(
           1 -> 14,
-          entityPath = PathIdentifier(1 -> 14, Seq.empty[String])
+          entityPath = PathIdentifier(1 -> 24, Seq("foo"))
         )
       )
       checkDefinition[Type, Type](input, expected, identity)
@@ -147,10 +147,12 @@ class TypeParserTest extends ParsingTest {
                                    |""".stripMargin)
       val expected = Alternation(
         (3, 12, rpi),
-        List(AliasedTypeExpression(
-          (3, 21, rpi),
-          PathIdentifier((3, 26, rpi), Seq("Foo"))
-        ))
+        List(
+          AliasedTypeExpression(
+            (3, 21, rpi),
+            PathIdentifier((3, 26, rpi), Seq("Foo"))
+          )
+        )
       )
       parseDomainDefinition[Type](rpi, _.types.last) match {
         case Left(errors) =>
@@ -162,7 +164,7 @@ class TypeParserTest extends ParsingTest {
     "allow aggregation" in {
       val rip = RiddlParserInput("""type agg = {
                                    |  key: Number,
-                                   |  id: Id(),
+                                   |  id: Id(entity foo),
                                    |  time: TimeStamp
                                    |}
                                    |""".stripMargin)
@@ -182,7 +184,7 @@ class TypeParserTest extends ParsingTest {
               Identifier((3, 3, rip), "id"),
               UniqueId(
                 (3, 7, rip),
-                PathIdentifier((3, 7, rip), Seq.empty[String])
+                PathIdentifier((3, 17, rip), Seq("foo"))
               )
             ),
             Field(
@@ -196,11 +198,11 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
     "allow command, event, query, and result message aggregations" in {
-      for  mk <- Seq("command", "event", "query", "result")  do {
+      for mk <- Seq("command", "event", "query", "result") do {
         val prefix = s"type mkt = $mk {"
         val rip = RiddlParserInput(prefix + """
                                               |  key: Number,
-                                              |  id: Id(),
+                                              |  id: Id(entity foo),
                                               |  time: TimeStamp
                                               |}
                                               |""".stripMargin)
@@ -226,7 +228,7 @@ class TypeParserTest extends ParsingTest {
                 Identifier((3, 3, rip), "id"),
                 UniqueId(
                   (3, 7, rip),
-                  PathIdentifier((3, 7, rip), Seq.empty[String])
+                  PathIdentifier((3, 17, rip), Seq("foo"))
                 )
               ),
               Field(
@@ -331,11 +333,13 @@ class TypeParserTest extends ParsingTest {
         AggregateUseCaseTypeExpression(
           (1, 16, rip),
           CommandCase,
-          Seq(Field(
-            (1, 18, rip),
-            Identifier((1, 18, rip), "a"),
-            Integer((1, 21, rip))
-          ))
+          Seq(
+            Field(
+              (1, 18, rip),
+              Identifier((1, 18, rip), "a"),
+              Integer((1, 21, rip))
+            )
+          )
         )
       )
       checkDefinition[Type, Type](rip, expected, identity)

@@ -161,6 +161,7 @@ object Terminals {
     final val range = "range"
     final val reference = "reference"
     final val remove = "remove"
+    final val replica = "replica"
     final val reply = "reply"
     final val repository = "repository"
     final val requires = "requires"

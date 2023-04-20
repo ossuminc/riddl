@@ -220,55 +220,81 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
-  private def oneWordPredefTypes[u: P]: P[TypeExpression] = {
+  private def integerPredefTypes[u:P]: P[IntegerTypeExpression] = {
+    P(
+      location ~ (
+        StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural).! ~~ !CharPred(_.isLetterOrDigit)
+      | rangeType)
+    ).map {
+      case (at, Predefined.Boolean)     => AST.Bool(at)
+      case (at, Predefined.Integer)     => AST.Integer(at)
+      case (at, Predefined.Natural)     => AST.Natural(at)
+      case (at, Predefined.Whole)       => AST.Whole(at)
+      case (_: At, range: RangeType)    => range
+    }
+  }
+
+  private def realPredefTypes[u:P]: P[RealTypeExpression] = {
+    P(
+      location ~ (
+        StringIn(
+          Predefined.Current,
+          Predefined.Length,
+          Predefined.Luminosity,
+          Predefined.Mass,
+          Predefined.Mole,
+          Predefined.Number,
+          Predefined.Real,
+          Predefined.Temperature,
+        ).! ~~ !CharPred(_.isLetterOrDigit))
+    ).map {
+      case (at: At, Predefined.Current) => Current(at)
+      case (at: At, Predefined.Length)=> Length(at)
+      case (at: At, Predefined.Luminosity) => Luminosity(at)
+      case (at: At, Predefined.Mass) => Mass(at)
+      case (at: At, Predefined.Mole) => Mole(at)
+      case (at: At, Predefined.Number) => Number(at)
+      case (at: At, Predefined.Real) => Real(at)
+      case (at: At, Predefined.Temperature) => Temperature(at)
+    }
+  }
+
+  private def timePredefTypes[u:P]: P[TypeExpression] = {
+    P(
+      location ~ StringIn(
+        Predefined.Duration,
+        Predefined.DateTime,
+        Predefined.Date,
+        Predefined.TimeStamp,
+        Predefined.Time,
+      ).! ~~ !CharPred(_.isLetterOrDigit)
+    ).map {
+      case (at: At, Predefined.Duration) => Duration(at)
+      case (at, Predefined.DateTime) => DateTime(at)
+      case (at, Predefined.Date) => Date(at)
+      case (at, Predefined.TimeStamp) => TimeStamp(at)
+      case (at, Predefined.Time) => Time(at)
+    }
+  }
+
+  private def otherTypes[u: P]: P[TypeExpression] = {
     P(
       location ~ StringIn(
         // order matters in this list, because of common prefixes
         Predefined.Abstract,
-        Predefined.Boolean,
-        Predefined.Current,
-        Predefined.Decimal,
-        Predefined.Duration,
-        Predefined.DateTime,
-        Predefined.Date,
-        Predefined.Integer,
         Predefined.Length,
         Predefined.Location,
-        Predefined.Luminosity,
-        Predefined.Mass,
-        Predefined.Mole,
-        Predefined.Natural,
         Predefined.Nothing,
         Predefined.Number,
-        Predefined.Real,
-        Predefined.Temperature,
-        Predefined.TimeStamp,
-        Predefined.Time,
         Predefined.UUID,
-        Predefined.Whole
       ).! ~~ !CharPred(_.isLetterOrDigit)
     ).map {
       case (at, Predefined.Abstract)    => AST.Abstract(at)
-      case (at, Predefined.Boolean)     => AST.Bool(at)
-      case (at, Predefined.Current)     => AST.Current(at)
-      case (at, Predefined.Duration)    => AST.Duration(at)
-      case (at, Predefined.DateTime)    => AST.DateTime(at)
-      case (at, Predefined.Date)        => AST.Date(at)
-      case (at, Predefined.Integer)     => AST.Integer(at)
-      case (at, Predefined.Length)      => AST.Length(at)
       case (at, Predefined.Location)    => AST.Location(at)
-      case (at, Predefined.Luminosity)  => AST.Luminosity(at)
-      case (at, Predefined.Mass)        => AST.Mass(at)
-      case (at, Predefined.Mole)        => AST.Mole(at)
       case (at, Predefined.Nothing)     => AST.Nothing(at)
       case (at, Predefined.Natural)     => AST.Natural(at)
       case (at, Predefined.Number)      => AST.Number(at)
-      case (at, Predefined.Real)        => AST.Real(at)
-      case (at, Predefined.Temperature) => AST.Temperature(at)
-      case (at, Predefined.TimeStamp)   => AST.TimeStamp(at)
-      case (at, Predefined.Time)        => AST.Time(at)
       case (at, Predefined.UUID)        => AST.UUID(at)
-      case (at, Predefined.Whole)       => AST.Whole(at)
       case (at, _) =>
         error("Unrecognized predefined type")
         AST.Abstract(at)
@@ -276,7 +302,8 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   }
 
   private def simplePredefinedTypes[u: P]: P[TypeExpression] = {
-    P(stringType | currencyType | urlType | oneWordPredefTypes | decimalType)./
+    P(stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
+      decimalType | otherTypes)./
   }
 
   private def decimalType[u: P]: P[Decimal] = {
@@ -298,12 +325,9 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
 
   private def uniqueIdType[u: P]: P[UniqueId] = {
     (location ~ Predefined.Id ~ Punctuation.roundOpen ~/
-      maybe(Keywords.entity) ~ pathIdentifier.? ~ Punctuation.roundClose./)
-      .map {
-        case (loc, Some(pid)) => UniqueId(loc, pid)
-        case (loc, None) =>
-          UniqueId(loc, PathIdentifier(loc, Seq.empty[String]))
-      }
+      maybe(Keywords.entity) ~ pathIdentifier ~ Punctuation.roundClose./) map { case (loc, pid) =>
+      UniqueId(loc, pid)
+    }
   }
 
   private def enumValue[u: P]: P[Option[Long]] = {
@@ -327,17 +351,13 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   private def alternation[u: P]: P[Alternation] = {
     P(
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
-        (Punctuation.undefinedMark.!.map(_ =>
-          Seq.empty[AliasedTypeExpression]
-        ) |
+        (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
     ).map { x => (Alternation.apply _).tupled(x) }
   }
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
-    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./.map(tpl =>
-      (AliasedTypeExpression.apply _).tupled(tpl)
-    )
+    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./.map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
   }
 
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
@@ -370,8 +390,8 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   }
 
   def aggregation[u: P]: P[Aggregation] = {
-    P(location ~ Keywords.fields.? ~ open ~ fields ~ close).map {
-      case (loc, fields) => Aggregation(loc, fields)
+    P(location ~ Keywords.fields.? ~ open ~ fields ~ close).map { case (loc, fields) =>
+      Aggregation(loc, fields)
     }
   }
 
@@ -403,8 +423,7 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     AggregateUseCaseTypeExpression(loc, mk, agg.fields)
   }
 
-  private def aggregateUseCaseTypeExpression[u: P]
-    : P[AggregateUseCaseTypeExpression] = {
+  private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
     P(location ~ aggregateUseCase ~ aggregation).map { case (loc, mk, agg) =>
       makeAggregateUseCaseType(loc, mk, agg)
     }
@@ -490,6 +509,10 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
           aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
       )
     )
+  }
+  
+  def replicaTypeExpression[u: P]: P[TypeExpression] = {
+    P(integerPredefTypes | mappingType | setType)
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {

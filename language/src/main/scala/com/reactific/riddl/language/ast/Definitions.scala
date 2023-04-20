@@ -1191,6 +1191,24 @@ trait Definitions extends Expressions with Options {
     }
   }
 
+  /** A replicated value within a context. Integer, Map and Set values will use CRDTs
+    * @param loc
+    *   The location of
+    * @param typeExp
+    *   The type of the replica
+    */
+  case class Replica(
+    loc: At,
+    id: Identifier,
+    typeExp: TypeExpression,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None
+  ) extends LeafDefinition
+      with ContextDefinition {
+    final val kind: String = "Replica"
+    final val format: String = s"$kind ${id.format}"
+  }
+
   /** A reference to an context's projector definition
     *
     * @param loc
@@ -1240,14 +1258,14 @@ trait Definitions extends Expressions with Options {
     streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
-    includes: Seq[Include[ContextDefinition]] = Seq
-      .empty[Include[ContextDefinition]],
+    includes: Seq[Include[ContextDefinition]] = Seq.empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projectors: Seq[Projector] = Seq.empty[Projector],
     repositories: Seq[Repository] = Seq.empty[Repository],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     connections: Seq[Connector] = Seq.empty[Connector],
+    replicas: Seq[Replica] = Seq.empty[Replica],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -1610,7 +1628,8 @@ trait Definitions extends Expressions with Options {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[SagaOption, SagaDefinition]
-      with ContextDefinition {
+      with ContextDefinition
+      with DomainDefinition {
     override lazy val contents: Seq[SagaDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++ terms
@@ -2158,8 +2177,8 @@ trait Definitions extends Expressions with Options {
     * @param contexts
     *   The contexts defined in the scope of the domain
     * @param users
-    *   User definitions for use in stories
-    * @param stories
+    *   User definitions for use in epics
+    * @param epics
     *   Story definitions for this domain
     * @param applications
     *   Application definitions for this domain
@@ -2182,7 +2201,8 @@ trait Definitions extends Expressions with Options {
     constants: Seq[Constant] = Seq.empty[Constant],
     contexts: Seq[Context] = Seq.empty[Context],
     users: Seq[User] = Seq.empty[User],
-    stories: Seq[Epic] = Seq.empty[Epic],
+    epics: Seq[Epic] = Seq.empty[Epic],
+    sagas: Seq[Saga] = Seq.empty[Saga],
     applications: Seq[Application] = Seq.empty[Application],
     domains: Seq[Domain] = Seq.empty[Domain],
     terms: Seq[Term] = Seq.empty[Term],
@@ -2197,7 +2217,7 @@ trait Definitions extends Expressions with Options {
 
     override lazy val contents: Seq[DomainDefinition] = {
       super.contents ++ domains ++ types ++ constants ++ contexts ++ users ++
-        stories ++ applications ++ terms ++ authorDefs
+        epics ++ applications ++ terms ++ authorDefs
     }
     final val kind: String = "Domain"
 
@@ -2205,8 +2225,8 @@ trait Definitions extends Expressions with Options {
       var score = super.maturity
       if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 15)
       if contexts.nonEmpty then score += Math.max(contexts.count(_.nonEmpty), 15)
-      if stories.nonEmpty then score += Math.max(stories.count(_.nonEmpty), 15)
-      if applications.nonEmpty then score += Math.max(stories.count(_.nonEmpty), 5)
+      if epics.nonEmpty then score += Math.max(epics.count(_.nonEmpty), 15)
+      if applications.nonEmpty then score += Math.max(epics.count(_.nonEmpty), 5)
       if domains.nonEmpty then score += Math.max(domains.count(_.nonEmpty), 10)
       Math.max(score, maxMaturity)
     }

@@ -7,6 +7,7 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.language.{CommonOptions, ParsingTest}
@@ -91,7 +92,13 @@ abstract class ValidatingTest extends ParsingTest {
     shouldFailOnErrors: Boolean = true
   )(validator: (Domain, RiddlParserInput, Messages) => Assertion): Assertion = {
     parseDefinition[Domain](input) match {
-      case Left(errors) => fail(errors.format)
+      case Left(errors) =>
+        if shouldFailOnErrors then {
+          fail(errors.format)
+        } else {
+          val loc: At = (1,1,input)
+          validator(Domain(loc, Identifier(loc,"stand-in")), input, errors)
+        }
       case Right((model: Domain, rpi)) =>
         val root = RootContainer(Seq(model), Seq(rpi))
         Pass(root, options, shouldFailOnErrors) match {
