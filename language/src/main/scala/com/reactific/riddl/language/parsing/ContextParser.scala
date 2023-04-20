@@ -45,11 +45,19 @@ private[parsing] trait ContextParser
     include[ContextDefinition, X](contextDefinitions(_))
   }
 
+  private def replica[x:P]: P[Replica] = {
+    P(
+      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description
+    ).map {
+      case (loc, id, typeExp, brief, description) =>
+        Replica(loc, id, typeExp,brief, description)
+    }
+  }
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
         (typeDef | handler | entity | adaptor | function | saga | streamlet |
-          projector | repository | inlet | outlet | connector | term |
+          projector | repository | inlet | outlet | connector | term | replica |
           contextInclude).rep(0)
     )
   }
@@ -77,8 +85,8 @@ private[parsing] trait ContextParser
       )
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val projections = mapTo[Projector](groups.get(classOf[Projector]))
-      val repos = mapTo[Repository](groups.get(classOf[Repository]))
+      val projectors = mapTo[Projector](groups.get(classOf[Projector]))
+      val repositories = mapTo[Repository](groups.get(classOf[Repository]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val replicas = mapTo[Replica](groups.get(classOf[Replica]))
       Context(
@@ -95,8 +103,8 @@ private[parsing] trait ContextParser
         terms,
         includes,
         handlers,
-        projections,
-        repos,
+        projectors,
+        repositories,
         inlets,
         outlets,
         connections,

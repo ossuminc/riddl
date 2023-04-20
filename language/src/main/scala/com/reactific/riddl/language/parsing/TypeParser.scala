@@ -510,6 +510,10 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
       )
     )
   }
+  
+  def replicaTypeExpression[u: P]: P[TypeExpression] = {
+    P(integerPredefTypes | mappingType | setType)
+  }
 
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(

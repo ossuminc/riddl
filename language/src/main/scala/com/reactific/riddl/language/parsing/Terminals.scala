@@ -161,6 +161,7 @@ object Terminals {
     final val range = "range"
     final val reference = "reference"
     final val remove = "remove"
+    final val replica = "replica"
     final val reply = "reply"
     final val repository = "repository"
     final val requires = "requires"
@@ -206,7 +207,6 @@ object Terminals {
     final val Boolean = "Boolean"
     final val Current = "Current" // in amperes
     final val Currency = "Currency" // for some nation
-    final val CRDT = "CRDT" 
     final val Date = "Date"
     final val DateTime = "DateTime"
     final val Decimal = "Decimal"

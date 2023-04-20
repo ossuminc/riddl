@@ -399,18 +399,19 @@ class ParserTest extends ParsingTest {
           }
       }
     }
-    "support CRDTs" in {
-      val input = """type crdt is CRDT(Integer)""".stripMargin
-      parseDefinition[Type](input) match {
+    "support Replica values in Contexts" in {
+      val input: String =
+        """domain foo {
+          |  context bar is {
+          |    replica crdt is Integer
+          |  }
+          |}
+          |""".stripMargin
+      parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
-        case Right((typ, rpi)) =>
-          val expected: Type = Type(
-            (1, 1, rpi),
-            Identifier((1, 6, rpi), "crdt"),
-            AliasedTypeExpression((1, 14, rpi), PathIdentifier((1, 14, rpi), List("CRDT")))
-          )
-          typ mustBe expected
-
+        case Right((domain, rpi)) =>
+          val r = domain.contexts.head.replicas.head
+          r.typeExp mustBe Integer((3,21,rpi))
       }
     }
   }
