@@ -1,0 +1,66 @@
+Missing: bad-pids.riddl(7:5): Entity 'FooEntity' should have a description:
+     entity FooEntity is {
+     ^
+Missing: bad-pids.riddl(11:7): State 'FooExample' should have a description:
+       state FooExample of FooExampleState is {
+       ^
+Missing: bad-pids.riddl(12:17): Handler 'HandleFoo' should have a description:
+         handler HandleFoo is {
+                 ^
+Usage: bad-pids.riddl(7:5): Entity 'FooEntity' is unused:
+     entity FooEntity is {
+     ^
+Missing: bad-pids.riddl(7:5): Vital definitions should have an author reference:
+     entity FooEntity is {
+     ^
+Missing: bad-pids.riddl(4:5): Type 'Foo' should have a description:
+     type Foo is {
+     ^
+Missing: bad-pids.riddl(3:5): Command 'DoFoo' should have a description:
+     command DoFoo is {foo: Foo}
+     ^
+Missing: bad-pids.riddl(14:13): Example 'Success' should have a description:
+             example Success {
+             ^
+Error: bad-pids.riddl(15:24): Path 'FooExamplexxxx.garbage' was not resolved, in Example 'Success', but should refer to a Field:
+               then set FooExamplexxxx.garbage to !Foo(garbage = "garbage")
+                        ^
+Missing: bad-pids.riddl(1:1): Domain 'foo' should have a description:
+ domain foo {
+ ^
+Usage: bad-pids.riddl(3:5): Command 'DoFoo' is unused:
+     command DoFoo is {foo: Foo}
+     ^
+Error: bad-pids.riddl(15:24): Setting a value requires assignment compatibility, but field:
+   FooExamplexxxx.garbage (<not found>)
+ is not assignment compatible with expression:
+   Foo(garbage="garbage") ({ bar: String(,) })
+ :
+               then set FooExamplexxxx.garbage to !Foo(garbage = "garbage")
+                        ^
+Missing: bad-pids.riddl(2:3): Context 'ExampleContext' should have a description:
+   context ExampleContext is {
+   ^
+Error: bad-pids.riddl(13:22): Path 'DooFoo' was not resolved, in OnMessageClause 'On command DooFoo', but should refer to a Type:
+           on command DooFoo {
+                      ^
+Missing: bad-pids.riddl(1:1): Vital definitions should have an author reference:
+ domain foo {
+ ^
+Missing: bad-pids.riddl(13:14): OnMessageClause 'On command DooFoo' should have a description:
+           on command DooFoo {
+              ^
+Usage: bad-pids.riddl(1:8): Models without any streaming data will exhibit minimal effect:
+ domain foo {
+        ^
+Missing: bad-pids.riddl(8:7): Record 'FooExampleState' should have a description:
+       record FooExampleState is {
+       ^
+Style: bad-pids.riddl(1:1): Domain 'foo' overloads:
+   Field 'foo' at bad-pids.riddl(3:23),
+   Field 'foo' at bad-pids.riddl(9:9):
+ domain foo {
+ ^
+Missing: bad-pids.riddl(2:3): Vital definitions should have an author reference:
+   context ExampleContext is {
+   ^
