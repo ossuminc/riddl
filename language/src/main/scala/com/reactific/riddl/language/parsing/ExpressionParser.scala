@@ -31,7 +31,7 @@ private[parsing] trait ExpressionParser
   }
 
   def trueCondition[u: P]: P[True] = {
-    P(location ~ IgnoreCase("true")).map( (loc) => True(loc))./
+    P(location ~ IgnoreCase("true")).map( loc => True(loc))./
   }
 
   def falseCondition[u: P]: P[False] = {
