@@ -108,7 +108,6 @@ object C {
       .settings(
         scalaVersion := "3.3.0-RC6",
         scalacOptions := scala3_2_Options,
-        Compile / doc / sources := Seq(),
         Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
         apiURL := Some(url("https://riddl.tech/apidoc/")),
         autoAPIMappings := true

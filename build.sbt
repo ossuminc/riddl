@@ -89,13 +89,14 @@ lazy val utils = project
     )
   )
 
-val Language = config("language")
-lazy val language = project
+val Language: Configuration = config("language")
+lazy val language: Project = project
   .in(file("language"))
   .configure(C.withCoverage(0))
   .configure(C.mavenPublish)
   .settings(
     name := "riddl-language",
+    Compile / sbt.Keys.doc / sources := Seq(), // FIXME: Don't defeat doc generation
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++
       Dep.testing
@@ -256,6 +257,7 @@ lazy val plugin = (project in file("sbt-riddl"))
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.17",
+    Compile / sbt.Keys.doc / sources := Seq(),
     Compile / packageDoc / publishArtifact := false,
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.reactific.riddl.sbt",
