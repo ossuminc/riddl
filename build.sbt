@@ -1,5 +1,5 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
-import org.scoverage.coveralls.Imports.CoverallsKeys._
+import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import sbtbuildinfo.BuildInfoOption.ToJson
 import sbtbuildinfo.BuildInfoOption.ToMap
 import sbtbuildinfo.BuildInfoOption.BuildTime
@@ -256,6 +256,7 @@ lazy val plugin = (project in file("sbt-riddl"))
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.17",
+    Compile / packageDoc / publishArtifact := false,
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.reactific.riddl.sbt",
     buildInfoOptions := Seq(BuildTime),

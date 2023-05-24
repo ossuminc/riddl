@@ -2,7 +2,6 @@ import com.typesafe.sbt.packager.Keys.maintainer
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
-import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtLogOnEachError
 import sbt.Keys.organizationName
 import sbt.Keys._
 import sbt._
@@ -50,6 +49,7 @@ object C {
   def withInfo(p: Project): Project = {
     p.settings(
       ThisBuild / maintainer := "reid@ossum.biz",
+      ThisBuild / maintainer := "reid@ossum.biz",
       ThisBuild / organization := "com.reactific",
       ThisBuild / organizationHomepage :=
         Some(new URL("https://reactific.com/")),
@@ -85,54 +85,33 @@ object C {
       "-Werror",
       "-pagewidth",
       "120"
-      /*, "-explain" */
     )
 
-  lazy val scalaDocOptions: Seq[String] = Seq(
-    "-project", "RIDDL",
-    "-project-version", "",
-    "-project-logo", "",
-    "-source-links:docs=github://reactific/riddl/master",
-    "-author"
-  )
-
-  lazy val scala2_13_Options: Seq[String] = Seq(
-    "-release:17",
-    // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
-    "-Xsource:3",
-    "-Wdead-code",
-    "-deprecation",
-    "-feature",
-    "-Werror",
-    "-Wunused:imports", // Warn if an import selector is not referenced.
-    "-Wunused:patvars", // Warn if a variable bound in a pattern is unused.
-    "-Wunused:privates", // Warn if a private member is unused.
-    "-Wunused:locals", // Warn if a local definition is unused.
-    "-Wunused:explicits", // Warn if an explicit parameter is unused.
-    "-Wunused:implicits", // Warn if an implicit parameter is unused.
-    "-Wunused:params", // Enable -Wunused:explicits,implicits.
-    "-Xlint:nonlocal-return", // A return statement used an exception for flow control.
-    "-Xlint:implicit-not-found", // Check @implicitNotFound and @implicitAmbiguous messages.
-    "-Xlint:serial", // @SerialVersionUID on traits and non-serializable classes.
-    "-Xlint:valpattern", // Enable pattern checks in val definitions.
-    "-Xlint:eta-zero", // Warn on eta-expansion (rather than auto-application) of zero-ary method.
-    "-Xlint:eta-sam", // Warn on eta-expansion to meet a Java-defined functional
-    // interface that is not explicitly annotated with @FunctionalInterface.
-    "-Xlint:deprecation" // Enable linted deprecations.
-  )
+  def scala_3_doc_options(version: String): Seq[String] = {
+    Seq(
+      "-deprecation",
+      "-feature",
+      "-groups",
+      "-project:RIDDL",
+      "-comment-syntax:wiki",
+      s"-project-version:$version",
+      "-siteroot:doc/src/hugo/static/apidoc",
+      "-author",
+      // "-source-links", "",
+      // "reid@reactific.com",publi
+      "-doc-canonical-base-url:https://riddl.tech/apidoc"
+    )
+  }
 
   def withScalaCompile(p: Project): Project = {
     p.configure(withInfo)
       .settings(
-        scalaVersion := "3.2.2",
-        // crossScalaVersions := Seq("2.13.10", "3.2.2"),
-        scalacOptions := {
-          if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
-          else if (scalaVersion.value.startsWith("2.13")) {scala2_13_Options}
-          else Seq.empty[String]
-        },
-        Compile / doc / scalacOptions := scalaDocOptions,
-        scalafmtLogOnEachError := true
+        scalaVersion := "3.3.0-RC6",
+        scalacOptions := scala3_2_Options,
+        Compile / doc / sources := Seq(),
+        Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
+        apiURL := Some(url("https://riddl.tech/apidoc/")),
+        autoAPIMappings := true
       )
   }
 

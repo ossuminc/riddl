@@ -12,7 +12,7 @@ import sbt.Keys.*
 import sbt.plugins.JvmPlugin
 
 import scala.language.postfixOps
-import scala.sys.process._
+import scala.sys.process.*
 
 /** A plugin that endows sbt with knowledge of code generation via riddl */
 object RiddlSbtPlugin extends AutoPlugin {
