@@ -14,7 +14,7 @@ import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 
 /** V - Dependency Versions object */
 object V {
-  val commons_io = "2.11.0"
+  val commons_io = "2.12.0"
   val compress = "1.23.0"
   val config = "1.4.2"
   val fastparse = "3.0.1"
@@ -89,9 +89,12 @@ object C {
     )
 
   lazy val scalaDocOptions: Seq[String] = Seq(
-    "-project", "RIDDL",
-    "-project-version", "",
-    "-project-logo", "",
+    "-project",
+    "RIDDL",
+    "-project-version",
+    "",
+    "-project-logo",
+    "",
     "-source-links:docs=github://reactific/riddl/master",
     "-author"
   )
@@ -128,7 +131,7 @@ object C {
         // crossScalaVersions := Seq("2.13.10", "3.2.2"),
         scalacOptions := {
           if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
-          else if (scalaVersion.value.startsWith("2.13")) {scala2_13_Options}
+          else if (scalaVersion.value.startsWith("2.13")) { scala2_13_Options }
           else Seq.empty[String]
         },
         Compile / doc / scalacOptions := scalaDocOptions,
