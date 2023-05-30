@@ -87,7 +87,6 @@ object C {
       "120"
     )
 
-
   def scala_3_doc_options(version: String): Seq[String] = {
     Seq(
       "-deprecation",
