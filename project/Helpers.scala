@@ -75,7 +75,7 @@ object C {
     )
   }
 
-  lazy val scala3_2_Options: Seq[String] =
+  lazy val scala_3_options: Seq[String] =
     Seq(
       "-deprecation",
       "-feature",
@@ -97,17 +97,15 @@ object C {
       s"-project-version:$version",
       "-siteroot:doc/src/hugo/static/apidoc",
       "-author",
-      // "-source-links", "",
-      // "reid@reactific.com",publi
       "-doc-canonical-base-url:https://riddl.tech/apidoc"
     )
   }
 
-  def withScalaCompile(p: Project): Project = {
+  def withScala3(p: Project): Project = {
     p.configure(withInfo)
       .settings(
-        scalaVersion := "3.3.0-RC6",
-        scalacOptions := scala3_2_Options,
+        scalaVersion := "3.3.0",
+        scalacOptions := scala_3_options,
         Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
         apiURL := Some(url("https://riddl.tech/apidoc/")),
         autoAPIMappings := true
@@ -155,49 +153,48 @@ object C {
   }
 
   def mavenPublish(p: Project): Project = {
-    p.configure(withScalaCompile)
-      .settings(
-        ThisBuild / dynverSonatypeSnapshots := true,
-        ThisBuild / dynverSeparator := "-",
-        maintainer := "reid@ossum.biz",
-        organization := "com.reactific",
-        organizationName := "Ossum Inc.",
-        organizationHomepage := Some(url("https://riddl.tech")),
-        scmInfo := Some(
-          ScmInfo(
-            url("https://github.com/reactific/riddl"),
-            "scm:git:git://github.com/reactific/riddl.git"
-          )
-        ),
-        developers := List(
-          Developer(
-            id = "reid-spencer",
-            name = "Reid Spencer",
-            email = "reid@reactific.com",
-            url = url("https://riddl.tech")
-          )
-        ),
-        description :=
-          """RIDDL is a language and toolset for specifying a system design using ideas from
+    p.settings(
+      ThisBuild / dynverSonatypeSnapshots := true,
+      ThisBuild / dynverSeparator := "-",
+      maintainer := "reid@ossum.biz",
+      organization := "com.reactific",
+      organizationName := "Ossum Inc.",
+      organizationHomepage := Some(url("https://riddl.tech")),
+      scmInfo := Some(
+        ScmInfo(
+          url("https://github.com/reactific/riddl"),
+          "scm:git:git://github.com/reactific/riddl.git"
+        )
+      ),
+      developers := List(
+        Developer(
+          id = "reid-spencer",
+          name = "Reid Spencer",
+          email = "reid@reactific.com",
+          url = url("https://riddl.tech")
+        )
+      ),
+      description :=
+        """RIDDL is a language and toolset for specifying a system design using ideas from
           |DDD, reactive architecture, distributed systems patterns, and other software
           |architecture practices.""".stripMargin,
-        licenses := List(
-          "Apache License, Version 2.0" ->
-            new URL("https://www.apache.org/licenses/LICENSE-2.0")
-        ),
-        homepage := Some(url("https://riddl.tech")),
+      licenses := List(
+        "Apache License, Version 2.0" ->
+          new URL("https://www.apache.org/licenses/LICENSE-2.0")
+      ),
+      homepage := Some(url("https://riddl.tech")),
 
-        // Remove all additional repository other than Maven Central from POM
-        pomIncludeRepository := { _ => false },
-        publishTo := {
-          val nexus = "https://oss.sonatype.org/"
-          if (isSnapshot.value) {
-            Some("snapshots" at nexus + "content/repositories/snapshots")
-          } else {
-            Some("releases" at nexus + "service/local/staging/deploy/maven2")
-          }
-        },
-        publishMavenStyle := true
-      )
+      // Remove all additional repository other than Maven Central from POM
+      pomIncludeRepository := { _ => false },
+      publishTo := {
+        val nexus = "https://oss.sonatype.org/"
+        if (isSnapshot.value) {
+          Some("snapshots" at nexus + "content/repositories/snapshots")
+        } else {
+          Some("releases" at nexus + "service/local/staging/deploy/maven2")
+        }
+      },
+      publishMavenStyle := true
+    )
   }
 }
