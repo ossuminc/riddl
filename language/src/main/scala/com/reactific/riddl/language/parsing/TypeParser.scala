@@ -231,6 +231,7 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
       case (at, Predefined.Natural)     => AST.Natural(at)
       case (at, Predefined.Whole)       => AST.Whole(at)
       case (_: At, range: RangeType)    => range
+      case (_, _) => ??? // FIXME: correct this
     }
   }
 
@@ -510,7 +511,7 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
       )
     )
   }
-  
+
   def replicaTypeExpression[u: P]: P[TypeExpression] = {
     P(integerPredefTypes | mappingType | setType)
   }

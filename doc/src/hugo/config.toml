@@ -32,7 +32,7 @@ pluralizeListTitles = false
 home = [ "HTML", "RSS"]
 
 # Required if you want to render robots.txt template
-enableRobotsTXT = true
+# enableRobotsTXT = true
 
 [markup.tableOfContents]
   startLevel = 1
