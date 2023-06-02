@@ -8,8 +8,8 @@ package com.reactific.riddl.language.ast
 
 import com.reactific.riddl.language.parsing.Terminals.*
 
-/** Unit Tests For TypeExpression */
-trait TypeExpression extends AbstractDefinitions {
+/** A portion of the AST that deals with Types and TypeExpressions */
+trait Types extends AbstractDefinitions {
 
 ///////////////////////////////////////////////////////////// TYPES
 

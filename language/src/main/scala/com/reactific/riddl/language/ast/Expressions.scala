@@ -11,7 +11,7 @@ import com.reactific.riddl.language.parsing.Terminals.*
 import scala.collection.immutable.ListMap
 
 /** A trait for inclusion into AST object in AST.scala */
-trait Expressions extends TypeExpression {
+trait Expressions extends Types {
 
 //////////////////////////////////////////////////////////// VALUE EXPRESSIONS
 
