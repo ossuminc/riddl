@@ -13,7 +13,7 @@ import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 
 /** V - Dependency Versions object */
 object V {
-  val commons_io = "2.12.0"
+  val commons_io = "2.13.0"
   val compress = "1.23.0"
   val config = "1.4.2"
   val fastparse = "3.0.1"
