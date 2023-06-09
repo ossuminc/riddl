@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.language.ast
 
 /** This trait defines all the Actions that can be invoked from an Example and
