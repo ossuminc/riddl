@@ -9,7 +9,8 @@ package com.reactific.riddl.language.ast
 import com.reactific.riddl.language.parsing.Terminals.*
 
 /** A portion of the AST that deals with Types and TypeExpressions */
-trait Types extends AbstractDefinitions {
+trait Types {
+  this: AbstractDefinitions =>
 
 ///////////////////////////////////////////////////////////// TYPES
 

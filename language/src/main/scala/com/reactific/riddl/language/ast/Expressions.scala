@@ -11,7 +11,8 @@ import com.reactific.riddl.language.parsing.Terminals.*
 import scala.collection.immutable.ListMap
 
 /** A trait for inclusion into AST object in AST.scala */
-trait Expressions extends Types {
+trait Expressions {
+  this: Types with AbstractDefinitions =>
 
 //////////////////////////////////////////////////////////// VALUE EXPRESSIONS
 
@@ -37,19 +38,16 @@ trait Expressions extends Types {
     @inline def expressionType: TypeExpression = Strng(loc)
   }
 
-  /** Represents the use of an arithmetic operator or well-known function call.
-    * The operator can be simple like addition or subtraction or complicated
-    * like pow, sqrt, etc. There is no limit on the number of operands but
-    * defining them shouldn't be necessary as they are pre-determined by use of
-    * the name of the operator (e.g. pow takes two floating point numbers, sqrt
-    * takes one.
+  /** Represents the use of an arithmetic operator or well-known function call. The operator can be simple like addition
+    * or subtraction or complicated like pow, sqrt, etc. There is no limit on the number of operands but defining them
+    * shouldn't be necessary as they are pre-determined by use of the name of the operator (e.g. pow takes two floating
+    * point numbers, sqrt takes one.
     * @param loc
     *   The location of the operator
     * @param operator
     *   The name of the operator (+, -, sqrt, ...)
     * @param operands
-    *   A list of expressions that correspond to the required operands for the
-    *   operator
+    *   A list of expressions that correspond to the required operands for the operator
     */
 
   case class ArithmeticOperator(
@@ -62,9 +60,8 @@ trait Expressions extends Types {
       .mkString("(", ",", ")")
   }
 
-  /** Represents an opoerator that is merely a reference to some value,
-    * presumably an entity state value but could also be a projector or
-    * repository value.
+  /** Represents an opoerator that is merely a reference to some value, presumably an entity state value but could also
+    * be a projector or repository value.
     *
     * @param loc
     *   The location of this expression
@@ -76,8 +73,7 @@ trait Expressions extends Types {
     def expressionType: TypeExpression = Abstract(loc)
   }
 
-  /** Represents a expression that will be specified later and uses the ???
-    * syntax to represent that condition.
+  /** Represents a expression that will be specified later and uses the ??? syntax to represent that condition.
     *
     * @param loc
     *   The location of the undefined condition
@@ -89,13 +85,11 @@ trait Expressions extends Types {
     override def isEmpty: Boolean = true
   }
 
-  /** The arguments of a [[FunctionCallExpression]] and
-    * [[AggregateConstructionExpression]] is a mapping between an argument name
-    * and the expression that provides the value for that argument.
+  /** The arguments of a [[FunctionCallExpression]] and [[AggregateConstructionExpression]] is a mapping between an
+    * argument name and the expression that provides the value for that argument.
     *
     * @param args
-    *   A mapping of Identifier to Expression to provide the arguments for the
-    *   function call.
+    *   A mapping of Identifier to Expression to provide the arguments for the function call.
     */
   case class ArgList(
     args: ListMap[Identifier, Expression] = ListMap
@@ -109,12 +103,11 @@ trait Expressions extends Types {
     override def isEmpty: Boolean = args.isEmpty
   }
 
-  /** A helper class for creating aggregates and messages that represents the
-    * construction of the message or aggregate value from parameters
+  /** A helper class for creating aggregates and messages that represents the construction of the message or aggregate
+    * value from parameters
     *
     * @param msg
-    *   A message reference that specifies the specific type of message to
-    *   construct
+    *   A message reference that specifies the specific type of message to construct
     * @param args
     *   An argument list that should correspond to teh fields of the message
     */
@@ -130,24 +123,23 @@ trait Expressions extends Types {
     def expressionType: TypeExpression = Abstract(loc)
   }
 
-  /** A helper class for creating expressions that represent the creation of a
-    * new entity identifier for a specific kind of entity.
+  /** A helper class for creating expressions that represent the creation of a new entity identifier for a specific kind
+    * of entity.
     *
     * @param loc
     *   The location of the expression in the source
     * @param entityId
     *   The [[PathIdentifier]] of the entity type for with the Id is created
     */
-  case class NewEntityIdOperator(loc: At, entityId: PathIdentifier)
-      extends Expression {
+  case class NewEntityIdOperator(loc: At, entityId: PathIdentifier) extends Expression {
     override def format: String = {
       Keywords.new_ + " Id(" + entityId.format + ")"
     }
     def expressionType: TypeExpression = UniqueId(loc, entityId)
   }
 
-  /** A RIDDL Function call. The only callable thing here is a function
-    * identified by its path identifier with a matching set of arguments
+  /** A RIDDL Function call. The only callable thing here is a function identified by its path identifier with a
+    * matching set of arguments
     *
     * @param loc
     *   The location of the function call expression
@@ -181,8 +173,7 @@ trait Expressions extends Types {
     * @param expressions
     *   The expressions that are grouped
     */
-  case class GroupExpression(loc: At, expressions: Seq[Expression])
-      extends Expression {
+  case class GroupExpression(loc: At, expressions: Seq[Expression]) extends Expression {
     override def format: String = {
       s"(${expressions.map(_.format).mkString(", ")})"
     }
@@ -192,8 +183,8 @@ trait Expressions extends Types {
     }
   }
 
-  /** Ternary operator to accept a conditional and two expressions and choose
-    * one of the expressions as the resulting value based on the conditional.
+  /** Ternary operator to accept a conditional and two expressions and choose one of the expressions as the resulting
+    * value based on the conditional.
     *
     * @param loc
     *   The location of the ternary operator
@@ -235,8 +226,7 @@ trait Expressions extends Types {
     * @param d
     *   The decimal number to use as the value of the expression
     */
-  case class DecimalValue(loc: At, d: BigDecimal)
-      extends NumericExpression(loc) {
+  case class DecimalValue(loc: At, d: BigDecimal) extends NumericExpression(loc) {
     override def format: String = d.toString
     override def expressionType: TypeExpression =
       Decimal(loc, Long.MaxValue, Long.MaxValue)
@@ -273,40 +263,35 @@ trait Expressions extends Types {
     override def format: String = "false"
   }
 
-  /** Represents an arbitrary condition that is specified merely with a literal
-    * string. This can't be easily processed downstream but provides the author
-    * with the ability to include arbitrary ideas/concepts into an condition
+  /** Represents an arbitrary condition that is specified merely with a literal string. This can't be easily processed
+    * downstream but provides the author with the ability to include arbitrary ideas/concepts into an condition
     * expression. For example in a when condition:
     * {{{
     *   example foo { when "the timer has expired" }
     * }}}
-    * shows the use of an arbitrary condition for the "when" part of a Gherkin
-    * example.
+    * shows the use of an arbitrary condition for the "when" part of a Gherkin example.
     *
     * @param cond
     *   The arbitrary condition provided as a quoted string
     */
-  case class ArbitraryCondition(loc: At, cond: LiteralString)
-      extends Condition(loc) {
+  case class ArbitraryCondition(loc: At, cond: LiteralString) extends Condition(loc) {
     override def format: String = cond.format
   }
 
-  /** Represents a condition that is merely a reference to some Boolean value,
-    * presumably an entity state value or parameter.
+  /** Represents a condition that is merely a reference to some Boolean value, presumably an entity state value or
+    * parameter.
     *
     * @param loc
     *   The location of this condition
     * @param path
     *   The path to the value for this condition
     */
-  case class ValueCondition(loc: At, path: PathIdentifier)
-      extends Condition(loc) {
+  case class ValueCondition(loc: At, path: PathIdentifier) extends Condition(loc) {
     override def format: String = "@" + path.format
   }
 
-  /** A RIDDL Function call to the function identified by its path identifier
-    * with a matching set of arguments. This function must return a boolean
-    * since it is defined as a Condition.
+  /** A RIDDL Function call to the function identified by its path identifier with a matching set of arguments. This
+    * function must return a boolean since it is defined as a Condition.
     *
     * @param loc
     *   The location of the function call expression
@@ -398,8 +383,7 @@ trait Expressions extends Types {
     * @param conditions
     *   The conditions (minimum 2) that must all be true for "and" to be true
     */
-  case class AndCondition(loc: At, conditions: Seq[Condition])
-      extends MultiCondition(loc) {
+  case class AndCondition(loc: At, conditions: Seq[Condition]) extends MultiCondition(loc) {
     override def format: String = "and" + super.format
   }
 
@@ -408,11 +392,9 @@ trait Expressions extends Types {
     * @param loc
     *   Location of the `or` condition
     * @param conditions
-    *   The conditions (minimum 2), any one of which must be true for "Or" to be
-    *   true
+    *   The conditions (minimum 2), any one of which must be true for "Or" to be true
     */
-  case class OrCondition(loc: At, conditions: Seq[Condition])
-      extends MultiCondition(loc) {
+  case class OrCondition(loc: At, conditions: Seq[Condition]) extends MultiCondition(loc) {
     override def format: String = "or" + super.format
   }
 
@@ -420,23 +402,20 @@ trait Expressions extends Types {
     * @param loc
     *   Location of the `xor` condition
     * @param conditions
-    *   The conditions (minimum 2), only one of which may be true for "xor" to
-    *   be true.
+    *   The conditions (minimum 2), only one of which may be true for "xor" to be true.
     */
-  case class XorCondition(loc: At, conditions: Seq[Condition])
-      extends MultiCondition(loc) {
+  case class XorCondition(loc: At, conditions: Seq[Condition]) extends MultiCondition(loc) {
     override def format: String = "xor" + super.format
   }
 
-  /** An arbitrary expression provided by a LiteralString Arbitrary expressions
-    * conform to the type based on the context in which they are found. Another
-    * way to think of it is that arbitrary expressions are assignment compatible
-    * with any other type For example, in an arithmetic expression like this
+  /** An arbitrary expression provided by a LiteralString Arbitrary expressions conform to the type based on the context
+    * in which they are found. Another way to think of it is that arbitrary expressions are assignment compatible with
+    * any other type For example, in an arithmetic expression like this
     * {{{
     *   +(42,"number of widgets in a wack-a-mole")
     * }}}
-    * the arbitrary expression given by the string conforms to a numeric type
-    * since the context is the addition of 42 and the arbitrary expression
+    * the arbitrary expression given by the string conforms to a numeric type since the context is the addition of 42
+    * and the arbitrary expression
     */
   case class ArbitraryExpression(cond: LiteralString) extends Expression {
     override def loc: At = cond.loc
