@@ -265,7 +265,7 @@ lazy val plugin = (project in file("sbt-riddl"))
   .settings(
     name := "sbt-riddl",
     sbtPlugin := true,
-    scalaVersion := "2.12.18",
+    scalaVersion := "2.13.11",
     Compile / sbt.Keys.doc / sources := Seq(),
     Compile / packageDoc / publishArtifact := false,
     buildInfoObject := "SbtRiddlPluginBuildInfo",

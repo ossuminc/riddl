@@ -4,7 +4,7 @@ lazy val root = (project in file("."))
   .enablePlugins(RiddlSbtPlugin)
   .settings(
     version := "0.1",
-    scalaVersion := "2.12.18",
+    scalaVersion := "2.13.11",
     TaskKey[Unit]("checkInfoOutput") := {
       val i = Seq("--verbose", "info")
       val p1 = Process("riddlc", i)
