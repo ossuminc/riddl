@@ -6,8 +6,8 @@
 
 package com.reactific.riddl.language.ast
 
-/** This trait defines all the Actions that can be invoked from an Example and classified by the kind of definition to
-  * which they are applicable
+/** This trait defines all the Actions that can be invoked from an Example and
+  * classified by the kind of definition to which they are applicable
   */
 trait Actions {
   this: Definitions with Expressions with Types with Options with AbstractDefinitions =>
@@ -21,8 +21,8 @@ trait Actions {
   sealed trait SagaAction extends Action
   sealed trait AnyAction extends Action
 
-  /** An action whose behavior is specified as a text string allowing extension to arbitrary actions not otherwise
-    * handled by RIDDL's syntax.
+  /** An action whose behavior is specified as a text string allowing extension
+    * to arbitrary actions not otherwise handled by RIDDL's syntax.
     *
     * @param loc
     *   The location where the action occurs in the source
@@ -36,8 +36,8 @@ trait Actions {
     override def format: String = what.format
   }
 
-  /** An action that is intended to generate a runtime error in the generated application or otherwise indicate an error
-    * condition
+  /** An action that is intended to generate a runtime error in the generated
+    * application or otherwise indicate an error condition
     *
     * @param loc
     *   The location where the action occurs in the source
@@ -48,7 +48,8 @@ trait Actions {
     override def format: String = s"severe \"${message.format}\""
   }
 
-  /** An action whose behavior is to set the value of a state field to some expression
+  /** An action whose behavior is to set the value of a state field to some
+    * expression
     *
     * @param loc
     *   The location where the action occurs int he source
@@ -57,7 +58,8 @@ trait Actions {
     * @param value
     *   An expression for the value to set the field to
     */
-  case class AssignAction(loc: At, target: PathIdentifier, value: Expression) extends EntityAction {
+  case class AssignAction(loc: At, target: PathIdentifier, value: Expression)
+      extends EntityAction {
     override def format: String = {
       s"set ${target.format} to ${value.format}"
     }
@@ -72,16 +74,19 @@ trait Actions {
     * @param value
     *   An expression for the value to set the field to
     */
-  case class AppendAction(loc: At, value: Expression, target: PathIdentifier) extends EntityAction {
+  case class AppendAction(loc: At, value: Expression, target: PathIdentifier)
+      extends EntityAction {
     override def format: String = {
       s"append ${value.format} to ${target.format}"
     }
   }
 
-  /** A helper class for publishing messages that represents the construction of the message to be sent.
+  /** A helper class for publishing messages that represents the construction of
+    * the message to be sent.
     *
     * @param msg
-    *   A message reference that specifies the specific type of message to construct
+    *   A message reference that specifies the specific type of message to
+    *   construct
     * @param args
     *   An argument list that should correspond to teh fields of the message
     */
@@ -162,8 +167,9 @@ trait Actions {
     override def format: String = s"morph ${entity.format} to ${state.format}"
   }
 
-  /** An action that changes the behavior of an entity by making it use a new handler for its messages; named for the
-    * "become" operation in Akka that does the same for an user.
+  /** An action that changes the behavior of an entity by making it use a new
+    * handler for its messages; named for the "become" operation in Akka that
+    * does the same for an user.
     *
     * @param loc
     *   The location in the source of the become action
@@ -172,15 +178,18 @@ trait Actions {
     * @param handler
     *   The reference to the new handler for the entity
     */
-  case class BecomeAction(loc: At, entity: EntityRef, handler: HandlerRef) extends EntityAction {
+  case class BecomeAction(loc: At, entity: EntityRef, handler: HandlerRef)
+      extends EntityAction {
     override def format: String =
       s"become ${entity.format} to ${handler.format}"
   }
 
-  /** An action that tells a message to an entity. This is very analogous to the tell operator in Akka. Unlike using an
-    * Portlet, this implies a direct relationship between the telling entity and the told entity. This action is
-    * considered useful in "high cohesion" scenarios. Use [[SendAction]] to reduce the coupling between entities because
-    * the relationship is managed by a [[Context]]'s [[Connector]] instead.
+  /** An action that tells a message to an entity. This is very analogous to the
+    * tell operator in Akka. Unlike using an Portlet, this implies a direct
+    * relationship between the telling entity and the told entity. This action
+    * is considered useful in "high cohesion" scenarios. Use [[SendAction]] to
+    * reduce the coupling between entities because the relationship is managed
+    * by a [[Context]]'s [[Connector]] instead.
     *
     * @param loc
     *   The location of the tell action
