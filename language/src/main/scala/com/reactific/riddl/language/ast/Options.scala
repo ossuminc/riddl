@@ -10,7 +10,8 @@ import com.reactific.riddl.language.parsing.Terminals
 import scala.reflect.ClassTag
 
 /** Option definitions for Vitals */
-trait Options extends AbstractDefinitions {
+trait Options {
+  this: AbstractDefinitions =>
 
   /** Base trait for option values for any option of a definition.
     */

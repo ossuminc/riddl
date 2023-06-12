@@ -10,7 +10,9 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.Terminals.Keywords
 
 /** Unit Tests For Definitions */
-trait Definitions extends Expressions with Options {
+trait Definitions {
+
+  this: Expressions with Options with Types with AbstractDefinitions =>
 
   /** Base trait of any definition that is in the content of an adaptor
     */

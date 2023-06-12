@@ -9,7 +9,8 @@ package com.reactific.riddl.language.ast
 /** This trait defines all the Actions that can be invoked from an Example and
   * classified by the kind of definition to which they are applicable
   */
-trait Actions extends Definitions {
+trait Actions {
+  this: Definitions with Expressions with Types with Options with AbstractDefinitions =>
 
   /** Base traits of Actions applicable to various processors */
   sealed trait ApplicationAction extends Action

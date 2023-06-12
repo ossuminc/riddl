@@ -100,7 +100,6 @@ lazy val language: Project = project
     name := "riddl-language",
     // FIXME: Don't defeat doc generation
     //     See https://github.com/lampepfl/dotty/issues/17577 for details
-    Compile / sbt.Keys.doc / sources := Seq(),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++
       Dep.testing
