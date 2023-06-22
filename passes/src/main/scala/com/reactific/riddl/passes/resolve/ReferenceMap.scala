@@ -35,9 +35,18 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     map.update(pathId -> parent, definition)
   }
 
-  def definitionOf[T <: Definition](pid: PathIdentifier, parent: Definition): Option[T] = {
+  def definitionOf[T <: Definition : ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {
     val key = pid.format -> parent
-    map.get(key).map(_.asInstanceOf[T])
+    val clazz = classTag[T].runtimeClass
+    map.get(key) match {
+      case Some(value) =>
+        if clazz == value.getClass then
+          Some(value.asInstanceOf[T])
+        else
+          None
+      case None =>
+        None
+    }
   }
 }
 

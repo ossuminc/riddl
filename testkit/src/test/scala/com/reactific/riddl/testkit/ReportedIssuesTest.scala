@@ -40,15 +40,16 @@ class ReportedIssuesTest extends ValidatingTest {
     "375" in {
       checkOne("375.riddl") {
         case Left(messages) =>
-          messages.length must be(10)
+          messages.length must be(11)
           val errors = messages.justErrors
-          errors.length must be(5)
+          errors.length must be(6)
           val f = errors.map(_.format)
           f contains ("Path 'DooFoo' was not resolved,")
           f contains ("Path 'FooExamplexxx.garbage' was not resolved,")
           f contains ("Path 'FooExamplexxxx.garbage' was not resolved")
           f contains ("Path 'Examplexxxx.Foo' was not resolved,")
           f contains ("Setting a value requires assignment compatibility, but field:")
+          f contains ("Expecting field name bar but got argument name garbage")
           val usage = messages.justUsage
           usage.length must be(5)
           val u = usage.map(_.format)
@@ -68,11 +69,12 @@ class ReportedIssuesTest extends ValidatingTest {
     "403" in {
       checkOne("403.riddl") {
         case Left(messages) =>
-          info(messages.format)
+          println(messages.format)
           val errors = messages.justErrors
           val warnings = messages.justWarnings
-          warnings must be(0)
-          errors must be(4)
+          warnings.size must be(2)
+          println(errors.format)
+          errors.size must be(2)
         case Right(result) =>
           fail("The test should fail")
       }

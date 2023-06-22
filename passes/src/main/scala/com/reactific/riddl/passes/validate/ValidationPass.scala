@@ -402,7 +402,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, a)
-        resolvePath(a.context.pathId, parents).map { (target: Context) =>
+        resolvePath[Context](a.context.pathId, parents).map { (target: Context) =>
           if target == c then {
             val message =
               s"${a.identify} may not specify a target context that is " +

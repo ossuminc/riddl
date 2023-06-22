@@ -32,21 +32,21 @@ trait BasicValidation {
     symbols.lookup[T](id)
   }
 
-  def pathIdToDefinition(
-    pid: PathIdentifier,
-    parents: Seq[Definition]
-  ): Option[Definition] = {
-    resolution.refMap.definitionOf(pid, parents.head)
-  }
-
-  @inline def resolvePath[T <: Definition](
+  def pathIdToDefinition[T <: Definition : ClassTag](
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): Option[T] = {
-    pathIdToDefinition(pid, parents).map(_.asInstanceOf[T])
+    resolution.refMap.definitionOf[T](pid, parents.head)
   }
 
-  def resolvePidRelativeTo[T <: Definition](
+  @inline def resolvePath[T <: Definition : ClassTag](
+    pid: PathIdentifier,
+    parents: Seq[Definition]
+  ): Option[T] = {
+    pathIdToDefinition[T](pid, parents)
+  }
+
+  def resolvePidRelativeTo[T <: Definition : ClassTag](
     pid: PathIdentifier,
     relativeTo: Definition
   ): Option[T] = {

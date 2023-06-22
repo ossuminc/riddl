@@ -68,6 +68,33 @@ trait ExampleValidation extends TypeValidation {
     }
   }
 
+  private def checkAggregateArgList(
+    loc: At,
+    typ: Type,
+    arguments: ArgList,
+    defn: Definition,
+    parents: Seq[Definition]
+  ): this.type = {
+    if typ.typ.getClass == classOf[Aggregation] then
+      val aggregation = typ.typ.asInstanceOf[Aggregation]
+      if aggregation.fields.size == arguments.args.size then
+        for {
+          (agg, (arg, expr)) <- aggregation.fields.zip(arguments.args)
+        } {
+          if (agg.id.value != arg.value) then
+            messages.addError(arg.loc, s"Expecting field name " +
+              s"${agg.id.format} but got argument name ${arg.format}")
+          checkExpression(expr, defn, parents)
+        }
+      else
+        messages.addError(loc, s"Expecting ${aggregation.fields.size} " +
+          s"arguments for ${typ.identify}, but got ${arguments.args.size}")
+    else
+      messages.addError(loc, s"${typ.id.format} is not an aggregate but " +
+        s"must be for an aggregate constructor")
+    this
+  }
+
   private def checkMessageConstructor(
     messageConstructor: MessageConstructor,
     defn: Definition,
@@ -182,9 +209,16 @@ trait ExampleValidation extends TypeValidation {
             Error,
             loc
           )
-      case AggregateConstructionExpression(_, pid, args) =>
-        checkPathRef[Type](pid, defn, parents)
-        checkArgList(args, defn, parents)
+      case AggregateConstructionExpression(loc, pid, args) =>
+        checkPathRef[Type](pid, defn, parents) match {
+          case Some(typ: Type) =>
+            if typ.typ.getClass == classOf[Aggregation] then
+              checkAggregateArgList(loc, typ, args, defn, parents)
+            else
+              error(s"${pid.format} is not an aggregate but must be in this context")
+          case None =>
+            error(s"Type ${pid.format} does not exist")
+        }
       case NewEntityIdOperator(_, entityRef) =>
         checkPathRef[Entity](entityRef, defn, parents)
       case Ternary(loc, condition, expr1, expr2) =>

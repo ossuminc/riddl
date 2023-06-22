@@ -10,11 +10,11 @@ domain Example is {
 	          }
 	          state FooExample of FooExampleState is {
 	            handler HandleFoo is {
-	              on command DooFoo {
+	              on command ExampleContext.DoFoo {
 		          example TwoErrors {
-		            then set FooExample.foo to !Foo(badField = @DooFoo.badField)
+		            then set FooEntity.FooExampleState.foo to !Foo(badField = @DooFoo.badField)
 		          }
-	           } 
+	           }
 	        }
 	    }
     }
