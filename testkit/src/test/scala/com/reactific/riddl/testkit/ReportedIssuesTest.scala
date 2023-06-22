@@ -55,14 +55,26 @@ class ReportedIssuesTest extends ValidatingTest {
           u contains("Entity 'FooEntity' is unused")
           u contains("Entity 'OtherEntity' is unused:")
           u contains("Command 'DoFoo' is unused")
-          u contains("Record 'OtherState' is unused:")
-          u contains("Models without any streaming data will exhibit minimal effect:")
+          u contains ("Record 'OtherState' is unused:")
+          u contains ("Models without any streaming data will exhibit minimal effect:")
           info(messages.format)
           succeed
         case Right(result) =>
           val messages = result.messages
           val errors = messages.filter(_.kind.isError)
           errors mustBe empty
+      }
+    }
+    "403" in {
+      checkOne("403.riddl") {
+        case Left(messages) =>
+          info(messages.format)
+          val errors = messages.justErrors
+          val warnings = messages.justWarnings
+          warnings must be(0)
+          errors must be(4)
+        case Right(result) =>
+          fail("The test should fail")
       }
     }
   }
