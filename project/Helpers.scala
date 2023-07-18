@@ -16,7 +16,7 @@ object V {
   val commons_io = "2.13.0"
   val compress = "1.23.0"
   val config = "1.4.2"
-  val fastparse = "3.0.1"
+  val fastparse = "3.0.2"
   val jgit = "6.5.0"
   val lang3 = "3.12.0"
   val pureconfig = "0.17.4"
