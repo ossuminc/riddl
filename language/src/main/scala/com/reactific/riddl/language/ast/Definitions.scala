@@ -12,7 +12,7 @@ import com.reactific.riddl.language.parsing.Terminals.Keywords
 /** Unit Tests For Definitions */
 trait Definitions {
 
-  this: Expressions with Options with Types with AbstractDefinitions =>
+  this: Expressions with Options with Types with AbstractDefinitions with Statements =>
 
   /** Base trait of any definition that is in the content of an adaptor
     */
@@ -712,7 +712,7 @@ trait Definitions {
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
   sealed trait OnClause extends HandlerDefinition {
-    def examples: Seq[Example]
+    def statements: Seq[Statement]
   }
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
@@ -729,17 +729,17 @@ trait Definitions {
     */
   case class OnOtherClause(
     loc: At,
-    examples: Seq[Example] = Seq.empty[Example],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Other")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = statements.isEmpty
 
     override def kind: String = "On Other"
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Statement] = statements
 
     override def format: String = ""
   }
@@ -757,17 +757,17 @@ trait Definitions {
     */
   case class OnInitClause(
     loc: At,
-    examples: Seq[Example] = Seq.empty[Example],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Init")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = statements.isEmpty
 
     override def kind: String = "On Init"
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Statement] = statements
 
     override def format: String = ""
   }
@@ -792,15 +792,15 @@ trait Definitions {
     loc: At,
     msg: MessageRef,
     from: Option[Reference[Definition]],
-    examples: Seq[Example] = Seq.empty[Example],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = statements.isEmpty
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Statement] = statements
 
     def format: String = ""
 
@@ -822,19 +822,19 @@ trait Definitions {
     * @param description
     *   An optional description of the on clause.
     */
-  case class OnTermClause(
+  case class OnTerminationClause(
     loc: At,
-    examples: Seq[Example] = Seq.empty[Example],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Term")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = statements.isEmpty
 
     override def kind: String = "On Term"
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Statement] = statements
 
     override def format: String = ""
   }

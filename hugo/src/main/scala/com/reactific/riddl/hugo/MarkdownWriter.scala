@@ -765,13 +765,19 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       clause match {
         case oic: OnInitClause    => h3(oic.kind)
         case omc: OnMessageClause => h3(clause.kind + " " + omc.msg.format)
-        case otc: OnTermClause    => h3(otc.kind)
+        case otc: OnTerminationClause    => h3(otc.kind)
         case ooc: OnOtherClause   => h3(ooc.kind)
       }
       emitShortDefDoc(clause)
-      emitExamples(clause.examples, 4)
+      emitStatements(clause.statements)
+      // emitExamples(clause.examples, 4)
     }
     emitUsage(handler)
+    this
+  }
+
+  private def emitStatements(statements: Seq[Statement]): this.type = {
+    list(statements.map(_.format))
     this
   }
 

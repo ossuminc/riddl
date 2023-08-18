@@ -116,6 +116,4 @@ private[parsing] trait GherkinParser extends ActionParser {
 
   def examples[u: P]: P[Seq[Example]] = { P(example.rep(0)) }
 
-  def nonEmptyExamples[u: P]: P[Seq[Example]] = { P(example.rep(1)) }
-
 }

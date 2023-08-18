@@ -71,7 +71,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
         validateUser(sa, parentsAsSeq)
       case oic: OnInitClause =>
         checkDefinition(parentsAsSeq, oic)
-      case otc: OnTermClause =>
+      case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)

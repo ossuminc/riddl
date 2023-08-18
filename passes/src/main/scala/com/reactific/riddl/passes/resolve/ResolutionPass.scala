@@ -64,14 +64,12 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         }
       case t: Type =>
         resolveType(t, parentsAsSeq)
-      case e: Example =>
-        resolveExample(e, parentsAsSeq)
       case ic: OnInitClause =>
-        ic.examples.foreach(resolveExample(_, parentsAsSeq))
-      case tc: OnTermClause =>
-        tc.examples.foreach(resolveExample(_, parentsAsSeq))
+        ic.statements.foreach(resolveStatement(_, parentsAsSeq))
+      case tc: OnTerminationClause =>
+        tc.statements.foreach(resolveStatement(_, parentsAsSeq))
       case oc: OnOtherClause =>
-        oc.examples.foreach(resolveExample(_, parentsAsSeq))
+        oc.statements.foreach(resolveStatement(_, parentsAsSeq))
       case mc: OnMessageClause =>
         resolveOnMessageClause(mc, parentsAsSeq)
       case h: Handler =>
@@ -127,17 +125,17 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveARef[Input](pi.to, parentsAsSeq)
       case si: SelfInteraction =>
         resolveARef[Definition](si.from, parentsAsSeq)
-      case _: Author => () // no references
-      case _: User => () // no references
-      case _: Enumerator => () // no references
-      case _: Group => () // no references
-      case _: Include[_] => () // no references
-      case _: OptionalInteractions => () // no references
-      case _: ParallelInteractions => () // no references
-      case _: RootContainer => () // no references
-      case _: SagaStep => () // no references
+      case _: Author                 => () // no references
+      case _: User                   => () // no references
+      case _: Enumerator             => () // no references
+      case _: Group                  => () // no references
+      case _: Include[_]             => () // no references
+      case _: OptionalInteractions   => () // no references
+      case _: ParallelInteractions   => () // no references
+      case _: RootContainer          => () // no references
+      case _: SagaStep               => () // no references
       case _: SequentialInteractions => () // no references
-      case _: Term => () // no references
+      case _: Term                   => () // no references
       // case _ => () // NOTE: Never have this catchall! Want compile time errors.
     }
   }
@@ -174,14 +172,14 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     if mc.from.nonEmpty then {
       resolveARef[Definition](mc.from.get, parents)
     }
-    mc.examples.foreach(resolveExample(_, parents))
+    mc.statements.foreach(resolveStatement(_, parents))
   }
 
-  private def resolveExample(example: Example, parents: Seq[Definition]): Unit = {
-    val pars = example +: parents
-    example.whens.foreach { when => resolveExpr(when.condition, pars) }
-    example.thens.foreach { then_ => resolveAction(then_.action, pars) }
-    example.buts.foreach { but => resolveAction(but.action, pars) }
+  private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
+    val pars = statement +: parents
+    statement match {
+      case _: ArbitraryStatement => ()
+    }
   }
 
   private def resolveAction(action: Action, parents: Seq[Definition]): Unit = {

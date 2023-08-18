@@ -14,7 +14,8 @@ package com.reactific.riddl.language
   * which is referentially and semantically consistent (or the user gets an
   * error).
   */
-object AST extends ast.AbstractDefinitions with ast.Actions with ast.Definitions with ast.Expressions with ast.Options with ast.Types {
+object AST extends ast.AbstractDefinitions with ast.Actions with ast.Definitions with ast.Expressions with ast
+.Options with ast.Types with ast.Statements {
 
   def findAuthors(
     defn: Definition,

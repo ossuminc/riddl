@@ -13,10 +13,9 @@ import Terminals.*
 
 private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
 
-  private def onClauseBody[u: P]: P[Seq[Example]] = {
-    open ~ (nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
+  private def onClauseBody[u: P]: P[Seq[Statement]] = {
+    open ~ (nonEmptyStatements | undefined(Seq.empty[Statement])) ~ close
   }
-
   private def onOtherClause[u: P]: P[OnClause] = {
     P(
       Keywords.on ~ Keywords.other ~/ location ~ is ~ onClauseBody ~ briefly ~
@@ -31,8 +30,8 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
-  private def messageOrigins[u:P]: P[Reference[Definition]] = {
-    P(inletRef | processorRef | userRef | epicRef )
+  private def messageOrigins[u: P]: P[Reference[Definition]] = {
+    P(inletRef | processorRef | userRef | epicRef)
   }
   private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/
@@ -45,6 +44,18 @@ private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
       Keywords.on ~ Keywords.term ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
+  }
+
+  private def nonEmptyStatements[u: P]: P[Seq[Statement]] = { P(statement.rep(1)) }
+
+  private def statement[u: P]: P[Statement] = {
+    P {
+      anyStatement
+    }
+  }
+
+  private def anyStatement[u: P]: P[ArbitraryStatement] = {
+    P(location ~ literalString).map(t => (ArbitraryStatement.apply _).tupled(t))
   }
 
   private def handlerDefinitions[u: P]: P[Seq[OnClause]] = {
