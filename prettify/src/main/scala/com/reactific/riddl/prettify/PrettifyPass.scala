@@ -324,7 +324,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   ): Unit = {
     state.withCurrent(
       _.openDef(step)
-        .emitExamples(step.doAction)
+        .emitExamples(step.actions)
         .add("reverted by")
         .emitExamples(step.undoAction)
     )

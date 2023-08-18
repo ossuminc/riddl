@@ -15,7 +15,6 @@ import fastparse.ScalaWhitespace.*
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser
     extends HandlerParser
-      with GherkinParser
       with ActionParser
       with FunctionParser
       with StreamingParser {

@@ -19,7 +19,7 @@ private[parsing] trait ActionParser
     with ExpressionParser {
 
   private def arbitraryAction[u: P]: P[ArbitraryAction] = {
-    P(location ~ literalString)./.map { tpl =>
+    P(location ~ literalString ~ briefly ~ description)./.map { tpl =>
       (ArbitraryAction.apply _).tupled(tpl)
     }
   }
@@ -28,18 +28,6 @@ private[parsing] trait ActionParser
     P(location ~ Keywords.error ~ literalString)./.map { tpl =>
       (ErrorAction.apply _).tupled(tpl)
     }
-  }
-
-  private def assignAction[u: P]: P[AssignAction] = {
-    P(
-      location ~ Keywords.set ~/ pathIdentifier ~ Readability.to ~ expression
-    )./.map { t => (AssignAction.apply _).tupled(t) }
-  }
-
-  private def appendAction[u: P]: P[AppendAction] = {
-    P(
-      location ~ Keywords.append ~/ expression ~ Readability.to ~ pathIdentifier
-    )./.map { t => (AppendAction.apply _).tupled(t) }
   }
 
   private def morphAction[u: P]: P[MorphAction] = {
@@ -96,7 +84,7 @@ private[parsing] trait ActionParser
   }
 
   private def entityActions[u: P]: P[EntityAction] = {
-    P(assignAction | tellAction | appendAction | morphAction | becomeAction)
+    P(tellAction | morphAction | becomeAction)
   }
 
   private def functionActions[u: P]: P[FunctionAction] = {
@@ -114,6 +102,10 @@ private[parsing] trait ActionParser
     P(
       entityActions | functionActions | anyActions
     )
+  }
+
+  def actions[u:P]: P[Seq[Action]] = {
+    P(allActions.rep(0))
   }
 
 }

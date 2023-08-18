@@ -31,9 +31,12 @@ trait Actions {
     */
   case class ArbitraryAction(
     loc: At,
-    what: LiteralString
+    what: LiteralString,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
   ) extends AnyAction {
     override def format: String = what.format
+    def id: Identifier = Identifier.empty
   }
 
   /** An action that is intended to generate a runtime error in the generated

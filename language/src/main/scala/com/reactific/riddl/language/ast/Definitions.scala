@@ -498,97 +498,6 @@ trait Definitions {
     override def format: String = s"${Keywords.`type`} ${pathId.format}"
   }
 
-  // ////////////////////////////////////////////////////////// Gherkin
-
-  /** A GherkinClause for the Given part of a Gherkin [[Example]]
-    *
-    * @param loc
-    *   The location of the Given clause
-    * @param scenario
-    *   The strings that define the scenario
-    */
-  case class GivenClause(loc: At, scenario: Seq[LiteralString]) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A [[GherkinClause]] for the When part of a Gherkin [[Example]]
-    *
-    * @param loc
-    *   The location of the When clause
-    * @param condition
-    *   The condition expression that defines the trigger for the [[Example]]
-    */
-  case class WhenClause(loc: At, condition: Condition) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A [[GherkinClause]] for the Then part of a Gherkin [[Example]]. This part specifies what should be done if the
-    * [[WhenClause]] evaluates to true.
-    *
-    * @param loc
-    *   The location of the Then clause
-    * @param action
-    *   The action to be performed
-    */
-  case class ThenClause(loc: At, action: Action) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A [[GherkinClause]] for the But part of a Gherkin [[Example]]. This part specifies what should be done if the
-    * [[WhenClause]] evaluates to false.
-    *
-    * @param loc
-    *   The location of the But clause
-    * @param action
-    *   The action to be performed
-    */
-  case class ButClause(loc: At, action: Action) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A Gherkin example. Examples have names, [[id]], and a sequence of each of the four kinds of Gherkin clauses:
-    * [[GivenClause]], [[WhenClause]], [[ThenClause]], [[ButClause]]
-    *
-    * @see
-    *   [[https://cucumber.io/docs/gherkin/reference/ The Gherkin Reference]]
-    * @param loc
-    *   The location of the start of the example
-    * @param id
-    *   The name of the example
-    * @param givens
-    *   The list of Given/And statements
-    * @param whens
-    *   The list of When/And statements
-    * @param thens
-    *   The list of Then/And statements
-    * @param buts
-    *   The List of But/And statements
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the example
-    */
-  case class Example(
-    loc: At,
-    id: Identifier,
-    givens: Seq[GivenClause] = Seq.empty[GivenClause],
-    whens: Seq[WhenClause] = Seq.empty[WhenClause],
-    thens: Seq[ThenClause] = Seq.empty[ThenClause],
-    buts: Seq[ButClause] = Seq.empty[ButClause],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = Option.empty[Description]
-  ) extends LeafDefinition
-      with OnClauseDefinition
-      with FunctionDefinition
-      with EpicDefinition {
-    final val kind: String = "Example"
-
-    def format: String = ""
-
-    override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
-      thens.isEmpty && buts.isEmpty
-  }
-
   // ////////////////////////////////////////////////////////// Entities
 
   /** A reference to an entity
@@ -623,8 +532,8 @@ trait Definitions {
     *   An optional type expression that names and types the fields of the input of the function
     * @param output
     *   An optional type expression that names and types the fields of the output of the function
-    * @param examples
-    *   The set of examples that define the behavior of the function.
+    * @param actions
+    *   The set of actions that define the behavior of the function.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -637,7 +546,7 @@ trait Definitions {
     output: Option[Aggregation] = None,
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
-    examples: Seq[Example] = Seq.empty[Example],
+    actions: Seq[Action] = Seq.empty[Action],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[FunctionDefinition]] = Seq
       .empty[Include[FunctionDefinition]],
@@ -659,10 +568,10 @@ trait Definitions {
     override lazy val contents: Seq[FunctionDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
-        functions ++ examples
+        functions ++ actions
     }
 
-    override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
+    override def isEmpty: Boolean = actions.isEmpty && input.isEmpty &&
       output.isEmpty
 
     final val kind: String = "Function"
@@ -672,7 +581,7 @@ trait Definitions {
       if input.nonEmpty then score += 2
       if output.nonEmpty then score += 3
       if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 13)
-      if examples.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
+      if actions.nonEmpty then score += Math.max(actions.count(_.nonEmpty), 25)
       if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 12)
       Math.max(score, maxMaturity)
     }
@@ -712,7 +621,7 @@ trait Definitions {
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
   sealed trait OnClause extends HandlerDefinition {
-    def examples: Seq[Example]
+    def actions: Seq[Action]
   }
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
@@ -720,8 +629,8 @@ trait Definitions {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param examples
-    *   A set of examples that define the behavior when a message doesn't match
+    * @param actions
+    *   A set of actions that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -729,17 +638,17 @@ trait Definitions {
     */
   case class OnOtherClause(
     loc: At,
-    examples: Seq[Example] = Seq.empty[Example],
+    actions: Seq[Action] = Seq.empty[Action],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Other")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = actions.isEmpty
 
     override def kind: String = "On Other"
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Action] = actions
 
     override def format: String = ""
   }
@@ -748,8 +657,8 @@ trait Definitions {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param examples
-    *   A set of examples that define the behavior when a message doesn't match
+    * @param actions
+    *   A set of actions that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -757,17 +666,17 @@ trait Definitions {
     */
   case class OnInitClause(
     loc: At,
-    examples: Seq[Example] = Seq.empty[Example],
+    actions: Seq[Action] = Seq.empty[Action],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Init")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = actions.isEmpty
 
     override def kind: String = "On Init"
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Action] = actions
 
     override def format: String = ""
   }
@@ -781,8 +690,8 @@ trait Definitions {
     *   A reference to the message type that is handled
     * @param from
     *   Optional message generating
-    * @param examples
-    *   A set of examples that define the behavior when the [[msg]] is received.
+    * @param actions
+    *   A set of actions that define the behavior when the [[msg]] is received.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -792,15 +701,15 @@ trait Definitions {
     loc: At,
     msg: MessageRef,
     from: Option[Reference[Definition]],
-    examples: Seq[Example] = Seq.empty[Example],
+    actions: Seq[Action] = Seq.empty[Action],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = actions.isEmpty
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Action] = actions
 
     def format: String = ""
 
@@ -815,8 +724,8 @@ trait Definitions {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param examples
-    *   A set of examples that define the behavior when a message doesn't match
+    * @param actions
+    *   A set of actions that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -824,17 +733,17 @@ trait Definitions {
     */
   case class OnTermClause(
     loc: At,
-    examples: Seq[Example] = Seq.empty[Example],
+    actions: Seq[Action] = Seq.empty[Action],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Term")
 
-    override def isEmpty: Boolean = examples.isEmpty
+    override def isEmpty: Boolean = actions.isEmpty
 
     override def kind: String = "On Term"
 
-    override def contents: Seq[Example] = examples
+    override def contents: Seq[Action] = actions
 
     override def format: String = ""
   }
@@ -1438,7 +1347,7 @@ trait Definitions {
   }
 
   /** Definition of a Streamlet. A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A processor's
-    * processing is specified by Gherkin [[Example]]s. Streamlets come in various shapes: Source, Sink, Flow, Merge,
+    * processing is specified by Gherkin [[Action]]s. Streamlets come in various shapes: Source, Sink, Flow, Merge,
     * Split, and Router depending on how many inlets and outlets they have
     *
     * @param loc
@@ -1569,16 +1478,16 @@ trait Definitions {
     override def format: String = s"${Keywords.outlet} ${pathId.format}"
   }
 
-  /** The definition of one step in a saga with its undo step and example.
+  /** The definition of one step in a saga with its undo step and action.
     *
     * @param loc
     *   The location of the saga action definition
     * @param id
     *   The name of the SagaAction
-    * @param doAction
+    * @param actions
     *   The command to be done.
     * @param undoAction
-    *   The command that undoes [[doAction]]
+    *   The command that undoes [[actions]]
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1587,12 +1496,12 @@ trait Definitions {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doAction: Seq[Example] = Seq.empty[Example],
-    undoAction: Seq[Example] = Seq.empty[Example],
+    actions: Seq[Action] = Seq.empty[Action],
+    undoAction: Seq[Action] = Seq.empty[Action],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends SagaDefinition {
-    def contents: Seq[Example] = doAction ++ undoAction
+    def contents: Seq[Action] = actions ++ undoAction
 
     def format: String = s"${Keywords.step} ${id.format}"
 
@@ -1979,7 +1888,7 @@ trait Definitions {
     */
   sealed trait UIElement extends ApplicationDefinition
 
-  /** A group of UIElement that can be treated as a whole. For example, a form, a button group, etc.
+  /** A group of UIElement that can be treated as a whole. For action, a form, a button group, etc.
     * @param loc
     *   The location of the group
     * @param id

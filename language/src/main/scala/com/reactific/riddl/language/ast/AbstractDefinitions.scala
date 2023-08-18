@@ -245,12 +245,16 @@ trait AbstractDefinitions {
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
-  /** Base class for all actions. Actions are used in the "then" and "but"
-    * clauses of a Gherkin example such as in the body of a handler's `on`
-    * clause or in the definition of a Function. The subclasses define different
-    * kinds of actions that can be used.
-    */
-  trait Action extends RiddlValue
+  /** Base class for all actions. Actions are used as the contents of
+   * an OnClause, such as in the body of  a handler or in the definition
+   * of a Function. The subclasses define different
+   * kinds of actions that can be used.
+   */
+  trait Action extends FunctionDefinition {
+    def id: Identifier = Identifier.empty
+    def contents: Seq[Definition] = Seq.empty[Definition]
+    def kind: String = "Action"
+  }
 
   /** Base class of any Gherkin value
     */

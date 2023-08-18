@@ -465,13 +465,13 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
   ): Unit = {
     checkContainer(parents, s)
     check(
-      s.doAction.getClass == s.undoAction.getClass,
+      s.actions.getClass == s.undoAction.getClass,
       "The primary action and revert action must be the same shape",
       Messages.Error,
       s.loc
     )
     val parentsSeq = parents.toSeq
-    checkExamples(s.doAction, s +: parentsSeq)
+    checkExamples(s.actions, s +: parentsSeq)
     checkExamples(s.undoAction, s +: parentsSeq)
     checkDescription(s)
   }
