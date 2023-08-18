@@ -803,7 +803,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       h3(step.identify)
       emitShortDefDoc(step)
       h4("Do Examples")
-      emitExamples(step.actions, 5)
+      emitExamples(step.doAction, 5)
       h4("Undo Examples")
       emitExamples(step.undoAction, 5)
     }

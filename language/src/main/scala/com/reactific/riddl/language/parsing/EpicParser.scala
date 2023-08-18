@@ -13,7 +13,8 @@ import Terminals.*
 
 private[parsing] trait EpicParser
     extends CommonParser
-    with ReferenceParser {
+    with ReferenceParser
+    with GherkinParser {
 
   private def arbitraryStoryRef[u: P]: P[Reference[VitalDefinition[_,_]]] = {
     processorRef | sagaRef | functionRef

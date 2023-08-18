@@ -12,8 +12,7 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait FunctionParser extends CommonParser with TypeParser 
-  with ActionParser {
+private[parsing] trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
@@ -35,7 +34,7 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser
   }
 
   private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
-    P(typeDef | allActions | function | term | functionInclude).rep(0)
+    P(typeDef | example | function | term | functionInclude).rep(0)
   }
 
   private def functionBody[u: P]: P[
@@ -75,7 +74,7 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
-        val actions = mapTo[Action](groups.get(classOf[Action]))
+        val examples = mapTo[Example](groups.get(classOf[Example]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         val includes = mapTo[Include[FunctionDefinition]](groups.get(
@@ -88,7 +87,7 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser
           output,
           types,
           functions,
-          actions,
+          examples,
           authors,
           includes,
           options,

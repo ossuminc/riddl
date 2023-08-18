@@ -11,10 +11,10 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait HandlerParser extends FunctionParser {
+private[parsing] trait HandlerParser extends GherkinParser with FunctionParser {
 
-  private def onClauseBody[u: P]: P[Seq[Action]] = {
-    open ~ actions ~ close
+  private def onClauseBody[u: P]: P[Seq[Example]] = {
+    open ~ (nonEmptyExamples | undefined(Seq.empty[Example])) ~ close
   }
 
   private def onOtherClause[u: P]: P[OnClause] = {
