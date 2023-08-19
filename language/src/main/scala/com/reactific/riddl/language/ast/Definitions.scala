@@ -64,6 +64,18 @@ trait Definitions {
   /** Base trait of definitions that are in the body of a Story definition */
   sealed trait EpicDefinition extends Definition
 
+  trait Statement
+      extends Definition
+      with ApplicationDefinition
+      with AdaptorDefinition
+      with ContextDefinition
+      with EntityDefinition
+      with FunctionDefinition
+      with SagaDefinition {
+    def id: Identifier = Identifier.empty
+    def kind: String = "Statement"
+  }
+
   sealed trait VitalDefinitionDefinition
       extends AdaptorDefinition
       with ApplicationDefinition
@@ -1587,12 +1599,12 @@ trait Definitions {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doAction: Seq[Example] = Seq.empty[Example],
-    undoAction: Seq[Example] = Seq.empty[Example],
+    doAction: Seq[Statement] = Seq.empty[Statement],
+    undoAction: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends SagaDefinition {
-    def contents: Seq[Example] = doAction ++ undoAction
+    def contents: Seq[Statement] = doAction ++ undoAction
 
     def format: String = s"${Keywords.step} ${id.format}"
 

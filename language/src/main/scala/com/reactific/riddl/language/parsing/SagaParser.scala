@@ -11,20 +11,20 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-/** SagaParser Implements the parsing of saga definitions in context
-  * definitions.
+/** SagaParser Implements the parsing of saga definitions in context definitions.
   */
 private[parsing] trait SagaParser
     extends ReferenceParser
-    with ActionParser
-    with GherkinParser
     with FunctionParser
+    with StatementParser
     with StreamingParser {
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
-      location ~ Keywords.step ~/ identifier ~ is ~ open ~ examples ~ close ~
-        Keywords.reverted ~ Readability.by.? ~ open ~ examples ~ close ~
+      location ~ Keywords.step ~/ identifier ~ is ~ open ~
+        setOfStatements(StatementsSet.SagaStatements) ~ close ~
+        Keywords.reverted ~ Readability.by.? ~ open ~
+        setOfStatements(StatementsSet.SagaStatements) ~ close ~
         briefly ~ description
     ).map(x => (SagaStep.apply _).tupled(x))
   }

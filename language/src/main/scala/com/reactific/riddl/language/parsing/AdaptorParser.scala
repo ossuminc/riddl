@@ -15,9 +15,8 @@ import fastparse.ScalaWhitespace.*
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser
     extends HandlerParser
-      with GherkinParser
-      with ActionParser
       with FunctionParser
+      with StatementParser
       with StreamingParser {
 
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
@@ -33,7 +32,8 @@ private[parsing] trait AdaptorParser
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      (handler | function | inlet | outlet | adaptorInclude | term | constant).rep(1) |
+      (handler(StatementsSet.AdaptorStatements) | function | inlet | 
+        outlet | adaptorInclude | term | constant).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }

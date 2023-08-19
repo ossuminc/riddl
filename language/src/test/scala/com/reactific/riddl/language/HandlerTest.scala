@@ -12,14 +12,14 @@ import com.reactific.riddl.language.AST.Entity
 /** Unit Tests For Handler */
 class HandlerTest extends ParsingTest {
   "Handlers" should {
-    "allowed in contexts" in {
+    "be allowed in contexts" in {
       val input = """context Foo is {
                     |  type DoFoo is command { flux: Integer }
                     |  type FooDone is event { flux: Integer }
                     |  outlet begone is event FooDone
                     |  handler FooHandler is {
                     |    on command FooMessage {
-                    |      then send event FooDone( flux = 42 ) to outlet begone
+                    |      send event FooDone( flux = 42 ) to outlet begone
                     |    }
                     |  }
                     |}

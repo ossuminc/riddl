@@ -46,9 +46,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Function]  => function(_)
       case x if x == classOf[AST.Streamlet] => streamlet(_)
       case x if x == classOf[AST.Saga]      => saga(_)
-      case x if x == classOf[AST.Example]   => example(_)
-      case x if x == classOf[AST.Saga]      => repository(_)
-      case x if x == classOf[AST.Saga]      => projector(_)
+      case x if x == classOf[AST.Repository]=> repository(_)
+      case x if x == classOf[AST.Projector] => projector(_)
       case x if x == classOf[AST.Epic]      => epic(_)
       case _ =>
         throw new RuntimeException(

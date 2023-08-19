@@ -15,6 +15,8 @@ import Terminals.*
 private[parsing] trait EntityParser
     extends TypeParser
     with HandlerParser
+    with FunctionParser
+    with StatementParser
     with StreamingParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
@@ -45,12 +47,12 @@ private[parsing] trait EntityParser
       case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
       case (loc, Options.device, _)        => EntityIsDevice(loc)
       case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
-      case _ => throw new RuntimeException("Impossible case")
+      case _                               => throw new RuntimeException("Impossible case")
     }
   }
 
   private def stateDefinitions[u: P]: P[Seq[StateDefinition]] = {
-    P(typeDef | handler | invariant).rep(0)
+    P(typeDef | handler(StatementsSet.EntityStatements) | invariant).rep(0)
   }
 
   private def stateBody[u: P]: P[Seq[StateDefinition]] = {
@@ -82,8 +84,8 @@ private[parsing] trait EntityParser
 
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(
-      handler | function | invariant | typeDef | state |
-        entityInclude | inlet | outlet | term | constant
+      handler(StatementsSet.EntityStatements) | function | invariant |
+        typeDef | state | entityInclude | inlet | outlet | term | constant
     ).rep
   }
 

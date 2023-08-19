@@ -12,12 +12,12 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
+private[parsing] trait FunctionParser extends TypeParser with StatementParser {
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+      case (_, _, _)                        => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -34,7 +34,9 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
   }
 
   private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
-    P(typeDef | example | function | term | functionInclude).rep(0)
+    P( typeDef | statement(StatementsSet.FunctionStatements) | function |
+        term | functionInclude
+    ).rep(0)
   }
 
   private def functionBody[u: P]: P[
@@ -77,9 +79,11 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
         val examples = mapTo[Example](groups.get(classOf[Example]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[FunctionDefinition]](groups.get(
-          classOf[Include[FunctionDefinition]]
-        ))
+        val includes = mapTo[Include[FunctionDefinition]](
+          groups.get(
+            classOf[Include[FunctionDefinition]]
+          )
+        )
         Function(
           loc,
           id,
