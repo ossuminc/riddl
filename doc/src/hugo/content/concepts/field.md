@@ -9,10 +9,8 @@ projection. A field is a simple mapping of a name to a type. For example:
 ```name: Number```
 
 specifies that the field named `name` has type `Number`. Fields are most often
-referenced in 
-[actions]({{< relref "action" >}}) and 
-[expressions]({{< relref "expression" >}}) to supply values over which 
-computations are performed. 
+referenced in [conditionals]({{< relref "conditional.md" >}}) to supply 
+the values over which truthiness is computed. 
 
 ## Occurs In
 * [Types]({{< relref "type.md" >}}) 

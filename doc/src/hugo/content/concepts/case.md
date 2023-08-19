@@ -28,8 +28,8 @@ The following table shows the pairings recognized:
 
 ## Occurs In
 * [Epic]({{< relref "epic.md" >}})
-* [Use Case]({{< relref "case.md" >}})
+* [Use Case]({{< relref "./case.md" >}})
 
 ## Contains)
-* [Examples]({{< relref "example.md" >}})
+* [Statements]({{< relref "statement.md" >}})
 

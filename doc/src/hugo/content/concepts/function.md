@@ -15,5 +15,5 @@ for something once.
 
 ## Contains
 * [Fields]({{< relref "field.md" >}})
-* [Examples]({{< relref "example.md" >}})
+* [Statements]({{< relref "statement.md" >}})
 * [Functions]({{< relref "function.md" >}}) {{< icon "rotate-left" >}}
