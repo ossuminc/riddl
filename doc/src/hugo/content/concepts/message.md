@@ -13,7 +13,7 @@ and the _lingua franca_ of many RIDDL definitions. They define the API for:
 * [`context`s]({{< relref "context.md" >}})
 * [`entity`s]({{< relref "entity.md" >}})
 * [`processor`s]({{< relref "processor.md" >}})
-* [`projection`s]({{< relref "projection.md" >}})
+* [`projector`s]({{< relref "projector.md" >}})
 * and [`repository`s]({{< relref "repository.md" >}})
 
 * That is, these are the fundamental building blocks of a

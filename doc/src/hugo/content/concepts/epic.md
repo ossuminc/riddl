@@ -23,18 +23,18 @@ which have these three ideas:
 * A `benefit` that provides the reason why the narrator wants to 
   use the `capability`
 
-A RIDDL Epic also provides a set of use cases that relate the story to 
-other RIDDL components through the steps taken for each 
-[`case`]({{< relref "case.md" >}}. Each case specifies a set of 
-`interactions` that define and label the interactions between other RIDDL 
-definitions such as 
-[elements]({{< relref "element.md" >}}), 
-[entities]({{< relref "entity.md" >}}), and 
-[projections]({{< relref "projection.md" >}}). 
+A RIDDL Epic also provides a set of use cases that relate the story to
+other RIDDL components through the steps taken for each
+[`case`]({{< relref "case.md" >}}. Each case specifies a set of
+`interactions` that define and label the interactions between other RIDDL
+definitions such as
+[elements]({{< relref "element.md" >}}),
+[entities]({{< relref "entity.md" >}}), and
+[projectors]({{< relref "projector.md" >}}).
 Cases can also outline user acceptance testing.
 
-Stories are designed to produce sequence diagrams. This allows the intended 
-interaction of some user (human or not) with the system being 
+Stories are designed to produce sequence diagrams. This allows the intended
+interaction of some user (human or not) with the system being
 designed in RIDDL to support a detailed definition of a
 [user story](https://en.wikipedia.org/wiki/User_story).
 

@@ -15,7 +15,7 @@ the values over which truthiness is computed.
 ## Occurs In
 * [Types]({{< relref "type.md" >}}) 
 * [States]({{< relref "state.md" >}})
-* [Projections]({{< relref "projection.md" >}})
+* [Projectors]({{< relref "projector.md" >}})
 
 # Contains
 Nothing

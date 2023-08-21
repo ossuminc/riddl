@@ -70,7 +70,7 @@ events from commands.
 * [Contexts]({{< relref "context.md" >}})
 * [Entities]({{< relref "entity.md" >}}) 
 * [Processors]({{< relref "processor.md" >}})
-* [Projections]({{< relref "projection.md" >}})
+* [Projectors]({{< relref "projector.md" >}})
 * [Repositories]({{< relref "repository.md" >}})
 * [State]({{< relref "state.md" >}})
 

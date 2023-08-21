@@ -70,7 +70,7 @@ With those clarifying simplifications, here's the hierarchy:
       * [Handler]({{< relref "handler.md" >}})
         * [On Clause]({{< relref "onclause.md" >}})
           * [Statement]({{< relref "statement.md" >}})
-      * [Projection]({{< relref "projection.md" >}})
+      * [Projector]({{< relref "projector.md" >}})
         * [Type]({{< relref "type.md" >}})
         * [Field]({{< relref "field.md" >}})
         * [Handler]({{< relref "handler.md" >}})
