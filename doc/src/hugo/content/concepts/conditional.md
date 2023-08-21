@@ -1,12 +1,12 @@
 ---
-title: "Expression"
+title: "Condition"
 draft: false
 ---
 
-TBD - This part of RIDDL may change significantly in the future.
+A condition is a logical (boolean) expression resulting in true or false.
 
-## Literal Expressions (#literal)
-TBD
+## Arbitrary Conditional (#arbitrary)
+* just a string
 
 ## Numeric Expressions (#numeric)
 TBD
