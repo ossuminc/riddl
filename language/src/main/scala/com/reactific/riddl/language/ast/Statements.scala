@@ -9,7 +9,7 @@ package com.reactific.riddl.language.ast
 import scala.collection.Map
 
 trait Statements {
-  this: Definitions with AbstractDefinitions =>
+  this: Definitions with Conditions with Values with AbstractDefinitions =>
 
   trait StatementBaseImpl extends Statement {
     def contents: Seq[Definition] = Seq.empty[Definition]
@@ -188,4 +188,43 @@ trait Statements {
     override def format: String = s"tell ${msg.format} to ${entityRef.format}"
   }
 
+  /** An action whose behavior is to set the value of a state field to some expression
+    *
+    * @param loc
+    *   The location where the action occurs int he source
+    * @param target
+    *   The path identifier of the entity's state field that is to be set
+    * @param value
+    *   An expression for the value to set the field to
+    */
+  case class SetStatement(
+    loc: At,
+    target: PathIdentifier,
+    value: Value
+  ) extends StatementBaseImpl {
+    override def format: String = {
+      s"set ${target.format} to ${value.format}"
+    }
+  }
+
+  case class IfStatement(
+    loc: At,
+    conditional: Condition,
+    then_ : Seq[Statement],
+    else_ : Seq[Statement] = Seq.empty[Statement]
+  ) extends StatementBaseImpl {
+    override def format: String = s"if ${conditional.format}\n" +
+      then_.map(_.format).mkString("\n") + " else \n" +
+      else_.map(_.format).mkString("\nend")
+  }
+
+  case class ForEachStatement(
+    loc: At,
+    ref: PathIdentifier,
+    do_ : Seq[Statement]
+  ) extends StatementBaseImpl {
+    def format: String = s"foreach ${ref.format} do \n" +
+      do_.map(_.format).mkString("\n") + "end\n"
+  }
+  
 }

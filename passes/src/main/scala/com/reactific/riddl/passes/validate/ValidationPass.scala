@@ -19,12 +19,13 @@ import scala.collection.mutable
 object ValidationPass extends PassInfo {
   val name: String = "validation"
 }
+
 /** The ValidationPass
- *
- * @param resolution
- * Output of the prior Resolution pass including Symbols and Resolution passes
- */
-case class ValidationPass (input: PassInput) extends Pass(input) with StreamingValidation {
+  *
+  * @param resolution
+  *   Output of the prior Resolution pass including Symbols and Resolution passes
+  */
+case class ValidationPass(input: PassInput) extends Pass(input) with StreamingValidation {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -35,15 +36,13 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
   lazy val symbols: SymbolsOutput = input.outputOf[SymbolsOutput](SymbolsPass.name)
   lazy val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
 
-  /**
-   * Generate the output of this Pass. This will only be called after all the calls
-   * to process have completed.
-   *
-   * @return an instance of the output type
-   */
+  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+    *
+    * @return
+    *   an instance of the output type
+    */
   override def result: ValidationOutput = {
-    ValidationOutput(messages.toMessages, inlets, outlets,
-      connectors, streamlets, sends.toMap)
+    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets, sends.toMap)
   }
 
   def postProcess(root: RootContainer): Unit = {
@@ -81,7 +80,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
         validateConstant(c, parentsAsSeq)
-      case i: Include[ApplicationDefinition]@unchecked =>
+      case i: Include[ApplicationDefinition] @unchecked =>
         validateInclude(i)
       case s: State =>
         validateState(s, parentsAsSeq)
@@ -125,7 +124,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
         validateInput(in, parentsAsSeq)
       case out: Output =>
         validateOutput(out, parentsAsSeq)
-      case i: Interaction => validateInteraction(i, parentsAsSeq)
+      case i: Interaction   => validateInteraction(i, parentsAsSeq)
       case _: RootContainer => ()
 
       // NOTE: Never put a catch-all here, every Definition type must be handled
@@ -192,7 +191,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     checkOption(i.expression, "condition", i) { expr =>
       checkExpression(expr, i, parents)
     }
-    .checkDescription(i)
+      .checkDescription(i)
   }
 
   private def validateInlet(
@@ -223,7 +222,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
       case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
         val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
         val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
-        if !areSameType(inletType, outletType) then  {
+        if !areSameType(inletType, outletType) then {
           messages.addError(
             inlet.loc,
             s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
@@ -232,7 +231,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
           )
         }
       case _ =>
-        // one of the two didn't resolve, already handled above.
+      // one of the two didn't resolve, already handled above.
     }
   }
 
@@ -258,7 +257,7 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
       t.loc
     )
     if !t.typ.isInstanceOf[AggregateTypeExpression] then {
-        checkTypeExpression(t.typ, t, parents)
+      checkTypeExpression(t.typ, t, parents)
     }
     checkDescription(t)
   }
@@ -271,8 +270,10 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     val expr = c.value.asInstanceOf[Expression]
     val maybeTypEx = getExpressionType(expr, parents)
     if !isAssignmentCompatible(Some(c.typeEx), maybeTypEx) then {
-      messages.addError(expr. loc,
-        s"Expression value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}")
+      messages.addError(
+        expr.loc,
+        s"Expression value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}"
+      )
     }
     checkDescription(c)
   }
@@ -315,7 +316,6 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     checkDescription(h)
   }
 
-
   private def validateInclude[T <: Definition](
     i: Include[T]
   ): Unit = {
@@ -330,11 +330,13 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     checkContainer(parents, e)
     checkOptions[EntityOption](e.options, e.loc)
     if e.states.isEmpty && !e.isEmpty then {
-      messages.add(Message(
-        e.loc,
-        s"${e.identify} must define at least one state",
-        Messages.MissingWarning
-      ))
+      messages.add(
+        Message(
+          e.loc,
+          s"${e.identify} must define at least one state",
+          Messages.MissingWarning
+        )
+      )
     }
     if e.handlers.nonEmpty && e.handlers.forall(_.clauses.isEmpty) then {
       messages.add(
@@ -342,22 +344,25 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
       )
     }
     if e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2 then {
-      messages.add(Message(
-        e.loc,
-        s"${e.identify} is declared as an fsm, but doesn't have at least two states",
-        Messages.Error
-      ))
+      messages.add(
+        Message(
+          e.loc,
+          s"${e.identify} is declared as an fsm, but doesn't have at least two states",
+          Messages.Error
+        )
+      )
     }
     if e.states.nonEmpty && e.states.forall(_.handlers.isEmpty) && e.handlers.isEmpty then {
       messages.add(
         Message(
           e.loc,
           s"${e.identify} has ${e.states.size} state${
-            if e.states.size != 1 then "s"
-            else ""
-          } but no handlers.",
+              if e.states.size != 1 then "s"
+              else ""
+            } but no handlers.",
           Messages.Error
-        ))
+        )
+      )
     }
     checkDescription(e)
   }
@@ -367,13 +372,14 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, p)
-    check(p.types.exists { (typ: Type) =>
-      typ.typ match {
-        case auc: AggregateUseCaseTypeExpression =>
-          auc.usecase == RecordCase
-        case _ => false
-      }
-    },
+    check(
+      p.types.exists { (typ: Type) =>
+        typ.typ match {
+          case auc: AggregateUseCaseTypeExpression =>
+            auc.usecase == RecordCase
+          case _ => false
+        }
+      },
       s"${p.identify} lacks a required ${RecordCase.format} definition.",
       Messages.Error,
       p.loc
@@ -465,14 +471,14 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
   ): Unit = {
     checkContainer(parents, s)
     check(
-      s.doAction.getClass == s.undoAction.getClass,
+      s.doStatements.getClass == s.undoStatements.getClass,
       "The primary action and revert action must be the same shape",
       Messages.Error,
       s.loc
     )
     val parentsSeq = parents.toSeq
-    checkExamples(s.doAction, s +: parentsSeq)
-    checkExamples(s.undoAction, s +: parentsSeq)
+    checkStatements(s.doStatements, s +: parentsSeq)
+    checkStatements(s.undoStatements, s +: parentsSeq)
     checkDescription(s)
   }
 
@@ -552,55 +558,55 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, uc)
-      if uc.contents.nonEmpty then {
-        uc.contents.foreach { step =>
-          step match {
-            case seq: SequentialInteractions =>
-              if seq.contents.isEmpty then {
-                messages.addMissing(seq.loc,
-                  "Sequential interactions should not be empty")
-              }
-            case par: ParallelInteractions =>
-              if par.contents.isEmpty then {
-                messages.addMissing(
-                  par.loc,
-                  "Parallel interaction should not be empty"
-                )
-              }
-            case opt: OptionalInteractions =>
-              if opt.contents.isEmpty then {
-                messages.addMissing(
-                  opt.loc,
-                  "Optional interaction should not be empty"
-                )
-              }
-            case is: GenericInteraction =>
-              checkPathRef[Definition](is.from.pathId, uc, parents)
-              checkPathRef[Definition](is.to.pathId, uc, parents)
-              if is.relationship.isEmpty then {
-                messages.addMissing(
-                  step.loc,
-                  s"Interactions must have a non-empty relationship"
-                )
-              }
-          }
+    if uc.contents.nonEmpty then {
+      uc.contents.foreach { step =>
+        step match {
+          case seq: SequentialInteractions =>
+            if seq.contents.isEmpty then {
+              messages.addMissing(seq.loc, "Sequential interactions should not be empty")
+            }
+          case par: ParallelInteractions =>
+            if par.contents.isEmpty then {
+              messages.addMissing(
+                par.loc,
+                "Parallel interaction should not be empty"
+              )
+            }
+          case opt: OptionalInteractions =>
+            if opt.contents.isEmpty then {
+              messages.addMissing(
+                opt.loc,
+                "Optional interaction should not be empty"
+              )
+            }
+          case is: GenericInteraction =>
+            checkPathRef[Definition](is.from.pathId, uc, parents)
+            checkPathRef[Definition](is.to.pathId, uc, parents)
+            if is.relationship.isEmpty then {
+              messages.addMissing(
+                step.loc,
+                s"Interactions must have a non-empty relationship"
+              )
+            }
         }
       }
-      if uc.nonEmpty then {
-        if uc.contents.isEmpty then (
+    }
+    if uc.nonEmpty then {
+      if uc.contents.isEmpty then
+        (
           messages.addMissing(
             uc.loc,
             s"${uc.identify} doesn't define any interactions"
           )
-        )
-      }
-      checkDescription(uc)
+      )
+    }
+    checkDescription(uc)
   }
 
   private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, interaction)
     interaction match {
-      case SelfInteraction(_,_,from,_,_,_) => checkRef[Definition](from, interaction, parents)
+      case SelfInteraction(_, _, from, _, _, _) => checkRef[Definition](from, interaction, parents)
       case PutInputInteraction(_, _, from, _, to, _, _) =>
         checkRef[User](from, interaction, parents)
         checkRef[Input](to, interaction, parents)
@@ -611,12 +617,10 @@ case class ValidationPass (input: PassInput) extends Pass(input) with StreamingV
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
       case _ => ()
-        // These are all just containers of other interactions, not needing further validation
-        // OptionalInteractions, ParallelInteractions, SequentialInteractions
+      // These are all just containers of other interactions, not needing further validation
+      // OptionalInteractions, ParallelInteractions, SequentialInteractions
     }
     checkDescription(interaction)
   }
-
-
 
 }

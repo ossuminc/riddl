@@ -14,7 +14,7 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Parsing rules for Type definitions */
-private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
+private[parsing] trait TypeParser extends CommonParser with ConditionParser {
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
@@ -220,61 +220,61 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
-  private def integerPredefTypes[u:P]: P[IntegerTypeExpression] = {
+  private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
     P(
-      location ~ (
-        StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural).! ~~ !CharPred(_.isLetterOrDigit)
-      | rangeType)
+      location ~ (StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural).! ~~ !CharPred(
+        _.isLetterOrDigit
+      )
+        | rangeType)
     ).map {
-      case (at, Predefined.Boolean)     => AST.Bool(at)
-      case (at, Predefined.Integer)     => AST.Integer(at)
-      case (at, Predefined.Natural)     => AST.Natural(at)
-      case (at, Predefined.Whole)       => AST.Whole(at)
-      case (_: At, range: RangeType)    => range
-      case (_, _) => ??? // FIXME: correct this
+      case (at, Predefined.Boolean)  => AST.Bool(at)
+      case (at, Predefined.Integer)  => AST.Integer(at)
+      case (at, Predefined.Natural)  => AST.Natural(at)
+      case (at, Predefined.Whole)    => AST.Whole(at)
+      case (_: At, range: RangeType) => range
+      case (_, _)                    => ??? // FIXME: correct this
     }
   }
 
-  private def realPredefTypes[u:P]: P[RealTypeExpression] = {
+  private def realPredefTypes[u: P]: P[RealTypeExpression] = {
     P(
-      location ~ (
-        StringIn(
-          Predefined.Current,
-          Predefined.Length,
-          Predefined.Luminosity,
-          Predefined.Mass,
-          Predefined.Mole,
-          Predefined.Number,
-          Predefined.Real,
-          Predefined.Temperature,
-        ).! ~~ !CharPred(_.isLetterOrDigit))
+      location ~ (StringIn(
+        Predefined.Current,
+        Predefined.Length,
+        Predefined.Luminosity,
+        Predefined.Mass,
+        Predefined.Mole,
+        Predefined.Number,
+        Predefined.Real,
+        Predefined.Temperature
+      ).! ~~ !CharPred(_.isLetterOrDigit))
     ).map {
-      case (at: At, Predefined.Current) => Current(at)
-      case (at: At, Predefined.Length)=> Length(at)
-      case (at: At, Predefined.Luminosity) => Luminosity(at)
-      case (at: At, Predefined.Mass) => Mass(at)
-      case (at: At, Predefined.Mole) => Mole(at)
-      case (at: At, Predefined.Number) => Number(at)
-      case (at: At, Predefined.Real) => Real(at)
+      case (at: At, Predefined.Current)     => Current(at)
+      case (at: At, Predefined.Length)      => Length(at)
+      case (at: At, Predefined.Luminosity)  => Luminosity(at)
+      case (at: At, Predefined.Mass)        => Mass(at)
+      case (at: At, Predefined.Mole)        => Mole(at)
+      case (at: At, Predefined.Number)      => Number(at)
+      case (at: At, Predefined.Real)        => Real(at)
       case (at: At, Predefined.Temperature) => Temperature(at)
     }
   }
 
-  private def timePredefTypes[u:P]: P[TypeExpression] = {
+  private def timePredefTypes[u: P]: P[TypeExpression] = {
     P(
       location ~ StringIn(
         Predefined.Duration,
         Predefined.DateTime,
         Predefined.Date,
         Predefined.TimeStamp,
-        Predefined.Time,
+        Predefined.Time
       ).! ~~ !CharPred(_.isLetterOrDigit)
     ).map {
       case (at: At, Predefined.Duration) => Duration(at)
-      case (at, Predefined.DateTime) => DateTime(at)
-      case (at, Predefined.Date) => Date(at)
-      case (at, Predefined.TimeStamp) => TimeStamp(at)
-      case (at, Predefined.Time) => Time(at)
+      case (at, Predefined.DateTime)     => DateTime(at)
+      case (at, Predefined.Date)         => Date(at)
+      case (at, Predefined.TimeStamp)    => TimeStamp(at)
+      case (at, Predefined.Time)         => Time(at)
     }
   }
 
@@ -287,15 +287,15 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
         Predefined.Location,
         Predefined.Nothing,
         Predefined.Number,
-        Predefined.UUID,
+        Predefined.UUID
       ).! ~~ !CharPred(_.isLetterOrDigit)
     ).map {
-      case (at, Predefined.Abstract)    => AST.Abstract(at)
-      case (at, Predefined.Location)    => AST.Location(at)
-      case (at, Predefined.Nothing)     => AST.Nothing(at)
-      case (at, Predefined.Natural)     => AST.Natural(at)
-      case (at, Predefined.Number)      => AST.Number(at)
-      case (at, Predefined.UUID)        => AST.UUID(at)
+      case (at, Predefined.Abstract) => AST.Abstract(at)
+      case (at, Predefined.Location) => AST.Location(at)
+      case (at, Predefined.Nothing)  => AST.Nothing(at)
+      case (at, Predefined.Natural)  => AST.Natural(at)
+      case (at, Predefined.Number)   => AST.Number(at)
+      case (at, Predefined.UUID)     => AST.UUID(at)
       case (at, _) =>
         error("Unrecognized predefined type")
         AST.Abstract(at)
@@ -303,8 +303,10 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
   }
 
   private def simplePredefinedTypes[u: P]: P[TypeExpression] = {
-    P(stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
-      decimalType | otherTypes)./
+    P(
+      stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
+        decimalType | otherTypes
+    )./
   }
 
   private def decimalType[u: P]: P[Decimal] = {
@@ -371,8 +373,8 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
     )
   }
 
-  private def fieldValue[u: P]: P[Option[Expression]] = {
-    P(Punctuation.roundOpen ~ expression ~ Punctuation.roundClose./).?
+  private def fieldValue[u: P]: P[Option[Value]] = {
+    P(Punctuation.roundOpen ~ value ~ Punctuation.roundClose./).?
   }
 
   def field[u: P]: P[Field] = {
@@ -537,7 +539,7 @@ private[parsing] trait TypeParser extends CommonParser with ExpressionParser {
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
 
-  private def constantExpression[u: P]: P[Expression] = {
+  private def constantExpression[u: P]: P[Value] = {
     P(
       trueCondition | falseCondition | decimalValue |
         integerValue | stringValue

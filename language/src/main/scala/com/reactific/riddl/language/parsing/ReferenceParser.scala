@@ -88,6 +88,16 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (TypeRef.apply _).tupled(tpl))
   }
 
+  def fieldRef[u: P]: P[FieldRef] = {
+    P(location ~ Keywords.field ~ pathIdentifier)
+      .map(tpl => (FieldRef.apply _).tupled(tpl))
+  }
+
+  def constantRef[u: P]: P[ConstantRef] = {
+    P(location ~ Keywords.const ~ pathIdentifier)
+      .map(tpl => (ConstantRef.apply _).tupled(tpl))
+  }
+
   def contextRef[u: P]: P[ContextRef] = {
     P(location ~ Keywords.context ~ pathIdentifier)
       .map(tpl => (ContextRef.apply _).tupled(tpl))

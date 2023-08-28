@@ -13,8 +13,7 @@ import com.reactific.riddl.utils.TextFileWriter
 import java.nio.file.Path
 import scala.annotation.unused
 
-case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
-    extends TextFileWriter {
+case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends TextFileWriter {
 
   def fileHead(
     title: String,
@@ -150,7 +149,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       } else { sb.append(s"* ${italic(prefix)}: $body\n") }
     }
 
-    for item <- items  do {
+    for item <- items do {
       item match {
         case (
               prefix: String,
@@ -254,8 +253,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
         case _: Optional =>
           if typeName.isEmpty then typeName
           else { from + " ||--o| " + typeName + " : references" }
-        case _: AliasedTypeExpression | _: EntityReferenceTypeExpression |
-            _: UniqueId =>
+        case _: AliasedTypeExpression | _: EntityReferenceTypeExpression | _: UniqueId =>
           if typeName.isEmpty then typeName
           else { from + " ||--|| " + typeName + " : references" }
         case _ => ""
@@ -313,7 +311,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     }
     state.result.usage.getUses(definition) match {
       case usages: Seq[Definition] if usages.nonEmpty => listOf("Uses", usages)
-      case _         => h2("Uses Nothing")
+      case _                                          => h2("Uses Nothing")
     }
     this
   }
@@ -375,9 +373,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       s"Boundary($name, $name, \"${brief(defntn)}\") {"
     val context_foot = prefix + "}"
 
-    val body = defntn.entities.map(e =>
-      prefix + s"  System(${e.id.format}, ${e.id.format}, \"${brief(e)}\")"
-    )
+    val body = defntn.entities.map(e => prefix + s"  System(${e.id.format}, ${e.id.format}, \"${brief(e)}\")")
     val lines: Seq[String] = heading ++ openedBoundaries ++ Seq(context_head) ++
       body ++ Seq(context_foot) ++ closedBoundaries
     emitMermaidDiagram(lines)
@@ -386,9 +382,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
   def emitTerms(terms: Seq[Term]): this.type = {
     list(
       "Terms",
-      terms.map(t =>
-        (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description)
-      )
+      terms.map(t => (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description))
     )
     this
   }
@@ -471,7 +465,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     parents: Seq[Definition]
   ): String = {
     state.refMap.definitionOf[Definition](pid, parents.head) match {
-      case None => s"unresolved path: ${pid.format}"
+      case None       => s"unresolved path: ${pid.format}"
       case Some(defn) => defn.id.format
     }
   }
@@ -605,16 +599,14 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       .toSeq
       .sortBy(_._1)
     h2("Types")
-    for  (label, list) <- groups  do { toc(label, mkTocSeq(list), 3) }
+    for (label, list) <- groups do { toc(label, mkTocSeq(list), 3) }
     this
   }
 
   def emitAuthorInfo(authors: Seq[Author], level: Int = 2): this.type = {
     for a <- authors do {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
-        a.organization.fold(Seq.empty[(String, String)])(ls =>
-          Seq("Organization" -> ls.s)
-        ) ++
+        a.organization.fold(Seq.empty[(String, String)])(ls => Seq("Organization" -> ls.s)) ++
         a.title.fold(Seq.empty[(String, String)])(ls => Seq("Title" -> ls.s))
       list("Author", items, level)
     }
@@ -763,21 +755,21 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       clause match {
-        case oic: OnInitClause    => h3(oic.kind)
-        case omc: OnMessageClause => h3(clause.kind + " " + omc.msg.format)
-        case otc: OnTerminationClause    => h3(otc.kind)
-        case ooc: OnOtherClause   => h3(ooc.kind)
+        case oic: OnInitClause        => h3(oic.kind)
+        case omc: OnMessageClause     => h3(clause.kind + " " + omc.msg.format)
+        case otc: OnTerminationClause => h3(otc.kind)
+        case ooc: OnOtherClause       => h3(ooc.kind)
       }
       emitShortDefDoc(clause)
-      emitStatements(clause.statements)
+      emitStatements(clause.statements, 4)
       // emitExamples(clause.examples, 4)
     }
     emitUsage(handler)
     this
   }
 
-  private def emitStatements(statements: Seq[Statement]): this.type = {
-    list(statements.map(_.format))
+  private def emitStatements(statements: Seq[Statement], level: Int): this.type = {
+    list("statement", statements.map(_.format), level)
     this
   }
 
@@ -809,9 +801,9 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       h3(step.identify)
       emitShortDefDoc(step)
       h4("Do Examples")
-      emitExamples(step.doAction, 5)
+      emitStatements(step.doStatements, 5)
       h4("Undo Examples")
-      emitExamples(step.undoAction, 5)
+      emitStatements(step.undoStatements, 5)
     }
     this
   }
@@ -834,7 +826,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     containerHead(application, "Application")
     val parents = state.makeParents(stack)
     emitDefDoc(application, parents)
-    for  group <- application.groups  do {
+    for group <- application.groups do {
       h2(group.identify)
       list(group.elements.map(_.format))
     }
@@ -878,7 +870,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
     leafHead(uc, weight = 20)
     val parList = state.makeParents(parents)
     emitDefDoc(uc, parList)
-   // TODO: Finish emitting a UseCase page
+    // TODO: Finish emitting a UseCase page
   }
 
   def emitConnection(conn: Connector, parents: Seq[String]): this.type = {
@@ -992,7 +984,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState)
       Option("A list of definitions needing more work")
     )
     h2("Definitions With Missing Content")
-    for  (key, items) <- map  do {
+    for (key, items) <- map do {
       h3(key)
       list(items)
     }

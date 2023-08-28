@@ -10,7 +10,7 @@ import com.reactific.riddl.language.parsing.Terminals.*
 
 /** A portion of the AST that deals with Types and TypeExpressions */
 trait Types {
-  this: AbstractDefinitions =>
+  this: AbstractDefinitions with Values =>
 
 ///////////////////////////////////////////////////////////// TYPES
 
@@ -242,7 +242,7 @@ trait Types {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    default: Option[ForwardDeclaredExpression] = None,
+    default: Option[Value] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition

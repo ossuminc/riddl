@@ -80,8 +80,8 @@ object C {
       "-deprecation",
       "-feature",
       "-new-syntax",
-      "-explain",
-      "-explain-types",
+      // "-explain",
+      // "-explain-types",
       "-Werror",
       "-pagewidth",
       "120"

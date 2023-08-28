@@ -318,22 +318,19 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def emitExample(example: Example): this.type = {
-    if !example.isImplicit then {
-      openDef(example)
+  def emitStatement(statement: Statement): this.type = {
+    if !statement.isImplicit then {
+      openDef(statement)
     }
-    emitGherkinClauses("given ", example.givens)
-      .emitGherkinClauses("when", example.whens)
-      .emitGherkinClauses("then", example.thens)
-      .emitGherkinClauses("but", example.buts)
-    if !example.isImplicit then {
-      closeDef(example)
+    // TODO: implement emitStatemetns
+    if !statement.isImplicit then {
+      closeDef(statement)
     }
     this
   }
 
-  def emitExamples(examples: Seq[Example]): this.type = {
-    examples.foreach(emitExample)
+  def emitStatements(statements: Seq[Statement]): this.type = {
+    statements.foreach(emitStatement)
     this
   }
 

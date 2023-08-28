@@ -12,7 +12,7 @@ import com.reactific.riddl.language.parsing.Terminals.Keywords
 /** Unit Tests For Definitions */
 trait Definitions {
 
-  this: Expressions with Options with Types with AbstractDefinitions with Statements =>
+  this: AbstractDefinitions with Conditions with Options with Statements with Types with Values =>
 
   /** Base trait of any definition that is in the content of an adaptor
     */
@@ -440,7 +440,7 @@ trait Definitions {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    value: Expression,
+    value: Value,
     brief: Option[LiteralString],
     description: Option[Description]
   ) extends LeafDefinition
@@ -451,6 +451,13 @@ trait Definitions {
     /** Format the node to a string */
     override def format: String =
       s"${Keywords.const} ${id.format} is ${typeEx.format} = ${value.format}"
+  }
+
+  case class ConstantRef(
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends Reference[Field] {
+    override def format: String = s"${Keywords.const} ${pathId.format}"
   }
 
   /** A type definition which associates an identifier with a type expression.
@@ -508,6 +515,13 @@ trait Definitions {
     pathId: PathIdentifier = PathIdentifier.empty
   ) extends Reference[Type] {
     override def format: String = s"${Keywords.`type`} ${pathId.format}"
+  }
+
+  case class FieldRef(
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends Reference[Field] {
+    override def format: String = s"${Keywords.field} ${pathId.format}"
   }
 
   // ////////////////////////////////////////////////////////// Gherkin
@@ -707,14 +721,14 @@ trait Definitions {
   case class Invariant(
     loc: At,
     id: Identifier,
-    expression: Option[Condition] = None,
+    condition: Option[Condition] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
       with EntityDefinition
       with ProjectorDefinition
       with StateDefinition {
-    override def isEmpty: Boolean = expression.isEmpty
+    override def isEmpty: Boolean = condition.isEmpty
 
     def format: String = ""
 
@@ -1587,10 +1601,10 @@ trait Definitions {
     *   The location of the saga action definition
     * @param id
     *   The name of the SagaAction
-    * @param doAction
+    * @param doStatements
     *   The command to be done.
-    * @param undoAction
-    *   The command that undoes [[doAction]]
+    * @param undoStatements
+    *   The command that undoes [[doStatements]]
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -1599,12 +1613,12 @@ trait Definitions {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doAction: Seq[Statement] = Seq.empty[Statement],
-    undoAction: Seq[Statement] = Seq.empty[Statement],
+    doStatements: Seq[Statement] = Seq.empty[Statement],
+    undoStatements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends SagaDefinition {
-    def contents: Seq[Statement] = doAction ++ undoAction
+    def contents: Seq[Statement] = doStatements ++ undoStatements
 
     def format: String = s"${Keywords.step} ${id.format}"
 

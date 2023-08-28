@@ -92,7 +92,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
     "emit type expressions" in {
       rfe.clear
-      rfe.emitTypeExpression(Decimal(At.empty,8,3)).toString mustBe
+      rfe.emitTypeExpression(Decimal(At.empty, 8, 3)).toString mustBe
         "Decimal(8,3)"
       rfe.clear
       rfe.emitTypeExpression(Real(At.empty)).toString mustBe "Real"
@@ -105,8 +105,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear
       rfe.emitTypeExpression(Abstract(At.empty)).toString mustBe "Abstract"
       rfe.clear
-      rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42))
-        .toString mustBe "Integer{24,42}"
+      rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42)).toString mustBe "Integer{24,42}"
     }
     "emit actions" in {
       val action = ArbitraryAction(At.empty, LiteralString(At.empty, "blah"))
@@ -128,62 +127,15 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
           |""".stripMargin
 
     }
-    "emit examples" in {
+    "emit statements" in {
       rfe.clear
-      val thenClause = ThenClause(
-        At.empty,
-        ArbitraryAction(
-          At.empty,
-          LiteralString(At.empty, "ya gots ta do betta")
-        )
-      )
-      val example = Example(
-        At.empty,
-        Identifier(At.empty, "ex-maple"),
-        Seq(GivenClause(
-          At.empty,
-          Seq(LiteralString(At.empty, "It's like this, see"))
-        )),
-        Seq(WhenClause(
-          At.empty,
-          NotCondition(
-            At.empty,
-            Comparison(
-              At.empty,
-              lt,
-              ArbitraryExpression(LiteralString(At.empty, "one")),
-              ArbitraryExpression(LiteralString(At.empty, "two"))
-            )
-          )
-        )),
-        Seq(thenClause, thenClause),
-        Seq(ButClause(
-          At.empty,
-          ArbitraryAction(
-            At.empty,
-            LiteralString(At.empty, "no at familia expense")
-          )
-        ))
+      val statements = Seq(
+        ArbitraryStatement(At.empty, LiteralString(At.empty, "ya gots ta do betta"))
       )
 
-      val examples = Seq(example, example)
-      rfe.emitExamples(examples)
+      rfe.emitStatements(statements)
       val expected =
-        """example ex-maple is {
-          |  given  "It's like this, see"
-          |  when not(<("one","two"))
-          |  then "ya gots ta do betta"
-          |  and "ya gots ta do betta"
-          |  but "no at familia expense"
-          |}
-          |example ex-maple is {
-          |  given  "It's like this, see"
-          |  when not(<("one","two"))
-          |  then "ya gots ta do betta"
-          |  and "ya gots ta do betta"
-          |  but "no at familia expense"
-          |}
-          |""".stripMargin
+        """"ya gots ta do betta"""".stripMargin
       rfe.toString mustBe expected
     }
 

@@ -111,7 +111,8 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     parents: Seq[Definition]
   ): Unit = {
     definition match {
-      case example: Example => state.withCurrent(_.emitExample(example))
+      case statement: Statement => state.withCurrent(_.emitStatement(statement))
+      // case example: Example => state.withCurrent(_.emitExample(example))
       case invariant: Invariant =>
         state.withCurrent(
           _.openDef(invariant).closeDef(invariant, withBrace = false)
@@ -324,9 +325,9 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   ): Unit = {
     state.withCurrent(
       _.openDef(step)
-        .emitExamples(step.doAction)
+        .emitStatements(step.doStatements)
         .add("reverted by")
-        .emitExamples(step.undoAction)
+        .emitStatements(step.undoStatements)
     )
   }
 

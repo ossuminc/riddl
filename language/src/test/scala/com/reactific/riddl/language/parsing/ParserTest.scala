@@ -230,20 +230,11 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow entity definitions in contexts" in {
+    "allow entity definitions" in {
       val input = RiddlParserInput("""entity Hamburger is {
          |  options ( transient, aggregate ) type Foo is { x: String }
-         |  state foo of type Foo {
-         |  handler foo is {} }
-         |  function AnAspect is {
-         |    EXAMPLE foo {
-         |      GIVEN "everybody hates me"
-         |      AND "I'm depressed"
-         |      WHEN "I go fishing"
-         |      THEN "I'll just eat worms"
-         |      ELSE "I'm happy"
-         |    }
-         |  }
+         |  state BurgerState of type BurgerStruct {
+         |  handler BurgerHandler is {} }
          |}
          |""".stripMargin)
       parseDefinition[Entity](input) match {
@@ -251,18 +242,18 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((content, rpi)) =>
-          content mustBe Entity(
+          val expected = Entity(
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
             Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
             Seq(
               State(
                 (3, 3, rpi),
-                Identifier((3, 9, rpi), "foo"),
-                TypeRef((3, 16, rpi), PathIdentifier((3, 21, rpi), Seq("Foo"))),
+                Identifier((3, 9, rpi), "BurgerState"),
+                TypeRef((3, 24, rpi), PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
                 List(),
-                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "foo")))
-              )
+                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
+              ),
             ),
             List(
               Type(
@@ -283,57 +274,9 @@ class ParserTest extends ParsingTest {
                 None,
                 None
               )
-            ),
-            functions = Seq(
-              Function(
-                (5, 3, rpi),
-                Identifier((5, 12, rpi), "AnAspect"),
-                examples = Seq(
-                  Example(
-                    (6, 5, rpi),
-                    Identifier((6, 13, rpi), "foo"),
-                    Seq(
-                      GivenClause(
-                        (7, 7, rpi),
-                        Seq(LiteralString((7, 13, rpi), "everybody hates me"))
-                      ),
-                      GivenClause(
-                        (8, 7, rpi),
-                        Seq(LiteralString((8, 11, rpi), "I'm depressed"))
-                      )
-                    ),
-                    Seq(
-                      WhenClause(
-                        (9, 7, rpi),
-                        ArbitraryCondition(
-                          (9, 12, rpi),
-                          LiteralString((9, 12, rpi), "I go fishing")
-                        )
-                      )
-                    ),
-                    Seq(
-                      ThenClause(
-                        (10, 7, rpi),
-                        ArbitraryAction(
-                          (10, 12, rpi),
-                          LiteralString((10, 12, rpi), "I'll just eat worms")
-                        )
-                      )
-                    ),
-                    Seq(
-                      ButClause(
-                        (11, 7, rpi),
-                        ArbitraryAction(
-                          (11, 12, rpi),
-                          LiteralString((11, 12, rpi), "I'm happy")
-                        )
-                      )
-                    )
-                  )
-                )
-              )
             )
           )
+          content mustBe expected
       }
     }
     "allow adaptor definitions" in {
@@ -411,7 +354,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
           val r = domain.contexts.head.replicas.head
-          r.typeExp mustBe Integer((3,21,rpi))
+          r.typeExp mustBe Integer((3, 21, rpi))
       }
     }
   }

@@ -132,7 +132,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
       DecimalValue(loc, BigDecimal(a + b + c + d + e))
     }
   }
-
+  
   def stringValue[u: P]: P[StringValue] = {
     P(
       location ~ Punctuation.quote ~ (strChars | escape).rep.! ~

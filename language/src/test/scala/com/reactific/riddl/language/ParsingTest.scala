@@ -19,8 +19,7 @@ import scala.annotation.unused
 import scala.reflect.*
 
 trait ParsingTestBase extends AnyWordSpec with Matchers {
-  case class StringParser(content: String)
-      extends TopLevelParser(RiddlParserInput(content))
+  case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content))
 }
 
 case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
@@ -37,18 +36,21 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 
   protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
-      case x if x == classOf[AST.Type]      => typeDef(_)
-      case x if x == classOf[AST.Domain]    => domain(_)
-      case x if x == classOf[AST.Context]   => context(_)
-      case x if x == classOf[AST.Entity]    => entity(_)
-      case x if x == classOf[AST.Adaptor]   => adaptor(_)
-      case x if x == classOf[AST.Invariant] => invariant(_)
-      case x if x == classOf[AST.Function]  => function(_)
-      case x if x == classOf[AST.Streamlet] => streamlet(_)
-      case x if x == classOf[AST.Saga]      => saga(_)
-      case x if x == classOf[AST.Repository]=> repository(_)
-      case x if x == classOf[AST.Projector] => projector(_)
-      case x if x == classOf[AST.Epic]      => epic(_)
+      case x if x == classOf[AST.Type]       => typeDef(_)
+      case x if x == classOf[AST.Domain]     => domain(_)
+      case x if x == classOf[AST.Context]    => context(_)
+      case x if x == classOf[AST.Entity]     => entity(_)
+      case x if x == classOf[AST.Adaptor]    => adaptor(_)
+      case x if x == classOf[AST.Invariant]  => invariant(_)
+      case x if x == classOf[AST.Function]   => function(_)
+      case x if x == classOf[AST.Streamlet]  => streamlet(_)
+      case x if x == classOf[AST.Saga]       => saga(_)
+      case x if x == classOf[AST.Repository] => repository(_)
+      case x if x == classOf[AST.Projector]  => projector(_)
+      case x if x == classOf[AST.Epic]       => epic(_)
+      case x if x == classOf[AST.Statement]  => statement(StatementsSet.EntityStatements)(_)
+      case x if x == classOf[AST.Condition]  => condition(_)
+      case x if x == classOf[AST.Value]      => value(_)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"

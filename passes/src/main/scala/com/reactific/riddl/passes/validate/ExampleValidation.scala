@@ -27,6 +27,13 @@ trait ExampleValidation extends TypeValidation {
     this
   }
 
+  def checkStatements(
+    statements: Seq[Statement],
+    parents: Seq[Definition]
+  ): this.type =
+    // TODO: Write me
+    this
+
   def checkExamples(
     examples: Seq[Example],
     parents: Seq[Definition]
@@ -91,12 +98,14 @@ trait ExampleValidation extends TypeValidation {
               }
             }
           case te: TypeExpression =>
-            messages.addError(pid.loc,
+            messages.addError(
+              pid.loc,
               s"'${pid.format}' should reference a message type but is a ${errorDescription(te)} type instead."
             )
         }
       case _ =>
-        messages.addError(pid.loc,
+        messages.addError(
+          pid.loc,
           s"'${pid.format}' was expected to be a message type but is ${article(defn.kind)} instead"
         )
     }
@@ -118,7 +127,8 @@ trait ExampleValidation extends TypeValidation {
         val fields = f.input.get.fields
         val paramNames = fields.map(_.id.value)
         val argNames = args.args.keys.map(_.value).toSeq
-        val s1 = check(argNames.size == paramNames.size,
+        val s1 = check(
+          argNames.size == paramNames.size,
           s"Wrong number of arguments for ${fid.format}. Expected ${paramNames.size}, but got ${argNames.size}",
           Error,
           loc
@@ -229,8 +239,8 @@ trait ExampleValidation extends TypeValidation {
         checkExpression(value, defn, parents)
         checkAssignmentCompatability(path, value, parents)
       case AppendAction(_, value, path) =>
-         checkExpression(value, defn, parents)
-         checkPathRef[Field](path, defn, parents)
+        checkExpression(value, defn, parents)
+        checkPathRef[Field](path, defn, parents)
       case ReturnAction(_, value) =>
         checkExpression(value, defn, parents)
       case s @ SendAction(_, msg, outlet) =>
@@ -269,26 +279,25 @@ trait ExampleValidation extends TypeValidation {
                 } else {
                   val pid = resolvedState.typ.pathId
                   val maybeType = resolvePidRelativeTo[Type](pid, resolvedState)
-                    maybeType match {
-                      case Some(typ) =>
-                        if
-                          !this.isAssignmentCompatible(
-                            Some(typ.typ),
-                            Some(exprType)
-                          )
-                        then {
-                          messages.addError(
-                            value.loc,
-                            s"Morph value of type ${exprType.format} " +
-                              s"cannot be assigned to ${resolvedState.identify} value of type ${typ.identify}"
-                          )
-                        }
-                      case None =>
-                    }
+                  maybeType match {
+                    case Some(typ) =>
+                      if !this.isAssignmentCompatible(
+                          Some(typ.typ),
+                          Some(exprType)
+                        )
+                      then {
+                        messages.addError(
+                          value.loc,
+                          s"Morph value of type ${exprType.format} " +
+                            s"cannot be assigned to ${resolvedState.identify} value of type ${typ.identify}"
+                        )
+                      }
+                    case None =>
                   }
                 }
-            }
+              }
           }
+        }
 
       case CompoundAction(loc, actions) =>
         check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)

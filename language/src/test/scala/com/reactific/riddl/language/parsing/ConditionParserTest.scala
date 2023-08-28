@@ -18,8 +18,7 @@ class ConditionParserTest extends ParsingTest {
 
   def parseCondition(
     input: String
-  )(check: Condition => Assertion
-  ): Assertion = {
+  )(check: Condition => Assertion): Assertion = {
     val rpi = RiddlParserInput(input)
     parse[Condition, Condition](
       rpi,
@@ -72,36 +71,42 @@ class ConditionParserTest extends ParsingTest {
       }
     }
     "accept function call" in {
-      parseCondition("This.That(x=42)") { (cond: Condition) =>
-        cond mustBe FunctionCallCondition(
+      parseCondition("function This.That(x=42)") { (cond: Condition) =>
+        val expected = FunctionCallCondition(
           At(1 -> 1),
-          PathIdentifier(At(1 -> 1), Seq("This", "That")),
-          ArgList(ListMap(
-            Identifier(At(1 -> 11), "x") ->
-              IntegerValue(At(1 -> 13), BigInt(42))
-          ))
+          FunctionRef(1 -> 1, PathIdentifier(1 -> 10, Seq("This", "That"))),
+          ParameterValues(
+            1 -> 19,
+            Map.from(
+              Seq(
+                Identifier(1 -> 20, "x") ->
+                  IntegerValue(1 -> 22, BigInt(42))
+              )
+            )
+          )
         )
+        cond mustBe expected
       }
     }
-    "accept comparison expressions" in {
-      parseCondition("or(<(@a,42),<(@b,SomeFunc()))") { (cond: Condition) =>
+    "accept comparison" in {
+      parseCondition("or(<(constant a, 42), <(field b, calc()))") { (cond: Condition) =>
         cond mustBe OrCondition(
           1 -> 1,
           Seq(
             Comparison(
               1 -> 4,
               lt,
-              ValueOperator(1 -> 6, PathIdentifier(1 -> 7, Seq("a"))),
-              IntegerValue(1 -> 9, BigInt(42))
+              ConstantValue(1 -> 6, PathIdentifier(1 -> 15, Seq("a"))),
+              IntegerValue(1 -> 18, BigInt(42))
             ),
             Comparison(
-              1 -> 13,
+              1 -> 23,
               lt,
-              ValueOperator(1 -> 15, PathIdentifier(1 -> 16, Seq("b"))),
-              FunctionCallExpression(
-                1 -> 18,
-                PathIdentifier(1 -> 18, Seq("SomeFunc")),
-                ArgList()
+              FieldValue(1 -> 25, PathIdentifier(1 -> 31, Seq("b"))),
+              ComputedValue(
+                1 -> 34,
+                "calc",
+                Seq.empty[Value]
               )
             )
           )
@@ -110,7 +115,7 @@ class ConditionParserTest extends ParsingTest {
     }
     "accept complicated conditional expression" in {
       val input =
-        """or(and(not(==("sooth", false)),SomeFunc(x=42)),true)""".stripMargin
+        """or(and(not(==("sooth", false)),function SomeFunc(x=42)),true)""".stripMargin
       parseCondition(input) { (cond: Condition) =>
         cond mustBe OrCondition(
           1 -> 1,
@@ -123,24 +128,27 @@ class ConditionParserTest extends ParsingTest {
                   Comparison(
                     1 -> 12,
                     AST.eq,
-                    ArbitraryCondition(
+                    ArbitraryValue(
                       1 -> 15,
                       LiteralString(1 -> 15, "sooth")
                     ),
-                    False(1 -> 24)
+                    BooleanValue(1 -> 24, false)
                   )
                 ),
                 FunctionCallCondition(
                   1 -> 32,
-                  PathIdentifier(1 -> 32, Seq("SomeFunc")),
-                  ArgList(ListMap(
-                    Identifier(1 -> 41, "x") ->
-                        IntegerValue(1 -> 43, BigInt(42))
-                  ))
+                  FunctionRef(1 -> 32, PathIdentifier(1 -> 41, Seq("SomeFunc"))),
+                  ParameterValues(
+                    1 -> 49,
+                    Map(
+                      Identifier(1 -> 50, "x") ->
+                        IntegerValue(1 -> 52, BigInt(42))
+                    )
+                  )
                 )
               )
             ),
-            True(1 -> 48)
+            True(1 -> 57)
           )
         )
       }
