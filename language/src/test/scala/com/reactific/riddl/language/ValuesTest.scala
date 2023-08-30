@@ -7,7 +7,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.immutable.ListMap
 
-/** Unit Tests For Expressions */
+/** Unit Tests For Values */
 class ValuesTest extends AnyWordSpec with Matchers {
 
   val int1 = IntegerValue(At.empty, BigInt(1))
@@ -34,7 +34,7 @@ class ValuesTest extends AnyWordSpec with Matchers {
   val callValue = FunctionCallValue(
     At.empty,
     FunctionRef(At.empty, PathIdentifier(At.empty, Seq("a", "b"))),
-    ParameterValues(
+    ArgumentValues(
       At.empty,
       Map.from(
         Seq(Identifier(At.empty, "arg") -> IntegerValue(At.empty, BigInt(1)))

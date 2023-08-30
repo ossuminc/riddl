@@ -32,7 +32,7 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef
+      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~ value
     )./.map { tpl => (MorphStatement.apply _).tupled(tpl) }
   }
 
@@ -42,16 +42,16 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
     )./.map { tpl => (BecomeStatement.apply _).tupled(tpl) }
   }
 
-  private def arguments[u: P]: P[Arguments] = {
+  private def arguments[u: P]: P[ArgumentValues] = {
     P(
       location ~
         Punctuation.roundOpen ~
-        (identifier ~ Punctuation.equalsSign ~ literalString)
+        (identifier ~ Punctuation.equalsSign ~ value )
           .rep(0, Punctuation.comma)
         ~ Punctuation.roundClose
     )./.map { case (loc, args) =>
-      val map = HashMap.from[Identifier, LiteralString](args)
-      Arguments(loc, map)
+      val map = HashMap.from[Identifier, Value](args)
+      ArgumentValues(loc, map)
     }
   }
 
@@ -66,7 +66,7 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
 
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
-      location ~ Keywords.return_ ~/ literalString
+      location ~ Keywords.return_ ~/ value
     )./.map(t => (ReturnStatement.apply _).tupled(t))
   }
 
@@ -79,7 +79,7 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
 
   private def functionCallStatement[u: P]: P[FunctionCallStatement] = {
     P(
-      location ~ Keywords.call ~/ pathIdentifier ~ arguments
+      location ~ Keywords.call ~/ pathIdentifier ~ argumentValues
     )./.map(tpl => (FunctionCallStatement.apply _).tupled(tpl))
   }
 

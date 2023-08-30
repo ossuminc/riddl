@@ -740,7 +740,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
-        val expr = invariant.expression
+        val expr = invariant.condition
           .map(_.format)
           .getOrElse("<not specified>")
         sb.append("* ").append(expr).append("\n")

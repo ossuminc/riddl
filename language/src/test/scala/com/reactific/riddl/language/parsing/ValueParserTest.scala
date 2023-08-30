@@ -105,7 +105,7 @@ class ValueParserTest extends ParsingTest {
         val expected = FunctionCallValue(
           At(1 -> 1),
           FunctionRef(1 -> 1, PathIdentifier(1 -> 10, Seq("Entity", "Function"))),
-          ParameterValues(
+          ArgumentValues(
             1 -> 25,
             Map.from[Identifier, Value](
               Seq(

@@ -1,9 +1,13 @@
 package com.reactific.riddl.language.ast
 
+import scala.collection.Map
+
 trait Values {
   this: Types with Definitions with Statements with AbstractDefinitions =>
 
-  trait Value extends RiddlValue
+  trait Value extends RiddlValue {
+    def valueType: TypeExpression
+  }
 
   /** Represents an arbitrary value expressed as a quoted string
     *
@@ -14,10 +18,12 @@ trait Values {
     */
   case class ArbitraryValue(loc: At, value: LiteralString) extends Value {
     override def format: String = value.format
+    def valueType: TypeExpression = Abstract(loc)
   }
 
   case class BooleanValue(loc: At, n: Boolean) extends Value {
     override def format: String = n.toString
+    def valueType: TypeExpression = Bool(loc)
   }
 
   /** An expression that is a literal constant integer value
@@ -29,6 +35,7 @@ trait Values {
     */
   case class IntegerValue(loc: At, n: BigInt) extends Value {
     override def format: String = n.toString()
+    def valueType: TypeExpression = Integer(loc)
   }
 
   /** An expression that is a liberal constant decimal value
@@ -39,10 +46,12 @@ trait Values {
     */
   case class DecimalValue(loc: At, d: BigDecimal) extends Value {
     override def format: String = d.toString
+    def valueType: TypeExpression = Real(loc)
   }
 
   case class ConstantValue(loc: At, pid: PathIdentifier) extends Value {
     override def format: String = "@" + pid.format
+    def valueType: TypeExpression = UnknownType(loc)
   }
 
   /** Represents an opoerator that is merely a reference to some value, presumably an entity state value but could also
@@ -55,16 +64,16 @@ trait Values {
     */
   case class FieldValue(loc: At, path: PathIdentifier) extends Value {
     override def format: String = "@" + path.format
-    def expressionType: TypeExpression = Abstract(loc)
+    def valueType: TypeExpression = UnknownType(loc)
   }
 
-  /** The arguments of a [[FunctionCallValue]] and [[AggregateConstruction]] is a mapping between an argument name and
-    * the expression that provides the value for that argument.
+  /** The arguments of messae constructors andfunctions is a mapping between an argument name and the expression that
+    * provides the value for that argument.
     *
     * @param args
     *   A mapping of Identifier to LiteralString to provide the arguments for the function call.
     */
-  case class ParameterValues(
+  case class ArgumentValues(
     loc: At,
     args: Map[Identifier, Value] = Map.empty[Identifier, Value]
   ) extends RiddlNode {
@@ -79,10 +88,11 @@ trait Values {
   case class ComputedValue(
     loc: At,
     funcName: String,
-    args: Seq[Value]
+    args: Seq[Value] = Seq.empty[Value]
   ) extends Value {
     override def format: String =
       s"$funcName${args.map(_.format).mkString("(", ", ", ")")}"
+    def valueType: TypeExpression = Abstract(loc)
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -94,15 +104,16 @@ trait Values {
     */
   case class StringValue(loc: At, s: String) extends Value {
     override def format = s"\"$s\""
-
     override def isEmpty: Boolean = s.isEmpty
+    def valueType: TypeExpression = Strng(loc)
   }
 
   case class FunctionCallValue(
     loc: At,
     function: FunctionRef,
-    arguments: ParameterValues
+    arguments: ArgumentValues
   ) extends Value {
     def format: String = function.format + arguments.format
+    def valueType: TypeExpression = UnknownType(loc)
   }
 }

@@ -253,7 +253,7 @@ class ParserTest extends ParsingTest {
                 TypeRef((3, 24, rpi), PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
                 List(),
                 Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
-              ),
+              )
             ),
             List(
               Type(
@@ -320,13 +320,13 @@ class ParserTest extends ParsingTest {
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _, _))
+                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _))
                     )
                   ),
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _, _))
+                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
                     )
                   ),
                   _,

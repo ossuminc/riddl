@@ -45,24 +45,6 @@ trait Statements {
     override def format: String = s"error \"${message.format}\""
   }
 
-  /** The arguments of a [[FunctionCall]] and [[AggregateConstruction]] is a mapping between an argument name and the
-    * expression that provides the value for that argument.
-    *
-    * @param args
-    *   A mapping of Identifier to LiteralString to provide the arguments for the function call.
-    */
-  case class Arguments(
-    loc: At,
-    args: Map[Identifier, LiteralString] = Map.empty[Identifier, LiteralString]
-  ) extends RiddlNode {
-    override def format: String = args
-      .map { case (id, str) =>
-        id.format + "=" + str.format
-      }
-      .mkString("(", ", ", ")")
-    override def isEmpty: Boolean = args.isEmpty
-  }
-
   /** A helper class for publishing messages that represents the construction of the message to be sent.
     *
     * @param msg
@@ -73,7 +55,7 @@ trait Statements {
   case class MessageValue(
     loc: At,
     msg: MessageRef,
-    args: Arguments = Arguments(At.empty, Map.empty[Identifier, LiteralString])
+    args: ArgumentValues = ArgumentValues(At.empty, scala.collection.Map.empty[Identifier, Value])
   ) extends RiddlNode {
     override def format: String = msg.format + {
       if args.nonEmpty then {
@@ -93,7 +75,7 @@ trait Statements {
     */
   case class ReturnStatement(
     loc: At,
-    value: LiteralString
+    value: Value
   ) extends StatementBaseImpl {
     override def format: String = s"return ${value.format}"
   }
@@ -127,7 +109,7 @@ trait Statements {
   case class FunctionCallStatement(
     loc: At,
     function: PathIdentifier,
-    arguments: Arguments
+    arguments: ArgumentValues
   ) extends StatementBaseImpl {
     override def format: String = s"call ${function.format}${arguments.format}"
   }
@@ -144,7 +126,8 @@ trait Statements {
   case class MorphStatement(
     loc: At,
     entity: EntityRef,
-    state: StateRef
+    state: StateRef,
+    newValue: Value
   ) extends StatementBaseImpl {
     override def format: String = s"morph ${entity.format} to ${state.format}"
   }
@@ -226,5 +209,5 @@ trait Statements {
     def format: String = s"foreach ${ref.format} do \n" +
       do_.map(_.format).mkString("\n") + "end\n"
   }
-  
+
 }

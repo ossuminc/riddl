@@ -13,7 +13,7 @@ import com.reactific.riddl.language.ast.At
 import scala.collection.mutable
 
 /** Unit Tests For ExampleValidationState */
-trait ExampleValidation extends TypeValidation {
+trait StatementValidation extends TypeValidation {
 
   protected val sends: mutable.HashMap[SendAction, Seq[Definition]] =
     mutable.HashMap
@@ -34,45 +34,15 @@ trait ExampleValidation extends TypeValidation {
     // TODO: Write me
     this
 
-  def checkExamples(
-    examples: Seq[Example],
-    parents: Seq[Definition]
-  ): this.type = {
-    examples.foldLeft[this.type](this) { (next, example) =>
-      next.checkExample(example, parents)
-    }
-  }
-
-  def checkExample(
-    example: Example,
-    parents: Seq[Definition]
-  ): this.type = {
-    val Example(_, _, givens, whens, thens, buts, _, _) = example
-
-    checkSequence(givens) { (givenClause: GivenClause) =>
-      checkSequence(givenClause.scenario) { ls =>
-        checkNonEmptyValue(ls, "Given Scenario", example, MissingWarning)
-      }.checkNonEmpty(givenClause.scenario, "Givens", example, MissingWarning)
-    }
-    checkSequence(whens) { (when: WhenClause) =>
-      checkExpression(when.condition, example, parents)
-    }
-    if example.id.nonEmpty then {
-      checkNonEmpty(thens, "Thens", example, required = true)
-    }
-    checkActions(thens.map(_.action), example, parents)
-    checkActions(buts.map(_.action), example, parents)
-    checkDescription(example)
-  }
-
-  private def checkArgList(
-    arguments: ArgList,
+  private def checkArgumentValues(
+    arguments: ArgumentValues,
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    arguments.args.values.foldLeft[this.type](this) { (st: this.type, arg) =>
-      st.checkExpression(arg, defn, parents)
+    arguments.args.values.foreach { (arg: Value) =>
+      checkValue(arg, defn, parents)
     }
+    this
   }
 
   private def checkMessageConstructor(
@@ -115,134 +85,116 @@ trait ExampleValidation extends TypeValidation {
   private def checkFunctionCall(
     loc: At,
     pathId: PathIdentifier,
-    args: ArgList,
+    args: ArgumentValues,
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    checkArgList(args, defn, parents)
-      .checkPathRef[Function](pathId, defn, parents.toSeq)
-    defn match {
-      case f: Function if f.input.nonEmpty =>
-        val fid = f.id
-        val fields = f.input.get.fields
-        val paramNames = fields.map(_.id.value)
-        val argNames = args.args.keys.map(_.value).toSeq
-        val s1 = check(
-          argNames.size == paramNames.size,
-          s"Wrong number of arguments for ${fid.format}. Expected ${paramNames.size}, but got ${argNames.size}",
-          Error,
-          loc
-        )
-        val missing = paramNames.filterNot(argNames.contains(_))
-        val unexpected = argNames.filterNot(paramNames.contains(_))
-        val s2 = s1.check(
-          missing.isEmpty,
-          s"Missing arguments: ${missing.mkString(", ")}",
-          Error,
-          loc
-        )
-        s2.check(
-          unexpected.isEmpty,
-          s"Arguments do not correspond to parameters; ${unexpected.mkString(",")}",
-          Error,
-          loc
-        )
-      case _ =>
+    checkArgumentValues(args, defn, parents)
+    val maybeType: Option[Function] = checkPathRef[Function](pathId, defn, parents.toSeq)
+    maybeType match {
+      case None =>
+        error(s"PathId ${pathId.format} does not reference a Function", pathId.loc)
+      case Some(defn) =>
+        defn match {
+          case f: Function if f.input.nonEmpty =>
+            val fid = f.id
+            val fields = f.input.get.fields
+            val paramNames = fields.map(_.id.value)
+            val argNames = args.args.keys.map(_.value).toSeq
+            val s1 = check(
+              argNames.size == paramNames.size,
+              s"Wrong number of arguments for ${fid.format}. Expected ${paramNames.size}, but got ${argNames.size}",
+              Error,
+              loc
+            )
+            val missing = paramNames.filterNot(argNames.contains(_))
+            val unexpected = argNames.filterNot(paramNames.contains(_))
+            val s2 = s1.check(
+              missing.isEmpty,
+              s"Missing arguments: ${missing.mkString(", ")}",
+              Error,
+              loc
+            )
+            s2.check(
+              unexpected.isEmpty,
+              s"Arguments do not correspond to parameters; ${unexpected.mkString(",")}",
+              Error,
+              loc
+            )
+          case _ =>
+        }
     }
     this
   }
 
-  private def checkExpressions(
-    expressions: Seq[Expression],
+  private def checkValues(
+    values: Seq[Value],
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    expressions.foldLeft[this.type](this) { (st: this.type, expr) =>
-      st.checkExpression(expr, defn, parents)
+    values.foldLeft[this.type](this) { (st: this.type, expr) =>
+      st.checkValue(expr, defn, parents)
     }
   }
 
-  def checkExpression(
-    expression: Expression,
+  def checkValue(
+    value: Value,
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    expression match {
-      case ValueOperator(_, path) =>
-        checkPathRef[Field](path, defn, parents)
-      case GroupExpression(_, expressions) =>
-        checkSequence(expressions) { expr =>
-          checkExpression(expr, defn, parents)
-        }
-      case FunctionCallExpression(loc, pathId, arguments) =>
-        checkFunctionCall(loc, pathId, arguments, defn, parents)
-      case ArithmeticOperator(loc, op, operands) =>
+    value match {
+      case FunctionCallValue(loc, funcRef, args) =>
+        checkFunctionCall(loc, funcRef.pathId, args, defn, parents)
+      case FunctionCallCondition(loc, funcRef, args) =>
+        checkFunctionCall(loc, funcRef.pathId, args, defn, parents)
+      case ComputedValue(loc, op, operands) =>
         check(
           op.nonEmpty,
-          "Operator is empty in abstract binary operator",
+          "Operator is empty in computed value",
           Error,
           loc
-        ).checkExpressions(operands, defn, parents)
+        ).checkValues(operands, defn, parents)
       case Comparison(loc, comp, arg1, arg2) =>
-        checkExpression(arg1, defn, parents)
-          .checkExpression(arg2, defn, parents)
+        checkValue(arg1, defn, parents)
+          .checkValue(arg2, defn, parents)
           .check(
-            arg1.expressionType.isAssignmentCompatible(arg2.expressionType),
+            arg1.valueType.isAssignmentCompatible(arg2.valueType),
             s"Incompatible expression types in ${comp.format} expression",
             Error,
             loc
           )
-      case AggregateConstructionExpression(_, pid, args) =>
-        checkPathRef[Type](pid, defn, parents)
-        checkArgList(args, defn, parents)
-      case NewEntityIdOperator(_, entityRef) =>
-        checkPathRef[Entity](entityRef, defn, parents)
-      case Ternary(loc, condition, expr1, expr2) =>
-        checkExpression(condition, defn, parents)
-          .checkExpression(expr1, defn, parents)
-          .checkExpression(expr2, defn, parents)
-          .check(
-            expr1.expressionType.isAssignmentCompatible(expr2.expressionType),
-            "Incompatible expression types in Ternary expression",
-            Error,
-            loc
-          )
-
-      case NotCondition(_, cond1) => checkExpression(cond1, defn, parents)
+      case NotCondition(_, cond1) => checkValue(cond1, defn, parents)
       case condition: MultiCondition =>
-        checkExpressions(condition.conditions, defn, parents)
+        checkValues(condition.conditions, defn, parents)
       case _ => // not of interest
     }
     this
   }
 
-  private def checkActions(
-    actions: Seq[Action],
-    example: Example,
+  private def checkStatements(
+    statements: Seq[Statement],
+    onClause: OnClause,
     parents: Seq[Definition]
   ): this.type = {
-    checkSequence(actions) { action =>
-      checkAction(action, example, example +: parents)
+    checkSequence(statements) { statement =>
+      checkStatement(statement, onClause, parents)
     }
     this
   }
 
-  private def checkAction(
-    action: Action,
-    defn: Example,
+  private def checkStatement(
+    statement: Statement,
+    defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    action match {
-      case _: ErrorAction =>
-      case AssignAction(_, path, value) =>
-        checkPathRef[Field](path, defn, parents)
-        checkExpression(value, defn, parents)
-        checkAssignmentCompatability(path, value, parents)
-      case AppendAction(_, value, path) =>
-        checkExpression(value, defn, parents)
-        checkPathRef[Field](path, defn, parents)
-      case ReturnAction(_, value) =>
-        checkExpression(value, defn, parents)
+    statement match {
+      case _: ErrorStatement =>
+      case SetStatement(_, pathId, value) =>
+        checkPathRef[Field](pathId, statement, parents)
+        checkValue(value, defn, parents)
+        checkAssignmentCompatability(pathId, value, parents)
+      case ReturnStatement(_, value) =>
+        checkValue(value, defn, parents)
       case s @ SendAction(_, msg, outlet) =>
         checkMessageConstructor(msg, defn, parents)
         checkRef[Portlet](outlet, defn, parents)
@@ -250,17 +202,17 @@ trait ExampleValidation extends TypeValidation {
       case TellAction(_, msg, entityRef) =>
         checkMessageConstructor(msg, defn, parents)
         checkRef[Processor[?, ?]](entityRef, defn, parents)
-      case FunctionCallAction(_, funcId, args) =>
+      case FunctionCallStatement(_, funcId, args) =>
         checkPathRef[Function](funcId, defn, parents)
-        checkArgList(args, defn, parents)
-      case BecomeAction(_, entity, handler) =>
+        checkArgumentValues(args, defn, parents)
+      case BecomeStatement(_, entity, handler) =>
         checkRef[Entity](entity, defn, parents)
         checkRef[Handler](handler, defn, parents)
-      case MorphAction(_, entity, state, value) =>
+      case MorphStatement(_, entity, state, value) =>
         val maybeEntity = checkRef[Entity](entity, defn, parents)
         val maybeState = checkRef[State](state, defn, parents)
-        checkExpression(value, defn, parents)
-        val maybeExprType = getExpressionType(value, parents)
+        checkValue(value, defn, parents)
+        val maybeExprType = getValueType(value, parents)
         if maybeExprType.isEmpty then {
           messages.addError(
             value.loc,
@@ -298,16 +250,10 @@ trait ExampleValidation extends TypeValidation {
               }
           }
         }
-
-      case CompoundAction(loc, actions) =>
-        check(actions.nonEmpty, "Compound action is empty", MissingWarning, loc)
-          .checkSequence(actions) { action =>
-            checkAction(action, defn, parents)
-          }
-      case ArbitraryAction(loc, what) =>
+      case ArbitraryStatement(loc, what) =>
         check(
           what.nonEmpty,
-          "arbitrary action is empty providing no behavior specification value",
+          "arbitrary statement is empty providing no behavior specification value",
           MissingWarning,
           loc
         )
@@ -317,18 +263,18 @@ trait ExampleValidation extends TypeValidation {
 
   private def checkAssignmentCompatability(
     path: PathIdentifier,
-    expr: Expression,
+    value: Value,
     parents: Seq[Definition]
   ): this.type = {
     val pidType = getPathIdType(path, parents)
-    val exprType = getExpressionType(expr, parents)
+    val exprType = getValueType(value, parents)
     if !isAssignmentCompatible(pidType, exprType) then {
       messages.addError(
         path.loc,
         s"""Setting a value requires assignment compatibility, but field:
            |  ${path.format} (${pidType.map(_.format).getOrElse("<not found>")})
            |is not assignment compatible with expression:
-           |  ${expr.format} (${exprType
+           |  ${value.format} (${exprType
             .map(_.format)
             .getOrElse("<not found>")})
            |""".stripMargin

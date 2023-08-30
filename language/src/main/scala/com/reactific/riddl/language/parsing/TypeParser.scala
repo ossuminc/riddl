@@ -14,7 +14,7 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Parsing rules for Type definitions */
-private[parsing] trait TypeParser extends CommonParser with ConditionParser {
+private[parsing] trait TypeParser extends CommonParser {
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
@@ -373,14 +373,9 @@ private[parsing] trait TypeParser extends CommonParser with ConditionParser {
     )
   }
 
-  private def fieldValue[u: P]: P[Option[Value]] = {
-    P(Punctuation.roundOpen ~ value ~ Punctuation.roundClose./).?
-  }
-
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ fieldValue ~
-        briefly ~ description
+      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
     )
       .map(tpl => (Field.apply _).tupled(tpl))
   }
@@ -503,7 +498,7 @@ private[parsing] trait TypeParser extends CommonParser with ConditionParser {
     }
   }
 
-  private def typeExpression[u: P]: P[TypeExpression] = {
+  def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
         simplePredefinedTypes | patternType | uniqueIdType | enumeration |
@@ -538,20 +533,5 @@ private[parsing] trait TypeParser extends CommonParser with ConditionParser {
   def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
-
-  private def constantExpression[u: P]: P[Value] = {
-    P(
-      trueCondition | falseCondition | decimalValue |
-        integerValue | stringValue
-    )
-  }
-
-  def constant[u: P]: P[Constant] = {
-    P(
-      location ~ Keywords.const ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ constantExpression ~
-        briefly ~ description
-    ).map { tpl => (Constant.apply _).tupled(tpl) }
-  }
 
 }

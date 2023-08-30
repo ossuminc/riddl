@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.ast.At
 
-trait StreamingValidation extends ExampleValidation {
+trait StreamingValidation extends StatementValidation {
 
 
   def checkStreaming(root: RootContainer): Unit = {

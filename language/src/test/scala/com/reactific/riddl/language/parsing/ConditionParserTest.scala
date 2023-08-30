@@ -75,7 +75,7 @@ class ConditionParserTest extends ParsingTest {
         val expected = FunctionCallCondition(
           At(1 -> 1),
           FunctionRef(1 -> 1, PathIdentifier(1 -> 10, Seq("This", "That"))),
-          ParameterValues(
+          ArgumentValues(
             1 -> 19,
             Map.from(
               Seq(
@@ -138,7 +138,7 @@ class ConditionParserTest extends ParsingTest {
                 FunctionCallCondition(
                   1 -> 32,
                   FunctionRef(1 -> 32, PathIdentifier(1 -> 41, Seq("SomeFunc"))),
-                  ParameterValues(
+                  ArgumentValues(
                     1 -> 49,
                     Map(
                       Identifier(1 -> 50, "x") ->

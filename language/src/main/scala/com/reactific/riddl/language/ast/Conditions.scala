@@ -6,6 +6,7 @@ trait Conditions {
   /** Base trait for conditions */
   sealed abstract class Condition(loc: At) extends Value {
     @inline override def isEmpty: Boolean = true
+    final def valueType: TypeExpression = Bool(loc)
   }
 
   /** A condition value for "true"
@@ -51,7 +52,8 @@ trait Conditions {
     override def format: String = "@" + path.format
   }
 
-  /** A RIDDL Function call to the function identified by its path identifier with a matching set of arguments. This
+  /** A RIDDL Function call to the function identified by its path identifier
+    * with a matching set of arguments. This
     * function must return a boolean since it is defined as a Condition.
     *
     * @param loc
@@ -64,7 +66,7 @@ trait Conditions {
   case class FunctionCallCondition(
     loc: At,
     name: FunctionRef,
-    arguments: ParameterValues
+    arguments: ArgumentValues
   ) extends Condition(loc) {
     override def format: String = name.format + arguments.format
   }

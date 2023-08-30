@@ -234,6 +234,7 @@ object Terminals {
     final val Temperature = "Temperature" // in Kelvin
     final val Time = "Time"
     final val TimeStamp = "TimeStamp"
+    final val Unknown = "Unknown"
     final val URL = "URL"
     final val UUID = "UUID"
     final val Whole = "Whole"

@@ -20,7 +20,7 @@ case class ResolutionOutput(
   refMap: ReferenceMap,
   kindMap: KindMap,
   usage: Usages
-) extends PassOutput
+) extends PassOutput {}
 
 object ResolutionPass extends PassInfo {
   val name: String = "resolution"
@@ -37,6 +37,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
   val refMap: ReferenceMap = ReferenceMap(messages)
   val kindMap: KindMap = KindMap()
+  val typeMap: TypeMap = TypeMap()
   val symbols: SymbolsOutput = input.outputOf[SymbolsOutput]("symbols")
 
   override def result: ResolutionOutput =
@@ -88,10 +89,10 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case c: Connector =>
         resolveConnector(c, parentsAsSeq)
       case i: Invariant =>
-        resolveMaybeExpr(i.expression, parentsAsSeq)
+        resolveMaybeValue(i.condition, parentsAsSeq)
       case c: Constant =>
         resolveTypeExpression(c.typeEx, parentsAsSeq)
-        resolveExpr(c.value, parentsAsSeq)
+        resolveValue(c.value, parentsAsSeq)
       case a: Adaptor =>
         resolveARef[Context](a.context, parentsAsSeq)
         a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
@@ -176,85 +177,60 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   }
 
   private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
-    val pars = statement +: parents
+    val pars: Seq[Definition] = statement +: parents
     statement match {
-      case _: ArbitraryStatement => ()
-    }
-  }
-
-  private def resolveAction(action: Action, parents: Seq[Definition]): Unit = {
-    action match {
-      case AssignAction(_, pid: PathIdentifier, value: Expression) =>
-        resolveExpr(value, parents)
-        resolveAPathId[Field](pid, parents)
-      case AppendAction(_, value: Expression, pid: PathIdentifier) =>
-        resolveExpr(value, parents)
-        resolveAPathId[Field](pid, parents)
-      case ReturnAction(_, value: Expression) =>
-        resolveExpr(value, parents)
-      case SendAction(_, msg: MessageConstructor, ref: PortletRef[Portlet]) =>
+      case SetStatement(_, pid: PathIdentifier, value: Value) =>
+        resolveAPathId[Field](pid, pars)
+        resolveValue(value, parents)
+      case SendStatement(_, msg: MessageValue, ref: PortletRef[Portlet]) =>
+        resolveARef[Type](msg.msg, parents)
         resolveARef[Portlet](ref, parents)
+        msg.args.args.values.foreach(resolveValue(_, parents))
+      case TellStatement(_, msg: MessageValue, ref: EntityRef) =>
         resolveARef[Type](msg.msg, parents)
-        msg.args.args.values.foreach(resolveExpr(_, parents))
-      case TellAction(_, msg: MessageConstructor, ref: EntityRef) =>
         resolveARef[Entity](ref, parents)
-        resolveARef[Type](msg.msg, parents)
-        msg.args.args.values.foreach(resolveExpr(_, parents))
-      case FunctionCallAction(_, pid: PathIdentifier, args: ArgList) =>
+        msg.args.args.values.foreach(resolveValue(_, parents))
+      case FunctionCallStatement(_, pid: PathIdentifier, args: ArgumentValues) =>
         resolveAPathId[Function](pid, parents)
-        args.args.values.foreach(resolveExpr(_, parents))
-      case MorphAction(_, ref: EntityRef, state: StateRef, newValue: Expression) =>
+        args.args.values.foreach(resolveValue(_, parents))
+      case MorphStatement(_, ref: EntityRef, state: StateRef, newValue: Value) =>
         resolveARef[Entity](ref, parents)
         resolveARef[State](state, parents)
-        resolveExpr(newValue, parents)
-      case BecomeAction(_, entity: EntityRef, handler: HandlerRef) =>
+        resolveValue(newValue, parents)
+      case BecomeStatement(_, entity: EntityRef, handler: HandlerRef) =>
         resolveARef[Entity](entity, parents)
         resolveARef[Handler](handler, parents)
-      case CompoundAction(_, actions: Seq[Action]) =>
-        actions.foreach(resolveAction(_, parents))
-      case _: ErrorAction     => () // no references
-      case _: ArbitraryAction => () // no references
+      case _: ErrorStatement     => () // no references
+      case _: ArbitraryStatement => () // no references
     }
   }
 
-  private def resolveMaybeExpr(maybeExpr: Option[Expression], parents: Seq[Definition]): Unit = {
-    maybeExpr.foreach(resolveExpr(_, parents))
+  private def resolveMaybeValue(maybeExpr: Option[Value], parents: Seq[Definition]): Unit = {
+    maybeExpr.foreach(resolveValue(_, parents))
   }
 
-  private def resolveExpr(expr: Expression, parents: Seq[Definition]): Unit = {
+  private def resolveValue(expr: Value, parents: Seq[Definition]): Unit = {
     expr match {
-      case ValueOperator(_, path) =>
-        resolveAPathId[Field](path, parents)
+      case FunctionCallCondition(_, func, args) =>
+        resolveAPathId[Function](func.pathId, parents)
+        args.args.values.foreach(resolveValue(_, parents))
       case ValueCondition(_, path) =>
         resolveAPathId[Field](path, parents)
-      case AggregateConstructionExpression(_, msg, _) => resolveAPathId[Type](msg, parents)
-      case NewEntityIdOperator(_, entityId)           => resolveAPathId[Entity](entityId, parents)
-      case FunctionCallExpression(_, func, args) =>
-        resolveAPathId[Function](func, parents)
-        args.args.values.foreach(resolveExpr(_, parents))
-      case FunctionCallCondition(_, func, args) =>
-        resolveAPathId[Function](func, parents)
-        args.args.values.foreach(resolveExpr(_, parents))
-      case ArbitraryOperator(_, _, args) =>
-        args.args.values.foreach(resolveExpr(_, parents))
-      case Comparison(_, _, expr1, expr2) =>
-        resolveExpr(expr1, parents); resolveExpr(expr2, parents)
-      case ArithmeticOperator(_, _, operands) =>
-        operands.foreach(resolveExpr(_, parents))
-      case Ternary(_, cond, expr1, expr2) =>
-        resolveExpr(cond, parents); resolveExpr(expr1, parents); resolveExpr(expr2, parents)
-      case GroupExpression(_, expressions) =>
-        expressions.foreach(resolveExpr(_, parents))
       case NotCondition(_, condition) =>
-        resolveExpr(condition, parents)
+        resolveValue(condition, parents)
       case mc: MultiCondition =>
-        mc.conditions.foreach(resolveExpr(_, parents))
-      case vfe: ValueFunctionExpression =>
-        vfe.args.foreach(resolveExpr(_, parents))
+        mc.conditions.foreach(resolveValue(_, parents))
+      case Comparison(_, _, expr1, expr2) =>
+        resolveValue(expr1, parents); resolveValue(expr2, parents)
+      case FieldValue(_, pid) =>
+        resolveAPathId[Field](pid, parents)
+      case ConstantValue(_, pid) =>
+        resolveAPathId[Constant](pid, parents)
+      case FunctionCallValue(_, func, args) =>
+        resolveAPathId[Function](func.pathId, parents)
+        args.args.values.foreach(resolveValue(_, parents))
       case _ =>
-      // ArbitraryCondition, ArbitraryExpression, constant values, undefined
-      // None of these have case _: com.reactific.riddl.language.ast.Expressions.GroupExpression =>
-      // caseArbitraryOperator(loc, resolve nor paths to resolve
+      // ArbitraryValue, true, false, integer, decimal, etc. all have no pid
     }
   }
 

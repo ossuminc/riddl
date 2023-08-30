@@ -242,7 +242,6 @@ trait Types {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    default: Option[Value] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -437,6 +436,12 @@ trait Types {
 
   case class Currency(loc: At, country: String) extends PredefinedType {
     @inline def kind: String = Predefined.Currency
+  }
+
+  /** A type expression that is unknown at compile type but will be resolved before validation time.
+    */
+  case class UnknownType(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.Unknown
   }
 
   /** The simplest type expression: Abstract An abstract type expression is one that is not defined explicitly. It is

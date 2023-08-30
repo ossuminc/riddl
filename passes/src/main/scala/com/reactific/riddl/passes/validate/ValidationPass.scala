@@ -58,8 +58,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateField(f, parentsAsSeq)
       case t: Type =>
         validateType(t, parentsAsSeq)
-      case e: Example =>
-        validateExample(e, parentsAsSeq)
       case e: Enumerator =>
         validateEnumerator(e, parentsAsSeq)
       case i: Invariant =>
@@ -74,8 +72,8 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         checkDefinition(parentsAsSeq, otc)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
-      case mc: OnMessageClause =>
-        validateOnMessageClause(mc, parentsAsSeq)
+      case omc: OnMessageClause =>
+        validateOnMessageClause(omc, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -174,22 +172,13 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDescription(f)
   }
 
-  private def validateExample(
-    e: Example,
-    parents: Seq[Definition]
-  ): Unit = {
-    checkDefinition(parents, e)
-    checkExample(e, parents)
-    checkDescription(e)
-  }
-
   private def validateInvariant(
     i: Invariant,
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, i)
-    checkOption(i.expression, "condition", i) { expr =>
-      checkExpression(expr, i, parents)
+    checkOption(i.condition, "condition", i) { cond =>
+      checkValue(cond, i, parents)
     }
       .checkDescription(i)
   }
@@ -267,11 +256,11 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, c)
-    val expr = c.value.asInstanceOf[Expression]
-    val maybeTypEx = getExpressionType(expr, parents)
+    val value = c.value.asInstanceOf[Value]
+    val maybeTypEx = getValueType(value, parents)
     if !isAssignmentCompatible(Some(c.typeEx), maybeTypEx) then {
       messages.addError(
-        expr.loc,
+        value.loc,
         s"Expression value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}"
       )
     }
