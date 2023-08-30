@@ -236,7 +236,7 @@ class ResolutionPassTest extends ResolvingTest {
           |      state S of E.fields is  {
           |        handler foo is {
           |         on command DoIt {
-          |           then set E.S.f.t to true
+          |           set field E.S.f.t to true
           |         }
           |        }
           |      }

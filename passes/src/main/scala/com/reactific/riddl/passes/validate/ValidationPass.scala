@@ -22,8 +22,8 @@ object ValidationPass extends PassInfo {
 
 /** The ValidationPass
   *
-  * @param resolution
-  *   Output of the prior Resolution pass including Symbols and Resolution passes
+  * @param input
+  *   Input from previous passes
   */
 case class ValidationPass(input: PassInput) extends Pass(input) with StreamingValidation {
 
@@ -74,6 +74,8 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         checkDefinition(parentsAsSeq, ooc)
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
+      case stmt: Statement =>
+        validateStatement(stmt, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -139,6 +141,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     }
     checkDescription(omc)
   }
+
 
   private def validateTerm(
     t: Term,

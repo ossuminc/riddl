@@ -137,6 +137,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case _: SagaStep               => () // no references
       case _: SequentialInteractions => () // no references
       case _: Term                   => () // no references
+      case _: Statement              => () // handled in OnClause
       // case _ => () // NOTE: Never have this catchall! Want compile time errors.
     }
   }
@@ -226,6 +227,23 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveAPathId[Field](pid, parents)
       case ConstantValue(_, pid) =>
         resolveAPathId[Constant](pid, parents)
+      case MessageValue(_, msg, args) =>
+        val path = resolveAPathId[Type](msg.pathId, parents)
+        if path.nonEmpty then
+          path match {
+            case t: Type =>
+              t.typ match {
+                case aucte: AggregateUseCaseTypeExpression =>
+                // okay
+                case _ =>
+                  messages.error(
+                    s"PathId '${msg.pathId}' refers to a non-message aggregate Type'"
+                  )
+              }
+            case x: Definition =>
+              messages.error(s"PathId '${msg.pathId}' refers to a ' ${x.kind} but should be a Message Type")
+          }
+
       case FunctionCallValue(_, func, args) =>
         resolveAPathId[Function](func.pathId, parents)
         args.args.values.foreach(resolveValue(_, parents))

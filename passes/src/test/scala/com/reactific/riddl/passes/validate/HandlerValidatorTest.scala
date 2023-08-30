@@ -22,8 +22,8 @@ class HandlerValidatorTest extends ValidatingTest {
           |  type StateFields is { field1: Number, field2: String }
           |  state HamburgerState of StateFields = {
           |    handler foo is {
-          |      on command EntityCommand { example only { then set HamburgerState.field1 to 345 } }
-          |      on event EntityEvent { example only { then set HamburgerState.field2 to string("678") } }
+          |      on command EntityCommand {  set field HamburgerState.field1 to 345 }
+          |      on event EntityEvent { set field HamburgerState.field2 to string("678") }
           |    } described as "Irrelevant"
           |  } described as "Irrelevant"
           |} described as "Irrelevant"
@@ -56,7 +56,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |   type StateFields is { field1: Number }
           |   state HamburgerState of Hamburger.StateFields is {
           |    handler foo is {
-          |     on event EntityContext.Incoming { example only { then set HamburgerState.field1 to 678 } }
+          |     on event EntityContext.Incoming { set field HamburgerState.field1 to 678 }
           |    }
           |   }
           |  }
@@ -83,8 +83,9 @@ class HandlerValidatorTest extends ValidatingTest {
           |  record Fields is { field1: Number }
           |  state HamburgerState of Fields is {
           |    handler foo is {
-          |      on event Incoming { example only {
-          |       then set HamburgerState.field1 to 678 } }
+          |      on event Incoming {
+          |       set field HamburgerState.field1 to 678
+          |     }
           |    }
           |  }
           |}
@@ -108,11 +109,12 @@ class HandlerValidatorTest extends ValidatingTest {
           |context EntityContext is {
           |entity Hamburger is {
           |  record Fields is { field1: Number }
+          |  command EntityCommand is { foo: Number }
           |  state HamburgerState of Fields = {
           |    handler foo is {
-          |      on command EntityCommand { example only {
-          |        then set nonExistingField to 123
-          |      } }
+          |      on command EntityCommand {
+          |        set field nonExistingField to 123
+          |      }
           |    }
           |  }
           |}
@@ -124,8 +126,8 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'nonExistingField' was not resolved, in Example " +
-              "'only', but should refer to a Field"
+            "Path 'nonExistingField' was not resolved, in Anonymous Statement, " +
+              "but should refer to a Field"
           )
       }
     }
@@ -140,9 +142,9 @@ class HandlerValidatorTest extends ValidatingTest {
           |  record Fields is {  field1: Number  }
           |  state HamburgerState of Fields = {
           |    handler foo is {
-          |      on command EntityCommand { example only {
-          |        then set field1 to @bar
-          |      } }
+          |      on command EntityCommand {
+          |        set field field1 to field bar
+          |      }
           |    }
           |  }
           |}
@@ -154,7 +156,7 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'bar' was not resolved, in Example 'only', but should refer to a Field"
+            "Path 'bar' was not resolved, in OnMessageClause 'On command EntityCommand', but should refer to a Field"
           )
       }
     }
@@ -169,9 +171,9 @@ class HandlerValidatorTest extends ValidatingTest {
           |  record Fields is { field1: Number }
           |  state HamburgerState of Fields = {
           |    handler doit is {
-          |      on command EntityCommand { example only {
-          |        then set field1 to @foo
-          |      } }
+          |      on command EntityCommand {
+          |        set field field1 to field foo
+          |      }
           |    }
           |  }
           |}
@@ -196,9 +198,9 @@ class HandlerValidatorTest extends ValidatingTest {
           |  record Fields is { field1: String }
           |  state HamburgerState of Fields = {
           |    handler doit is {
-          |      on command ec:EntityCommand { example only {
-          |        then set Fields.field1 to @ec.foo
-          |      } }
+          |      on command ec:EntityCommand {
+          |        set field Fields.field1 to field ec.foo
+          |      }
           |    }
           |  }
           |}

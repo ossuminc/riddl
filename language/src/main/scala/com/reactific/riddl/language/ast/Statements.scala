@@ -30,7 +30,7 @@ trait Statements {
     what: LiteralString
   ) extends StatementBaseImpl {
     override def format: String = what.format
-
+    override def kind: String = "ArbitraryStatement"
   }
 
   /** An action that is intended to generate a runtime error in the generated application or otherwise indicate an error
@@ -43,27 +43,7 @@ trait Statements {
     */
   case class ErrorStatement(loc: At, message: LiteralString) extends StatementBaseImpl {
     override def format: String = s"error \"${message.format}\""
-  }
-
-  /** A helper class for publishing messages that represents the construction of the message to be sent.
-    *
-    * @param msg
-    *   A message reference that specifies the specific type of message to construct
-    * @param args
-    *   An argument list that should correspond to teh fields of the message
-    */
-  case class MessageValue(
-    loc: At,
-    msg: MessageRef,
-    args: ArgumentValues = ArgumentValues(At.empty, scala.collection.Map.empty[Identifier, Value])
-  ) extends RiddlNode {
-    override def format: String = msg.format + {
-      if args.nonEmpty then {
-        args.format
-      } else {
-        "()"
-      }
-    }
+    override def kind: String = "ErrorStatement"
   }
 
   /** An action that returns a value from a function

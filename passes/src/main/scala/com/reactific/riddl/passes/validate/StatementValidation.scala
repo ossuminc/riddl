@@ -7,6 +7,7 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.ast.At
 
@@ -171,47 +172,54 @@ trait StatementValidation extends TypeValidation {
     this
   }
 
-  private def checkStatements(
-    statements: Seq[Statement],
-    onClause: OnClause,
-    parents: Seq[Definition]
-  ): this.type = {
-    checkSequence(statements) { statement =>
-      checkStatement(statement, onClause, parents)
-    }
-    this
-  }
-
-  private def checkStatement(
+  def validateStatement(
     statement: Statement,
-    defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
     statement match {
-      case _: ErrorStatement =>
       case SetStatement(_, pathId, value) =>
         checkPathRef[Field](pathId, statement, parents)
-        checkValue(value, defn, parents)
+        checkValue(value, statement, parents)
         checkAssignmentCompatability(pathId, value, parents)
       case ReturnStatement(_, value) =>
-        checkValue(value, defn, parents)
+        checkValue(value, statement, parents)
       case s @ SendAction(_, msg, outlet) =>
-        checkMessageConstructor(msg, defn, parents)
-        checkRef[Portlet](outlet, defn, parents)
+        checkMessageConstructor(msg, statement, parents)
+        checkRef[Portlet](outlet, statement, parents)
         addSend(s, parents)
       case TellAction(_, msg, entityRef) =>
-        checkMessageConstructor(msg, defn, parents)
-        checkRef[Processor[?, ?]](entityRef, defn, parents)
+        checkMessageConstructor(msg, statement, parents)
+        checkRef[Processor[?, ?]](entityRef, statement, parents)
       case FunctionCallStatement(_, funcId, args) =>
-        checkPathRef[Function](funcId, defn, parents)
-        checkArgumentValues(args, defn, parents)
-      case BecomeStatement(_, entity, handler) =>
-        checkRef[Entity](entity, defn, parents)
-        checkRef[Handler](handler, defn, parents)
+        checkPathRef[Function](funcId, statement, parents)
+        checkArgumentValues(args, statement, parents)
+      case BecomeStatement(loc, er, hr) =>
+        checkRef[Entity](er, parents.head, parents.tail) match {
+          case Some(entity) =>
+            checkRef[Handler](hr, parents.head, parents.tail) match {
+              case Some(handler) =>
+                check(
+                  entity.handlers.contains(handler),
+                  s"Handler '${handler.id.format}' is not associated with Entity '${entity.id.format}",
+                  Messages.Error,
+                  handler.loc
+                )
+                check(
+                  parents.exists(_.isInstanceOf[Entity]),
+                  "Become statement is only allowed within an Entity's Handler",
+                  Messages.Error,
+                  loc
+                )
+              case None =>
+                messages.error(s"Path Id'${hr.pathId} does not refer to a Handler", hr.loc)
+            }
+          case None =>
+            messages.error(s"PathId '${er.pathId}' does not refer to an Entity'", er.loc)
+        }
       case MorphStatement(_, entity, state, value) =>
-        val maybeEntity = checkRef[Entity](entity, defn, parents)
-        val maybeState = checkRef[State](state, defn, parents)
-        checkValue(value, defn, parents)
+        val maybeEntity = checkRef[Entity](entity, statement, parents)
+        val maybeState = checkRef[State](state, statement, parents)
+        checkValue(value, statement, parents)
         val maybeExprType = getValueType(value, parents)
         if maybeExprType.isEmpty then {
           messages.addError(
@@ -257,6 +265,7 @@ trait StatementValidation extends TypeValidation {
           MissingWarning,
           loc
         )
+      case _: ErrorStatement =>
     }
     this
   }

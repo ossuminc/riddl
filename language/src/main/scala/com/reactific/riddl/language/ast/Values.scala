@@ -74,7 +74,7 @@ trait Values {
     *   A mapping of Identifier to LiteralString to provide the arguments for the function call.
     */
   case class ArgumentValues(
-    loc: At,
+    loc: At = At.empty,
     args: Map[Identifier, Value] = Map.empty[Identifier, Value]
   ) extends RiddlNode {
     override def format: String = args
@@ -111,9 +111,31 @@ trait Values {
   case class FunctionCallValue(
     loc: At,
     function: FunctionRef,
-    arguments: ArgumentValues
+    arguments: ArgumentValues = ArgumentValues()
   ) extends Value {
     def format: String = function.format + arguments.format
     def valueType: TypeExpression = UnknownType(loc)
+  }
+
+  /** Represents a message
+    *
+    * @param msg
+    *   A message reference that specifies the specific type of message to construct
+    * @param args
+    *   An argument list that should correspond to teh fields of the message
+    */
+  case class MessageValue(
+    loc: At,
+    msg: MessageRef,
+    args: ArgumentValues = ArgumentValues()
+  ) extends Value {
+    def valueType: TypeExpression = UnknownType(loc)
+    override def format: String = msg.format + {
+      if args.nonEmpty then {
+        args.format
+      } else {
+        "()"
+      }
+    }
   }
 }
