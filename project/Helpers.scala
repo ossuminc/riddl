@@ -104,7 +104,7 @@ object C {
   def withScala3(p: Project): Project = {
     p.configure(withInfo)
       .settings(
-        scalaVersion := "3.3.1-RC5",
+        scalaVersion := "3.3.1-RC7",
         scalacOptions := scala_3_options,
         Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
         apiURL := Some(url("https://riddl.tech/apidoc/")),
