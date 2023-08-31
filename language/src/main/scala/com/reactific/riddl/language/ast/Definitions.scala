@@ -71,10 +71,7 @@ trait Definitions {
       with ContextDefinition
       with EntityDefinition
       with FunctionDefinition
-      with SagaDefinition {
-    def id: Identifier = Identifier.empty
-    def kind: String = "Statement"
-  }
+      with SagaDefinition
 
   sealed trait VitalDefinitionDefinition
       extends AdaptorDefinition

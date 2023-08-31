@@ -49,7 +49,7 @@ trait Conditions {
     *   The path to the value for this condition
     */
   case class ValueCondition(loc: At, path: PathIdentifier) extends Condition(loc) {
-    override def format: String = "@" + path.format
+    override def format: String = "field " + path.format
   }
 
   /** A RIDDL Function call to the function identified by its path identifier

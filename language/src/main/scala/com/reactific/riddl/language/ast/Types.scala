@@ -38,7 +38,7 @@ trait Types {
     }
   }
 
-  sealed trait IntegerTypeExpression extends NumericType with TypeExpression
+  sealed trait IntegerTypeExpression extends NumericType
   sealed trait RealTypeExpression extends NumericType
 
   /** A TypeExpression that references another type by PathIdentifier
@@ -426,8 +426,10 @@ trait Types {
     */
   case class Strng(loc: At, min: Option[Long] = None, max: Option[Long] = None) extends PredefinedType {
     override lazy val kind: String = Predefined.String
-    override def format: String =
-      s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
+    override def format: String = {
+      if min.isEmpty && max.isEmpty then kind else
+        s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
+    }
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]

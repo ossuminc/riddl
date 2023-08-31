@@ -15,6 +15,7 @@ trait Statements {
     def contents: Seq[Definition] = Seq.empty[Definition]
     def description: Option[Description] = None
     def brief: Option[LiteralString] = None
+    def label: String = if id.value.isEmpty then id.value + ": " else ""
   }
 
   /** A statement whose behavior is specified as a text string allowing an arbitrary action to be specified handled by
@@ -27,10 +28,11 @@ trait Statements {
     */
   case class ArbitraryStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     what: LiteralString
   ) extends StatementBaseImpl {
     override def format: String = what.format
-    override def kind: String = "ArbitraryStatement"
+    override def kind: String = "Arbitrary Statement"
   }
 
   /** An action that is intended to generate a runtime error in the generated application or otherwise indicate an error
@@ -41,9 +43,13 @@ trait Statements {
     * @param message
     *   The error message to report
     */
-  case class ErrorStatement(loc: At, message: LiteralString) extends StatementBaseImpl {
-    override def format: String = s"error \"${message.format}\""
-    override def kind: String = "ErrorStatement"
+  case class ErrorStatement(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    message: LiteralString
+  ) extends StatementBaseImpl {
+    override def format: String = s"${label}error \"${message.format}\""
+    override def kind: String = "Error Statement"
   }
 
   /** An action that returns a value from a function
@@ -55,9 +61,11 @@ trait Statements {
     */
   case class ReturnStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     value: Value
   ) extends StatementBaseImpl {
-    override def format: String = s"return ${value.format}"
+    override def kind: String = "Return Statement"
+    override def format: String = s"${label}return ${value.format}"
   }
 
   /** An action that sends a message to an [[Inlet]] or [[Outlet]].
@@ -71,10 +79,12 @@ trait Statements {
     */
   case class SendStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     msg: MessageValue,
     portlet: PortletRef[Portlet]
   ) extends StatementBaseImpl {
-    override def format: String = s"send ${msg.format} to ${portlet.format}"
+    override def kind: String = "Send Statement"
+    override def format: String = s"${label}send ${msg.format} to ${portlet.format}"
   }
 
   /** An action to call a function
@@ -88,10 +98,12 @@ trait Statements {
     */
   case class FunctionCallStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     function: PathIdentifier,
     arguments: ArgumentValues
   ) extends StatementBaseImpl {
-    override def format: String = s"call ${function.format}${arguments.format}"
+    override def kind: String = "Call Statement"
+    override def format: String = s"${label}call ${function.format}${arguments.format}"
   }
 
   /** An statement that morphs the state of an entity to a new structure
@@ -105,11 +117,13 @@ trait Statements {
     */
   case class MorphStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     entity: EntityRef,
     state: StateRef,
     newValue: Value
   ) extends StatementBaseImpl {
-    override def format: String = s"morph ${entity.format} to ${state.format}"
+    override def kind: String = "Morph Statement"
+    override def format: String = s"${label}morph ${entity.format} to ${state.format}"
   }
 
   /** An action that changes the behavior of an entity by making it use a new handler for its messages; named for the
@@ -124,11 +138,13 @@ trait Statements {
     */
   case class BecomeStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     entity: EntityRef,
     handler: HandlerRef
   ) extends StatementBaseImpl {
+    override def kind: String = "Become Statement"
     override def format: String =
-      s"become ${entity.format} to ${handler.format}"
+      s"${label}become ${entity.format} to ${handler.format}"
   }
 
   /** An action that tells a message to an entity. This is very analogous to the tell operator in Akka. Unlike using an
@@ -145,10 +161,13 @@ trait Statements {
     */
   case class TellStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     msg: MessageValue,
     entityRef: ProcessorRef[Processor[?, ?]]
   ) extends StatementBaseImpl {
-    override def format: String = s"tell ${msg.format} to ${entityRef.format}"
+    override def kind: String = "Tell Statement"
+    override def format: String =
+      s"${label}tell ${msg.format} to ${entityRef.format}"
   }
 
   /** An action whose behavior is to set the value of a state field to some expression
@@ -162,31 +181,37 @@ trait Statements {
     */
   case class SetStatement(
     loc: At,
-    target: PathIdentifier,
+    id: Identifier = Identifier.empty,
+    target: FieldRef,
     value: Value
   ) extends StatementBaseImpl {
+    override def kind: String = "Set Statement"
     override def format: String = {
-      s"set ${target.format} to ${value.format}"
+      s"${label}set ${target.format} to ${value.format}"
     }
   }
 
   case class IfStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     conditional: Condition,
     then_ : Seq[Statement],
     else_ : Seq[Statement] = Seq.empty[Statement]
   ) extends StatementBaseImpl {
-    override def format: String = s"if ${conditional.format}\n" +
+    override def kind: String = "If Statement"
+    override def format: String = s"${label}if ${conditional.format}\n" +
       then_.map(_.format).mkString("\n") + " else \n" +
       else_.map(_.format).mkString("\nend")
   }
 
   case class ForEachStatement(
     loc: At,
+    id: Identifier = Identifier.empty,
     ref: PathIdentifier,
     do_ : Seq[Statement]
   ) extends StatementBaseImpl {
-    def format: String = s"foreach ${ref.format} do \n" +
+    override def kind: String = "Foreach Statement"
+    def format: String = s"${label}foreach ${ref.format} do \n" +
       do_.map(_.format).mkString("\n") + "end\n"
   }
 

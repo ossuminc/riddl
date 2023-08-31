@@ -50,7 +50,7 @@ trait Values {
   }
 
   case class ConstantValue(loc: At, pid: PathIdentifier) extends Value {
-    override def format: String = "@" + pid.format
+    override def format: String = "constant " + pid.format
     def valueType: TypeExpression = UnknownType(loc)
   }
 
@@ -63,7 +63,7 @@ trait Values {
     *   The path to the value for this expression
     */
   case class FieldValue(loc: At, path: PathIdentifier) extends Value {
-    override def format: String = "@" + path.format
+    override def format: String = "field " + path.format
     def valueType: TypeExpression = UnknownType(loc)
   }
 

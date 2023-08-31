@@ -18,13 +18,17 @@ import scala.collection.immutable.HashMap
   */
 private[parsing] trait StatementParser extends ReferenceParser with ConditionParser with CommonParser {
 
+  private def label[u: P]: P[Identifier] = {
+    P((identifier ~ Punctuation.colon).?).map(_.getOrElse(Identifier.empty))
+  }
+
   private def arbitraryStatement[u: P]: P[ArbitraryStatement] = {
-    P(location ~ literalString).map(t => (ArbitraryStatement.apply _).tupled(t))
+    P(location ~ label ~ literalString).map(t => (ArbitraryStatement.apply _).tupled(t))
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
     P(
-      location ~ Keywords.error ~ literalString
+      location ~ label ~ Keywords.error ~ literalString
     )./.map { tpl =>
       (ErrorStatement.apply _).tupled(tpl)
     }
@@ -32,13 +36,13 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~ value
+      location ~ label ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~ value
     )./.map { tpl => (MorphStatement.apply _).tupled(tpl) }
   }
 
   private def becomeStatement[u: P]: P[BecomeStatement] = {
     P(
-      location ~ Keywords.become ~/ entityRef ~ Readability.to ~ handlerRef
+      location ~ label ~ Keywords.become ~/ entityRef ~ Readability.to ~ handlerRef
     )./.map { tpl => (BecomeStatement.apply _).tupled(tpl) }
   }
 
@@ -46,7 +50,7 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
     P(
       location ~
         Punctuation.roundOpen ~
-        (identifier ~ Punctuation.equalsSign ~ value )
+        (identifier ~ Punctuation.equalsSign ~ value)
           .rep(0, Punctuation.comma)
         ~ Punctuation.roundClose
     )./.map { case (loc, args) =>
@@ -66,54 +70,56 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
 
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
-      location ~ Keywords.return_ ~/ value
+      location ~ label ~ Keywords.return_ ~/ value
     )./.map(t => (ReturnStatement.apply _).tupled(t))
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      location ~ Keywords.send ~/ messageValue ~
+      location ~ label ~ Keywords.send ~/ messageValue ~
         Readability.to ~ (outletRef | inletRef)
     )./.map { t => (SendStatement.apply _).tupled(t) }
   }
 
   private def functionCallStatement[u: P]: P[FunctionCallStatement] = {
     P(
-      location ~ Keywords.call ~/ pathIdentifier ~ argumentValues
+      location ~ label ~ Keywords.call ~/ pathIdentifier ~ argumentValues
     )./.map(tpl => (FunctionCallStatement.apply _).tupled(tpl))
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      location ~ Keywords.tell ~/ messageValue ~ Readability.to.? ~
+      location ~ label ~ Keywords.tell ~/ messageValue ~ Readability.to.? ~
         processorRef
     )./.map { t => (TellStatement.apply _).tupled(t) }
   }
 
   private def setStatement[u: P]: P[SetStatement] = {
     P(
-      location ~ Keywords.set ~/ fieldRef ~ Readability.to ~ value
-    )./.map { case (loc, ref, value) => SetStatement(loc, ref.pathId, value) }
+      location ~ label ~ Keywords.set ~/ fieldRef ~ Readability.to ~ value
+    )./.map { case (loc, label, ref, value) =>
+      SetStatement(loc, label, ref, value)
+    }
   }
 
   private def ifStatement[u: P](set: StatementsSet): P[IfStatement] = {
     P(
-      location ~ Keywords.if_ ~/ condition ~ Keywords.then_ ~/ setOfStatements(set) ~
+      location ~ label ~ Keywords.if_ ~/ condition ~ Keywords.then_ ~/ setOfStatements(set) ~
         (Keywords.else_ ~/ setOfStatements(set)).?.map {
           case None    => Seq.empty[Statement]
           case Some(s) => s
         } ~ Keywords.end_
-    )./.map { case (loc, cond, then_, else_) =>
-      IfStatement(loc, cond, then_, else_)
+    )./.map { case (loc, label, cond, then_, else_) =>
+      IfStatement(loc, label, cond, then_, else_)
     }
   }
 
   private def forEachStatement[u: P](set: StatementsSet): P[ForEachStatement] = {
     P(
-      location ~ Keywords.foreach ~ pathIdentifier ~ Keywords.do_ ~
+      location ~ label ~ Keywords.foreach ~ pathIdentifier ~ Keywords.do_ ~
         setOfStatements(set) ~ Keywords.end_
-    )./.map { case (loc, pid, statements) =>
-      ForEachStatement(loc, pid, statements)
+    )./.map { case (loc, label, pid, statements) =>
+      ForEachStatement(loc, label, pid, statements)
     }
   }
 
