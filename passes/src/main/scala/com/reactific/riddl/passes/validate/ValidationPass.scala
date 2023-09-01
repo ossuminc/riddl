@@ -264,7 +264,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     if !isAssignmentCompatible(Some(c.typeEx), maybeTypEx) then {
       messages.addError(
         value.loc,
-        s"Expression value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}"
+        s"Value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}"
       )
     }
     checkDescription(c)

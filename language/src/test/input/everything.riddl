@@ -78,11 +78,9 @@ domain Everything by author Reid is {
       state someState of Something.someData is {
         handler foo is {
           on command ACommand {
-            example only {
-              given "Something arrives "
-              when misc()
-              then send event Inebriated() to outlet APlant.Source.Commands
-            }
+            if and("Something arrives", misc()) then
+              send event Inebriated() to outlet APlant.Source.Commands
+            end
           }
         }
       }

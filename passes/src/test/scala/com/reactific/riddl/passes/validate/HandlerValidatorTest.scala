@@ -113,7 +113,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of Fields = {
           |    handler foo is {
           |      on command EntityCommand {
-          |        set field nonExistingField to 123
+          |        set field HamburgerState.nonExistingField to 123
           |      }
           |    }
           |  }
@@ -126,7 +126,7 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'nonExistingField' was not resolved, in Anonymous Statement, " +
+            "Path 'HamburgerState.nonExistingField' was not resolved, in Anonymous Set Statement, " +
               "but should refer to a Field"
           )
       }
@@ -142,8 +142,8 @@ class HandlerValidatorTest extends ValidatingTest {
           |  record Fields is {  field1: Number  }
           |  state HamburgerState of Fields = {
           |    handler foo is {
-          |      on command EntityCommand {
-          |        set field field1 to field bar
+          |      on command ec:EntityCommand {
+          |        set field HamburgerState.field1 to field ec.bar
           |      }
           |    }
           |  }
@@ -156,7 +156,7 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'bar' was not resolved, in OnMessageClause 'On command EntityCommand', but should refer to a Field"
+            "Path 'ec.bar' was not resolved, in Anonymous Set Statement, but should refer to a Field"
           )
       }
     }
@@ -199,7 +199,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of Fields = {
           |    handler doit is {
           |      on command ec:EntityCommand {
-          |        set field Fields.field1 to field ec.foo
+          |        set field HamburgerState.field1 to field ec.foo
           |      }
           |    }
           |  }
@@ -209,7 +209,8 @@ class HandlerValidatorTest extends ValidatingTest {
           |""".stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
-          msgs.justErrors.format mustBe (empty)
+          msgs.justErrors mustBe empty
+
       }
     }
   }

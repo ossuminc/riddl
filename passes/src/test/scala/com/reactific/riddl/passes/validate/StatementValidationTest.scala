@@ -5,10 +5,10 @@ import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
-class ActionValidationTest extends ValidatingTest {
+class StatementValidationTest extends ValidatingTest {
 
   "Morph" should {
-    "not error on valid action" in {
+    "not error on valid statement" in {
       val input = """domain Ignore is {
                     |context Ignore2 is {
                     |entity OfInterest is {
@@ -18,8 +18,8 @@ class ActionValidationTest extends ValidatingTest {
                     |  state Second of OfInterest.Data is {
                     |    handler only is {
                     |      on command MorphIt {
-                    |        then morph entity Ignore.Ignore2.OfInterest to state OfInterest.First
-                    |        with !OfInterest.Data(field=3)
+                    |        morph entity Ignore.Ignore2.OfInterest to state OfInterest.First
+                    |          with record OfInterest.Data(field=3)
                     |      }
                     |    }
                     |  }
@@ -40,8 +40,7 @@ class ActionValidationTest extends ValidatingTest {
           |  state Second of OfInterest.Data is {
           |    handler only is {
           |      on command MorphIt {
-          |        then morph entity OfInterest to state First with 3
-          |
+          |        morph entity OfInterest to state First with 3
           |      }
           |    }
           |  }
@@ -74,9 +73,8 @@ class ActionValidationTest extends ValidatingTest {
                     |  state Second of Ignore.Ignore2.Data is {
                     |    handler only is {
                     |      on command MorphIt {
-                    |        then morph entity Ignore.Ignore2.Confusion to state Ignore.Ignore2.OfInterest.First
-                    |        with !Ignore.Ignore2.Data(field=3)
-                    |
+                    |        morph entity Ignore.Ignore2.Confusion to state Ignore.Ignore2.OfInterest.First
+                    |         with record Ignore.Ignore2.Data(field=3)
                     |      }
                     |    }
                     |  }

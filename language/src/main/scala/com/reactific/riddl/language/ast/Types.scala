@@ -264,20 +264,20 @@ trait Types {
     final lazy val contents: Seq[Field] = fields
     override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || {
-        other match {
-          case oate: AggregateTypeExpression =>
-            val validity: Seq[Boolean] = for
-              ofield <- oate.fields
-              myField <- fields.find(_.id.value == ofield.id.value)
-              myTypEx = myField.typeEx
-              oTypeEx = ofield.typeEx
-            yield {
-              myTypEx.isAssignmentCompatible(oTypeEx)
-            }
-            (validity.size == oate.fields.size) && validity.forall(_ == true)
-          case _ => false
-        }
+      
+      other match {
+        case oate: AggregateTypeExpression =>
+          val validity: Seq[Boolean] = for
+            ofield <- oate.fields
+            myField <- fields.find(_.id.value == ofield.id.value)
+            myTypEx = myField.typeEx
+            oTypeEx = ofield.typeEx
+          yield {
+            myTypEx.isAssignmentCompatible(oTypeEx)
+          }
+          (validity.size == oate.fields.size) && validity.forall(_ == true)
+        case _ =>
+          super.isAssignmentCompatible(other)
       }
     }
   }

@@ -20,7 +20,7 @@ private[parsing] trait ValueParser extends TypeParser with ReferenceParser with 
   def value[u: P]: P[Value] = {
     P(
       decimalValue | integerValue | booleanValue | computedValue | constantValue | fieldValue |
-        arbitraryValue | functionCallValue
+        arbitraryValue | functionCallValue | messageValue
     )
   }
 
@@ -109,4 +109,9 @@ private[parsing] trait ValueParser extends TypeParser with ReferenceParser with 
     ).map { tpl => (FunctionCallValue.apply _).tupled(tpl) }
   }
 
+  private def messageValue[u:P]: P[MessageValue] = {
+    P(
+      location ~ messageRef ~ argumentValues
+    ).map { tpl => (MessageValue.apply _).tupled(tpl) }
+  }
 }

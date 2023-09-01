@@ -180,27 +180,27 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
     val pars: Seq[Definition] = statement +: parents
     statement match {
-      case SetStatement(_, pid: PathIdentifier, value: Value) =>
-        resolveAPathId[Field](pid, pars)
-        resolveValue(value, parents)
-      case SendStatement(_, msg: MessageValue, ref: PortletRef[Portlet]) =>
-        resolveARef[Type](msg.msg, parents)
-        resolveARef[Portlet](ref, parents)
+      case SetStatement(_, _, ref: FieldRef, value: Value) =>
+        resolveARef[Field](ref, pars)
+        resolveValue(value, pars)
+      case SendStatement(_, _, msg: MessageValue, ref: PortletRef[Portlet]) =>
+        resolveARef[Type](msg.msg, pars)
+        resolveARef[Portlet](ref, pars)
+        msg.args.args.values.foreach(resolveValue(_, pars))
+      case TellStatement(_, _, msg: MessageValue, ref: EntityRef) =>
+        resolveARef[Type](msg.msg, pars)
+        resolveARef[Entity](ref, pars)
         msg.args.args.values.foreach(resolveValue(_, parents))
-      case TellStatement(_, msg: MessageValue, ref: EntityRef) =>
-        resolveARef[Type](msg.msg, parents)
-        resolveARef[Entity](ref, parents)
-        msg.args.args.values.foreach(resolveValue(_, parents))
-      case FunctionCallStatement(_, pid: PathIdentifier, args: ArgumentValues) =>
-        resolveAPathId[Function](pid, parents)
-        args.args.values.foreach(resolveValue(_, parents))
-      case MorphStatement(_, ref: EntityRef, state: StateRef, newValue: Value) =>
-        resolveARef[Entity](ref, parents)
-        resolveARef[State](state, parents)
-        resolveValue(newValue, parents)
-      case BecomeStatement(_, entity: EntityRef, handler: HandlerRef) =>
-        resolveARef[Entity](entity, parents)
-        resolveARef[Handler](handler, parents)
+      case FunctionCallStatement(_, _, pid: PathIdentifier, args: ArgumentValues) =>
+        resolveAPathId[Function](pid, pars)
+        args.args.values.foreach(resolveValue(_, pars))
+      case MorphStatement(_, _, ref: EntityRef, state: StateRef, newValue: Value) =>
+        resolveARef[Entity](ref, pars)
+        resolveARef[State](state, pars)
+        resolveValue(newValue, pars)
+      case BecomeStatement(_, _, entity: EntityRef, handler: HandlerRef) =>
+        resolveARef[Entity](entity, pars)
+        resolveARef[Handler](handler, pars)
       case _: ErrorStatement     => () // no references
       case _: ArbitraryStatement => () // no references
     }
@@ -228,7 +228,9 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case ConstantValue(_, pid) =>
         resolveAPathId[Constant](pid, parents)
       case MessageValue(_, msg, args) =>
-        val path = resolveAPathId[Type](msg.pathId, parents)
+        resolveAPathId[Type](msg.pathId, parents)
+        args.args.values.foreach(resolveValue(_, parents))
+/*
         if path.nonEmpty then
           path match {
             case t: Type =>
@@ -242,7 +244,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
               }
             case x: Definition =>
               messages.error(s"PathId '${msg.pathId}' refers to a ' ${x.kind} but should be a Message Type")
-          }
+          }*/
 
       case FunctionCallValue(_, func, args) =>
         resolveAPathId[Function](func.pathId, parents)
@@ -490,6 +492,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
           adjustStacksForPid[Type](oc.msg.pathId, parentStack)
         case f: Field =>
           candidatesFromTypeEx(f.typeEx, parentStack)
+        case c: Constant =>
+          candidatesFromTypeEx(c.typeEx, parentStack)
         case t: Type =>
           candidatesFromTypeEx(t.typ, parentStack)
         case f: Function =>

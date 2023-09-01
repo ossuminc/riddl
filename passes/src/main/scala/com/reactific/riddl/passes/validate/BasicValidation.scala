@@ -60,8 +60,8 @@ trait BasicValidation {
     container: Definition,
     parents: Seq[Definition]
   ): Option[T] = {
-    val tc = classTag[T].runtimeClass
     if pid.value.isEmpty then {
+      val tc = classTag[T].runtimeClass
       val message =
         s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
       messages.addError(pid.loc, message)
@@ -152,6 +152,7 @@ trait BasicValidation {
         case Some(f: Function) => f.output
         case Some(t: Type)     => Some(t.typ)
         case Some(f: Field)    => Some(f.typeEx)
+        case Some(c: Constant) => Some(c.typeEx)
         case Some(s: State) =>
           Some(AliasedTypeExpression(s.typ.loc, s.typ.pathId))
         case Some(Inlet(_, _, typ, _, _)) =>

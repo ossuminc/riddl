@@ -159,15 +159,15 @@ class RegressionTests extends ValidatingTest {
           |    entity ExampleEntity is {
           |      handler ExampleHandler is {
           |          on command Foo {
-          |            then morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample
-          |              with !FooExampleState(
-          |                infoThatShouldNotWork = @Example.Foo.info,
-          |                nameThatShouldWork = @Example.Foo.info.name,
-          |                nameThatShouldNotWork = @Example.Foo.info
+          |            morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample
+          |              with record ExampleEntity.FooExampleState(
+          |                infoThatShouldNotWork = command Example.Foo.info,
+          |                nameThatShouldWork = field Example.Foo.info.name,
+          |                nameThatShouldNotWork = field Example.Foo.info
           |              )
           |          }
           |          on other {
-          |            then error "You must first create an event using ScheduleEvent command."
+          |            error "You must first create an event using ScheduleEvent command."
           |          }
           |      }
           |
@@ -178,12 +178,12 @@ class RegressionTests extends ValidatingTest {
           |      state FooExample of FooExampleState is {
           |        handler FooExampleHandler {
           |          on other {
-          |            then error "You must first create an event using ScheduleEvent command."
+          |            error "You must first create an event using ScheduleEvent command."
           |          }
           |        }
           |      }
-          |		}
-          |	}
+          |    }
+          |	 }
           |}
           |""".stripMargin
       )

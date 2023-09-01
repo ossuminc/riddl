@@ -6,8 +6,6 @@
 
 package com.reactific.riddl.language.ast
 
-import scala.collection.Map
-
 trait Statements {
   this: Definitions with Conditions with Values with AbstractDefinitions =>
 

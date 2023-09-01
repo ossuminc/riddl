@@ -16,12 +16,12 @@ import scala.collection.mutable
 /** Unit Tests For ExampleValidationState */
 trait StatementValidation extends TypeValidation {
 
-  protected val sends: mutable.HashMap[SendAction, Seq[Definition]] =
+  protected val sends: mutable.HashMap[SendStatement, Seq[Definition]] =
     mutable.HashMap
-      .empty[SendAction, Seq[Definition]]
+      .empty[SendStatement, Seq[Definition]]
 
   private def addSend(
-    send: SendAction,
+    send: SendStatement,
     parents: Seq[Definition]
   ): this.type = {
     sends.put(send, parents)
@@ -46,24 +46,24 @@ trait StatementValidation extends TypeValidation {
     this
   }
 
-  private def checkMessageConstructor(
-    messageConstructor: MessageConstructor,
+  private def checkMessageValue(
+    messageValue: MessageValue,
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
-    val pid = messageConstructor.msg.pathId
+    val pid = messageValue.msg.pathId
     resolvePath[Type](pid, parents) match {
       case Some(typ) =>
         typ.typ match {
           case mt: AggregateUseCaseTypeExpression =>
-            val names = messageConstructor.args.args.keys.map(_.value).toSeq
+            val names = messageValue.args.args.keys.map(_.value).toSeq
             val unset = mt.fields.filterNot { fName =>
               names.contains(fName.id.value)
             }
             if unset.nonEmpty then {
               unset.filterNot(_.isImplicit).foreach { field =>
                 messages.addError(
-                  messageConstructor.loc,
+                  messageValue.loc,
                   s"${field.identify} was not set in message constructor"
                 )
               }
@@ -129,7 +129,7 @@ trait StatementValidation extends TypeValidation {
   }
 
   private def checkValues(
-    values: Seq[Value],
+    values: Iterable[Value],
     defn: Definition,
     parents: Seq[Definition]
   ): this.type = {
@@ -155,6 +155,8 @@ trait StatementValidation extends TypeValidation {
           Error,
           loc
         ).checkValues(operands, defn, parents)
+      case MessageValue(_, msg, args) =>
+        checkValues(args.args.values, defn, parents)
       case Comparison(loc, comp, arg1, arg2) =>
         checkValue(arg1, defn, parents)
           .checkValue(arg2, defn, parents)
@@ -176,24 +178,25 @@ trait StatementValidation extends TypeValidation {
     statement: Statement,
     parents: Seq[Definition]
   ): this.type = {
+    val pars = statement +: parents
     statement match {
-      case SetStatement(_, pathId, value) =>
-        checkPathRef[Field](pathId, statement, parents)
+      case SetStatement(_, _, target, value) =>
+        checkRef[Field](target, statement, parents)
         checkValue(value, statement, parents)
-        checkAssignmentCompatability(pathId, value, parents)
-      case ReturnStatement(_, value) =>
+        checkAssignmentCompatability(target.pathId, value, pars)
+      case ReturnStatement(_, _, value) =>
         checkValue(value, statement, parents)
-      case s @ SendAction(_, msg, outlet) =>
-        checkMessageConstructor(msg, statement, parents)
+      case ss @ SendStatement(_, _, msg, outlet) =>
+        checkMessageValue(msg, statement, parents)
         checkRef[Portlet](outlet, statement, parents)
-        addSend(s, parents)
-      case TellAction(_, msg, entityRef) =>
-        checkMessageConstructor(msg, statement, parents)
+        addSend(ss, parents)
+      case TellStatement(_, _, msg, entityRef) =>
+        checkMessageValue(msg, statement, parents)
         checkRef[Processor[?, ?]](entityRef, statement, parents)
-      case FunctionCallStatement(_, funcId, args) =>
+      case FunctionCallStatement(_, _, funcId, args) =>
         checkPathRef[Function](funcId, statement, parents)
         checkArgumentValues(args, statement, parents)
-      case BecomeStatement(loc, er, hr) =>
+      case BecomeStatement(loc, _, er, hr) =>
         checkRef[Entity](er, parents.head, parents.tail) match {
           case Some(entity) =>
             checkRef[Handler](hr, parents.head, parents.tail) match {
@@ -216,15 +219,15 @@ trait StatementValidation extends TypeValidation {
           case None =>
             messages.error(s"PathId '${er.pathId}' does not refer to an Entity'", er.loc)
         }
-      case MorphStatement(_, entity, state, value) =>
+      case MorphStatement(_, _, entity, state, value) =>
         val maybeEntity = checkRef[Entity](entity, statement, parents)
         val maybeState = checkRef[State](state, statement, parents)
         checkValue(value, statement, parents)
-        val maybeExprType = getValueType(value, parents)
+        val maybeExprType = getValueType(value, pars)
         if maybeExprType.isEmpty then {
           messages.addError(
             value.loc,
-            s"Unable to determine type of expression ${value.format}"
+            s"Unable to determine type of value ${value.format}"
           )
         } else {
           val exprType = maybeExprType.get
@@ -241,11 +244,7 @@ trait StatementValidation extends TypeValidation {
                   val maybeType = resolvePidRelativeTo[Type](pid, resolvedState)
                   maybeType match {
                     case Some(typ) =>
-                      if !this.isAssignmentCompatible(
-                          Some(typ.typ),
-                          Some(exprType)
-                        )
-                      then {
+                      if !isAssignmentCompatible(Some(typ.typ), Some(exprType)) then {
                         messages.addError(
                           value.loc,
                           s"Morph value of type ${exprType.format} " +
@@ -258,7 +257,7 @@ trait StatementValidation extends TypeValidation {
               }
           }
         }
-      case ArbitraryStatement(loc, what) =>
+      case ArbitraryStatement(loc, _, what) =>
         check(
           what.nonEmpty,
           "arbitrary statement is empty providing no behavior specification value",
@@ -276,19 +275,16 @@ trait StatementValidation extends TypeValidation {
     parents: Seq[Definition]
   ): this.type = {
     val pidType = getPathIdType(path, parents)
-    val exprType = getValueType(value, parents)
-    if !isAssignmentCompatible(pidType, exprType) then {
+    val valueType = getValueType(value, parents)
+    if !isAssignmentCompatible(pidType, valueType) then
       messages.addError(
         path.loc,
         s"""Setting a value requires assignment compatibility, but field:
            |  ${path.format} (${pidType.map(_.format).getOrElse("<not found>")})
-           |is not assignment compatible with expression:
-           |  ${value.format} (${exprType
-            .map(_.format)
-            .getOrElse("<not found>")})
+           |is not assignment compatible with value:
+           |  ${value.format} (${valueType.map(_.format).getOrElse("<not found>")})
            |""".stripMargin
       )
-    }
     this
   }
 }

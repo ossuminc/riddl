@@ -52,6 +52,7 @@ trait TypeValidation extends DefinitionValidation {
       case FunctionCallValue(_, fRef, _) => getPathIdType(fRef.pathId, parents)
       case FieldValue(_, pid)            => getPathIdType(pid, parents)
       case ConstantValue(_, pid)         => getPathIdType(pid, parents)
+      case MessageValue(_, ref, _)       => getPathIdType(ref.pathId, parents)
       case v: Value                      => Some(v.valueType)
     }
   }

@@ -36,7 +36,8 @@ private[parsing] trait StatementParser extends ReferenceParser with ConditionPar
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ label ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~ value
+      location ~ label ~ Keywords.morph ~/ entityRef ~/ Readability.to ~
+        stateRef ~ Readability.with_ ~ value
     )./.map { tpl => (MorphStatement.apply _).tupled(tpl) }
   }
 
