@@ -305,6 +305,7 @@ class ParserTest extends ParsingTest {
                     |function foo is {
                     |  requires {b:Boolean}
                     |  returns {i:Integer}
+                    |  {}
                     |}
                     |""".stripMargin
 

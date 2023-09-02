@@ -660,7 +660,7 @@ trait Definitions {
     output: Option[Aggregation] = None,
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
-    examples: Seq[Example] = Seq.empty[Example],
+    statements: Seq[Statement] = Seq.empty[Statement],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[FunctionDefinition]] = Seq
       .empty[Include[FunctionDefinition]],
@@ -682,10 +682,10 @@ trait Definitions {
     override lazy val contents: Seq[FunctionDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
-        functions ++ examples
+        functions ++ statements
     }
 
-    override def isEmpty: Boolean = examples.isEmpty && input.isEmpty &&
+    override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
       output.isEmpty
 
     final val kind: String = "Function"
@@ -695,7 +695,7 @@ trait Definitions {
       if input.nonEmpty then score += 2
       if output.nonEmpty then score += 3
       if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 13)
-      if examples.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
+      if statements.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
       if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 12)
       Math.max(score, maxMaturity)
     }

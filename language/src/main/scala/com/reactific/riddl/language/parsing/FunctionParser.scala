@@ -34,9 +34,13 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
   }
 
   private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
-    P( typeDef | statement(StatementsSet.FunctionStatements) | function |
-        term | functionInclude
+    P(
+      typeDef | function | term | functionInclude
     ).rep(0)
+  }
+
+  private def statementBlock[u: P]: P[Seq[Statement]] = {
+    P(open ~ statement(StatementsSet.FunctionStatements).rep(0) ~ close)
   }
 
   private def functionBody[u: P]: P[
@@ -44,12 +48,13 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
       Seq[FunctionOption],
       Option[Aggregation],
       Option[Aggregation],
-      Seq[FunctionDefinition]
+      Seq[FunctionDefinition],
+      Seq[Statement]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition])
-    } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions))
+      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
+    } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 
   /** Parses function literals, i.e.
@@ -58,6 +63,7 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
     *   function myFunction is {
     *     requires is Boolean
     *     yields is Integer
+    *     { statements }
     *   }
     * }}}
     */
@@ -70,13 +76,12 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
             loc,
             id,
             authors,
-            (options, input, output, definitions),
+            (options, input, output, definitions, statements),
             briefly,
             description
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
-        val examples = mapTo[Example](groups.get(classOf[Example]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
         val includes = mapTo[Include[FunctionDefinition]](
@@ -91,7 +96,7 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
           output,
           types,
           functions,
-          examples,
+          statements,
           authors,
           includes,
           options,
