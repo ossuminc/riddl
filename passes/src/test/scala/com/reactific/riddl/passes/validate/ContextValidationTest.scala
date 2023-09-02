@@ -57,6 +57,7 @@ class ContextValidationTest extends ValidatingTest {
       val input = """function bar is {
                     |  requires { i: Integer }
                     |  returns { o: Integer }
+                    |  {}
                     |}
                     |""".stripMargin
       parseAndValidateContext(input) {
