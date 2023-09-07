@@ -15,7 +15,10 @@ private[parsing] trait HandlerParser extends StatementParser with CommonParser {
 
   private def onClauseBody[u: P](set: StatementsSet): P[Seq[Statement]] = {
     P(
-      open ~ (setOfStatements(set) | undefined(Seq.empty[Statement])) ~ close
+      open ~ (
+        undefined(Seq.empty[Statement]) |
+          setOfStatements(set)
+        ) ~ close
     )
   }
 
