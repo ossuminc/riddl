@@ -22,11 +22,12 @@ class ParsingTestTest extends ParsingTest {
       }
     }
 
-    "parse[Example]" in {
-      val rpi = RiddlParserInput("""example foo is { ??? }""")
-      parseDefinition[Example](rpi) match {
+    "parse[Statement]" in {
+      val rpi = RiddlParserInput(""" "statement" """)
+      parseDefinition[Statement](rpi) match {
         case Right((oj, _)) =>
-          val expected = Example((1, 1, rpi), Identifier((1, 9, rpi), "foo"))
+          val expected = ArbitraryStatement((1, 1, rpi), Identifier((1, 1, rpi), ""),
+            LiteralString((1, 2, rpi), "statement"))
           oj mustBe expected
         case Left(errors) => fail(errors.format)
       }
