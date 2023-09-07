@@ -1,3 +1,5 @@
+.metals/
+.vscode/
 .bloop/
 /.bsp/
 !.idea/runConfigurations/
