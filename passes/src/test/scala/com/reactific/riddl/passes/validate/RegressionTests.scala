@@ -160,11 +160,7 @@ class RegressionTests extends ValidatingTest {
           |      handler ExampleHandler is {
           |          on command Foo {
           |            morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample
-          |              with record ExampleEntity.FooExampleState(
-          |                infoThatShouldNotWork = command Example.Foo.info,
-          |                nameThatShouldWork = field Example.Foo.info.name,
-          |                nameThatShouldNotWork = field Example.Foo.info
-          |              )
+          |              with "constructed FooExampleState"
           |          }
           |          on other {
           |            error "You must first create an event using ScheduleEvent command."
