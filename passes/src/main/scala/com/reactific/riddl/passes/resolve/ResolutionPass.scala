@@ -16,10 +16,10 @@ import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 case class ResolutionOutput(
-  messages: Messages.Messages,
-  refMap: ReferenceMap,
-  kindMap: KindMap,
-  usage: Usages
+  messages: Messages.Messages = Messages.empty,
+  refMap: ReferenceMap = ReferenceMap.empty,
+  kindMap: KindMap = KindMap.empty,
+  usage: Usages = Usages.empty
 ) extends PassOutput {}
 
 object ResolutionPass extends PassInfo {
@@ -38,7 +38,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   val refMap: ReferenceMap = ReferenceMap(messages)
   val kindMap: KindMap = KindMap()
   val typeMap: TypeMap = TypeMap()
-  val symbols: SymbolsOutput = input.outputOf[SymbolsOutput]("symbols")
+  val symbols: SymbolsOutput = input.outputOf[SymbolsOutput](SymbolsPass.name)
 
   override def result: ResolutionOutput =
     ResolutionOutput(messages.toMessages, refMap, kindMap, Usages(uses, usedBy))
@@ -499,7 +499,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         case f: Function =>
           // If we're at a Function node, the functions input parameters
           // are the candidates to search next
-          f.input.get.fields
+          f.input.get.fields ++ f.output.get.fields
         case d: Definition =>
           d.contents.flatMap {
             case Include(_, contents, _) =>

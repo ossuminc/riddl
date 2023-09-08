@@ -21,6 +21,7 @@ kinds of statements, described in the table below.
 |   Publish    | Publish a message to a pipe                                  |
 |    Reply     | Provide the reply message to the entity that invoked a query |
 |    Return    | Return a value from a function                               |
+|     Set      | Set a field value                                            |
 |     Tell     | Send a message to an entity directly, do not wait for result |
 
 ## Level of Detail

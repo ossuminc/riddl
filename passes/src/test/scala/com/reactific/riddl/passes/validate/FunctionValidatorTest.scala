@@ -18,6 +18,7 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |  function foo is {
                                           |    requires {b: Boolean }
                                           |    returns {r: Integer }
+                                          |    {}
                                           |  }
                                           |}
                                           |""".stripMargin) { (e, _, msgs) =>
@@ -50,14 +51,14 @@ class FunctionValidatorTest extends ValidatingTest {
         """function percent {
         |  requires { number: Number }
         |  returns { result: Number }
-        |  example calc is {
-        |    then set percent.result to /(@percent.number , 100.0)
+        |  {
+        |    set field percent.result to "a percentage result"
         |  }
         |}
         |""".stripMargin
       parseAndValidateInContext[Function](input, shouldFailOnErrors = true) { case (function, _, msgs) =>
         function.id.value mustBe "percent"
-        function.examples mustNot be(empty)
+        function.statements mustNot be(empty)
         msgs.justErrors must be(empty)
       }
 
@@ -65,22 +66,19 @@ class FunctionValidatorTest extends ValidatingTest {
     "validate function examples" in {
       val input = """
                     |  function AnAspect is {
-                    |    EXAMPLE foobar {
-                    |      GIVEN "everybody hates me"
-                    |      AND "I'm depressed"
-                    |      WHEN "I go fishing"
-                    |      THEN "I'll just eat worms"
-                    |      ELSE "I'm happy"
-                    |    } described as {
-                    |     "brief description"
-                    |     "detailed description"
+                    |    { if and("everybody hates me", "I'm depressed") then
+                    |        "I go fishing"
+                    |        "I'll just eat worms"
+                    |      else
+                    |        "I'm happy"
+                    |      end
                     |    }
                     |  } described as "foo"
                     |""".stripMargin
 
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
         function.id.value mustBe "AnAspect"
-        function.examples mustNot be(empty)
+        function.statements mustNot be(empty)
         msgs mustNot be(empty)
         val text = msgs.format
         text must include("Function 'AnAspect' is unused")

@@ -690,8 +690,8 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitDefDoc(function, parents)
     emitTypesToc(function)
     emitInputOutput(function.input, function.output)
-    h2("Examples")
-    emitExamples(function.examples)
+    h2("Statements")
+    emitStatements(function.statements, 2)
     emitUsage(function)
     emitTerms(function.terms)
     this
@@ -768,7 +768,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  private def emitStatements(statements: Seq[Statement], level: Int): this.type = {
+  private def emitStatements(statements: Seq[Statement], level: Int = 2): this.type = {
     list("statement", statements.map(_.format), level)
     this
   }
