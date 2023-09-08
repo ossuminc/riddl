@@ -71,7 +71,15 @@ trait Definitions {
       with ContextDefinition
       with EntityDefinition
       with FunctionDefinition
-      with SagaDefinition
+        with SagaDefinition {
+    def contents: Seq[Definition] = Seq.empty[Definition]
+
+    def description: Option[Description] = None
+
+    def brief: Option[LiteralString] = None
+
+    def label: String = if id.value.isEmpty then id.value + ": " else ""
+  }
 
   sealed trait VitalDefinitionDefinition
       extends AdaptorDefinition

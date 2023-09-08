@@ -9,13 +9,6 @@ package com.reactific.riddl.language.ast
 trait Statements {
   this: Definitions with Conditions with Values with AbstractDefinitions =>
 
-  trait StatementBaseImpl extends Statement {
-    def contents: Seq[Definition] = Seq.empty[Definition]
-    def description: Option[Description] = None
-    def brief: Option[LiteralString] = None
-    def label: String = if id.value.isEmpty then id.value + ": " else ""
-  }
-
   /** A statement whose behavior is specified as a text string allowing an arbitrary action to be specified handled by
     * RIDDL's syntax.
     *
@@ -28,7 +21,7 @@ trait Statements {
     loc: At,
     id: Identifier = Identifier.empty,
     what: LiteralString
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def format: String = what.format
     override def kind: String = "Arbitrary Statement"
   }
@@ -45,7 +38,7 @@ trait Statements {
     loc: At,
     id: Identifier = Identifier.empty,
     message: LiteralString
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def format: String = s"${label}error \"${message.format}\""
     override def kind: String = "Error Statement"
   }
@@ -61,7 +54,7 @@ trait Statements {
     loc: At,
     id: Identifier = Identifier.empty,
     value: Value
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Return Statement"
     override def format: String = s"${label}return ${value.format}"
   }
@@ -80,7 +73,7 @@ trait Statements {
     id: Identifier = Identifier.empty,
     msg: MessageValue,
     portlet: PortletRef[Portlet]
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Send Statement"
     override def format: String = s"${label}send ${msg.format} to ${portlet.format}"
   }
@@ -99,7 +92,7 @@ trait Statements {
     id: Identifier = Identifier.empty,
     function: PathIdentifier,
     arguments: ArgumentValues
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Call Statement"
     override def format: String = s"${label}call ${function.format}${arguments.format}"
   }
@@ -119,7 +112,7 @@ trait Statements {
     entity: EntityRef,
     state: StateRef,
     newValue: Value
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Morph Statement"
     override def format: String = s"${label}morph ${entity.format} to ${state.format}"
   }
@@ -139,7 +132,7 @@ trait Statements {
     id: Identifier = Identifier.empty,
     entity: EntityRef,
     handler: HandlerRef
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Become Statement"
     override def format: String =
       s"${label}become ${entity.format} to ${handler.format}"
@@ -162,7 +155,7 @@ trait Statements {
     id: Identifier = Identifier.empty,
     msg: MessageValue,
     entityRef: ProcessorRef[Processor[?, ?]]
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Tell Statement"
     override def format: String =
       s"${label}tell ${msg.format} to ${entityRef.format}"
@@ -182,7 +175,7 @@ trait Statements {
     id: Identifier = Identifier.empty,
     target: FieldRef,
     value: Value
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Set Statement"
     override def format: String = {
       s"${label}set ${target.format} to ${value.format}"
@@ -195,7 +188,7 @@ trait Statements {
     conditional: Condition,
     then_ : Seq[Statement],
     else_ : Seq[Statement] = Seq.empty[Statement]
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "If Statement"
     override def format: String = s"${label}if ${conditional.format}\n" +
       then_.map(_.format).mkString("\n") + " else \n" +
@@ -207,7 +200,7 @@ trait Statements {
     id: Identifier = Identifier.empty,
     ref: PathIdentifier,
     do_ : Seq[Statement]
-  ) extends StatementBaseImpl {
+  ) extends Statement {
     override def kind: String = "Foreach Statement"
     def format: String = s"${label}foreach ${ref.format} do \n" +
       do_.map(_.format).mkString("\n") + "end\n"
