@@ -2,8 +2,9 @@ package com.reactific.riddl.passes.validate
 
 /** Unit Tests For Repository */
 import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Tests For Repository */
 class RepositoryTest extends ValidatingTest {
 
@@ -30,7 +31,8 @@ class RepositoryTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input) {
+      val options = CommonOptions.noWarnings.copy(showMissingWarnings=false)
+      parseAndValidateDomain(input, options)  {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.contexts.headOption match {

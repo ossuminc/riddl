@@ -56,14 +56,14 @@ class FunctionValidatorTest extends ValidatingTest {
         |  }
         |}
         |""".stripMargin
-      parseAndValidateInContext[Function](input, shouldFailOnErrors = true) { case (function, _, msgs) =>
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
         function.id.value mustBe "percent"
-        function.statements mustNot be(empty)
+        function.statements.size mustBe 1
         msgs.justErrors must be(empty)
       }
 
     }
-    "validate function examples" in {
+    "validate function empty statements" in {
       val input = """
                     |  function AnAspect is {
                     |    { if and("everybody hates me", "I'm depressed") then
@@ -78,7 +78,7 @@ class FunctionValidatorTest extends ValidatingTest {
 
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
         function.id.value mustBe "AnAspect"
-        function.statements mustNot be(empty)
+        function.statements.size mustBe 1
         msgs mustNot be(empty)
         val text = msgs.format
         text must include("Function 'AnAspect' is unused")

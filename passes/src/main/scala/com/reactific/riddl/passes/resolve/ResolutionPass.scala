@@ -146,6 +146,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     f.authors.foreach(resolveARef[Author](_, parents))
     addFunction(f)
     f.input.foreach(resolveTypeExpression(_, parents))
+    f.output.foreach(resolveTypeExpression(_, parents))
   }
 
   private def resolveConnector(connector: Connector, parents: Seq[Definition]): Unit = {
@@ -230,7 +231,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case MessageValue(_, msg, args) =>
         resolveAPathId[Type](msg.pathId, parents)
         args.args.values.foreach(resolveValue(_, parents))
-/*
+      /*
         if path.nonEmpty then
           path match {
             case t: Type =>
