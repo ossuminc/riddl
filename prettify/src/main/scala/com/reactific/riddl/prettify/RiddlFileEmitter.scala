@@ -320,9 +320,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitStatement(statement: Statement): this.type = {
     if !statement.isImplicit then {
-      openDef(statement)
+      add(statement.label)
     }
-    // TODO: implement emitStatemetns
     if !statement.isImplicit then {
       closeDef(statement)
     }

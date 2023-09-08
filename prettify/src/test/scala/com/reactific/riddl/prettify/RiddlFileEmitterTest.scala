@@ -108,10 +108,10 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42)).toString mustBe "Integer{24,42}"
     }
     "emit actions" in {
-      val action = ArbitraryAction(At.empty, LiteralString(At.empty, "blah"))
-      val actions = Seq(action, action)
+      val stmt = ArbitraryStatement(At.empty, Identifier.empty, LiteralString(At.empty, "blah"))
+      val stmts = Seq(stmt, stmt)
       rfe.clear
-      rfe.emitActions(actions).toString mustBe (action.format + action.format)
+      rfe.emitStatements(stmts).toString mustBe (stmt.format + stmt.format)
     }
     "emit Gherkin Strings" in {
       val string = LiteralString(At.empty, "string")
@@ -130,7 +130,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
     "emit statements" in {
       rfe.clear
       val statements = Seq(
-        ArbitraryStatement(At.empty, LiteralString(At.empty, "ya gots ta do betta"))
+        ArbitraryStatement(At.empty, Identifier.empty, LiteralString(At.empty, "ya gots ta do betta"))
       )
 
       rfe.emitStatements(statements)

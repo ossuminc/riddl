@@ -31,7 +31,7 @@ class AdaptorTest extends ValidatingTest {
           |adaptor PaymentAdapter to context Target is {
           |  handler sendAMessage is {
           |    on event ItHappened {
-          |      example one is { then error "foo" } described as "eno"
+          |      error "foo"
           |    } described as "?"
           |  } explained as "?"
           |} explained as "?"
@@ -59,9 +59,7 @@ class AdaptorTest extends ValidatingTest {
           |    outlet forMyEntity is command LetsDoIt
           |    handler sendAMessage is {
           |      on command ItWillHappen  {
-          |        example one is {
-          |          then send command LetsDoIt(bcd="foo") to outlet forMyEntity
-          |        } described as "eno"
+          |        send command Foo.LetsDoIt(bcd="foo") to outlet forMyEntity
           |      } described as "?"
           |    } explained as "?"
           |  } explained as "?"
@@ -69,7 +67,10 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
-        messages.isOnlyWarnings mustBe true
+        if messages.isOnlyWarnings then
+          succeed
+        else
+          fail(messages.justErrors.format)
       }
     }
 

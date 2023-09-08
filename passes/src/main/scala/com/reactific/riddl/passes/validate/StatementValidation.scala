@@ -52,7 +52,8 @@ trait StatementValidation extends TypeValidation {
     parents: Seq[Definition]
   ): this.type = {
     val pid = messageValue.msg.pathId
-    resolvePath[Type](pid, parents) match {
+    val resolved = resolvePath[Type](pid, parents)
+    resolved match {
       case Some(typ) =>
         typ.typ match {
           case mt: AggregateUseCaseTypeExpression =>
@@ -187,17 +188,17 @@ trait StatementValidation extends TypeValidation {
       case ReturnStatement(_, _, value) =>
         checkValue(value, statement, parents)
       case ss @ SendStatement(_, _, msg, outlet) =>
-        checkMessageValue(msg, statement, parents)
-        checkRef[Portlet](outlet, statement, parents)
+        checkMessageValue(msg, statement, pars)
+        checkRef[Portlet](outlet, statement, pars)
         addSend(ss, parents)
       case TellStatement(_, _, msg, entityRef) =>
-        checkMessageValue(msg, statement, parents)
-        checkRef[Processor[?, ?]](entityRef, statement, parents)
+        checkMessageValue(msg, statement, pars)
+        checkRef[Processor[?, ?]](entityRef, statement, pars)
       case FunctionCallStatement(_, _, funcId, args) =>
         checkPathRef[Function](funcId, statement, parents)
         checkArgumentValues(args, statement, parents)
       case BecomeStatement(loc, _, er, hr) =>
-        checkRef[Entity](er, parents.head, parents.tail) match {
+        checkRef[Entity](er, statement, parents) match {
           case Some(entity) =>
             checkRef[Handler](hr, parents.head, parents.tail) match {
               case Some(handler) =>

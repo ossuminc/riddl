@@ -8,7 +8,7 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 class RepositoryTest extends ValidatingTest {
 
   "RepositoryTest" should {
-    "handl a basic definition" in {
+    "handle a basic definition" in {
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {
@@ -19,13 +19,10 @@ class RepositoryTest extends ValidatingTest {
           |      command AddThis is { what: String }
           |      handler Only is {
           |        on command AddThis {
-          |          then { "add 'what' to the list" }
+          |          "add 'what' to the list"
           |        }
           |        on query GetOne {
-          |          then {
-          |            send result fubar.Reply(that = "some value") to outlet
-          |             hereyougo
-          |          }
+          |          send result fubar.Reply(that="value") to outlet hereyougo
           |        }
           |        }
           |     }
