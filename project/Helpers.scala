@@ -14,14 +14,14 @@ import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 /** V - Dependency Versions object */
 object V {
   val commons_io = "2.13.0"
-  val compress = "1.23.0"
+  val compress = "1.24.0"
   val config = "1.4.2"
   val fastparse = "3.0.2"
   val jgit = "6.5.0"
   val lang3 = "3.13.0"
   val pureconfig = "0.17.4"
   val scalacheck = "1.17.0"
-  val scalatest = "3.2.16"
+  val scalatest = "3.2.17"
   val scopt = "4.1.0"
   val slf4j = "2.0.4"
 }
@@ -104,7 +104,7 @@ object C {
   def withScala3(p: Project): Project = {
     p.configure(withInfo)
       .settings(
-        scalaVersion := "3.3.1-RC7",
+        scalaVersion := "3.3.1",
         scalacOptions := scala_3_options,
         Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
         apiURL := Some(url("https://riddl.tech/apidoc/")),
