@@ -8,7 +8,7 @@ package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.Messages.{Message, StyleWarning}
+import com.reactific.riddl.language.Messages.{Message, MissingWarning, StyleWarning}
 import com.reactific.riddl.passes.{Pass, PassInfo, PassInput}
 import com.reactific.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -449,7 +449,9 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     s: SagaStep,
     parents: Seq[Definition]
   ): Unit = {
-    checkContainer(parents, s)
+    checkDefinition(parents, s)
+    checkNonEmpty(s.doStatements,"Do Statements", s, MissingWarning)
+    checkNonEmpty(s.doStatements,"Revert Statements", s, MissingWarning)
     check(
       s.doStatements.getClass == s.undoStatements.getClass,
       "The primary action and revert action must be the same shape",

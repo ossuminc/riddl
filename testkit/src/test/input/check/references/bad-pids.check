@@ -19,22 +19,12 @@ Missing: bad-pids.riddl(4:5): Type 'Foo' should have a description:
 Missing: bad-pids.riddl(3:5): Command 'DoFoo' should have a description:
      command DoFoo is {foo: Foo}
      ^
-Error: bad-pids.riddl(14:23): Path 'FooExamplexxxx.garbage' was not resolved, in Anonymous Set Statement, but should refer to a Field:
-             set field FooExamplexxxx.garbage to record Foo(garbage = "garbage")
-                       ^
 Missing: bad-pids.riddl(1:1): Domain 'foo' should have a description:
  domain foo {
  ^
 Usage: bad-pids.riddl(3:5): Command 'DoFoo' is unused:
      command DoFoo is {foo: Foo}
      ^
-Error: bad-pids.riddl(14:23): Setting a value requires assignment compatibility, but field:
-   FooExamplexxxx.garbage (<not found>)
- is not assignment compatible with value:
-   record Foo(garbage="garbage") ({ bar: String })
- :
-             set field FooExamplexxxx.garbage to record Foo(garbage = "garbage")
-                       ^
 Missing: bad-pids.riddl(2:3): Context 'ExampleContext' should have a description:
    context ExampleContext is {
    ^

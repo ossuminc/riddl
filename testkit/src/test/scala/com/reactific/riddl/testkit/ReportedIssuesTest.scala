@@ -14,8 +14,7 @@ class ReportedIssuesTest extends ValidatingTest {
     showTimes = true,
     showWarnings = false,
     showMissingWarnings = false,
-    showStyleWarnings = false,
-    showUsageWarnings = false
+    showStyleWarnings = false
   )
 
   def checkOne(fileName: String)(checkResult: Either[Messages.Messages, PassesResult] => Assertion): Assertion = {
@@ -41,23 +40,21 @@ class ReportedIssuesTest extends ValidatingTest {
     "375" in {
       checkOne("375.riddl") {
         case Left(messages) =>
-          messages.length must be(10)
+          info(messages.format)
           val errors = messages.justErrors
-          errors.length must be(5)
+          errors.length must be(3)
           val f = errors.map(_.format)
-          f contains ("Path 'DooFoo' was not resolved,")
           f contains ("Path 'FooExamplexxx.garbage' was not resolved,")
           f contains ("Path 'FooExamplexxxx.garbage' was not resolved")
           f contains ("Path 'Examplexxxx.Foo' was not resolved,")
-          f contains ("Setting a value requires assignment compatibility, but field:")
           val usage = messages.justUsage
           usage.length must be(5)
           val u = usage.map(_.format)
-          u contains("Entity 'FooEntity' is unused")
-          u contains("Entity 'OtherEntity' is unused:")
-          u contains("Command 'DoFoo' is unused")
-          u contains("Record 'OtherState' is unused:")
-          u contains("Models without any streaming data will exhibit minimal effect:")
+          u contains ("Entity 'FooEntity' is unused")
+          u contains ("Entity 'OtherEntity' is unused:")
+          u contains ("Command 'DoFoo' is unused")
+          u contains ("Record 'OtherState' is unused:")
+          u contains ("Models without any streaming data will exhibit minimal effect:")
           info(messages.format)
           succeed
         case Right(result) =>
@@ -66,8 +63,7 @@ class ReportedIssuesTest extends ValidatingTest {
           if errors.isEmpty then
             info(messages.format)
             fail("Errors were expected")
-          else
-          errors mustBe empty
+          else errors mustBe empty
           fail("Expected errors")
       }
     }

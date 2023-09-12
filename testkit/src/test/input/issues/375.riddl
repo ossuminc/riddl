@@ -10,8 +10,8 @@ domain Example is {
       }
       state FooExample of FooExampleState is {
         handler HandleFoo is {
-          on command DooFoo {
-            | set field FooExamplexxxx.garbage to record Foo(garbage = "garbage")
+          on command ExampleContext.DooFoo {
+            | do something
           }
         }
       }

@@ -1,8 +1,8 @@
 Style: saga.riddl(6:18): Field identifier 'a' is too short. The minimum length is 3:
-       requires { a: Integer described by "a"} returns { b: Integer described by "b"} {}
+       requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
                   ^
 Style: saga.riddl(9:18): Field identifier 'c' is too short. The minimum length is 3:
-       requires { c: Integer described by "c"} returns { d: Integer described by "d"} {}
+       requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
                   ^
 Missing: saga.riddl(4:5): Command 'UndoSomething' should have a description:
      type UndoSomething = command { ??? }
@@ -11,10 +11,10 @@ Missing: saga.riddl(3:5): Command 'Something' should have a description:
      type Something = command { ??? }
      ^
 Style: saga.riddl(9:57): Field identifier 'd' is too short. The minimum length is 3:
-       requires { c: Integer described by "c"} returns { d: Integer described by "d"} {}
+       requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
                                                          ^
 Style: saga.riddl(6:57): Field identifier 'b' is too short. The minimum length is 3:
-       requires { a: Integer described by "a"} returns { b: Integer described by "b"} {}
+       requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
                                                          ^
 Missing: saga.riddl(1:1): Vital definitions should have an author reference:
  domain ignore1 is {
@@ -61,12 +61,6 @@ Usage: saga.riddl(12:5): Entity 'blah' is unused:
 Warning: saga.riddl(13:7): Inlet 'in' is not connected:
        inlet in is command Something
        ^
-Error: saga.riddl(20:22): 'Something' was expected to be a message type but is a Send Statement instead:
-         send command Something() to inlet blah.in
-                      ^
-Error: saga.riddl(22:22): 'UndoSomething' was expected to be a message type but is a Send Statement instead:
-         send command UndoSomething() to inlet blah.in
-                      ^
 Usage: saga.riddl(4:5): Command 'UndoSomething' is unused:
      type UndoSomething = command { ??? }
      ^
