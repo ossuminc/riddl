@@ -14,7 +14,8 @@ class ReportedIssuesTest extends ValidatingTest {
     showTimes = true,
     showWarnings = false,
     showMissingWarnings = false,
-    showStyleWarnings = false
+    showStyleWarnings = false,
+    showUsageWarnings = false
   )
 
   def checkOne(fileName: String)(checkResult: Either[Messages.Messages, PassesResult] => Assertion): Assertion = {
@@ -62,7 +63,12 @@ class ReportedIssuesTest extends ValidatingTest {
         case Right(result) =>
           val messages = result.messages
           val errors = messages.filter(_.kind.isError)
+          if errors.isEmpty then
+            info(messages.format)
+            fail("Errors were expected")
+          else
           errors mustBe empty
+          fail("Expected errors")
       }
     }
   }

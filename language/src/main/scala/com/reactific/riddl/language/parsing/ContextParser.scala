@@ -20,7 +20,6 @@ private[parsing] trait ContextParser
     with RepositoryParser
     with SagaParser
     with StreamingParser
-    with StatementParser
     with TypeParser {
 
   private def contextOptions[X: P]: P[Seq[ContextOption]] = {
@@ -56,8 +55,8 @@ private[parsing] trait ContextParser
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (typeDef | handler(StatementsSet.ContextStatements) | entity | 
-          adaptor | function | saga | streamlet | projector | repository | 
+        (typeDef | handler | entity |
+          adaptor | function | saga | streamlet | projector | repository |
           inlet | outlet | connector | term | replica |
           contextInclude).rep(0)
     )

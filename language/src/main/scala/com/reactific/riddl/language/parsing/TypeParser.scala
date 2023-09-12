@@ -534,4 +534,20 @@ private[parsing] trait TypeParser extends CommonParser {
 
   def types[u: P]: P[Seq[Type]] = { typeDef.rep(0) }
 
+  def constant[u: P]: P[Constant] = {
+    P(
+      location ~ Keywords.const ~ identifier ~ is ~ typeExpression ~
+        Punctuation.equalsSign ~ literalString ~ briefly ~ description
+    ).map { tpl => (Constant.apply _).tupled(tpl) }
+  }
+
+  def invariant[u: P]: P[Invariant] = {
+    P(
+      Keywords.invariant ~/ location ~ identifier ~ is ~ open ~
+        (undefined(Option.empty[LiteralString]) | literalString.?) ~ close ~ briefly ~ description
+    ).map { case (loc, id, cond, brief, desc) =>
+      Invariant(loc, id, cond, brief, desc)
+    }
+  }
+
 }

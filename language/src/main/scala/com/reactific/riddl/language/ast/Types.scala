@@ -10,7 +10,7 @@ import com.reactific.riddl.language.parsing.Terminals.*
 
 /** A portion of the AST that deals with Types and TypeExpressions */
 trait Types {
-  this: AbstractDefinitions with Values =>
+  this: AbstractDefinitions =>
 
 ///////////////////////////////////////////////////////////// TYPES
 

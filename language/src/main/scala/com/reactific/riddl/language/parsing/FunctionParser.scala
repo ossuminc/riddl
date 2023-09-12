@@ -12,7 +12,7 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait FunctionParser extends TypeParser with StatementParser {
+private[parsing] trait FunctionParser extends ReferenceParser with TypeParser with CommonParser {
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
@@ -39,8 +39,13 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
     ).rep(0)
   }
 
-  private def statementBlock[u: P]: P[Seq[Statement]] = {
-    P(open ~ statement(StatementsSet.FunctionStatements).rep(0) ~ close)
+  private def statementBlock[u: P]: P[Seq[LiteralString]] = {
+    P(
+      Keywords.body ~ (
+        undefined(Seq.empty[LiteralString]) |
+          open ~ markdownLines ~ close
+      )
+    )
   }
 
   private def functionBody[u: P]: P[
@@ -49,11 +54,11 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
       Option[Aggregation],
       Option[Aggregation],
       Seq[FunctionDefinition],
-      Seq[Statement]
+      Seq[LiteralString]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
+      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[LiteralString])
     } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 
@@ -62,8 +67,8 @@ private[parsing] trait FunctionParser extends TypeParser with StatementParser {
     * {{{
     *   function myFunction is {
     *     requires is Boolean
-    *     yields is Integer
-    *     { statements }
+    *     returns is Integer
+    *     body { statements }
     *   }
     * }}}
     */

@@ -79,7 +79,7 @@ private[parsing] trait StreamingParser
     P(
       (inlet.rep(minInlets, " ", maxInlets) ~/
         outlet.rep(minOutlets, " ", maxOutlets) ~/
-        (handler(StatementsSet.StreamStatements) | term |
+        (handler | term |
           streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))
           .rep(0)).map { case (inlets, outlets, definitions) =>
         inlets ++ outlets ++ definitions

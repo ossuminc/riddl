@@ -28,8 +28,7 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
 
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
     P(
-      typeDef | handler(StatementsSet.RepositoryStatements) | function |
-        term | repositoryInclude | inlet | outlet
+      typeDef | handler | function | term | repositoryInclude | inlet | outlet
     ).rep(0)
   }
 

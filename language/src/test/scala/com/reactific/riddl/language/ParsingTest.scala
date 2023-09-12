@@ -48,9 +48,6 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Repository] => repository(_)
       case x if x == classOf[AST.Projector]  => projector(_)
       case x if x == classOf[AST.Epic]       => epic(_)
-      case x if x == classOf[AST.Statement]  => statement(StatementsSet.EntityStatements)(_)
-      case x if x == classOf[AST.Condition]  => condition(_)
-      case x if x == classOf[AST.Value]      => value(_)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for class ${classTag[T].runtimeClass}"

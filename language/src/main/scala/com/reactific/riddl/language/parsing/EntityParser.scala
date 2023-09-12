@@ -16,7 +16,6 @@ private[parsing] trait EntityParser
     extends TypeParser
     with HandlerParser
     with FunctionParser
-    with StatementParser
     with StreamingParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
@@ -52,7 +51,7 @@ private[parsing] trait EntityParser
   }
 
   private def stateDefinitions[u: P]: P[Seq[StateDefinition]] = {
-    P(typeDef | handler(StatementsSet.EntityStatements) | invariant).rep(0)
+    P(typeDef | handler | invariant).rep(0)
   }
 
   private def stateBody[u: P]: P[Seq[StateDefinition]] = {
@@ -84,7 +83,7 @@ private[parsing] trait EntityParser
 
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(
-      handler(StatementsSet.EntityStatements) | function | invariant |
+      handler | function | invariant |
         typeDef | state | entityInclude | inlet | outlet | term | constant
     ).rep
   }

@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.ast.At
 
-trait StreamingValidation extends StatementValidation {
+trait StreamingValidation  extends TypeValidation {
 
 
   def checkStreaming(root: RootContainer): Unit = {
@@ -18,7 +18,6 @@ trait StreamingValidation extends StatementValidation {
     checkStreamingUsage(start)
     checkConnectorPersistence()
     checkUnattachedOutlets()
-    checkUnusedOutlets()
   }
 
   val inlets: Seq[Inlet] = resolution.kindMap.definitionsOfKind[Inlet]
@@ -106,19 +105,5 @@ trait StreamingValidation extends StatementValidation {
       messages.addWarning(inlet.loc, message)
     }
 
-  }
-
-  private def checkUnusedOutlets(): Unit = {
-    val usedOutlets: Seq[Outlet] = sends.flatMap { case (send, pars) =>
-      resolvePath[Outlet](send.portlet.pathId, pars)
-    }.toSeq
-
-    val unusedOutlets: scala.collection.Set[Outlet] = outlets.toSet --
-      usedOutlets
-
-    for  outlet <- unusedOutlets  do {
-      val message = s"${outlet.identify} has nothing sent to it"
-      messages.addUsage(outlet.loc, message)
-    }
   }
 }

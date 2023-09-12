@@ -31,7 +31,7 @@ class AdaptorTest extends ValidatingTest {
           |adaptor PaymentAdapter to context Target is {
           |  handler sendAMessage is {
           |    on event ItHappened {
-          |      error "foo"
+          |      "error foo"
           |    } described as "?"
           |  } explained as "?"
           |} explained as "?"

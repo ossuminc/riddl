@@ -11,27 +11,26 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait HandlerParser extends StatementParser with CommonParser {
+private[parsing] trait HandlerParser extends ReferenceParser with CommonParser {
 
-  private def onClauseBody[u: P](set: StatementsSet): P[Seq[Statement]] = {
+  private def onClauseBody[u: P]: P[Seq[LiteralString]] = {
     P(
       open ~ (
-        undefined(Seq.empty[Statement]) |
-          setOfStatements(set)
-        ) ~ close
+        undefined(Seq.empty[LiteralString]) | markdownLines
+      ) ~ close
     )
   }
 
-  private def onOtherClause[u: P](set: StatementsSet): P[OnClause] = {
+  private def onOtherClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.other ~/ location ~ is ~ onClauseBody(set) ~ briefly ~
+      Keywords.on ~ Keywords.other ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
-  private def onInitClause[u: P](set: StatementsSet): P[OnClause] = {
+  private def onInitClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.init ~/ location ~ is ~ onClauseBody(set) ~ briefly ~
+      Keywords.on ~ Keywords.init ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
@@ -40,31 +39,31 @@ private[parsing] trait HandlerParser extends StatementParser with CommonParser {
     P(inletRef | processorRef | userRef | epicRef)
   }
 
-  private def onMessageClause[u: P](set: StatementsSet): P[OnClause] = {
+  private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/
-      (Readability.from./ ~ messageOrigins).? ~ is ~ onClauseBody(set) ~
+      (Readability.from./ ~ messageOrigins).? ~ is ~ onClauseBody ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
-  private def onTermClause[u: P](set: StatementsSet): P[OnClause] = {
+  private def onTermClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.term ~/ location ~ is ~ onClauseBody(set) ~ briefly ~
+      Keywords.on ~ Keywords.term ~/ location ~ is ~ onClauseBody ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
-  private def handlerDefinitions[u: P](set: StatementsSet): P[Seq[OnClause]] = {
-    P(onInitClause(set) | onMessageClause(set) | onTermClause(set) | onOtherClause(set)).rep(0)
+  private def handlerDefinitions[u: P]: P[Seq[OnClause]] = {
+    P(onInitClause | onMessageClause | onTermClause | onOtherClause).rep(0)
   }
 
-  private def handlerBody[u: P](set: StatementsSet): P[Seq[OnClause]] = {
-    undefined(Seq.empty[OnClause]) | handlerDefinitions(set)
+  private def handlerBody[u: P] = {
+    undefined(Seq.empty[OnClause]) | handlerDefinitions
   }
 
-  def handler[u: P](set: StatementsSet): P[Handler] = {
+  def handler[u: P]: P[Handler] = {
     P(
       Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
-        handlerBody(set) ~
+        handlerBody ~
         close ~ briefly ~ description
     ).map { case (loc, id, authors, clauses, briefly, desc) =>
       Handler(
@@ -78,5 +77,5 @@ private[parsing] trait HandlerParser extends StatementParser with CommonParser {
     }
   }
 
-  def handlers[u: P](set: StatementsSet): P[Seq[Handler]] = handler(set).rep(0)
+  def handlers[u: P]: P[Seq[Handler]] = handler.rep(0)
 }

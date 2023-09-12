@@ -44,19 +44,6 @@ trait TypeValidation extends DefinitionValidation {
     }
   }
 
-  def getValueType(
-    expr: Value,
-    parents: Seq[Definition]
-  ): Option[TypeExpression] = {
-    expr match {
-      case FunctionCallValue(_, fRef, _) => getPathIdType(fRef.pathId, parents)
-      case FieldValue(_, pid)            => getPathIdType(pid, parents)
-      case ConstantValue(_, pid)         => getPathIdType(pid, parents)
-      case MessageValue(_, ref, _)       => getPathIdType(ref.pathId, parents)
-      case v: Value                      => Some(v.valueType)
-    }
-  }
-
   private def checkPattern(p: Pattern): this.type = {
     try {
       val compound = p.pattern.map(_.s).reduce(_ + _)

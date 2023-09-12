@@ -42,7 +42,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     *   an instance of the output type
     */
   override def result: ValidationOutput = {
-    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets, sends.toMap)
+    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets)
   }
 
   def postProcess(root: RootContainer): Unit = {
@@ -74,8 +74,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         checkDefinition(parentsAsSeq, ooc)
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
-      case stmt: Statement =>
-        validateStatement(stmt, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -180,10 +178,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, i)
-    checkOption(i.condition, "condition", i) { cond =>
-      checkValue(cond, i, parents)
-    }
-      .checkDescription(i)
+    checkDescription(i)
   }
 
   private def validateInlet(
@@ -259,14 +254,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, c)
-    val value = c.value.asInstanceOf[Value]
-    val maybeTypEx = getValueType(value, parents)
-    if !isAssignmentCompatible(Some(c.typeEx), maybeTypEx) then {
-      messages.addError(
-        value.loc,
-        s"Value for ${c.identify} is not assignment compatible with declared type ${c.typeEx.format}"
-      )
-    }
     checkDescription(c)
   }
 
@@ -468,9 +455,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       Messages.Error,
       s.loc
     )
-    val parentsSeq = parents.toSeq
-    checkStatements(s.doStatements, s +: parentsSeq)
-    checkStatements(s.undoStatements, s +: parentsSeq)
     checkDescription(s)
   }
 

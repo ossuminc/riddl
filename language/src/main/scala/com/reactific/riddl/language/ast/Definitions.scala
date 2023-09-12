@@ -12,7 +12,7 @@ import com.reactific.riddl.language.parsing.Terminals.Keywords
 /** Unit Tests For Definitions */
 trait Definitions {
 
-  this: AbstractDefinitions with Conditions with Options with Statements with Types with Values =>
+  this: AbstractDefinitions with Options with Types =>
 
   /** Base trait of any definition that is in the content of an adaptor
     */
@@ -63,23 +63,6 @@ trait Definitions {
 
   /** Base trait of definitions that are in the body of a Story definition */
   sealed trait EpicDefinition extends Definition
-
-  trait Statement
-      extends Definition
-      with ApplicationDefinition
-      with AdaptorDefinition
-      with ContextDefinition
-      with EntityDefinition
-      with FunctionDefinition
-        with SagaDefinition {
-    def contents: Seq[Definition] = Seq.empty[Definition]
-
-    def description: Option[Description] = None
-
-    def brief: Option[LiteralString] = None
-
-    def label: String = if id.value.isEmpty then id.value + ": " else ""
-  }
 
   sealed trait VitalDefinitionDefinition
       extends AdaptorDefinition
@@ -445,7 +428,7 @@ trait Definitions {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    value: Value,
+    value: LiteralString,
     brief: Option[LiteralString],
     description: Option[Description]
   ) extends LeafDefinition
@@ -529,97 +512,6 @@ trait Definitions {
     override def format: String = s"${Keywords.field} ${pathId.format}"
   }
 
-  // ////////////////////////////////////////////////////////// Gherkin
-
-  /** A GherkinClause for the Given part of a Gherkin [[Example]]
-    *
-    * @param loc
-    *   The location of the Given clause
-    * @param scenario
-    *   The strings that define the scenario
-    */
-  case class GivenClause(loc: At, scenario: Seq[LiteralString]) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A [[GherkinClause]] for the When part of a Gherkin [[Example]]
-    *
-    * @param loc
-    *   The location of the When clause
-    * @param condition
-    *   The condition expression that defines the trigger for the [[Example]]
-    */
-  case class WhenClause(loc: At, condition: Condition) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A [[GherkinClause]] for the Then part of a Gherkin [[Example]]. This part specifies what should be done if the
-    * [[WhenClause]] evaluates to true.
-    *
-    * @param loc
-    *   The location of the Then clause
-    * @param action
-    *   The action to be performed
-    */
-  case class ThenClause(loc: At, action: Action) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A [[GherkinClause]] for the But part of a Gherkin [[Example]]. This part specifies what should be done if the
-    * [[WhenClause]] evaluates to false.
-    *
-    * @param loc
-    *   The location of the But clause
-    * @param action
-    *   The action to be performed
-    */
-  case class ButClause(loc: At, action: Action) extends GherkinClause {
-    def format: String = ""
-  }
-
-  /** A Gherkin example. Examples have names, [[id]], and a sequence of each of the four kinds of Gherkin clauses:
-    * [[GivenClause]], [[WhenClause]], [[ThenClause]], [[ButClause]]
-    *
-    * @see
-    *   [[https://cucumber.io/docs/gherkin/reference/ The Gherkin Reference]]
-    * @param loc
-    *   The location of the start of the example
-    * @param id
-    *   The name of the example
-    * @param givens
-    *   The list of Given/And statements
-    * @param whens
-    *   The list of When/And statements
-    * @param thens
-    *   The list of Then/And statements
-    * @param buts
-    *   The List of But/And statements
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the example
-    */
-  case class Example(
-    loc: At,
-    id: Identifier,
-    givens: Seq[GivenClause] = Seq.empty[GivenClause],
-    whens: Seq[WhenClause] = Seq.empty[WhenClause],
-    thens: Seq[ThenClause] = Seq.empty[ThenClause],
-    buts: Seq[ButClause] = Seq.empty[ButClause],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = Option.empty[Description]
-  ) extends LeafDefinition
-      with OnClauseDefinition
-      with FunctionDefinition
-      with EpicDefinition {
-    final val kind: String = "Example"
-
-    def format: String = ""
-
-    override def isEmpty: Boolean = givens.isEmpty && whens.isEmpty &&
-      thens.isEmpty && buts.isEmpty
-  }
-
   // ////////////////////////////////////////////////////////// Entities
 
   /** A reference to an entity
@@ -668,7 +560,7 @@ trait Definitions {
     output: Option[Aggregation] = None,
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
-    statements: Seq[Statement] = Seq.empty[Statement],
+    statements: Seq[LiteralString] = Seq.empty[LiteralString],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[FunctionDefinition]] = Seq
       .empty[Include[FunctionDefinition]],
@@ -690,7 +582,7 @@ trait Definitions {
     override lazy val contents: Seq[FunctionDefinition] = {
       super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
-        functions ++ statements
+        functions
     }
 
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
@@ -726,7 +618,7 @@ trait Definitions {
   case class Invariant(
     loc: At,
     id: Identifier,
-    condition: Option[Condition] = None,
+    condition: Option[LiteralString] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -742,8 +634,8 @@ trait Definitions {
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends HandlerDefinition {
-    def statements: Seq[Statement]
+  sealed trait OnClause extends LeafDefinition with HandlerDefinition {
+    def statements: Seq[LiteralString]
   }
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
@@ -760,7 +652,7 @@ trait Definitions {
     */
   case class OnOtherClause(
     loc: At,
-    statements: Seq[Statement] = Seq.empty[Statement],
+    statements: Seq[LiteralString] = Seq.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -769,8 +661,6 @@ trait Definitions {
     override def isEmpty: Boolean = statements.isEmpty
 
     override def kind: String = "On Other"
-
-    override def contents: Seq[Statement] = statements
 
     override def format: String = ""
   }
@@ -788,7 +678,7 @@ trait Definitions {
     */
   case class OnInitClause(
     loc: At,
-    statements: Seq[Statement] = Seq.empty[Statement],
+    statements: Seq[LiteralString] = Seq.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -797,8 +687,6 @@ trait Definitions {
     override def isEmpty: Boolean = statements.isEmpty
 
     override def kind: String = "On Init"
-
-    override def contents: Seq[Statement] = statements
 
     override def format: String = ""
   }
@@ -823,15 +711,13 @@ trait Definitions {
     loc: At,
     msg: MessageRef,
     from: Option[Reference[Definition]],
-    statements: Seq[Statement] = Seq.empty[Statement],
+    statements: Seq[LiteralString] = Seq.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
 
     override def isEmpty: Boolean = statements.isEmpty
-
-    override def contents: Seq[Statement] = statements
 
     def format: String = ""
 
@@ -855,7 +741,7 @@ trait Definitions {
     */
   case class OnTerminationClause(
     loc: At,
-    statements: Seq[Statement] = Seq.empty[Statement],
+    statements: Seq[LiteralString] = Seq.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -864,8 +750,6 @@ trait Definitions {
     override def isEmpty: Boolean = statements.isEmpty
 
     override def kind: String = "On Term"
-
-    override def contents: Seq[Statement] = statements
 
     override def format: String = ""
   }
@@ -1618,13 +1502,12 @@ trait Definitions {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doStatements: Seq[Statement] = Seq.empty[Statement],
-    undoStatements: Seq[Statement] = Seq.empty[Statement],
+    doStatements: Seq[LiteralString] = Seq.empty[LiteralString],
+    undoStatements: Seq[LiteralString] = Seq.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends SagaDefinition {
-    def contents: Seq[Statement] = doStatements ++ undoStatements
-
+  ) extends LeafDefinition
+      with SagaDefinition {
     def format: String = s"${Keywords.step} ${id.format}"
 
     final val kind: String = "SagaStep"

@@ -3,10 +3,10 @@ domain ignore1 is {
     type Something = command { ??? }
     type UndoSomething = command { ??? }
     function AnotherThing {
-      requires { a: Integer described by "a"} returns { b: Integer described by "b"}
+      requires { a: Integer described by "a"} returns { b: Integer described by "b"} {}
     } explained as "A simple function for another"
     function UndoAnotherThing {
-      requires { c: Integer described by "c"} returns { d: Integer described by "d"}
+      requires { c: Integer described by "c"} returns { d: Integer described by "d"} {}
     } explained as "A reversion function for undoing AnotherThing"
 
     entity blah is {
@@ -17,24 +17,17 @@ domain ignore1 is {
       requires: { p1: String, p2: String }
       returns: {s: String }
       step One is {
-        example A is {
-          then send command Something() to inlet blah.in
-        } described as "First step performing action"
+        send command Something() to inlet blah.in
       } reverted by {
-          example One_Undo { then send command UndoSomething() to inlet blah.in }
-          described as "First step compensation action"
+        send command UndoSomething() to inlet blah.in
       } described as "First saga step"
       step Two is {
-        example B is {
-          given "Step One has completed"
-          then call AnotherThing(a=42)
-          and "Pass 42 to AnotherThing function"
-          and "Return AnotherThing's output"
-          but "Revert it with UndoAnotherThing(a=42) if it fails"
-        } described as "Second step performing action"
+        call AnotherThing(a=42)
+        "Pass 42 to AnotherThing function"
+        "Return AnotherThing's output"
+
       } reverted by {
-        scenario Two_Undo { then call UndoAnotherThing(a=42) }
-        described as "Second step compensation action"
+        call UndoAnotherThing(a=42)
       } described as "Second saca step"
     }
   } described as "ignore"

@@ -91,6 +91,7 @@ object Terminals {
     final val benefit = "benefit"
     final val brief = "brief"
     final val briefly = "briefly"
+    final val body = "body"
     final val but = "but"
     final val call = "call"
     final val case_ = "case"

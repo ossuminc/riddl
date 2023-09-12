@@ -15,7 +15,6 @@ private[parsing] trait ApplicationParser
     extends StreamingParser
       with FunctionParser
       with HandlerParser
-      with StatementParser 
       with TypeParser {
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
@@ -55,7 +54,7 @@ private[parsing] trait ApplicationParser
 
   private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
     P(
-      group | handler(StatementsSet.ApplicationStatements) | function | 
+      group | handler | function |
         inlet | outlet | term | typeDef |
         constant | applicationInclude
     )

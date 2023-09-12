@@ -69,7 +69,11 @@ domain Everything by author Reid is {
     // transient (memory only) or aggregate (they consume commands and queries)
     entity Something is {
       options (aggregate, transient)
-      function misc is { requires { n: Nothing } returns { b: Boolean } {} }
+      function misc is {
+        requires { n: Nothing }
+        returns { b: Boolean }
+        body ???
+      }
       type somethingDate is Date
 
       event Inebriated is {}
@@ -78,9 +82,9 @@ domain Everything by author Reid is {
       state someState of Something.someData is {
         handler foo is {
           on command ACommand {
-            if and("Something arrives", "misc()") then
-              send event Inebriated() to outlet APlant.Source.Commands
-            end
+            "if Something arrives and misc() then"
+            "  send event Inebriated() to outlet APlant.Source.Commands"
+            "end"
           }
         }
       }
@@ -88,7 +92,7 @@ domain Everything by author Reid is {
       function whenUnderTheInfluence is {
         requires {  n:Nothing }
         returns { b: Boolean }
-        {}
+        body {""}
       }
     } briefly "Something is nothing interesting"
 
@@ -98,8 +102,8 @@ domain Everything by author Reid is {
       state otherThingState of SomeOtherThing.otherThingData is {
         handler fee is {
           on event ItHappened {
-            set field SomeOtherThing.otherThingState.fields.field to
-              field ItHappened.field
+            "set field SomeOtherThing.otherThingState.fields.field to"
+            "  field ItHappened.field"
           }
         }
       }

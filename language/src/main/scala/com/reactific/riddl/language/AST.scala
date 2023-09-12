@@ -11,16 +11,7 @@ package com.reactific.riddl.language
   * produced from parsing are syntactically correct but have no semantic validation. The Transformation passes convert
   * RawAST model to AST model which is referentially and semantically consistent (or the user gets an error).
   */
-object AST
-    extends ast.AbstractDefinitions
-    with ast.Actions
-    with ast.Conditions
-    with ast.Definitions
-    with ast.Expressions
-    with ast.Options
-    with ast.Types
-    with ast.Statements
-    with ast.Values {
+object AST extends ast.AbstractDefinitions with ast.Definitions with ast.Options with ast.Types {
 
   def findAuthors(
     defn: Definition,

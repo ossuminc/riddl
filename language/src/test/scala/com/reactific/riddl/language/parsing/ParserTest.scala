@@ -220,13 +220,8 @@ class ParserTest extends ParsingTest {
           content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            Some(
-              ArbitraryCondition(
-                (1, 22, rpi),
-                LiteralString((1, 22, rpi), "x is greater or equal to 10")
-              )
-            ),
-            None
+            Some(LiteralString((1,22,rpi), "x is greater or equal to 10")),
+            None, None
           )
       }
     }
@@ -305,7 +300,7 @@ class ParserTest extends ParsingTest {
                     |function foo is {
                     |  requires {b:Boolean}
                     |  returns {i:Integer}
-                    |  {}
+                    |  body ???
                     |}
                     |""".stripMargin
 

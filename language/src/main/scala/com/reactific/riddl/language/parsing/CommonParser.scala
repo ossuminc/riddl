@@ -61,7 +61,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  private def markdownLines[u: P]: P[Seq[LiteralString]] = {
+  def markdownLines[u: P]: P[Seq[LiteralString]] = {
     P(markdownLine.rep(1))
   }
 
@@ -117,29 +117,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     StringIn(Operators.plus, Operators.minus).? ~ wholeNumber
   }
 
-  def integerValue[u: P]: P[IntegerValue] = {
-    P(location ~ integer.map(v => BigInt(v)))
-      .map(tpl => (IntegerValue.apply _).tupled(tpl))
-  }
-
-  def decimalValue[u: P]: P[DecimalValue] = {
-    P(
-      location ~ StringIn(Operators.plus, Operators.minus).?.! ~ CharIn("0-9")
-        .rep(1)
-        .! ~ Punctuation.dot.! ~ CharIn("0-9").rep(0).?.! ~
-        ("E" ~ CharIn("+\\-") ~ CharIn("0-9").rep(min = 1, max = 3)).?.!
-    ).map { case (loc, a, b, c, d, e) =>
-      DecimalValue(loc, BigDecimal(a + b + c + d + e))
-    }
-  }
-  
-  def stringValue[u: P]: P[StringValue] = {
-    P(
-      location ~ Punctuation.quote ~ (strChars | escape).rep.! ~
-        Punctuation.quote
-    ).map(tpl => (StringValue.apply _).tupled(tpl))
-  }
-
   private def simpleIdentifier[u: P]: P[String] = {
     P((CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_").?).!)
   }
@@ -157,9 +134,8 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier ~ (Punctuation.dot ~ anyIdentifier ).repX(0)).map {
-      case (loc, first, strings) =>
-        PathIdentifier(loc, first +: strings)
+    P(location ~ anyIdentifier ~ (Punctuation.dot ~ anyIdentifier).repX(0)).map { case (loc, first, strings) =>
+      PathIdentifier(loc, first +: strings)
     }
   }
 
