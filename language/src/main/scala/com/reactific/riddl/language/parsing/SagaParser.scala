@@ -17,10 +17,8 @@ private[parsing] trait SagaParser extends ReferenceParser with FunctionParser wi
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
-      location ~ Keywords.step ~/ identifier ~ is ~ open ~
-        markdownLines ~ close ~
-        Keywords.reverted ~ Readability.by.? ~ open ~
-        markdownLines ~ close ~
+      location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock ~ 
+        Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock ~
         briefly ~ description
     ).map(x => (SagaStep.apply _).tupled(x))
   }

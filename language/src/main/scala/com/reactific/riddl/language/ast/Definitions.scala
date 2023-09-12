@@ -618,7 +618,7 @@ trait Definitions {
   case class Invariant(
     loc: At,
     id: Identifier,
-    condition: Option[LiteralString] = None,
+    condition: Seq[LiteralString] = Seq.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition

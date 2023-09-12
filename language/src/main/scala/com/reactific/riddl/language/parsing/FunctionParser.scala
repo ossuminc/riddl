@@ -41,10 +41,7 @@ private[parsing] trait FunctionParser extends ReferenceParser with TypeParser wi
 
   private def statementBlock[u: P]: P[Seq[LiteralString]] = {
     P(
-      Keywords.body ~ (
-        undefined(Seq.empty[LiteralString]) |
-          open ~ markdownLines ~ close
-      )
+      Keywords.body./ ~ (undefined(Seq.empty[LiteralString]) | pseudoCodeBlock)
     )
   }
 

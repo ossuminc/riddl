@@ -31,7 +31,7 @@ class AdaptorTest extends ValidatingTest {
           |adaptor PaymentAdapter to context Target is {
           |  handler sendAMessage is {
           |    on event ItHappened {
-          |      "error foo"
+          |      |error foo
           |    } described as "?"
           |  } explained as "?"
           |} explained as "?"
@@ -59,7 +59,7 @@ class AdaptorTest extends ValidatingTest {
           |    outlet forMyEntity is command LetsDoIt
           |    handler sendAMessage is {
           |      on command ItWillHappen  {
-          |        send command Foo.LetsDoIt(bcd="foo") to outlet forMyEntity
+          |        |send command Foo.LetsDoIt(bcd="foo") to outlet forMyEntity
           |      } described as "?"
           |    } explained as "?"
           |  } explained as "?"

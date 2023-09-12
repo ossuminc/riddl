@@ -236,7 +236,7 @@ class ResolutionPassTest extends ResolvingTest {
           |      state S of E.fields is  {
           |        handler foo is {
           |         on command DoIt {
-          |           "set field E.S.f.t to true"
+          |           |set field E.S.f.t to true
           |         }
           |        }
           |      }
@@ -262,7 +262,7 @@ class ResolutionPassTest extends ResolvingTest {
           |      state S of E.fields is {
           |        handler E_Handler is {
           |          on command C.DoIt {
-          |            then set S.f.g.value to @C.DoIt.value
+          |            |set S.f.g.value to @C.DoIt.value
           |          }
           |        }
           |      }
@@ -366,8 +366,8 @@ class ResolutionPassTest extends ResolvingTest {
           |      state Second of Data is {
           |        handler only is {
           |          on command MorphIt {
-          |            then morph entity Ignore2.OfInterest to state OfInterest.First
-          |            with !OfInterest.Data(field=3)
+          |            |morph entity Ignore2.OfInterest to state OfInterest.First
+          |            |  with !OfInterest.Data(field=3)
           |          }
           |        }
           |      }

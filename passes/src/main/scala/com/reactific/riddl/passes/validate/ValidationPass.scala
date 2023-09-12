@@ -178,6 +178,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, i)
+    checkNonEmpty(i.condition.toList, "condition", i, Messages.MissingWarning, false)
     checkDescription(i)
   }
 

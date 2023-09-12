@@ -41,7 +41,7 @@ class InvariantValidator extends ValidatingTest {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
-          | invariant large is { "x must be greater or equal to 10" }
+          | invariant large is "x must be greater or equal to 10"
           |}
           |""".stripMargin
       ) { (_, _, msgs) =>
@@ -55,7 +55,9 @@ class InvariantValidator extends ValidatingTest {
     "allow conditional expressions" in {
       parseAndValidateInContext[AST.Entity]("""
                                               |entity user is {
-                                              | invariant large is { true }
+                                              | invariant large is {
+                                              |   |true
+                                              | }
                                               |}
                                               |""".stripMargin) {
         (_, _, msgs) =>

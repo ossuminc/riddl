@@ -19,6 +19,14 @@ import scala.reflect.{ClassTag, classTag}
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
+  def pseudoCodeBlock[u: P]: P[Seq[LiteralString]] = {
+    P(
+      open ~ (
+        undefined(Seq.empty[LiteralString]) | markdownLines
+      ) ~ close
+    )
+  }
+
   def author[u: P]: P[Author] = {
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~

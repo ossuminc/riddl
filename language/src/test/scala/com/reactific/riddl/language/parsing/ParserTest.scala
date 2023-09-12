@@ -210,7 +210,7 @@ class ParserTest extends ParsingTest {
     }
     "allow invariant definitions" in {
       val input = RiddlParserInput(
-        """invariant large is { "x is greater or equal to 10" }"""
+        """invariant large is "x is greater or equal to 10" """
       )
       parseDefinition[Invariant](input) match {
         case Left(errors) =>
@@ -220,7 +220,7 @@ class ParserTest extends ParsingTest {
           content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            Some(LiteralString((1,22,rpi), "x is greater or equal to 10")),
+            Seq(LiteralString((1,20,rpi), "x is greater or equal to 10")),
             None, None
           )
       }

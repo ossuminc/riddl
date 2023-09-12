@@ -22,8 +22,12 @@ class HandlerValidatorTest extends ValidatingTest {
           |  type StateFields is { field1: Number, field2: String }
           |  state HamburgerState of StateFields = {
           |    handler foo is {
-          |      on command EntityCommand {  set field HamburgerState.field1 to 345 }
-          |      on event EntityEvent { set field HamburgerState.field2 to string("678") }
+          |      on command EntityCommand {
+          |        |set field HamburgerState.field1 to 345
+          |      }
+          |      on event EntityEvent {
+          |        |set field HamburgerState.field2 to string("678")
+          |      }
           |    } described as "Irrelevant"
           |  } described as "Irrelevant"
           |} described as "Irrelevant"
@@ -56,7 +60,9 @@ class HandlerValidatorTest extends ValidatingTest {
           |   type StateFields is { field1: Number }
           |   state HamburgerState of Hamburger.StateFields is {
           |    handler foo is {
-          |     on event EntityContext.Incoming { set field HamburgerState.field1 to 678 }
+          |     on event EntityContext.Incoming {
+          |       |set field HamburgerState.field1 to 678
+          |     }
           |    }
           |   }
           |  }
@@ -84,7 +90,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of Fields is {
           |    handler foo is {
           |      on event Incoming {
-          |       set field HamburgerState.field1 to 678
+          |       | set field HamburgerState.field1 to 678
           |     }
           |    }
           |  }
@@ -102,93 +108,6 @@ class HandlerValidatorTest extends ValidatingTest {
       }
     }
 
-    "produce an error when on clause references a state field that does not exist" in {
-      val input =
-        """
-          |domain entityTest is {
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  record Fields is { field1: Number }
-          |  command EntityCommand is { foo: Number }
-          |  state HamburgerState of Fields = {
-          |    handler foo is {
-          |      on command EntityCommand {
-          |        set field HamburgerState.nonExistingField to 123
-          |      }
-          |    }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Path 'HamburgerState.nonExistingField' was not resolved, in Anonymous Set Statement, " +
-              "but should refer to a Field"
-          )
-      }
-    }
-
-    "produce an error when on clause sets state from a message field that does not exist" in {
-      val input =
-        """
-          |domain entityTest is {
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  type EntityCommand is command { foo: Number }
-          |  record Fields is {  field1: Number  }
-          |  state HamburgerState of Fields = {
-          |    handler foo is {
-          |      on command ec:EntityCommand {
-          |        set field HamburgerState.field1 to field ec.bar
-          |      }
-          |    }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Path 'ec.bar' was not resolved, in Anonymous Set Statement, but should refer to a Field"
-          )
-      }
-    }
-
-    "produce an error when on clause sets state from incompatible type of message field" in {
-      val input =
-        """
-          |domain entityTest is {
-          |context EntityContext is {
-          |entity Hamburger is {
-          |  type EntityCommand is command { foo: String }
-          |  record Fields is { field1: Number }
-          |  state HamburgerState of Fields = {
-          |    handler doit is {
-          |      on command EntityCommand {
-          |        set field field1 to field foo
-          |      }
-          |    }
-          |  }
-          |}
-          |}
-          |}
-          |""".stripMargin
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "assignment compatibility, but field:\n  field1"
-          )
-      }
-    }
     "allow message clauses to name the message and it resolves" in {
       val input =
         """domain entityTest is {
@@ -199,7 +118,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of Fields = {
           |    handler doit is {
           |      on command ec:EntityCommand {
-          |        set field HamburgerState.field1 to field ec.foo
+          |        |set field HamburgerState.field1 to field ec.foo
           |      }
           |    }
           |  }

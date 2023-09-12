@@ -141,7 +141,7 @@ class EntityValidatorTest extends ValidatingTest {
           |    state field of Hamburger.fields is { }
           |    handler baz is {
           |      on command DoIt {
-          |        send event Message to outlet ridOfIt
+          |        |send event Message to outlet ridOfIt
           |      }
           |    }
           |  }
@@ -149,11 +149,7 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          s"Field 'a' was not set in message constructor"
-        )
+        msgs.justErrors mustBe empty
       }
     }
   }

@@ -18,7 +18,7 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |  function foo is {
                                           |    requires {b: Boolean }
                                           |    returns {r: Integer }
-                                          |    {}
+                                          |    body ???
                                           |  }
                                           |}
                                           |""".stripMargin) { (e, _, msgs) =>
@@ -51,8 +51,8 @@ class FunctionValidatorTest extends ValidatingTest {
         """function percent {
         |  requires { number: Number }
         |  returns { result: Number }
-        |  {
-        |    set field percent.result to "a percentage result"
+        |  body {
+        |    |set field percent.result to "a percentage result"
         |  }
         |}
         |""".stripMargin
@@ -66,19 +66,20 @@ class FunctionValidatorTest extends ValidatingTest {
     "validate function empty statements" in {
       val input = """
                     |  function AnAspect is {
-                    |    { if and("everybody hates me", "I'm depressed") then
-                    |        "I go fishing"
-                    |        "I'll just eat worms"
-                    |      else
-                    |        "I'm happy"
-                    |      end
+                    |    body {
+                    |      |if and("everybody hates me", "I'm depressed") then
+                    |      |  "I go fishing"
+                    |      |  "I'll just eat worms"
+                    |      |else
+                    |      |  "I'm happy"
+                    |      |end
                     |    }
                     |  } described as "foo"
                     |""".stripMargin
 
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
         function.id.value mustBe "AnAspect"
-        function.statements.size mustBe 1
+        function.statements.size mustBe 6
         msgs mustNot be(empty)
         val text = msgs.format
         text must include("Function 'AnAspect' is unused")

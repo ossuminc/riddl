@@ -13,24 +13,16 @@ import Terminals.*
 
 private[parsing] trait HandlerParser extends ReferenceParser with CommonParser {
 
-  private def onClauseBody[u: P]: P[Seq[LiteralString]] = {
-    P(
-      open ~ (
-        undefined(Seq.empty[LiteralString]) | markdownLines
-      ) ~ close
-    )
-  }
-
   private def onOtherClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.other ~/ location ~ is ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.other ~/ location ~ is ~ pseudoCodeBlock ~ briefly ~
         description
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   private def onInitClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.init ~/ location ~ is ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.init ~/ location ~ is ~ pseudoCodeBlock ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
@@ -41,13 +33,13 @@ private[parsing] trait HandlerParser extends ReferenceParser with CommonParser {
 
   private def onMessageClause[u: P]: P[OnClause] = {
     Keywords.on ~ location ~ messageRef ~/
-      (Readability.from./ ~ messageOrigins).? ~ is ~ onClauseBody ~
+      (Readability.from./ ~ messageOrigins).? ~ is ~ pseudoCodeBlock ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
   private def onTermClause[u: P]: P[OnClause] = {
     P(
-      Keywords.on ~ Keywords.term ~/ location ~ is ~ onClauseBody ~ briefly ~
+      Keywords.on ~ Keywords.term ~/ location ~ is ~ pseudoCodeBlock ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
