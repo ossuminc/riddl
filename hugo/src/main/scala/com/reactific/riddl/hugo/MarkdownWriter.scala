@@ -204,6 +204,16 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
+  def codeBlock(headline: String, items: Seq[LiteralString], level: Int = 2): this.type = {
+    if items.nonEmpty then {
+      heading(headline, level)
+      sb.append("```\\n")
+      sb.append(items.map(_.format).mkString)
+      sb.append("```\\n")
+    }
+    this
+  }
+
   def toc(
     kindOfThing: String,
     contents: Seq[String],
@@ -294,10 +304,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       children = {
         val newParents = container.id.value +: parents
         container.contents
-          .filter(d =>
-            d.nonEmpty && !d.isInstanceOf[OnMessageClause] &&
-              !d.isInstanceOf[Example]
-          )
+          .filter(d => d.nonEmpty && !d.isInstanceOf[OnMessageClause])
           .map(makeData(_, newParents))
       }
     )
@@ -627,48 +634,6 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitExamples(
-    examples: Seq[Example],
-    level: Int = 2
-  ): this.type = {
-    heading("Examples", level)
-    var count = 0
-    examples.foreach { example =>
-      if example.isImplicit then {
-        count += 1
-        heading(s"Anonymous Example $count", level + 1)
-      } else { heading(example.id.format, level) }
-      emitExample(example, level + 1)
-    }
-    this
-  }
-
-  def emitExample(
-    example: Example,
-    level: Int = 2
-  ): this.type = {
-    emitShortDefDoc(example)
-    if example.givens.nonEmpty then {
-      heading("GIVEN", level)
-      list(example.givens.map { a_given =>
-        a_given.scenario.map("    *" + _.s + "\n")
-      })
-    }
-    if example.whens.nonEmpty then {
-      heading("WHEN", level)
-      list(example.whens.map { when => when.condition.format })
-    }
-    if example.thens.nonEmpty then {
-      heading("THEN", level)
-      list(example.thens.map { then_ => then_.action.format })
-    }
-    if example.buts.nonEmpty then {
-      heading("BUT", level)
-      list(example.buts.map { but => but.action.format })
-    }
-    this
-  }
-
   def emitInputOutput(
     input: Option[Aggregation],
     output: Option[Aggregation]
@@ -690,8 +655,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitDefDoc(function, parents)
     emitTypesToc(function)
     emitInputOutput(function.input, function.output)
-    h2("Statements")
-    emitStatements(function.statements, 2)
+    codeBlock("Statements", function.statements, 2)
     emitUsage(function)
     emitTerms(function.terms)
     this
@@ -740,10 +704,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
-        val expr = invariant.condition
-          .map(_.format)
-          .getOrElse("<not specified>")
-        sb.append("* ").append(expr).append("\n")
+        list(invariant.condition.map(_.format))
         emitDescription(invariant.description, 4)
       }
     }
@@ -761,15 +722,10 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
         case ooc: OnOtherClause       => h3(ooc.kind)
       }
       emitShortDefDoc(clause)
-      emitStatements(clause.statements, 4)
+      codeBlock("Statements", clause.statements, 4)
       // emitExamples(clause.examples, 4)
     }
     emitUsage(handler)
-    this
-  }
-
-  private def emitStatements(statements: Seq[Statement], level: Int = 2): this.type = {
-    list("statement", statements.map(_.format), level)
     this
   }
 
@@ -800,10 +756,8 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     actions.foreach { step =>
       h3(step.identify)
       emitShortDefDoc(step)
-      h4("Do Examples")
-      emitStatements(step.doStatements, 5)
-      h4("Undo Examples")
-      emitStatements(step.undoStatements, 5)
+      list(typeOfThing = "Do Statements", step.doStatements.map(_.format), 4)
+      list(typeOfThing = "Undo Statements", step.doStatements.map(_.format), 4)
     }
     this
   }

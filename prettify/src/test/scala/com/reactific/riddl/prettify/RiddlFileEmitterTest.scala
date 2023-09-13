@@ -107,37 +107,6 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear
       rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42)).toString mustBe "Integer{24,42}"
     }
-    "emit actions" in {
-      val stmt = ArbitraryStatement(At.empty, Identifier.empty, LiteralString(At.empty, "blah"))
-      val stmts = Seq(stmt, stmt)
-      rfe.clear
-      rfe.emitStatements(stmts).toString mustBe (stmt.format + stmt.format)
-    }
-    "emit Gherkin Strings" in {
-      val string = LiteralString(At.empty, "string")
-      rfe.clear
-      rfe.emitGherkinStrings(Seq.empty[LiteralString]).toString mustBe "\"\""
-      rfe.clear
-      rfe.emitGherkinStrings(Seq(string)).toString mustBe string.format
-      rfe.clear
-      rfe.emitGherkinStrings(Seq(string, string)).toString mustBe
-        """
-          |  "string"
-          |  "string"
-          |""".stripMargin
-
-    }
-    "emit statements" in {
-      rfe.clear
-      val statements = Seq(
-        ArbitraryStatement(At.empty, Identifier.empty, LiteralString(At.empty, "ya gots ta do betta"))
-      )
-
-      rfe.emitStatements(statements)
-      val expected =
-        """"ya gots ta do betta"""".stripMargin
-      rfe.toString mustBe expected
-    }
 
     "emit to a file" in {
       rfe.clear

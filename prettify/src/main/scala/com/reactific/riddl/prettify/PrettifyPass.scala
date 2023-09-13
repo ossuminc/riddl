@@ -38,7 +38,6 @@ object PrettifyPass extends PassInfo {
       case _: Domain => Keywords.domain
       case _: Entity => Keywords.entity
       case _: Enumerator => ""
-      case _: Example => Keywords.example
       case _: Field => ""
       case _: Function => Keywords.function
       case _: Handler => Keywords.handler
@@ -91,7 +90,6 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
       case typ: Type => state.current.emitType(typ)
       case function: Function => openFunction(function)
       case st: State => openState(st)
-      case oc: OnMessageClause => openOnClause(oc)
       case step: SagaStep => openSagaStep(step)
       case include: Include[Definition]@unchecked =>
         openInclude(include)
@@ -99,9 +97,10 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
       case _: RootContainer => () // ignore
       case processor: Processor[_, _] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
-      case container: Definition =>
-        // Applies To: Saga, Handler
-        state.withCurrent(_.openDef(container))
+      case handler: Handler =>
+        state.withCurrent(_.openDef(handler))
+      case saga: Saga =>
+        state.withCurrent(_.openDef(saga))
     }
   }
 
@@ -111,8 +110,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     parents: Seq[Definition]
   ): Unit = {
     definition match {
-      case statement: Statement => state.withCurrent(_.emitStatement(statement))
-      // case example: Example => state.withCurrent(_.emitExample(example))
+      case onClause: OnClause => processOnClause(onClause)
       case invariant: Invariant =>
         state.withCurrent(
           _.openDef(invariant).closeDef(invariant, withBrace = false)
@@ -243,12 +241,27 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     }
   }
 
-  private def openOnClause(
-    onClause: OnMessageClause
+  private def processOnClause(
+    onClause: OnClause
   ): Unit = {
-    state.withCurrent(
-      _.addIndent("on ").emitMessageRef(onClause.msg).add(" {\n").indent
-    )
+    onClause match {
+      case omc: OnMessageClause =>
+        state.withCurrent(
+          _.addIndent("on ").emitMessageRef(omc.msg).emitCodeBlock(omc.statements)
+        )
+      case oic: OnInitClause =>
+        state.withCurrent(
+          _.addIndent("on init ").emitCodeBlock(oic.statements)
+        )
+      case otc: OnTerminationClause =>
+        state.withCurrent(
+          _.addIndent("on term ").emitCodeBlock(otc.statements)
+        )
+      case ooc: OnOtherClause =>
+        state.withCurrent(
+          _.addIndent("on other ").emitCodeBlock(ooc.statements)
+        )
+    }
   }
 
   private def closeOnClause(): Unit = {
@@ -302,6 +315,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     function.output.foreach(te =>
       state.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
     )
+    state.withCurrent(_.addIndent("body ").emitCodeBlock(function.statements))
   }
 
   private def openState(
@@ -325,9 +339,9 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   ): Unit = {
     state.withCurrent(
       _.openDef(step)
-        .emitStatements(step.doStatements)
+        .emitCodeBlock(step.doStatements)
         .add("reverted by")
-        .emitStatements(step.undoStatements)
+        .emitCodeBlock(step.undoStatements)
     )
   }
 

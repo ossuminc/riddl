@@ -16,7 +16,7 @@ import org.scalatest.Assertion
 import java.io.File
 import java.nio.file.Path
 
-/** Test The ReformatTranslator's ability to generate consistent output */
+/** Test The PrettifyPass's ability to generate consistent output */
 class PrettifyTest extends RiddlFilesTestBase {
 
   def checkAFile(rootDir: Path, file: File): Assertion = {checkAFile(file)}
@@ -46,6 +46,7 @@ class PrettifyTest extends RiddlFilesTestBase {
     }
   }
 
+  /** Parse and prettify a file twice and compare the original with the third version. */
   def checkAFile(
     file: File,
   ): Assertion = {

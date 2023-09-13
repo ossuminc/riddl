@@ -66,7 +66,8 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
       case e: Enumerator => state.addToGlossary(e, stack)
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _: Outlet | _: Author | _: OnMessageClause | _: OnOtherClause |
+      case  _: Inlet | _: Outlet | _: Author | _: OnMessageClause | _: OnOtherClause |
+         _: OnInitClause | _: OnTerminationClause |
           _: Include[Definition] @unchecked | _: RootContainer =>
       // All these cases do not generate a file as their content contributes
       // to the content of their parent container
