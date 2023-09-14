@@ -52,7 +52,7 @@ class FunctionValidatorTest extends ValidatingTest {
         |  requires { number: Number }
         |  returns { result: Number }
         |  body {
-        |    |set field percent.result to "a percentage result"
+        |    set field percent.result to "a percentage result"
         |  }
         |}
         |""".stripMargin
@@ -67,12 +67,12 @@ class FunctionValidatorTest extends ValidatingTest {
       val input = """
                     |  function AnAspect is {
                     |    body {
-                    |      |if and("everybody hates me", "I'm depressed") then
-                    |      |  "I go fishing"
-                    |      |  "I'll just eat worms"
-                    |      |else
-                    |      |  "I'm happy"
-                    |      |end
+                    |      "if and(everybody hates me, I'm depressed) then"
+                    |        "I go fishing"
+                    |        "I'll just eat worms"
+                    |      "else"
+                    |        "I'm happy"
+                    |      "end"
                     |    }
                     |  } described as "foo"
                     |""".stripMargin

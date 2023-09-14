@@ -20,10 +20,10 @@ class RepositoryTest extends ValidatingTest {
           |      command AddThis is { what: String }
           |      handler Only is {
           |        on command AddThis {
-          |          |add 'what' to the list
+          |          "add 'what' to the list"
           |        }
           |        on query GetOne {
-          |          | send result fubar.Reply(that="value") to outlet hereyougo
+          |          send result fubar.Reply to outlet hereyougo
           |        }
           |        }
           |     }

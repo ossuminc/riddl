@@ -66,6 +66,9 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveType(t, parentsAsSeq)
       case mc: OnMessageClause =>
         resolveOnMessageClause(mc, parentsAsSeq)
+      case ic: OnInitClause        => () // no references
+      case tc: OnTerminationClause => () // no references
+      case oc: OnOtherClause       => () // no references
       case h: Handler =>
         h.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case e: Entity =>
@@ -116,9 +119,6 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveARef[Input](pi.to, parentsAsSeq)
       case si: SelfInteraction =>
         resolveARef[Definition](si.from, parentsAsSeq)
-      case ic: OnInitClause          => () // no references
-      case tc: OnTerminationClause   => () // no references
-      case oc: OnOtherClause         => () // no references
       case _: Author                 => () // no references
       case _: User                   => () // no references
       case _: Enumerator             => () // no references
@@ -171,6 +171,29 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     resolveARef[Type](mc.msg, parents)
     if mc.from.nonEmpty then {
       resolveARef[Definition](mc.from.get, parents)
+    }
+  }
+
+  private def resolveOnClauses(oc: OnClause, parents: Seq[Definition]): Unit = {
+    resolveStatements(oc.statements, oc +: parents)
+  }
+
+  private def resolveStatements(statements: Seq[Statement], parents: Seq[Definition]): Unit = {
+    statements.foreach(resolveStatement(_, parents))
+  }
+
+  private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
+    // TODO: Finish implementation of resolutions for statements
+    statement match {
+      case ss: SetStatement                      => resolveARef[Field](ss.field, parents)
+      case BecomeStatement(loc, entity, handler) => ()
+      case ForEachStatement(loc, ref, do_)       => ()
+      case SendStatement(loc, msg, portlet) => ()
+      case MorphStatement(loc, entity, state) => ()
+      case TellStatement(loc, msg, entityRef) => ()
+      case _: ArbitraryStatement => ()
+      case _: ErrorStatement => ()
+      case _: ReturnStatement                    => ()
     }
   }
 

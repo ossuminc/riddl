@@ -23,10 +23,10 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of StateFields = {
           |    handler foo is {
           |      on command EntityCommand {
-          |        |set field HamburgerState.field1 to 345
+          |        set field HamburgerState.field1 to "345"
           |      }
           |      on event EntityEvent {
-          |        |set field HamburgerState.field2 to string("678")
+          |        set field HamburgerState.field2 to "678"
           |      }
           |    } described as "Irrelevant"
           |  } described as "Irrelevant"
@@ -61,7 +61,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |   state HamburgerState of Hamburger.StateFields is {
           |    handler foo is {
           |     on event EntityContext.Incoming {
-          |       |set field HamburgerState.field1 to 678
+          |       set field HamburgerState.field1 to "678"
           |     }
           |    }
           |   }
@@ -90,7 +90,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of Fields is {
           |    handler foo is {
           |      on event Incoming {
-          |       | set field HamburgerState.field1 to 678
+          |       set field HamburgerState.field1 to "678"
           |     }
           |    }
           |  }
@@ -118,7 +118,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  state HamburgerState of Fields = {
           |    handler doit is {
           |      on command ec:EntityCommand {
-          |        |set field HamburgerState.field1 to field ec.foo
+          |        set field HamburgerState.field1 to "field ec.foo"
           |      }
           |    }
           |  }

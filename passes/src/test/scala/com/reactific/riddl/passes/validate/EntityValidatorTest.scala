@@ -141,7 +141,7 @@ class EntityValidatorTest extends ValidatingTest {
           |    state field of Hamburger.fields is { }
           |    handler baz is {
           |      on command DoIt {
-          |        |send event Message to outlet ridOfIt
+          |        send event Message to outlet ridOfIt
           |      }
           |    }
           |  }

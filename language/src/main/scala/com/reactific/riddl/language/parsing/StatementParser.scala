@@ -120,7 +120,9 @@ private[parsing] trait StatementParser {
 
   def invariant[u: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ literalString.? ~ briefly ~ description
+      Keywords.invariant ~/ location ~ identifier ~ is ~ (
+        undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
+      ) ~ briefly ~ description
     ).map { case (loc, id, cond, brief, desc) =>
       Invariant(loc, id, cond, brief, desc)
     }

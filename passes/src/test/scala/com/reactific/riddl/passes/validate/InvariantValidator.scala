@@ -16,7 +16,7 @@ class InvariantValidator extends ValidatingTest {
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
-          | invariant small is { ??? } described as { "self explanatory!" }
+          | invariant small is ??? described as { "self explanatory!" }
           |}
           |""".stripMargin
       ) { (_, _, msgs) =>
@@ -52,12 +52,10 @@ class InvariantValidator extends ValidatingTest {
         )
       }
     }
-    "allow conditional expressions" in {
+    "allow arbitrary conditional" in {
       parseAndValidateInContext[AST.Entity]("""
                                               |entity user is {
-                                              | invariant large is {
-                                              |   |true
-                                              | }
+                                              | invariant large is "true"
                                               |}
                                               |""".stripMargin) {
         (_, _, msgs) =>

@@ -66,6 +66,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateTerm(t, parentsAsSeq)
       case sa: User =>
         validateUser(sa, parentsAsSeq)
+      // TODO: Add statement validation to OnClauses 
       case oic: OnInitClause =>
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTerminationClause =>

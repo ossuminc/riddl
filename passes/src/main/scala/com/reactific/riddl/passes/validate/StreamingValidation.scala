@@ -10,8 +10,9 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.ast.At
 
-trait StreamingValidation  extends TypeValidation {
+trait StreamingValidation extends TypeValidation {
 
+  // TODO: Validate Stream usage from statements
 
   def checkStreaming(root: RootContainer): Unit = {
     val start = root.domains.headOption.map(_.id.loc).getOrElse(At.empty)
@@ -37,17 +38,14 @@ trait StreamingValidation  extends TypeValidation {
   }
 
   private def checkConnectorPersistence(): Unit = {
-    connectors.foreach {  connector =>
+    connectors.foreach { connector =>
       val connParents = symbols.parentsOf(connector)
       val maybeConnContext = symbols.contextOf(connector)
       require(maybeConnContext.nonEmpty, "Connector with no Context")
       val pipeContext = maybeConnContext.get
-      val maybeToInlet = connector.to.flatMap(inlet =>
-        resolvePath[Inlet](inlet.pathId, connector +: connParents)
-      )
-      val maybeFromOutlet = connector.from.flatMap(outlet =>
-        resolvePath[Outlet](outlet.pathId, connector +:connParents)
-      )
+      val maybeToInlet = connector.to.flatMap(inlet => resolvePath[Inlet](inlet.pathId, connector +: connParents))
+      val maybeFromOutlet =
+        connector.from.flatMap(outlet => resolvePath[Outlet](outlet.pathId, connector +: connParents))
       val maybeInletContext = maybeToInlet.flatMap(inlet => symbols.contextOf(inlet))
       val maybeOutletContext = maybeFromOutlet.flatMap(outlet => symbols.contextOf(outlet))
       val inletIsSameContext = maybeInletContext.nonEmpty &&
@@ -67,8 +65,8 @@ trait StreamingValidation  extends TypeValidation {
         if !outletIsSameContext || !inletIsSameContext then {
           val message =
             s"The persistence option on ${connector.identify} should be " +
-            s"specified because an end of the connector is not connected " +
-            s"within the same context"
+              s"specified because an end of the connector is not connected " +
+              s"within the same context"
           messages.addWarning(connector.loc, message)
         }
       }
@@ -93,8 +91,8 @@ trait StreamingValidation  extends TypeValidation {
     val unattachedOutlets = outlets.toSet[Outlet] -- inUseOutlets
 
     unattachedOutlets.foreach { outlet =>
-        val message = s"${outlet.identify} is not connected"
-        messages.addWarning(outlet.loc, message)
+      val message = s"${outlet.identify} is not connected"
+      messages.addWarning(outlet.loc, message)
     }
 
     val inUseInlets = connected.map(_._2)
