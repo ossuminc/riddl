@@ -90,7 +90,7 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef
+      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~/ Readability.with_ ~ messageRef
     )./.map { tpl => (MorphStatement.apply _).tupled(tpl) }
   }
 

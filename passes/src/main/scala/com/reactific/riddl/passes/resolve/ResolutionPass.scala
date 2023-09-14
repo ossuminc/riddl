@@ -189,7 +189,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case BecomeStatement(loc, entity, handler) => ()
       case ForEachStatement(loc, ref, do_)       => ()
       case SendStatement(loc, msg, portlet) => ()
-      case MorphStatement(loc, entity, state) => ()
+      case MorphStatement(loc, entity, state, message ) => ()
       case TellStatement(loc, msg, entityRef) => ()
       case _: ArbitraryStatement => ()
       case _: ErrorStatement => ()

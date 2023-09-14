@@ -99,10 +99,11 @@ trait Statements {
   case class MorphStatement(
     loc: At,
     entity: EntityRef,
-    state: StateRef
+    state: StateRef,
+    value: MessageRef
   ) extends Statement {
     override def kind: String = "Morph Statement"
-    def format: String = s"morph ${entity.format} to ${state.format}"
+    def format: String = s"morph ${entity.format} to ${state.format} with ${value.format}"
   }
 
   /** An action that changes the behavior of an entity by making it use a new handler for its messages; named for the
@@ -127,7 +128,7 @@ trait Statements {
   /** An action that tells a message to an entity. This is very analogous to the tell operator in Akka. Unlike using an
     * Portlet, this implies a direct relationship between the telling entity and the told entity. This action is
     * considered useful in "high cohesion" scenarios. Use [[SendStatement]] to reduce the coupling between entities
-    * because the relationship is managed by a [[Context]]'s [[Connector]] instead.
+    * because the relationship is managed by a [[Context]] 's [[Connector]] instead.
     *
     * @param loc
     *   The location of the tell action
@@ -170,12 +171,8 @@ trait Statements {
     elses: Seq[Statement]
   ) extends Statement {
     override def kind: String = "IfThenElse Statement"
-    def format: String = s"if ${cond.format} then\n{\n${
-      thens.map(_.format).mkString("  ", "\n  ", "\n}") +
-        (if elses.nonEmpty then
-          " else {\n" + elses.map(_.format).mkString("  ", "\n  ", "\n}\n")
-        else
-          "\n"
-        )}"
+    def format: String = s"if ${cond.format} then\n{\n${thens.map(_.format).mkString("  ", "\n  ", "\n}") +
+        (if elses.nonEmpty then " else {\n" + elses.map(_.format).mkString("  ", "\n  ", "\n}\n")
+         else "\n")}"
   }
 }

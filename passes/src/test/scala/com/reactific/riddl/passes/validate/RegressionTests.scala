@@ -9,6 +9,7 @@ package com.reactific.riddl.passes.validate
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ValidatingTest {
   "Regressions" should {
@@ -159,7 +160,7 @@ class RegressionTests extends ValidatingTest {
           |    entity ExampleEntity is {
           |      handler ExampleHandler is {
           |          on command Foo {
-          |            morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample
+          |            morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample with command Foo
           |          }
           |          on other {
           |            error "You must first create an event using ScheduleEvent command."
@@ -217,18 +218,17 @@ class RegressionTests extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (_, _, msgs) =>
-          msgs mustNot be(empty)
-          val duplicate =
-            msgs.find(_.message.contains("has duplicate content names"))
-          duplicate mustNot be(empty)
-          val dup = duplicate.get
-          dup.message must include(
-            """Context 'ExampleContext' has duplicate content names:
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
+        msgs mustNot be(empty)
+        val duplicate =
+          msgs.find(_.message.contains("has duplicate content names"))
+        duplicate mustNot be(empty)
+        val dup = duplicate.get
+        dup.message must include(
+          """Context 'ExampleContext' has duplicate content names:
                 |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
                 |""".stripMargin
-          )
+        )
       }
     }
   }
