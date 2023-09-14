@@ -23,32 +23,32 @@ private[parsing] trait StatementParser {
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
     P(
-      location ~ Keywords.error ~ literalString
+      location ~ Keywords.error ~/ literalString
     )./.map { tpl => (ErrorStatement.apply _).tupled(tpl) }
   }
 
   private def setStatement[u: P]: P[SetStatement] = {
     P(
-      location ~ Keywords.set ~ fieldRef ~ Readability.to ~ literalString
+      location ~ Keywords.set ~/ fieldRef ~/ Readability.to ~ literalString
     )./.map { tpl => (SetStatement.apply _).tupled(tpl) }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      location ~ Keywords.send ~/ messageRef ~
+      location ~ Keywords.send ~/ messageRef ~/
         Readability.to ~ (outletRef | inletRef)
     )./.map { t => (SendStatement.apply _).tupled(t) }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      location ~ Keywords.tell ~/ messageRef ~ Readability.to ~ processorRef
+      location ~ Keywords.tell ~/ messageRef ~/ Readability.to ~ processorRef
     )./.map { t => (TellStatement.apply _).tupled(t) }
   }
 
   private def forEachStatement[u: P](set: StatementsSet): P[ForEachStatement] = {
     P(
-      location ~ Keywords.foreach ~ pathIdentifier ~ Keywords.do_ ~ pseudoCodeBlock(set) ~ Keywords.end_
+      location ~ Keywords.foreach ~/ pathIdentifier ~ Keywords.do_ ~/ pseudoCodeBlock(set) ~ Keywords.end_
     )./.map { case (loc, pid, statements) =>
       ForEachStatement(loc, pid, statements)
     }
@@ -56,7 +56,7 @@ private[parsing] trait StatementParser {
 
   private def ifThenElseStatement[u: P](set: StatementsSet): P[IfThenElseStatement] = {
     P(
-      location ~ Keywords.if_ ~ literalString ~ Keywords.then_ ~ pseudoCodeBlock(set) ~ (
+      location ~ Keywords.if_ ~/ literalString ~ Keywords.then_ ~/ pseudoCodeBlock(set) ~ (
         Keywords.else_ ~ pseudoCodeBlock(set)
       ).?
     )./.map { case (loc, cond, thens, maybeElses) =>
@@ -66,7 +66,7 @@ private[parsing] trait StatementParser {
   }
 
   private def callStatement[u: P]: P[CallStatement] = {
-    P(location ~ Keywords.call ~ functionRef)./.map { tpl => (CallStatement.apply _).tupled(tpl) }
+    P(location ~ Keywords.call ~/ functionRef)./.map { tpl => (CallStatement.apply _).tupled(tpl) }
   }
 
   private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
@@ -117,8 +117,9 @@ private[parsing] trait StatementParser {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
       case StatementsSet.ApplicationStatements => anyDefStatements(set) | replyStatement
       case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
-      case StatementsSet.EntityStatements   => anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
-      case StatementsSet.FunctionStatements => anyDefStatements(set) | returnStatement
+      case StatementsSet.EntityStatements =>
+        anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
+      case StatementsSet.FunctionStatements   => anyDefStatements(set) | returnStatement
       case StatementsSet.ProjectorStatements  => anyDefStatements(set) | replyStatement
       case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
       case StatementsSet.SagaStatements       => anyDefStatements(set) | returnStatement
