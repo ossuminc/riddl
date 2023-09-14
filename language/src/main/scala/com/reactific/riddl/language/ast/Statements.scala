@@ -145,6 +145,14 @@ trait Statements {
     def format: String = s"tell ${msg.format} to ${entityRef.format}"
   }
 
+  case class CallStatement(
+    loc: At,
+    func: FunctionRef
+  ) extends Statement {
+    override def kind: String = "Call Statement"
+    def format: String = "scall ${func.format}"
+  }
+
   case class ForEachStatement(
     loc: At,
     ref: PathIdentifier,

@@ -11,7 +11,7 @@ domain foo {
       state FooExample of FooExampleState is {
         handler HandleFoo is {
           on command DooFoo {
-            | set field FooExamplexxxx.garbage to record Foo(garbage = "garbage")
+            set field FooExamplexxxx.garbage to "record Foo"
           }
         }
       }

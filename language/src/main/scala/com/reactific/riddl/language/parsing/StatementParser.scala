@@ -12,8 +12,6 @@ import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-import scala.collection.immutable.HashMap
-
 /** StatementParser Define actions that various constructs can take for modelling behavior in a message-passing system
   */
 private[parsing] trait StatementParser {
@@ -56,9 +54,14 @@ private[parsing] trait StatementParser {
     }
   }
 
+  private def callStatement[u: P]: P[CallStatement] = {
+    P(location ~ Keywords.call ~ functionRef)./.map { tpl => (CallStatement.apply _).tupled(tpl) }
+  }
+
   private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
     P(
-      sendStatement | arbitraryStatement | errorStatement | setStatement | tellStatement | forEachStatement(set)
+      sendStatement | arbitraryStatement | errorStatement | setStatement | tellStatement | callStatement |
+        forEachStatement(set)
     )
   }
 

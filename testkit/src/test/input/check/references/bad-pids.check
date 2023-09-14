@@ -34,9 +34,9 @@ Error: bad-pids.riddl(13:22): Path 'DooFoo' was not resolved, in OnMessageClause
 Missing: bad-pids.riddl(1:1): Vital definitions should have an author reference:
  domain foo {
  ^
-Missing: bad-pids.riddl(13:14): OnMessageClause 'On command DooFoo' should have a description:
+Missing: bad-pids.riddl(13:11): OnMessageClause 'On command DooFoo' should have a description:
            on command DooFoo {
-              ^
+           ^
 Usage: bad-pids.riddl(1:8): Models without any streaming data will exhibit minimal effect:
  domain foo {
         ^

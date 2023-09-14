@@ -205,9 +205,9 @@ Usage: everything.riddl(44:5): Type 'agg' is unused:
 Missing: everything.riddl(79:15): Handler 'foo' should have a description:
        handler foo is {
                ^
-Missing: everything.riddl(80:12): OnMessageClause 'On command ACommand' should have a description:
+Missing: everything.riddl(80:9): OnMessageClause 'On command ACommand' should have a description:
          on command ACommand {
-            ^
+         ^
 Missing: everything.riddl(87:5): Entity 'SomeOtherThing' should have a description:
      entity SomeOtherThing is {
      ^
@@ -223,9 +223,9 @@ Missing: everything.riddl(90:7): State 'otherThingState' in Entity 'SomeOtherThi
 Missing: everything.riddl(91:15): Handler 'fee' should have a description:
        handler fee is {
                ^
-Missing: everything.riddl(92:12): OnMessageClause 'On event ItHappened' should have a description:
+Missing: everything.riddl(92:9): OnMessageClause 'On event ItHappened' should have a description:
          on event ItHappened {
-            ^
+         ^
 Usage: everything.riddl(71:7): Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
        ^

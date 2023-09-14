@@ -17,17 +17,17 @@ domain ignore1 is {
       requires: { p1: String, p2: String }
       returns: {s: String }
       step One is {
-        | send command Something() to inlet blah.in
+        send command Something to inlet blah.in
       } reverted by {
-        | send command UndoSomething() to inlet blah.in
+        send command UndoSomething to inlet blah.in
       } described as "First saga step"
       step Two is {
-        | call AnotherThing(a=42)
-        | "Pass 42 to AnotherThing function"
-        | "Return AnotherThing's output"
+        call function AnotherThing
+        "Pass 42 to AnotherThing function"
+        "Return AnotherThing's output"
       } reverted by {
-        | call UndoAnotherThing(a=42)
-      } described as "Second saca step"
+        call function UndoAnotherThing
+      } described as "Second saga step"
     }
   } described as "ignore"
 } described as "just for testing a saga"
