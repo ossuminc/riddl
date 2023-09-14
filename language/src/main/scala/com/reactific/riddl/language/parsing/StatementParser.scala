@@ -48,9 +48,20 @@ private[parsing] trait StatementParser {
 
   private def forEachStatement[u: P](set: StatementsSet): P[ForEachStatement] = {
     P(
-      location ~ Keywords.foreach ~ pathIdentifier ~ Keywords.do_ ~ setOfStatements(set) ~ Keywords.end_
+      location ~ Keywords.foreach ~ pathIdentifier ~ Keywords.do_ ~ pseudoCodeBlock(set) ~ Keywords.end_
     )./.map { case (loc, pid, statements) =>
       ForEachStatement(loc, pid, statements)
+    }
+  }
+
+  private def ifThenElseStatement[u: P](set: StatementsSet): P[IfThenElseStatement] = {
+    P(
+      location ~ Keywords.if_ ~ literalString ~ Keywords.then_ ~ pseudoCodeBlock(set) ~ (
+        Keywords.else_ ~ pseudoCodeBlock(set)
+      ).?
+    )./.map { case (loc, cond, thens, maybeElses) =>
+      val elses = maybeElses.getOrElse(Seq.empty[Statement])
+      IfThenElseStatement(loc, cond, thens, elses)
     }
   }
 
@@ -61,7 +72,7 @@ private[parsing] trait StatementParser {
   private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
     P(
       sendStatement | arbitraryStatement | errorStatement | setStatement | tellStatement | callStatement |
-        forEachStatement(set)
+        ifThenElseStatement(set) | forEachStatement(set)
     )
   }
 

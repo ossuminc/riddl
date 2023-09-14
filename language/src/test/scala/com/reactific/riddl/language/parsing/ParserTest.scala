@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.{ParsingTest, TestParser}
 
-/** Unit Tests For ParserTest */
+/** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
 
   "ParserContext" must {

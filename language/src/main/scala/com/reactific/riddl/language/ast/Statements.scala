@@ -163,4 +163,19 @@ trait Statements {
       do_.map(_.format).mkString("\n") + "end\n"
   }
 
+  case class IfThenElseStatement(
+    loc: At,
+    cond: LiteralString,
+    thens: Seq[Statement],
+    elses: Seq[Statement]
+  ) extends Statement {
+    override def kind: String = "IfThenElse Statement"
+    def format: String = s"if ${cond.format} then\n{\n${
+      thens.map(_.format).mkString("  ", "\n  ", "\n}") +
+        (if elses.nonEmpty then
+          " else {\n" + elses.map(_.format).mkString("  ", "\n  ", "\n}\n")
+        else
+          "\n"
+        )}"
+  }
 }

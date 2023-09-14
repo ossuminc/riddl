@@ -82,9 +82,9 @@ domain Everything by author Reid is {
       state someState of Something.someData is {
         handler foo is {
           on command ACommand {
-            "if Something arrives and misc() then"
+            if "Something arrives" then {
               send event Inebriated to outlet APlant.Source.Commands
-            "end"
+            }
           }
         }
       }
