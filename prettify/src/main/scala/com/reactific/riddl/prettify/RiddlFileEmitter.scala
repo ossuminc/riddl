@@ -276,11 +276,11 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitCodeBlock(statements: Seq[LiteralString]): this.type = {
+  def emitCodeBlock(statements: Seq[Statement]): this.type = {
     if (statements.isEmpty) then add(" { ??? }\n")
     else
       add(" {").indent.nl
-      statements.map("|" + _.s + "\n").foreach(addIndent)
+      statements.map( _.format + "\n").foreach(addIndent)
       outdent.addIndent("}").nl
     this
   }

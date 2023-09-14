@@ -103,7 +103,7 @@ class ParserTest extends ParsingTest {
           |      state entityState of twoState is { ??? }
           |      handler one  is { ??? }
           |      function one is { ??? }
-          |      invariant one is { ??? }
+          |      invariant one is "???"
           |    }
           |    adaptor one from context over.consumption is { ??? }
           |  }
@@ -220,7 +220,7 @@ class ParserTest extends ParsingTest {
           content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            Seq(LiteralString((1,20,rpi), "x is greater or equal to 10")),
+            Option(LiteralString((1,20,rpi), "x is greater or equal to 10")),
             None, None
           )
       }

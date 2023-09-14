@@ -11,9 +11,9 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait EpicParser
-    extends CommonParser
-    with ReferenceParser {
+private[parsing] trait EpicParser {
+  this: CommonParser
+    with ReferenceParser =>
 
   private def arbitraryStoryRef[u: P]: P[Reference[VitalDefinition[_,_]]] = {
     processorRef | sagaRef | functionRef

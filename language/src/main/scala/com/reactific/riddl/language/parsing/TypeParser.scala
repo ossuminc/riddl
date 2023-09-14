@@ -541,14 +541,4 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map { tpl => (Constant.apply _).tupled(tpl) }
   }
 
-  def invariant[u: P]: P[Invariant] = {
-    P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~
-        ( literalString.map(Seq[LiteralString](_)) | pseudoCodeBlock ) ~
-        briefly ~ description
-    ).map { case (loc, id, cond, brief, desc) =>
-      Invariant(loc, id, cond, brief, desc)
-    }
-  }
-
 }

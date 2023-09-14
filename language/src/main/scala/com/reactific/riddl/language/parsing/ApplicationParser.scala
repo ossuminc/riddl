@@ -11,11 +11,9 @@ import Terminals.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-private[parsing] trait ApplicationParser
-    extends StreamingParser
-      with FunctionParser
-      with HandlerParser
-      with TypeParser {
+private[parsing] trait ApplicationParser {
+  this: StreamingParser with FunctionParser with ReferenceParser with HandlerParser with StatementParser 
+  with TypeParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](StringIn(Options.technology).!) {
@@ -54,7 +52,7 @@ private[parsing] trait ApplicationParser
 
   private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
     P(
-      group | handler | function |
+      group | handler(StatementsSet.ApplicationStatements) | function |
         inlet | outlet | term | typeDef |
         constant | applicationInclude
     )

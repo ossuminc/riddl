@@ -12,11 +12,13 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait ProjectorParser
-    extends TypeParser
-      with HandlerParser
-      with FunctionParser
-      with StreamingParser {
+private[parsing] trait ProjectorParser {
+  this: FunctionParser
+    with HandlerParser
+    with ReferenceParser
+    with StatementParser
+    with StreamingParser
+    with TypeParser =>
 
   private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
     options[u, ProjectorOption](StringIn(Options.technology).!) {
@@ -32,7 +34,7 @@ private[parsing] trait ProjectorParser
 
   private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
-      term | projectionInclude | handler | function | inlet | outlet |
+      term | projectionInclude | handler(StatementsSet.ProjectorStatements) | function | inlet | outlet |
         invariant | constant | typeDef
     ).rep(0)
   }

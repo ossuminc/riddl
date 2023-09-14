@@ -13,12 +13,14 @@ import Terminals.*
 
 /** SagaParser Implements the parsing of saga definitions in context definitions.
   */
-private[parsing] trait SagaParser extends ReferenceParser with FunctionParser with StreamingParser with CommonParser {
+private[parsing] trait SagaParser {
+
+  this: ReferenceParser with FunctionParser with StreamingParser with StatementParser with CommonParser =>
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
-      location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock ~ 
-        Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock ~
+      location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
+        Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         briefly ~ description
     ).map(x => (SagaStep.apply _).tupled(x))
   }

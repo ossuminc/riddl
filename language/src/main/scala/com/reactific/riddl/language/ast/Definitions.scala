@@ -12,7 +12,7 @@ import com.reactific.riddl.language.parsing.Terminals.Keywords
 /** Unit Tests For Definitions */
 trait Definitions {
 
-  this: AbstractDefinitions with Options with Types =>
+  this: AbstractDefinitions with Options with Types with Statements =>
 
   /** Base trait of any definition that is in the content of an adaptor
     */
@@ -105,7 +105,7 @@ trait Definitions {
     def hasTerms: Boolean = terms.nonEmpty
   }
 
-  /** A [[RiddlValue]] to record an inclusion of a file while parsing.
+  /** A value to record an inclusion of a file while parsing.
     *
     * @param loc
     *   The location of the include statement in the source
@@ -144,7 +144,7 @@ trait Definitions {
     }
   }
 
-  /** A [[RiddlValue]] that holds the author's information
+  /** A value that holds the author's information
     *
     * @param loc
     *   The location of the author information
@@ -560,7 +560,7 @@ trait Definitions {
     output: Option[Aggregation] = None,
     types: Seq[Type] = Seq.empty[Type],
     functions: Seq[Function] = Seq.empty[Function],
-    statements: Seq[LiteralString] = Seq.empty[LiteralString],
+    statements: Seq[Statement] = Seq.empty[Statement],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     includes: Seq[Include[FunctionDefinition]] = Seq
       .empty[Include[FunctionDefinition]],
@@ -618,7 +618,7 @@ trait Definitions {
   case class Invariant(
     loc: At,
     id: Identifier,
-    condition: Seq[LiteralString] = Seq.empty[LiteralString],
+    condition: Option[LiteralString] = Option.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -635,7 +635,7 @@ trait Definitions {
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
   sealed trait OnClause extends LeafDefinition with HandlerDefinition {
-    def statements: Seq[LiteralString]
+    def statements: Seq[Statement]
   }
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
@@ -643,7 +643,7 @@ trait Definitions {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param examples
+    * @param statements
     *   A set of examples that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -652,7 +652,7 @@ trait Definitions {
     */
   case class OnOtherClause(
     loc: At,
-    statements: Seq[LiteralString] = Seq.empty[LiteralString],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -678,7 +678,7 @@ trait Definitions {
     */
   case class OnInitClause(
     loc: At,
-    statements: Seq[LiteralString] = Seq.empty[LiteralString],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -711,7 +711,7 @@ trait Definitions {
     loc: At,
     msg: MessageRef,
     from: Option[Reference[Definition]],
-    statements: Seq[LiteralString] = Seq.empty[LiteralString],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -741,7 +741,7 @@ trait Definitions {
     */
   case class OnTerminationClause(
     loc: At,
-    statements: Seq[LiteralString] = Seq.empty[LiteralString],
+    statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -1353,8 +1353,8 @@ trait Definitions {
   }
 
   /** Definition of a Streamlet. A computing element for processing data from [[Inlet]]s to [[Outlet]]s. A processor's
-    * processing is specified by Gherkin [[Example]]s. Streamlets come in various shapes: Source, Sink, Flow, Merge,
-    * Split, and Router depending on how many inlets and outlets they have
+    * processing is specified by free text statements in [[Handler]]s. Streamlets come in various shapes: Source, Sink,
+    * Flow, Merge, Split, and Router depending on how many inlets and outlets they have
     *
     * @param loc
     *   The location of the Processor definition
@@ -1502,8 +1502,8 @@ trait Definitions {
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doStatements: Seq[LiteralString] = Seq.empty[LiteralString],
-    undoStatements: Seq[LiteralString] = Seq.empty[LiteralString],
+    doStatements: Seq[Statement] = Seq.empty[Statement],
+    undoStatements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition

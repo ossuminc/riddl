@@ -226,7 +226,7 @@ class ASTTest extends AnyWordSpec with Matchers {
         )
 
         val invariants = Seq(
-          Invariant(At(), Identifier(At(), "my_id"), Seq(LiteralString(At(),"true")), None)
+          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(),"true")), None)
         )
         val types = Seq(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),

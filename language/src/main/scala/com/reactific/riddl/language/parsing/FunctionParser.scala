@@ -12,8 +12,10 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait FunctionParser extends ReferenceParser with TypeParser with CommonParser {
+private[parsing] trait FunctionParser {
 
+  this: ReferenceParser with TypeParser with StatementParser with CommonParser => 
+    
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
@@ -39,9 +41,9 @@ private[parsing] trait FunctionParser extends ReferenceParser with TypeParser wi
     ).rep(0)
   }
 
-  private def statementBlock[u: P]: P[Seq[LiteralString]] = {
+  private def statementBlock[u: P]: P[Seq[Statement]] = {
     P(
-      Keywords.body./ ~ (undefined(Seq.empty[LiteralString]) | pseudoCodeBlock)
+      Keywords.body./ ~ (undefined(Seq.empty[Statement]) | pseudoCodeBlock(StatementsSet.FunctionStatements))
     )
   }
 
@@ -51,11 +53,11 @@ private[parsing] trait FunctionParser extends ReferenceParser with TypeParser wi
       Option[Aggregation],
       Option[Aggregation],
       Seq[FunctionDefinition],
-      Seq[LiteralString]
+      Seq[Statement]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[LiteralString])
+      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
     } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 

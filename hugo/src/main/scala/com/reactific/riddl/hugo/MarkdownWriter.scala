@@ -204,7 +204,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def codeBlock(headline: String, items: Seq[LiteralString], level: Int = 2): this.type = {
+  def codeBlock(headline: String, items: Seq[Statement], level: Int = 2): this.type = {
     if items.nonEmpty then {
       heading(headline, level)
       sb.append("```\\n")
@@ -704,7 +704,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
-        list(invariant.condition.map(_.format))
+        list(invariant.condition.map(_.format).toSeq)
         emitDescription(invariant.description, 4)
       }
     }

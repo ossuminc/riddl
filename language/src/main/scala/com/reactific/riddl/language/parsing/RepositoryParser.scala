@@ -12,7 +12,14 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait RepositoryParser extends HandlerParser with StreamingParser with FunctionParser {
+private[parsing] trait RepositoryParser {
+
+  this: HandlerParser
+    with ReferenceParser
+    with StatementParser
+    with StreamingParser
+    with FunctionParser
+    with TypeParser =>
 
   private def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
     options[u, RepositoryOption](StringIn(Options.technology).!) {
@@ -28,7 +35,7 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
 
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
     P(
-      typeDef | handler | function | term | repositoryInclude | inlet | outlet
+      typeDef | handler(StatementsSet.RepositoryStatements) | function | term | repositoryInclude | inlet | outlet
     ).rep(0)
   }
 

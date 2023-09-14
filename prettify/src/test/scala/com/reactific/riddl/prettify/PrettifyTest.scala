@@ -64,6 +64,7 @@ class PrettifyTest extends RiddlFilesTestBase {
     "check enumerations" in {
       processADirectory("testkit/src/test/input/enumerations")
     }
+
     "check mappings" in { processADirectory("testkit/src/test/input/mappings") }
     "check ranges" in { processADirectory("testkit/src/test/input/ranges") }
     "check empty.riddl" in {

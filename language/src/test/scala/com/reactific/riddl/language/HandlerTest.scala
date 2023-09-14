@@ -19,7 +19,7 @@ class HandlerTest extends ParsingTest {
                     |  outlet begone is event FooDone
                     |  handler FooHandler is {
                     |    on command FooMessage {
-                    |      |send event FooDone( flux = 42 ) to outlet begone
+                    |      send event FooDone to outlet begone
                     |    }
                     |  }
                     |}
@@ -64,11 +64,10 @@ class HandlerTest extends ParsingTest {
           |
           |        handler MemberHandler is {
           |            on command RegisterMember {
-          |                then morph entity Member to state Member.Active
-          |                and set Active.memberId to @RegisterMember.memberId
-          |                and set Active.memberInfo to @RegisterMember.memberInfo
+          |                morph entity Member to state Member.Active
+          |                set Active.memberId to "RegisterMember.memberId"
+          |                set Active.memberInfo to "RegisterMember.memberInfo"
           |            }
-          |
           |        }
           |
           |        state Active is {
@@ -78,18 +77,17 @@ class HandlerTest extends ParsingTest {
           |        }
           |        handler ActiveMemberHandler /*for state Active */ is {
           |            on command UpdateMemberInfo {
-          |                then set Active.memberInfo to @UpdateMemberInfo.memberInfo
+          |                set Active.memberInfo to "UpdateMemberInfo.memberInfo"
           |            }
-          |            on command UpdateMemberStatus { ???
-          |            }
-          |            on query GetMemberData {  }
+          |            on command UpdateMemberStatus { ??? }
+          |            on query GetMemberData {  ??? }
           |        }
           |
           |        state Terminated is {
           |            memberId: MemberId
           |        }
           |        handler TerminatedMemberHandler is {
-          |            on other { then error "Terminated members cannot process messages" }
+          |            on other { error "Terminated members cannot process messages" }
           |        }
           |    }
           |
@@ -108,9 +106,9 @@ class HandlerTest extends ParsingTest {
           |  state DistributionState of ArbitraryState is { ??? }
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
-          |      |if  ==(field ContainerNestedInContainer.id, parentContainer) then
-          |      |  set field DistributionItem.lastKnownWOrkCenter to field ContainerNestedInContainer.workCenter
-          |      |end
+          |      "if  ==(field ContainerNestedInContainer.id, parentContainer) then"
+          |        set field DistributionItem.lastKnownWOrkCenter to "field ContainerNestedInContainer.workCenter"
+          |      "end"
           |    } explained as { "Helps update this item's location" }
           |  }
           |}
@@ -130,85 +128,74 @@ class HandlerTest extends ParsingTest {
           |  state DistributionState of ArbitraryState is { ??? }
           | handler FromContainer  is {
           |    on event ContainerNestedInContainer {
-          |      |if ==(field ContainerNestedInContainer.id,parentContainer) then
-          |      |  set field DistributionItem.workCenter to lastKnownWorkCenter
-          |      |end
+          |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"
+          |        set field DistributionItem.workCenter to "lastKnownWorkCenter"
+          |      "end"
           |    } explained as { "Helps update this item's location" }
-          |    on other {
-          |      |do nothing
-          |    }
+          |    on other is { ??? }
           |  }
           |  handler FromDistributionItem  is {
           |    on command CreateItem {
-          |      |set field DistributionItem.journey to
-          |      |  field FromDistributionItem.PreInducted
-          |      |set field DistributionItem.trackingId to
-          |      |  field CreateItem.trackingId
-          |      |set field DistributionItem.manifestId to
-          |      |  field CreateItem.manifestId
-          |      |set field DistributionItem.destination to
-          |      |  field CreatItem.postalCode
-          |      |send event DistributionItem.ItemPreInducted to
-          |      |  inlet DistributionItem.incoming
+          |      set field DistributionItem.journey to "field FromDistributionItem.PreInducted"
+          |      set field DistributionItem.trackingId to "field CreateItem.trackingId"
+          |      set field DistributionItem.manifestId to "field CreateItem.manifestId"
+          |      set field DistributionItem.destination to "field CreatItem.postalCode"
+          |      send event DistributionItem.ItemPreInducted to inlet DistributionItem.incoming
           |    }
           |    on command InductItem {
-          |      |set field DistributionItem.timeOfFirstScan to
-          |      |  field InductItem.originTimeStamp
-          |      |set field DistributionItem.journey to
-          |      |  field InductItem.Inducted
-          |      |set field DistributionItem.lastKnownWorkCenterId to
-          |      |  field InductItem.workCenter
-          |      |send event DistributionItem.ItemInducted() to
-          |      |  inlet DistributionItem.incoming
+          |      set field DistributionItem.timeOfFirstScan to "field InductItem.originTimeStamp"
+          |      set field DistributionItem.journey to "field InductItem.Inducted"
+          |      set field DistributionItem.lastKnownWorkCenterId to "field InductItem.workCenter"
+          |      send event DistributionItem.ItemInducted to inlet DistributionItem.incoming
           |    }
           |    on command SortItem {
-          |      |if ==(true,empty(timeOfFirstScan())) then
-          |      |  set field timeOfFirstScan to field SortItem.originTimeStamp
-          |      |  set field journey to field Sorted
-          |      |  execute Unnest
-          |      |end
+          |      "if rue == empty(timeOfFirstScan()) then"
+          |        set field timeOfFirstScan to "field SortItem.originTimeStamp"
+          |        set field journey to "field Sorted"
+          |        "execute Unnest"
+          |      "end"
           |    }
           |    on command RemoveItemFromContainer {
-          |      |set field journey to field AtWorkCenter // ??? what's the correct journey?
-          |      |set field parentContainer to empty
+          |      set field journey to "field AtWorkCenter // ??? what's the correct journey?"
+          |      set field parentContainer to "empty"
           |    }
           |    on command NestItem {
-          |      |if ==(true,empty(timeOfFirstScan())) then
-          |      |  set field timeOfFirstScan to field NestItem.originTimeStamp
-          |      |  set field parentContainer to field NestItem.container
-          |      |  send command AddItemToContainer() to inlet incoming
-          |      |end
+          |      "if ==(true,empty(timeOfFirstScan())) then"
+          |        set field timeOfFirstScan to "field NestItem.originTimeStamp"
+          |        set field parentContainer to "field NestItem.container"
+          |        send command AddItemToContainer to inlet incoming
+          |      "end"
           |    }
           |    on command TransportItem {
-          |      |if ==(true,empty(timeOfFirstScan())) then
-          |      |  set field timeOfFirstScan to field TransportItem.originTimeStamp
-          |      |  set field journey to field TransportItem.InTransit
-          |      |  set field lastKnownWorkCenter to field TransportItem.workCenter
-          |      |end
+          |      "if ==(true,empty(timeOfFirstScan())) then"
+          |        set field timeOfFirstScan to "field TransportItem.originTimeStamp"
+          |        set field journey to "field TransportItem.InTransit"
+          |        set field lastKnownWorkCenter to "field TransportItem.workCenter"
+          |      "end"
           |    }
           |    on command ReceiveItem {
-          |      |if ==(true,empty(timeOfFirstScan())) then
-          |      | set field timeOfFirstScan to field ReceiveItem.originTimeStamp
-          |      |  set field journey to true
-          |      |  execute Unnest
-          |      |end
+          |      "if ==(true,empty(timeOfFirstScan())) then"
+          |         set field timeOfFirstScan to "field ReceiveItem.originTimeStamp"
+          |         set field journey to "true"
+          |         "execute Unnest"
+          |      "end"
           |    }
           |    // TODO: what commands bring item out of a hold?
           |    on command MarkItemOutForDelivery {
-          |      |set field journey to field OutForDelivery
+          |      set field journey to "field OutForDelivery"
           |    }
           |    on command DeliverItem {
-          |      |set field journey to field Delivered
-          |      |execute Unnest
+          |      "set field journey to field Delivered"
+          |      "execute Unnest"
           |    }
           |    on command MachineMissort {
-          |      |set field journey to unknown() // TODO: how do we respond to this?
+          |      set field journey to "unknown() // TODO: how do we respond to this?"
           |    }
           |    on command HumanMissort {
-          |      |set field journey to unknown() // TODO: how do we respond to this?
+          |      set field journey to "unknown() // TODO: how do we respond to this?"
           |    }
           |    on command CustomerAddressingError {
-          |      |set field journey to onHold() // TODO: how do we respond to this?
+          |      set field journey to "onHold() // TODO: how do we respond to this?"
           |    }
           |  }
           |}
