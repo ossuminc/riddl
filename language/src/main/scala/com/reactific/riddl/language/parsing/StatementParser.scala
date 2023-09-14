@@ -42,7 +42,7 @@ private[parsing] trait StatementParser {
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      location ~ Keywords.tell ~/ messageRef ~ Readability.to.? ~ processorRef
+      location ~ Keywords.tell ~/ messageRef ~ Readability.to ~ processorRef
     )./.map { t => (TellStatement.apply _).tupled(t) }
   }
 
@@ -100,6 +100,12 @@ private[parsing] trait StatementParser {
     )./.map { tpl => (BecomeStatement.apply _).tupled(tpl) }
   }
 
+  private def replyStatement[u: P]: P[ReplyStatement] = {
+    P(
+      location ~ Keywords.reply ~ Readability.with_.? ~ messageRef
+    )./.map { tpl => (ReplyStatement.apply _).tupled(tpl) }
+  }
+
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
       location ~ Keywords.return_ ~ literalString
@@ -108,15 +114,15 @@ private[parsing] trait StatementParser {
 
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
-      case StatementsSet.AdaptorStatements     => anyDefStatements(set)
-      case StatementsSet.ApplicationStatements => anyDefStatements(set)
-      case StatementsSet.ContextStatements     => anyDefStatements(set)
-      case StatementsSet.EntityStatements      => anyDefStatements(set) | morphStatement | becomeStatement
-      case StatementsSet.FunctionStatements    => anyDefStatements(set) | returnStatement
-      case StatementsSet.ProjectorStatements   => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements  => anyDefStatements(set)
-      case StatementsSet.SagaStatements        => anyDefStatements(set) | returnStatement
-      case StatementsSet.StreamStatements      => anyDefStatements(set)
+      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
+      case StatementsSet.ApplicationStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
+      case StatementsSet.EntityStatements   => anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
+      case StatementsSet.FunctionStatements => anyDefStatements(set) | returnStatement
+      case StatementsSet.ProjectorStatements  => anyDefStatements(set) | replyStatement
+      case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.SagaStatements       => anyDefStatements(set) | returnStatement
+      case StatementsSet.StreamStatements     => anyDefStatements(set)
     }
   }
 

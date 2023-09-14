@@ -87,6 +87,21 @@ trait Statements {
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
 
+  /** A statement that replys in a handler to a query
+    *
+    * @param loc
+    *   The location in the source of the publish action
+    * @param value
+    *   The value to be returned
+    */
+  case class ReplyStatement(
+    loc: At,
+    message: MessageRef
+  ) extends Statement {
+    override def kind: String = "Reply Statement"
+    def format: String = s"reply ${message.format}"
+  }
+
   /** An statement that morphs the state of an entity to a new structure
     *
     * @param loc
