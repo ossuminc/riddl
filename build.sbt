@@ -51,44 +51,11 @@ lazy val utils = project
   .configure(C.withScala3)
   .configure(C.withCoverage(0))
   .enablePlugins(BuildInfoPlugin)
+  .configure(
+    C.withBuildInfo("https://riddl.tech", "Ossum Inc.", "com.reactific.riddl.utils", "RiddlBuildInfo", 2019))
   .settings(
     name := "riddl-utils",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
-    buildInfoObject := "RiddlBuildInfo",
-    buildInfoPackage := "com.reactific.riddl.utils",
-    buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
-    buildInfoUsePackageAsPath := true,
-    buildInfoKeys ++= Seq[BuildInfoKey](
-      name,
-      version,
-      description,
-      organization,
-      organizationName,
-      BuildInfoKey.map(organizationHomepage) { case (k, v) =>
-        k -> v.get.toString
-      },
-      BuildInfoKey.map(homepage) { case (k, v) =>
-        "projectHomepage" -> v.map(_.toString).getOrElse("https://riddl.tech")
-      },
-      BuildInfoKey.map(startYear) { case (k, v) =>
-        k -> v.map(_.toString).getOrElse("2019")
-      },
-      BuildInfoKey.map(startYear) { case (k, v) =>
-        "copyright" -> s"© ${v.map(_.toString).getOrElse("2019")}-${Calendar
-            .getInstance()
-            .get(Calendar.YEAR)} Ossum Inc."
-      },
-      scalaVersion,
-      sbtVersion,
-      BuildInfoKey.map(scalaVersion) { case (k, v) =>
-        val version = if (v.head == '2') { v.substring(0, v.lastIndexOf('.')) }
-        else v
-        "scalaCompatVersion" -> version
-      },
-      BuildInfoKey.map(licenses) { case (k, v) =>
-        k -> v.map(_._1).mkString(", ")
-      }
-    )
   )
 
 val Language: Configuration = config("language")
@@ -99,11 +66,8 @@ lazy val language: Project = project
   .configure(C.withScala3)
   .settings(
     name := "riddl-language",
-    // FIXME: Don't defeat doc generation
-    //     See https://github.com/lampepfl/dotty/issues/17577 for details
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
-    libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++
-      Dep.testing
+    libraryDependencies ++= Seq(Dep.fastparse, Dep.lang3, Dep.commons_io) ++ Dep.testing
   )
   .dependsOn(utils)
 
@@ -259,15 +223,13 @@ lazy val riddlc: Project = project
   )
 
 lazy val plugin = (project in file("sbt-riddl"))
-  .enablePlugins(SbtPlugin, BuildInfoPlugin)
+  .enablePlugins(SbtPlugin, BuildInfoPlugin, JavaAppPackaging)
   .disablePlugins(ScoverageSbtPlugin)
   .configure(C.mavenPublish)
   .settings(
     name := "sbt-riddl",
     sbtPlugin := true,
     scalaVersion := "2.12.18",
-    Compile / sbt.Keys.doc / sources := Seq(),
-    Compile / packageDoc / publishArtifact := false,
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.reactific.riddl.sbt",
     buildInfoOptions := Seq(BuildTime),

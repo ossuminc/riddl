@@ -3,13 +3,20 @@ import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
 import sbt.Keys.organizationName
-import sbt.Keys._
-import sbt._
+import sbt.Keys.*
+import sbt.*
 import sbt.io.Path.allSubpaths
-import scoverage.ScoverageKeys._
+import sbtbuildinfo.BuildInfoKey
+import sbtbuildinfo.BuildInfoKeys.{buildInfoKeys, buildInfoObject, buildInfoPackage, buildInfoUsePackageAsPath}
+import sbtbuildinfo.BuildInfoOption.{BuildTime, ToJson, ToMap}
+import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoOptions
+import scoverage.ScoverageKeys.*
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
+
+import java.util.Calendar
+import scala.collection.Seq
 
 /** V - Dependency Versions object */
 object V {
@@ -124,6 +131,52 @@ object C {
       coverageMinimumStmtPerFile := percent,
       coverageMinimumBranchPerFile := percent,
       coverageExcludedPackages := "<empty>"
+    )
+  }
+
+  def withBuildInfo(
+    homePage: String,
+    orgName: String,
+    packageName: String,
+    objName: String = "BuildInfo",
+    baseYear: Int = 2023
+  )(p: Project): Project = {
+    p.settings(
+      buildInfoObject := objName,
+      buildInfoPackage := packageName,
+      buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
+      buildInfoUsePackageAsPath := true,
+      buildInfoKeys ++= Seq[BuildInfoKey](
+        name,
+        version,
+        description,
+        organization,
+        organizationName,
+        BuildInfoKey.map(organizationHomepage) { case (k, v) =>
+          k -> v.get.toString
+        },
+        BuildInfoKey.map(homepage) { case (k, v) =>
+          "projectHomepage" -> v.map(_.toString).getOrElse(homePage)
+        },
+        BuildInfoKey.map(startYear) { case (k, v) =>
+          k -> v.map(_.toString).getOrElse(baseYear.toString)
+        },
+        BuildInfoKey.map(startYear) { case (k, v) =>
+          "copyright" -> s"© ${v.map(_.toString).getOrElse(baseYear.toString)}-${Calendar
+              .getInstance()
+              .get(Calendar.YEAR)} $orgName}"
+        },
+        scalaVersion,
+        sbtVersion,
+        BuildInfoKey.map(scalaVersion) { case (k, v) =>
+          val version = if (v.head == '2') { v.substring(0, v.lastIndexOf('.')) }
+          else v
+          "scalaCompatVersion" -> version
+        },
+        BuildInfoKey.map(licenses) { case (k, v) =>
+          k -> v.map(_._1).mkString(", ")
+        }
+      )
     )
   }
 
