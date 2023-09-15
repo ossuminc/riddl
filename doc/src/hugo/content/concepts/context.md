@@ -71,7 +71,7 @@ from DDD Europe 2020 conference
 * [Handlers]({{< relref "handler.md" >}})
 * [Includes]({{< relref "include.md" >}})
 * [Processors]({{< relref "processor.md" >}})
-* [Projections]({{< relref "projection.md" >}})
+* [Projectors]({{< relref "projector.md" >}})
 * [Sagas]({{< relref "saga.md" >}})
 * [Terms]({{< relref "term.md" >}})
 * [Types]({{< relref "type.md" >}})

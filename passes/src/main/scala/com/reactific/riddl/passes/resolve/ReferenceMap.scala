@@ -20,7 +20,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
   def size: Int = map.size
 
   def add[T <: Definition: ClassTag](ref: Reference[T], parent: Definition, definition: T): Unit = {
-    add(ref.pathId, parent, definition)
+    add(ref.pathId.format, parent, definition)
   }
 
   def add[T <: Definition : ClassTag](pathId: PathIdentifier, parent: Definition, definition: T): Unit = {

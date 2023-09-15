@@ -10,6 +10,7 @@ import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.LiteralString
 import fastparse.*
 import fastparse.NoWhitespace.*
+import java.lang.Character.isISOControl
 
 /** Parser rules that should not collect white space */
 private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
@@ -17,8 +18,8 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
   def markdownLine[u: P]: P[LiteralString] = {
     P(
       location ~ Punctuation.verticalBar ~~
-        CharsWhile(ch => ch != '\n' && ch != '\r').! ~~ ("\n" | "\r")
-          .rep(min = 1, max = 2)
+        CharsWhile(ch => ch != '\n' && ch != '\r').! ~~
+          ("\n" | "\r" ~~ "\n").rep(min = 1, max = 2)
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
 
@@ -63,5 +64,4 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
         Punctuation.quote
     )
   }.map { tpl => (LiteralString.apply _).tupled(tpl) }
-
 }

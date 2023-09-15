@@ -39,7 +39,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     if strings.sizeIs > 1 then {
       sb.append("\n")
       strings.foreach(s => sb.append(s"""$spc"${s.s}"$newLine"""))
-    } else {strings.foreach(s => sb.append(s""" "${s.s}" """))}
+    } else { strings.foreach(s => sb.append(s""" "${s.s}" """)) }
     this
   }
 
@@ -67,7 +67,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def indent: this.type = {indentLevel = indentLevel + 2; this}
+  def indent: this.type = { indentLevel = indentLevel + 2; this }
 
   def outdent: this.type = {
     require(indentLevel > 1, "unmatched indents")
@@ -81,8 +81,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   ): this.type = {
     addSpace().add(s"${keyword(definition)} ${definition.id.format} is ")
     if withBrace then {
-      if definition.isEmpty then {add("{ ??? }")}
-      else {add("{\n").indent}
+      if definition.isEmpty then add("{ ??? }")
+      else add("{\n").indent
     }
     this
   }
@@ -91,7 +91,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    if withBrace && !definition.isEmpty then {outdent.addIndent("}")}
+    if withBrace && !definition.isEmpty then { outdent.addIndent("}") }
     emitBrief(definition.brief)
     emitDescription(definition.description).add("\n")
   }
@@ -117,9 +117,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitString(s: Strng): this.type = {
     (s.min, s.max) match {
       case (Some(n), Some(x)) => this.add(s"String($n,$x)")
-      case (None, Some(x)) => this.add(s"String(,$x)")
-      case (Some(n), None) => this.add(s"String($n)")
-      case (None, None) => this.add(s"String")
+      case (None, Some(x))    => this.add(s"String(,$x)")
+      case (Some(n), None)    => this.add(s"String($n)")
+      case (None, None)       => this.add(s"String")
     }
   }
 
@@ -164,7 +164,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitFields(of: Seq[Field]): this.type = {
-    if of.isEmpty then {this.add("{ ??? }")}
+    if of.isEmpty then { this.add("{ ??? }") }
     else if of.sizeIs == 1 then {
       val f: Field = of.head
       add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
@@ -220,15 +220,15 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitTypeExpression(typEx: TypeExpression): this.type = {
     typEx match {
-      case string: Strng => emitString(string)
+      case string: Strng                => emitString(string)
       case AliasedTypeExpression(_, id) => this.add(id.format)
       case URL(_, scheme) =>
         this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
       case enumeration: Enumeration => emitEnumeration(enumeration)
       case alternation: Alternation => emitAlternation(alternation)
-      case mapping: Mapping => emitMapping(mapping)
-      case sequence: Sequence => emitSequence(sequence)
+      case mapping: Mapping         => emitMapping(mapping)
+      case sequence: Sequence       => emitSequence(sequence)
       case set: Set                 => emitSet(set)
       case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
@@ -265,12 +265,6 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .add("\n")
   }
 
-  def emitCondition(
-    condition: Condition
-  ): this.type = {
-    add(condition.format)
-  }
-
   def emitAction(
     action: Action
   ): this.type = {
@@ -282,62 +276,16 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitGherkinStrings(strings: Seq[LiteralString]): this.type = {
-    strings.size match {
-      case 0 => add("\"\"")
-      case 1 => add(strings.head.format)
-      case _ =>
-        indent.add("\n")
-        strings.foreach { fact => addLine(fact.format) }
-        outdent
-    }
-  }
-
-  def emitAGherkinClause(ghc: GherkinClause): this.type = {
-    ghc match {
-      case GivenClause(_, strings) => emitGherkinStrings(strings)
-      case WhenClause(_, condition) => emitCondition(condition)
-      case ThenClause(_, action) => emitAction(action)
-      case ButClause(_, action) => emitAction(action)
-    }
-  }
-
-  def emitGherkinClauses(
-    kind: String,
-    clauses: Seq[GherkinClause]
-  ): this.type = {
-    clauses.size match {
-      case 0 => this
-      case 1 => addIndent(kind).add(" ").emitAGherkinClause(clauses.head).nl
-      case _ =>
-        addIndent(kind).add(" ").emitAGherkinClause(clauses.head).nl
-        clauses.tail.foreach { clause =>
-          addIndent("and ").emitAGherkinClause(clause).nl
-        }
-        this
-    }
-  }
-
-  def emitExample(example: Example): this.type = {
-    if !example.isImplicit then {
-      openDef(example)
-    }
-    emitGherkinClauses("given ", example.givens)
-      .emitGherkinClauses("when", example.whens)
-      .emitGherkinClauses("then", example.thens)
-      .emitGherkinClauses("but", example.buts)
-    if !example.isImplicit then {
-      closeDef(example)
-    }
+  def emitCodeBlock(statements: Seq[Statement]): this.type = {
+    if (statements.isEmpty) then add(" { ??? }\n")
+    else
+      add(" {").indent.nl
+      statements.map( _.format + "\n").foreach(addIndent)
+      outdent.addIndent("}").nl
     this
   }
 
-  def emitExamples(examples: Seq[Example]): this.type = {
-    examples.foreach(emitExample)
-    this
-  }
-
-  def emitUndefined(): this.type = {add(" ???")}
+  def emitUndefined(): this.type = { add(" ???") }
 
   def emitOptions(optionDef: WithOptions[?]): this.type = {
     if optionDef.options.nonEmpty then this.addLine(optionDef.format) else this

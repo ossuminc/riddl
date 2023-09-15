@@ -9,12 +9,12 @@ components in a model. Handlers do that by specifying what should be done
 whenever a [message]({{< relref "message.md" >}}) of a particular type is
 received by its parent definition. Handlers are composed as a set of
 [on clauses]({{< relref "onclause.md" >}}) that connect a
-[message]({{< relref "message.md" >}}) with an 
-[example]({{< relref example.md >}}). The example specifies the business logic 
-that should be executed upon receipt of the message. Because that business 
+[message]({{< relref "message.md" >}}) with a set of  
+[statements]({{< relref statement.md >}}). The statements provide the business 
+logic that should be executed upon receipt of the message. Because that business 
 logic can send and publish further messages to other components, a 
 relationship can be inferred between the component receiving the message 
-sent and the component that contains the handler.
+and the component that contains the handler.
 
 There are several kinds of handlers depending on the handler's containing
 definition, as shown in this table:
@@ -70,7 +70,7 @@ events from commands.
 * [Contexts]({{< relref "context.md" >}})
 * [Entities]({{< relref "entity.md" >}}) 
 * [Processors]({{< relref "processor.md" >}})
-* [Projections]({{< relref "projection.md" >}})
+* [Projectors]({{< relref "projector.md" >}})
 * [Repositories]({{< relref "repository.md" >}})
 * [State]({{< relref "state.md" >}})
 

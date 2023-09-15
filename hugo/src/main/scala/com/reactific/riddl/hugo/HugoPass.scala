@@ -23,7 +23,7 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
-  val geekDoc_version = "v0.38.1"
+  val geekDoc_version = "v0.40.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = new URL(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -53,7 +53,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   makeDirectoryStructure(options.inputFile.get, state.logger, options, commonOptions)
   val root = input.root
 
-  val maybeAuthor = root.authors.headOption.orElse {root.domains.headOption.flatMap(_.authorDefs.headOption)}
+  val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
   writeConfigToml(options, maybeAuthor)
 
   val name: String = HugoPass.name
@@ -61,14 +61,14 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
     definition match {
-      case f: Field => state.addToGlossary(f, stack)
-      case i: Invariant => state.addToGlossary(i, stack)
+      case f: Field      => state.addToGlossary(f, stack)
+      case i: Invariant  => state.addToGlossary(i, stack)
       case e: Enumerator => state.addToGlossary(e, stack)
-      case ss: SagaStep => state.addToGlossary(ss, stack)
-      case t: Term => state.addToGlossary(t, stack)
-      case _: Example | _: Inlet | _: Outlet | _: Author | _: OnMessageClause |
-           _: OnOtherClause | _: Include[Definition]@unchecked |
-           _: RootContainer =>
+      case ss: SagaStep  => state.addToGlossary(ss, stack)
+      case t: Term       => state.addToGlossary(t, stack)
+      case  _: Inlet | _: Outlet | _: Author | _: OnMessageClause | _: OnOtherClause |
+         _: OnInitClause | _: OnTerminationClause |
+          _: Include[Definition] @unchecked | _: RootContainer =>
       // All these cases do not generate a file as their content contributes
       // to the content of their parent container
       case leaf: LeafDefinition =>
@@ -80,7 +80,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
             val (mkd, parents) = setUpLeaf(leaf, state, stack)
             mkd.emitConnection(c, parents)
             state.addToGlossary(c, stack)
-          case sa: User => state.addToGlossary(sa, stack)
+          case sa: User       => state.addToGlossary(sa, stack)
           case i: Interaction => state.addToGlossary(i, stack)
           case unknown =>
             require(requirement = false, s"Failed to handle Leaf: $unknown")
@@ -91,10 +91,10 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
         val (mkd, parents) = setUpContainer(container, state, stack)
         container match {
           case a: Application => mkd.emitApplication(a, stack)
-          case out: Output => state.addToGlossary(out, stack)
-          case in: Input => state.addToGlossary(in, stack)
-          case grp: Group => state.addToGlossary(grp, stack)
-          case t: Type => mkd.emitType(t, stack)
+          case out: Output    => state.addToGlossary(out, stack)
+          case in: Input      => state.addToGlossary(in, stack)
+          case grp: Group     => state.addToGlossary(grp, stack)
+          case t: Type        => mkd.emitType(t, stack)
           case s: State =>
             val maybeType = refMap.definitionOf[Type](s.typ.pathId, s)
             maybeType match {
@@ -105,18 +105,18 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
               case _ =>
                 throw new IllegalStateException("State aggregate not resolved")
             }
-          case h: Handler => mkd.emitHandler(h, parents)
-          case f: Function => mkd.emitFunction(f, parents)
-          case e: Entity => mkd.emitEntity(e, parents)
-          case c: Context => mkd.emitContext(c, stack)
-          case d: Domain => mkd.emitDomain(d, parents)
-          case a: Adaptor => mkd.emitAdaptor(a, parents)
-          case s: Streamlet => mkd.emitStreamlet(s, stack)
-          case p: Projector => mkd.emitProjection(p, parents)
+          case h: Handler    => mkd.emitHandler(h, parents)
+          case f: Function   => mkd.emitFunction(f, parents)
+          case e: Entity     => mkd.emitEntity(e, parents)
+          case c: Context    => mkd.emitContext(c, stack)
+          case d: Domain     => mkd.emitDomain(d, parents)
+          case a: Adaptor    => mkd.emitAdaptor(a, parents)
+          case s: Streamlet  => mkd.emitStreamlet(s, stack)
+          case p: Projector  => mkd.emitProjection(p, parents)
           case _: Repository => // TODO: mkd.emitRepository(r, parents)
-          case s: Saga => mkd.emitSaga(s, parents)
-          case s: Epic => mkd.emitEpic(s, stack)
-          case uc: UseCase => mkd.emitUseCase(uc, stack)
+          case s: Saga       => mkd.emitSaga(s, parents)
+          case s: Epic       => mkd.emitEpic(s, stack)
+          case uc: UseCase   => mkd.emitUseCase(uc, stack)
           case unknown =>
             require(
               requirement = false,
@@ -138,7 +138,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   private def deleteAll(directory: File): Boolean = {
     val maybeFiles = Option(directory.listFiles)
     if maybeFiles.nonEmpty then {
-      for file <- maybeFiles.get do {deleteAll(file)}
+      for file <- maybeFiles.get do { deleteAll(file) }
     }
     directory.delete
   }
@@ -238,15 +238,15 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     commonOptions: CommonOptions
   ): Unit = {
     val outDir = options.outputRoot.toFile
-    if outDir.exists() then {if options.eraseOutput then {deleteAll(outDir)}}
-    else {outDir.mkdirs()}
+    if outDir.exists() then { if options.eraseOutput then { deleteAll(outDir) } }
+    else { outDir.mkdirs() }
 
     val parent = outDir.getParentFile
     require(
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if commonOptions.verbose then {println(s"Generating output to: $outDir")}
+    if commonOptions.verbose then { println(s"Generating output to: $outDir") }
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, log, options)

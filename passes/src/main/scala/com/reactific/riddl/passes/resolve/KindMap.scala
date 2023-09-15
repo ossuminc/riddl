@@ -11,7 +11,7 @@ import com.reactific.riddl.language.AST.*
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
-/** Unit Tests For KindMap */
+/** Mapping from implementation class to the instances of definitions */
 case class KindMap() {
 
   private val map: mutable.HashMap[Class[_], Seq[Definition]] = mutable.HashMap.empty

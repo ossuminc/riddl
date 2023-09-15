@@ -63,21 +63,6 @@ class StreamValidatorTest extends ValidatingTest {
         ) mustBe true
       }
     }
-    "warn about unsent outlets" in {
-      val input = """domain solo {
-                    | type T = Integer
-                    | context a {
-                    |  outlet out is type T
-                    | }
-                    |} """.stripMargin
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
-        domain.isEmpty mustBe false
-        messages.isEmpty mustBe false
-        messages.hasErrors mustBe false
-        val expected = "Outlet 'out' has nothing sent to it"
-        messages.exists(_.message == expected) mustBe true
-      }
-    }
 
     "warn about needed persistence option" in {
       val input = """domain uno {

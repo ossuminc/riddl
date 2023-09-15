@@ -10,4 +10,4 @@ has both `do` and `undo` examples for its action and compensating action.
 * [Contexts]({{< relref "context.md" >}})
 
 ## Contains
-* [Examples]({{< relref "example.md" >}})
+* [Statements]({{< relref "statement.md" >}})

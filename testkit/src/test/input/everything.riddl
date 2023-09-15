@@ -79,12 +79,9 @@ domain Everything is {
       state someState of Something.fields is {
         handler foo is {
           on command ACommand {
-            example only {
-              given "Something arrives "
-              when full.misc()
-              then send event Inebriated() to
-                inlet Everything.full.input
-            }
+            "if and(Something arrives, misc()) then"
+              send event Inebriated to inlet Everything.full.input
+            "end"
           }
         }
       }
@@ -92,6 +89,7 @@ domain Everything is {
       function whenUnderTheInfluence is {
         requires {n:Nothing}
         returns {b: Boolean}
+        body ???
       }
     }
 
@@ -101,9 +99,7 @@ domain Everything is {
       state otherThingState of SomeOtherThing.fields is {
         handler fee is {
           on event ItHappened {
-            example only {
-              then set SomeOtherThing.otherThingState.field to @ItHappened.field
-            }
+             set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
           }
         }
       }
@@ -111,6 +107,7 @@ domain Everything is {
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
+      body ???
     }
   }
 }

@@ -14,19 +14,22 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for domains. */
-private[parsing] trait DomainParser
-    extends ApplicationParser
+private[parsing] trait DomainParser {
+  this: ApplicationParser
     with ContextParser
     with EpicParser
-    with StreamingParser
+    with ReferenceParser
     with SagaParser
-    with TypeParser {
+    with StreamingParser
+    with StatementParser
+    with TypeParser 
+    with CommonParser =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
     options[X, DomainOption](StringIn(Options.package_, Options.technology).!) {
       case (loc, Options.package_, args)   => DomainPackageOption(loc, args)
       case (loc, Options.technology, args) => DomainTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+      case (_, _, _)                       => throw new RuntimeException("Impossible case")
     }
   }
 

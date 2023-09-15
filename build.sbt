@@ -39,6 +39,7 @@ lazy val riddl = (project in file("."))
     prettify,
     hugo,
     doc,
+    stats,
     riddlc,
     plugin
   )

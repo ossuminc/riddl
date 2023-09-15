@@ -1,7 +1,7 @@
 domain Example is {
   context ExampleContext is {
     command DoFoo is {foo: Foo}
-    type Foo is {
+    record Foo is {
       bar: String
     }
     entity FooEntity is {
@@ -10,10 +10,8 @@ domain Example is {
       }
       state FooExample of FooExampleState is {
         handler HandleFoo is {
-          on command DooFoo {
-            example Success {
-              then set FooExamplexxxx.garbage to !Foo(garbage = "garbage")
-            }
+          on command ExampleContext.DooFoo {
+            "do something"
           }
         }
       }

@@ -6,7 +6,9 @@ context context by author Reid is {
   event event is { at: TimeStamp }
   handler handler is {
     on event event {
-      then "nothing"
+      if "there is an error" then {
+        error "This is an error"
+      }
     }
   }
   repository repository is { ??? }
@@ -17,7 +19,15 @@ context context by author Reid is {
   merge merge is { ??? }
   split split is { ??? }
   saga saga is {
-   step a is { then "nothing" } reverted by { then "nothing" }
-   step b is { then "nothing" } reverted by { then "nothing" }
+   step a is {
+     "a.1"
+   } reverted by {
+     "a_r.1"
+   }
+   step b is {
+     "b.1"
+   } reverted by {
+     "b_r.1"
+   }
  }
 }

@@ -28,7 +28,7 @@ trait BasicValidation {
     symbols.parentOf(definition).getOrElse(RootContainer.empty)
   }
 
-  def lookup[T <: Definition : ClassTag](id: Seq[String]): List[T] = {
+  def lookup[T <: Definition: ClassTag](id: Seq[String]): List[T] = {
     symbols.lookup[T](id)
   }
 
@@ -39,7 +39,8 @@ trait BasicValidation {
     resolution.refMap.definitionOf(pid, parents.head)
   }
 
-  @inline def resolvePath[T <: Definition](
+  @inline
+  def resolvePath[T <: Definition](
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): Option[T] = {
@@ -54,13 +55,13 @@ trait BasicValidation {
     resolvePath[T](pid, parents)
   }
 
-  def checkPathRef[T <: Definition : ClassTag](
+  def checkPathRef[T <: Definition: ClassTag](
     pid: PathIdentifier,
     container: Definition,
     parents: Seq[Definition]
   ): Option[T] = {
-    val tc = classTag[T].runtimeClass
     if pid.value.isEmpty then {
+      val tc = classTag[T].runtimeClass
       val message =
         s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
       messages.addError(pid.loc, message)
@@ -71,24 +72,26 @@ trait BasicValidation {
     }
   }
 
-  def checkRef[T <: Definition : ClassTag](
+  def checkRef[T <: Definition: ClassTag](
     reference: Reference[T],
     definition: Definition,
-    parents: Seq[Definition],
+    parents: Seq[Definition]
   ): Option[T] = {
     checkPathRef[T](reference.pathId, definition, parents)
   }
 
-  def checkRefAndExamine[T <: Definition : ClassTag](
+  def checkRefAndExamine[T <: Definition: ClassTag](
     reference: Reference[T],
     defn: Definition,
     parents: Seq[Definition]
   )(examiner: T => Unit): this.type = {
-    checkPathRef[T](reference.pathId, defn, parents).map { (resolved: T) => examiner(resolved) }
+    checkPathRef[T](reference.pathId, defn, parents).foreach { (resolved: T) =>
+      examiner(resolved)
+    }
     this
   }
 
-  def checkMaybeRef[T <: Definition : ClassTag](
+  def checkMaybeRef[T <: Definition: ClassTag](
     reference: Option[Reference[T]],
     definition: Definition,
     parents: Seq[Definition]
@@ -123,16 +126,13 @@ trait BasicValidation {
               case te: TypeExpression =>
                 messages.addError(
                   ref.pathId.loc,
-                  s"'${ref.identify} should reference ${article(kind.kind)} but is a ${
-                    AST.errorDescription(te)
-                  } type instead"
+                  s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST.errorDescription(te)} type instead"
                 )
             }
           case _ =>
             messages.addError(
               ref.pathId.loc,
-              s"${ref.identify} was expected to be ${
-                article(kind.kind)} type but is ${article(definition.kind)} instead"
+              s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(definition.kind)} instead"
             )
         }
       }
@@ -146,12 +146,13 @@ trait BasicValidation {
     if pid.value.isEmpty then {
       None
     } else {
-      val maybeDef: Option[Definition] = resolvePath(pid, parents)
-      val candidate: Option[TypeExpression] = maybeDef.headOption match {
-        case None => None
+      val maybeDef: Option[Definition] = resolvePath[Definition](pid, parents)
+      val candidate: Option[TypeExpression] = maybeDef match {
+        case None              => None
         case Some(f: Function) => f.output
-        case Some(t: Type) => Some(t.typ)
-        case Some(f: Field) => Some(f.typeEx)
+        case Some(t: Type)     => Some(t.typ)
+        case Some(f: Field)    => Some(f.typeEx)
+        case Some(c: Constant) => Some(c.typeEx)
         case Some(s: State) =>
           Some(AliasedTypeExpression(s.typ.loc, s.typ.pathId))
         case Some(Inlet(_, _, typ, _, _)) =>
@@ -165,7 +166,7 @@ trait BasicValidation {
         case Some(streamlet: Streamlet) if streamlet.outlets.size == 1 =>
           resolvePath[Type](
             streamlet.outlets.head.type_.pathId,
-            parents.toSeq
+            parents
           )
             .map(_.typ)
         case Some(_) => Option.empty[TypeExpression]
@@ -174,7 +175,7 @@ trait BasicValidation {
         case Some(AliasedTypeExpression(_, pid)) =>
           getPathIdType(pid, maybeDef.toSeq)
         case Some(other: TypeExpression) => Some(other)
-        case None => None
+        case None                        => None
       }
     }
   }
@@ -192,8 +193,7 @@ trait BasicValidation {
     kind: KindOfMessage,
     loc: At
   ): this.type = {
-    if !predicate then
-      messages.add(Message(loc, message, kind))
+    if !predicate then messages.add(Message(loc, message, kind))
     this
   }
 
@@ -202,7 +202,7 @@ trait BasicValidation {
     this
   }
 
-  def checkSequence[A](elements: Seq[A])(check: (A) => Unit): this.type = {
+  def checkSequence[A](elements: Seq[A])(check: A => Unit): this.type = {
     elements.foreach(check(_))
     this
   }
@@ -228,7 +228,6 @@ trait BasicValidation {
     this
   }
 
-
   def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
     if d.id.value.nonEmpty && d.id.value.length < min then {
       messages.addStyle(
@@ -248,8 +247,7 @@ trait BasicValidation {
   ): this.type = {
     check(
       value.nonEmpty,
-      message =
-        s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
+      message = s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
       thing.loc
     )

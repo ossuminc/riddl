@@ -21,7 +21,11 @@ class HugoPassTest
     commandName = "hugo"
   ) {
 
-  "HugoTranslator" should {"handle all example sources" in {runTests()}}
+  "HugoTranslator" should {
+    "handle all example sources" in {
+      runTests()
+    }
+  }
 
   override def validate(name: String): Boolean = name == "ReactiveBBQ"
 

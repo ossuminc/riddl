@@ -16,7 +16,24 @@ import java.net.URL
 import java.nio.file.Path
 
 /** Top level parsing rules */
-class TopLevelParser(rpi: RiddlParserInput) extends DomainParser {
+class TopLevelParser(rpi: RiddlParserInput)
+  extends DomainParser
+    with AdaptorParser
+    with ApplicationParser
+    with ContextParser
+    with EntityParser
+    with EpicParser
+    with FunctionParser
+    with HandlerParser
+    with ProjectorParser
+    with ReferenceParser
+    with RepositoryParser
+    with SagaParser
+    with StreamingParser
+    with StatementParser
+    with TypeParser
+    with CommonParser {
+
   push(rpi)
 
   def root[u: P]: P[RootContainer] = {

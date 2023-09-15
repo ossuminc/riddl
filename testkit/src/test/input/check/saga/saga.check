@@ -1,8 +1,8 @@
 Style: saga.riddl(6:18): Field identifier 'a' is too short. The minimum length is 3:
-       requires { a: Integer described by "a"} returns { b: Integer described by "b"}
+       requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
                   ^
 Style: saga.riddl(9:18): Field identifier 'c' is too short. The minimum length is 3:
-       requires { c: Integer described by "c"} returns { d: Integer described by "d"}
+       requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
                   ^
 Missing: saga.riddl(4:5): Command 'UndoSomething' should have a description:
      type UndoSomething = command { ??? }
@@ -11,10 +11,10 @@ Missing: saga.riddl(3:5): Command 'Something' should have a description:
      type Something = command { ??? }
      ^
 Style: saga.riddl(9:57): Field identifier 'd' is too short. The minimum length is 3:
-       requires { c: Integer described by "c"} returns { d: Integer described by "d"}
+       requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
                                                          ^
 Style: saga.riddl(6:57): Field identifier 'b' is too short. The minimum length is 3:
-       requires { a: Integer described by "a"} returns { b: Integer described by "b"}
+       requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
                                                          ^
 Missing: saga.riddl(1:1): Vital definitions should have an author reference:
  domain ignore1 is {
@@ -55,15 +55,18 @@ Style: saga.riddl(17:31): Field identifier 'p2' is too short. The minimum length
 Style: saga.riddl(18:17): Field identifier 's' is too short. The minimum length is 3:
        returns: {s: String }
                  ^
-Style: saga.riddl(20:17): Example identifier 'A' is too short. The minimum length is 3:
-         example A is {
-                 ^
-Style: saga.riddl(28:17): Example identifier 'B' is too short. The minimum length is 3:
-         example B is {
-                 ^
 Usage: saga.riddl(12:5): Entity 'blah' is unused:
      entity blah is {
      ^
 Warning: saga.riddl(13:7): Inlet 'in' is not connected:
        inlet in is command Something
        ^
+Usage: saga.riddl(4:5): Command 'UndoSomething' is unused:
+     type UndoSomething = command { ??? }
+     ^
+Usage: saga.riddl(5:5): Function 'AnotherThing' is unused:
+     function AnotherThing {
+     ^
+Usage: saga.riddl(8:5): Function 'UndoAnotherThing' is unused:
+     function UndoAnotherThing {
+     ^

@@ -11,29 +11,30 @@ import scala.reflect.ClassTag
 class SymbolsPassTest extends ParsingTest {
 
 
-  def captureEverythingSymbols: SymbolsOutput = {
+  val st: SymbolsOutput = {
     val root = checkFile("everything", "everything.riddl")
     val input: PassInput = PassInput(root, CommonOptions())
     Pass.runSymbols(input)
   }
 
-  "SymbolsPass" must {
-    val st = captureEverythingSymbols
 
-    def assertRefWithParent[T <: Definition : ClassTag, P <: Definition : ClassTag](
-      names: Seq[String],
-      parentName: String
-    ): Assertion = {
-      val lookupResult = st.lookup[T](names)
-      lookupResult.headOption match {
-        case None => fail(s"Symbol '${names.mkString(".")}' not found")
-        case Some(definition) =>
-          val p = st.parentOf(definition)
-          if p.isEmpty then fail(s"Symbol '${names.mkString(".")}' has no parent")
-          p.get mustBe a[P]
-          p.get.id.value mustEqual parentName
-      }
+  def assertRefWithParent[T <: Definition : ClassTag, P <: Definition : ClassTag](
+    names: Seq[String],
+    parentName: String
+  ): Assertion = {
+    val lookupResult = st.lookup[T](names)
+    lookupResult.headOption match {
+      case None => fail(s"Symbol '${names.mkString(".")}' not found")
+      case Some(definition) =>
+        val p = st.parentOf(definition)
+        if p.isEmpty then fail(s"Symbol '${names.mkString(".")}' has no parent")
+        p.get mustBe a[P]
+        p.get.id.value mustEqual parentName
     }
+  }
+
+  "SymbolsPass" must {
+
 
     "capture all expected symbol references and parents" in {
       st.lookup[Domain](Seq("Everything")).headOption mustBe defined

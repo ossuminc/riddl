@@ -30,7 +30,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |      state S of E.SFields is {
                     |        handler H is {
                     |          on command di:C.DoIt {
-                    |            then set S.f2 to @di.f1
+                    |            set field S.f2 to "field di.f1"
                     |          }
                     |        }
                     |      }
