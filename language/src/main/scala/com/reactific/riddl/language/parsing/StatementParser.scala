@@ -69,10 +69,16 @@ private[parsing] trait StatementParser {
     P(location ~ Keywords.call ~/ functionRef)./.map { tpl => (CallStatement.apply _).tupled(tpl) }
   }
 
+  private def stopStatement[u: P]: P[StopStatement] = {
+    P(
+      location ~ Keywords.stop
+    )./.map { (loc: At) => StopStatement(loc) }
+  }
+
   private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
     P(
       sendStatement | arbitraryStatement | errorStatement | setStatement | tellStatement | callStatement |
-        ifThenElseStatement(set) | forEachStatement(set)
+        stopStatement | ifThenElseStatement(set) | forEachStatement(set)
     )
   }
 

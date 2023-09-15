@@ -190,4 +190,12 @@ trait Statements {
         (if elses.nonEmpty then " else {\n" + elses.map(_.format).mkString("  ", "\n  ", "\n}\n")
          else "\n")}"
   }
+
+  case class StopStatement(
+    loc: At,
+  ) extends Statement {
+    override def kind: String = "Stop Statement"
+    def format: String = "scall ${func.format}"
+
+  }
 }

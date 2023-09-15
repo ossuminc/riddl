@@ -79,7 +79,6 @@ object Terminals {
 
   object Keywords {
     final val acquires = "acquires"
-    final val user = "user"
     final val adaptor = "adaptor"
     final val all = "all"
     final val any = "any"
@@ -192,6 +191,7 @@ object Terminals {
     final val split = "split"
     final val state = "state"
     final val step = "step"
+    final val stop = "stop"
     final val story = "story"
     final val streamlet = "streamlet"
     final val tell = "tell"
@@ -202,6 +202,7 @@ object Terminals {
     final val true_ = "true"
     final val `type` = "type"
     final val url = "url"
+    final val user = "user"
     final val value = "value"
     final val view = "view"
     final val void = "void"
