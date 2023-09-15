@@ -102,7 +102,7 @@ private[parsing] trait StatementParser {
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
-      location ~ Keywords.reply ~ Readability.with_.? ~ messageRef
+      location ~ Keywords.reply ~/ Readability.with_.?./ ~ messageRef
     )./.map { tpl => (ReplyStatement.apply _).tupled(tpl) }
   }
 
