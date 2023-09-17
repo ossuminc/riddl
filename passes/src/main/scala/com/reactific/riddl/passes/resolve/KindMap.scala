@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.passes.resolve
 
 import com.reactific.riddl.language.AST.*
@@ -5,7 +11,7 @@ import com.reactific.riddl.language.AST.*
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
-/** Unit Tests For KindMap */
+/** Mapping from implementation class to the instances of definitions */
 case class KindMap() {
 
   private val map: mutable.HashMap[Class[_], Seq[Definition]] = mutable.HashMap.empty

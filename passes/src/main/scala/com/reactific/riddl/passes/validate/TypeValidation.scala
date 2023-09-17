@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
@@ -35,42 +41,6 @@ trait TypeValidation extends DefinitionValidation {
           case None      => false
           case Some(ty2) => ty1.isAssignmentCompatible(ty2)
         }
-    }
-  }
-
-  def getExpressionType(
-    expr: Expression,
-    parents: Seq[Definition]
-  ): Option[TypeExpression] = {
-    expr match {
-      case NewEntityIdOperator(loc, pid)      => Some(UniqueId(loc, pid))
-      case ValueOperator(_, path)             => getPathIdType(path, parents)
-      case FunctionCallExpression(_, name, _) => getPathIdType(name, parents)
-      case GroupExpression(loc, expressions)  =>
-        // the type of a group is the last expression but it could be empty
-        expressions.lastOption match {
-          case None       => Some(Abstract(loc))
-          case Some(expr) => getExpressionType(expr, parents)
-        }
-      case AggregateConstructionExpression(_, pid, _) =>
-        getPathIdType(pid, parents)
-      case Ternary(loc, _, expr1, expr2) =>
-        val expr1Ty = getExpressionType(expr1, parents)
-        val expr2Ty = getExpressionType(expr2, parents)
-        if isAssignmentCompatible(expr1Ty, expr2Ty) then {
-          expr1Ty
-        } else {
-          messages.addError(
-            loc,
-            s"""Ternary expressions must be assignment compatible but:
-               |  ${expr1.format} and
-               |  ${expr2.format}
-               |are incompatible
-               |""".stripMargin
-          )
-          None
-        }
-      case e: Expression => Some(e.expressionType)
     }
   }
 
@@ -168,7 +138,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkSeq(sequence: Sequence, definition: Definition, parents: Seq[Definition]): Unit = {
     checkTypeExpression(sequence.of, definition, parents)
   }
-  
+
   private def checkMapping(
     mapping: Mapping,
     typeDef: Definition,
@@ -223,8 +193,8 @@ trait TypeValidation extends DefinitionValidation {
       case UniqueId(_, pid) => checkPathRef[Entity](pid, defn, parents)
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, defn, parents)
-      case _: PredefinedType => this // nothing needed
-      case _: TypeRef        => this // handled elsewhere
+      case _: PredefinedType => () // nothing needed
+      case _: TypeRef        => () // handled elsewhere
       case x =>
         require(requirement = false, s"Failed to match definition $x")
     }

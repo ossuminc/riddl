@@ -1,8 +1,12 @@
+.metals/
+.vscode/
 .bloop/
 /.bsp/
 !.idea/runConfigurations/
 !.idea/dictionaries
 /.idea/
+/project/project
+/project/.bloop
 target
 **/target/
 **/.DS_Store

@@ -2,27 +2,33 @@ import com.typesafe.sbt.packager.Keys.maintainer
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
-import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtLogOnEachError
 import sbt.Keys.organizationName
-import sbt.Keys._
-import sbt._
+import sbt.Keys.*
+import sbt.*
 import sbt.io.Path.allSubpaths
-import scoverage.ScoverageKeys._
+import sbtbuildinfo.BuildInfoKey
+import sbtbuildinfo.BuildInfoKeys.{buildInfoKeys, buildInfoObject, buildInfoPackage, buildInfoUsePackageAsPath}
+import sbtbuildinfo.BuildInfoOption.{BuildTime, ToJson, ToMap}
+import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoOptions
+import scoverage.ScoverageKeys.*
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 
+import java.util.Calendar
+import scala.collection.Seq
+
 /** V - Dependency Versions object */
 object V {
-  val commons_io = "2.11.0"
-  val compress = "1.23.0"
+  val commons_io = "2.13.0"
+  val compress = "1.24.0"
   val config = "1.4.2"
-  val fastparse = "3.0.1"
+  val fastparse = "3.0.2"
   val jgit = "6.5.0"
-  val lang3 = "3.12.0"
-  val pureconfig = "0.17.3"
+  val lang3 = "3.13.0"
+  val pureconfig = "0.17.4"
   val scalacheck = "1.17.0"
-  val scalatest = "3.2.15"
+  val scalatest = "3.2.17"
   val scopt = "4.1.0"
   val slf4j = "2.0.4"
 }
@@ -50,6 +56,7 @@ object C {
   def withInfo(p: Project): Project = {
     p.settings(
       ThisBuild / maintainer := "reid@ossum.biz",
+      ThisBuild / maintainer := "reid@ossum.biz",
       ThisBuild / organization := "com.reactific",
       ThisBuild / organizationHomepage :=
         Some(new URL("https://reactific.com/")),
@@ -75,64 +82,40 @@ object C {
     )
   }
 
-  lazy val scala3_2_Options: Seq[String] =
+  lazy val scala_3_options: Seq[String] =
     Seq(
       "-deprecation",
       "-feature",
       "-new-syntax",
-      "-explain",
-      "-explain-types",
+      // "-explain",
+      // "-explain-types",
       "-Werror",
       "-pagewidth",
       "120"
-      /*, "-explain" */
     )
 
-  lazy val scalaDocOptions: Seq[String] = Seq(
-    "-project", "RIDDL",
-    "-project-version", "",
-    "-project-logo", "",
-    "-source-links:docs=github://reactific/riddl/master",
-    "-author"
-  )
+  def scala_3_doc_options(version: String): Seq[String] = {
+    Seq(
+      "-deprecation",
+      "-feature",
+      "-groups",
+      "-project:RIDDL",
+      "-comment-syntax:wiki",
+      s"-project-version:$version",
+      "-siteroot:doc/src/hugo/static/apidoc",
+      "-author",
+      "-doc-canonical-base-url:https://riddl.tech/apidoc"
+    )
+  }
 
-  lazy val scala2_13_Options: Seq[String] = Seq(
-    "-release:17",
-    // "-Ypatmat-exhaust-depth 40", Zinc can't handle this :(
-    "-Xsource:3",
-    "-Wdead-code",
-    "-deprecation",
-    "-feature",
-    "-Werror",
-    "-Wunused:imports", // Warn if an import selector is not referenced.
-    "-Wunused:patvars", // Warn if a variable bound in a pattern is unused.
-    "-Wunused:privates", // Warn if a private member is unused.
-    "-Wunused:locals", // Warn if a local definition is unused.
-    "-Wunused:explicits", // Warn if an explicit parameter is unused.
-    "-Wunused:implicits", // Warn if an implicit parameter is unused.
-    "-Wunused:params", // Enable -Wunused:explicits,implicits.
-    "-Xlint:nonlocal-return", // A return statement used an exception for flow control.
-    "-Xlint:implicit-not-found", // Check @implicitNotFound and @implicitAmbiguous messages.
-    "-Xlint:serial", // @SerialVersionUID on traits and non-serializable classes.
-    "-Xlint:valpattern", // Enable pattern checks in val definitions.
-    "-Xlint:eta-zero", // Warn on eta-expansion (rather than auto-application) of zero-ary method.
-    "-Xlint:eta-sam", // Warn on eta-expansion to meet a Java-defined functional
-    // interface that is not explicitly annotated with @FunctionalInterface.
-    "-Xlint:deprecation" // Enable linted deprecations.
-  )
-
-  def withScalaCompile(p: Project): Project = {
+  def withScala3(p: Project): Project = {
     p.configure(withInfo)
       .settings(
-        scalaVersion := "3.2.2",
-        // crossScalaVersions := Seq("2.13.10", "3.2.2"),
-        scalacOptions := {
-          if (scalaVersion.value.startsWith("3.2")) scala3_2_Options
-          else if (scalaVersion.value.startsWith("2.13")) {scala2_13_Options}
-          else Seq.empty[String]
-        },
-        Compile / doc / scalacOptions := scalaDocOptions,
-        scalafmtLogOnEachError := true
+        scalaVersion := "3.3.1",
+        scalacOptions := scala_3_options,
+        Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
+        apiURL := Some(url("https://riddl.tech/apidoc/")),
+        autoAPIMappings := true
       )
   }
 
@@ -148,6 +131,52 @@ object C {
       coverageMinimumStmtPerFile := percent,
       coverageMinimumBranchPerFile := percent,
       coverageExcludedPackages := "<empty>"
+    )
+  }
+
+  def withBuildInfo(
+    homePage: String,
+    orgName: String,
+    packageName: String,
+    objName: String = "BuildInfo",
+    baseYear: Int = 2023
+  )(p: Project): Project = {
+    p.settings(
+      buildInfoObject := objName,
+      buildInfoPackage := packageName,
+      buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
+      buildInfoUsePackageAsPath := true,
+      buildInfoKeys ++= Seq[BuildInfoKey](
+        name,
+        version,
+        description,
+        organization,
+        organizationName,
+        BuildInfoKey.map(organizationHomepage) { case (k, v) =>
+          k -> v.get.toString
+        },
+        BuildInfoKey.map(homepage) { case (k, v) =>
+          "projectHomepage" -> v.map(_.toString).getOrElse(homePage)
+        },
+        BuildInfoKey.map(startYear) { case (k, v) =>
+          k -> v.map(_.toString).getOrElse(baseYear.toString)
+        },
+        BuildInfoKey.map(startYear) { case (k, v) =>
+          "copyright" -> s"© ${v.map(_.toString).getOrElse(baseYear.toString)}-${Calendar
+              .getInstance()
+              .get(Calendar.YEAR)} $orgName}"
+        },
+        scalaVersion,
+        sbtVersion,
+        BuildInfoKey.map(scalaVersion) { case (k, v) =>
+          val version = if (v.head == '2') { v.substring(0, v.lastIndexOf('.')) }
+          else v
+          "scalaCompatVersion" -> version
+        },
+        BuildInfoKey.map(licenses) { case (k, v) =>
+          k -> v.map(_._1).mkString(", ")
+        }
+      )
     )
   }
 
@@ -177,49 +206,48 @@ object C {
   }
 
   def mavenPublish(p: Project): Project = {
-    p.configure(withScalaCompile)
-      .settings(
-        ThisBuild / dynverSonatypeSnapshots := true,
-        ThisBuild / dynverSeparator := "-",
-        maintainer := "reid@ossum.biz",
-        organization := "com.reactific",
-        organizationName := "Ossum Inc.",
-        organizationHomepage := Some(url("https://riddl.tech")),
-        scmInfo := Some(
-          ScmInfo(
-            url("https://github.com/reactific/riddl"),
-            "scm:git:git://github.com/reactific/riddl.git"
-          )
-        ),
-        developers := List(
-          Developer(
-            id = "reid-spencer",
-            name = "Reid Spencer",
-            email = "reid@reactific.com",
-            url = url("https://riddl.tech")
-          )
-        ),
-        description :=
-          """RIDDL is a language and toolset for specifying a system design using ideas from
+    p.settings(
+      ThisBuild / dynverSonatypeSnapshots := true,
+      ThisBuild / dynverSeparator := "-",
+      maintainer := "reid@ossum.biz",
+      organization := "com.reactific",
+      organizationName := "Ossum Inc.",
+      organizationHomepage := Some(url("https://riddl.tech")),
+      scmInfo := Some(
+        ScmInfo(
+          url("https://github.com/reactific/riddl"),
+          "scm:git:git://github.com/reactific/riddl.git"
+        )
+      ),
+      developers := List(
+        Developer(
+          id = "reid-spencer",
+          name = "Reid Spencer",
+          email = "reid@reactific.com",
+          url = url("https://riddl.tech")
+        )
+      ),
+      description :=
+        """RIDDL is a language and toolset for specifying a system design using ideas from
           |DDD, reactive architecture, distributed systems patterns, and other software
           |architecture practices.""".stripMargin,
-        licenses := List(
-          "Apache License, Version 2.0" ->
-            new URL("https://www.apache.org/licenses/LICENSE-2.0")
-        ),
-        homepage := Some(url("https://riddl.tech")),
+      licenses := List(
+        "Apache License, Version 2.0" ->
+          new URL("https://www.apache.org/licenses/LICENSE-2.0")
+      ),
+      homepage := Some(url("https://riddl.tech")),
 
-        // Remove all additional repository other than Maven Central from POM
-        pomIncludeRepository := { _ => false },
-        publishTo := {
-          val nexus = "https://oss.sonatype.org/"
-          if (isSnapshot.value) {
-            Some("snapshots" at nexus + "content/repositories/snapshots")
-          } else {
-            Some("releases" at nexus + "service/local/staging/deploy/maven2")
-          }
-        },
-        publishMavenStyle := true
-      )
+      // Remove all additional repository other than Maven Central from POM
+      pomIncludeRepository := { _ => false },
+      publishTo := {
+        val nexus = "https://oss.sonatype.org/"
+        if (isSnapshot.value) {
+          Some("snapshots" at nexus + "content/repositories/snapshots")
+        } else {
+          Some("releases" at nexus + "service/local/staging/deploy/maven2")
+        }
+      },
+      publishMavenStyle := true
+    )
   }
 }

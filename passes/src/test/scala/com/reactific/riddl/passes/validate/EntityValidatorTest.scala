@@ -136,11 +136,12 @@ class EntityValidatorTest extends ValidatingTest {
           |  entity Hamburger  is {
           |    options (aggregate, transient)
           |    outlet ridOfIt is event Message
+          |    type SomeType is Number
           |    record fields is { field: SomeType } handler x is { ??? }
           |    state field of Hamburger.fields is { }
           |    handler baz is {
           |      on command DoIt {
-          |        then send event Message() to outlet ridOfIt
+          |        send event Message to outlet ridOfIt
           |      }
           |    }
           |  }
@@ -148,11 +149,7 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          s"Field 'a' was not set in message constructor"
-        )
+        msgs.justErrors mustBe empty
       }
     }
   }

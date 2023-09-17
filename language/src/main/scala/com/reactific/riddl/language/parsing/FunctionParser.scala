@@ -12,12 +12,14 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For FunctionParser */
-private[parsing] trait FunctionParser extends CommonParser with TypeParser with GherkinParser {
+private[parsing] trait FunctionParser {
 
+  this: ReferenceParser with TypeParser with StatementParser with CommonParser => 
+    
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+      case (_, _, _)                        => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -34,7 +36,15 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
   }
 
   private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
-    P(typeDef | example | function | term | functionInclude).rep(0)
+    P(
+      typeDef | function | term | functionInclude
+    ).rep(0)
+  }
+
+  private def statementBlock[u: P]: P[Seq[Statement]] = {
+    P(
+      Keywords.body./ ~ (undefined(Seq.empty[Statement]) | pseudoCodeBlock(StatementsSet.FunctionStatements))
+    )
   }
 
   private def functionBody[u: P]: P[
@@ -42,12 +52,13 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
       Seq[FunctionOption],
       Option[Aggregation],
       Option[Aggregation],
-      Seq[FunctionDefinition]
+      Seq[FunctionDefinition],
+      Seq[Statement]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition])
-    } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions))
+      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
+    } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 
   /** Parses function literals, i.e.
@@ -55,7 +66,8 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
     * {{{
     *   function myFunction is {
     *     requires is Boolean
-    *     yields is Integer
+    *     returns is Integer
+    *     body { statements }
     *   }
     * }}}
     */
@@ -68,18 +80,19 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
             loc,
             id,
             authors,
-            (options, input, output, definitions),
+            (options, input, output, definitions, statements),
             briefly,
             description
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
-        val examples = mapTo[Example](groups.get(classOf[Example]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[FunctionDefinition]](groups.get(
-          classOf[Include[FunctionDefinition]]
-        ))
+        val includes = mapTo[Include[FunctionDefinition]](
+          groups.get(
+            classOf[Include[FunctionDefinition]]
+          )
+        )
         Function(
           loc,
           id,
@@ -87,7 +100,7 @@ private[parsing] trait FunctionParser extends CommonParser with TypeParser with 
           output,
           types,
           functions,
-          examples,
+          statements,
           authors,
           includes,
           options,

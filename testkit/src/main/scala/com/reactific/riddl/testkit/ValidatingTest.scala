@@ -21,9 +21,7 @@ abstract class ValidatingTest extends ParsingTest {
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (RootContainer, Messages) => Assertion =
-      (_, msgs) => fail(msgs.format)
-  ): Assertion = {
+  )(validation: (RootContainer, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
     Riddl.parseAndValidate(file, options) match {
@@ -40,7 +38,8 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions()
   ): Assertion = {
     Riddl.parseAndValidate(file, options) match {
-      case Left(errors) => fail(errors.format)
+      case Left(errors) =>
+        fail(errors.format)
       case Right(result) =>
         val messages = result.messages
         val errors = messages.filter(_.kind.isError)
@@ -51,8 +50,7 @@ abstract class ValidatingTest extends ParsingTest {
   def assertValidationMessage(
     msgs: Messages,
     searchFor: String
-  )(f: Message => Boolean
-  ): Assertion = {
+  )(f: Message => Boolean): Assertion = {
     assert(
       msgs.exists(f),
       s"; expecting, but didn't find '$searchFor', in:\n${msgs.mkString("\n")}"

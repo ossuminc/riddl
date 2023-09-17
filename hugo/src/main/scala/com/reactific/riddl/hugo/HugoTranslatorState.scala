@@ -158,8 +158,9 @@ case class HugoTranslatorState(
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
-      case _: OnMessageClause | _: Example | _: Inlet | _: Outlet => pars + "#" +
-          definition.id.value.toLowerCase
+      case _: OnMessageClause | _: OnInitClause | _: OnTerminationClause | _: OnOtherClause|
+           _: Inlet | _: Outlet => 
+        pars + "#" + definition.id.value.toLowerCase
       case _: Field | _: Enumerator | _: Invariant | _: Author | _: SagaStep |
           _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
       case _ =>

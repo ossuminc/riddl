@@ -8,8 +8,9 @@ package com.reactific.riddl.language.ast
 
 import com.reactific.riddl.language.parsing.Terminals.*
 
-/** Unit Tests For TypeExpression */
-trait TypeExpression extends AbstractDefinitions {
+/** A portion of the AST that deals with Types and TypeExpressions */
+trait Types {
+  this: AbstractDefinitions =>
 
 ///////////////////////////////////////////////////////////// TYPES
 
@@ -37,7 +38,7 @@ trait TypeExpression extends AbstractDefinitions {
     }
   }
 
-  sealed trait IntegerTypeExpression extends NumericType with TypeExpression
+  sealed trait IntegerTypeExpression extends NumericType
   sealed trait RealTypeExpression extends NumericType
 
   /** A TypeExpression that references another type by PathIdentifier
@@ -241,7 +242,6 @@ trait TypeExpression extends AbstractDefinitions {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    default: Option[ForwardDeclaredExpression] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -264,20 +264,20 @@ trait TypeExpression extends AbstractDefinitions {
     final lazy val contents: Seq[Field] = fields
     override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || {
-        other match {
-          case oate: AggregateTypeExpression =>
-            val validity: Seq[Boolean] = for
-              ofield <- oate.fields
-              myField <- fields.find(_.id.value == ofield.id.value)
-              myTypEx = myField.typeEx
-              oTypeEx = ofield.typeEx
-            yield {
-              myTypEx.isAssignmentCompatible(oTypeEx)
-            }
-            (validity.size == oate.fields.size) && validity.forall(_ == true)
-          case _ => false
-        }
+      
+      other match {
+        case oate: AggregateTypeExpression =>
+          val validity: Seq[Boolean] = for
+            ofield <- oate.fields
+            myField <- fields.find(_.id.value == ofield.id.value)
+            myTypEx = myField.typeEx
+            oTypeEx = ofield.typeEx
+          yield {
+            myTypEx.isAssignmentCompatible(oTypeEx)
+          }
+          (validity.size == oate.fields.size) && validity.forall(_ == true)
+        case _ =>
+          super.isAssignmentCompatible(other)
       }
     }
   }
@@ -426,8 +426,10 @@ trait TypeExpression extends AbstractDefinitions {
     */
   case class Strng(loc: At, min: Option[Long] = None, max: Option[Long] = None) extends PredefinedType {
     override lazy val kind: String = Predefined.String
-    override def format: String =
-      s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
+    override def format: String = {
+      if min.isEmpty && max.isEmpty then kind else
+        s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
+    }
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
@@ -436,6 +438,12 @@ trait TypeExpression extends AbstractDefinitions {
 
   case class Currency(loc: At, country: String) extends PredefinedType {
     @inline def kind: String = Predefined.Currency
+  }
+
+  /** A type expression that is unknown at compile type but will be resolved before validation time.
+    */
+  case class UnknownType(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.Unknown
   }
 
   /** The simplest type expression: Abstract An abstract type expression is one that is not defined explicitly. It is

@@ -22,8 +22,8 @@ connecting it to an [inlet]({{< relref "inlet" >}}) (for `to` ends) or
 [outlet]({{< relref "outlet" >}}) (for `from` ends).
 An open end is not specified in the pipe definition. Instead, it is 
 implied by use of the`publish` and `subscribe`
-[action]({{< relref "action" >}})s. This permits multiple publishers and 
-multiple subscribers. 
+[statements]({{< relref "statement.md" >}})s. This permits multiple
+publishers and multiple subscribers. 
 
 
 ## Pipe Options

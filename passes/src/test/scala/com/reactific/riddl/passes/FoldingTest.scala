@@ -28,19 +28,20 @@ class FoldingTest extends ParsingTest {
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns {}
+      |       body ???
       |     }
       |    type oneState is Integer
       |    entity one is {
       |      state entityState of oneState is { ??? }
       |      handler one  is { ??? }
       |      function one is { ??? }
-      |      invariant one is { ??? }
+      |      invariant one is ""
       |    }
       |    entity two is {
       |      state entityState of oneState is { ??? }
       |      handler one  is { ??? }
       |      function one is { ??? }
-      |      invariant one is { ??? }
+      |      invariant one is ???
       |    }
       |    adaptor one to context over.consumption is { ??? }
       |  }

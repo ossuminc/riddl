@@ -12,7 +12,14 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
 
-private[parsing] trait RepositoryParser extends HandlerParser with StreamingParser with FunctionParser {
+private[parsing] trait RepositoryParser {
+
+  this: HandlerParser
+    with ReferenceParser
+    with StatementParser
+    with StreamingParser
+    with FunctionParser
+    with TypeParser =>
 
   private def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
     options[u, RepositoryOption](StringIn(Options.technology).!) {
@@ -27,7 +34,9 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
   }
 
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
-    P(typeDef | handler | function | term | repositoryInclude | inlet | outlet).rep(0)
+    P(
+      typeDef | handler(StatementsSet.RepositoryStatements) | function | term | repositoryInclude | inlet | outlet
+    ).rep(0)
   }
 
   def repository[u: P]: P[Repository] = {
@@ -35,7 +44,7 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
       location ~ Keywords.repository ~/ identifier ~ authorRefs ~ is ~ open ~
         repositoryOptions ~
         (undefined(Seq.empty[RepositoryDefinition]) | repositoryDefinitions) ~
-          close ~ briefly ~ description
+        close ~ briefly ~ description
     ).map { case (loc, id, authors, opts, defs, brief, desc) =>
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
@@ -44,9 +53,11 @@ private[parsing] trait RepositoryParser extends HandlerParser with StreamingPars
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[RepositoryDefinition]](groups.get(
-        classOf[Include[RepositoryDefinition]]
-      ))
+      val includes = mapTo[Include[RepositoryDefinition]](
+        groups.get(
+          classOf[Include[RepositoryDefinition]]
+        )
+      )
 
       Repository(
         loc,

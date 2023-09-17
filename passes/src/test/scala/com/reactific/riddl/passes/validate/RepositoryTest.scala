@@ -2,13 +2,14 @@ package com.reactific.riddl.passes.validate
 
 /** Unit Tests For Repository */
 import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.parsing.RiddlParserInput
+
 /** Tests For Repository */
 class RepositoryTest extends ValidatingTest {
 
   "RepositoryTest" should {
-    "handl a basic definition" in {
+    "handle a basic definition" in {
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {
@@ -19,13 +20,10 @@ class RepositoryTest extends ValidatingTest {
           |      command AddThis is { what: String }
           |      handler Only is {
           |        on command AddThis {
-          |          then { "add 'what' to the list" }
+          |          "add 'what' to the list"
           |        }
           |        on query GetOne {
-          |          then {
-          |            send result fubar.Reply(that = "some value") to outlet
-          |             hereyougo
-          |          }
+          |          send result fubar.Reply to outlet hereyougo
           |        }
           |        }
           |     }
@@ -33,7 +31,8 @@ class RepositoryTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input) {
+      val options = CommonOptions.noWarnings.copy(showMissingWarnings=false)
+      parseAndValidateDomain(input, options)  {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.contexts.headOption match {

@@ -12,15 +12,18 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parsing rules for Context definitions */
-private[parsing] trait ContextParser
-    extends HandlerParser
+private[parsing] trait ContextParser {
+  this: HandlerParser
     with AdaptorParser
     with EntityParser
+    with FunctionParser
     with ProjectorParser
+    with ReferenceParser
     with RepositoryParser
     with SagaParser
     with StreamingParser
-    with TypeParser {
+    with StatementParser
+    with TypeParser =>
 
   private def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](
@@ -45,19 +48,19 @@ private[parsing] trait ContextParser
     include[ContextDefinition, X](contextDefinitions(_))
   }
 
-  private def replica[x:P]: P[Replica] = {
+  private def replica[x: P]: P[Replica] = {
     P(
       location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description
-    ).map {
-      case (loc, id, typeExp, brief, description) =>
-        Replica(loc, id, typeExp,brief, description)
+    ).map { case (loc, id, typeExp, brief, description) =>
+      Replica(loc, id, typeExp, brief, description)
     }
   }
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
       undefined(Seq.empty[ContextDefinition]) |
-        (typeDef | handler | entity | adaptor | function | saga | streamlet |
-          projector | repository | inlet | outlet | connector | term | replica |
+        (typeDef | handler(StatementsSet.ContextStatements) | entity |
+          adaptor | function | saga | streamlet | projector | repository |
+          inlet | outlet | connector | term | replica |
           contextInclude).rep(0)
     )
   }

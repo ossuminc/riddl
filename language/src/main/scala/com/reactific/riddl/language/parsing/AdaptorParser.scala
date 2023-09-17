@@ -13,17 +13,18 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 /** Parser rules for Adaptors */
-private[parsing] trait AdaptorParser
-    extends HandlerParser
-      with GherkinParser
-      with ActionParser
-      with FunctionParser
-      with StreamingParser {
+private[parsing] trait AdaptorParser {
+  this: HandlerParser
+    with FunctionParser
+    with StreamingParser
+    with StatementParser
+    with ReferenceParser
+    with TypeParser =>
 
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) => AdaptorTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+      case (_, _, _)                       => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -33,7 +34,8 @@ private[parsing] trait AdaptorParser
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      (handler | function | inlet | outlet | adaptorInclude | term | constant).rep(1) |
+      (handler(StatementsSet.AdaptorStatements) | function | inlet |
+        outlet | adaptorInclude | term | constant).rep(1) |
         undefined(Seq.empty[AdaptorDefinition])
     )
   }

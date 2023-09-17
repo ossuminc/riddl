@@ -46,7 +46,7 @@ domain dokn is {
             state CompanyBase of Company.fields is {
               handler CompanyBaseHandler is {
                   on command AddCompany {
-                      then send event CompanyAdded() to outlet CompanyEvents_out
+                      send event CompanyAdded to outlet CompanyEvents_out
                   }
               }
             }
@@ -83,17 +83,10 @@ domain dokn is {
             state DriverBase of Driver.fields is {
               handler DriverBaseHandler is {
                   on command AddDriverToCompany {
-                    then send event DriverAddedToCompany (
-                      name = @AddDriverToCompany.name,
-                      mobile = @AddDriverToCompany.mobile,
-                      companyId = @AddDriverToCompany.companyId
-                    ) to inlet Driver_out
+                    send event DriverAddedToCompany to inlet Driver_out
                   }
                   on command RemoveDriverFromCompany {
-                    then send event DriverRemovedFromCompany(
-                      mobile = @RemoveDriverFromCompany.mobile,
-                      companyId = @RemoveDriverFromCompany.companyId
-                    ) to inlet Driver_out
+                    send event DriverRemovedFromCompany to inlet Driver_out
                   }
               }
             }
@@ -170,34 +163,25 @@ domain dokn is {
             state LocationBase of Location.fields is {
               handler Base is {
                   on command Location.AddDeliveryLocation {
-                     then send event Location.DeliveryLocationAdded() to
-                       inlet CompanyEvents_in
+                    send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
                   }
                   on command ChangeLocationName {
-                      then send event Location.LocationNameChanged(
-                          newName = @ChangeLocationName.newName
-                      ) to inlet CompanyEvents_in
+                    send event Location.LocationNameChanged to inlet CompanyEvents_in
                   }
-                  on command ReportTicketReceived { then
-                    send event Location.TicketReportedAtLocation() to inlet
-                     CompanyEvents_in
+                  on command ReportTicketReceived {
+                    send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
                   }
                   on command ModifyNotesAtLocation {
-                      then send event Location.NotesForLocationModified (
-                          note = @Location.ModifyNotesAtLocation.note
-                      ) to inlet CompanyEvents_in
+                    send event Location.NotesForLocationModified to inlet CompanyEvents_in
                   }
                   on event Location.LocationAddressReceived {
-                      then set LocationBase.address to
-                      @Location.LocationAddressReceived.newAddress
+                    set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
                   }
                   on query Location.getLocationDetails {
-                    then send result Location.LocationDetails() to
-                       inlet Driver_in
-                    }
+                    send result Location.LocationDetails to inlet Driver_in
+                  }
                   on query Location.getLocationNotes {
-                    then send result Location.LocationNotes(notes=empty()) to outlet
-                    Driver_out
+                    send result Location.LocationNotes to outlet Driver_out
                   }
               }
             }

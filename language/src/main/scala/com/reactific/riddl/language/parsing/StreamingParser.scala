@@ -13,9 +13,8 @@ import fastparse.ScalaWhitespace.*
 import Terminals.*
 
 /** Unit Tests For StreamingParser */
-private[parsing] trait StreamingParser
-    extends ReferenceParser
-    with HandlerParser {
+private[parsing] trait StreamingParser {
+  this: HandlerParser with ReferenceParser with StatementParser =>
 
   def inlet[u: P]: P[Inlet] = {
     P(
@@ -79,7 +78,7 @@ private[parsing] trait StreamingParser
     P(
       (inlet.rep(minInlets, " ", maxInlets) ~/
         outlet.rep(minOutlets, " ", maxOutlets) ~/
-        (handler | term |
+        (handler(StatementsSet.StreamStatements) | term |
           streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))
           .rep(0)).map { case (inlets, outlets, definitions) =>
         inlets ++ outlets ++ definitions

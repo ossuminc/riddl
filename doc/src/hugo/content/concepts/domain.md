@@ -54,7 +54,6 @@ Within a domain, you can define these things:
   file
 * [Options]({{< relref "option.md" >}}) - optional declarations about a 
   definition
-* [Plants]({{< relref "plant.md" >}}) - a data processing plant
 * [Terms]({{< relref "term.md" >}}) - definition of a term relevant to the
   domain
 * [Types]({{< relref "type.md" >}}) - information definitions used throughout
