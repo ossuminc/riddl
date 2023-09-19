@@ -47,7 +47,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     state
   }
 
-  override lazy val projectSettings: Seq[Setting[_]] = Seq(
+  override val projectSettings: Seq[Setting[_]] = Seq(
     riddlcPath := file("riddlc"),
     riddlcOptions := Seq("from", "src/main/riddl/riddlc.conf"),
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
@@ -67,7 +67,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     }.value
   )
 
-  def versionTriple(version: String): (Int, Int, Int) = {
+  private def versionTriple(version: String): (Int, Int, Int) = {
     val trimmed = version.indexOf('-') match {
       case x: Int if x < 0 => version
       case y: Int          => version.take(y)
@@ -80,7 +80,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     } else { (parts(0).toInt, parts(1).toInt, parts(2).toInt) }
   }
 
-  def versionSameOrLater(actualVersion: String, minVersion: String): Boolean = {
+  private def versionSameOrLater(actualVersion: String, minVersion: String): Boolean = {
     if (actualVersion != minVersion) {
       val (aJ, aN, aP) = versionTriple(actualVersion)
       val (mJ, mN, mP) = versionTriple(minVersion)
@@ -88,7 +88,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     } else { true }
   }
 
-  def checkVersion(
+  private def checkVersion(
     riddlc: sbt.File,
     minimumVersion: String
   ): Unit = {
@@ -103,7 +103,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     } else { println(s"riddlc version = $actualVersion") }
   }
 
-  def runRiddlc(
+  private def runRiddlc(
     riddlc: sbt.File,
     options: Seq[String],
     minimumVersion: String
@@ -111,6 +111,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     checkVersion(riddlc, minimumVersion)
     val command = riddlc.toString + " " + options.mkString(" ")
     val logger = ProcessLogger(println(_))
-    command.!(logger)
+    val rc = command.!(logger)
+    logger.out(s"RC=$rc")
   }
 }

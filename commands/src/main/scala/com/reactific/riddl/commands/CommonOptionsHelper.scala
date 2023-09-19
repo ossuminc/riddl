@@ -34,7 +34,7 @@ object CommonOptionsHelper {
        |
        |""".stripMargin
 
-  val commonOptionsParser: OParser[Unit, CommonOptions] = {
+  lazy val commonOptionsParser: OParser[Unit, CommonOptions] = {
     val builder: OParserBuilder[CommonOptions] = OParser.builder[CommonOptions]
 
     import builder.*

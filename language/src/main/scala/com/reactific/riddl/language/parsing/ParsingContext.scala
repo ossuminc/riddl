@@ -74,7 +74,7 @@ trait ParsingContext {
   )(rule: P[?] => P[Seq[T]]
   ): Include[T] = {
     val source = if str.s.startsWith("http") then {
-      val url = new java.net.URL(str.s)
+      val url = java.net.URI.create(str.s).toURL
       push(url)
       str.s
     } else {

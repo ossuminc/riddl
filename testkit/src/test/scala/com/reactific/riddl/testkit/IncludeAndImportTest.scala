@@ -28,7 +28,7 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle bad URL" in {
-      val badURL = new java.net.URL("https://incredible.lightness.of.being:8900000/@@@")
+      val badURL = java.net.URI("https://incredible.lightness.of.being:8900000/@@@").toURL
       parseDomainDefinition(
         RiddlParserInput(badURL),
         identity
@@ -41,8 +41,9 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle non existent URL" in {
-      val emptyURL = new java.net.URL(
+      val emptyURL = java.net.URI(
         "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl")
+        .toURL
       parseDomainDefinition(
         RiddlParserInput(emptyURL),
         identity
@@ -55,8 +56,9 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle existing URL" in {
-      val fullURL = new java.net.URL(
+      val fullURL = java.net.URI(
         "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain.riddl")
+        .toURL
       parseDomainDefinition(
         RiddlParserInput(fullURL),
         identity

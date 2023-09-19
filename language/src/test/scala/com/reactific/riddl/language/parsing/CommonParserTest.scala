@@ -32,7 +32,7 @@ class CommonParserTest extends ParsingTest {
             description = Some(
               URLDescription(
                 (2, 1),
-                new java.net.URL("https://www.wordnik.com/words/phi")
+                java.net.URI("https://www.wordnik.com/words/phi").toURL
               )
             )
           )

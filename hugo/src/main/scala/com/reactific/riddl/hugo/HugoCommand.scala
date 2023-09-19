@@ -34,7 +34,7 @@ object HugoCommand {
     siteDescription: Option[String] = None,
     siteLogoPath: Option[String] = Some("images/logo.png"),
     siteLogoURL: Option[URL] = None,
-    baseUrl: Option[URL] = Option(new URL("https://example.com/")),
+    baseUrl: Option[URL] = Option(java.net.URI.create("https://example.com/").toURL),
     themes: Seq[(String, Option[URL])] =
     Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url)),
     sourceURL: Option[URL] = None,
@@ -105,7 +105,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
         .action((v, c) => c.copy(baseUrl = Some(v)))
         .text("Optional base URL for root of generated http URLs"),
       opt[Map[String, String]]('t', name = "themes").action((t, c) =>
-        c.copy(themes = t.toSeq.map(x => x._1 -> Some(new URL(x._2))))
+        c.copy(themes = t.toSeq.map(x => x._1 -> Some(java.net.URI.create(x._2).toURL)))
       ).text("Add theme name/url pairs to use alternative Hugo themes"),
       opt[URL]('s', name = "source-url")
         .action((u, c) => c.copy(baseUrl = Option(u)))
@@ -118,7 +118,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
         .text("""Path, in 'static' directory to placement and use
                 |of the site logo.""".stripMargin),
       opt[String]('n', "site-logo-url")
-        .action((s, c) => c.copy(siteLogoURL = Option(new URL(s))))
+        .action((s, c) => c.copy(siteLogoURL = Option(java.net.URI(s).toURL)))
         .text("URL from which to copy the site logo.")
     ) -> HugoCommand.Options()
   }
@@ -185,7 +185,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     yield {
       def handleURL(url: Option[String]): Option[URL] = {
         if url.isEmpty || url.get.isEmpty then None
-        else Option(new java.net.URL(url.get))
+        else Option(java.net.URI(url.get).toURL)
       }
 
       val themes =

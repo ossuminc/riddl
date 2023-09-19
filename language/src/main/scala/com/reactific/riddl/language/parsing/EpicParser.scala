@@ -21,7 +21,7 @@ private[parsing] trait EpicParser {
 
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
-      location ~ Keywords.step ~ identifier.? ~ Readability.from.? ~ arbitraryStoryRef ~
+      location ~ Keywords.step ~/ identifier.? ~ Readability.from.? ~ arbitraryStoryRef ~
         literalString ~ Readability.to.? ~ arbitraryStoryRef ~ briefly ~ description
     )./.map { case (loc, id, from, ls, to, brief, desc) =>
       ArbitraryInteraction(loc, id.getOrElse(Identifier.empty), from, ls, to, brief, desc)
@@ -36,7 +36,7 @@ private[parsing] trait EpicParser {
 
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
-      location ~ Keywords.step ~ identifierNotKeyword(Readability.for_) ~
+      location ~ Keywords.step ~/ identifierNotKeyword(Readability.for_) ~
         (arbitraryStoryRef | userRef) ~ is ~ literalString ~ briefly ~ description
     )./.map { case (loc, id, fromTo, proc, brief, desc) =>
       SelfInteraction(loc, id, fromTo, proc, brief, desc)

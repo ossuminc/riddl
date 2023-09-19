@@ -12,7 +12,7 @@ import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-import java.net.URL
+import java.net.URI
 import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
 
@@ -219,7 +219,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def httpUrl[u: P]: P[java.net.URL] = {
     P(
       "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
-    ).!.map(new URL(_))
+    ).!.map(URI.create(_).toURL)
   }
 
   def term[u: P]: P[Term] = {
