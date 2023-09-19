@@ -22,9 +22,7 @@ object RiddlSbtPlugin extends AutoPlugin {
 
     lazy val riddlcPath = settingKey[File]("Path to `riddlc` compiler")
 
-    lazy val riddlcOptions = {
-      settingKey[Seq[String]]("Options for the riddlc compiler")
-    }
+    lazy val riddlcConf = settingKey[File]("Path to the config file")
 
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")
@@ -34,6 +32,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   import autoImport.*
 
   lazy val compileTask = taskKey[Unit]("A task to invoke riddlc compiler")
+  lazy val infoTask = taskKey[Unit]("A task to invoke riddlc info command")
 
   // Allow riddlc to be run from inside an sbt shell
   def riddlcCommand = Command.args(
@@ -49,13 +48,19 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     riddlcPath := file("riddlc"),
-    riddlcOptions := Seq("from", "src/main/riddl/riddlc.conf"),
+    riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
     compileTask := {
       val execPath = riddlcPath.value
-      val options = riddlcOptions.value
+      val conf = riddlcConf.value.getAbsoluteFile.toString
       val version = riddlcMinVersion.value
-      runRiddlc(execPath, options, version)
+      runRiddlc(execPath, Seq("from", conf), version)
+    },
+    infoTask := {
+      val execPath = riddlcPath.value
+      val options = Seq("info")
+      val version = riddlcMinVersion.value
+      runRiddlc(execPath, options, version )
     },
     commands ++= Seq(riddlcCommand),
     Compile / compile := Def.taskDyn {

@@ -8,11 +8,7 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.FileBuilder
 
-case class SequenceDiagrammer(
-  state: HugoTranslatorState,
-  story: Epic,
-  parents: Seq[Definition])
-    extends FileBuilder {
+case class SequenceDiagrammer(state: HugoTranslatorState, story: Epic, parents: Seq[Definition]) extends FileBuilder {
 
   val participants: Map[Seq[String], Definition] = {
     (for
@@ -21,7 +17,7 @@ case class SequenceDiagrammer(
     yield {
       interaction match {
         case is: GenericInteraction => Seq[Reference[Definition]](is.from, is.to)
-        case _ => Seq.empty[Reference[Definition]]
+        case _                      => Seq.empty[Reference[Definition]]
       }
     })
       .filterNot(_.isEmpty)
@@ -30,17 +26,18 @@ case class SequenceDiagrammer(
       .map { (ref: Reference[Definition]) =>
         state.refMap.definitionOf[Definition](ref.pathId, parents.head) match {
           case Some(definition) => ref.pathId.value -> definition
-          case None => throw new IllegalStateException(
-            s"Pre-validated PathId not found: ${ref.identify}"
-          )
+          case None =>
+            throw new IllegalStateException(
+              s"Pre-validated PathId not found: ${ref.identify}"
+            )
         }
-    }
+      }
   }.toMap
 
   def makeParticipant(definition: Definition): Unit = {
     val name = definition.id.value
     definition match {
-      case _: User      => sb.append(s"  user $name"); nl
+      case _: User       => sb.append(s"  user $name"); nl
       case _: Definition => sb.append(s"  participant $name"); nl
     }
   }
@@ -49,7 +46,7 @@ case class SequenceDiagrammer(
     val name = definition.identify
     val link = state.makeDocLink(definition)
     definition match {
-      case _: User      => sb.append(s"  link $name:  @ $link"); nl
+      case _: User       => sb.append(s"  link $name:  @ $link"); nl
       case _: Definition => sb.append(s"  link $name: Definition @ $link"); nl
     }
   }
@@ -60,18 +57,20 @@ case class SequenceDiagrammer(
   parts.foreach(x => makeParticipant(x))
   parts.foreach(x => makeLink(x))
 
-  for  cse <- story.cases  do {
+  for cse <- story.cases do {
     sb.append(s"  opt ${cse.id.value} - ${cse.briefValue}"); nl
-    for  ntrctn <- cse.contents do ntrctn match {
-      case is: GenericInteraction =>
-        val from = participants(is.from.pathId.value)
-        val to = participants(is.to.pathId.value)
-        sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
-        nl
-      case _: SequentialInteractions => // TODO: include sequential groups
-      case _: ParallelInteractions => // TODO: include parallel groups
-      case _: OptionalInteractions => // TODO: include optional groups
-    }
+    for ntrctn <- cse.contents do
+      ntrctn match {
+        case is: GenericInteraction =>
+          val from = participants(is.from.pathId.value)
+          val to = participants(is.to.pathId.value)
+          sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
+          nl
+        case _: VagueInteraction      => // TODO: include vague interactions
+        case _: SequentialInteractions => // TODO: include sequential groups
+        case _: ParallelInteractions   => // TODO: include parallel groups
+        case _: OptionalInteractions   => // TODO: include optional groups
+      }
     sb.append("  end opt"); nl
   }
   sb.append("end"); nl

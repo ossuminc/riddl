@@ -245,6 +245,14 @@ trait AbstractDefinitions {
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
+  object Reference {
+    val empty = new Reference[Definition] {
+      def pathId: PathIdentifier = PathIdentifier.empty
+      def format: String = "Empty Reference"
+      def loc: At = At.empty
+    }
+  }
+
   /** Base class for all actions. Actions are used in the "then" and "but"
     * clauses of a Gherkin example such as in the body of a handler's `on`
     * clause or in the definition of a Function. The subclasses define different

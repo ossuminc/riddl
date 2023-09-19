@@ -1,0 +1,14 @@
+// Test case for Issue 435
+
+domain Foo {
+  context Bar {
+    type Baz = Id(Ensure)
+    entity Ensure { ??? }
+  }
+
+  context Boo {
+    event Mojo {
+      field: Foo.Bar.Baz
+    }
+  }
+}

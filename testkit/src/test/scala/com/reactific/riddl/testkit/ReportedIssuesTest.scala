@@ -67,5 +67,14 @@ class ReportedIssuesTest extends ValidatingTest {
           fail("Expected errors")
       }
     }
+    "435" in {
+      checkOne("435.riddl") {
+        case Left(messages) =>
+          info(messages.format)
+          fail("oops")
+        case Right(result) =>
+          succeed
+      }
+    }
   }
 }

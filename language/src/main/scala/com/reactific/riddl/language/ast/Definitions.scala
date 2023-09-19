@@ -1679,6 +1679,19 @@ trait Definitions {
     override def kind: String = "Optional Interaction"
   }
 
+  /** A very vague step just written as text */
+  case class VagueInteraction(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    relationship: LiteralString,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
+  ) extends Interaction {
+    override def kind: String = "Vague Interaction"
+
+    override def contents: Seq[Definition] = Seq.empty[Definition]
+  }
+
   /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
     * provide more type specificity to these three fields.
     */
@@ -1739,7 +1752,7 @@ trait Definitions {
     * @param brief
     *   A brief description of this interaction
     */
-  case class TakeOutputInteraction(
+  case class ShowOutputInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
     from: OutputRef,
@@ -1748,7 +1761,7 @@ trait Definitions {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
-    override def kind: String = "Take Output Interaction"
+    override def kind: String = "Show Output Interaction"
   }
 
   /** A interaction where and User provides input
@@ -1764,7 +1777,7 @@ trait Definitions {
     * @param brief
     *   A description of this interaction step
     */
-  case class PutInputInteraction(
+  case class TakeInputInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
     from: UserRef,
@@ -1773,7 +1786,7 @@ trait Definitions {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
-    override def kind: String = "Put Input Interaction"
+    override def kind: String = "Take Input Interaction"
   }
 
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between the user and RIDDL

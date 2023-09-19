@@ -66,7 +66,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateTerm(t, parentsAsSeq)
       case sa: User =>
         validateUser(sa, parentsAsSeq)
-      // TODO: Add statement validation to OnClauses 
+      // TODO: Add statement validation to OnClauses
       case oic: OnInitClause =>
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTerminationClause =>
@@ -559,6 +559,10 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
                 "Optional interaction should not be empty"
               )
             }
+          case opt: VagueInteraction =>
+            check(opt.relationship.nonEmpty,
+              "Vague Interactions should have a non-empty description", Messages.MissingWarning, opt
+              .relationship.loc)
           case is: GenericInteraction =>
             checkPathRef[Definition](is.from.pathId, uc, parents)
             checkPathRef[Definition](is.to.pathId, uc, parents)
@@ -587,13 +591,13 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDefinition(parents, interaction)
     interaction match {
       case SelfInteraction(_, _, from, _, _, _) => checkRef[Definition](from, interaction, parents)
-      case PutInputInteraction(_, _, from, _, to, _, _) =>
-        checkRef[User](from, interaction, parents)
-        checkRef[Input](to, interaction, parents)
+      case TakeInputInteraction(_, _, user: UserRef, _, inputRef: InputRef, _, _) =>
+        checkRef[User](user, interaction, parents)
+        checkRef[Input](inputRef, interaction, parents)
       case ArbitraryInteraction(_, _, from, _, to, _, _) =>
         checkRef[Definition](from, interaction, parents)
         checkRef[Definition](to, interaction, parents)
-      case TakeOutputInteraction(_, _, from, _, to, _, _) =>
+      case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _) =>
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
       case _ => ()
