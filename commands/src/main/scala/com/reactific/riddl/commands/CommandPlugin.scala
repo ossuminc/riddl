@@ -67,13 +67,7 @@ object CommandPlugin {
       val rc = if result.isRight then "yes" else "no"
       println(s"Ran: ${args.mkString(" ")}: success=$rc")
     }
-    result match {
-      case left @ Left(messages) =>
-        log.info(messages.format)
-        left
-      case right: Either[Messages, PassesResult] =>
-        right
-    }
+    result
   }
 
   def runCommandNamed(
