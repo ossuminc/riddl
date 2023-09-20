@@ -22,7 +22,7 @@ private[parsing] trait DomainParser {
     with SagaParser
     with StreamingParser
     with StatementParser
-    with TypeParser 
+    with TypeParser
     with CommonParser =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
@@ -33,8 +33,8 @@ private[parsing] trait DomainParser {
     }
   }
 
-  private def domainInclude[X: P]: P[Include[DomainDefinition]] = {
-    include[DomainDefinition, X](domainContent(_))
+  private def domainInclude[u: P]: P[Include[DomainDefinition]] = {
+    include[DomainDefinition, u](domainContent(_))
   }
 
   private def domainContent[u: P]: P[Seq[DomainDefinition]] = {

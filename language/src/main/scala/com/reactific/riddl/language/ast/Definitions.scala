@@ -281,10 +281,11 @@ trait Definitions {
     *   The inputs for this root scope
     */
   case class RootContainer(
-    domains: Seq[Domain] = Nil,
-    authors: Seq[Author] = Nil,
+    contents: Seq[RootDefinition] = Nil,
     inputs: Seq[RiddlParserInput] = Nil
   ) extends Definition {
+    lazy val domains: Seq[Domain] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Domain]]
+    lazy val authors: Seq[Author] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Author]]
 
     override def isRootContainer: Boolean = true
 
@@ -303,16 +304,11 @@ trait Definitions {
     final val kind: String = "Root"
 
     def format: String = ""
-
-    def contents: Seq[Definition] = domains ++ authors
   }
 
   object RootContainer {
-    def apply(domains: Seq[Domain], inputs: Seq[RiddlParserInput]): RootContainer = {
-      RootContainer(domains, Seq.empty[Author], inputs)
-    }
     val empty: RootContainer =
-      RootContainer(Seq.empty[Domain], Seq.empty[Author], Seq.empty[RiddlParserInput])
+      RootContainer(Seq.empty[RootDefinition], Seq.empty[RiddlParserInput])
   }
 
   /** Base trait for the four kinds of message references */

@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.ast.At
-import fastparse.*
+import fastparse.{P, *}
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 import fastparse.internal.Lazy
@@ -20,7 +20,6 @@ import java.io.File
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.mutable
-
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
@@ -28,8 +27,7 @@ trait ParsingContext {
 
   private val stack: InputStack = InputStack()
 
-  protected val errors: mutable.ListBuffer[Messages.Message] = mutable
-    .ListBuffer.empty[Messages.Message]
+  protected val errors: mutable.ListBuffer[Messages.Message] = mutable.ListBuffer.empty[Messages.Message]
 
   @inline def current: RiddlParserInput = { stack.current }
   @inline protected def push(path: Path): Unit = { stack.push(path) }
@@ -40,8 +38,7 @@ trait ParsingContext {
     rpi
   }
 
-  private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable
-    .ListBuffer.empty[RiddlParserInput]
+  private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable.ListBuffer.empty[RiddlParserInput]
 
   def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
 
@@ -71,8 +68,7 @@ trait ParsingContext {
 
   def doInclude[T <: Definition](
     str: LiteralString
-  )(rule: P[?] => P[Seq[T]]
-  ): Include[T] = {
+  )(rule: P[?] => P[Seq[T]]): Include[T] = {
     val source = if str.s.startsWith("http") then {
       val url = new java.net.URL(str.s)
       push(url)
@@ -84,7 +80,7 @@ trait ParsingContext {
       path.toString
     }
     try {
-      this.expect[Seq[T]](rule) match {
+      this.expectMultiple[T](str.s, rule) match {
         case Left(theErrors) =>
           theErrors.filterNot(errors.contains).foreach(errors.append)
           Include[T](str.loc, Seq.empty[T], Some(source))
@@ -93,8 +89,8 @@ trait ParsingContext {
       }
     } catch {
       case NonFatal(exception) =>
-        val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n  ","\n  ","\n")
-          error(str.loc, s"Include file '${str.s}' not found: $message ")
+        val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n  ", "\n  ", "\n")
+        error(str.loc, s"Include file '${str.s}' not found: $message ")
         Include[T](str.loc, Seq.empty[T], Some(str.s))
     } finally {
       pop
@@ -111,11 +107,15 @@ trait ParsingContext {
   }
 
   private def mkTerminals(list: List[Lazy[String]]): String = {
-    list.map(_.force).map {
-      case s: String if s.startsWith("char-pred")  => "pattern"
-      case s: String if s.startsWith("chars-with") => "pattern"
-      case s: String                               => s
-    }.distinct.mkString("(", " | ", ")")
+    list
+      .map(_.force)
+      .map {
+        case s: String if s.startsWith("char-pred")  => "pattern"
+        case s: String if s.startsWith("chars-with") => "pattern"
+        case s: String                               => s
+      }
+      .distinct
+      .mkString("(", " | ", ")")
   }
 
   private def makeParseFailureError(failure: Failure): Unit = {
@@ -131,31 +131,51 @@ trait ParsingContext {
   }
 
   private def makeParseFailureError(exception: Throwable): Unit = {
-    val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n","\n  ", "\n")
+    val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
     error(At.empty, message)
   }
 
-  def expect[T](
+  def expect[T <: Definition](
     parser: P[?] => P[T]
   ): Either[Messages, (T, RiddlParserInput)] = {
     val input = current
     try {
-      fastparse.parse(input, parser(_)) match {
+      fastparse.parse[T](input, parser(_)) match {
         case Success(content, _) =>
-          if errors.nonEmpty then {
-            Left(errors.toList)
-          }
-          else {
-            Right(content -> input)
-          }
+          if errors.nonEmpty then Left(errors.toList)
+          else Right(content -> input)
         case failure: Failure =>
           makeParseFailureError(failure)
           Left(errors.toList)
       }
     } catch {
       case NonFatal(exception) =>
-       makeParseFailureError(exception)
-       Left(errors.toList)
+        makeParseFailureError(exception)
+        Left(errors.toList)
+    }
+  }
+
+  def expectMultiple[T <: Definition](
+    source: String,
+    parser: P[?] => P[Seq[T]]
+  ): Either[Messages, (Seq[T], RiddlParserInput)] = {
+    val input = current
+    try {
+      fastparse.parse[Seq[T]](input, parser(_)) match {
+        case Success(content, _) =>
+          if errors.nonEmpty then Left(errors.toList)
+          else if content.isEmpty then
+            error(s"No parse content from '$source'")
+            Left(errors.toList)
+          else Right(content -> input)
+        case failure: Failure =>
+          makeParseFailureError(failure)
+          Left(errors.toList)
+      }
+    } catch {
+      case NonFatal(exception) =>
+        makeParseFailureError(exception)
+        Left(errors.toList)
     }
   }
 }
