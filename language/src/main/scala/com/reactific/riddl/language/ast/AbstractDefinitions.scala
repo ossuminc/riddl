@@ -246,7 +246,7 @@ trait AbstractDefinitions {
   }
 
   object Reference {
-    val empty = new Reference[Definition] {
+    val empty: Reference[Definition] = new Reference[Definition] {
       def pathId: PathIdentifier = PathIdentifier.empty
       def format: String = "Empty Reference"
       def loc: At = At.empty
