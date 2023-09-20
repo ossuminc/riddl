@@ -22,7 +22,7 @@ private[parsing] trait EpicParser {
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier("") ~ literalString ~/ briefly ~ description
+      location ~ Keywords.step ~ optionalIdentifier("") ~ is ~ literalString ~/ briefly ~ description
     )./.map { case (loc, id, ls, brief, desc) =>
       VagueInteraction(loc, id, ls, brief, desc)
     }
@@ -30,8 +30,8 @@ private[parsing] trait EpicParser {
 
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Readability.from) ~/ arbitraryInteractionRef ~
-        literalString ~ Readability.to.? ~ arbitraryInteractionRef ~/ briefly ~ description
+      location ~ Keywords.step ~ optionalIdentifier(Readability.from) ~/ anyInteractionRef ~
+        literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description
     )./.map { case (loc, id, from, ls, to, brief, desc) =>
       ArbitraryInteraction(loc, id, from, ls, to, brief, desc)
     }
@@ -49,7 +49,7 @@ private[parsing] trait EpicParser {
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
       location ~ Keywords.step ~ optionalIdentifier(Keywords.show) ~/
-      outputRef ~ Readability.to ~ userRef ~/ briefly ~ description
+        outputRef ~ Readability.to ~ userRef ~/ briefly ~ description
     )./.map { case (loc, id, outRef, userRef, brief, desc) =>
       ShowOutputInteraction(loc, id, outRef, LiteralString.empty, userRef, brief, desc)
     }
@@ -58,9 +58,9 @@ private[parsing] trait EpicParser {
   private def takeInputStep[u: P]: P[TakeInputInteraction] = {
     P(
       location ~ Keywords.step ~ optionalIdentifier(Keywords.take) ~/
-      inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
+        inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
     )./.map { case (loc, id, input, user, brief, desc) =>
-      TakeInputInteraction(loc, id, from=user, relationship=LiteralString.empty, to=input , brief, desc)
+      TakeInputInteraction(loc, id, from = user, relationship = LiteralString.empty, to = input, brief, desc)
     }
   }
 
@@ -114,7 +114,7 @@ private[parsing] trait EpicParser {
   def userStory[u: P]: P[UserStory] = {
     P(
       location ~ userRef ~ Readability.wants ~ Readability.to.? ~
-        literalString ~ Readability.so ~ Readability.that.? ~ is ~ literalString
+        literalString ~ Readability.so ~ Readability.that.? ~ literalString
     ).map { case (loc, user, capability, benefit) =>
       UserStory(loc, user, capability, benefit)
     }
