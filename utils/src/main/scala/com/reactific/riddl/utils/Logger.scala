@@ -11,6 +11,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.io.AnsiColor.*
 
 object Logger {
   sealed trait Lvl {
@@ -70,7 +71,13 @@ trait Logger {
 case class SysLogger() extends Logger {
   override def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
-    System.out.println(s"[$level] $s")
+    val prefix = level match {
+      case Logger.Severe  => s"${RED_B}${BLACK}"
+      case Logger.Error   => s"${RED}"
+      case Logger.Warning => s"${YELLOW}"
+      case Logger.Info    => s"${BLUE}"
+    }
+    System.out.println(s"$prefix[$level]${RESET} $s")
   }
 }
 

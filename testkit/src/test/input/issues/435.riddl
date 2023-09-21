@@ -1,3 +1,5 @@
+// Test case for Issue 435
+
 domain Foo {
   include "435_oops"
 
