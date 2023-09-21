@@ -255,6 +255,51 @@ trait Types {
     final val kind: String = "Field"
   }
 
+  /** An argument to a method */
+  case class MethodArgument(
+    loc: At,
+    key: String,
+    value: TypeExpression
+  ) extends RiddlNode {
+
+    /** Format the node to a string */
+    def format: String = s"$key: ${value.format}"
+
+  }
+
+  /** A leaf definition that is a callable method (function) of an aggregation
+   * type expressions. Methods associate an identifier with a computed type
+    * expression.
+    *
+    * @param loc
+    *   The location of the field definition
+    * @param id
+    *   The name of the field
+    * @param args
+    *   The type of the field
+    * @param brief
+    *   A brief description (one sentence) for use in documentation
+    * @param description
+    *   An optional description of the field.
+    */
+  case class Method(
+    loc: At,
+    id: Identifier,
+    args: Seq[MethodArgument] = Seq.empty[MethodArgument],
+    result: TypeExpression,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None
+  ) extends LeafDefinition
+      with AlwaysEmpty
+      with TypeDefinition
+      with SagaDefinition
+      with StateDefinition
+      with FunctionDefinition
+      with ProjectorDefinition {
+    override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${result.format}"
+    final val kind: String = "Field"
+  }
+
   /** A type expression that contains an aggregation of fields
     *
     * This is used as the base trait of Aggregations and Messages
@@ -264,7 +309,7 @@ trait Types {
     final lazy val contents: Seq[Field] = fields
     override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      
+
       other match {
         case oate: AggregateTypeExpression =>
           val validity: Seq[Boolean] = for
