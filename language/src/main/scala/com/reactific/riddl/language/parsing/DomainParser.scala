@@ -22,7 +22,7 @@ private[parsing] trait DomainParser {
     with SagaParser
     with StreamingParser
     with StatementParser
-    with TypeParser 
+    with TypeParser
     with CommonParser =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
@@ -39,8 +39,12 @@ private[parsing] trait DomainParser {
 
   private def domainContent[u: P]: P[Seq[DomainDefinition]] = {
     P(
-      (author | typeDef | context | user | epic | saga | domain | term |
-        constant | application | importDef | domainInclude).rep(0)
+      undefined(Seq.empty[DomainDefinition]) |
+        (
+          author | typeDef | context | user | epic | saga | domain | term |
+            constant | application | importDef | domainInclude |
+            errorOnInvalidClose(Keywords.domain)
+        ).rep(0)
     )
   }
 
@@ -56,8 +60,7 @@ private[parsing] trait DomainParser {
   def domain[u: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~ authorRefs ~ is ~ open ~/
-        domainOptions ~
-        (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/
+        domainOptions ~ domainContent ~ close ~/
         briefly ~ description
     ).map { case (loc, id, authorRefs, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)

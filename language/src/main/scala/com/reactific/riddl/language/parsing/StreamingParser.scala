@@ -128,7 +128,7 @@ private[parsing] trait StreamingParser {
   ): P[Streamlet] = {
     P(
       location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
-        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~ close ~
+        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets)  ~ close ~
         briefly ~ description
     ).map { case (location, id, auths, (options, definitions), brief, desc) =>
       val groups = definitions.groupBy(_.getClass)

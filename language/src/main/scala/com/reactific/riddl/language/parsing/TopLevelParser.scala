@@ -36,13 +36,10 @@ class TopLevelParser(rpi: RiddlParserInput)
 
   push(rpi)
 
-  def root[u: P]: P[RootContainer] = {
+  def root[u: P]: P[Seq[RootDefinition]] = {
     P(Start ~ (domain | author).rep(0) ~ End).map { contents =>
       pop
-      val groups = contents.groupBy(_.getClass == classOf[Domain])
-      val domains: Seq[Domain] = groups.getOrElse(true, Seq.empty[Domain]).asInstanceOf[Seq[Domain]]
-      val authors: Seq[Author] = groups.getOrElse(false, Seq.empty[Author]).asInstanceOf[Seq[Author]]
-      RootContainer(domains, authors, Seq(rpi))
+      contents
     }
   }
 }
@@ -53,7 +50,10 @@ object TopLevelParser {
     input: RiddlParserInput
   ): Either[Messages, RootContainer] = {
     val tlp = new TopLevelParser(input)
-    tlp.expect(tlp.root(_)).map(_._1)
+    tlp.expectMultiple("test case", tlp.root(_)).map {
+      case (defs: Seq[RootDefinition], rpi) =>
+        RootContainer(defs, Seq(rpi))
+    }
   }
 
   def parse(file: File): Either[Messages, RootContainer] = {

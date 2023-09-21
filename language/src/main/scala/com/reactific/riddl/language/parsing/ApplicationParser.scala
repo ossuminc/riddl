@@ -12,7 +12,7 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 private[parsing] trait ApplicationParser {
-  this: StreamingParser with FunctionParser with ReferenceParser with HandlerParser with StatementParser 
+  this: StreamingParser with FunctionParser with ReferenceParser with HandlerParser with StatementParser
   with TypeParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
@@ -54,7 +54,7 @@ private[parsing] trait ApplicationParser {
     P(
       group | handler(StatementsSet.ApplicationStatements) | function |
         inlet | outlet | term | typeDef |
-        constant | applicationInclude
+        constant | applicationInclude | errorOnInvalidClose(Keywords.application)
     )
   }
 

@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.parsing.Terminals.*
+import com.reactific.riddl.language.parsing.Terminals.{Keywords, *}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import fastparse.*
@@ -18,7 +18,7 @@ import scala.reflect.{ClassTag, classTag}
 
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
-  
+
   def author[u: P]: P[Author] = {
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~
@@ -225,5 +225,14 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def term[u: P]: P[Term] = {
     P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
       .map(tpl => (Term.apply _).tupled(tpl))
+  }
+
+  def errorOnInvalidClose[u: P](kind: String): P[Line] = {
+    P(
+      invalidCloseLine
+    ).map { line =>
+      error(line.loc, s"Unexpected syntax when a $kind definition was expected", "")
+      line
+    }
   }
 }

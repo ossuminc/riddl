@@ -84,7 +84,7 @@ trait ParsingContext {
       path.toString
     }
     try {
-      this.expect[Seq[T]](rule) match {
+      this.expectMultiple(str.s, rule) match {
         case Left(theErrors) =>
           theErrors.filterNot(errors.contains).foreach(errors.append)
           Include[T](str.loc, Seq.empty[T], Some(source))
@@ -135,27 +135,51 @@ trait ParsingContext {
     error(At.empty, message)
   }
 
-  def expect[T](
+  def expect[T <: RiddlNode](
     parser: P[?] => P[T]
   ): Either[Messages, (T, RiddlParserInput)] = {
     val input = current
     try {
       fastparse.parse(input, parser(_)) match {
         case Success(content, _) =>
-          if errors.nonEmpty then {
-            Left(errors.toList)
-          }
-          else {
-            Right(content -> input)
-          }
+          if errors.nonEmpty then Left(errors.toList)
+          else Right(content -> input)
         case failure: Failure =>
           makeParseFailureError(failure)
           Left(errors.toList)
       }
     } catch {
       case NonFatal(exception) =>
-       makeParseFailureError(exception)
-       Left(errors.toList)
+        makeParseFailureError(exception)
+        Left(errors.toList)
+    }
+  }
+
+  def expectMultiple[T <: Definition](
+    source: String,
+    parser: P[?] => P[Seq[T]]
+  ): Either[Messages, (Seq[T], RiddlParserInput)] = {
+    val input = current
+    try {
+      fastparse.parse[Seq[T]](input, parser(_)) match {
+        case Success(content, index) =>
+          if errors.nonEmpty then Left(errors.toList)
+          else if content.isEmpty then
+            error(
+              At(input, index),
+              s"Parser could not translate '${input.origin}'",
+              s"while including $source"
+            )
+            Right(content -> input)
+          else Right(content -> input)
+        case failure: Failure =>
+          makeParseFailureError(failure)
+          Left(errors.toList)
+      }
+    } catch {
+      case NonFatal(exception) =>
+        makeParseFailureError(exception)
+        Left(errors.toList)
     }
   }
 }

@@ -70,7 +70,7 @@ class ValidationTest extends ParsingTest {
       incls(1).contents.head.getClass mustBe classOf[Context]
     }
     "have terms and author refs in applications" in {
-      val apps = sharedRoot.contents.head.contents
+      val apps = sharedRoot.domains.head.contents
       apps mustNot be(empty)
       apps.head mustBe a[Application]
       val app = apps.head.asInstanceOf[Application]

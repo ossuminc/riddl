@@ -24,7 +24,6 @@ class DomainValidatorTest extends ValidatingTest {
           Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
           Domain((2, 2, rpi), Identifier((2, 8, rpi), "foo"))
         ),
-        Seq.empty[Author],
         Seq(rpi)
       )
 

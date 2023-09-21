@@ -57,13 +57,20 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   }
 
   def parseTopLevelDomains: Either[Messages, RootContainer] = {
-    expect(root(_)).map(_._1)
+    expectMultiple("test case", root(_)).map {
+      case (defs: Seq[RootDefinition], _) =>
+        RootContainer(defs, Seq(input))
+    }
   }
 
   def parseTopLevelDomain[TO <: RiddlNode](
     extract: RootContainer => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    expect[RootContainer](root(_)).map(x => extract(x._1) -> x._2)
+    expectMultiple[RootDefinition]("test case", root(_)).map {
+      case (roots: Seq[RootDefinition], _) =>
+        val rc = RootContainer(roots, Seq(input))
+        extract(rc) -> input
+    }
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
