@@ -43,9 +43,12 @@ object CommandPlugin {
       loaded.find(_.pluginName == name) match {
         case Some(pl) if pl.isInstanceOf[CommandPlugin[CommandOptions]] =>
           Right(pl)
-        case Some(plugin) => Left(errors(
-            s"Plugin for command $name is the wrong type ${plugin.getClass.getSimpleName}"
-          ))
+        case Some(plugin) =>
+          Left(
+            errors(
+              s"Plugin for command $name is the wrong type ${plugin.getClass.getSimpleName}"
+            )
+          )
         case None => Left(errors(s"No plugin command matches '$name'"))
       }
     }
@@ -97,7 +100,9 @@ object CommandPlugin {
     configFile: Path,
     commonOptions: CommonOptions = CommonOptions()
   ): Either[Messages, Seq[String]] = {
-    val names = ConfigSource.file(configFile.toFile).value()
+    val names = ConfigSource
+      .file(configFile.toFile)
+      .value()
       .map(_.keySet().asScala.toSeq)
     names match {
       case Right(value) =>
@@ -122,7 +127,8 @@ object CommandPlugin {
     commandName: String
   ): Either[Messages, PassesResult] = {
     val result = CommandOptions.withInputFile(configFile, commandName) { path =>
-      val candidate = CommandPlugin.loadCandidateCommands(path, commonOptions)
+      val candidate = CommandPlugin
+        .loadCandidateCommands(path, commonOptions)
         .flatMap { names =>
           if names.contains(targetCommand) then {
             CommandPlugin
@@ -136,9 +142,11 @@ object CommandPlugin {
               case result @ Right(_) => result.map(_ => ())
             }
           } else {
-            Left[Messages, Unit](errors(
-              s"Command '$targetCommand' is not defined in $path"
-            ))
+            Left[Messages, Unit](
+              errors(
+                s"Command '$targetCommand' is not defined in $path"
+              )
+            )
           }
         }
       candidate.map(_ => PassesResult())
@@ -191,8 +199,9 @@ object CommandPlugin {
       val (common, remaining) = com.reactific.riddl.commands.CommonOptionsHelper
         .parseCommonOptions(args)
       common match {
-        case Some(commonOptions) => handleCommandRun(remaining, commonOptions)
-        case None                =>
+        case Some(commonOptions) =>
+          handleCommandRun(remaining, commonOptions)
+        case None =>
           // arguments are bad, error message will have been displayed
           log.info("Option parsing failed, terminating.")
           1
@@ -206,9 +215,7 @@ object CommandPlugin {
 }
 
 /** The service interface for Riddlc command plugins */
-abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
-  val pluginName: String)
-    extends PluginInterface {
+abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) extends PluginInterface {
   final override def pluginVersion: String = RiddlBuildInfo.version
 
   private val optionsClass: Class[?] = classTag[OPT].runtimeClass
@@ -228,9 +235,8 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     result
   }
 
-  /** Provide a typesafe/Config reader for the commands options. This reader
-    * should read an object having the same name as the command. The fields of
-    * that object must correspond to the fields of the OPT type.
+  /** Provide a typesafe/Config reader for the commands options. This reader should read an object having the same name
+    * as the command. The fields of that object must correspond to the fields of the OPT type.
     * @return
     *   A pureconfig.ConfigReader[OPT] that knows how to read OPT
     */
@@ -253,36 +259,39 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
           println(toPrettyString(value, 1))
         }
         Right(value)
-      case Left(fails) => Left(errors(
-          s"Errors while reading ${configFile}:\n" + fails.prettyPrint(1)
-        ))
+      case Left(fails) =>
+        Left(
+          errors(
+            s"Errors while reading ${configFile}:\n" + fails.prettyPrint(1)
+          )
+        )
     }
   }
 
-  /** Execute the command given the options. Error should be returned as
-    * Left(messages) and not directly logged. The log is for verbose or debug
-    * output
-   *
-   * @param options
+  /** Execute the command given the options. Error should be returned as Left(messages) and not directly logged. The log
+    * is for verbose or debug output
+    *
+    * @param options
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-   * @param log
-   *    A logger for logging errors, warnings, and info
-   * @return
-   * Either a set of Messages on error or a Unit on success
-   */
+    * @param log
+    *   A logger for logging errors, warnings, and info
+    * @return
+    *   Either a set of Messages on error or a Unit on success
+    */
   def run(
     @unused options: OPT,
     @unused commonOptions: CommonOptions,
     @unused log: Logger,
     @unused outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    Left(severes(
-      s"""In command '$pluginName':
-         |the CommandPlugin.run(OPT,CommonOptions,Logger) method was not overridden"""
-        .stripMargin
-    ))
+    Left(
+      severes(
+        s"""In command '$pluginName':
+         |the CommandPlugin.run(OPT,CommonOptions,Logger) method was not overridden""".stripMargin
+      )
+    )
   }
 
   def run(
@@ -295,7 +304,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
     maybeOptions match {
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
-        if commonOptions.verbose then {println(s"Running command: $command")}
+        if commonOptions.verbose then { println(s"Running command: $command") }
         val result = Timer.time(command, show = commonOptions.showTimes, log) {
           run(opts, commonOptions, log, outputDirOverride)
         }
@@ -309,12 +318,16 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](
   import builder.*
 
   def inputFile(f: OptionPlacer[File]): OParser[File, OPT] = {
-    arg[File]("input-file").required().action((v, c) => f(v, c))
+    arg[File]("input-file")
+      .required()
+      .action((v, c) => f(v, c))
       .text("required riddl input file to read")
   }
 
   def outputDir(f: OptionPlacer[File]): OParser[File, OPT] = {
-    opt[File]('o', "output-dir").optional().action((v, c) => f(v, c))
+    opt[File]('o', "output-dir")
+      .optional()
+      .action((v, c) => f(v, c))
       .text("required output directory for the generated output")
   }
 

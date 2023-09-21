@@ -174,7 +174,16 @@ private[parsing] trait ReferenceParser extends CommonParser {
   def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
     P(
       adaptorRef | applicationRef | contextRef | entityRef | projectorRef |
-        repositoryRef | streamletRef
+        repositoryRef | streamletRef 
     )
+  }
+  
+  def arbitraryInteractionRef[u:P]: P[Reference[Definition]] = {
+    P( processorRef | sagaRef | inputRef | outputRef )
+  }
+
+
+  def anyInteractionRef[u: P]: P[Reference[Definition]] = {
+    arbitraryInteractionRef | userRef 
   }
 }

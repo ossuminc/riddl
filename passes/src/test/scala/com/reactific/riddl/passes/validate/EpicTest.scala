@@ -103,11 +103,11 @@ class EpicTest extends ValidatingTest {
           |
           |  case primary is {
           |    optional {
-          |      step from user ImprovingApp.Owner "creates an Organization" to
-          |        input ImprovingApp.Improving_app.OrganizationPage.accept
+          |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
+          |        from user ImprovingApp.Owner
           |        briefly "create org",
-          |      step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |        "presented" to user ImprovingApp.Owner
+          |      step show output ImprovingApp.Improving_app.OrganizationPage.show
+          |        to user ImprovingApp.Owner
           |        briefly "organization added"
           |    }
           |  }
@@ -118,10 +118,13 @@ class EpicTest extends ValidatingTest {
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
-          domain mustNot be(empty)
-          domain.epics mustNot be(empty)
-          if msgs.nonEmpty then { info(msgs.format) }
-          msgs.hasErrors mustBe false
+          val errors = msgs.justErrors
+          info ( errors.format )
+          if errors.isEmpty then
+            domain mustNot be(empty)
+            domain.epics mustNot be(empty)
+          else
+            fail("Shouldn't be any errors")
       }
     }
     "handle parallel group" in {
@@ -175,12 +178,10 @@ class EpicTest extends ValidatingTest {
           |
           |  case primary is {
           |    parallel {
-          |      step from user ImprovingApp.Owner "creates an Organization" to
-          |        input ImprovingApp.Improving_app.OrganizationPage.accept
-          |        briefly "create org",
-          |      step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |        "presented" to user ImprovingApp.Owner
-          |        briefly "organization added"
+          |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
+          |        from  user ImprovingApp.Owner   briefly "create org",
+          |      step show output ImprovingApp.Improving_app.OrganizationPage.show
+          |        to user ImprovingApp.Owner briefly "organization added"
           |     }
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
@@ -190,11 +191,15 @@ class EpicTest extends ValidatingTest {
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
-          domain mustNot be(empty)
-          domain.epics mustNot be(empty)
-          if msgs.nonEmpty then { info(msgs.format) }
-          msgs.hasErrors mustBe false
-          succeed
+          val errors = msgs.justErrors
+          if errors.isEmpty then
+            domain mustNot be(empty)
+            domain.epics mustNot be(empty)
+            msgs.hasErrors mustBe false
+            succeed
+          else
+            info(msgs.format)
+            fail("Shouldn't have errors")
       }
     }
     "handle optional group" in {
@@ -242,13 +247,13 @@ class EpicTest extends ValidatingTest {
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
-          |    step from user ImprovingApp.Owner "creates an Organization" to
-          |      input ImprovingApp.Improving_app.OrganizationPage.accept
+          |    step take input ImprovingApp.Improving_app.OrganizationPage.accept
+          |      from user ImprovingApp.Owner
           |      briefly "create org",
-          |    step for user ImprovingApp.Owner is "contemplates his navel"
+          |    step for user ImprovingApp.Owner "contemplates his navel"
           |      briefly "self-processing",
-          |    step from output ImprovingApp.Improving_app.OrganizationPage.show
-          |      "presented" to user ImprovingApp.Owner
+          |    step show output ImprovingApp.Improving_app.OrganizationPage.show
+          |      to user ImprovingApp.Owner
           |      briefly "organization added"
           |  }
           |} briefly "A story about establishing an organization in Improving.app"
@@ -258,11 +263,16 @@ class EpicTest extends ValidatingTest {
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
-          domain mustNot be(empty)
-          domain.epics mustNot be(empty)
-          if msgs.nonEmpty then { info(msgs.format) }
-          msgs.hasErrors mustBe false
-          succeed
+          val errors = msgs.justErrors
+          if errors.nonEmpty then
+            info(msgs.format)
+            fail("Shouldn't have errors")
+          else
+            domain mustNot be(empty)
+            domain.epics mustNot be(empty)
+            if msgs.nonEmpty then { }
+            msgs.hasErrors mustBe false
+            succeed
       }
     }
   }
