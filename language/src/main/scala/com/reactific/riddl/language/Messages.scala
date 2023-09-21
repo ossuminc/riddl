@@ -7,9 +7,11 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput}
 import com.reactific.riddl.utils.Logger
 
 import scala.collection.mutable
+import scala.io.AnsiColor.*
 
 object Messages {
 
@@ -97,11 +99,9 @@ object Messages {
     def severity = 6
   }
 
-  case class Message(
-    loc: At,
-    message: String,
-    kind: KindOfMessage = Error,
-    context: String = "")
+  val nl: String = System.lineSeparator()
+
+  case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
 
     def isInfo: Boolean = kind.isInfo
@@ -118,15 +118,38 @@ object Messages {
       else comparison
     }
 
+    def highlight(s: String): String = {
+      s"${kind match {
+          case Info           => s"${BLUE}"
+          case StyleWarning   => s"${YELLOW}"
+          case MissingWarning => s"${YELLOW}${UNDERLINED}"
+          case UsageWarning   => s"${YELLOW}${BOLD}"
+          case Warning        => s"${YELLOW}${BOLD}${UNDERLINED}"
+          case Error          => s"${RED}${BOLD}"
+          case SevereError    => s"${RED_B}${BLACK}${BOLD}"
+        }}$s${RESET}"
+    }
+
     def format: String = {
-      val nl = System.lineSeparator()
       val ctxt =
         if context.nonEmpty then { s"${nl}Context: $context" }
         else ""
+      val source = loc.source match {
+        case FileParserInput(file) =>
+          val path = file.getAbsolutePath
+          val index = path.lastIndexOf("riddl/")
+          path.substring(index + 6)
+        case SourceParserInput(source, _) => source.descr
+        case StringParserInput(_, origin) => origin
+        case URLParserInput(url)          => url.toString
+        case _                            => "unknown source"
+      }
+      val sourceLine = loc.toShort
+      val headLine = s"${highlight(s"$kind: $source$sourceLine:")}$nl"
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
-      if loc.isEmpty || loc.source.isEmpty || errorLine.isEmpty then {
-        s"$kind: $loc: $message$ctxt"
-      } else { s"$kind: $loc: $message:$nl$errorLine$ctxt" }
+      if loc.isEmpty || source.isEmpty || errorLine.isEmpty then {
+        s"$headLine$message$ctxt"
+      } else { s"$headLine$message:$nl$errorLine$ctxt" }
     }
   }
 
@@ -233,10 +256,10 @@ object Messages {
 
           messages.map(_.format).foreach { message =>
             kind match {
-              case Info => log.info(message)
+              case Info        => log.info(message)
               case SevereError => log.severe(message)
-              case Error => log.error(message)
-              case _ => log.warn(message)
+              case Error       => log.error(message)
+              case _           => log.warn(message)
             }
           }
         }
@@ -290,7 +313,6 @@ object Messages {
       }
       this
     }
-
 
     @inline def style(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, StyleWarning))
