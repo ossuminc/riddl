@@ -197,6 +197,33 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+    "allow methods in aggregates" in {
+      val rip = RiddlParserInput("""record agg = {
+                                   |  key: Number,
+                                   |  calc(key: Number): Number,
+                                   |}
+                                   |""".stripMargin)
+      val expected = Type(
+        (1, 1, rip),
+        Identifier((1, 6, rip), "agg"),
+        Aggregation(
+          (1, 12, rip),
+          Seq(
+            Field(
+              (2, 3, rip),
+              Identifier((2, 3, rip), "key"),
+              Number((2, 8, rip))
+            ),
+            Method(
+              (3, 3, rip),
+              Identifier((3, 3, rip), "calc"),
+              Seq(MethodArgument((3, 8, rip), "key", Number((3, 13, rip)))),
+              Number((3, 22, rip))
+            )
+          )
+        )
+      )
+    }
     "allow command, event, query, and result message aggregations" in {
       for mk <- Seq("command", "event", "query", "result") do {
         val prefix = s"type mkt = $mk {"

@@ -376,20 +376,36 @@ private[parsing] trait TypeParser extends CommonParser {
   def field[u: P]: P[Field] = {
     P(
       location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
-    )
-      .map(tpl => (Field.apply _).tupled(tpl))
+    ).map(tpl => (Field.apply _).tupled(tpl))
   }
 
-  def fields[u: P]: P[Seq[Field]] = {
+  def arguments[u:P]: P[Seq[MethodArgument]] = {
     P(
-      Punctuation.undefinedMark.!.map(_ => Seq.empty[Field]) |
-        field.rep(min = 0, Punctuation.comma)
+      (
+        location ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression
+      ).map(tpl => (MethodArgument.apply _).tupled(tpl))
+    ).rep(min=0, Punctuation.comma)
+  }
+
+  def method[u: P]: P[Method] = {
+    P(
+      location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
+        is ~ fieldTypeExpression ~ briefly ~ description
+    ).map(tpl => (Method.apply _).tupled(tpl))
+  }
+
+
+  def aggregateDefinitions[u:P]: P[Seq[AggregateDefinition]] = {
+    P(
+      undefined(Seq.empty[AggregateDefinition]) |
+        (field | method).rep(min = 1, Punctuation.comma)
     )
   }
 
   def aggregation[u: P]: P[Aggregation] = {
-    P(location ~ Keywords.fields.? ~ open ~ fields ~ close).map { case (loc, fields) =>
-      Aggregation(loc, fields)
+    P(location ~ open ~ aggregateDefinitions.? ~ close).map {
+      case (loc, Some(contents)) => Aggregation(loc, contents)
+      case (loc, None) => Aggregation(loc, Seq.empty[AggregateDefinition])
     }
   }
 

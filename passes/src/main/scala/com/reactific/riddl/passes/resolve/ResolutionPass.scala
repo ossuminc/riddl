@@ -407,9 +407,9 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case Enumeration(_, enumerators) =>
         // if we're at an enumeration type then the numerators are candidates
         enumerators
-      case AggregateUseCaseTypeExpression(_, _, fields) =>
+      case AggregateUseCaseTypeExpression(_, _, contents) =>
         // Any kind of Aggregate's fields are candidates for resolution
-        fields
+        contents
       case AliasedTypeExpression(_, pid) =>
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push
