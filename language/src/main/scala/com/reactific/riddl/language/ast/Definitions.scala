@@ -52,6 +52,16 @@ trait Definitions {
       with StreamletDefinition
       with SagaDefinition
 
+  case class Line(loc: At, line: String) extends RiddlValue with DomainDefinition with ProcessorDefinition {
+    override def format = line
+    override def isEmpty: Boolean = line.isEmpty
+    def brief: Option[LiteralString] = None
+    def contents: Seq[Definition] = Seq.empty[Definition]
+    def id: Identifier = Identifier.empty
+    def kind: String = "Line"
+    def description: Option[Definitions.this.Description] = None
+  }
+
   /** Base trait of definitions defined in a repository */
   sealed trait RepositoryDefinition extends Definition
 
@@ -281,10 +291,11 @@ trait Definitions {
     *   The inputs for this root scope
     */
   case class RootContainer(
-    domains: Seq[Domain] = Nil,
-    authors: Seq[Author] = Nil,
+    contents: Seq[RootDefinition] = Seq.empty[RootDefinition],
     inputs: Seq[RiddlParserInput] = Nil
   ) extends Definition {
+    lazy val domains: Seq[Domain] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Domain]]
+    lazy val authors: Seq[Author] = contents.filter(_.getClass == classOf[Author]).asInstanceOf[Seq[Author]]
 
     override def isRootContainer: Boolean = true
 
@@ -303,16 +314,11 @@ trait Definitions {
     final val kind: String = "Root"
 
     def format: String = ""
-
-    def contents: Seq[Definition] = domains ++ authors
   }
 
   object RootContainer {
-    def apply(domains: Seq[Domain], inputs: Seq[RiddlParserInput]): RootContainer = {
-      RootContainer(domains, Seq.empty[Author], inputs)
-    }
     val empty: RootContainer =
-      RootContainer(Seq.empty[Domain], Seq.empty[Author], Seq.empty[RiddlParserInput])
+      RootContainer(Seq.empty[RootDefinition], Seq.empty[RiddlParserInput])
   }
 
   /** Base trait for the four kinds of message references */
@@ -470,6 +476,7 @@ trait Definitions {
   ) extends Definition
       with StateDefinition
       with ProcessorDefinition
+      with ProjectorDefinition
       with FunctionDefinition
       with DomainDefinition {
     override def contents: Seq[TypeDefinition] = {
@@ -1679,6 +1686,19 @@ trait Definitions {
     override def kind: String = "Optional Interaction"
   }
 
+  /** A very vague step just written as text */
+  case class VagueInteraction(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    relationship: LiteralString,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
+  ) extends Interaction {
+    override def kind: String = "Vague Interaction"
+
+    override def contents: Seq[Definition] = Seq.empty[Definition]
+  }
+
   /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
     * provide more type specificity to these three fields.
     */
@@ -1739,7 +1759,7 @@ trait Definitions {
     * @param brief
     *   A brief description of this interaction
     */
-  case class TakeOutputInteraction(
+  case class ShowOutputInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
     from: OutputRef,
@@ -1748,7 +1768,7 @@ trait Definitions {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
-    override def kind: String = "Take Output Interaction"
+    override def kind: String = "Show Output Interaction"
   }
 
   /** A interaction where and User provides input
@@ -1764,7 +1784,7 @@ trait Definitions {
     * @param brief
     *   A description of this interaction step
     */
-  case class PutInputInteraction(
+  case class TakeInputInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
     from: UserRef,
@@ -1773,7 +1793,7 @@ trait Definitions {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
-    override def kind: String = "Put Input Interaction"
+    override def kind: String = "Take Input Interaction"
   }
 
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between the user and RIDDL

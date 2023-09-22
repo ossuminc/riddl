@@ -35,7 +35,8 @@ private[parsing] trait RepositoryParser {
 
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
     P(
-      typeDef | handler(StatementsSet.RepositoryStatements) | function | term | repositoryInclude | inlet | outlet
+      typeDef | handler(StatementsSet.RepositoryStatements) |
+        function | term | repositoryInclude | inlet | outlet
     ).rep(0)
   }
 

@@ -58,7 +58,7 @@ private[parsing] trait HandlerParser {
       Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
         handlerBody(set) ~
         close ~ briefly ~ description
-    ).map { case (loc, id, authors, clauses, briefly, desc) =>
+    )./.map { case (loc, id, authors, clauses, briefly, desc) =>
       Handler(
         loc,
         id,

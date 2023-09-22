@@ -34,23 +34,14 @@ private[parsing] trait ProjectorParser {
 
   private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
-      term | projectionInclude | handler(StatementsSet.ProjectorStatements) | function | inlet | outlet |
-        invariant | constant | typeDef
-    ).rep(0)
+      typeDef | term | projectionInclude | handler(StatementsSet.ProjectorStatements) | 
+        function | inlet | outlet | invariant | constant | typeDef 
+    )./.rep(1)
   }
 
-  private type ProjectionBody =
-    (Seq[ProjectorOption], Seq[Type], Seq[ProjectorDefinition])
-
-  private def projectionBody[u: P]: P[ProjectionBody] = {
+  private def projectionBody[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
-      undefined(
-        (
-          Seq.empty[ProjectorOption],
-          Seq.empty[Type],
-          Seq.empty[ProjectorDefinition]
-        )
-      ) | (projectionOptions ~ typeDef.rep(0) ~ projectionDefinitions)
+      undefined(Seq.empty[ProjectorDefinition]) | projectionDefinitions
     )
   }
 
@@ -66,17 +57,19 @@ private[parsing] trait ProjectorParser {
   def projector[u: P]: P[Projector] = {
     P(
       location ~ Keywords.projector ~/ identifier ~ authorRefs ~ is ~ open ~
-        projectionBody ~ close ~ briefly ~ description
+        projectionOptions ~ projectionBody ~ close ~ briefly ~ description
     ).map {
       case (
             loc,
             id,
             authors,
-            (options, types, definitions),
+            options,
+            definitions,
             briefly,
             description
           ) =>
         val groups = definitions.groupBy(_.getClass)
+        val types = mapTo[Type](groups.get(classOf[Type]))
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val constants = mapTo[Constant](groups.get(classOf[Constant]))

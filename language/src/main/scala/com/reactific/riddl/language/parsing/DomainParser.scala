@@ -22,7 +22,7 @@ private[parsing] trait DomainParser {
     with SagaParser
     with StreamingParser
     with StatementParser
-    with TypeParser 
+    with TypeParser
     with CommonParser =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
@@ -33,15 +33,8 @@ private[parsing] trait DomainParser {
     }
   }
 
-  private def domainInclude[X: P]: P[Include[DomainDefinition]] = {
-    include[DomainDefinition, X](domainContent(_))
-  }
-
-  private def domainContent[u: P]: P[Seq[DomainDefinition]] = {
-    P(
-      (author | typeDef | context | user | epic | saga | domain | term |
-        constant | application | importDef | domainInclude).rep(0)
-    )
+  private def domainInclude[u: P]: P[Include[DomainDefinition]] = {
+    include[DomainDefinition, u](domainDefinitions(_))
   }
 
   private def user[u: P]: P[User] = {
@@ -53,18 +46,28 @@ private[parsing] trait DomainParser {
     }
   }
 
+  private def domainDefinitions[u: P]: P[Seq[DomainDefinition]] = {
+    P(
+      author | typeDef | context | user | epic | saga | domain | term |
+        constant | application | importDef | domainInclude
+    )./.rep(1)
+  }
+
+  private def domainBody[u: P]: P[Seq[DomainDefinition]] = {
+    undefined(Seq.empty[DomainDefinition]) | domainDefinitions
+  }
+
   def domain[u: P]: P[Domain] = {
     P(
       location ~ Keywords.domain ~/ identifier ~ authorRefs ~ is ~ open ~/
-        domainOptions ~
-        (undefined(Seq.empty[DomainDefinition]) | domainContent) ~ close ~/
+        domainOptions ~ domainBody ~ close ~/
         briefly ~ description
     ).map { case (loc, id, authorRefs, options, defs, briefly, description) =>
       val groups = defs.groupBy(_.getClass)
-      val authors = mapTo[AST.Author](groups.get(classOf[AST.Author]))
-      val subdomains = mapTo[AST.Domain](groups.get(classOf[AST.Domain]))
-      val types = mapTo[AST.Type](groups.get(classOf[AST.Type]))
-      val consts = mapTo[AST.Constant](groups.get(classOf[AST.Constant]))
+      val authors = mapTo[Author](groups.get(classOf[Author]))
+      val subdomains = mapTo[Domain](groups.get(classOf[Domain]))
+      val types = mapTo[Type](groups.get(classOf[Type]))
+      val consts = mapTo[Constant](groups.get(classOf[Constant]))
       val contexts = mapTo[Context](groups.get(classOf[Context]))
       val epics = mapTo[Epic](groups.get(classOf[Epic]))
       val sagas = mapTo[Saga](groups.get(classOf[Saga]))

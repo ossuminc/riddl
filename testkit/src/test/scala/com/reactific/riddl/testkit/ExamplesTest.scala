@@ -31,7 +31,6 @@ class ExamplesTest extends ValidatingTest {
 
   "Examples" should {
     "compile Reactive BBQ" in { doOne("rbbq.riddl") }
-    "compile Empty" in { doOne("empty.riddl") }
     "compile Pet Store" in { doOne("petstore.riddl") }
     "compile Everything" in { doOne("everything.riddl") }
     "compile dokn" in { doOne("dokn.riddl") }

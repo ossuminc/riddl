@@ -76,11 +76,11 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Seq[StreamletDefinition]] = {
     P(
-      (inlet.rep(minInlets, " ", maxInlets) ~/
-        outlet.rep(minOutlets, " ", maxOutlets) ~/
+      (inlet./.rep(minInlets, " ", maxInlets) ~
+        outlet./.rep(minOutlets, " ", maxOutlets) ~
         (handler(StatementsSet.StreamStatements) | term |
-          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))
-          .rep(0)).map { case (inlets, outlets, definitions) =>
+          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets)
+        )./.rep(0)).map { case (inlets, outlets, definitions) =>
         inlets ++ outlets ++ definitions
       }
     )
@@ -128,9 +128,9 @@ private[parsing] trait StreamingParser {
   ): P[Streamlet] = {
     P(
       location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
-        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~ close ~
+        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets)  ~ close ~
         briefly ~ description
-    ).map { case (location, id, auths, (options, definitions), brief, desc) =>
+    )./.map { case (location, id, auths, (options, definitions), brief, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))

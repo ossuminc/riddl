@@ -111,14 +111,20 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveARef[Type](in.putIn, parentsAsSeq)
       case out: Output =>
         resolveARef[Type](out.putOut, parentsAsSeq)
-      case ti: TakeOutputInteraction =>
-        resolveARef[User](ti.to, parentsAsSeq)
-        resolveARef[Output](ti.from, parentsAsSeq)
-      case pi: PutInputInteraction =>
-        resolveARef[User](pi.from, parentsAsSeq)
-        resolveARef[Input](pi.to, parentsAsSeq)
-      case si: SelfInteraction =>
-        resolveARef[Definition](si.from, parentsAsSeq)
+      case gi: GenericInteraction =>
+        gi match {
+          case ArbitraryInteraction(_, _, from, _, to, _, _) =>
+            resolveARef[Definition](from, parentsAsSeq)
+            resolveARef[Definition]( to, parentsAsSeq)
+          case ti: ShowOutputInteraction =>
+            resolveARef[User](ti.to, parentsAsSeq)
+            resolveARef[Output](ti.from, parentsAsSeq)
+          case pi: TakeInputInteraction =>
+            resolveARef[User](pi.from, parentsAsSeq)
+            resolveARef[Input](pi.to, parentsAsSeq)
+          case si: SelfInteraction =>
+            resolveARef[Definition](si.from, parentsAsSeq)
+       }
       case _: Author                 => () // no references
       case _: User                   => () // no references
       case _: Enumerator             => () // no references
@@ -126,9 +132,10 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case _: Include[_]             => () // no references
       case _: OptionalInteractions   => () // no references
       case _: ParallelInteractions   => () // no references
+      case _: SequentialInteractions => () // no references
+      case _: VagueInteraction       => () // no references
       case _: RootContainer          => () // no references
       case _: SagaStep               => () // no references
-      case _: SequentialInteractions => () // no references
       case _: Term                   => () // no references
       case i: Invariant              => () // no references
       // case _ => () // NOTE: Never have this catchall! Want compile time errors.
@@ -400,9 +407,9 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case Enumeration(_, enumerators) =>
         // if we're at an enumeration type then the numerators are candidates
         enumerators
-      case AggregateUseCaseTypeExpression(_, _, fields) =>
+      case AggregateUseCaseTypeExpression(_, _, contents) =>
         // Any kind of Aggregate's fields are candidates for resolution
-        fields
+        contents
       case AliasedTypeExpression(_, pid) =>
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push

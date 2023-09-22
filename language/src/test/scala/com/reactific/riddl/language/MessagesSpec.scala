@@ -131,16 +131,16 @@ class MessagesSpec extends AnyWordSpec with Matchers {
 
   "Messages" should {
     "filter for Warnings" in {
-      mix.justWarnings mustBe(Seq(sty,m,u,w))
+      mix.justWarnings mustBe (Seq(sty, m, u, w))
     }
     "filter for Errors" in {
-      mix.justErrors mustBe(Seq(e,s))
+      mix.justErrors mustBe (Seq(e, s))
     }
     "filter for StyleWarnings" in {
       mix.justStyle mustBe (Seq(sty))
     }
     "filter for MissingWarnings" in {
-      mix.justMissing mustBe(Seq(m))
+      mix.justMissing mustBe (Seq(m))
     }
     "filter for UsageWarnings" in {
       mix.justUsage mustBe (Seq(u))
@@ -150,34 +150,47 @@ class MessagesSpec extends AnyWordSpec with Matchers {
       val log = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
       val content = log.toString()
-      content mustBe
-        """[info] Info: empty(1:1): info
-          |[warning] Style: empty(1:1): style
-          |[warning] Missing: empty(1:1): missing
-          |[warning] Usage: empty(1:1): usage
-          |[warning] Warning: empty(1:1): warning
-          |[error] Error: empty(1:1): error
-          |[severe] Severe: empty(1:1): severe
-          |""".stripMargin
+      val expected = """[34m[info] [0m[34mInfo: unknown(1:1):[0m
+                       |info
+                       |[33m[warning] [0m[33mStyle: unknown(1:1):[0m
+                       |style
+                       |[33m[warning] [0m[33m[4mMissing: unknown(1:1):[0m
+                       |missing
+                       |[33m[warning] [0m[33m[1mUsage: unknown(1:1):[0m
+                       |usage
+                       |[33m[warning] [0m[33m[1m[4mWarning: unknown(1:1):[0m
+                       |warning
+                       |[31m[error] [0m[31m[1mError: unknown(1:1):[0m
+                       |error
+                       |[41m[30m[severe] [0m[41m[30m[1mSevere: unknown(1:1):[0m
+                       |severe
+                       |""".stripMargin
+      content mustBe expected
     }
     "log grouped by message kind" in {
       val commonOptions = CommonOptions(groupMessagesByKind = true)
-      val log:Logger = StringLogger()
+      val log: Logger = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
-      val content = log.toString()
+      val content = log.toString
       val expected =
-        """[info] Severe Message Count: 1
-          |[severe] Severe: empty(1:1): severe
-          |[info] Error Message Count: 1
-          |[error] Error: empty(1:1): error
-          |[info] Usage Message Count: 1
-          |[warning] Usage: empty(1:1): usage
-          |[info] Missing Message Count: 1
-          |[warning] Missing: empty(1:1): missing
-          |[info] Style Message Count: 1
-          |[warning] Style: empty(1:1): style
-          |[info] Info Message Count: 1
-          |[info] Info: empty(1:1): info
+        """[34m[info] [0mSevere Message Count: 1
+          |[41m[30m[severe] [0m[41m[30m[1mSevere: unknown(1:1):[0m
+          |severe
+          |[34m[info] [0mError Message Count: 1
+          |[31m[error] [0m[31m[1mError: unknown(1:1):[0m
+          |error
+          |[34m[info] [0mUsage Message Count: 1
+          |[33m[warning] [0m[33m[1mUsage: unknown(1:1):[0m
+          |usage
+          |[34m[info] [0mMissing Message Count: 1
+          |[33m[warning] [0m[33m[4mMissing: unknown(1:1):[0m
+          |missing
+          |[34m[info] [0mStyle Message Count: 1
+          |[33m[warning] [0m[33mStyle: unknown(1:1):[0m
+          |style
+          |[34m[info] [0mInfo Message Count: 1
+          |[34m[info] [0m[34mInfo: unknown(1:1):[0m
+          |info
           |""".stripMargin
       content mustBe expected
     }
@@ -185,7 +198,10 @@ class MessagesSpec extends AnyWordSpec with Matchers {
     "format should produce a correct string" in {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
-      msg.format mustBe s"Warning: empty(1:2): the_message"
+      val content = msg.format
+      val expected = """[33m[1m[4mWarning: unknown(1:2):[0m
+                       |the_message""".stripMargin
+      content mustBe expected
     }
 
     "be ordered based on location" in {

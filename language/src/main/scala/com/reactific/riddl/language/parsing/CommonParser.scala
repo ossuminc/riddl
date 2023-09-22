@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.parsing.Terminals.*
+import com.reactific.riddl.language.parsing.Terminals.{Keywords, *}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.ast.At
 import fastparse.*
@@ -18,7 +18,7 @@ import scala.reflect.{ClassTag, classTag}
 
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
-  
+
   def author[u: P]: P[Author] = {
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~
@@ -43,7 +43,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[Include[K]] = {
-    P(Keywords.include ~/ literalString).map { (str: LiteralString) =>
+    P(Keywords.include ~/ literalString)./.map { (str: LiteralString) =>
       doInclude[K](str)(parser)
     }
   }
@@ -219,11 +219,10 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def httpUrl[u: P]: P[java.net.URL] = {
     P(
       "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
-    ).!.map(URI.create(_).toURL)
+    ).!.map(java.net.URI(_).toURL)
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
-      .map(tpl => (Term.apply _).tupled(tpl))
+    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl => (Term.apply _).tupled(tpl))
   }
 }
