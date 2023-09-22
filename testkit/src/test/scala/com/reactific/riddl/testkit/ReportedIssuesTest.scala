@@ -73,7 +73,7 @@ class ReportedIssuesTest extends ValidatingTest {
           info(messages.format)
           messages.size must be(1)
           val message = messages.head.format
-          message must include("could not translate")
+          message must include("Expected")
 
         case Right(result) =>
           info(result.messages.format)

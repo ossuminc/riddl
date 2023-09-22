@@ -14,8 +14,8 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 class RegressionTests extends ValidatingTest {
   "Regressions" should {
     "allow descriptions as a single string" in {
-      val input = """domain foo is {
-                    |} explained as { "foo" }
+      val input = """domain foo is { ??? }
+                    |explained as { "foo" }
                     |""".stripMargin
       parseDefinition[Domain](RiddlParserInput(input)) match {
         case Left(errors) => fail(errors.format)
@@ -27,8 +27,8 @@ class RegressionTests extends ValidatingTest {
       }
     }
     "allow descriptions as a doc block" in {
-      val input = """domain foo is {
-                    |} explained as {
+      val input = """domain foo is { ??? }
+                    |explained as {
                     |  |ladeedah
                     |}
                     |""".stripMargin

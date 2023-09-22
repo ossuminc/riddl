@@ -17,7 +17,7 @@ class ContextValidationTest extends ValidatingTest {
   "Context" should {
     "allow options" in {
       val input =
-        """options (wrapper, service, gateway, package("foo"), technology("http"))"""
+        """options (wrapper, service, gateway, package("foo"), technology("http")) ??? """
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           msgs.filter(_.kind.isError) mustBe empty
@@ -57,7 +57,7 @@ class ContextValidationTest extends ValidatingTest {
       val input = """function bar is {
                     |  requires { i: Integer }
                     |  returns { o: Integer }
-                    |  body ???
+                    |  body { ??? }
                     |}
                     |""".stripMargin
       parseAndValidateContext(input) {
