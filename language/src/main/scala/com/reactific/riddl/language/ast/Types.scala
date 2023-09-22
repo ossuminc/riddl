@@ -21,6 +21,10 @@ trait Types {
 
   sealed trait TypeDefinition extends Definition
 
+  sealed trait AggregateDefinition extends TypeDefinition {
+    def typeEx: TypeExpression
+  }
+
   /** Base trait of an expression that defines a type
     */
   sealed trait TypeExpression extends RiddlValue {
@@ -245,6 +249,7 @@ trait Types {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
+      with AggregateDefinition
       with AlwaysEmpty
       with TypeDefinition
       with SagaDefinition
@@ -286,17 +291,18 @@ trait Types {
     loc: At,
     id: Identifier,
     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
-    result: TypeExpression,
+    typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
+      with AggregateDefinition
       with AlwaysEmpty
       with TypeDefinition
       with SagaDefinition
       with StateDefinition
       with FunctionDefinition
       with ProjectorDefinition {
-    override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${result.format}"
+    override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
     final val kind: String = "Field"
   }
 
@@ -304,23 +310,24 @@ trait Types {
     *
     * This is used as the base trait of Aggregations and Messages
     */
-  trait AggregateTypeExpression extends TypeExpression with Container[Field] {
-    def fields: Seq[Field]
-    final lazy val contents: Seq[Field] = fields
-    override def format: String = s"{ ${fields.map(_.format).mkString(", ")} }"
+  trait AggregateTypeExpression extends TypeExpression with Container[AggregateDefinition] {
+    def contents: Seq[AggregateDefinition]
+    lazy val fields: Seq[Field] = contents.filter(_.isInstanceOf[Field]).asInstanceOf[Seq[Field]]
+    lazy val methods: Seq[Method] = contents.filter(_.isInstanceOf[Method]).asInstanceOf[Seq[Method]]
+    override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
 
       other match {
         case oate: AggregateTypeExpression =>
           val validity: Seq[Boolean] = for
-            ofield <- oate.fields
-            myField <- fields.find(_.id.value == ofield.id.value)
+            ofield <- oate.contents
+            myField <- contents.find(_.id.value == ofield.id.value)
             myTypEx = myField.typeEx
             oTypeEx = ofield.typeEx
           yield {
             myTypEx.isAssignmentCompatible(oTypeEx)
           }
-          (validity.size == oate.fields.size) && validity.forall(_ == true)
+          (validity.size == oate.contents.size) && validity.forall(_ == true)
         case _ =>
           super.isAssignmentCompatible(other)
       }
@@ -334,7 +341,8 @@ trait Types {
     * @param fields
     *   The fields of the aggregation
     */
-  case class Aggregation(loc: At, fields: Seq[Field] = Seq.empty[Field]) extends AggregateTypeExpression
+  case class Aggregation(loc: At, contents: Seq[AggregateDefinition] = Seq.empty[AggregateDefinition]) extends
+    AggregateTypeExpression
 
   object Aggregation {
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
@@ -436,7 +444,7 @@ trait Types {
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    fields: Seq[Field] = Seq.empty[Field]
+    contents: Seq[AggregateDefinition] = Seq.empty[AggregateDefinition]
   ) extends AggregateTypeExpression {
     override def format: String = {
       usecase.format.toLowerCase() + " " + super.format
