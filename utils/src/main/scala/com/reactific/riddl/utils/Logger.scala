@@ -11,6 +11,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.io.AnsiColor.*
 
 object Logger {
   sealed trait Lvl {
@@ -26,6 +27,8 @@ object Logger {
 
 trait Logger {
   import Logger.*
+
+  protected def withHighlighting: Boolean = true
 
   final def severe(s: => String): Unit = { write(Severe, s) }
   final def severe(s: => String, xcptn: Throwable): Unit = {
@@ -47,6 +50,19 @@ trait Logger {
   private var nWarning = 0
   private var nInfo = 0
 
+  protected def highlight(level: Lvl, s: String): String = {
+    if !withHighlighting then
+      s"[$level] $s"
+    else
+      val prefix = level match {
+        case Logger.Severe  => s"${RED_B}${BLACK}"
+        case Logger.Error   => s"${RED}"
+        case Logger.Warning => s"${YELLOW}"
+        case Logger.Info    => s"${BLUE}"
+      }
+      s"$prefix[$level] ${RESET}$s"
+  }
+
   protected def write(level: Lvl, @unused s: String): Unit
 
   protected def count(level: Lvl): Unit = {
@@ -67,19 +83,25 @@ trait Logger {
   }
 }
 
-case class SysLogger() extends Logger {
+case class SysLogger(override val withHighlighting: Boolean = true) extends Logger {
   override def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
-    System.out.println(s"[$level] $s")
+    val prefix = level match {
+      case Logger.Severe  => s"${RED_B}${BLACK}"
+      case Logger.Error   => s"${RED}"
+      case Logger.Warning => s"${YELLOW}"
+      case Logger.Info    => s"${BLUE}"
+    }
+    System.out.println(highlight(level, s))
   }
 }
 
-case class StringLogger(capacity: Int = 512 * 2) extends Logger {
+case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: Boolean = true) extends Logger {
   private val stringBuilder = new mutable.StringBuilder(capacity)
 
   override def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
-    stringBuilder.append("[").append(level).append("] ").append(s).append("\n")
+    stringBuilder.append(highlight(level, s)).append("\n")
   }
 
   override def toString: String = stringBuilder.toString()
@@ -88,7 +110,7 @@ case class StringLogger(capacity: Int = 512 * 2) extends Logger {
 /** A Logger which captures logged lines into an in-memory buffer, useful for
   * testing purposes.
   */
-case class InMemoryLogger() extends Logger {
+case class InMemoryLogger(override val withHighlighting: Boolean = false) extends Logger {
   case class Line(level: Logger.Lvl, msg: String)
 
   private[this] val buffer = ArrayBuffer[Line]()

@@ -50,9 +50,9 @@ object TopLevelParser {
     input: RiddlParserInput
   ): Either[Messages, RootContainer] = {
     val tlp = new TopLevelParser(input)
-    tlp.expectMultiple[RootDefinition]("top", tlp.root(_)).map {
-      case (contents: Seq[RootDefinition], rpi: RiddlParserInput) =>
-      RootContainer(contents, Seq(rpi))
+    tlp.expectMultiple("test case", tlp.root(_)).map {
+      case (defs: Seq[RootDefinition], rpi) =>
+        RootContainer(defs, Seq(rpi))
     }
   }
 

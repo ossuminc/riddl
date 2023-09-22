@@ -34,9 +34,11 @@ private[parsing] trait AdaptorParser {
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
+      undefined(Seq.empty[AdaptorDefinition]) |
       (handler(StatementsSet.AdaptorStatements) | function | inlet |
-        outlet | adaptorInclude | term | constant).rep(1) |
-        undefined(Seq.empty[AdaptorDefinition])
+        outlet | adaptorInclude | term | constant | errorOnInvalidClose(Keywords.adaptor)
+      ).rep(1)
+
     )
   }
 

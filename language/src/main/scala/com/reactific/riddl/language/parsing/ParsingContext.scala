@@ -70,7 +70,7 @@ trait ParsingContext {
     str: LiteralString
   )(rule: P[?] => P[Seq[T]]): Include[T] = {
     val source = if str.s.startsWith("http") then {
-      val url = new java.net.URL(str.s)
+      val url = java.net.URI(str.s).toURL
       push(url)
       str.s
     } else {
@@ -135,7 +135,7 @@ trait ParsingContext {
     error(At.empty, message)
   }
 
-  def expect[T <: Definition](
+  def expect[T <: RiddlNode](
     parser: P[?] => P[T]
   ): Either[Messages, (T, RiddlParserInput)] = {
     val input = current

@@ -61,7 +61,8 @@ private[parsing] trait ContextParser {
         (typeDef | handler(StatementsSet.ContextStatements) | entity |
           adaptor | function | saga | streamlet | projector | repository |
           inlet | outlet | connector | term | replica |
-          contextInclude).rep(0)
+          contextInclude | errorOnInvalidClose(Keywords.context)
+        ).rep(0)
     )
   }
 
