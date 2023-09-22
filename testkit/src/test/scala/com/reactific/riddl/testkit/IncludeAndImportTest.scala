@@ -9,6 +9,8 @@ package com.reactific.riddl.testkit
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.{RiddlParserInput, StringParserInput}
 
+import scala.util.control.NonFatal
+
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
 
@@ -57,22 +59,27 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle existing URL" in {
       import sys.process._
-      val branchName = "git branch --show-current".!!.trim
-      val fullURL = java.net
-        .URI(
-          s"https://raw.githubusercontent.com/reactific/riddl/$branchName/"
-            + "testkit/src/test/input/domains/simpleDomain.riddl"
-        )
-        .toURL
-      parseDomainDefinition(
-        RiddlParserInput(fullURL),
-        identity
-      ) match {
-        case Right(_) =>
-          succeed
-        case Left(errors) =>
-          fail(errors.format)
+      val url: String = try {
+        val branchName = "git branch --show-current".!!.trim
+        s"https://raw.githubusercontent.com/reactific/riddl/$branchName/"
+          + "testkit/src/test/input/domains/simpleDomain.riddl"
+      } catch {
+        case NonFatal(x) =>
+          ""
       }
+      if url.isEmpty then
+        cancel("exception running git")
+      else
+        val fullURL = java.net.URI(url).toURL
+        parseDomainDefinition(
+          RiddlParserInput(fullURL),
+          identity
+        ) match {
+          case Right(_) =>
+            succeed
+          case Left(errors) =>
+            fail(errors.format)
+        }
     }
     "handle inclusions into domain" in {
       val rc = checkFile("Domain Includes", "domainIncludes.riddl")
