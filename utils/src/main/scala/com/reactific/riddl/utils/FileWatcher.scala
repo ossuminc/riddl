@@ -40,9 +40,7 @@ object FileWatcher {
     key: WatchKey,
     events: Seq[WatchEvent[?]],
     interval: Int
-  )(onEvents: Seq[WatchEvent[?]] => Boolean
-  )(notOnEvents: => Boolean
-  ): Unit = {
+  )(onEvents: Seq[WatchEvent[?]] => Boolean)(notOnEvents: => Boolean): Unit = {
     events match {
       case x: Seq[WatchEvent[?]] if x.isEmpty =>
         if notOnEvents then {
@@ -67,11 +65,8 @@ object FileWatcher {
     path: Path,
     periodInSeconds: Int,
     intervalInMillis: Int
-  )(onEvents: Seq[WatchEvent[?]] => Boolean
-  )(notOnEvents: => Boolean
-  ): Boolean = {
-    val deadline = Instant.now().plus(periodInSeconds, ChronoUnit.SECONDS)
-      .toEpochMilli
+  )(onEvents: Seq[WatchEvent[?]] => Boolean)(notOnEvents: => Boolean): Boolean = {
+    val deadline = Instant.now().plus(periodInSeconds, ChronoUnit.SECONDS).toEpochMilli
     val watchService: WatchService = FileSystems.getDefault.newWatchService()
     try {
       registerRecursively(path, watchService)
@@ -81,13 +76,13 @@ object FileWatcher {
           case key: WatchKey if key != null =>
             saveKey = key
             val events = key.pollEvents().asScala.toSeq
-            handlePolledEvents(key, events, intervalInMillis)(onEvents)(
-              notOnEvents
-            )
+            handlePolledEvents(key, events, intervalInMillis)(onEvents)(notOnEvents)
           case _ =>
+            notOnEvents
         }
       }
-      System.currentTimeMillis() < deadline
+      val current = System.currentTimeMillis()
+      current < deadline
     } finally { watchService.close() }
   }
 }

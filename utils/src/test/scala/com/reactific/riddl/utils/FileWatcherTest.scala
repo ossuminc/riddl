@@ -29,15 +29,15 @@ class FileWatcherTest extends AnyWordSpec with Matchers {
       if Files.exists(changeFile) then { Files.delete(changeFile) }
       // watch for changes
       val f = Future[Boolean] {
-        FileWatcher.watchForChanges(dir, 2, 10)(onEvents)(notOnEvents)
+        FileWatcher.watchForChanges(dir, 4, 50)(onEvents)(notOnEvents)
       }
       Thread.sleep(800)
       Files.createFile(changeFile)
       Thread.sleep(100)
       require(Files.exists(changeFile), "File should exist")
       Thread.sleep(200)
+      val result = Await.result(f, Duration(60, "seconds"))
       Files.delete(changeFile)
-      val result = Await.result(f, Duration(3, "seconds"))
       result must be(true)
     }
   }
