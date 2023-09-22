@@ -86,7 +86,8 @@ private[parsing] trait EntityParser {
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(
       handler(StatementsSet.EntityStatements) | function | invariant |
-        typeDef | state | entityInclude | inlet | outlet | term | constant
+        typeDef | state | entityInclude | inlet | outlet | term | constant |
+        errorOnInvalidClose(Keywords.entity)
     ).rep
   }
 
@@ -98,7 +99,7 @@ private[parsing] trait EntityParser {
 
   private def entityBody[u: P]: P[EntityBody] = {
     P(
-      entityOptions.? ~ entityDefinitions
+      entityOptions.? ~ ( undefined(Seq.empty[EntityDefinition]) | entityDefinitions)
     )
   }
 

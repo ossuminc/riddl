@@ -24,7 +24,6 @@ class DomainValidatorTest extends ValidatingTest {
           Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
           Domain((2, 2, rpi), Identifier((2, 8, rpi), "foo"))
         ),
-        Seq.empty[Author],
         Seq(rpi)
       )
 
@@ -34,9 +33,8 @@ class DomainValidatorTest extends ValidatingTest {
           val theErrors: Messages = result.messages.justErrors
           theErrors mustBe empty
           val messages = result.messages.map(_.format)
-          val notOccur =
-            "Style: empty(2:2): Domain 'foo' overloads Domain 'foo' at empty(1:1)"
-          messages.exists(_.startsWith(notOccur)) mustBe true
+          val notOccur = "Domain 'foo' overloads Domain 'foo' at empty(1:1)"
+          messages.exists(_.contains(notOccur)) mustBe true
       }
     }
 

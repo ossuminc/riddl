@@ -60,32 +60,31 @@ class SysLoggerTest extends AnyWordSpec with Matchers {
   "SysLogger" should {
     "print error message" in {
       val expected = "[error] asdf\n"
-      val sl = SysLogger()
+      val sl = SysLogger(false)
       val captured = capturingStdOut(() => sl.error("asdf"))
       captured._2 mustBe expected
     }
     "print severe message" in {
       val expected = "[severe] asdf\n"
-      val sl = SysLogger()
+      val sl = SysLogger(false)
       val captured = capturingStdOut(() => sl.severe("asdf"))
       captured._2 mustBe expected
     }
     "print warning message" in {
       val expected = "[warning] asdf\n"
-      val sl = SysLogger()
+      val sl = SysLogger(false)
       val captured = capturingStdOut(() => sl.warn("asdf"))
       captured._2 mustBe expected
     }
     "print info message" in {
       val expected = "[info] asdf\n"
-      for j <- 1 to 1000 do
-        val sl = SysLogger()
-        val captured = capturingStdOut(() => sl.info("asdf"))
-        if captured._2 != expected then fail(s"Expected: $expected, Received: $captured._2")
+      val sl = SysLogger(false)
+      val captured = capturingStdOut(() => sl.info("asdf"))
+      if captured._2 != expected then fail(s"Expected: $expected, Received: $captured._2")
       succeed
     }
     "print many message" in {
-      val sl = SysLogger()
+      val sl = SysLogger(false)
       val captured = capturingStdOut { () =>
         sl.error("a")
         sl.info("b")

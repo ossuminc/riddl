@@ -13,8 +13,7 @@ import scala.reflect.classTag
 
 trait AbstractDefinitions {
 
-  /** The root trait of all things RIDDL AST. Every node in the tree is a
-    * RiddlNode.
+  /** The root trait of all things RIDDL AST. Every node in the tree is a RiddlNode.
     */
   trait RiddlNode {
 
@@ -39,9 +38,8 @@ trait AbstractDefinitions {
     ) final def nonEmpty: Boolean = !isEmpty
   }
 
-  /** The root trait of all parsable values. If a parser returns something, its
-    * a RiddlValue. The distinguishing factor is the inclusion of the parsing
-    * location given by the `loc` field.
+  /** The root trait of all parsable values. If a parser returns something, its a RiddlValue. The distinguishing factor
+    * is the inclusion of the parsing location given by the `loc` field.
     */
   trait RiddlValue extends RiddlNode {
 
@@ -65,8 +63,7 @@ trait AbstractDefinitions {
     val empty: LiteralString = LiteralString(At.empty, "")
   }
 
-  /** A RiddlValue that is a parsed identifier, typically the name of a
-    * definition.
+  /** A RiddlValue that is a parsed identifier, typically the name of a definition.
     *
     * @param loc
     *   The location in the input where the identifier starts
@@ -83,10 +80,8 @@ trait AbstractDefinitions {
     val empty: Identifier = Identifier(At.empty, "")
   }
 
-  /** Represents a segmented identifier to a definition in the model. Path
-    * Identifiers are parsed from a dot-separated list of identifiers in the
-    * input. Path identifiers are used to reference other definitions in the
-    * model.
+  /** Represents a segmented identifier to a definition in the model. Path Identifiers are parsed from a dot-separated
+    * list of identifiers in the input. Path identifiers are used to reference other definitions in the model.
     *
     * @param loc
     *   Location in the input of the first letter of the path identifier
@@ -103,8 +98,8 @@ trait AbstractDefinitions {
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
   }
 
-  /** The description of a definition. All definitions have a name and an
-    * optional description. This class provides the description part.
+  /** The description of a definition. All definitions have a name and an optional description. This class provides the
+    * description part.
     */
   trait Description extends RiddlValue {
     def loc: At
@@ -169,14 +164,10 @@ trait AbstractDefinitions {
     def isRootContainer: Boolean = false
   }
 
-  /** Base trait for all definitions requiring an identifier for the definition
-    * and providing the identify method to yield a string that provides the kind
-    * and name
+  /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
+    * yield a string that provides the kind and name
     */
-  trait Definition
-      extends DescribedValue
-      with BrieflyDescribedValue
-      with Container[Definition] {
+  trait Definition extends DescribedValue with BrieflyDescribedValue with Container[Definition] {
     def id: Identifier
 
     def kind: String
@@ -222,24 +213,23 @@ trait AbstractDefinitions {
     *   The type of definition to which the references refers.
     */
   abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
-    /**
-     * The Path identifier to the referenced definition
-     */
+
+    /** The Path identifier to the referenced definition
+      */
     def pathId: PathIdentifier
 
-    /**
-     * The optional identifier of the reference to be used locally in some other reference.
-     */
+    /** The optional identifier of the reference to be used locally in some other reference.
+      */
     def id: Option[Identifier] = None
 
-    /**
-     * @return String
-     *         A string that describes this reference
-     */
+    /** @return
+      *   String A string that describes this reference
+      */
     def identify: String = {
       s"${classTag[T].runtimeClass.getSimpleName} ${
-        if id.nonEmpty then {id.map(_.format + ": ")} else ""
-      }'${pathId.format}'${loc.toShort}"
+          if id.nonEmpty then { id.map(_.format + ": ") }
+          else ""
+        }'${pathId.format}'${loc.toShort}"
     }
 
     override def isEmpty: Boolean = pathId.isEmpty

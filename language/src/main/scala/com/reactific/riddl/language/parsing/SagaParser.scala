@@ -41,7 +41,8 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
-    P(sagaStep | inlet | outlet | function | term | sagaInclude).rep(2)
+    P(sagaStep | inlet | outlet | function | term | sagaInclude |
+      errorOnInvalidClose(Keywords.saga)).rep(2)
   }
 
   private type SagaBodyType = (

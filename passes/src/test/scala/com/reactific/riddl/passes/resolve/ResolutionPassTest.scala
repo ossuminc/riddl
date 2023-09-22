@@ -275,7 +275,7 @@ class ResolutionPassTest extends ResolvingTest {
     "resolve simple path through an include" in {
       val eL = At.empty
       val root = RootContainer(
-        domains = Seq(
+        contents = Seq(
           Domain(
             eL,
             Identifier(eL, "D"),
@@ -308,7 +308,6 @@ class ResolutionPassTest extends ResolvingTest {
             )
           )
         ),
-        Seq.empty[Author],
         Seq.empty[RiddlParserInput]
       )
       root.contents.head.contents.length mustBe 2

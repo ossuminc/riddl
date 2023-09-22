@@ -35,7 +35,7 @@ private[parsing] trait ProjectorParser {
   private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
       term | projectionInclude | handler(StatementsSet.ProjectorStatements) | function | inlet | outlet |
-        invariant | constant | typeDef
+        invariant | constant | typeDef | errorOnInvalidClose(Keywords.projector)
     ).rep(0)
   }
 

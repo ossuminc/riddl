@@ -19,8 +19,7 @@ import scopt.OParser
 
 import java.nio.file.Path
 
-/** Base class for command options. Every command should extend this to a case
-  * class
+/** Base class for command options. Every command should extend this to a case class
   */
 trait CommandOptions {
   def command: String
@@ -73,8 +72,7 @@ object CommandOptions {
     objCur: ConfigObjectCursor,
     key: String,
     default: T
-  )(mapIt: ConfigCursor => ConfigReader.Result[T]
-  ): ConfigReader.Result[T] = {
+  )(mapIt: ConfigCursor => ConfigReader.Result[T]): ConfigReader.Result[T] = {
     objCur.atKeyOrUndefined(key) match {
       case stCur if stCur.isUndefined => Right[ConfigReaderFailures, T](default)
       case stCur                      => mapIt(stCur)
@@ -83,90 +81,99 @@ object CommandOptions {
 
   private def noBool = Option.empty[Boolean]
 
-  implicit val commonOptionsReader: ConfigReader[CommonOptions] = {
-    (cur: ConfigCursor) =>
-      {
-        for
-          topCur <- cur.asObjectCursor
-          topRes <- topCur.atKey("common")
-          objCur <- topRes.asObjectCursor
-          showTimes <-
-            optional[Boolean](objCur, "show-times", false)(c => c.asBoolean)
-          verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
-          dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
-          quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
-          debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
-          sortMessages <- optional(objCur, "sort-messages-by-location", noBool)(
-            cc => cc.asBoolean.map(Option(_))
-          )
-          suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(
-            cc => cc.asBoolean.map(Option(_))
-          )
-          suppressStyleWarnings <-
-            optional(objCur, "suppress-style-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
-          suppressMissingWarnings <-
-            optional(objCur, "suppress-missing-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
-          hideWarnings <- optional(objCur, "hide-warnings", noBool)(cc =>
-            cc.asBoolean.map(Option(_))
-          )
-          hideStyleWarnings <- optional(objCur, "hide-style-warnings", noBool) {
-            cc => cc.asBoolean.map(Option(_))
-          }
-          hideMissingWarnings <-
-            optional(objCur, "hide-missing-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
-          showWarnings <- optional(objCur, "show-warnings", noBool) { cc =>
+  implicit val commonOptionsReader: ConfigReader[CommonOptions] = { (cur: ConfigCursor) =>
+    {
+      for
+        topCur <- cur.asObjectCursor
+        topRes <- topCur.atKey("common")
+        objCur <- topRes.asObjectCursor
+        showTimes <-
+          optional[Boolean](objCur, "show-times", false)(c => c.asBoolean)
+        verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
+        dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
+        quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
+        debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
+        noANSIMessages <- optional(objCur, "noANSIMessages", false)(cc => cc.asBoolean)
+        sortMessages <- optional(objCur, "sort-messages-by-location", noBool)(cc => cc.asBoolean.map(Option(_)))
+        suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        suppressStyleWarnings <-
+          optional(objCur, "suppress-style-warnings", noBool) { cc =>
             cc.asBoolean.map(Option(_))
           }
-          showStyleWarnings <- optional(objCur, "show-style-warnings", noBool) {
-            cc => cc.asBoolean.map(Option(_))
+        suppressMissingWarnings <-
+          optional(objCur, "suppress-missing-warnings", noBool) { cc =>
+            cc.asBoolean.map(Option(_))
           }
-          showMissingWarnings <-
-            optional(objCur, "show-missing-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
-          showUnusedWarnings <-
-            optional(objCur, "show-unused-warnings", noBool) { cc =>
-              cc.asBoolean.map(Option(_))
-            }
-          pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path]) {
-            cc => cc.asString.map(f => Option(Path.of(f)))
+        hideWarnings <- optional(objCur, "hide-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        hideStyleWarnings <- optional(objCur, "hide-style-warnings", noBool) { cc =>
+          cc.asBoolean.map(Option(_))
+        }
+        hideMissingWarnings <-
+          optional(objCur, "hide-missing-warnings", noBool) { cc =>
+            cc.asBoolean.map(Option(_))
           }
-        yield {
-          val default = CommonOptions()
-          val shouldShowWarnings = suppressWarnings.map(!_)
-            .getOrElse(hideWarnings.map(!_).getOrElse(showWarnings.getOrElse(
-              default.showWarnings
-            )))
-          val shouldShowMissing = suppressMissingWarnings.map(!_)
-            .getOrElse(hideMissingWarnings.map(!_).getOrElse(
-              showMissingWarnings.getOrElse(default.showMissingWarnings)
-            ))
-          val shouldShowStyle = suppressStyleWarnings.map(!_).getOrElse(
-            hideStyleWarnings.map(!_)
+        showWarnings <- optional(objCur, "show-warnings", noBool) { cc =>
+          cc.asBoolean.map(Option(_))
+        }
+        showStyleWarnings <- optional(objCur, "show-style-warnings", noBool) { cc =>
+          cc.asBoolean.map(Option(_))
+        }
+        showMissingWarnings <-
+          optional(objCur, "show-missing-warnings", noBool) { cc =>
+            cc.asBoolean.map(Option(_))
+          }
+        showUnusedWarnings <-
+          optional(objCur, "show-unused-warnings", noBool) { cc =>
+            cc.asBoolean.map(Option(_))
+          }
+        pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path]) { cc =>
+          cc.asString.map(f => Option(Path.of(f)))
+        }
+      yield {
+        val default = CommonOptions()
+        val shouldShowWarnings = suppressWarnings
+          .map(!_)
+          .getOrElse(
+            hideWarnings
+              .map(!_)
+              .getOrElse(
+                showWarnings.getOrElse(
+                  default.showWarnings
+                )
+              )
+          )
+        val shouldShowMissing = suppressMissingWarnings
+          .map(!_)
+          .getOrElse(
+            hideMissingWarnings
+              .map(!_)
+              .getOrElse(
+                showMissingWarnings.getOrElse(default.showMissingWarnings)
+              )
+          )
+        val shouldShowStyle = suppressStyleWarnings
+          .map(!_)
+          .getOrElse(
+            hideStyleWarnings
+              .map(!_)
               .getOrElse(showStyleWarnings.getOrElse(default.showStyleWarnings))
           )
-          CommonOptions(
-            showTimes,
-            verbose,
-            dryRun,
-            quiet,
-            shouldShowWarnings,
-            shouldShowMissing,
-            shouldShowStyle,
-            showUsageWarnings = showUnusedWarnings
-              .getOrElse(default.showStyleWarnings),
-            debug,
-            pluginsDir,
-            sortMessagesByLocation = sortMessages.getOrElse(false)
-          )
-        }
+        CommonOptions(
+          showTimes,
+          verbose,
+          dryRun,
+          quiet,
+          shouldShowWarnings,
+          shouldShowMissing,
+          shouldShowStyle,
+          showUsageWarnings = showUnusedWarnings
+            .getOrElse(default.showStyleWarnings),
+          debug,
+          pluginsDir,
+          sortMessagesByLocation = sortMessages.getOrElse(false)
+        )
       }
+    }
   }
 
   final def loadCommonOptions(
@@ -179,10 +186,13 @@ object CommandOptions {
           println(toPrettyString(options, 1, Some("Loaded common options:")))
         }
         Right(options)
-      case Left(failures) => Left(errors(
-          s"Failed to load options from $path because:\n" +
-            failures.prettyPrint(1)
-        ))
+      case Left(failures) =>
+        Left(
+          errors(
+            s"Failed to load options from $path because:\n" +
+              failures.prettyPrint(1)
+          )
+        )
     }
   }
 
@@ -192,7 +202,8 @@ object CommandOptions {
     require(args.nonEmpty)
     val result = CommandPlugin.loadCommandNamed(args.head)
     result match {
-      case Right(cmd) => cmd.parseOptions(args) match {
+      case Right(cmd) =>
+        cmd.parseOptions(args) match {
           case Some(options) => Right(options)
           case None          => Left(errors("Option parsing failed"))
         }
@@ -203,7 +214,7 @@ object CommandOptions {
   val commandOptionsParser: OParser[Unit, CommandOptions] = {
     val plugins = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]]()
     val list =
-      for  plugin <- plugins  yield { plugin.pluginName -> plugin.getOptions }
+      for plugin <- plugins yield { plugin.pluginName -> plugin.getOptions }
     val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
     OParser.sequence(parsers.head, parsers.tail*)
   }
