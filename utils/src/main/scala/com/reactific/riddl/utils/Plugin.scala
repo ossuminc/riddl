@@ -50,8 +50,10 @@ object Plugin {
           Files.isReadable(path),
           s"Candidate plugin $path is not a regular file"
         )
-
-        URI.create(s"jar::/${path.toAbsolutePath.toString}").toURL
+        val ssp = "file://" + path.toAbsolutePath.toString + "!/"
+        val uri = new URI("jar", ssp, "")
+        uri.toURL
+        // URI.create(s"jar:file:${path.toAbsolutePath.toString}").toURL
       }
       PluginClassLoader(urls, getClass.getClassLoader)
     } else { getClass.getClassLoader }
