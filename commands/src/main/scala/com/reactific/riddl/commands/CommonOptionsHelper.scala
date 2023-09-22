@@ -42,41 +42,61 @@ object CommonOptionsHelper {
     OParser.sequence(
       programName("riddlc"),
       head(blurb),
-      opt[Unit]('t', name = "show-times").optional()
+      opt[Unit]('t', name = "show-times")
+        .optional()
         .action((_, c) => c.copy(showTimes = true))
         .text("Show compilation phase execution times "),
-      opt[Unit]('d', "dry-run").optional()
+      opt[Unit]('d', "dry-run")
+        .optional()
         .action((_, c) => c.copy(dryRun = true))
         .text("go through the motions but don't write any changes"),
-      opt[Unit]('v', "verbose").optional()
+      opt[Unit]('v', "verbose")
+        .optional()
         .action((_, c) => c.copy(verbose = true))
         .text("Provide verbose output detailing riddlc's actions"),
-      opt[Unit]('D', "debug").optional().action((_, c) => c.copy(debug = true))
+      opt[Unit]('D', "debug")
+        .optional()
+        .action((_, c) => c.copy(debug = true))
         .text("Enable debug output. Only useful for riddlc developers"),
-      opt[Unit]('q', "quiet").optional().action((_, c) => c.copy(quiet = true))
+      opt[Unit]('q', "quiet")
+        .optional()
+        .action((_, c) => c.copy(quiet = true))
         .text("Do not print out any output, just do the requested command"),
-      opt[Unit]('w', name = "suppress-warnings").optional().action((_, c) =>
-        c.copy(
-          showWarnings = false,
-          showMissingWarnings = false,
-          showStyleWarnings = false,
-          showUsageWarnings = false
-        )
-      ).text("Suppress all warning messages so only errors are shown"),
-      opt[Unit]('m', name = "suppress-missing-warnings").optional()
+      opt[Unit]('a', "noANSIMessages")
+        .optional()
+        .action((_, c) => c.copy(noANSIMessages = true))
+        .text("Do not print messages with ANSI formatting"),
+      opt [Unit] ('w', name = "suppress-warnings")
+          .optional()
+          .action((_, c) =>
+            c.copy(
+              showWarnings = false,
+              showMissingWarnings = false,
+              showStyleWarnings = false,
+              showUsageWarnings = false
+            )
+          )
+          .text("Suppress all warning messages so only errors are shown"),
+      opt[Unit]('m', name = "suppress-missing-warnings")
+        .optional()
         .action((_, c) => c.copy(showMissingWarnings = false))
         .text("Show warnings about things that are missing"),
-      opt[Unit]('s', name = "suppress-style-warnings").optional()
+      opt[Unit]('s', name = "suppress-style-warnings")
+        .optional()
         .action((_, c) => c.copy(showStyleWarnings = false))
         .text("Show warnings about questionable input style. "),
-      opt[Unit]('u', name = "suppress-unused-warnings").optional()
+      opt[Unit]('u', name = "suppress-unused-warnings")
+        .optional()
         .action((_, c) => c.copy(showUsageWarnings = false))
         .text("Show warnings about questionable input style. "),
-      opt[File]('P', name = "plugins-dir").optional()
+      opt[File]('P', name = "plugins-dir")
+        .optional()
         .action((file, c) => c.copy(pluginsDir = Some(file.toPath)))
         .text("Load riddlc command extension plugins from this directory."),
-      opt[Boolean]('S', name = "sort-warnings-by-location").optional()
-        .action((_, c) => c.copy(sortMessagesByLocation = true)).text(
+      opt[Boolean]('S', name = "sort-warnings-by-location")
+        .optional()
+        .action((_, c) => c.copy(sortMessagesByLocation = true))
+        .text(
           "Print all messages sorted by the file name and line number in which they occur."
         )
     )

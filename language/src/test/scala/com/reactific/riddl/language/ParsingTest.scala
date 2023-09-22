@@ -31,7 +31,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     parser: P[?] => P[T],
     extract: T => U
   ): Either[Messages, (U, RiddlParserInput)] = {
-    expect(parser).map(x => extract(x._1) -> x._2)
+    expect[T](parser).map(x => extract(x._1) -> x._2)
   }
 
   protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {

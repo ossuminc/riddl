@@ -20,7 +20,10 @@ class ValidationTest extends ParsingTest {
     "produce a correct string" in {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
-      msg.format mustBe s"Warning: empty(1:2): the_message"
+      val content = msg.format
+      val expected = """[33m[1m[4mWarning: unknown(1:2):[0m
+                       |the_message""".stripMargin
+      content mustBe expected
     }
     "compare based on locations" in {
       val v1 = Message(At(1, 2, "the_source"), "the_message", Warning)
@@ -66,7 +69,7 @@ class ValidationTest extends ParsingTest {
       val incls = sharedRoot.domains.head.includes
       incls mustNot be(empty)
       incls.head.contents mustNot be(empty)
-      incls.head.contents.head.getClass mustBe(classOf[Application])
+      incls.head.contents.head.getClass mustBe (classOf[Application])
       incls(1).contents.head.getClass mustBe classOf[Context]
     }
     "have terms and author refs in applications" in {

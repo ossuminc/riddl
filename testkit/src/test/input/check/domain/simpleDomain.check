@@ -1,3 +1,4 @@
-Usage: simpleDomain.riddl(1:8): Models without any streaming data will exhibit minimal effect:
+Usage: testkit/src/test/input/check/domain/simpleDomain.riddl(1:8):
+ Models without any streaming data will exhibit minimal effect:
  domain foo by author foo.Nada is {
         ^

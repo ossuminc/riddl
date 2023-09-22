@@ -24,7 +24,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     with Matchers {
   push(input)
 
-  def parse[T <: Definition, U <: RiddlNode](
+  def parse[T <: RiddlNode, U <: RiddlNode](
     parser: P[?] => P[T],
     extract: T => U
   ): Either[Messages, (U, RiddlParserInput)] = {
@@ -101,7 +101,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 /** Base class for tests that need parsing help */
 class ParsingTest extends ParsingTestBase {
 
-  def parse[T <: Definition, U <: RiddlNode](
+  def parse[T <: RiddlNode, U <: RiddlNode](
     input: RiddlParserInput,
     parser: P[?] => P[T],
     extraction: T => U
@@ -117,7 +117,7 @@ class ParsingTest extends ParsingTestBase {
     tp.parseTopLevelDomains
   }
 
-  def parseTopLevelDomain[TO <: RootDefinition](
+  def parseTopLevelDomain[TO <: RiddlNode](
     input: RiddlParserInput,
     extract: RootContainer => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {

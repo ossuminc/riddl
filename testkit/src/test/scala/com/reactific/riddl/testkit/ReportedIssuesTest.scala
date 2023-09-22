@@ -71,9 +71,10 @@ class ReportedIssuesTest extends ValidatingTest {
       checkOne("435.riddl") {
         case Left(messages) =>
           info(messages.format)
-          val msgStrs = messages.map(_.format)
-          msgStrs.exists(_.contains("could not translate")) mustBe true
-          msgStrs.exists(_.contains("syntax")) mustBe true
+          messages.size must be(1)
+          val message = messages.head.format
+          message must include("could not translate")
+
         case Right(result) =>
           info(result.messages.format)
           fail("Should have produced a syntax error on 'contest'")

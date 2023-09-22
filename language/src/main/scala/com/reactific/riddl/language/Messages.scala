@@ -118,19 +118,23 @@ object Messages {
       else comparison
     }
 
-    def highlight(s: String): String = {
-      s"${kind match {
-          case Info           => s"${BLUE}"
-          case StyleWarning   => s"${YELLOW}"
-          case MissingWarning => s"${YELLOW}${UNDERLINED}"
-          case UsageWarning   => s"${YELLOW}${BOLD}"
-          case Warning        => s"${YELLOW}${BOLD}${UNDERLINED}"
-          case Error          => s"${RED}${BOLD}"
-          case SevereError    => s"${RED_B}${BLACK}${BOLD}"
-        }}$s${RESET}"
+    private def highlight(s: String, noHighlighting: Boolean = false): String = {
+      if noHighlighting then s
+      else
+        s"${kind match {
+            case Info           => s"${BLUE}"
+            case StyleWarning   => s"${YELLOW}"
+            case MissingWarning => s"${YELLOW}${UNDERLINED}"
+            case UsageWarning   => s"${YELLOW}${BOLD}"
+            case Warning        => s"${YELLOW}${BOLD}${UNDERLINED}"
+            case Error          => s"${RED}${BOLD}"
+            case SevereError    => s"${RED_B}${BLACK}${BOLD}"
+          }}$s${RESET}"
     }
 
-    def format: String = {
+    def format: String = { format(false) }
+
+    def format(noHighlighting: Boolean = false): String = {
       val ctxt =
         if context.nonEmpty then { s"${nl}Context: $context" }
         else ""
@@ -142,10 +146,10 @@ object Messages {
         case SourceParserInput(source, _) => source.descr
         case StringParserInput(_, origin) => origin
         case URLParserInput(url)          => url.toString
-        case _                            => "unknown source"
+        case _                            => "unknown"
       }
       val sourceLine = loc.toShort
-      val headLine = s"${highlight(s"$kind: $source$sourceLine:")}$nl"
+      val headLine = s"${highlight(s"$kind: $source$sourceLine:", noHighlighting)}$nl"
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
       if loc.isEmpty || source.isEmpty || errorLine.isEmpty then {
         s"$headLine$message$ctxt"

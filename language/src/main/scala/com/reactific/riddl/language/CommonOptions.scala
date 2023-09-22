@@ -19,7 +19,8 @@ case class CommonOptions(
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
   sortMessagesByLocation: Boolean = false,
-  groupMessagesByKind: Boolean = true
+  groupMessagesByKind: Boolean = true,
+  noANSIMessages: Boolean = false,
 )
 
 object CommonOptions {
