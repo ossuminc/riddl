@@ -30,7 +30,7 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle bad URL" in {
-      val badURL = new java.net.URL("https://incredible.lightness.of.being:8900000/@@@")
+      val badURL = new java.net.URI("https://incredible.lightness.of.being:8900000/@@@").toURL
       parseDomainDefinition(
         RiddlParserInput(badURL),
         identity
@@ -43,7 +43,7 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle non existent URL" in {
-      val emptyURL = new java.net.URL(
+      val emptyURL = new java.net.URI(
         "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
       )
       parseDomainDefinition(
@@ -57,29 +57,20 @@ class IncludeAndImportTest extends ParsingTest {
           errors.exists(_.format.contains("port out of range: 8900000"))
       }
     }
-    "handle existing URL" in {
+    "handle existing URI" in {
       import sys.process._
-      val url: String = try {
-        val branchName = "git branch --show-current".!!.trim
-        s"https://raw.githubusercontent.com/reactific/riddl/$branchName/"
-          + "testkit/src/test/input/domains/simpleDomain.riddl"
-      } catch {
-        case NonFatal(x) =>
-          ""
+      val cwd = System.getProperty("user.dir", ".")
+      val urlStr: String = s"file:///${cwd}/testkit/src/test/input/domains/simpleDomain.riddl"
+      val uri = java.net.URI(urlStr)
+      parseDomainDefinition(
+        RiddlParserInput(uri),
+        identity
+      ) match {
+        case Right(_) =>
+          succeed
+        case Left(errors) =>
+          fail(errors.format)
       }
-      if url.isEmpty then
-        cancel("exception running git")
-      else
-        val fullURL = java.net.URI(url).toURL
-        parseDomainDefinition(
-          RiddlParserInput(fullURL),
-          identity
-        ) match {
-          case Right(_) =>
-            succeed
-          case Left(errors) =>
-            fail(errors.format)
-        }
     }
     "handle inclusions into domain" in {
       val rc = checkFile("Domain Includes", "domainIncludes.riddl")
