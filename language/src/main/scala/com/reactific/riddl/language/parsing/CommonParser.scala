@@ -12,7 +12,7 @@ import com.reactific.riddl.language.ast.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
-import java.net.URL
+import java.net.URI
 import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
 

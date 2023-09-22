@@ -14,6 +14,7 @@ import scala.jdk.StreamConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.reflect.ClassTag
 import scala.reflect.classTag
+import java.net.URI
 
 object Plugin {
 
@@ -49,7 +50,10 @@ object Plugin {
           Files.isReadable(path),
           s"Candidate plugin $path is not a regular file"
         )
-        new URL("jar", "", -1, path.toAbsolutePath.toString)
+        val ssp = "file://" + path.toAbsolutePath.toString + "!/"
+        val uri = new URI("jar", ssp, "")
+        uri.toURL
+        // URI.create(s"jar:file:${path.toAbsolutePath.toString}").toURL
       }
       PluginClassLoader(urls, getClass.getClassLoader)
     } else { getClass.getClassLoader }

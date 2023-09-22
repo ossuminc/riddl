@@ -3,18 +3,19 @@ import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
 import sbt.Keys.organizationName
-import sbt.Keys.*
-import sbt.*
+import sbt.Keys._
+import sbt._
 import sbt.io.Path.allSubpaths
 import sbtbuildinfo.BuildInfoKey
 import sbtbuildinfo.BuildInfoKeys.{buildInfoKeys, buildInfoObject, buildInfoPackage, buildInfoUsePackageAsPath}
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToJson, ToMap}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoOptions
-import scoverage.ScoverageKeys.*
+import scoverage.ScoverageKeys._
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 
+import java.net.URI
 import java.util.Calendar
 import scala.collection.Seq
 
@@ -58,14 +59,13 @@ object C {
       ThisBuild / maintainer := "reid@ossum.biz",
       ThisBuild / maintainer := "reid@ossum.biz",
       ThisBuild / organization := "com.reactific",
-      ThisBuild / organizationHomepage :=
-        Some(new URL("https://reactific.com/")),
+      ThisBuild / organizationHomepage := Some(URI.create("https://reactific.com/").toURL),
       ThisBuild / organizationName := "Ossum Inc.",
       ThisBuild / startYear := Some(2019),
       ThisBuild / licenses +=
         (
           "Apache-2.0",
-          new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
+          URI.create("https://www.apache.org/licenses/LICENSE-2.0.txt").toURL
         ),
       ThisBuild / versionScheme := Option("early-semver"),
       ThisBuild / dynverVTagPrefix := false,
@@ -233,7 +233,7 @@ object C {
           |architecture practices.""".stripMargin,
       licenses := List(
         "Apache License, Version 2.0" ->
-          new URL("https://www.apache.org/licenses/LICENSE-2.0")
+          URI.create("https://www.apache.org/licenses/LICENSE-2.0").toURL
       ),
       homepage := Some(url("https://riddl.tech")),
 

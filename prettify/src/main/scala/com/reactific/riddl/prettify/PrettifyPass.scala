@@ -351,7 +351,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     if !state.options.singleFile then {
       include.source match {
         case Some(path: String) if path.startsWith("http") =>
-          val url = new java.net.URL(path)
+          val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")
           val outPath = state.outPathFor(url)
           state.pushFile(RiddlFileEmitter(outPath))

@@ -25,9 +25,9 @@ object HugoPass extends PassInfo {
   val name: String = "hugo"
   val geekDoc_version = "v0.40.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
-  val geekDoc_url = new URL(
+  val geekDoc_url = java.net.URI.create(
     s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
-  )
+  ).toURL
 }
 
 case class HugoOutput(
@@ -326,7 +326,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
        |[author]
        |    name = "${auth.name.s}"
        |    email = "${auth.email.s}"
-       |    homepage = "${auth.url.getOrElse(new URL("https://example.org/"))}"
+       |    homepage = "${auth.url.getOrElse(java.net.URI.create("https://example.org/").toURL)}"
        |
        |# Required to get well formatted code blocks
        |pygmentsUseClasses = true

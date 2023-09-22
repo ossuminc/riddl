@@ -52,7 +52,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   val examplesRepo: String =
     "https://github.com/reactific/riddl-examples/archive/refs/heads/main.zip"
-  val examplesURL: URL = new URL(examplesRepo)
+  val examplesURL: URL =  java.net.URI.create(examplesRepo).toURL
   val tmpDir: Path = Files.createTempDirectory("riddl-examples")
   val examplesPath: Path = Path.of(s"riddl-examples-main/src/riddl")
   val srcDir: Path = tmpDir.resolve(examplesPath)
