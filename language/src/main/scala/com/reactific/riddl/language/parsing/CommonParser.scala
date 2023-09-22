@@ -43,7 +43,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[Include[K]] = {
-    P(Keywords.include ~/ literalString).map { (str: LiteralString) =>
+    P(Keywords.include ~/ literalString)./.map { (str: LiteralString) =>
       doInclude[K](str)(parser)
     }
   }
@@ -219,20 +219,10 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def httpUrl[u: P]: P[java.net.URL] = {
     P(
       "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
-    ).!.map(new URL(_))
+    ).!.map(java.net.URI(_).toURL)
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)
-      .map(tpl => (Term.apply _).tupled(tpl))
-  }
-
-  def errorOnInvalidClose[u: P](kind: String): P[Line] = {
-    P(
-      invalidCloseLine
-    ).map { line =>
-      error(line.loc, s"Unexpected syntax when a $kind definition was expected", "")
-      line
-    }
+    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl => (Term.apply _).tupled(tpl))
   }
 }

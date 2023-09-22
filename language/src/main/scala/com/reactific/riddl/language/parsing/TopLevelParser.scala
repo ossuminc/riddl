@@ -17,7 +17,7 @@ import java.nio.file.Path
 
 /** Top level parsing rules */
 class TopLevelParser(rpi: RiddlParserInput)
-  extends DomainParser
+    extends DomainParser
     with AdaptorParser
     with ApplicationParser
     with ContextParser
@@ -37,7 +37,7 @@ class TopLevelParser(rpi: RiddlParserInput)
   push(rpi)
 
   def root[u: P]: P[Seq[RootDefinition]] = {
-    P(Start ~ (domain | author).rep(0) ~ End).map { contents =>
+    P(Start ~ (domain | author)./.rep(1) ~ End).map { contents =>
       pop
       contents
     }
@@ -50,9 +50,8 @@ object TopLevelParser {
     input: RiddlParserInput
   ): Either[Messages, RootContainer] = {
     val tlp = new TopLevelParser(input)
-    tlp.expectMultiple("test case", tlp.root(_)).map {
-      case (defs: Seq[RootDefinition], rpi) =>
-        RootContainer(defs, Seq(rpi))
+    tlp.expectMultiple("test case", tlp.root(_)).map { case (defs: Seq[RootDefinition], rpi) =>
+      RootContainer(defs, Seq(rpi))
     }
   }
 

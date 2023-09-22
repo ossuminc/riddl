@@ -53,8 +53,7 @@ private[parsing] trait ApplicationParser {
   private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
     P(
       group | handler(StatementsSet.ApplicationStatements) | function |
-        inlet | outlet | term | typeDef |
-        constant | applicationInclude | errorOnInvalidClose(Keywords.application)
+        inlet | outlet | term | typeDef | constant | applicationInclude 
     )
   }
 
@@ -66,8 +65,12 @@ private[parsing] trait ApplicationParser {
     include[ApplicationDefinition, u](applicationDefinitions(_))
   }
 
-  private def emptyApplication[
-    u: P
+  private def emptyApplication[u: P
+  ]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
+    undefined((Seq.empty[ApplicationOption], Seq.empty[ApplicationDefinition]))
+  }
+  
+  private def applicationBody[u: P
   ]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
     undefined((Seq.empty[ApplicationOption], Seq.empty[ApplicationDefinition]))
   }

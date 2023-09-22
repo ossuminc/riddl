@@ -34,12 +34,14 @@ private[parsing] trait AdaptorParser {
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
-      undefined(Seq.empty[AdaptorDefinition]) |
       (handler(StatementsSet.AdaptorStatements) | function | inlet |
-        outlet | adaptorInclude | term | constant | errorOnInvalidClose(Keywords.adaptor)
-      ).rep(1)
-
+        outlet | adaptorInclude | term | constant
+      )./.rep(1)
     )
+  }
+
+  private def adaptorBody[u:P]: P[Seq[AdaptorDefinition]] = {
+    undefined(Seq.empty[AdaptorDefinition])./ | adaptorDefinitions./
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
@@ -56,7 +58,7 @@ private[parsing] trait AdaptorParser {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ authorRefs ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
-        adaptorDefinitions ~ close ~ briefly ~ description
+        adaptorBody ~ close ~ briefly ~ description
     ).map {
       case (
             loc,

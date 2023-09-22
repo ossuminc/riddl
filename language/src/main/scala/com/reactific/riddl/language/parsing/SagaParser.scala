@@ -41,12 +41,10 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
-    P(sagaStep | inlet | outlet | function | term | sagaInclude |
-      errorOnInvalidClose(Keywords.saga)).rep(2)
+    P(sagaStep | inlet | outlet | function | term | sagaInclude)./.rep(2)
   }
 
   private type SagaBodyType = (
-    Seq[SagaOption],
     Option[Aggregation],
     Option[Aggregation],
     Seq[SagaDefinition]
@@ -54,22 +52,22 @@ private[parsing] trait SagaParser {
 
   private def sagaBody[u: P]: P[SagaBodyType] = {
     P(
-      undefined(
-        (Seq.empty[SagaOption], None, None, Seq.empty[SagaDefinition])
-      ) | (sagaOptions ~ input.? ~ output.? ~ sagaDefinitions)
+      undefined((None, None, Seq.empty[SagaDefinition])) |
+        (input.? ~ output.? ~ sagaDefinitions)
     )
   }
 
   def saga[u: P]: P[Saga] = {
     P(
       location ~ Keywords.saga ~ identifier ~ authorRefs ~ is ~ open ~
-        sagaBody ~ close ~ briefly ~ description
+        sagaOptions ~ sagaBody ~ close ~ briefly ~ description
     ).map {
       case (
             location,
             identifier,
             authors,
-            (options, input, output, definitions),
+            options,
+            (input, output, definitions),
             briefly,
             description
           ) =>

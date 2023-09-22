@@ -192,7 +192,7 @@ trait Statements {
   }
 
   case class StopStatement(
-    loc: At,
+    loc: At
   ) extends Statement {
     override def kind: String = "Stop Statement"
     def format: String = "scall ${func.format}"

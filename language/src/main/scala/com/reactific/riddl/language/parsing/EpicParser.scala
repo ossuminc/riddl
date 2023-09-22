@@ -144,7 +144,6 @@ private[parsing] trait EpicParser {
   }
 
   type EpicBody = (
-    Seq[EpicOption],
     Option[UserStory],
     Seq[java.net.URL],
     Seq[EpicDefinition]
@@ -154,27 +153,27 @@ private[parsing] trait EpicParser {
     P(
       undefined(
         (
-          Seq.empty[EpicOption],
           Option.empty[UserStory],
           Seq.empty[java.net.URL],
           Seq.empty[EpicDefinition]
         )
-      ) |
-        (epicOptions ~ userStory.? ~ shownBy ~ epicDefinitions)
-    )./
+      )./ |
+        (userStory.? ~ shownBy ~ epicDefinitions)./
+    )
   }
 
   def epic[u: P]: P[Epic] = {
     P(
       location ~ Keywords.epic ~/ identifier ~ authorRefs ~ is ~ open ~
-        epicBody ~ close ~
+        epicOptions ~ epicBody ~ close ~
         briefly ~ description
     ).map {
       case (
             loc,
             id,
             authors,
-            (options, userStory, shownBy, definitions),
+            options,
+            (userStory, shownBy, definitions),
             briefly,
             description
           ) =>

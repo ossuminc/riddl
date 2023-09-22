@@ -58,7 +58,7 @@ class TopLevelParserTest extends ParsingTestBase {
           List(
             StringParserInput(
               """domain foo is {
-              |
+              |  ???
               |}
               |""".stripMargin,
               "simpleDomain.riddl"
@@ -71,8 +71,27 @@ class TopLevelParserTest extends ParsingTestBase {
     "parse empty String" in {
       val expected =
         RootContainer(List(), List(StringParserInput("", "string")))
-      TopLevelParser.parse("") mustBe Right(expected)
+      TopLevelParser.parse("") match {
+        case Right(expected) =>
+          fail("Should have failed excpecting an author or domain")
+        case Left(messages) =>
+          messages.length mustBe(1)
+          val msg = messages.head
+          msg.message must include("Expected one of (\"author\" | \"domain\"")
+      }
+    }
+
+    "handle garbage" in {
+      val expected =
+        RootContainer(List(), List(StringParserInput("", "string")))
+      TopLevelParser.parse(" pweio afhj") match {
+        case Right(expected) =>
+          fail("Should have failed excpecting an author or domain")
+        case Left(messages) =>
+          messages.length mustBe(1)
+          val msg = messages.head
+          msg.message must include("Expected one of (\"author\" | \"domain\"")
+      }
     }
   }
-
 }

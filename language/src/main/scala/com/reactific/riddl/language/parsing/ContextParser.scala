@@ -57,21 +57,23 @@ private[parsing] trait ContextParser {
   }
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
     P(
-      undefined(Seq.empty[ContextDefinition]) |
-        (typeDef | handler(StatementsSet.ContextStatements) | entity |
-          adaptor | function | saga | streamlet | projector | repository |
-          inlet | outlet | connector | term | replica |
-          contextInclude | errorOnInvalidClose(Keywords.context)
-        ).rep(0)
+      typeDef | handler(StatementsSet.ContextStatements) | entity |
+        adaptor | function | saga | streamlet | projector | repository |
+        inlet | outlet | connector | term | replica | contextInclude
+    )./.rep(1)
+  }
+
+  private def contextBody[u: P]: P[Seq[ContextDefinition]] = {
+    P(
+      undefined(Seq.empty[ContextDefinition])./ | contextDefinitions./
     )
   }
 
   def context[u: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ authorRefs ~ is ~ open ~
-        (undefined(Seq.empty[ContextOption] -> Seq.empty[ContextDefinition]) |
-          (contextOptions ~ contextDefinitions)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, authorRefs, (options, definitions), briefly, desc) =>
+        contextOptions ~ contextBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, authorRefs, options, definitions, briefly, desc) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))

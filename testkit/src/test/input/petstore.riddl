@@ -1,8 +1,11 @@
 domain PetStore is {
   context stock is {
+    ???
   }
   context register is {
+    ???
   }
   context payment is {
+    ???
   }
 }

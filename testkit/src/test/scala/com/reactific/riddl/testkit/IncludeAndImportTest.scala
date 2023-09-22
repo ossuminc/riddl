@@ -9,6 +9,8 @@ package com.reactific.riddl.testkit
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.{RiddlParserInput, StringParserInput}
 
+import scala.util.control.NonFatal
+
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
 
@@ -42,7 +44,8 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle non existent URL" in {
       val emptyURL = new java.net.URL(
-        "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl")
+        "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
+      )
       parseDomainDefinition(
         RiddlParserInput(emptyURL),
         identity
@@ -55,17 +58,28 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle existing URL" in {
-      val fullURL = new java.net.URL(
-        "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain.riddl")
-      parseDomainDefinition(
-        RiddlParserInput(fullURL),
-        identity
-      ) match {
-        case Right(_) =>
-          succeed
-        case Left(errors) =>
-          fail(errors.format)
+      import sys.process._
+      val url: String = try {
+        val branchName = "git branch --show-current".!!.trim
+        s"https://raw.githubusercontent.com/reactific/riddl/$branchName/"
+          + "testkit/src/test/input/domains/simpleDomain.riddl"
+      } catch {
+        case NonFatal(x) =>
+          ""
       }
+      if url.isEmpty then
+        cancel("exception running git")
+      else
+        val fullURL = java.net.URI(url).toURL
+        parseDomainDefinition(
+          RiddlParserInput(fullURL),
+          identity
+        ) match {
+          case Right(_) =>
+            succeed
+          case Left(errors) =>
+            fail(errors.format)
+        }
     }
     "handle inclusions into domain" in {
       val rc = checkFile("Domain Includes", "domainIncludes.riddl")
@@ -74,13 +88,13 @@ class IncludeAndImportTest extends ParsingTest {
       rc.domains.head.includes mustNot be(empty)
       rc.domains.head.includes.head.contents mustNot be(empty)
       val actual = rc.domains.head.includes.head.contents.head
-      val expected= Type(
+      val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         Strng((1, 13, inc)),
         None
       )
-      actual == expected mustBe(true)
+      actual == expected mustBe (true)
     }
     "handle inclusions into contexts" in {
       val rc = checkFile("Context Includes", "contextIncludes.riddl")
@@ -96,7 +110,7 @@ class IncludeAndImportTest extends ParsingTest {
         Strng((1, 12, inc)),
         None
       )
-      actual mustBe( expected )
+      actual mustBe (expected)
     }
   }
 
