@@ -14,8 +14,8 @@ import Terminals.*
 /** Unit Tests For FunctionParser */
 private[parsing] trait FunctionParser {
 
-  this: ReferenceParser with TypeParser with StatementParser with CommonParser => 
-    
+  this: ReferenceParser with TypeParser with StatementParser with CommonParser =>
+
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
@@ -28,17 +28,11 @@ private[parsing] trait FunctionParser {
   }
 
   def input[u: P]: P[Aggregation] = {
-    P(Keywords.requires ~ Punctuation.colon.? ~ aggregation)
+    P(Keywords.requires ~ Punctuation.colon.? ~ aggregation)./
   }
 
   def output[u: P]: P[Aggregation] = {
-    P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)
-  }
-
-  private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
-    P(
-      typeDef | function | term | functionInclude
-    ).rep(0)
+    P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)./
   }
 
   private def statementBlock[u: P]: P[Seq[Statement]] = {
@@ -47,9 +41,15 @@ private[parsing] trait FunctionParser {
     )
   }
 
+  private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
+    P(
+      typeDef | function | term | functionInclude
+    )./.rep(0)
+  }
+
+
   private def functionBody[u: P]: P[
     (
-      Seq[FunctionOption],
       Option[Aggregation],
       Option[Aggregation],
       Seq[FunctionDefinition],
@@ -57,8 +57,8 @@ private[parsing] trait FunctionParser {
     )
   ] = {
     P(undefined(None).map { _ =>
-      (Seq.empty[FunctionOption], None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
-    } | (functionOptions ~ input.? ~ output.? ~ functionDefinitions ~ statementBlock))
+      (None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
+    } | (input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 
   /** Parses function literals, i.e.
@@ -74,13 +74,14 @@ private[parsing] trait FunctionParser {
   def function[u: P]: P[Function] = {
     P(
       location ~ Keywords.function ~/ identifier ~ authorRefs ~ is ~ open ~
-        functionBody ~ close ~ briefly ~ description
-    ).map {
+        functionOptions ~ functionBody ~ close ~ briefly ~ description
+    )./.map {
       case (
             loc,
             id,
             authors,
-            (options, input, output, definitions, statements),
+            options,
+            (input, output, definitions, statements),
             briefly,
             description
           ) =>

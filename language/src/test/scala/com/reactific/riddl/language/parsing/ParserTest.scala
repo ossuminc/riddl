@@ -29,7 +29,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           errors must not be empty
           errors.head.message mustBe
-            "Expected one of (end-of-input | \"author\" | \"domain\")"
+            "Expected one of (\"author\" | \"domain\")"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
@@ -43,7 +43,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow an empty funky-name domain" in {
-      val input = RiddlParserInput("domain 'foo-fah|roo' is { }")
+      val input = RiddlParserInput("domain 'foo-fah|roo' is { ??? }")
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -55,7 +55,7 @@ class ParserTest extends ParsingTest {
     }
     "allow nested domains" in {
       val input = RiddlParserInput("""domain foo is {
-                                     |domain bar is { }
+                                     |domain bar is { ??? }
                                      |}
                                      |""".stripMargin)
       parseTopLevelDomains(input) match {
@@ -73,8 +73,8 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow multiple domains" in {
-      val input = RiddlParserInput("""domain foo is { }
-                                     |domain bar is { }
+      val input = RiddlParserInput("""domain foo is { ??? }
+                                     |domain bar is { ??? }
                                      |""".stripMargin)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
@@ -120,7 +120,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "allow context definitions in domains" in {
-      val input = RiddlParserInput("domain foo is { context bar is { } }")
+      val input = RiddlParserInput("domain foo is { context bar is { ??? } }")
       parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -132,7 +132,7 @@ class ParserTest extends ParsingTest {
     }
     "allow options on context definitions" in {
       val input = RiddlParserInput(
-        "context bar is { options (service, wrapper, gateway ) }"
+        "context bar is { options (service, wrapper, gateway ) ??? }"
       )
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
@@ -300,7 +300,7 @@ class ParserTest extends ParsingTest {
                     |function foo is {
                     |  requires {b:Boolean}
                     |  returns {i:Integer}
-                    |  body ???
+                    |  body { ??? }
                     |}
                     |""".stripMargin
 

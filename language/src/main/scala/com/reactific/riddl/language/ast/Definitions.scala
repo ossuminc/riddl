@@ -476,6 +476,7 @@ trait Definitions {
   ) extends Definition
       with StateDefinition
       with ProcessorDefinition
+      with ProjectorDefinition
       with FunctionDefinition
       with DomainDefinition {
     override def contents: Seq[TypeDefinition] = {

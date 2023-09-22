@@ -16,7 +16,7 @@ class EntityValidatorTest extends ValidatingTest {
     "handle a variety of options" in {
       val input = """entity WithOptions is {
                     | options(fsm, mq, aggregate, transient, available)
-                    |
+                    | ???
                     |}
                     |""".stripMargin
       parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {

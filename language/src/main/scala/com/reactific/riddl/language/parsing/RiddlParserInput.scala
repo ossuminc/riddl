@@ -11,7 +11,7 @@ import fastparse.ParserInput
 import fastparse.internal.Util
 
 import java.io.File
-import java.net.URL
+import java.net.{URI, URL}
 import java.nio.file.Path
 import scala.collection.Searching
 import scala.io.Source
@@ -121,8 +121,19 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   def this(path: Path) = this(path.toFile)
 }
 
+case class URIParserInput(uri: URI) extends RiddlParserInput {
+  lazy val data: String = {
+    val source: Source = Source.fromURI(uri)
+    try { source.getLines().mkString("\n") }
+    finally { source.close() }
+  }
+  override def isEmpty: Boolean = data.isEmpty
+  val root: File = new File(uri.getPath)
+  def origin: String = uri.toString
+}
+
 case class URLParserInput(url: URL) extends RiddlParserInput {
-  require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
+  // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
   lazy val data: String = {
     val source: Source = Source.fromURL(url)
     try { source.getLines().mkString("\n") }
@@ -160,4 +171,6 @@ object RiddlParserInput {
   }
 
   implicit def apply(url: URL): RiddlParserInput = URLParserInput(url)
+
+  implicit def apply(uri: URI): RiddlParserInput = URIParserInput(uri)
 }

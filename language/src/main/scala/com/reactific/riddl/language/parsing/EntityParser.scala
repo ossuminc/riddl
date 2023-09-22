@@ -86,28 +86,21 @@ private[parsing] trait EntityParser {
   private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
     P(
       handler(StatementsSet.EntityStatements) | function | invariant |
-        typeDef | state | entityInclude | inlet | outlet | term | constant |
-        errorOnInvalidClose(Keywords.entity)
-    ).rep
+        typeDef | state | entityInclude | inlet | outlet | term | constant
+    )./.rep(1)
   }
 
-  private type EntityBody = (Option[Seq[EntityOption]], Seq[EntityDefinition])
-
-  private def noEntityBody[u: P]: P[EntityBody] = {
-    P(undefined(Option.empty[Seq[EntityOption]] -> Seq.empty[EntityDefinition]))
-  }
-
-  private def entityBody[u: P]: P[EntityBody] = {
+  private def entityBody[u: P]: P[Seq[EntityDefinition]] = {
     P(
-      entityOptions.? ~ ( undefined(Seq.empty[EntityDefinition]) | entityDefinitions)
+      undefined(Seq.empty[EntityDefinition])./ | entityDefinitions./ 
     )
   }
 
   def entity[u: P]: P[Entity] = {
     P(
       location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
-        (noEntityBody | entityBody) ~ close ~ briefly ~ description
-    ).map { case (loc, id, authorRefs, (options, entityDefs), briefly, desc) =>
+        entityOptions ~ entityBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, authorRefs, options, entityDefs, briefly, desc) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -126,7 +119,7 @@ private[parsing] trait EntityParser {
       Entity(
         loc,
         id,
-        options.fold(Seq.empty[EntityOption])(identity),
+        options,
         states,
         types,
         constants,

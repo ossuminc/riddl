@@ -2,8 +2,8 @@ Missing: testkit/src/test/input/check/t0001/main.riddl(1:1):
  Domain 'foo' in Root should have content:
  domain foo is {
  ^
-Missing: testkit/src/test/input/check/t0001/main.riddl(2:16):
- For Domain 'foo', description at main.riddl(2:16) is declared but empty
+Missing: testkit/src/test/input/check/t0001/main.riddl(3:16):
+ For Domain 'foo', description at main.riddl(3:16) is declared but empty
 Missing: testkit/src/test/input/check/t0001/main.riddl(1:1):
  Vital definitions should have an author reference:
  domain foo is {
