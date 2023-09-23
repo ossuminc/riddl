@@ -80,5 +80,13 @@ class ReportedIssuesTest extends ValidatingTest {
           fail("Should have produced a syntax error on 'contest'")
       }
     }
+    "406" in {
+      checkOne("406.riddl") {
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(result) =>
+          succeed
+      }
+    }
   }
 }

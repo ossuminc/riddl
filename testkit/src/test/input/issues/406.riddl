@@ -1,0 +1,27 @@
+domain Example is {
+  context ExampleContext is {
+	  command ToBar is {}
+    command ToFoo is {}
+	  type Foo is {
+	    bar: String
+	   }
+    entity FooEntity is {
+      record FooExampleState is { foo: Foo }
+	    state FooExample of FooExampleState is {
+	      handler HandleFoo is {
+	        on command ToBar {
+		        morph entity FooEntity to state BarExampleState with record BarExampleState
+          }
+        }
+	    }
+      record BarExampleState is { bar: String }
+	    state BarExample of BarExampleState is {
+	      handler HandleFoo is {
+	        on command ToFoo {
+		        morph entity FooEntity to state FooExample with record FooExampleState
+		      }
+	      }
+	    }
+	  }
+  }
+}
