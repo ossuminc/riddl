@@ -10,6 +10,7 @@ import java.util.concurrent.CancellationException
 import scala.concurrent.*
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 final class Interrupt extends (() => Boolean) {
 
   // We need a state-machine to track the progress.
@@ -45,10 +46,10 @@ final class Interrupt extends (() => Boolean) {
   // allows to not run the logic at all if already cancelled.
   private[this] def enter(): Boolean = this.synchronized {
     state match {
-      case _: this.type => false
       case NotStarted =>
         state = Started(Thread.currentThread)
         true
+      case _: this.type => false
     }
   }
 
@@ -67,14 +68,18 @@ final class Interrupt extends (() => Boolean) {
 
   def ready: Boolean = thread.nonEmpty
 
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def cancel: Unit = {
-    if thread.nonEmpty then thread.get.interrupt()
-    else throw new IllegalStateException("Thread not obtained yet.")
+    if thread.nonEmpty then thread.map(_.interrupt())
+    else {
+      throw new IllegalStateException("Thread not obtained yet.")
+    }
   }
 
   /** Executes the supplied block of code and returns the result. Throws
     * CancellationException if the block was interrupted.
     */
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def interruptibly[T](block: => T): T = {
     if enter() then {
       thread = Some(Thread.currentThread())
@@ -87,7 +92,9 @@ final class Interrupt extends (() => Boolean) {
         // If we were interrupted and flag was not cleared
         if !exit() && Thread.interrupted() then { () }
       }
-    } else { throw new CancellationException() }
+    } else {
+      throw new CancellationException()
+    }
   }
 }
 

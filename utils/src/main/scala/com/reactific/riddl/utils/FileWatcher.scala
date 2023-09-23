@@ -70,6 +70,7 @@ object FileWatcher {
     val watchService: WatchService = FileSystems.getDefault.newWatchService()
     try {
       registerRecursively(path, watchService)
+      @SuppressWarnings(Array("org.wartremover.warts.Var", "org.wartremover.warts.Null"))
       var saveKey: WatchKey = null
       while (saveKey == null || saveKey.isValid) && (Instant.now().toEpochMilli < deadline) do {
         watchService.take() match {

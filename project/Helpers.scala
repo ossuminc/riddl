@@ -3,17 +3,20 @@ import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
 import sbt.Keys.organizationName
-import sbt.Keys._
-import sbt._
+import sbt.Keys.*
+import sbt.*
 import sbt.io.Path.allSubpaths
 import sbtbuildinfo.BuildInfoKey
 import sbtbuildinfo.BuildInfoKeys.{buildInfoKeys, buildInfoObject, buildInfoPackage, buildInfoUsePackageAsPath}
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToJson, ToMap}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoOptions
-import scoverage.ScoverageKeys._
+import scoverage.ScoverageKeys.*
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
+import wartremover.WartRemover.autoImport
+import wartremover.{Wart, WartRemover}
+import wartremover.WartRemover.autoImport.*
 
 import java.net.URI
 import java.util.Calendar
@@ -108,6 +111,19 @@ object C {
     )
   }
 
+  def withWartRemover(p: Project): Project = {
+    p.enablePlugins(WartRemover)
+      .settings(
+        Compile / compile / wartremoverWarnings ++= Warts.unsafe.filter {
+          case Wart.DefaultArguments | Wart.Any => false
+          case _ => true
+        },
+        // Ignore generated files
+        wartremoverExcluded += baseDirectory.value / "target" / "scala-3.3.1" /
+          "src_managed" / "main" / "com" / "reactific"
+      )
+  }
+
   def withScala3(p: Project): Project = {
     p.configure(withInfo)
       .settings(
@@ -117,6 +133,7 @@ object C {
         apiURL := Some(url("https://riddl.tech/apidoc/")),
         autoAPIMappings := true
       )
+      .configure(withWartRemover)
   }
 
   final val defaultPercentage: Int = 50
