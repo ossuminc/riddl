@@ -62,7 +62,7 @@ trait ParsingContext {
   private def importDomain(
     @unused file: File
   ): Domain = {
-    // TODO: implement importDomain
+    // TODO: implement importDomain, issue #72
     Domain(At(), Identifier(At(), "NotImplemented"))
   }
 
@@ -74,7 +74,12 @@ trait ParsingContext {
       push(url)
       str.s
     } else {
-      val name = str.s + ".riddl"
+      val name = {
+        if str.s.endsWith(".riddl") then
+          str.s
+        else
+          str.s + ".riddl"
+      }
       val path = current.root.toPath.resolve(name)
       push(path)
       path.toString
