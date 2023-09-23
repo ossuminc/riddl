@@ -7,7 +7,7 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.Domain
-import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.Messages.*
 
 class HandlerValidatorTest extends ValidatingTest {
@@ -130,6 +130,31 @@ class HandlerValidatorTest extends ValidatingTest {
         case (_, _, msgs: Messages) =>
           msgs.justErrors mustBe empty
 
+      }
+    }
+    "produce a warning for commands with no events sent" in {
+      val input =
+        """domain ignore is {
+          |  context ignore is {
+          |    command C is { field: Integer }
+          |    command D is { field: Integer }
+          |    outlet results is Integer
+          |    entity example is {
+          |      handler default is {
+          |        on command C { ??? }
+          |        on command D {
+          |          send result Foo to outlet results
+          |        }
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin
+      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) {
+        case (root, rpi, messages: Messages) =>
+          val warnings = messages.justWarnings.format
+          info(warnings)
+          warnings mustNot be(empty)
+          warnings must include("commands should result in sending an event")
       }
     }
   }

@@ -8,11 +8,12 @@ package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.Messages.{Message, MissingWarning, StyleWarning}
+import com.reactific.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
 import com.reactific.riddl.passes.{Pass, PassInfo, PassInput}
 import com.reactific.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
+import com.sun.nio.file.SensitivityWatchEventModifier
 
 import scala.collection.mutable
 
@@ -67,14 +68,14 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       case sa: User =>
         validateUser(sa, parentsAsSeq)
       // TODO: Add statement validation to OnClauses
+      case omc: OnMessageClause =>
+        validateOnMessageClause(omc, parentsAsSeq)
       case oic: OnInitClause =>
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
-      case omc: OnMessageClause =>
-        validateOnMessageClause(omc, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -134,6 +135,25 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDefinition(parents, omc)
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, omc, parents, omc.msg.messageKind)
+      omc.msg.messageKind match {
+        case CommandCase =>
+          val sends: Seq[SendStatement] = omc.statements
+            .filter(_.isInstanceOf[SendStatement])
+            .map(_.asInstanceOf[SendStatement])
+          if sends.isEmpty || sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
+            messages.add(
+              missing("Processing for commands should result in sending an event", omc.loc)
+            )
+        case QueryCase =>
+          val sends: Seq[SendStatement] = omc.statements
+            .filter(_.isInstanceOf[SendStatement])
+            .map(_.asInstanceOf[SendStatement])
+          if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == ResultCase) then
+            messages.add(
+              missing("Processing for queries should result in sending a result", omc.loc)
+            )
+        case _ =>
+      }
     }
     if omc.from.nonEmpty then {
       checkRef(omc.from.get, omc, parents)
