@@ -49,7 +49,7 @@ object Folding {
           case i: Include[Definition] @unchecked =>
             i.contents.foldLeft(next) {
               case (n, d: LeafDefinition) => f(n, d, parents.toSeq)
-              case (n, cd: Definition) => foldLeftWithStack(n, parents)(cd)(f)
+              case (n, cd: Definition)    => foldLeftWithStack(n, parents)(cd)(f)
             }
           case d: LeafDefinition => f(next, d, parents.toSeq)
           case c: Definition     => foldLeftWithStack(next, parents)(c)(f)
@@ -136,11 +136,11 @@ object Folding {
         case StyleWarning =>
           if commonOptions.showStyleWarnings then {
             msgs += msg
-          } 
+          }
         case MissingWarning =>
           if commonOptions.showMissingWarnings then {
             msgs += msg
-          } 
+          }
         case _ =>
           msgs += msg
       }
@@ -171,7 +171,7 @@ object Folding {
       // Now push the names we found in the pid, to be resolved yet
       nameStack.pushAll(pid.value.reverse)
       // Get the next name to resolve
-      val top = pid.value.head
+      val top = pid.value.headOption.getOrElse("")
       // If it is a resolvable name and that name is on the parent stack
       if top.nonEmpty && parentStack.exists(_.id.value == top) then {
         // Remove the top of stack name we just pushed, because we just found it
@@ -187,70 +187,72 @@ object Folding {
       parentStack: mutable.Stack[Definition],
       nameStack: mutable.Stack[String]
     ): Seq[Definition] = {
-      if parentStack.isEmpty then {
-        // Nothing in the parent stack so we're done searching and
-        // we return empty to signal nothing found
-        Seq.empty[Definition]
-      } else {
-        parentStack.head match {
-          case st: AST.State =>
-            // If we're at a state definition then it references a type for
-            // its fields so we need to push that typeRef's path on the name
-            // stack.
-            adjustStacksForPid(searchFor, st.typ.pathId, parentStack, nameStack)
-          case oc: OnMessageClause =>
-            // if we're at an onClause that references a message then we
-            // need to push that message's path on the name stack
-            adjustStacksForPid(searchFor, oc.msg.pathId, parentStack, nameStack)
-          case f: Field =>
-            f.typeEx match {
-              case Aggregation(_, fields) =>
-                // if we're at a field composed of more fields, then those fields
-                // what we are looking for
-                fields
-              case Enumeration(_, enumerators)                  => enumerators
-              case AggregateUseCaseTypeExpression(_, _, fields) =>
-                // Message types have fields too, those fields are what we seek
-                fields
-              case AliasedTypeExpression(_, pid) =>
-                // if we're at a field that references another type then we
-                // need to push that types path on the name stack
-                adjustStacksForPid(searchFor, pid, parentStack, nameStack)
-              case _ =>
-                // Any other type expression can't be descend into
-                Seq.empty[Definition]
-            }
-          case t: Type =>
-            t.typ match {
-              case Aggregation(_, fields)                       => fields
-              case Enumeration(_, enumerators)                  => enumerators
-              case AggregateUseCaseTypeExpression(_, _, fields) => fields
-              case AliasedTypeExpression(_, pid)                =>
-                // if we're at a type definition that references another type then
-                // we need to push that type's path on the name stack
-                adjustStacksForPid(searchFor, pid, parentStack, nameStack)
-              case _ =>
-                // Any other type expression can't be descended into
-                Seq.empty[Definition]
-            }
-          case f: Function if f.input.nonEmpty =>
-            // If we're at a Function node, the functions input parameters
-            // are the candidates to search next
-            f.input.get.fields
-          case d: Definition =>
-            d.contents.flatMap {
-              case Include(_, contents, _) => contents
-              case d: Definition           => Seq(d)
-            }
-        }
+      parentStack.headOption match {
+        case None =>
+          // Nothing in the parent stack so we're done searching and
+          // we return empty to signal nothing found
+          Seq.empty[Definition]
+        case Some(item) =>
+          item match {
+            case st: AST.State =>
+              // If we're at a state definition then it references a type for
+              // its fields so we need to push that typeRef's path on the name
+              // stack.
+              adjustStacksForPid(searchFor, st.typ.pathId, parentStack, nameStack)
+            case oc: OnMessageClause =>
+              // if we're at an onClause that references a message then we
+              // need to push that message's path on the name stack
+              adjustStacksForPid(searchFor, oc.msg.pathId, parentStack, nameStack)
+            case ad: AggregateDefinition =>
+              ad.typeEx match {
+                case a: Aggregation =>
+                  // if we're at a field composed of more fields, then those fields
+                  // what we are looking for
+                  a.contents
+                case Enumeration(_, enumerators)       => enumerators
+                case a: AggregateUseCaseTypeExpression =>
+                  // Message types have fields too, those fields are what we seek
+                  a.contents
+                case AliasedTypeExpression(_, pid) =>
+                  // if we're at a field that references another type then we
+                  // need to push that types path on the name stack
+                  adjustStacksForPid(searchFor, pid, parentStack, nameStack)
+                case _ =>
+                  // Any other type expression can't be descend into
+                  Seq.empty[Definition]
+              }
+            case t: Type =>
+              t.typ match {
+                case a: Aggregation                    => a.contents
+                case a: AggregateUseCaseTypeExpression => a.contents
+                case Enumeration(_, enumerators)       => enumerators
+                case AliasedTypeExpression(_, pid)     =>
+                  // if we're at a type definition that references another type then
+                  // we need to push that type's path on the name stack
+                  adjustStacksForPid(searchFor, pid, parentStack, nameStack)
+                case _ =>
+                  // Any other type expression can't be descended into
+                  Seq.empty[Definition]
+              }
+            case f: Function =>
+              // If we're at a Function node, the functions input and output
+              // parameters are the candidates to search next
+              val input: Aggregation = f.input.getOrElse(Aggregation.empty(f.loc))
+              val output: Aggregation = f.output.getOrElse(Aggregation.empty(f.loc))
+              input.contents ++ output.contents
+            case d: Definition =>
+              d.contents.flatMap {
+                case Include(_, contents, _) => contents
+                case d: Definition           => Seq(d)
+              }
+          }
       }
     }
 
     // final val maxTraversal = 10
 
-    /** Resolve a Relative PathIdentifier. If the path is already resolved or it
-      * has no empty components then we can resolve it from the map or the
-      * symbol table.
+    /** Resolve a Relative PathIdentifier. If the path is already resolved or it has no empty components then we can
+      * resolve it from the map or the symbol table.
       *
       * @param pid
       *   The path to consider
@@ -296,97 +298,105 @@ object Folding {
           }
         } else {
           // We have a name to search for if the parent stack is not empty
-          if parentStack.nonEmpty then {
-            val definition =
-              parentStack.head // get the next definition of the parentStack
+          parentStack.headOption match {
+            case None =>
+              Seq.empty[Definition]
+            case Some(definition) =>
+              // get the next definition of the parentStack
+              // If we have already visited this definition, its an error
+              if visitedStack.contains(definition) then {
+                // Generate the error message
+                this.addError(
+                  pid.loc,
+                  msg = s"""Path resolution encountered a loop at ${definition.identify}
+                           |  for name '$soughtName' when resolving ${pid.format}
+                           |  in definition context: ${parents
+                            .map(_.identify)
+                            .mkString("\n    ", "\n    ", "\n")}
+                           |""".stripMargin
+                )
+                // Signal we're done searching with no result
+                parentStack.clear()
+              } else {
+                // otherwise we are good to search for soughtName
 
-            // If we have already visited this definition, its an error
-            if visitedStack.contains(definition) then {
-              // Generate the error message
-              this.addError(
-                pid.loc,
-                msg =
-                  s"""Path resolution encountered a loop at ${definition.identify}
-                         |  for name '$soughtName' when resolving ${pid.format}
-                         |  in definition context: ${parents
-                      .map(_.identify)
-                      .mkString("\n    ", "\n    ", "\n")}
-                         |""".stripMargin
-              )
-              // Signal we're done searching with no result
-              parentStack.clear()
-            } else {
-              // otherwise we are good to search for soughtName
+                // Look where we are and find the candidate things that could
+                // possibly match soughtName
+                val candidates =
+                  findCandidates(soughtName, parentStack, nameStack)
 
-              // Look where we are and find the candidate things that could
-              // possibly match soughtName
-              val candidates =
-                findCandidates(soughtName, parentStack, nameStack)
+                // If the name stack grew because findCandidates added to it
+                val newSoughtName =
+                  if candidates.isEmpty then {
+                    // then push the definition on the visited stack because we
+                    // already resolved this one and looked for candidates, no
+                    // point looping through here again.
+                    visitedStack.push(definition)
 
-              // If the name stack grew because findCandidates added to it
-              val newSoughtName =
-                if candidates.isEmpty then {
-                  // then push the definition on the visited stack because we
-                  // already resolved this one and looked for candidates, no
-                  // point looping through here again.
-                  visitedStack.push(definition)
+                    // The name we are now searching for may have been updated by the
+                    // findCandidates function adjusting the stacks.
+                    nameStack.headOption match {
+                      case None       => soughtName
+                      case Some(name) => name
+                    }
 
-                  // The name we are now searching for may have been updated by the
-                  // findCandidates function adjusting the stacks.
-                  nameStack.headOption match {
-                    case None       => soughtName
-                    case Some(name) => name
-                  }
+                  } else { soughtName }
 
-                } else { soughtName }
-
-              // Now find the match, if any, and handle appropriately
-              val found = candidates.find(_.id.value == newSoughtName)
-              found match {
-                case Some(q: Definition) =>
-                  // found the named item, and it is a Container, so put it on
-                  // the stack in case there are more things to resolve
-                  parentStack.push(q)
-                case None =>
-                // No search result, there may be more things to find in
-                // the next iteration
+                // Now find the match, if any, and handle appropriately
+                val found = candidates.find(_.id.value == newSoughtName)
+                found match {
+                  case Some(q: Definition) =>
+                    // found the named item, and it is a Container, so put it on
+                    // the stack in case there are more things to resolve
+                    parentStack.push(q)
+                  case None =>
+                  // No search result, there may be more things to find in
+                  // the next iteration
+                }
               }
-            }
           }
         }
       }
 
       // if there is a single thing left on the stack and that things is
       // a RootContainer
-      if
-        parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer]
-      then {
-        // then pop it off because RootContainers don't count and we want to
-        // rightfully return an empty sequence for "not found"
-        parentStack.pop()
-      }
-      // Convert parent stack to immutable sequence
-      parentStack.toSeq
+      parentStack.headOption match
+        case Some(x: RootContainer) if parentStack.size == 1 =>
+          // then pop it off because RootContainers don't count and we want to
+          // rightfully return an empty sequence for "not found"
+          parentStack.pop()
+          // Convert parent stack to immutable sequence
+          parentStack.toSeq
+        case None =>
+          // Its weird that something else is the only parent. Let's fail
+          Seq.empty[Definition]
+        case _ =>
+          // Convert parent stack to immutable sequence
+          parentStack.toSeq
     }
 
     private def resolvePathFromHierarchy(
       pid: PathIdentifier,
       parents: Seq[Definition]
     ): Seq[Definition] = {
-      // First, scan up through the parent stack to find the starting place
-      val top = pid.value.head
-      val newParents = parents.dropUntil(_.id.value == top)
-      if newParents.isEmpty then {
-        newParents // is empty, signalling "not found"
-      } else if pid.value.length == 1 then {
-        // we found the only name so let's just return it because the found
-        // definition is just the head of the adjusted newParents
-        Seq(newParents.head)
-      } else {
-        // we found the starting point, adjust the PathIdentifier to drop the
-        // one we found, and use resolveRelativePath to descend through names
-        val newPid = PathIdentifier(pid.loc, pid.value.drop(1))
-        resolveRelativePath(newPid, newParents)
+      pid.value.headOption match {
+        case None =>
+          Seq.empty[Definition] // signla not found
+        case Some(top) =>
+          // First, scan up through the parent stack to find the starting place
+          val newParents = parents.dropUntil(_.id.value == top)
+          if newParents.isEmpty then {
+            newParents // is empty, signalling "not found"
+          } else if pid.value.length == 1 then {
+            // we found the only name so let's just return it because the found
+            // definition is just the head of the adjusted newParents
+            Seq(newParents.head)
+          } else {
+            // we found the starting point, adjust the PathIdentifier to drop the
+            // one we found, and use resolveRelativePath to descend through names
+            val newPid = PathIdentifier(pid.loc, pid.value.drop(1))
+            resolveRelativePath(newPid, newParents)
+          }
       }
     }
 
@@ -445,8 +455,7 @@ object Folding {
       pid: PathIdentifier,
       parents: Seq[Definition]
     )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
-      onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] =
-        doNothingMultiple
+      onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] = doNothingMultiple
     ): Seq[Definition] = {
       if pid.value.isEmpty then { Seq.empty[Definition] }
       else if pid.value.exists(_.isEmpty) then {

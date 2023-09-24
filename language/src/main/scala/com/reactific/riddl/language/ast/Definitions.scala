@@ -458,7 +458,7 @@ trait Definitions {
     final val kind: String = {
       typ match {
         case AggregateUseCaseTypeExpression(_, useCase, _, _) => useCase.kind
-        case _                                             => "Type"
+        case _                                                => "Type"
       }
     }
 
@@ -1142,6 +1142,9 @@ trait Definitions {
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
 
+  }
+  object Context {
+    lazy val empty: Context = Context(At.empty, Identifier.empty)
   }
 
   /** A reference to a bounded context

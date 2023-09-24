@@ -115,7 +115,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         gi match {
           case ArbitraryInteraction(_, _, from, _, to, _, _) =>
             resolveARef[Definition](from, parentsAsSeq)
-            resolveARef[Definition]( to, parentsAsSeq)
+            resolveARef[Definition](to, parentsAsSeq)
           case ti: ShowOutputInteraction =>
             resolveARef[User](ti.to, parentsAsSeq)
             resolveARef[Output](ti.from, parentsAsSeq)
@@ -124,7 +124,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
             resolveARef[Input](pi.to, parentsAsSeq)
           case si: SelfInteraction =>
             resolveARef[Definition](si.from, parentsAsSeq)
-       }
+        }
       case _: Author                 => () // no references
       case _: User                   => () // no references
       case _: Enumerator             => () // no references
@@ -176,8 +176,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
   private def resolveOnMessageClause(mc: OnMessageClause, parents: Seq[Definition]): Unit = {
     resolveARef[Type](mc.msg, parents)
-    if mc.from.nonEmpty then {
-      resolveARef[Definition](mc.from.get, parents)
+    mc.from.foreach { (ref: Reference[Definition]) =>
+      resolveARef[Definition](ref, parents)
     }
   }
 
@@ -192,15 +192,15 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
     // TODO: Finish implementation of resolutions for statements
     statement match {
-      case ss: SetStatement                      => resolveARef[Field](ss.field, parents)
-      case BecomeStatement(loc, entity, handler) => ()
-      case ForEachStatement(loc, ref, do_)       => ()
-      case SendStatement(loc, msg, portlet) => ()
-      case MorphStatement(loc, entity, state, message ) => ()
-      case TellStatement(loc, msg, entityRef) => ()
-      case _: ArbitraryStatement => ()
-      case _: ErrorStatement => ()
-      case _: ReturnStatement                    => ()
+      case ss: SetStatement                            => resolveARef[Field](ss.field, parents)
+      case BecomeStatement(loc, entity, handler)       => ()
+      case ForEachStatement(loc, ref, do_)             => ()
+      case SendStatement(loc, msg, portlet)            => ()
+      case MorphStatement(loc, entity, state, message) => ()
+      case TellStatement(loc, msg, entityRef)          => ()
+      case _: ArbitraryStatement                       => ()
+      case _: ErrorStatement                           => ()
+      case _: ReturnStatement                          => ()
     }
   }
 
@@ -231,66 +231,80 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     pathId: PathIdentifier,
     parents: Seq[Definition]
   ): Seq[Definition] = {
-    val parent = parents.head
-    val maybeFound: Seq[Definition] = if pathId.value.isEmpty then {
-      notResolved[Definition](pathId, parents.head)
-      Seq.empty[Definition]
-    } else {
-      // Capture the first name we're looking for
-      val topName = pathId.value.head
+    val maybeFound: Seq[Definition] =
+      pathId.value.headOption match
+        case None =>
+          parents.headOption match
+            case None =>
+              // This is odd, fail
+              Seq.empty[Definition]
+            case Some(parent) =>
+              notResolved[Definition](pathId, parent)
+              Seq.empty[Definition]
+        case Some(topName) => // Capture the first name we're looking for
+          // Define a function to identify the starting point in the parents
+          def startingPoint(defn: Definition): Boolean =
+            defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
+          // Drop parents until starting point found
+          val newParents = parents.dropUntil(startingPoint)
 
-      // Define a function to identify the starting point in the parents
-      def startingPoint(defn: Definition): Boolean = {
-        defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
-      }
+          // If we dropped all the parents then the path isn't valid
+          if newParents.isEmpty then
+            // Signal not found
+            Seq.empty[Definition]
+          else
+            // we found the starting point, and adjusted the parent stack correspondingly
+            // use resolveRelativePath to descend through names
+            resolveRelativePath(pathId, newParents)
 
-      // Drop parents until starting point found
-      val newParents = parents.dropUntil(startingPoint)
-
-      // If we dropped all the parents then the path isn't valid
-      if newParents.isEmpty then {
-        // Signal not found
-        Seq.empty[Definition]
-      } else {
-        // we found the starting point, and adjusted the parent stack correspondingly
-        // use resolveRelativePath to descend through names
-        resolveRelativePath(pathId, newParents)
+    val isFound: Boolean = {
+      maybeFound.headOption match {
+        case Some(head) =>
+          pathId.value.lastOption match
+            case Some(last) =>
+              val hasRightName = head.id.value == last
+              val hasSameType = isSameKind[T](head)
+              parents.headOption match {
+                case None =>
+                  // shouldn't happen
+                  false
+                case Some(parent) =>
+                  if hasRightName then
+                    if hasSameType then
+                      // a candidate was found and it has the same type as expected
+                      resolved[T](pathId, parent, head)
+                    else wrongType[T](pathId, parent, head)
+                    true
+                  else false
+              }
+            case None =>
+              false
+        case None => false
       }
     }
-
-    val isFound: Boolean = if maybeFound.nonEmpty then {
-      val head = maybeFound.head
-      val hasRightName = head.id.value == pathId.value.last
-      val hasSameType = isSameKind[T](head)
-      if hasRightName then {
-        if hasSameType then {
-          // a candidate was found and it has the same type as expected
-          resolved[T](pathId, parent, head)
-        } else {
-          wrongType[T](pathId, parent, head)
-        }
-        true
-      } else {
-        false
-      }
-    } else { false }
 
     if !isFound then {
       val symTabCompatibleNameSearch = pathId.value.reverse
       val list = symbols.lookupParentage(symTabCompatibleNameSearch)
-      list match {
-        case Nil =>
-          notResolved[T](pathId, parent)
-          maybeFound
-        case (d, _) :: Nil if isSameKind[T](d) => // exact match
-          // Found
-          resolved[T](pathId, parent, d)
-          maybeFound
-        case (d, _) :: Nil =>
-          wrongType[T](pathId, parent, d)
-          Seq.empty[Definition]
-        case list =>
-          ambiguous[T](pathId, list)
+      parents.headOption match {
+        case None =>
+          // shouldn't happen
+          Seq.empty
+        case Some(parent) =>
+          list match {
+            case Nil =>
+              notResolved[T](pathId, parent)
+              maybeFound
+            case (d, _) :: Nil if isSameKind[T](d) => // exact match
+              // Found
+              resolved[T](pathId, parent, d)
+              maybeFound
+            case (d, _) :: Nil =>
+              wrongType[T](pathId, parent, d)
+              Seq.empty[Definition]
+            case list =>
+              ambiguous[T](pathId, list)
+          }
       }
     } else {
       maybeFound
@@ -346,26 +360,22 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     val allDifferent = definitions.map(_.kind).distinct.sizeIs ==
       definitions.size
     val expectedClass = classTag[T].runtimeClass
-    if allDifferent || definitions.head.isImplicit then {
-      // pick the one that is the right type or the first one
-      list.find(_._1.getClass == expectedClass) match {
-        case Some((defn, parents)) => defn +: parents
-        case None                  => list.head._1 +: list.head._2
-      }
-    } else {
-      val ambiguity =
-        list
+    definitions.headOption match {
+      case Some(head) if head.isImplicit && allDifferent =>
+        // pick the one that is the right type or the first one
+        list.find(_._1.getClass == expectedClass) match {
+          case Some((defn, parents)) => defn +: parents
+          case None                  => list.take(1).map(_._1)
+        }
+      case _ =>
+        val ambiguity = list
           .map { case (definition, parents) =>
             "  " + parents.reverse.map(_.id.value).mkString(".") + "." +
               definition.id.value + " (" + definition.loc + ")"
           }
           .mkString("\n")
-
-      messages.addError(
-        pid.loc,
-        s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity"
-      )
-      Seq.empty[Definition]
+        messages.addError(pid.loc, s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity")
+        Seq.empty[Definition]
     }
   }
 
@@ -391,7 +401,10 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       parentStack.pushAll(path.reverse)
 
       // Return the name and candidates we should next search for
-      parentStack.head.contents
+      parentStack.headOption match
+        case None       => Seq.empty[Definition] // shouldn't happen?
+        case Some(head) => head.contents
+
     } else {
       // Couldn't resolve it, error already issued, signal termination of the search
       Seq.empty[Definition]
@@ -400,16 +413,15 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
   private def candidatesFromTypeEx(typEx: TypeExpression, parentStack: mutable.Stack[Definition]): Seq[Definition] = {
     typEx match {
-      case Aggregation(_, fields) =>
-        // if we're at a field composed of more fields, then those fields
-        // what we are looking for
-        fields
+      case a: Aggregation => a.contents
+      // if we're at a field composed of more fields, then those fields
+      // what we are looking for
       case Enumeration(_, enumerators) =>
         // if we're at an enumeration type then the numerators are candidates
         enumerators
-      case AggregateUseCaseTypeExpression(_, _, contents) =>
+      case a: AggregateUseCaseTypeExpression =>
         // Any kind of Aggregate's fields are candidates for resolution
-        contents
+        a.contents
       case AliasedTypeExpression(_, pid) =>
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push
@@ -431,40 +443,48 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       // we return empty to signal nothing found
       Seq.empty[Definition]
     } else {
-      parentStack.head match {
-        case st: State =>
-          // If we're at a state definition then it references a type for
-          // its fields so we need to push that typeRef's name on the name stack.
-          adjustStacksForPid[Type](st.typ.pathId, parentStack)
-        case oc: OnMessageClause =>
-          // if we're at an onClause that references a named message then we
-          // need to push that message's path on the name stack
-          adjustStacksForPid[Type](oc.msg.pathId, parentStack)
-        case f: Field =>
-          candidatesFromTypeEx(f.typeEx, parentStack)
-        case c: Constant =>
-          candidatesFromTypeEx(c.typeEx, parentStack)
-        case t: Type =>
-          candidatesFromTypeEx(t.typ, parentStack)
-        case f: Function =>
-          // If we're at a Function node, the functions input parameters
-          // are the candidates to search next
-          f.input.get.fields ++ f.output.get.fields
-        case d: Definition =>
-          d.contents.flatMap {
-            case Include(_, contents, _) =>
-              contents
+      parentStack.headOption match {
+        case None =>
+          Seq.empty[Definition] // nothing to search to provide candidates
+        case Some(head) =>
+          head match
+            case st: State =>
+              // If we're at a state definition then it references a type for
+              // its fields so we need to push that typeRef's name on the name stack.
+              adjustStacksForPid[Type](st.typ.pathId, parentStack)
+            case oc: OnMessageClause =>
+              // if we're at an onClause that references a named message then we
+              // need to push that message's path on the name stack
+              adjustStacksForPid[Type](oc.msg.pathId, parentStack)
+            case field: Field =>
+              candidatesFromTypeEx(field.typeEx, parentStack)
+            case c: Constant =>
+              candidatesFromTypeEx(c.typeEx, parentStack)
+            case t: Type =>
+              candidatesFromTypeEx(t.typ, parentStack)
+            case func: Function =>
+              val inputs: Aggregation = func.input.getOrElse(Aggregation.empty())
+              val outputs: Aggregation = func.output.getOrElse(Aggregation.empty())
+              // If we're at a Function node, the functions input parameters
+              // are the candidates to search next
+              inputs.contents ++ outputs.contents
             case d: Definition =>
-              Seq(d)
-          }
+              d.contents.flatMap {
+                case Include(_, contents, _) =>
+                  contents
+                case d: Definition =>
+                  Seq(d)
+              }
       }
     }
   }
 
   private def findResolution(soughtName: String, candidate: Definition): Boolean = {
     candidate match {
-      case omc: OnMessageClause if omc.msg.id.nonEmpty => omc.msg.id.get.value == soughtName
-      case other: Definition                           => other.id.value == soughtName
+      case omc: OnMessageClause if omc.msg.id.nonEmpty =>
+        omc.msg.id.getOrElse(Identifier.empty).value == soughtName
+      case other: Definition =>
+        other.id.value == soughtName
     }
   }
 
@@ -505,57 +525,65 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       // Pop the name we're currently looking for and save it
       val soughtName = nameStack.pop()
 
-      // We have a name to search for if the parent stack is not empty
-      if parentStack.nonEmpty then {
-        val definition = parentStack.head // get the next definition of the parentStack
-
-        // If we have already visited this definition, its a looping error
-        if visitedStack.contains(definition) then {
-          // Generate the error message
+      parentStack.headOption match
+        case None =>
           messages.addError(
             pid.loc,
-            msg = s"""Path resolution encountered a loop at ${definition.identify}
-                 |  for name '$soughtName' when resolving ${pid.format}
-                 |  in definition context: ${parents.map(_.identify).mkString("\n    ", "\n    ", "\n")}
-                 |""".stripMargin
+            s"To many names in path identifier for parents"
           )
-          // Signal we're done searching with no result
-          parentStack.clear()
-        } else {
+        case Some(definition) =>
+          // We have a name to search for if the parent stack is not empty
 
-          // Look where we are and find the candidates that could
-          // possibly match soughtName
-          val candidates = findCandidates(parentStack)
+          // If we have already visited this definition, its a looping error
+          if visitedStack.contains(definition) then {
+            // Generate the error message
+            messages.addError(
+              pid.loc,
+              msg = s"""Path resolution encountered a loop at ${definition.identify}
+                   |  for name '$soughtName' when resolving ${pid.format}
+                   |  in definition context: ${parents.map(_.identify).mkString("\n    ", "\n    ", "\n")}
+                   |""".stripMargin
+            )
+            // Signal we're done searching with no result
+            parentStack.clear()
+          } else {
+            // Look where we are and find the candidates that could
+            // possibly match soughtName
+            val candidates = findCandidates(parentStack)
 
-          // Now find the match, if any, and handle appropriately
-          val found = candidates.find(candidate => findResolution(soughtName, candidate))
-          found match {
-            case Some(q: Definition) =>
-              // found the named item, and it is a Container, so put it on
-              // the stack in case there are more things to resolve
-              parentStack.push(q)
+            // Now find the match, if any, and handle appropriately
+            val found = candidates.find(candidate => findResolution(soughtName, candidate))
+            found match {
+              case Some(q: Definition) =>
+                // found the named item, and it is a Container, so put it on
+                // the stack in case there are more things to resolve
+                parentStack.push(q)
 
-              // Push the definition on the visited stack because we
-              // already resolved this one and looked for candidates, no
-              // point looping through here again.
-              visitedStack.push(definition)
+                // Push the definition on the visited stack because we
+                // already resolved this one and looked for candidates, no
+                // point looping through here again.
+                visitedStack.push(definition)
 
-            case None =>
-            // No search result, there may be more things to find in
-            // the next iteration
+              case None =>
+              // No search result, there may be more things to find in
+              // the next iteration
+            }
           }
-        }
-      }
     }
 
     // if there is a single thing left on the stack and that things is
     // a RootContainer
-    if parentStack.size == 1 && parentStack.head.isInstanceOf[RootContainer] then {
-      // then pop it off because RootContainers don't count and we want to
-      // rightfully return an empty sequence for "not found"
-      parentStack.pop()
-    }
-    // Convert parent stack to immutable sequence
-    parentStack.toSeq
+    parentStack.headOption match
+      case Some(head: RootContainer) if parentStack.size == 1 =>
+        // then pop it off because RootContainers don't count and we want to
+        // rightfully return an empty sequence for "not found"
+        parentStack.pop()
+        // Convert parent stack to immutable sequence
+        parentStack.toSeq
+      case Some(head) =>
+        // Not the root, just convert the result to immutable Seq
+        parentStack.toSeq
+      case None =>
+        parentStack.toSeq // empty == fail
   }
 }

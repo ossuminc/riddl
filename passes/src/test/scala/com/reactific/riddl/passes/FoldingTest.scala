@@ -27,7 +27,7 @@ class FoldingTest extends ParsingTest {
       |    term ForcePush is described by "an ability of the Jedi"
       |    function foo is {
       |       requires { a: Integer, b: String }
-      |       returns {}
+      |       returns { ??? }
       |       body ???
       |     }
       |    type oneState is Integer

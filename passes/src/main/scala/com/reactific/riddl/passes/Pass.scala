@@ -30,6 +30,8 @@ trait PassInfo {
 case class PassInput(root: RootContainer, commonOptions: CommonOptions = CommonOptions.empty) {
 
   private[passes]  val priorOutputs: mutable.HashMap[String,PassOutput] = mutable.HashMap.empty
+
+  @SuppressWarnings(Array("org.wartremover.warts.Var"))
   private var messages: Messages = Messages.empty
 
   def getMessages: Messages = messages
@@ -168,6 +170,44 @@ abstract class HierarchyPass(input: PassInput) extends Pass(input) {
           parents.pop()
         }
         closeContainer(container, parents.toSeq)
+    }
+  }
+}
+
+case class FoldingPassOutput[T](
+  messages: Messages = Messages.empty,
+  folded: Seq[T] = Seq.empty[T]
+) extends PassOutput
+
+/**
+ * A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
+ *   - openContainer at the start of container's processing
+ *   - processLeaf for any leaf node
+ *   - closeContainer after all the container's contents have been processed
+ *     This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all
+ *     their content (openContainer) and also after all its content (closeContainer). This is necessary for passes that
+ *     must maintain the hierarchical structure of the AST model in their processing
+ *
+ * @param input
+ * The PassInput to process
+ */
+abstract class FoldingPass[F](input: PassInput) extends Pass(input) {
+
+  // not required in this kind of pass, final override it
+  override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
+
+  // Instead traverse will use this fold method
+  protected def fold(definition: Definition, parents: mutable.Stack[AST.Definition]): F
+
+  @SuppressWarnings(Array("org.wartremover.warts.Var"))
+  var resultAccumulator: Seq[F] = Seq.empty[F]
+
+  override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+    resultAccumulator :+ fold(definition, parents)
+    if definition.hasDefinitions then {
+      parents.push(definition)
+      definition.contents.foreach { item => traverse(item, parents) }
+      parents.pop()
     }
   }
 }

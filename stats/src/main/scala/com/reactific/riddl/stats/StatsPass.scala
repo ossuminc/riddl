@@ -12,9 +12,12 @@ import scala.collection.mutable
 object StatsPass extends PassInfo {
   val name: String = "stats"
 }
+
 case class CategoryStats(
   count: Long = 0,
   percentOfDefinitions: Double = 0.0d,
+  averageCompleteness: Double = 0.0d,
+  averageComplexity: Double = 0.0d,
   averageMaturity: Double = 0.0d,
   totalMaturity: Long = 0,
   percentComplete: Double = 0.0d,
@@ -25,6 +28,17 @@ case class CategoryStats(
   }
 }
 
+/**
+ *
+ * @param specifications
+ * The number of kinds of specifications that can be completed from the node's specifications method
+ * @param completed
+ */
+case class DefinitionStats(
+  numCompletions: Long = 0;
+  completion: Double = 0.0d
+  contained: Long = 0, // the number of contained definitions
+)
 
 case class StatsOutput(
   messages: Messages = Messages.empty,
@@ -32,10 +46,10 @@ case class StatsOutput(
   term_count: Long = 0,
   maximum_depth: Int = 0,
   categories: Map[String, CategoryStats] = Map.empty
-) extends PassOutput
+) extends FoldingPassOutput[]
 
 /** Unit Tests For StatsPass */
-case class StatsPass(input: PassInput) extends Pass(input) {
+case class StatsPass(input: PassInput) extends FoldingPass(input) {
 
   def name: String = StatsPass.name
 
@@ -103,6 +117,174 @@ case class StatsPass(input: PassInput) extends Pass(input) {
         other_stats.count += 1
         if d.nonEmpty then other_stats.completed += 1
     }
+  }
+
+  /**
+   * Calculates the number of types of specifications that can be added to
+   * the vital definition provided.
+   * @param v
+   *   The vital definition for whom specifications number is computed
+   * @return
+   *   The number of types of specifications for v
+   */
+  private def specificationsFor(v: VitalDefinition[?, ?]): Int = {
+    val specsForDefinition: Int = 0
+      + 1 // Brief Description
+      + 1 // Description
+      + 1 // Options
+      + 1 // Authors
+      + 1 // Terms
+
+    v match {
+      case p: Processor[?,?] =>
+        val specsForProcessor = specsForDefinition
+          + 1 // Types
+          + 1 // Constants
+          + 1 // Functions
+          + 1 // Handlers
+          + 1 // Inlets
+          + 1 // Outlets
+        p match {
+          case _: Application => specsForProcessor
+            + 1  // Groups
+          case _: Adaptor => specsForProcessor
+            + 1 // direction
+            + 1 // contextRef
+          case _: Context => specsForProcessor
+            + 1 // entities
+            + 1 // adaptors
+            + 1 // sagas
+            + 1 // streamlets
+            + 1 // projectors
+            + 1 // repositories
+            + 1 // connections
+            + 1 // replicas
+          case _: Entity => specsForProcessor
+            + 1 // states
+            + 1 // invariants
+          case _: Projector => specsForProcessor
+            + 1 // invariants
+          case _: Repository => specsForProcessor
+          case _: Streamlet => specsForProcessor
+             +1 // shape
+        }
+      case _: Domain      => specsForDefinition
+        + 1 // authorDefinitions
+        + 1 // contexts
+        + 1 // users
+        + 1 // epics
+        + 1 // sagas
+        + 1 // applications
+        + 0 // recursive domains not included
+      case _: Epic        => specsForDefinition
+        + 1 // userStory
+        + 1 // shownBy
+        + 1 // cases
+      case _: Function    => specsForDefinition
+        + 1 // input
+        + 1 // output
+        + 1 // statements
+        + 0 // recursive functions not included
+      case _: Saga        => specsForDefinition
+        + 1 // input
+        + 1 // output
+        + 1 // steps
+    }
+
+  }
+
+  private def definitionCount(d: Definition): Int =
+    d.hasTypes.toInt + d.hasAuthors.toInt + d.hasOptions.toInt +
+      d.hasDescription.toInt + d.hasBriefDescription.toInt
+
+
+  private def processorCount(p: Processor[?, ?]): Int =
+    definitionCount(p) + handlers.nonEmpty + functions.nonEmpty +
+      constants.nonEmpty + inlets.nonEmpty + outlets.nonEmpty
+
+  private def completenessOf(v: VitalDefinition[?, ?]): Double = {
+    val divisor = specificationsFor(v)
+    val numerator = v match {
+      case p: Processor[?, ?] =>
+        val countForProcessor = processorCount(p)
+          + p.types.nonEmpty + p.constants.nonEmpty + p.functions.nonEmpty
+          + p.handlers.nonEmpty + p.inlets.nonEmpty + p.outlets.nonEmpty
+        p match {
+          case a: Application => countForPrrocessor + a.groups.nonEmpty
+          case a: Adaptor =>
+            specsForProcessor +
+              +1 // direction (required)
+              + 1 // contextRef (required)
+          case c: Context =>
+            specsForProcessor +
+              +c.entities.nonEmpty
+              + c.adaptors.nonEmpty
+              + c.sagas.nonEmpty
+              + c.streamlets.nonEmpty
+              + c.projectors.nonEmpty
+              + c.repositories.nonEmpty
+              + c.connections.nonEmpty
+              + c.replicas.nonEmpty
+          case e: Entity =>
+            specsForProcessor
+              + e.states.nonEmpty
+              + e.invariants.nonEmpty
+          case p: Projector =>
+            specsForProcessor
+              + p.invariants.nonEmpty
+          case _: Repository => specsForProcessor
+          case s: Streamlet =>
+            specsForProcessor
+              + 1 // shape required
+        }
+      case d: Domain =>
+        processorCount(d)
+          + d.authorDefs.nonEmpty
+          + d.contexts.nonEmpty
+          + d.users.nonEmpty
+          + d.epics.nonEmpty
+          + d.sagas.nonEmpty
+          + d.applications.nonEmpty
+          + 0 // recursive domains not included
+      case e: Epic =>
+        processorCount(d)
+          + e.userStory.nonEmpty
+          + e.shownBy.nonEmpty
+          + e.cases.nonEmpty
+      case f: Function =>
+        processorCount(d)
+          + f.input.nonEmpty
+          + f.output.nonEmpty
+          + f.statements.nonEmpty
+          + 0 // recursive functions not included
+      case s: Saga =>
+        processorCount(d)
+          + s.input.nonEmpty
+          + s.output.nonEmpty
+          + s.sagaSteps.nonEmpty
+    }
+    require(divisor > 0, "Completeness requires positive specification divisor" )
+    numerator.toDouble / divisor
+  }
+
+  private def complexityOf(v: VitalDefinition[?, ?]): Double = {
+    v match {
+      case a: Adaptor     => 0.0d
+      case a: Applicaiton => 0.0d
+      case c: Context     => 0.0d
+      case d: Domain      => 0.0d
+      case e: Entity      => 0.0d
+      case e: Epic        => 0.0d
+      case f: Function    => 0.0d
+      case p: Projector   => 0.0d
+      case r: Repository  => 0.0d
+      case s: Saga        => 0.0d
+      case s: Streamlet   => 0.0d
+    }
+  }
+
+  private def maturityOf(v: VitalDefinion[?,?]): Double = {
+
   }
 
   private def makeVitalStats(

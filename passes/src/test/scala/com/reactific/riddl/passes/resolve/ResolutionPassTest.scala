@@ -227,7 +227,7 @@ class ResolutionPassTest extends ResolvingTest {
         """domain A {
           |  type T is { tp: A.TPrime } // Refers to T.TPrime
           |  type TPrime is { t: A.T } // Refers to A.T cyclically
-          |  command DoIt is {  }
+          |  command DoIt is { ??? }
           |  context C {
           |    entity E {
           |      record fields is {
