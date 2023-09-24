@@ -48,7 +48,6 @@ private[parsing] trait EntityParser {
       case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
       case (loc, Options.device, _)        => EntityIsDevice(loc)
       case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
-      case _                               => throw new RuntimeException("Impossible case")
     }
   }
 

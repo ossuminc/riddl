@@ -37,7 +37,6 @@ private[parsing] trait StreamingParser {
       case (loc, Options.persistent, _) => ConnectorPersistentOption(loc)
       case (loc, Options.technology, args) =>
         ConnectorTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -79,18 +78,16 @@ private[parsing] trait StreamingParser {
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
         (handler(StatementsSet.StreamStatements) | term |
-          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets)
-        )./.rep(0)).map { case (inlets, outlets, definitions) =>
-        inlets ++ outlets ++ definitions
+          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
+        case (inlets, outlets, definitions) =>
+          inlets ++ outlets ++ definitions
       }
     )
   }
 
   private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
-    options[u, StreamletOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) =>
-        StreamletTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
+    options[u, StreamletOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
+      StreamletTechnologyOption(loc, args)
     }
   }
 
@@ -99,11 +96,10 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[(Seq[StreamletOption], Seq[StreamletDefinition])] = {
+  ): P[Seq[StreamletDefinition]] = {
     P(
-      undefined((Seq.empty[StreamletOption], Seq.empty[StreamletDefinition])) |
-        (streamletOptions ~
-          streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets))
+      undefined(Seq.empty[StreamletDefinition]) |
+        streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
     )
   }
 
@@ -128,36 +124,35 @@ private[parsing] trait StreamingParser {
   ): P[Streamlet] = {
     P(
       location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
-        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets)  ~ close ~
-        briefly ~ description
-    )./.map { case (location, id, auths, (options, definitions), brief, desc) =>
+        streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
+        close ~ briefly ~ description
+    )./.map { case (loc, id, authors, options, definitions, brief, description) =>
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
+      val constants = mapTo[Constant](groups.get(classOf[Constant]))
+      val shape = keywordToKind(keyword, loc)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[StreamletDefinition]](
-        groups.get(
-          classOf[Include[StreamletDefinition]]
-        )
-      )
+      val includes = mapTo[Include[StreamletDefinition]](groups.get(classOf[Include[StreamletDefinition]]))
       Streamlet(
-        location,
+        loc,
         id,
-        keywordToKind(keyword, location),
+        shape,
         inlets,
         outlets,
         handlers,
         functions,
+        constants,
         types,
         includes,
-        auths,
+        authors,
         options,
         terms,
         brief,
-        desc
+        description
       )
     }
   }

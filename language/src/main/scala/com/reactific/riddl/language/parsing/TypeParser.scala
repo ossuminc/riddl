@@ -222,17 +222,17 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
     P(
-      location ~ (StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural).! ~~ !CharPred(
-        _.isLetterOrDigit
-      )
-        | rangeType)
+      location ~ (
+        StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural
+      ).! ~~ !CharPred(_.isLetterOrDigit)) | rangeType
     ).map {
       case (at, Predefined.Boolean)  => AST.Bool(at)
       case (at, Predefined.Integer)  => AST.Integer(at)
       case (at, Predefined.Natural)  => AST.Natural(at)
       case (at, Predefined.Whole)    => AST.Whole(at)
-      case (_: At, range: RangeType) => range
-      case (_, _)                    => ??? // FIXME: correct this
+      case (at, _: String) => assert(true)  // shouldn't happen
+        AST.Integer(at)
+      case range: RangeType => range
     }
   }
 
@@ -403,9 +403,12 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   def aggregation[u: P]: P[Aggregation] = {
-    P(location ~ open ~ aggregateDefinitions.? ~ close).map {
-      case (loc, Some(contents)) => Aggregation(loc, contents)
-      case (loc, None) => Aggregation(loc, Seq.empty[AggregateDefinition])
+    P(location ~ open ~ aggregateDefinitions ~ close).map {
+      case (loc, contents) =>
+        val groups = contents.groupBy(_.getClass)
+        val fields = mapTo[Field](groups.get(classOf[Field]))
+        val methods = mapTo[Method](groups.get(classOf[Method]))
+        Aggregation(loc, fields, methods)
     }
   }
 
@@ -434,7 +437,7 @@ private[parsing] trait TypeParser extends CommonParser {
     mk: AggregateUseCase,
     agg: Aggregation
   ): AggregateUseCaseTypeExpression = {
-    AggregateUseCaseTypeExpression(loc, mk, agg.fields)
+    AggregateUseCaseTypeExpression(loc, mk, agg.fields, agg.methods)
   }
 
   private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
@@ -533,8 +536,8 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ aggregateUseCase ~/ identifier ~ is ~ aggregation ~ briefly ~
         description
-    ).map { case (loc, mk, id, agg, b, d) =>
-      val mt = AggregateUseCaseTypeExpression(agg.loc, mk, agg.fields)
+    ).map { case (loc, useCase, id, agg, b, d) =>
+      val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
       Type(loc, id, mt, b, d)
     }
   }

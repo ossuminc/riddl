@@ -10,6 +10,7 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.parsing.Terminals.Keywords
 
 /** Unit Tests For Definitions */
+@SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf", "org.wartremover.warts.AsInstanceOf"))
 trait Definitions {
 
   this: AbstractDefinitions with Options with Types with Statements =>
@@ -220,46 +221,8 @@ trait Definitions {
       */
     implicit def bool2int(b: Boolean): Int = if b then 1 else 0
 
-    /** Compute the completeness of this definition. Vital definitions should have options, terms, and authors but
-      * includes are optional. Incompleteness is signalled by child definitions that are empty.
-      *
-      * @return
-      *   A numerator and denominator for percent complete
-      */
-    def completeness: (Int, Int) = {
-      // TODO: make subclass implementations
-      (hasOptions * 1 + hasTerms + hasAuthors + brief.nonEmpty +
-        description.nonEmpty) -> 5
-    }
-
-    /** Compute the 'maturity' of a definition. Maturity is a score with no maximum but with scoring rules that target
-      * 100 points per definition. Maturity is broken down this way:
-      *   - has a description - up to 50 points depending on # of non empty lines
-      *   - has a brief description - 5 points
-      *   - has options specified - 5 points
-      *   - has terms defined -
-      *   - has an author in or above the definition - 5 points \-
-      *   - definition specific things: 0.65
-      *
-      * @return
-      */
-    def maturity: Int = {
-      var score = 0
-      if hasOptions then score += 5
-      if hasTerms then score += 5
-      if description.nonEmpty then {
-        score += 5 + Math.max(description.get.lines.count(_.nonEmpty), 50)
-      }
-      if brief.nonEmpty then score += 5
-      if includes.nonEmpty then score += 3
-      score += authors.size
-      score
-    }
-
     override def isVital: Boolean = true
   }
-
-  final val maxMaturity = 100
 
   /** Base trait of any definition that is a container and contains types
     */
@@ -275,6 +238,10 @@ trait Definitions {
   trait Processor[OPT <: OptionValue, DEF <: Definition] extends VitalDefinition[OPT, DEF] with WithTypes {
 
     def handlers: Seq[Handler]
+
+    def functions: Seq[Function]
+
+    def constants: Seq[Constant]
 
     def inlets: Seq[Inlet]
 
@@ -481,16 +448,16 @@ trait Definitions {
       with DomainDefinition {
     override def contents: Seq[TypeDefinition] = {
       typ match {
-        case Aggregation(_, fields)                       => fields
-        case Enumeration(_, enumerators)                  => enumerators
-        case AggregateUseCaseTypeExpression(_, _, fields) => fields
-        case _                                            => Seq.empty[TypeDefinition]
+        case a: Aggregation                    => a.contents
+        case a: AggregateUseCaseTypeExpression => a.contents
+        case Enumeration(_, enumerators)       => enumerators
+        case _                                 => Seq.empty[TypeDefinition]
       }
     }
 
     final val kind: String = {
       typ match {
-        case AggregateUseCaseTypeExpression(_, useCase, _) => useCase.kind
+        case AggregateUseCaseTypeExpression(_, useCase, _, _) => useCase.kind
         case _                                             => "Type"
       }
     }
@@ -596,16 +563,6 @@ trait Definitions {
       output.isEmpty
 
     final val kind: String = "Function"
-
-    override def maturity: Int = {
-      var score = super.maturity
-      if input.nonEmpty then score += 2
-      if output.nonEmpty then score += 3
-      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 13)
-      if statements.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
-      if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 12)
-      Math.max(score, maxMaturity)
-    }
   }
 
   /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional
@@ -731,7 +688,7 @@ trait Definitions {
     final val kind: String = "OnMessageClause"
 
     override def resolveNameTo(name: String): Option[Definition] = {
-      if msg.id.nonEmpty && msg.id.get.value == name then Some(this) else None
+      if msg.id.getOrElse(Identifier.empty).value == name then Some(this) else None
     }
   }
 
@@ -915,17 +872,6 @@ trait Definitions {
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
 
-    override def maturity: Int = {
-      var score = super.maturity
-      if states.nonEmpty then score += Math.max(states.count(_.nonEmpty), 10)
-      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 25)
-      if handlers.nonEmpty then score += 1
-      if invariants.nonEmpty then
-        score +=
-          Math.max(invariants.count(_.nonEmpty), 10)
-      if functions.nonEmpty then score += Math.max(functions.count(_.nonEmpty), 5)
-      Math.max(score, maxMaturity)
-    }
   }
 
   sealed trait AdaptorDirection extends RiddlValue
@@ -982,13 +928,6 @@ trait Definitions {
     }
     final val kind: String = "Adaptor"
 
-    override def maturity: Int = {
-      var score = super.maturity
-      if handlers.nonEmpty then
-        score +=
-          Math.max(handlers.count(_.nonEmpty), maxMaturity)
-      Math.max(score, maxMaturity)
-    }
   }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
@@ -1033,6 +972,7 @@ trait Definitions {
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     functions: Seq[Function] = Seq.empty[Function],
+    constants: Seq[Constant] = Seq.empty[Constant],
     includes: Seq[Include[RepositoryDefinition]] = Seq
       .empty[Include[RepositoryDefinition]],
     options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
@@ -1044,7 +984,7 @@ trait Definitions {
     override def kind: String = "Repository"
 
     override lazy val contents: Seq[RepositoryDefinition] = {
-      super.contents ++ types ++ handlers ++ inlets ++ outlets ++ terms
+      super.contents ++ types ++ handlers ++ inlets ++ outlets ++ terms ++ constants
     }
   }
 
@@ -1111,14 +1051,6 @@ trait Definitions {
     }
     final val kind: String = "Projector"
 
-    override def maturity: Int = {
-      var score = super.maturity
-      val records: Seq[Type] = types.filter(_.typ.isContainer)
-      if records.nonEmpty then
-        score +=
-          Math.max(types.count(_.nonEmpty), maxMaturity)
-      Math.max(score, maxMaturity)
-    }
   }
 
   /** A replicated value within a context. Integer, Map and Set values will use CRDTs
@@ -1210,17 +1142,6 @@ trait Definitions {
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
 
-    override def maturity: Int = {
-      var score = super.maturity
-      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
-      if adaptors.nonEmpty then score += Math.max(types.count(_.nonEmpty), 5)
-      if sagas.nonEmpty then score += Math.max(types.count(_.nonEmpty), 5)
-      if streamlets.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
-      if functions.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
-      if handlers.nonEmpty then score += 10
-      if projectors.nonEmpty then score += Math.max(types.count(_.nonEmpty), 10)
-      Math.max(score, maxMaturity)
-    }
   }
 
   /** A reference to a bounded context
@@ -1388,6 +1309,7 @@ trait Definitions {
     outlets: Seq[Outlet] = Seq.empty[Outlet],
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
+    constants: Seq[Constant] = Seq.empty[Constant],
     types: Seq[Type] = Seq.empty[Type],
     includes: Seq[Include[StreamletDefinition]] = Seq
       .empty[Include[StreamletDefinition]],
@@ -1399,17 +1321,9 @@ trait Definitions {
   ) extends Processor[StreamletOption, StreamletDefinition]
       with ContextDefinition {
     override def contents: Seq[StreamletDefinition] = super.contents ++
-      inlets ++ outlets ++ handlers ++ terms
+      inlets ++ outlets ++ handlers ++ terms ++ constants
 
     final val kind: String = shape.getClass.getSimpleName
-
-    override def maturity: Int = {
-      var score = super.maturity
-      if inlets.nonEmpty then score += Math.max(inlets.count(_.nonEmpty), 5)
-      if outlets.nonEmpty then score += Math.max(outlets.count(_.nonEmpty), 5)
-      if handlers.nonEmpty then score += Math.max(handlers.count(_.nonEmpty), 40)
-      Math.max(score, maxMaturity)
-    }
 
     shape match {
       case Source(_) =>
@@ -1568,13 +1482,6 @@ trait Definitions {
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
 
-    override def maturity: Int = {
-      var score = super.maturity
-      if input.nonEmpty then score += 10
-      if output.nonEmpty then score += 10
-      if sagaSteps.nonEmpty then score += Math.max(sagaSteps.count(_.nonEmpty), 40)
-      Math.max(score, maxMaturity)
-    }
   }
 
   case class SagaRef(loc: At, pathId: PathIdentifier) extends Reference[Saga] {
@@ -1890,13 +1797,6 @@ trait Definitions {
 
     override def format: String = s"${Keywords.epic} ${id.format}"
 
-    override def maturity: Int = {
-      var score = super.maturity
-      if userStory.nonEmpty then score += 3
-      if shownBy.nonEmpty then score += 10
-      if cases.nonEmpty then score += Math.max(cases.count(_.nonEmpty), 25)
-      Math.max(score, maxMaturity)
-    }
   }
 
   /** A reference to a Story definintion.
@@ -2163,15 +2063,6 @@ trait Definitions {
     }
     final val kind: String = "Domain"
 
-    override def maturity: Int = {
-      var score = super.maturity
-      if types.nonEmpty then score += Math.max(types.count(_.nonEmpty), 15)
-      if contexts.nonEmpty then score += Math.max(contexts.count(_.nonEmpty), 15)
-      if epics.nonEmpty then score += Math.max(epics.count(_.nonEmpty), 15)
-      if applications.nonEmpty then score += Math.max(epics.count(_.nonEmpty), 5)
-      if domains.nonEmpty then score += Math.max(domains.count(_.nonEmpty), 10)
-      Math.max(score, maxMaturity)
-    }
   }
 
   /** A reference to a domain definition

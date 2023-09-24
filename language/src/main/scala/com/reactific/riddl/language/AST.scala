@@ -13,6 +13,7 @@ package com.reactific.riddl.language
   */
 object AST extends ast.AbstractDefinitions with ast.Definitions with ast.Options with ast.Types with ast.Statements {
 
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
   def findAuthors(
     defn: Definition,
     parents: Seq[Definition]

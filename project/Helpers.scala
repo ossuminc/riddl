@@ -3,20 +3,20 @@ import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
 import sbt.Keys.organizationName
-import sbt.Keys.*
-import sbt.*
+import sbt.Keys._
+import sbt._
 import sbt.io.Path.allSubpaths
 import sbtbuildinfo.BuildInfoKey
 import sbtbuildinfo.BuildInfoKeys.{buildInfoKeys, buildInfoObject, buildInfoPackage, buildInfoUsePackageAsPath}
 import sbtbuildinfo.BuildInfoOption.{BuildTime, ToJson, ToMap}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoOptions
-import scoverage.ScoverageKeys.*
+import scoverage.ScoverageKeys._
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
 import wartremover.WartRemover.autoImport
 import wartremover.{Wart, WartRemover}
-import wartremover.WartRemover.autoImport.*
+import wartremover.WartRemover.autoImport._
 
 import java.net.URI
 import java.util.Calendar
@@ -114,13 +114,17 @@ object C {
   def withWartRemover(p: Project): Project = {
     p.enablePlugins(WartRemover)
       .settings(
-        Compile / compile / wartremoverWarnings ++= Warts.unsafe.filter {
-          case Wart.DefaultArguments | Wart.Any => false
+        Compile / compile / wartremoverWarnings := Warts.unsafe.filter {
+          case Wart.DefaultArguments | Wart.Any | Wart.IsInstanceOf | // would like to get rid of this
+              Wart.AsInstanceOf // would like to get rid of this
+              =>
+            false
           case _ => true
         },
-        // Ignore generated files
-        wartremoverExcluded += baseDirectory.value / "target" / "scala-3.3.1" /
-          "src_managed" / "main" / "com" / "reactific"
+        Test / compile / wartremoverWarnings := Seq.empty[Wart]
+        // Ignore generated files - not a feature yet!
+        // wartremoverExcluded += baseDirectory.value / "target" / "scala-3.3.1" /
+        //  "src_managed" / "main" / "com" / "reactific"
       )
   }
 

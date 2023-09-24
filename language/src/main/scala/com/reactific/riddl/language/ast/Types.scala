@@ -28,6 +28,7 @@ trait Types {
   /** Base trait of an expression that defines a type
     */
   sealed trait TypeExpression extends RiddlValue {
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     def isAssignmentCompatible(other: TypeExpression): Boolean = {
       (other == this) || (other.getClass == this.getClass) ||
       (other.getClass == classOf[Abstract]) ||
@@ -37,6 +38,7 @@ trait Types {
 
   sealed trait NumericType extends TypeExpression {
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
     }
@@ -79,8 +81,8 @@ trait Types {
       case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
       case RangeType(_, min, max)  => s"Range($min,$max)"
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
-      case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
-        s"${messageKind.format} of ${m.fields.size} fields"
+      case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
+        s"${messageKind.format} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind
       case _                  => "<unknown type expression>"
     }
@@ -272,9 +274,8 @@ trait Types {
 
   }
 
-  /** A leaf definition that is a callable method (function) of an aggregation
-   * type expressions. Methods associate an identifier with a computed type
-    * expression.
+  /** A leaf definition that is a callable method (function) of an aggregation type expressions. Methods associate an
+    * identifier with a computed type expression.
     *
     * @param loc
     *   The location of the field definition
@@ -311,12 +312,11 @@ trait Types {
     * This is used as the base trait of Aggregations and Messages
     */
   trait AggregateTypeExpression extends TypeExpression with Container[AggregateDefinition] {
-    def contents: Seq[AggregateDefinition]
-    lazy val fields: Seq[Field] = contents.filter(_.isInstanceOf[Field]).asInstanceOf[Seq[Field]]
-    lazy val methods: Seq[Method] = contents.filter(_.isInstanceOf[Method]).asInstanceOf[Seq[Method]]
+    def fields: Seq[Field]
+    def methods: Seq[Method]
+    final def contents: Seq[AggregateDefinition] = fields ++ methods
     override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-
       other match {
         case oate: AggregateTypeExpression =>
           val validity: Seq[Boolean] = for
@@ -341,8 +341,11 @@ trait Types {
     * @param fields
     *   The fields of the aggregation
     */
-  case class Aggregation(loc: At, contents: Seq[AggregateDefinition] = Seq.empty[AggregateDefinition]) extends
-    AggregateTypeExpression
+  case class Aggregation(
+    loc: At,
+    fields: Seq[Field] = Seq.empty[Field],
+    methods: Seq[Method] = Seq.empty[Method]
+  ) extends AggregateTypeExpression
 
   object Aggregation {
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
@@ -409,6 +412,7 @@ trait Types {
     override def format: String =
       s"${Predefined.Pattern}(${pattern.map(_.format).mkString(", ")})"
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Strng]
     }
@@ -425,6 +429,7 @@ trait Types {
     @inline def kind: String = Predefined.Id
     override def format: String = s"$kind(${entityPath.format})"
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Strng] ||
       other.isInstanceOf[Pattern]
@@ -444,7 +449,8 @@ trait Types {
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    contents: Seq[AggregateDefinition] = Seq.empty[AggregateDefinition]
+    fields: Seq[Field] = Seq.empty[Field],
+    methods: Seq[Method] = Seq.empty[Method]
   ) extends AggregateTypeExpression {
     override def format: String = {
       usecase.format.toLowerCase() + " " + super.format
@@ -480,10 +486,10 @@ trait Types {
   case class Strng(loc: At, min: Option[Long] = None, max: Option[Long] = None) extends PredefinedType {
     override lazy val kind: String = Predefined.String
     override def format: String = {
-      if min.isEmpty && max.isEmpty then kind else
-        s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
+      if min.isEmpty && max.isEmpty then kind else s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
     }
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
     }
@@ -559,6 +565,8 @@ trait Types {
   case class RangeType(loc: At, min: Long, max: Long) extends IntegerTypeExpression {
     override def format: String = s"$kind($min,$max)"
     @inline def kind: String = Predefined.Range
+
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
     }
@@ -639,6 +647,7 @@ trait Types {
   case class Date(loc: At) extends TimeType {
     @inline def kind: String = Predefined.Date
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
@@ -654,6 +663,7 @@ trait Types {
   case class Time(loc: At) extends TimeType {
     @inline def kind: String = Predefined.Time
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
@@ -669,6 +679,7 @@ trait Types {
   case class DateTime(loc: At) extends TimeType {
     @inline def kind: String = Predefined.DateTime
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Date] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
@@ -684,6 +695,7 @@ trait Types {
   case class TimeStamp(loc: At) extends TimeType {
     @inline def kind: String = Predefined.TimeStamp
 
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[Date] || other.isInstanceOf[Strng] ||

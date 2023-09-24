@@ -253,18 +253,15 @@ object Messages {
     log: Logger
   ): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
-      if maybeMessages.nonEmpty then {
-        val messages = maybeMessages.get
-        if messages.nonEmpty then {
-          log.info(s"""$kind Message Count: ${messages.length}""")
-
-          messages.map(_.format).foreach { message =>
-            kind match {
-              case Info        => log.info(message)
-              case SevereError => log.severe(message)
-              case Error       => log.error(message)
-              case _           => log.warn(message)
-            }
+      val messages = maybeMessages.getOrElse(Seq.empty[Message])
+      if messages.nonEmpty then {
+        log.info(s"""$kind Message Count: ${messages.length}""")
+        messages.map(_.format).foreach { message =>
+          kind match {
+            case Info        => log.info(message)
+            case SevereError => log.severe(message)
+            case Error       => log.error(message)
+            case _           => log.warn(message)
           }
         }
       }

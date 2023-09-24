@@ -19,7 +19,6 @@ private[parsing] trait FunctionParser {
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
       case (loc, Options.tail_recursive, _) => TailRecursive(loc)
-      case (_, _, _)                        => throw new RuntimeException("Impossible case")
     }
   }
 

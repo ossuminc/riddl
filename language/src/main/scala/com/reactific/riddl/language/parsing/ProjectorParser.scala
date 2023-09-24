@@ -24,7 +24,6 @@ private[parsing] trait ProjectorParser {
     options[u, ProjectorOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         ProjectorTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 

@@ -108,6 +108,13 @@ trait AbstractDefinitions {
 
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
   }
+  object Description {
+    lazy val empty = new Description {
+      val loc: At = At.empty
+      val lines = Seq.empty[LiteralString]
+      def format: String = ""
+    }
+  }
 
   case class BlockDescription(
     loc: At = At.empty,
@@ -136,6 +143,7 @@ trait AbstractDefinitions {
     def briefValue: String = {
       brief.map(_.s).getOrElse("No brief description.")
     }
+    def hasBriefDescription: Boolean = brief.nonEmpty
   }
 
   /** Base trait of all values that have an optional Description
@@ -147,6 +155,7 @@ trait AbstractDefinitions {
         .map(_.lines.map(_.s))
         .mkString("", System.lineSeparator(), System.lineSeparator())
     }
+    def hasDescription: Boolean = description.nonEmpty
   }
 
   /** Base trait of any definition that is also a ContainerValue
@@ -243,10 +252,9 @@ trait AbstractDefinitions {
     }
   }
 
-  /** Base class for all actions. Actions are used in the "then" and "but"
-    * clauses of a Gherkin example such as in the body of a handler's `on`
-    * clause or in the definition of a Function. The subclasses define different
-    * kinds of actions that can be used.
+  /** Base class for all actions. Actions are used in the "then" and "but" clauses of a Gherkin example such as in the
+    * body of a handler's `on` clause or in the definition of a Function. The subclasses define different kinds of
+    * actions that can be used.
     */
   trait Action extends RiddlValue
 

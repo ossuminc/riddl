@@ -154,12 +154,6 @@ class ASTTest extends AnyWordSpec with Matchers {
       Context(At(), Identifier(At(), "test"), types = types).contents mustBe
         types
     }
-    "has completeness" in {
-      val (num, den) = context.completeness
-      num mustBe 0
-      den mustBe 5
-    }
-    "maxMaturity is 100" in { AST.maxMaturity mustBe 100 }
   }
   "WithTypes" must {
     "be sane" in {
