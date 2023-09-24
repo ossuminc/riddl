@@ -80,8 +80,8 @@ class StreamingParserTest extends ParsingTest {
         """
           |domain AnyDomain is {
           |context SensorMaintenance is {
-          |  command Forecast is {}
-          |  command Temperature is {}
+          |  command Forecast is { ??? }
+          |  command Temperature is { ??? }
           |  source GetWeatherForecast is {
           |    outlet Weather is command Forecast
           |  } described by "This is a source for Forecast data"
