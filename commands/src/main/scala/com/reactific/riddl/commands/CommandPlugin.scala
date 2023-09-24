@@ -173,21 +173,20 @@ object CommandPlugin {
     remaining: Array[String],
     commonOptions: CommonOptions
   ): Int = {
-    var log: Logger = SysLogger()
+    val log: Logger = 
+      if commonOptions.quiet then 
+        StringLogger()
+      else 
+        SysLogger()
 
     if remaining.isEmpty then {
-      if !commonOptions.quiet then {
-        log.error("No command argument was provided")
-      }
+      log.error("No command argument was provided")
       1
     } else {
       val name = remaining.head
-      if commonOptions.dryRun then {
-        if !commonOptions.quiet then {
-          log.info(s"Would have executed: ${remaining.mkString(" ")}")
-        }
-      }
-      if commonOptions.quiet then { log = StringLogger() }
+      if commonOptions.dryRun then
+        log.info(s"Would have executed: ${remaining.mkString(" ")}")
+      
       val result = CommandPlugin
         .runCommandWithArgs(name, remaining, log, commonOptions)
       handleCommandResult(result, commonOptions, log)

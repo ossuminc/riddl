@@ -145,6 +145,7 @@ class RepeatCommand
    * @return
    * Either a set of Messages on error or a Unit on success
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Var"))
   override def run(
     options: Options,
     commonOptions: CommonOptions,
