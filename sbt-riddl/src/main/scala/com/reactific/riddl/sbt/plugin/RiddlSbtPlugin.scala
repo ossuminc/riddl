@@ -54,7 +54,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       val execPath = riddlcPath.value
       val conf = riddlcConf.value.getAbsoluteFile.toString
       val version = riddlcMinVersion.value
-      runRiddlc(execPath, Seq("from", conf), version)
+      runRiddlc(execPath, Seq("from", conf, "validate"), version)
     },
     infoTask := {
       val execPath = riddlcPath.value
