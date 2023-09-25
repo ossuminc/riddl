@@ -203,7 +203,7 @@ abstract class CollectingPass[F](input: PassInput) extends Pass(input) {
   protected var collectedValues: Seq[F] = Seq.empty[F]
 
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    collectedValues :+ collect(definition, parents)
+    collectedValues = collectedValues :+ collect(definition, parents)
     if definition.hasDefinitions then {
       parents.push(definition)
       definition.contents.foreach { item => traverse(item, parents) }
