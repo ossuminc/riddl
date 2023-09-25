@@ -5,8 +5,6 @@
  */
 
 package com.reactific.riddl.language
-
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput}
 import com.reactific.riddl.utils.Logger
 

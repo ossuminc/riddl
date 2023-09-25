@@ -7,7 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.parsing.Terminals.*
-import com.reactific.riddl.language.AST.{Line, LiteralString}
+import com.reactific.riddl.language.AST.{LiteralString}
 import fastparse.*
 import fastparse.NoWhitespace.*
 import java.lang.Character.isISOControl
@@ -25,12 +25,6 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
     P(
       location ~ Punctuation.verticalBar ~~ line
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
-  }
-
-  def invalidCloseLine[u:P]: P[Line] = {
-    P(
-      location ~ CharsWhile( ch => ch != '\n' && ch != '\r' && ch != '}').! ~~ ("\n" | "\r" ~~ "\n")
-    ).map(tpl => (Line.apply _).tupled(tpl))
   }
 
   // \\	The backslash character

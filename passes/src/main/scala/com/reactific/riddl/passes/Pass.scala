@@ -8,8 +8,7 @@ package com.reactific.riddl.passes
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.{AST, CommonOptions, Messages}
+import com.reactific.riddl.language.{AST, At, CommonOptions, Messages}
 import com.reactific.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.passes.validate.{ValidationOutput, ValidationPass}
@@ -24,12 +23,11 @@ trait PassInfo {
   def name: String
 }
 
-/**
- * An abstract notion of the minimum notion
- */
+/** An abstract notion of the minimum notion
+  */
 case class PassInput(root: RootContainer, commonOptions: CommonOptions = CommonOptions.empty) {
 
-  private[passes]  val priorOutputs: mutable.HashMap[String,PassOutput] = mutable.HashMap.empty
+  private[passes] val priorOutputs: mutable.HashMap[String, PassOutput] = mutable.HashMap.empty
 
   @SuppressWarnings(Array("org.wartremover.warts.Var"))
   private var messages: Messages = Messages.empty
@@ -79,49 +77,53 @@ object PassesResult {
   def apply(input: PassInput): PassesResult = {
     val symbols = input.outputOf[SymbolsOutput](SymbolsPass.name)
     val resolution = input.outputOf[ResolutionOutput](ResolutionPass.name)
-    //val validation = input.outputOf[ValidationOutput](ValidationPass.name)
+    // val validation = input.outputOf[ValidationOutput](ValidationPass.name)
     val others = input.priorOutputs.toMap.filterNot(Pass.standardPassNames.contains(_))
-    PassesResult(input.root, input.commonOptions, input.getMessages, symbols,
-      resolution.refMap, resolution.usage, others)
+    PassesResult(
+      input.root,
+      input.commonOptions,
+      input.getMessages,
+      symbols,
+      resolution.refMap,
+      resolution.usage,
+      others
+    )
   }
 }
 
-
-/** Abstract Pass definition  */
+/** Abstract Pass definition */
 abstract class Pass(@unused in: PassInput) {
-  /**
-   * THe name of the pass for inclusion in messages it produces
-   * @return A string value giving the name of this pass
-   */
+
+  /** THe name of the pass for inclusion in messages it produces
+    * @return
+    *   A string value giving the name of this pass
+    */
   def name: String
 
-  /**
-   * If your pass requires the output from other passes, call this function from your pass's constructor.
-   * It will ensure that your pass will fail construction if the input doesn't contain that required pass's output.
-   * @param passInfo
-   *   The pass's companion object from which this function will obtain the pass's name
-   */
+  /** If your pass requires the output from other passes, call this function from your pass's constructor. It will
+    * ensure that your pass will fail construction if the input doesn't contain that required pass's output.
+    * @param passInfo
+    *   The pass's companion object from which this function will obtain the pass's name
+    */
   protected final def requires(passInfo: PassInfo): Unit = {
     require(in.hasPassOutput(passInfo.name), s"Required pass '${passInfo.name}' was not run prior to $name'")
   }
 
   protected def process(
     definition: Definition,
-    parents: mutable.Stack[Definition],
+    parents: mutable.Stack[Definition]
   ): Unit
 
   def postProcess(root: RootContainer): Unit
 
-  /**
-   * Generate the output of this Pass. This will only be called after all the calls
-   * to process have completed.
-   * @return an instance of the output type
-   */
+  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+    * @return
+    *   an instance of the output type
+    */
   def result: PassOutput
 
-  /**
-   * Close any resources used so this can be used with AutoCloseable or Using.Manager
-   */
+  /** Close any resources used so this can be used with AutoCloseable or Using.Manager
+    */
   def close(): Unit = ()
 
   protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
@@ -134,18 +136,17 @@ abstract class Pass(@unused in: PassInput) {
   }
 }
 
-/**
- * A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
- *   - openContainer at the start of container's processing
- *   - processLeaf for any leaf node
- *   - closeContainer after all the container's contents have been processed
- *     This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all
- *     their content (openContainer) and also after all its content (closeContainer). This is necessary for passes that
- *     must maintain the hierarchical structure of the AST model in their processing
- *
- * @param input
- * The PassInput to process
- */
+/** A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
+  *   - openContainer at the start of container's processing
+  *   - processLeaf for any leaf node
+  *   - closeContainer after all the container's contents have been processed This kind of Pass allows the processing to
+  *     follow the AST hierarchy so that container nodes can run before all their content (openContainer) and also after
+  *     all its content (closeContainer). This is necessary for passes that must maintain the hierarchical structure of
+  *     the AST model in their processing
+  *
+  * @param input
+  *   The PassInput to process
+  */
 abstract class HierarchyPass(input: PassInput) extends Pass(input) {
 
   // not required in this kind of pass, final override it
@@ -174,36 +175,35 @@ abstract class HierarchyPass(input: PassInput) extends Pass(input) {
   }
 }
 
-case class FoldingPassOutput[T](
+abstract class CollectingPassOutput[T](
   messages: Messages = Messages.empty,
-  folded: Seq[T] = Seq.empty[T]
+  collected: Seq[T] = Seq.empty[T]
 ) extends PassOutput
 
-/**
- * A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
- *   - openContainer at the start of container's processing
- *   - processLeaf for any leaf node
- *   - closeContainer after all the container's contents have been processed
- *     This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all
- *     their content (openContainer) and also after all its content (closeContainer). This is necessary for passes that
- *     must maintain the hierarchical structure of the AST model in their processing
- *
- * @param input
- * The PassInput to process
- */
-abstract class FoldingPass[F](input: PassInput) extends Pass(input) {
+/** A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
+  *   - openContainer at the start of container's processing
+  *   - processLeaf for any leaf node
+  *   - closeContainer after all the container's contents have been processed This kind of Pass allows the processing to
+  *     follow the AST hierarchy so that container nodes can run before all their content (openContainer) and also after
+  *     all its content (closeContainer). This is necessary for passes that must maintain the hierarchical structure of
+  *     the AST model in their processing
+  *
+  * @param input
+  *   The PassInput to process
+  */
+abstract class CollectingPass[F](input: PassInput) extends Pass(input) {
 
   // not required in this kind of pass, final override it
   override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
 
   // Instead traverse will use this fold method
-  protected def fold(definition: Definition, parents: mutable.Stack[AST.Definition]): F
+  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): F
 
   @SuppressWarnings(Array("org.wartremover.warts.Var"))
-  var resultAccumulator: Seq[F] = Seq.empty[F]
+  protected var collectedValues: Seq[F] = Seq.empty[F]
 
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    resultAccumulator :+ fold(definition, parents)
+    collectedValues :+ collect(definition, parents)
     if definition.hasDefinitions then {
       parents.push(definition)
       definition.contents.foreach { item => traverse(item, parents) }
@@ -211,7 +211,6 @@ abstract class FoldingPass[F](input: PassInput) extends Pass(input) {
     }
   }
 }
-
 
 object Pass {
 
@@ -231,9 +230,9 @@ object Pass {
     shouldFailOnErrors: Boolean = true,
     passes: PassesCreator = standardPasses,
     logger: Logger = SysLogger()
-  ): Either[Messages.Messages,PassesResult] = {
+  ): Either[Messages.Messages, PassesResult] = {
     try {
-      for  pass <- passes  yield {
+      for pass <- passes yield {
         val aPass = pass(input)
         val output = runOnePass(input, aPass, logger)
         input.outputIs(aPass.name, output)
@@ -244,25 +243,25 @@ object Pass {
       } else {
         Right(PassesResult(input))
       }
-      } catch {
-        case NonFatal(xcptn) =>
-          val message = ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
-          val messages: Messages.Messages = List(Messages.severe(message, At.empty))
-          Left(messages)
-      }
+    } catch {
+      case NonFatal(xcptn) =>
+        val message = ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
+        val messages: Messages.Messages = List(Messages.severe(message, At.empty))
+        Left(messages)
+    }
   }
 
   def apply(
     model: RootContainer,
     options: CommonOptions,
     shouldFailOnErrors: Boolean
-  ): Either[Messages.Messages,PassesResult]  = {
+  ): Either[Messages.Messages, PassesResult] = {
     val input: PassInput = PassInput(model, options)
     apply(input, shouldFailOnErrors, standardPasses, SysLogger())
   }
 
   def runSymbols(input: PassInput): SymbolsOutput = {
-    runPass[SymbolsOutput](input, SymbolsPass(input) )
+    runPass[SymbolsOutput](input, SymbolsPass(input))
   }
 
   def runResolution(input: PassInput): ResolutionOutput = {
@@ -270,7 +269,7 @@ object Pass {
   }
 
   def runValidation(input: PassInput): ValidationOutput = {
-    runPass[ValidationOutput](input, ValidationPass(input) )
+    runPass[ValidationOutput](input, ValidationPass(input))
   }
 
   private def runPass[OUT <: PassOutput](input: PassInput, pass: Pass): OUT = {

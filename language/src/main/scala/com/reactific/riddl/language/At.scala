@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language.ast
+package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
 

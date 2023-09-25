@@ -7,10 +7,9 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.language.{CommonOptions, ParsingTest}
+import com.reactific.riddl.language.{At, CommonOptions, ParsingTest}
 import com.reactific.riddl.passes.{Pass, PassesResult}
 import org.scalatest.Assertion
 

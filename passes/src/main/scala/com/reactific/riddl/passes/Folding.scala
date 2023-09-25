@@ -8,8 +8,7 @@ package com.reactific.riddl.passes
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.{AST, CommonOptions, Messages}
+import com.reactific.riddl.language.{AST, At, CommonOptions, Messages}
 import com.reactific.riddl.passes.symbols.SymbolsOutput
 import com.reactific.riddl.utils.SeqHelpers.*
 

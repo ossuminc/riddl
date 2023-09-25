@@ -55,8 +55,11 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     val parentsAsSeq: Seq[Definition] = parents.toSeq
     definition match {
       // TODO: generate some frequency statistics and use them to reorganize this list of cases, most frequent first
-      case f: Field =>
-        validateField(f, parentsAsSeq)
+      case f: AggregateDefinition =>
+        f match {
+          case f: Field  => validateField(f, parentsAsSeq)
+          case m: Method => validateMethod(m, parentsAsSeq)
+        }
       case t: Type =>
         validateType(t, parentsAsSeq)
       case e: Enumerator =>
@@ -116,6 +119,8 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateStory(s, parentsAsSeq)
       case a: Application =>
         validateApplication(a, parentsAsSeq)
+      case r: Replica =>
+        validateReplica(r, parentsAsSeq)
       case uc: UseCase =>
         validateUseCase(uc, parentsAsSeq)
       case grp: Group =>
@@ -192,6 +197,13 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     }
     checkTypeExpression(f.typeEx, f, parents)
     checkDescription(f)
+  }
+  private def validateMethod(
+    m: Method,
+    parents: Seq[Definition]
+  ): Unit = {
+    // TODO: Write validateMethod
+    ()
   }
 
   private def validateInvariant(
@@ -490,6 +502,26 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkContainer(parents, c)
     checkOptions[ContextOption](c.options, c.loc)
     checkDescription(c)
+  }
+
+  private def validateReplica(
+    replica: Replica,
+    parents: Seq[Definition]
+  ): Unit = {
+    checkDefinition(parents, replica)
+    checkTypeExpression(replica.typeExp, replica, parents)
+    replica.typeExp match {
+      case Mapping(loc, from, to)                =>
+      case Sequence(loc, of)                     =>
+      case Set(loc, of)                          =>
+      case Optional(loc, typeExp)                =>
+      case ZeroOrMore(loc, typeExp)              =>
+      case OneOrMore(loc, typeExp)               =>
+      case SpecificRange(loc, typeExp, min, max) =>
+      case t: TypeExpression =>
+        messages.addError(t.loc, s"Type expression in Replica ${replica.identify} is not a replicable type")
+    }
+    checkDescription(replica)
   }
 
   private def validateStory(

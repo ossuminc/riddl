@@ -8,8 +8,7 @@ package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.{AST, Messages}
+import com.reactific.riddl.language.{AST, At, Messages}
 import com.reactific.riddl.passes.resolve.ResolutionOutput
 import com.reactific.riddl.passes.symbols.SymbolsOutput
 

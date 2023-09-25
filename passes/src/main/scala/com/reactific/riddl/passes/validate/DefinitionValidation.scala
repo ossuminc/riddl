@@ -7,8 +7,8 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.At
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs

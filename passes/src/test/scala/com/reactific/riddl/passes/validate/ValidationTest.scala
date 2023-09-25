@@ -8,9 +8,8 @@ package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.ParsingTest
+import com.reactific.riddl.language.{At, ParsingTest}
 import com.reactific.riddl.passes.{Pass, PassInput, Riddl}
 
 import java.nio.file.Path

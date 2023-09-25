@@ -8,7 +8,6 @@ package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.Terminals.Keywords
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -157,16 +156,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   }
   "WithTypes" must {
     "be sane" in {
-      val wt = new WithTypes {
-        def types: Seq[Type] = Seq.empty
-        def id: AST.Identifier = Identifier.empty
-        def kind: String = ""
-        def contents: Seq[Definition] = Seq.empty
-        def description: Option[AST.Description] = None
-        def brief: Option[AST.LiteralString] = None
-        def loc: At = At.empty
-        def format: String = ""
-      }
+      val wt = new Domain(At.empty, Identifier.empty)
       wt.hasAuthors mustBe false
       wt.hasTypes mustBe false
       wt.hasOptions mustBe false
@@ -220,7 +210,7 @@ class ASTTest extends AnyWordSpec with Matchers {
         )
 
         val invariants = Seq(
-          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(),"true")), None)
+          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(), "true")), None)
         )
         val types = Seq(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),

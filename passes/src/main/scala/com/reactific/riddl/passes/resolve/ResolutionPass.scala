@@ -52,8 +52,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     kindMap.add(definition)
     val parentsAsSeq: Seq[Definition] = definition +: parents.toSeq
     definition match {
-      case f: Field =>
-        f.typeEx match {
+      case ad: AggregateDefinition =>
+        ad.typeEx match {
           case AliasedTypeExpression(_, pathId) =>
             resolveAPathId[Type](pathId, parentsAsSeq)
           case EntityReferenceTypeExpression(_, entity) =>
@@ -97,6 +97,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         r.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Saga =>
         s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+      case r: Replica =>
+        resolveTypeExpression(r.typeExp, parentsAsSeq)
       case d: Domain =>
         d.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case a: Application =>
@@ -192,15 +194,30 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
     // TODO: Finish implementation of resolutions for statements
     statement match {
-      case ss: SetStatement                            => resolveARef[Field](ss.field, parents)
-      case BecomeStatement(loc, entity, handler)       => ()
-      case ForEachStatement(loc, ref, do_)             => ()
-      case SendStatement(loc, msg, portlet)            => ()
-      case MorphStatement(loc, entity, state, message) => ()
-      case TellStatement(loc, msg, entityRef)          => ()
-      case _: ArbitraryStatement                       => ()
-      case _: ErrorStatement                           => ()
-      case _: ReturnStatement                          => ()
+      case ss: SetStatement =>
+        resolveARef[Field](ss.field, parents)
+      case BecomeStatement(loc, entity, handler) =>
+        resolveARef[Entity](entity, parents)
+      case ForEachStatement(loc, ref, do_) =>
+        resolveAPathId[Type](ref, parents)
+      case SendStatement(loc, msg, portlet) =>
+        resolveARef[Type](msg, parents)
+      case MorphStatement(loc, entity, state, message) =>
+        resolveARef[Entity](entity, parents)
+        resolveARef[State](state, parents)
+        resolveARef[Type](message, parents)
+      case TellStatement(loc, msg, processorRef) =>
+        resolveARef[Type](msg, parents)
+        resolveARef[Processor[?, ?]](processorRef, parents)
+      case CallStatement(loc, func) =>
+        resolveARef[Function](func, parents)
+      case ReplyStatement(loc, message) =>
+        resolveARef[Type](message, parents)
+      case _: ArbitraryStatement  => ()
+      case _: ErrorStatement      => ()
+      case _: ReturnStatement     => ()
+      case _: IfThenElseStatement => ()
+      case _: StopStatement       => ()
     }
   }
 

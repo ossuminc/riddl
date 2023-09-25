@@ -7,10 +7,9 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Messages
+import com.reactific.riddl.language.{At, Messages}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.language.ast.At
-import fastparse.{P, *}
+import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 import fastparse.internal.Lazy

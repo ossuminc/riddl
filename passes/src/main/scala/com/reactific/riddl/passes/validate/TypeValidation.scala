@@ -200,7 +200,6 @@ trait TypeValidation extends DefinitionValidation {
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, defn, parents)
       case _: PredefinedType => () // nothing needed
-      case _: TypeRef        => () // handled elsewhere
       case x =>
         require(requirement = false, s"Failed to match definition $x")
     }
