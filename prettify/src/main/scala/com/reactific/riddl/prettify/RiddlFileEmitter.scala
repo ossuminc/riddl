@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets
 import com.reactific.riddl.language.parsing.Terminals.*
 
 /** Unit Tests For RiddlFileEmitter */
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   private var indentLevel: Int = 0
 
@@ -146,13 +147,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitAlternation(alternation: Alternation): this.type = {
-    add(s"one of {\n").indent
-      .addIndent("")
-      .emitTypeExpression(alternation.of.head)
-    val s5 = alternation.of.tail.foldLeft(this) { (s4, te) =>
-      s4.add(" or ").emitTypeExpression(te)
-    }
-    s5.add("\n").outdent.addIndent("}")
+    add(s"one of {\n").indent.addIndent("")
+    alternation.of.map(emitTypeExpression).mkString("", ", ", "\n")
+    outdent.addIndent("}")
     this
   }
 
@@ -164,17 +161,17 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitFields(of: Seq[Field]): this.type = {
-    if of.isEmpty then { this.add("{ ??? }") }
-    else if of.sizeIs == 1 then {
-      val f: Field = of.head
-      add(s"{ ").emitField(f).add(" }").emitDescription(f.description)
-    } else {
-      this.add("{\n").indent
-      of.foldLeft(this) { case (s, f) =>
-        s.add(spc).emitField(f).emitDescription(f.description).add(",\n")
-      }
-      sb.deleteCharAt(sb.length - 2)
-      outdent.add(s"$spc} ")
+    of.headOption match {
+      case None => this.add("{ ??? }")
+      case Some(field) if of.size == 1 =>
+        add(s"{ ").emitField(field).add(" }").emitDescription(field.description)
+      case Some(field) =>
+        this.add("{\n").indent
+        of.foldLeft(this) { case (s, f) =>
+          s.add(spc).emitField(f).emitDescription(f.description).add(",\n")
+        }
+        sb.deleteCharAt(sb.length - 2)
+        outdent.add(s"$spc} ")
     }
     this
   }
@@ -200,13 +197,14 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitPattern(pattern: Pattern): this.type = {
-    val line =
-      if pattern.pattern.sizeIs == 1 then {
-        "Pattern(\"" + pattern.pattern.head.s + "\"" + s") "
-      } else {
-        s"Pattern(\n" + pattern.pattern.map(l => spc + "  \"" + l.s + "\"\n")
-        s"\n) "
-      }
+    val line = pattern.pattern.toList match
+      case Nil =>
+        ""
+      case pat :: Nil =>
+        s"Pattern(${pat.format})\n"
+      case pat :: tail =>
+        val lines = (pat :: tail).map(_.format).mkString(spc,s"\n$spc", "\n")
+        s"Pattern(\n$lines)\n"
     this.add(line)
   }
 
@@ -265,14 +263,14 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .add("\n")
   }
 
-  def emitAction(
-    action: Action
+  def emitStatement(
+    action: Statement
   ): this.type = {
     add(action.format)
   }
 
-  def emitActions(actions: Seq[Action]): this.type = {
-    actions.foreach { (a: Action) => emitAction(a) }
+  def emitStatements(actions: Seq[Statement]): this.type = {
+    actions.foreach { (s: Statement) => emitStatement(s) }
     this
   }
 
@@ -280,7 +278,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     if (statements.isEmpty) then add(" { ??? }\n")
     else
       add(" {").indent.nl
-      statements.map( _.format + "\n").foreach(addIndent)
+      statements.map(_.format + "\n").foreach(addIndent)
       outdent.addIndent("}").nl
     this
   }

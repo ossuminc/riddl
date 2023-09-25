@@ -3224,10 +3224,10 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   The benefit of that utilization
     */
   case class UserStory(
-    loc: At,
-    user: UserRef,
-    capability: LiteralString,
-    benefit: LiteralString
+    loc: At = At.empty,
+    user: UserRef = UserRef(At.empty, PathIdentifier.empty),
+    capability: LiteralString = LiteralString.empty,
+    benefit: LiteralString = LiteralString.empty
   ) extends RiddlValue {
     def format: String = ""
 
