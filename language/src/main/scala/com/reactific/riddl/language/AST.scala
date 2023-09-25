@@ -204,6 +204,11 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
     def isVital: Boolean = false
 
+    @SuppressWarnings(Array("org.wartremover.warts.asInstanceOf"))
+    def asVital[OPT <: OptionValue, DEF <: Definition]: VitalDefinition[OPT, DEF] =
+      require(this.isVital, "Not a vital definition")
+      this.asInstanceOf[VitalDefinition[OPT, DEF]]
+
     def hasOptions: Boolean = false
 
     def hasAuthors: Boolean = false
@@ -1697,9 +1702,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     implicit def bool2int(b: Boolean): Int = if b then 1 else 0
 
     override def isVital: Boolean = true
-
-    def asVital: VitalDefinition[OPT, DEF] = this
-
   }
 
   /** Base trait of any definition that is a container and contains types

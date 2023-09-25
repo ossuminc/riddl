@@ -185,6 +185,7 @@ private[parsing] trait EpicParser {
           )
         )
         val cases = mapTo[UseCase](groups.get(classOf[UseCase]))
+
         Epic(
           loc,
           id,

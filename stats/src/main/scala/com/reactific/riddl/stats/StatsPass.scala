@@ -3,7 +3,7 @@ package com.reactific.riddl.stats
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{CollectingPass, CollectingPassOutput, Pass, PassInfo, PassInput, PassOutput}
 import com.reactific.riddl.passes.resolve.ResolutionPass
 import com.reactific.riddl.passes.symbols.SymbolsPass
 
@@ -13,121 +13,188 @@ object StatsPass extends PassInfo {
   val name: String = "stats"
 }
 
-case class CategoryStats(
-  count: Long = 0,
-  percentOfDefinitions: Double = 0.0d,
-  averageCompleteness: Double = 0.0d,
-  averageComplexity: Double = 0.0d,
-  averageMaturity: Double = 0.0d,
-  totalMaturity: Long = 0,
-  percentComplete: Double = 0.0d,
-  percentDocumented: Double = 0.0d) {
-  override def toString: String = {
-    f"count:$count%s($percentOfDefinitions%.2f%%), maturity:$totalMaturity%d($averageMaturity%.2f%%)," +
-      f"complete: $percentComplete%.2f%%, documented: $percentDocumented%.2f%%"
-  }
-}
-
-/**
- *
- * @param specifications
- * The number of kinds of specifications that can be completed from the node's specifications method
- * @param completed
- */
+/** @param isEmpty
+  *   An indication if the definition is completely empty
+  * @param descriptionLines
+  *   The number of lines of documentation between the description and brief fields
+  * @param numSpecifications
+  *   The number of kinds of specifications that can be completed from the node's specifications method
+  * @param numCompleted
+  *   The number of specifications that hve been completed
+  * @param completeness
+  *   The ratio of numCompletions/numSpecifications as a percentage
+  * @param numContained
+  *   The number of contained definitions
+  */
 case class DefinitionStats(
-  numCompletions: Long = 0;
-  completion: Double = 0.0d
-  contained: Long = 0, // the number of contained definitions
+  kind: String = "",
+  isEmpty: Boolean = true, // if Definition.isEmpty returns true
+  descriptionLines: Int = 0, // number of lines of doc in briefly and description
+  numSpecifications: Int = 0, // how many kinds of specifications there are
+  numCompleted: Long = 0, // the actual number of specfications completed
+  numContained: Long = 0, // the number of contained definitions
+  numAuthors: Long = 0, // the number of defining authors
+  numTerms: Long = 0, // the number of term definitions
+  numOptions: Long = 0, // number of options declared
+  numIncludes: Long = 0,
+  numStatements: Long = 0
 )
+
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
+case class KindStats(
+  var count: Long = 0,
+  var numEmpty: Long = 0,
+  var descriptionLines: Long = 0,
+  var numSpecifications: Long = 0,
+  var numCompleted: Long = 0,
+  var numContained: Long = 0,
+  var numAuthors: Long = 0, // the number of defining authors
+  var numTerms: Long = 0, // the number of term definitions
+  var numOptions: Long = 0,
+  var numIncludes: Long = 0,
+  var numStatements: Long = 0
+) {
+  def completeness: Double = (numCompleted.toDouble / numSpecifications) * 100.0d
+  def complexity: Double =
+    ((numCompleted + numContained + numTerms + descriptionLines + numAuthors + numTerms + numOptions + numIncludes) /
+      count.toDouble) * 1000.0d
+  def averageContainment: Double = numContained.toDouble / count
+  def percent_of_all(total_count: Long): Double = (count.toDouble / total_count) * 100d
+  def percent_documented: Double = Math.min(descriptionLines / 5d, 100d)
+}
 
 case class StatsOutput(
   messages: Messages = Messages.empty,
-  count: Long = 0,
-  term_count: Long = 0,
   maximum_depth: Int = 0,
-  categories: Map[String, CategoryStats] = Map.empty
-) extends FoldingPassOutput[]
+  categories: Map[String, KindStats] = Map.empty
+) extends CollectingPassOutput[DefinitionStats]
 
 /** Unit Tests For StatsPass */
-case class StatsPass(input: PassInput) extends FoldingPass(input) {
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
+case class StatsPass(input: PassInput) extends CollectingPass[DefinitionStats](input) {
 
   def name: String = StatsPass.name
 
   requires(SymbolsPass)
   requires(ResolutionPass)
 
-  case class KindStats(
-    var count: Long = 0,
-    var maturitySum: Long = 0,
-    var completed: Long = 0,
-    var documented: Long = 0,
-  )
+  private var maximum_depth: Int = 0
+  private val kind_stats: mutable.HashMap[String, KindStats] = mutable.HashMap.empty
+  private var total_stats: Option[KindStats] = None
 
-  var term_count: Long = 0
-  var maximum_depth: Int = 0
-
-  var all_stats: KindStats = KindStats()
-  var adaptorStats: KindStats = KindStats()
-  var applicationStats: KindStats = KindStats()
-  var contextStats: KindStats = KindStats()
-  var domainStats: KindStats = KindStats()
-  var entityStats: KindStats = KindStats()
-  var functionStats: KindStats = KindStats()
-  var handlerStats: KindStats = KindStats()
-  var plantStats: KindStats = KindStats()
-  var streamletStats: KindStats = KindStats()
-  var projectionStats: KindStats = KindStats()
-  var repositoryStats: KindStats = KindStats()
-  var sagaStats: KindStats = KindStats()
-  var storyStats: KindStats = KindStats()
-  var other_stats: KindStats = KindStats()
-
-  var categories: Map[String, CategoryStats] = Map.empty
-
-
-  override protected def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
-    all_stats.count += 1
+  protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): DefinitionStats = {
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
-    if !definition.isEmpty then all_stats.completed += 1
-    if definition.brief.nonEmpty && definition.description.nonEmpty then all_stats.documented += 1
 
-    definition match {
+    val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
       case vd: VitalDefinition[?, ?] =>
-        all_stats.maturitySum += vd.maturity
-        vd match {
-          case p: Processor[_,_] => p match {
-            case a: Adaptor => makeVitalStats(a, adaptorStats)
-            case a: Application => makeVitalStats(a, applicationStats)
-            case c: Context => makeVitalStats(c, contextStats)
-            case e: Entity => makeVitalStats(e, entityStats)
-            case p: Streamlet => makeVitalStats(p, streamletStats)
-            case p: Projector => makeVitalStats(p, projectionStats)
-            case r: Repository => makeVitalStats(r, repositoryStats)
-          }
-          case e: Epic => makeVitalStats(e, storyStats)
-          case f: Function => makeVitalStats(f, functionStats)
-          case d: Domain => makeVitalStats(d, domainStats)
-          case s: Saga => makeVitalStats(s, sagaStats)
-        }
-      case t: Term =>
-        term_count += 1
-        other_stats.count += 1
-        if t.nonEmpty then other_stats.completed += 1
-      case d: Definition =>
-        other_stats.count += 1
-        if d.nonEmpty then other_stats.completed += 1
+        (vd.options.size, vd.authors.size, vd.terms.size, vd.includes.size)
+      case _ => (0, 0, 0, 0)
     }
+    val specs: Int = specificationsFor(definition)
+    val completes: Int = completedCount(definition)
+    DefinitionStats(
+      kind = definition.kind,
+      isEmpty = definition.isEmpty,
+      descriptionLines = {
+        definition.description.getOrElse(Description.empty).lines.size + { if definition.brief.nonEmpty then 1 else 0 }
+      },
+      numSpecifications = specs,
+      numCompleted = completes,
+      numContained = definition.contents.size,
+      numOptions = options,
+      numAuthors = authors,
+      numTerms = terms,
+      numIncludes = includes,
+      numStatements = definition.contents
+        .filter(_.isVital)
+        .map { (vd: Definition) =>
+          vd match {
+            case p: Processor[_, _] => p.handlers.flatMap(_.clauses.map(_.statements.size)).sum[Int]
+            case e: Epic            => 0
+            case f: Function        => f.statements.size
+            case d: Domain          => 0
+            case s: Saga       => s.sagaSteps.map(step => step.doStatements.size + step.undoStatements.size).sum[Int]
+            case _: Definition =>
+              // Non Vital, ignore
+              0
+          }
+        }
+        .sum[Int]
+    )
   }
 
-  /**
-   * Calculates the number of types of specifications that can be added to
-   * the vital definition provided.
-   * @param v
-   *   The vital definition for whom specifications number is computed
-   * @return
-   *   The number of types of specifications for v
-   */
-  private def specificationsFor(v: VitalDefinition[?, ?]): Int = {
+  def postProcess(root: RootContainer): Unit = {
+    for { defStats <- collectedValues } {
+      def remapping(existing: Option[KindStats]): Option[KindStats] = {
+        Some(
+          existing.fold(
+            KindStats(
+              count = 1L,
+              numEmpty = { if defStats.isEmpty then 1L else 0L },
+              descriptionLines = defStats.descriptionLines,
+              numSpecifications = defStats.numSpecifications,
+              numCompleted = defStats.numCompleted,
+              numContained = defStats.numCompleted,
+              numAuthors = defStats.numAuthors,
+              numTerms = defStats.numTerms,
+              numOptions = defStats.numOptions,
+              numIncludes = defStats.numIncludes,
+              numStatements = defStats.numStatements
+            )
+          ) { (ks: KindStats) =>
+            ks.count += 1
+            ks.numEmpty += { if defStats.isEmpty then 1 else 0 }
+            ks.numSpecifications += defStats.numSpecifications
+            ks.numCompleted += defStats.numCompleted
+            ks.numContained += defStats.numContained
+            ks.numAuthors += defStats.numAuthors
+            ks.numTerms += defStats.numTerms
+            ks.numOptions += defStats.numOptions
+            ks.numIncludes += defStats.numIncludes
+            ks.numStatements += defStats.numStatements
+            ks
+          }
+        )
+      }
+      kind_stats.updateWith(defStats.kind)(remapping)
+    }
+    val totals = kind_stats.values.foldLeft(KindStats()) { (total: KindStats, next: KindStats) =>
+      total.count += 1
+      total.descriptionLines += next.descriptionLines
+      total.numSpecifications += next.numSpecifications
+      total.numCompleted += next.numCompleted
+      total.numContained += next.numContained
+      total.numIncludes += next.numIncludes
+      total.numTerms += next.numTerms
+      total.numEmpty += next.numEmpty
+      total.numAuthors += next.numAuthors
+      total.numStatements += next.numStatements
+      total
+    }
+    total_stats = Some(totals)
+  }
+
+  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+    *
+    * @return
+    *   an instance of the output type
+    */
+  override def result: PassOutput = {
+    val totals = total_stats.getOrElse(KindStats())
+    StatsOutput(
+      Messages.empty,
+      maximum_depth,
+      categories = (kind_stats.toSeq :+ ("All" -> totals)).toMap[String, KindStats]
+    )
+  }
+
+  /** Calculates the number of types of specifications that can be added to the vital definition provided.
+    * @param v
+    *   The vital definition for whom specifications number is computed
+    * @return
+    *   The number of types of specifications for v
+    */
+  private def specificationsFor(v: Definition): Int = {
     val specsForDefinition: Int = 0
       + 1 // Brief Description
       + 1 // Description
@@ -136,7 +203,7 @@ case class StatsPass(input: PassInput) extends FoldingPass(input) {
       + 1 // Terms
 
     v match {
-      case p: Processor[?,?] =>
+      case p: Processor[?, ?] =>
         val specsForProcessor = specsForDefinition
           + 1 // Types
           + 1 // Constants
@@ -145,233 +212,144 @@ case class StatsPass(input: PassInput) extends FoldingPass(input) {
           + 1 // Inlets
           + 1 // Outlets
         p match {
-          case _: Application => specsForProcessor
-            + 1  // Groups
-          case _: Adaptor => specsForProcessor
-            + 1 // direction
-            + 1 // contextRef
-          case _: Context => specsForProcessor
-            + 1 // entities
-            + 1 // adaptors
-            + 1 // sagas
-            + 1 // streamlets
-            + 1 // projectors
-            + 1 // repositories
-            + 1 // connections
-            + 1 // replicas
-          case _: Entity => specsForProcessor
-            + 1 // states
-            + 1 // invariants
-          case _: Projector => specsForProcessor
-            + 1 // invariants
+          case _: Application =>
+            specsForProcessor
+              + 1 // Groups
+          case _: Adaptor =>
+            specsForProcessor
+              + 1 // direction
+              + 1 // contextRef
+          case _: Context =>
+            specsForProcessor
+              + 1 // entities
+              + 1 // adaptors
+              + 1 // sagas
+              + 1 // streamlets
+              + 1 // projectors
+              + 1 // repositories
+              + 1 // connections
+              + 1 // replicas
+          case _: Entity =>
+            specsForProcessor
+              + 1 // states
+              + 1 // invariants
+          case _: Projector =>
+            specsForProcessor
+              + 1 // invariants
           case _: Repository => specsForProcessor
-          case _: Streamlet => specsForProcessor
-             +1 // shape
+          case _: Streamlet =>
+            specsForProcessor
+              + 1 // shape
         }
-      case _: Domain      => specsForDefinition
-        + 1 // authorDefinitions
-        + 1 // contexts
-        + 1 // users
-        + 1 // epics
-        + 1 // sagas
-        + 1 // applications
-        + 0 // recursive domains not included
-      case _: Epic        => specsForDefinition
-        + 1 // userStory
-        + 1 // shownBy
-        + 1 // cases
-      case _: Function    => specsForDefinition
-        + 1 // input
-        + 1 // output
-        + 1 // statements
-        + 0 // recursive functions not included
-      case _: Saga        => specsForDefinition
-        + 1 // input
-        + 1 // output
-        + 1 // steps
+      case _: Domain =>
+        specsForDefinition
+          + 1 // authorDefinitions
+          + 1 // contexts
+          + 1 // users
+          + 1 // epics
+          + 1 // sagas
+          + 1 // applications
+          + 0 // recursive domains not included
+      case _: Epic =>
+        specsForDefinition
+          + 1 // userStory
+          + 1 // shownBy
+          + 1 // cases
+      case _: Function =>
+        specsForDefinition
+          + 1 // input
+          + 1 // output
+          + 1 // statements
+          + 0 // recursive functions not included
+      case _: Saga =>
+        specsForDefinition
+          + 1 // input
+          + 1 // output
+          + 1 // steps
+      case _: Definition => // shouldn't happen
+        specsForDefinition
     }
-
   }
 
   private def definitionCount(d: Definition): Int =
-    d.hasTypes.toInt + d.hasAuthors.toInt + d.hasOptions.toInt +
-      d.hasDescription.toInt + d.hasBriefDescription.toInt
-
+    var result = 0
+    if d.hasTypes then result += 1
+    if d.hasAuthors then result += 1
+    if d.hasOptions then result += 1
+    if d.hasDescription then result += 1
+    if d.hasBriefDescription then result += 1
+    result
 
   private def processorCount(p: Processor[?, ?]): Int =
-    definitionCount(p) + handlers.nonEmpty + functions.nonEmpty +
-      constants.nonEmpty + inlets.nonEmpty + outlets.nonEmpty
+    var result: Int = definitionCount(p)
+    if p.handlers.nonEmpty then result += 1
+    if p.functions.nonEmpty then result += 1
+    if p.constants.nonEmpty then result += 1
+    if p.inlets.nonEmpty then result += 1
+    if p.outlets.nonEmpty then result += 1
+    result
 
-  private def completenessOf(v: VitalDefinition[?, ?]): Double = {
-    val divisor = specificationsFor(v)
-    val numerator = v match {
+  private def completedCount(v: Definition): Int = {
+    v match {
       case p: Processor[?, ?] =>
         val countForProcessor = processorCount(p)
-          + p.types.nonEmpty + p.constants.nonEmpty + p.functions.nonEmpty
-          + p.handlers.nonEmpty + p.inlets.nonEmpty + p.outlets.nonEmpty
         p match {
-          case a: Application => countForPrrocessor + a.groups.nonEmpty
+          case a: Application =>
+            countForProcessor
+              + { if a.groups.nonEmpty then 1 else 0 }
           case a: Adaptor =>
-            specsForProcessor +
-              +1 // direction (required)
+            countForProcessor
+              + 1 // direction (required)
               + 1 // contextRef (required)
           case c: Context =>
-            specsForProcessor +
-              +c.entities.nonEmpty
-              + c.adaptors.nonEmpty
-              + c.sagas.nonEmpty
-              + c.streamlets.nonEmpty
-              + c.projectors.nonEmpty
-              + c.repositories.nonEmpty
-              + c.connections.nonEmpty
-              + c.replicas.nonEmpty
+            countForProcessor
+              + { if c.entities.nonEmpty then 1 else 0 }
+              + { if c.adaptors.nonEmpty then 1 else 0 }
+              + { if c.sagas.nonEmpty then 1 else 0 }
+              + { if c.streamlets.nonEmpty then 1 else 0 }
+              + { if c.projectors.nonEmpty then 1 else 0 }
+              + { if c.repositories.nonEmpty then 1 else 0 }
+              + { if c.connections.nonEmpty then 1 else 0 }
+              + { if c.replicas.nonEmpty then 1 else 0 }
           case e: Entity =>
-            specsForProcessor
-              + e.states.nonEmpty
-              + e.invariants.nonEmpty
+            countForProcessor
+              + { if e.states.nonEmpty then 1 else 0 }
+              + { if e.invariants.nonEmpty then 1 else 0 }
           case p: Projector =>
-            specsForProcessor
-              + p.invariants.nonEmpty
-          case _: Repository => specsForProcessor
+            countForProcessor
+              + { if p.invariants.nonEmpty then 1 else 0 }
+          case _: Repository => countForProcessor
           case s: Streamlet =>
-            specsForProcessor
+            countForProcessor
               + 1 // shape required
         }
       case d: Domain =>
-        processorCount(d)
-          + d.authorDefs.nonEmpty
-          + d.contexts.nonEmpty
-          + d.users.nonEmpty
-          + d.epics.nonEmpty
-          + d.sagas.nonEmpty
-          + d.applications.nonEmpty
+        definitionCount(d)
+          + { if d.authorDefs.nonEmpty then 1 else 0 }
+          + { if d.contexts.nonEmpty then 1 else 0 }
+          + { if d.users.nonEmpty then 1 else 0 }
+          + { if d.epics.nonEmpty then 1 else 0 }
+          + { if d.sagas.nonEmpty then 1 else 0 }
+          + { if d.applications.nonEmpty then 1 else 0 }
           + 0 // recursive domains not included
       case e: Epic =>
-        processorCount(d)
-          + e.userStory.nonEmpty
-          + e.shownBy.nonEmpty
-          + e.cases.nonEmpty
+        definitionCount(e)
+          + { if e.userStory.nonEmpty then 1 else 0 }
+          + { if e.shownBy.nonEmpty then 1 else 0 }
+          + { if e.cases.nonEmpty then 1 else 0 }
       case f: Function =>
-        processorCount(d)
-          + f.input.nonEmpty
-          + f.output.nonEmpty
-          + f.statements.nonEmpty
+        definitionCount(f)
+          + { if f.input.nonEmpty then 1 else 0 }
+          + { if f.output.nonEmpty then 1 else 0 }
+          + { if f.statements.nonEmpty then 1 else 0 }
           + 0 // recursive functions not included
       case s: Saga =>
-        processorCount(d)
-          + s.input.nonEmpty
-          + s.output.nonEmpty
-          + s.sagaSteps.nonEmpty
+        definitionCount(s)
+          + { if s.input.nonEmpty then 1 else 0 }
+          + { if s.output.nonEmpty then 1 else 0 }
+          + { if s.sagaSteps.nonEmpty then 1 else 0 }
+      case x: Definition => // shouldn't happen
+        definitionCount(x)
     }
-    require(divisor > 0, "Completeness requires positive specification divisor" )
-    numerator.toDouble / divisor
-  }
-
-  private def complexityOf(v: VitalDefinition[?, ?]): Double = {
-    v match {
-      case a: Adaptor     => 0.0d
-      case a: Applicaiton => 0.0d
-      case c: Context     => 0.0d
-      case d: Domain      => 0.0d
-      case e: Entity      => 0.0d
-      case e: Epic        => 0.0d
-      case f: Function    => 0.0d
-      case p: Projector   => 0.0d
-      case r: Repository  => 0.0d
-      case s: Saga        => 0.0d
-      case s: Streamlet   => 0.0d
-    }
-  }
-
-  private def maturityOf(v: VitalDefinion[?,?]): Double = {
-
-  }
-
-  private def makeVitalStats(
-    v: VitalDefinition[?, ?],
-    stats: => KindStats
-  ): Unit = {
-    stats.count += 1
-    stats.maturitySum += v.maturity
-    if v.nonEmpty then stats.completed += 1
-    if v.brief.nonEmpty && v.description.nonEmpty then stats.documented += 1
-  }
-
-  def postProcess(root: RootContainer): Unit = ()
-
-  /**
-   * Generate the output of this Pass. This will only be called after all the calls
-   * to process have completed.
-   *
-   * @return an instance of the output type
-   */
-  override def result: PassOutput = {
-    val count = all_stats.count
-    val percent_complete = (all_stats.completed.toDouble / count) * 100.0d
-    val averageMaturity = (all_stats.maturitySum.toDouble / count) * 100.0d
-    val percent_documented = (all_stats.documented.toDouble / count) * 100.0d
-    val all = CategoryStats(
-      count,
-      100.0d,
-      averageMaturity,
-      all_stats.maturitySum,
-      percent_complete,
-      percent_documented
-    )
-    val adaptor = makeCategoryStats(adaptorStats, all_stats)
-    val context = makeCategoryStats(contextStats, all_stats)
-    val domain = makeCategoryStats(domainStats, all_stats)
-    val entity = makeCategoryStats(entityStats, all_stats)
-    val function = makeCategoryStats(functionStats, all_stats)
-    val handler = makeCategoryStats(handlerStats, all_stats)
-    val plant = makeCategoryStats(plantStats, all_stats)
-    val processor = makeCategoryStats(streamletStats, all_stats)
-    val projection = makeCategoryStats(projectionStats, all_stats)
-    val saga = makeCategoryStats(sagaStats, all_stats)
-    val story = makeCategoryStats(storyStats, all_stats)
-    val other = makeCategoryStats(other_stats, all_stats)
-    StatsOutput(
-      Messages.empty,
-      all_stats.count,
-      term_count,
-      maximum_depth,
-      categories = Map(
-        "All" -> all,
-        "Adaptor" -> adaptor,
-        "Context" -> context,
-        "Domain" -> domain,
-        "Entity" -> entity,
-        "Function" -> function,
-        "Handler" -> handler,
-        "Plant" -> plant,
-        "Processor" -> processor,
-        "Projector" -> projection,
-        "Saga" -> saga,
-        "Story" -> story,
-        "Other" -> other
-      )
-    )
-
-  }
-
-  def makeCategoryStats(
-    stats: KindStats,
-    all_stats: KindStats
-  ): CategoryStats = {
-    if stats.count > 0 then {
-      val average_maturity = (stats.maturitySum.toFloat / stats.count)
-      val percent_of_all = (stats.count.toDouble / all_stats.count) * 100.0d
-      val percent_completed = (stats.completed.toDouble / stats.count) * 100.0d
-      val percent_documented =
-        (stats.documented.toDouble / stats.count) * 100.0d
-      CategoryStats(
-        stats.count,
-        percent_of_all,
-        average_maturity,
-        stats.maturitySum,
-        percent_completed,
-        percent_documented
-      )
-    } else CategoryStats()
   }
 }

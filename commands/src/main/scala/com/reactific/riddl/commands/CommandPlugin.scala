@@ -176,7 +176,7 @@ object CommandPlugin {
     val log: Logger = 
       if commonOptions.quiet then 
         StringLogger()
-      else 
+      else
         SysLogger()
 
     if remaining.isEmpty then {
@@ -186,7 +186,7 @@ object CommandPlugin {
       val name = remaining.head
       if commonOptions.dryRun then
         log.info(s"Would have executed: ${remaining.mkString(" ")}")
-      
+
       val result = CommandPlugin
         .runCommandWithArgs(name, remaining, log, commonOptions)
       handleCommandResult(result, commonOptions, log)
