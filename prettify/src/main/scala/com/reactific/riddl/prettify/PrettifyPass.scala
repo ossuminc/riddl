@@ -106,16 +106,17 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
       case oi: OptionalInteractions =>
         state.withCurrent(_.openDef(oi))
       case group: Group =>
-        state.withCurrent(_.openDef(group) )
+        state.withCurrent(_.openDef(group))
       case output: Output =>
-        state.withCurrent(_.openDef( output ))
+        state.withCurrent(_.openDef(output))
       case input: Input =>
         state.withCurrent(_.openDef(input))
       case _: RootContainer => () // ignore
       case _: Enumerator    => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
           _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
-          _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction => () // not  containers
+          _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+        () // not  containers
 
     }
   }
