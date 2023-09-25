@@ -66,9 +66,12 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveType(t, parentsAsSeq)
       case mc: OnMessageClause =>
         resolveOnMessageClause(mc, parentsAsSeq)
-      case ic: OnInitClause        => () // no references
-      case tc: OnTerminationClause => () // no references
-      case oc: OnOtherClause       => () // no references
+      case ic: OnInitClause        =>
+        resolveOnClauses(ic, parentsAsSeq)
+      case tc: OnTerminationClause =>
+        resolveOnClauses(tc, parentsAsSeq)
+      case oc: OnOtherClause       =>
+        resolveOnClauses(oc, parentsAsSeq)
       case h: Handler =>
         h.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case e: Entity =>
