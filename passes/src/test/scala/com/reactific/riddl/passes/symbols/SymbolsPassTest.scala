@@ -1,7 +1,8 @@
 package com.reactific.riddl.passes.symbols
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.{CommonOptions, ParsingTest}
+import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.reactific.riddl.language.{At, CommonOptions, ParsingTest}
 import com.reactific.riddl.passes.{Pass, PassInput}
 import org.scalatest.Assertion
 
@@ -10,15 +11,13 @@ import scala.reflect.ClassTag
 /** Unit Tests For SymbolsPassTest */
 class SymbolsPassTest extends ParsingTest {
 
-
   val st: SymbolsOutput = {
     val root = checkFile("everything", "everything.riddl")
     val input: PassInput = PassInput(root, CommonOptions())
     Pass.runSymbols(input)
   }
 
-
-  def assertRefWithParent[T <: Definition : ClassTag, P <: Definition : ClassTag](
+  def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
     names: Seq[String],
     parentName: String
   ): Assertion = {
@@ -34,8 +33,6 @@ class SymbolsPassTest extends ParsingTest {
   }
 
   "SymbolsPass" must {
-
-
     "capture all expected symbol references and parents" in {
       st.lookup[Domain](Seq("Everything")).headOption mustBe defined
 
@@ -61,6 +58,44 @@ class SymbolsPassTest extends ParsingTest {
 
     "capture expected state field references with appropriate parent" in {
       st.lookup[Definition](Seq("field")) mustNot be(empty)
+    }
+
+    "resolve a path identifier" in {
+      val rpi = RiddlParserInput(data = """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      state s of record c.eState is {
+          |        handler h is {
+          |          on command c.foo { ??? }
+          |        }
+          |      }
+          |    }
+          |    record eState is { f: Integer }
+          |    command foo is { ??? }
+          |  }
+          |}
+          |""".stripMargin)
+      TopLevelParser.parse(rpi) match {
+        case Left(errors) =>
+          fail(errors.format)
+        case Right(root) =>
+          val passInput = PassInput(root)
+          val so = Pass.runSymbols(passInput)
+          val pathId = PathIdentifier(loc = At.empty, Seq("c", "eState"))
+          val domain = root.contents.head
+          val context = domain.contents.head
+          val entity = context.contents.find(_.id.value == "e").get
+          val state = entity.contents.find(_.id.value == "s").get
+          val record = context.contents.find(_.id.value == "eState").get
+          val parents = Seq(state, entity, context, domain)
+          val result: Seq[Symbols.SymTabItem] = so.resolvePathId[Type](pathId, parents)
+          result mustNot be(empty)
+          result.size must be(1)
+          val (node, nodeParents) = result.head
+          node mustBe record
+          nodeParents mustBe(Seq(record, context, domain))
+
+      }
     }
   }
 }

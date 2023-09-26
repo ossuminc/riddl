@@ -244,24 +244,52 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     clazz.isAssignableFrom(d.getClass)
   }
 
+  private def searchSymbolTable[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    parents: Seq[Definition]
+  ): Seq[Definition] = {
+    val symTabCompatibleNameSearch = pathId.value.reverse
+    val list = symbols.lookupParentage(symTabCompatibleNameSearch)
+    parents.headOption match {
+      case None =>
+        // shouldn't happen
+        Seq.empty
+      case Some(parent) =>
+        list match {
+          case Nil =>
+            notResolved[T](pathId, parents)
+            Seq.empty
+          case (d, pars) :: Nil if isSameKind[T](d) => // exact match
+            // Found
+            resolved[T](pathId, parent, d)
+            d +: pars
+          case (d, _) :: Nil =>
+            wrongType[T](pathId, parent, d)
+            Seq.empty
+          case list =>
+            ambiguous[T](pathId, list)
+        }
+    }
+  }
+
   private def resolveAPathId[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition]
   ): Seq[Definition] = {
-    val maybeFound: Seq[Definition] =
+
+    // val maybeFound: Seq[Definition] =
       pathId.value.headOption match
         case None =>
-          parents.headOption match
-            case None =>
-              // This is odd, fail
-              Seq.empty[Definition]
-            case Some(parent) =>
-              notResolved[Definition](pathId, parent)
-              Seq.empty[Definition]
+          // THe pathId is empty, can't resolve that
+          notResolved[Definition](pathId, parents)
+          Seq.empty[Definition]
+        case Some(name) if pathId.value.size == 1 =>
+          searchSymbolTable[T](pathId, parents)
         case Some(topName) => // Capture the first name we're looking for
           // Define a function to identify the starting point in the parents
-          def startingPoint(defn: Definition): Boolean =
+          def startingPoint(defn: Definition): Boolean = {
             defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
+          }
           // Drop parents until starting point found
           val newParents = parents.dropUntil(startingPoint)
 
@@ -273,7 +301,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
             // we found the starting point, and adjusted the parent stack correspondingly
             // use resolveRelativePath to descend through names
             resolveRelativePath(pathId, newParents)
-
+/*
     val isFound: Boolean = {
       maybeFound.headOption match {
         case Some(head) =>
@@ -284,14 +312,17 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
               parents.headOption match {
                 case None =>
                   // shouldn't happen
+                  notResolved[T](pathId, parents)
                   false
                 case Some(parent) =>
                   if hasRightName then
                     if hasSameType then
                       // a candidate was found and it has the same type as expected
                       resolved[T](pathId, parent, head)
-                    else wrongType[T](pathId, parent, head)
-                    true
+                    else
+                      // Not the same type, report the error
+                      wrongType[T](pathId, parent, head)
+                    true // we found it, just wrong type
                   else false
               }
             case None =>
@@ -303,29 +334,25 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     if !isFound then {
       val symTabCompatibleNameSearch = pathId.value.reverse
       val list = symbols.lookupParentage(symTabCompatibleNameSearch)
-      parents.headOption match {
-        case None =>
-          // shouldn't happen
-          Seq.empty
-        case Some(parent) =>
-          list match {
-            case Nil =>
-              notResolved[T](pathId, parent)
-              maybeFound
-            case (d, _) :: Nil if isSameKind[T](d) => // exact match
-              // Found
-              resolved[T](pathId, parent, d)
-              maybeFound
-            case (d, _) :: Nil =>
-              wrongType[T](pathId, parent, d)
-              Seq.empty[Definition]
-            case list =>
-              ambiguous[T](pathId, list)
-          }
+
+      list match {
+        case Nil =>
+          notResolved[T](pathId, parents)
+          maybeFound
+        case (d, _) :: Nil if isSameKind[T](d) => // exact match
+          // Found
+
+          resolved[T](pathId, parent, d)
+          maybeFound
+        case (d, _) :: Nil =>
+          wrongType[T](pathId, parent, d)
+          Seq.empty[Definition]
+        case list =>
+          ambiguous[T](pathId, list)
       }
     } else {
       maybeFound
-    }
+    } */
   }
 
   private def resolved[T <: Definition: ClassTag](
@@ -353,11 +380,16 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
   private def notResolved[T <: Definition: ClassTag](
     pid: PathIdentifier,
-    container: Definition
+    parents: Seq[Definition]
   ): Unit = {
     val tc = classTag[T].runtimeClass
-    val message = s"Path '${pid.format}' was not resolved," +
-      s" in ${container.identify}"
+    val container = parents.headOption
+    val message = container match
+      case None =>
+        s"Path '${pid.format}' is not resolvable, it has no container"
+      case Some(dfntn) =>
+        s"Path '${pid.format}' was not resolved,  in '${dfntn.identify}''"
+
     val referTo = tc.getSimpleName
     messages.addError(
       pid.loc,

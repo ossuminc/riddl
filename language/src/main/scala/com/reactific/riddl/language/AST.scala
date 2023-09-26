@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.parsing.Terminals.{Keywords, Predefined, Options}
+import com.reactific.riddl.language.parsing.Terminals.{Keywords, Options, Predefined}
 
 import java.net.URL
 import java.nio.file.Path
