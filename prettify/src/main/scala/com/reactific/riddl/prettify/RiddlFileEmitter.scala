@@ -201,9 +201,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case Nil =>
         ""
       case pat :: Nil =>
-        s"Pattern(${pat.format})\n"
+        s"Pattern(${pat.format})"
       case pat :: tail =>
-        val lines = (pat :: tail).map(_.format).mkString(spc,s"\n$spc", "\n")
+        val lines = (pat :: tail).map(_.format).mkString(spc, s"\n$spc", "\n")
         s"Pattern(\n$lines)\n"
     this.add(line)
   }

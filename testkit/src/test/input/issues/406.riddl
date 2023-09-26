@@ -1,7 +1,7 @@
 domain Example is {
   context ExampleContext is {
-	  command ToBar is {}
-    command ToFoo is {}
+	  command ToBar is { ??? }
+    command ToFoo is { ??? }
 	  type Foo is {
 	    bar: String
 	   }

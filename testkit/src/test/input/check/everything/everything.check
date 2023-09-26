@@ -124,7 +124,7 @@ Style: testkit/src/test/input/check/everything/everything.riddl(65:7):
        ^
 Missing: testkit/src/test/input/check/everything/everything.riddl(67:7):
  Command 'ACommand' should have a description:
-       command ACommand is {}
+       command ACommand is { ??? }
        ^
 Missing: testkit/src/test/input/check/everything/everything.riddl(3:1):
  Vital definitions should have an author reference:

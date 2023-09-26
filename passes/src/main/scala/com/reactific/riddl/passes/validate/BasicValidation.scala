@@ -227,7 +227,7 @@ trait BasicValidation {
                 messages.addStyle(last.loc, s"${last.identify} overloads ${head.identifyWithLoc}")
               case _ =>
                 val tailStr: String = tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
-                messages.addStyle(head.loc, s"${head.identify} overloads:\n  $tail")
+                messages.addStyle(head.loc, s"${head.identify} overloads:\n  $tailStr")
         }
       }
     }

@@ -136,7 +136,7 @@ trait DefinitionValidation extends BasicValidation  {
         MissingWarning,
         value.loc
       )
-    } else if shouldCheck then
+    } else if description.nonEmpty then
       description.fold(this) { (desc: Description) =>
           check(
             desc.nonEmpty,

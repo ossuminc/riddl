@@ -132,20 +132,20 @@ domain dokn is {
             type AddDeliveryLocation is command  {
               geohash: Location, label: String
             }
-            type DeliveryLocationAdded is event  { }
+            type DeliveryLocationAdded is event  { ??? }
 
             type ChangeLocationName is command { newName: String }
             type LocationNameChanged is event { newName: String }
 
-            type ReportTicketReceived is command {}
-            type TicketReportedAtLocation is event {}
+            type ReportTicketReceived is command { ??? }
+            type TicketReportedAtLocation is event { ??? }
 
             type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
             type LocationAddressReceived is event { newAddress: dokn.Address }
 
-            type getLocationDetails is query  {}
+            type getLocationDetails is query  { ??? }
             type LocationDetails is result  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }

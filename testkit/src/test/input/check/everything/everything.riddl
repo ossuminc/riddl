@@ -64,7 +64,7 @@ domain Everything is {
 
       type somethingDate is Date
 
-      command ACommand is {}
+      command ACommand is { ??? }
 
       state someState of type Everything.StateType is { ??? }
 
