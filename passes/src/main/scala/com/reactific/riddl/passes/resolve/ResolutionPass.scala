@@ -323,7 +323,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   ): Boolean = {
     pathId.value.headOption match {
       case Some(topName) =>
-        val maybeNames = maybeResult.reverse.map(_.id.value).drop(1) // drop "Root"
+        val maybeNames = maybeResult.reverse.map(_.id.value) // drop "Root"
         val matchingPathPortion = maybeNames.takeRight(pathId.value.length)
         val zipped = matchingPathPortion.zip[String](pathId.value)
         val allMatch = (for {

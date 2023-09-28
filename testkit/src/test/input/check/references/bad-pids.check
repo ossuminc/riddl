@@ -39,7 +39,8 @@ Missing: testkit/src/test/input/check/references/bad-pids.riddl(2:3):
    context ExampleContext is {
    ^
 Error: testkit/src/test/input/check/references/bad-pids.riddl(13:22):
- Path 'DooFoo' was not resolved, in OnMessageClause 'On command DooFoo', but should refer to a Type:
+ Path 'DooFoo' was not resolved, in OnMessageClause 'On command DooFoo'
+ and it should refer to a Type:
            on command DooFoo {
                       ^
 Missing: testkit/src/test/input/check/references/bad-pids.riddl(1:1):

@@ -254,22 +254,6 @@ Style: testkit/src/test/input/check/everything/everything.riddl(73:19):
  Field identifier 'b' is too short. The minimum length is 3:
          returns { b: Boolean }
                    ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(33:5):
- Type 'stamp' is unused:
-     type stamp is TimeStamp        // Define stamp as a TimeStamp
-     ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(34:5):
- Type 'url' is unused:
-     type url is URL
-     ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(38:5):
- Type 'enum' is unused:
-     type enum is any of { Apple Pear Peach(21) Persimmon(42) }
-     ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(44:5):
- Type 'agg' is unused:
-     type agg is {
-     ^
 Missing: testkit/src/test/input/check/everything/everything.riddl(79:15):
  Handler 'foo' should have a description:
        handler foo is {

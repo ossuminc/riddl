@@ -12,7 +12,7 @@ domain Everything is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
     connector AChannel is {
-      from  outlet Source.Commands  to inlet Sink.Commands
+      from  outlet APlant.Source.Commands  to inlet APlant.Sink.Commands
     } explained as "A Channel"
   }
 
