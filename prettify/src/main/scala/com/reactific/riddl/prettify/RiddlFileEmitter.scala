@@ -148,7 +148,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {\n").indent.addIndent("")
-    alternation.of.map(emitTypeExpression).mkString("", " or ", "\n")
+    val paths: Seq[String] = alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }
+    add(paths.mkString("", " or ", "\n"))
     outdent.addIndent("}")
     this
   }
