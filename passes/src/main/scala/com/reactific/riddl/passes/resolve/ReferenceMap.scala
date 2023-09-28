@@ -16,36 +16,44 @@ import scala.reflect.{ClassTag, classTag}
 /** A mapping from reference to definition */
 case class ReferenceMap(messages: Messages.Accumulator) {
 
-  private val map: mutable.HashMap[(String,Definition), Definition] = mutable.HashMap.empty
+  private case class Key(path: String, in: Definition) {
+    override def toString: String = s"(k=$path,v=${in.identify})"
+  }
+
+  private val map: mutable.HashMap[Key, Definition] = mutable.HashMap.empty
 
   override def toString: String = {
     StringHelpers.toPrettyString(this)
   }
+
   def size: Int = map.size
 
   def add[T <: Definition: ClassTag](ref: Reference[T], parent: Definition, definition: T): Unit = {
     add(ref.pathId.format, parent, definition)
   }
 
-  def add[T <: Definition : ClassTag](pathId: PathIdentifier, parent: Definition, definition: T): Unit = {
+  def add[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition, definition: T): Unit = {
     add(pathId.format, parent, definition)
   }
 
-  def add[T <: Definition : ClassTag]( pathId: String, parent: Definition, definition: T ): Unit = {
+  private def add[T <: Definition: ClassTag](pathId: String, parent: Definition, definition: T): Unit = {
+    val key = Key(pathId, parent)
     val expected = classTag[T].runtimeClass
     val actual = definition.getClass
-    require(expected.isAssignableFrom(actual),
-      s"referenced ${actual.getSimpleName} is not assignable to expected ${expected.getSimpleName}")
-    map.update(pathId -> parent, definition)
+    require(
+      expected.isAssignableFrom(actual),
+      s"referenced ${actual.getSimpleName} is not assignable to expected ${expected.getSimpleName}"
+    )
+    map.update(key, definition)
   }
 
-  def definitionOf[T <: Definition : ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {
-    val key = pid.format -> parent
+  def definitionOf[T <: Definition: ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {
+    val key = Key(pid.format, parent)
     val value = map.get(key)
     value match
-      case None => 
+      case None =>
         None
-      case Some(x: T)  =>
+      case Some(x: T) =>
         Some(x)
       case Some(x) =>
         val className = classTag[T].runtimeClass.getSimpleName

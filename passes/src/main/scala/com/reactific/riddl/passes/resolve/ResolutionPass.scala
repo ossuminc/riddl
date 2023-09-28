@@ -161,8 +161,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     typ match {
       case UniqueId(_, entityPath) =>
         resolveAPathId[Entity](entityPath, parents)
-      case AliasedTypeExpression(_, otherType) =>
-        resolveAPathId[Type](otherType, parents)
+      case AliasedTypeExpression(_, pathId) =>
+        resolveAPathId[Type](pathId, parents)
       case agg: AggregateTypeExpression =>
         agg.fields.foreach { (fld: Field) =>
           resolveTypeExpression(fld.typeEx, fld +: parents)
