@@ -12,7 +12,7 @@ domain Everything is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
     connector AChannel is {
-      flows type DoAThing from outlet Source.Commands to inlet Sink.Commands
+      flows type DoAThing from outlet APlant.Source.Commands to inlet APlant.Sink.Commands
     } explained as "A Channel"
   }
 
@@ -29,7 +29,7 @@ domain Everything is {
 
     inlet input is type DoAThing
     connector foo is {
-       from outlet APlant.Source.Commands to inlet full.input
+       from outlet Everything.APlant.Source.Commands to inlet full.input
     }
 
     // 8 pre-defined types, shown as re-names
