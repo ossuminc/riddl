@@ -148,7 +148,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {\n").indent.addIndent("")
-    alternation.of.map(emitTypeExpression).mkString("", ", ", "\n")
+    alternation.of.map(emitTypeExpression).mkString("", " or ", "\n")
     outdent.addIndent("}")
     this
   }

@@ -76,7 +76,7 @@ class HandlerValidatorTest extends ValidatingTest {
             Error,
             """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'On event EntityContext.Incoming' because
               |the search through the parents ended at:
-              |  entityTest.EntityContext
+              |  Root.entityTest.EntityContext
               |and there was no match to the elements of the PathId:
               |  EntityContext.Incoming
               |and it should refer to a Type""".stripMargin
