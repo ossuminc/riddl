@@ -2,7 +2,7 @@
 # See: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html for options
 
 # First, everything happens on compile so make it happen
-#> compile
+> compile
 
 # Try a simple riddlc command
 > riddlc info

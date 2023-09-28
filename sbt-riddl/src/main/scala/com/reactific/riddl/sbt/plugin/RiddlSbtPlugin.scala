@@ -20,10 +20,13 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   object autoImport {
 
-    lazy val riddlcPath = settingKey[File]("Path to `riddlc` compiler")
+    lazy val riddlcPath = settingKey[Option[File]]("Optionally specify path to `riddlc` compiler")
 
     lazy val riddlcConf = settingKey[File]("Path to the config file")
 
+    lazy val riddlcMem = settingKey[Int]("Number of megabytes for running riddlc jvm")
+
+    lazy val riddlcCommandPrefix = taskKey[String]("")
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")
     }
@@ -31,37 +34,46 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   import autoImport.*
 
-  lazy val compileTask = taskKey[Unit]("A task to invoke riddlc compiler")
-  lazy val infoTask = taskKey[Unit]("A task to invoke riddlc info command")
+  private def makeInvocation(state: State): Def.Initialize[sbt.Task[String]] = Def.taskDyn[String] {
+    val project = Project.extract(state)
+    Def.task[String] {
+      val fullClassPath = project.get(Runtime / fullClasspath).value.files
+      val classpath = fullClassPath.map(_.getAbsoluteFile.toString).mkString(";")
+      val java_home = System.getProperty("java.home")
+      val path_to_java = "/bin/java"
+      val cp_option = s"-cp '$classpath'"
+      val mem_option = s"-Xmx${riddlcMem.value}m"
+      val jre_options = s"$mem_option $cp_option"
+      val main = "com.reactific.riddl.RIDDLC$"
+      s"$java_home$path_to_java $jre_options $main "
+    }
+  }
 
   // Allow riddlc to be run from inside an sbt shell
-  def riddlcCommand = Command.args(
+  private def riddlcCommand = Command.args(
     name = "riddlc",
     display = "<options> <command> <args...> ; `riddlc help` for details"
   ) { (state, args) =>
     val project = Project.extract(state)
-    val path = project.get(riddlcPath)
     val minVersion = project.get(riddlcMinVersion)
-    runRiddlc(path, args, minVersion)
+    val invocation = Def.task {
+      makeInvocation(state).value
+    }.value
+    runRiddlc(invocation, args, minVersion)
     state
   }
 
+  private val riddl_version = SbtRiddlPluginBuildInfo.version
+
   override val projectSettings: Seq[Setting[_]] = Seq(
-    riddlcPath := file("riddlc"),
+    riddlcPath := None,
     riddlcConf := file("src/main/riddl/riddlc.conf"),
+    riddlcMem := 512,
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
-    compileTask := {
-      val execPath = riddlcPath.value
-      val conf = riddlcConf.value.getAbsoluteFile.toString
-      val version = riddlcMinVersion.value
-      runRiddlc(execPath, Seq("from", conf, "validate"), version)
-    },
-    infoTask := {
-      val execPath = riddlcPath.value
-      val options = Seq("info")
-      val version = riddlcMinVersion.value
-      runRiddlc(execPath, options, version )
-    },
+    libraryDependencies := Seq(
+      "com.reactific" % "riddlc_3" % riddl_version,
+      "com.reactific" % "riddl-testkit_3" % riddl_version % Test
+    ),
     commands ++= Seq(riddlcCommand),
     Compile / compile := Def.taskDyn {
       val c = (Compile / compile).value
@@ -94,11 +106,12 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   private def checkVersion(
-    riddlc: sbt.File,
+    invocation: String,
     minimumVersion: String
   ): Unit = {
     import scala.sys.process.*
-    val check = riddlc.toString + " version"
+    val check = invocation + " version"
+    println(s"Running: $check")
     val actualVersion = check.!!<.trim
     val minVersion = minimumVersion.trim
     if (!versionSameOrLater(actualVersion, minVersion)) {
@@ -109,12 +122,13 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   private def runRiddlc(
-    riddlc: sbt.File,
+    invocation: String,
     options: Seq[String],
     minimumVersion: String
   ): Unit = {
-    checkVersion(riddlc, minimumVersion)
-    val command = riddlc.toString + " " + options.mkString(" ")
+    checkVersion(invocation, minimumVersion)
+    val command = invocation + " " + options.mkString(" ")
+    println(s"Running: $command")
     val logger = ProcessLogger(println(_))
     val rc = command.!(logger)
     logger.out(s"RC=$rc")
