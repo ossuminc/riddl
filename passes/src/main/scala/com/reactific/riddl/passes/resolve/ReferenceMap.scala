@@ -8,6 +8,7 @@ package com.reactific.riddl.passes.resolve
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
+import com.reactific.riddl.utils.StringHelpers
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
@@ -17,6 +18,9 @@ case class ReferenceMap(messages: Messages.Accumulator) {
 
   private val map: mutable.HashMap[(String,Definition), Definition] = mutable.HashMap.empty
 
+  override def toString: String = {
+    StringHelpers.toPrettyString(this)
+  }
   def size: Int = map.size
 
   def add[T <: Definition: ClassTag](ref: Reference[T], parent: Definition, definition: T): Unit = {
@@ -35,9 +39,18 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     map.update(pathId -> parent, definition)
   }
 
-  def definitionOf[T <: Definition](pid: PathIdentifier, parent: Definition): Option[T] = {
+  def definitionOf[T <: Definition : ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {
     val key = pid.format -> parent
-    map.get(key).map(_.asInstanceOf[T])
+    val value = map.get(key)
+    value match
+      case None => 
+        None
+      case Some(x: T)  =>
+        Some(x)
+      case Some(x) =>
+        val className = classTag[T].runtimeClass.getSimpleName
+        messages.addError(pid.loc, s"Path Id '${pid.format} found ${x.identify} but a ${className} was expected")
+        None
   }
 }
 

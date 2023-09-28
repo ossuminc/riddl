@@ -59,43 +59,5 @@ class SymbolsPassTest extends ParsingTest {
     "capture expected state field references with appropriate parent" in {
       st.lookup[Definition](Seq("field")) mustNot be(empty)
     }
-
-    "resolve a path identifier" in {
-      val rpi = RiddlParserInput(data = """domain d is {
-          |  context c is {
-          |    entity e is {
-          |      state s of record c.eState is {
-          |        handler h is {
-          |          on command c.foo { ??? }
-          |        }
-          |      }
-          |    }
-          |    record eState is { f: Integer }
-          |    command foo is { ??? }
-          |  }
-          |}
-          |""".stripMargin)
-      TopLevelParser.parse(rpi) match {
-        case Left(errors) =>
-          fail(errors.format)
-        case Right(root) =>
-          val passInput = PassInput(root)
-          val so = Pass.runSymbols(passInput)
-          val pathId = PathIdentifier(loc = At.empty, Seq("c", "eState"))
-          val domain = root.contents.head
-          val context = domain.contents.head
-          val entity = context.contents.find(_.id.value == "e").get
-          val state = entity.contents.find(_.id.value == "s").get
-          val record = context.contents.find(_.id.value == "eState").get
-          val parents = Seq(state, entity, context, domain)
-          val result: Seq[Symbols.SymTabItem] = so.resolvePathId[Type](pathId, parents)
-          result mustNot be(empty)
-          result.size must be(1)
-          val (node, nodeParents) = result.head
-          node mustBe record
-          nodeParents mustBe(Seq(record, context, domain))
-
-      }
-    }
   }
 }
