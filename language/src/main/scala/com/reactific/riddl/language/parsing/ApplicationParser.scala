@@ -12,37 +12,63 @@ import fastparse.*
 import fastparse.ScalaWhitespace.*
 
 private[parsing] trait ApplicationParser {
-  this: StreamingParser with FunctionParser with ReferenceParser with HandlerParser with StatementParser
-  with TypeParser =>
+  this: StreamingParser
+    with FunctionParser
+    with ReferenceParser
+    with HandlerParser
+    with StatementParser
+    with TypeParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
-    options[u, ApplicationOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) =>
-        ApplicationTechnologyOption(loc, args)
+    options[u, ApplicationOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
+      ApplicationTechnologyOption(loc, args)
     }
+  }
+
+  private def groupAliases[u: P]: P[Unit] = {
+    P(
+      StringIn(Keywords.group, "page", "pange", "dialog", "popup", "frame", "column", "window", "section", "tab")
+    )
   }
 
   private def group[u: P]: P[Group] = {
     P(
-      location ~ Keywords.group ~/ identifier ~ is ~ open ~ types ~
+      location ~ groupAliases ~/ identifier ~ is ~ open ~ types ~
         (group | appOutput | appInput).rep(0) ~ close ~ briefly ~ description
     ).map { case (loc, id, types, elements, brief, description) =>
       Group(loc, id, types, elements, brief, description)
     }
   }
 
+  private def outputAliases[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        Keywords.output,
+        "document",
+        "list",
+        "table"
+      )
+    )
+  }
+
   private def appOutput[u: P]: P[Output] = {
     P(
-      location ~ Keywords.output ~/ identifier ~ is ~ open ~ types ~
+      location ~ outputAliases ~/ identifier ~ is ~ open ~ types ~
         Keywords.presents ~/ messageRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, result, brief, description) =>
       Output(loc, id, types, result, brief, description)
     }
   }
 
+  private def inputAliases[u: P]: P[Unit] = {
+    P(
+      StringIn(Keywords.input, "form", "textblock", "button", "picklist")
+    )
+  }
+
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ Keywords.input ~/ identifier ~ is ~ open ~ types ~
+      location ~ inputAliases ~/ identifier ~ is ~ open ~ types ~
         Keywords.acquires ~ messageRef ~ close ~ briefly ~ description
     ).map { case (loc, id, types, yields, brief, description) =>
       Input(loc, id, types, yields, brief, description)
@@ -52,7 +78,7 @@ private[parsing] trait ApplicationParser {
   private def applicationDefinition[u: P]: P[ApplicationDefinition] = {
     P(
       group | handler(StatementsSet.ApplicationStatements) | function |
-        inlet | outlet | term | typeDef | constant | applicationInclude 
+        inlet | outlet | term | typeDef | constant | applicationInclude
     )
   }
 
@@ -64,13 +90,11 @@ private[parsing] trait ApplicationParser {
     include[ApplicationDefinition, u](applicationDefinitions(_))
   }
 
-  private def emptyApplication[u: P
-  ]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
+  private def emptyApplication[u: P]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
     undefined((Seq.empty[ApplicationOption], Seq.empty[ApplicationDefinition]))
   }
-  
-  private def applicationBody[u: P
-  ]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
+
+  private def applicationBody[u: P]: P[(Seq[ApplicationOption], Seq[ApplicationDefinition])] = {
     undefined((Seq.empty[ApplicationOption], Seq.empty[ApplicationDefinition]))
   }
 

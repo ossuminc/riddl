@@ -104,7 +104,7 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Type 'Incoming'(8:10) should reference an Event but is a String type instead"
+            "'Type 'Incoming'(8:10) should reference one of these types: EventCase but is a String type instead"
           )
       }
     }
