@@ -244,9 +244,9 @@ class ResolutionPassTest extends ResolvingTest {
           |}
           |""".stripMargin
       parseAndResolve(RiddlParserInput(input)) { _ => succeed } { messages =>
-        println(messages.format)
-        messages.size mustBe 1
-        messages.head.format must include("Path resolution encountered a loop")
+        val errors = messages.justErrors
+        errors must be(empty)
+        fail(errors.format)
       }
     }
 
@@ -313,7 +313,7 @@ class ResolutionPassTest extends ResolvingTest {
       root.contents.head.contents.forall(_.kind == "Context")
       val in = resolve(root, CommonOptions())
       val messages = in.getMessages
-      val errors = messages.filter(_.kind >= Messages.Error)
+      val errors = messages.justErrors
       if errors.nonEmpty then fail(errors.format) else succeed
     }
     "resolve entity references" in {

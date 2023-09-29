@@ -290,45 +290,210 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     handleSymbolTableResults[T](list, pathId, parents)
   }
 
-  def canFindTopPathIdNameInParents[T <: Definition: ClassTag](
-    pathId: PathIdentifier,
+  private sealed trait AnchorCase
+  private case class AnchorNotFoundInSymTab(topName: String) extends AnchorCase
+  private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
+  private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
+  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition, Seq[Definition])]) extends AnchorCase
+  private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
+  private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
+  private case class AnchorIsRoot(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
+
+  private def findAnchorInParents(
+    topName: String,
     parents: Seq[Definition]
-  ): Boolean = {
-    pathId.value.headOption match {
-      case Some(topName) =>
-        // The first path name of a multi-part path must be the name of one
-        // of the parents above the location the pathId is used at.  If not
-        // there is no point doing an expensive search, just fail fast.
-        if parents.exists(_.id.value == topName) then
-          // Okay, that worked out. The PID is valie
-          true
-        else
-          notResolved(
-            pathId,
-            parents,
-            s"the PathId is invalid since the first element of the PathId is not the name of a parent of ${parents.head.identify}"
-          )
-          false
+  ): AnchorCase = {
+    // The anchor is the matching name closest to the PathId location
+    parents.find(_.id.value == topName) match {
+      case Some(anchor) =>
+        // We want to simulate a symtab find here which returns the node of
+        // interest and that node's parents. Since there is a node in common
+        // we can get it by dropping nodes until we find it.
+        val anchor_parents = parents.dropWhile(_ != anchor).drop(1)
+        AnchorFoundInParents(anchor, anchor_parents)
       case None =>
-        // No top name, can't find it.
-        messages.addSevere(pathId.loc, "Empty path id")
-        false
+        AnchorNotFoundInParents(topName)
     }
   }
 
-  def checkThatPathIdMatchesFoundParentStack[T <: Definition: ClassTag](
+  private def findAnchorInSymTab(
+    topName: String
+  ): AnchorCase = {
+    // Let's see if we can find it uniquely in the symbol table
+    symbols.lookupParentage(Seq(topName)) match {
+      case Nil =>
+        AnchorNotFoundInSymTab(topName)
+      case (anchor: Definition, anchor_parents: Seq[Definition]) :: Nil =>
+        // it is unique
+        // Found the top node uniquely in the symbol table
+        // now just run down the children and see if all levels of the
+        // pathId can be satisfied
+        AnchorFoundInSymTab(anchor, anchor_parents)
+      case list =>
+        AnchorIsAmbiguous(topName, list)
+    }
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
+  private def findAnchor[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    parents: Seq[Definition]
+  ): AnchorCase = {
+    pathId.value.headOption match
+      case Some(topName) if topName == "Root" =>
+        // We anchor at the root of the model so anything possible
+        AnchorIsRoot(parents.last, parents.dropRight(1))
+      case Some(topName) =>
+        // First, determine whether the anchor node is one of
+        // the names in the parents above the location the PathId is used.
+        findAnchorInParents(topName, parents) match
+          case afip: AnchorFoundInParents => afip
+          case _: AnchorNotFoundInParents =>
+            // Its not an ancestor so le'ts try the symbol table
+            findAnchorInSymTab(topName) match
+              case afis: AnchorFoundInSymTab     => afis
+              case anfis: AnchorNotFoundInSymTab => anfis
+              case aia: AnchorIsAmbiguous        => aia
+              case anfis: AnchorCase =>
+                messages.addSevere(pathId.loc, s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis")
+                anfis
+          case anfis: AnchorCase =>
+            messages.addSevere(pathId.loc, s"Invalid result from findAnchorInParents($topName, $parents): $anfis")
+            anfis
+      case None =>
+        messages.addSevere(pathId.loc, "PathId is empty; this should already be checked in resolveAPathId")
+        AnchorNotFoundAnywhere("<unknown>")
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.Var", "org.wartremover.warts.IterableOps"))
+  def resolvePathFromAnchor[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    parents: Seq[Definition],
+    anchor: Definition,
+    anchor_parents: Seq[Definition]
+  ): Seq[Definition] = {
+    val stack: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
+    val parents_to_add = anchor_parents.reverse
+    if anchor_parents.last.isRootContainer then
+      stack.pushAll(parents_to_add.drop(1))
+    else
+      stack.pushAll(parents_to_add)
+    stack.push(anchor)
+    val pathIdStart = pathId.value.drop(1) // we already resolved the anchor
+    var continue: Boolean = true
+    for { soughtName: String <- pathIdStart if continue } do {
+      // Get the list of candidates for the
+      val candidates = findCandidates(stack)
+
+      // Now find the match, if any, and handle appropriately
+      val maybeFound = candidates.find(candidate => findResolution(soughtName, candidate))
+      maybeFound match
+        case Some(q: Definition) =>
+          // found the named item, and it is a Container, so put it on
+          // the stack in case there are more things to resolve
+          stack.push(q)
+
+        case None =>
+          // None of the candidates match the name we're seeking
+          // So this Path Id isn't valid, say so
+          notResolved[T](
+            pathId,
+            parents,
+            s"definition '$soughtName' was not found inside '${stack.head.identify}''"
+          )
+          continue = false
+    }
+    if continue then
+      val maybeFound = stack.toSeq
+      checkResultingPath(pathId, parents, maybeFound)
+      stack.headOption match
+        case Some(head: RootContainer) if stack.size == 1 =>
+          // then pop it off because RootContainers don't count and we want to
+          // rightfully return an empty sequence for "not found"
+          stack.pop()
+          // Convert parent stack to immutable sequence
+          stack.toSeq
+        case Some(head) =>
+          // Not the root, just convert the result to immutable Seq
+          stack.toSeq
+        case None =>
+          stack.toSeq // empty == fail
+    else Seq.empty[Definition]
+  }
+
+  /*
+  def resolvePathFromAnchor(
+    pathId: PathIdentifier,
+    parents: Seq[Definition],
+    anchor: Definition,
+    anchor_parents: Seq[Definition]
+  ): Seq[Definition] = {
+    val maybeFound: Seq[Definition] = Seq.empty
+    // Capture the first name we're looking for
+    val topName = pathId.value.head
+    // Define a function to identify the starting point in the parents
+    def startingPoint(defn: Definition): Boolean = {
+      defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
+    }
+    // Drop parents until starting point found
+    val newParents = parents.dropUntil(startingPoint)
+
+    // If we dropped all the parents then the path isn't valid
+    // we found the starting point, and adjusted the parent stack correspondingly
+      // use resolveRelativePath to descend through names
+      val maybeFound = resolveRelativePath(pathId, newParents)
+      if newParents.isEmpty then
+      // Signal not found
+      Seq.empty[Definition]
+    else
+
+    checkResultingPath(pathId, parents, maybeFound)
+  }
+   */
+
+  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
+  def checkResultingPath[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    parents: Seq[Definition],
+    maybeFound: Seq[Definition]
+  ): Seq[Definition] = {
+    maybeFound.toList match {
+      case Nil =>
+        notResolved[T](pathId, parents)
+        Seq.empty
+      case head :: Nil =>
+        // shouldn't happen, but ...
+        messages.addSevere(pathId.loc, s"Single path entry found, '${head.format}' should not be possible'")
+        notResolved[T](pathId, parents)
+        Seq.empty
+      case head :: tail =>
+        // we have at least two names, let's find the first one
+        // and see if it is
+        if checkThatPathIdMatchesFoundParentStack(pathId, parents, maybeFound) then
+          if isSameKind[T](head) then
+            // a candidate was found and it has the same type as expected
+            resolved[T](pathId, parents.head, head)
+            head :: tail
+          else
+            // Not the same type, report the error
+            wrongType[T](pathId, parents.head, head)
+            Seq.empty
+        else Seq.empty
+    }
+
+  }
+
+  private def checkThatPathIdMatchesFoundParentStack[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition],
     maybeResult: Seq[Definition]
   ): Boolean = {
     pathId.value.headOption match {
       case Some(topName) =>
-        val maybeNames = maybeResult.reverse.map(_.id.value) // drop "Root"
-        val matchingPathPortion = maybeNames.takeRight(pathId.value.length)
+        val maybeNames = maybeResult.map(_.id.value) // drop "Root"
+        val matchingPathPortion = maybeNames.take(pathId.value.length).reverse
         val zipped = matchingPathPortion.zip[String](pathId.value)
-        val allMatch = (for {
-          (path: String, pid: String) <- zipped
-        } yield {
+        val allMatch = (for { (path: String, pid: String) <- zipped } yield {
           path == pid
         }).forall(_ == true)
         if !allMatch then
@@ -353,56 +518,51 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   ): Seq[Definition] = {
     if pathId.value.isEmpty then
       // The pathId is empty, can't resolve that
-      notResolved[T](pathId, parents, "the Path Identifier is empty")
+      notResolved[T](pathId, parents, "the PathId is empty")
       Seq.empty[Definition]
-    else if pathId.value.size == 1 then
-      // Easy case, just search the symtab and see if we can rule it out or
-      // find it ambiguous
-      searchSymbolTable[T](pathId, parents)
-    else if !canFindTopPathIdNameInParents[T](pathId, parents) then
-      // The pathId isn't empty since its top name doesn't match any of the
-      // parent's names. Errors emitted by canFindTopPathIdNameInParents
-      Seq.empty
     else
-      // Capture the first name we're looking for
-      val topName = pathId.value.head
-      // Define a function to identify the starting point in the parents
-      def startingPoint(defn: Definition): Boolean = {
-        defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
-      }
-      // Drop parents until starting point found
-      val newParents = parents.dropUntil(startingPoint)
-
-      // If we dropped all the parents then the path isn't valid
-      if newParents.isEmpty then
-        // Signal not found
-        Seq.empty[Definition]
-      else
-        // we found the starting point, and adjusted the parent stack correspondingly
-        // use resolveRelativePath to descend through names
-        val maybeFound = resolveRelativePath(pathId, newParents)
-
-        maybeFound.toList match {
-          case Nil =>
-            notResolved[T](pathId, parents)
-            Seq.empty
-          case head :: Nil =>
-            // shouldn't happen, but ...
-            messages.addSevere(pathId.loc, s"Single path entry found, '${head.format}' should not be possible'")
-            notResolved[T](pathId, parents)
-            Seq.empty
-          case head :: tail =>
-            if checkThatPathIdMatchesFoundParentStack(pathId, parents, maybeFound) then
-              if isSameKind[T](head) then
-                // a candidate was found and it has the same type as expected
-                resolved[T](pathId, parents.head, head)
-                head :: tail
-              else
-                // Not the same type, report the error
-                wrongType[T](pathId, parents.head, head)
-                Seq.empty
-            else Seq.empty
-        }
+      // If we already resolved this one, return it
+      refMap.definitionOf[T](pathId, parents.head) match
+        case Some(result) =>
+          result +: symbols.parentsOf(result)
+        case None =>
+          if pathId.value.size == 1 then
+            // Easy case, just search the symbol table and deal with it there.
+            // In other words, there really isn't a path to search here, just the
+            // symbol table
+            searchSymbolTable[T](pathId, parents)
+          else
+            // Okay, we have multiple names so we first have to find the anchor
+            // node from the first name in the PathId. This can be "Root" for the
+            // root of the model, a node name directly above, or a node from the
+            // symbol table.
+            findAnchor[T](pathId, parents) match
+              case AnchorNotFoundInParents(topName) =>
+                notResolved(
+                  pathId,
+                  parents,
+                  s"the PathId is invalid since it's first element, $topName, is not found in PathId ancestors"
+                )
+              case AnchorFoundInSymTab(anchor, anchor_parents) =>
+                // We found the anchor in the
+                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
+              case AnchorFoundInParents(anchor, anchor_parents) =>
+                // We found the anchor in the parents list
+                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
+              case AnchorNotFoundInSymTab(topName) =>
+                notResolved(
+                  pathId,
+                  parents,
+                  s"the PathId is invalid since it's first element, $topName, does not exist in the model"
+                )
+              case AnchorNotFoundAnywhere(topName) =>
+                notResolved(pathId, parents)
+              case AnchorIsRoot(anchor, anchor_parents) =>
+                // The first name in the path id was "Root" so start from there
+                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
+              case AnchorIsAmbiguous(topName, list) =>
+                // The anchor is ambiguous so generate that message
+                ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
   }
 
   private def resolved[T <: Definition: ClassTag](
@@ -414,6 +574,14 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     val t = definition.asInstanceOf[T]
     refMap.add[T](pathId, pidDirectParent, t)
     associateUsage(pidDirectParent, t)
+    if commonOptions.verbose then
+      messages.add(
+        Messages.info(
+          s"Path Identifier ${pathId.format} in ${pidDirectParent.identify} resolved to ${definition.identify}",
+          pathId.loc
+        )
+      )
+
     Some(t)
   }
 
@@ -432,7 +600,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     pid: PathIdentifier,
     parents: Seq[Definition],
     why: String = ""
-  ): Unit = {
+  ): Seq[Definition] = {
     val tc = classTag[T].runtimeClass
     val container = parents.headOption
     val message = container match
@@ -452,11 +620,13 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         else ""
       }
     )
+    Seq.empty
   }
 
   private def ambiguous[T <: Definition: ClassTag](
     pid: PathIdentifier,
-    list: List[(Definition, Seq[Definition])]
+    list: List[(Definition, Seq[Definition])],
+    context: Option[String] = None
   ): Seq[Definition] = {
     // Extract all the definitions that were found
     val definitions = list.map(_._1)
@@ -477,7 +647,13 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
               definition.id.value + " (" + definition.loc + ")"
           }
           .mkString("\n")
-        messages.addError(pid.loc, s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity")
+        val message = s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity" + {
+          context match {
+            case Some(context) => context + "\n"
+            case None          => ""
+          }
+        }
+        messages.addError(pid.loc, message)
         Seq.empty[Definition]
     }
   }

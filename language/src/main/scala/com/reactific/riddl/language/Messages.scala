@@ -207,6 +207,7 @@ object Messages {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
+    def justInfo: Messages = msgs.filter(_.isInfo)
     def justMissing: Messages = msgs.filter(_.isMissing)
     def justStyle: Messages = msgs.filter(_.isStyle)
     def justUsage: Messages = msgs.filter(_.isUsage)
@@ -308,6 +309,7 @@ object Messages {
           if commonOptions.showUsageWarnings then {
             msgs.append(msg)
           }
+        // FIXME: filter out Info messages if commonOptions.showInfoMssages is false
         case _ => msgs.append(msg)
       }
       this
