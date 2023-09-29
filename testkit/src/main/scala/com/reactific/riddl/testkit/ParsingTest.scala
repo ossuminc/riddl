@@ -45,19 +45,17 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
       case x if x == classOf[AST.Projector]   => projector(_)
       case x if x == classOf[AST.Connector]   => connector(_)
       case x if x == classOf[AST.Saga]        => saga(_)
-      case x if x == classOf[AST.Epic]       => epic(_)
+      case x if x == classOf[AST.Epic]        => epic(_)
       case _ =>
-        throw new RuntimeException(
-          s"No parser defined for class ${classTag[T].runtimeClass}"
-        )
+        require(false, s"No parser defined for class ${classTag[T].runtimeClass}")
+        typeDef(_)
     }
     parser.asInstanceOf[P[?] => P[T]]
   }
 
   def parseTopLevelDomains: Either[Messages, RootContainer] = {
-    expectMultiple("test case", root(_)).map {
-      case (defs: Seq[RootDefinition], rpi: RiddlParserInput) =>
-        RootContainer(defs, Seq(rpi))
+    expectMultiple("test case", root(_)).map { case (defs: Seq[RootDefinition], rpi: RiddlParserInput) =>
+      RootContainer(defs, Seq(rpi))
     }
   }
 

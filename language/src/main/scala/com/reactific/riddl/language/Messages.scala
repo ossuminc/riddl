@@ -5,8 +5,6 @@
  */
 
 package com.reactific.riddl.language
-
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput}
 import com.reactific.riddl.utils.Logger
 
@@ -209,6 +207,7 @@ object Messages {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
+    def justInfo: Messages = msgs.filter(_.isInfo)
     def justMissing: Messages = msgs.filter(_.isMissing)
     def justStyle: Messages = msgs.filter(_.isStyle)
     def justUsage: Messages = msgs.filter(_.isUsage)
@@ -253,18 +252,15 @@ object Messages {
     log: Logger
   ): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
-      if maybeMessages.nonEmpty then {
-        val messages = maybeMessages.get
-        if messages.nonEmpty then {
-          log.info(s"""$kind Message Count: ${messages.length}""")
-
-          messages.map(_.format).foreach { message =>
-            kind match {
-              case Info        => log.info(message)
-              case SevereError => log.severe(message)
-              case Error       => log.error(message)
-              case _           => log.warn(message)
-            }
+      val messages = maybeMessages.getOrElse(Seq.empty[Message])
+      if messages.nonEmpty then {
+        log.info(s"""$kind Message Count: ${messages.length}""")
+        messages.map(_.format).foreach { message =>
+          kind match {
+            case Info        => log.info(message)
+            case SevereError => log.severe(message)
+            case Error       => log.error(message)
+            case _           => log.warn(message)
           }
         }
       }
@@ -313,6 +309,7 @@ object Messages {
           if commonOptions.showUsageWarnings then {
             msgs.append(msg)
           }
+        // FIXME: filter out Info messages if commonOptions.showInfoMssages is false
         case _ => msgs.append(msg)
       }
       this

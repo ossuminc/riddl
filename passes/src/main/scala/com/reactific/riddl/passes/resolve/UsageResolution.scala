@@ -25,6 +25,7 @@ trait UsageBase {
   * detected, call associateUsage. After parsing ends, call checkUnused.
   * Collects entities, types and functions too
   */
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 trait UsageResolution extends UsageBase {
 
   def commonOptions: CommonOptions

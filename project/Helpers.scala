@@ -14,6 +14,9 @@ import scoverage.ScoverageKeys._
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
 import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
+import wartremover.WartRemover.autoImport
+import wartremover.{Wart, WartRemover}
+import wartremover.WartRemover.autoImport._
 
 import java.net.URI
 import java.util.Calendar
@@ -87,8 +90,8 @@ object C {
       "-deprecation",
       "-feature",
       "-new-syntax",
-      // "-explain",
-      // "-explain-types",
+      "-explain",
+      "-explain-types",
       "-Werror",
       "-pagewidth",
       "120"
@@ -108,6 +111,23 @@ object C {
     )
   }
 
+  def withWartRemover(p: Project): Project = {
+    p.enablePlugins(WartRemover)
+      .settings(
+        Compile / compile / wartremoverWarnings := Warts.unsafe.filter {
+          case Wart.DefaultArguments | Wart.Any | Wart.IsInstanceOf | // would like to get rid of this
+              Wart.AsInstanceOf // would like to get rid of this
+              =>
+            false
+          case _ => true
+        },
+        Test / compile / wartremoverWarnings := Seq.empty[Wart]
+        // Ignore generated files - not a feature yet!
+        // wartremoverExcluded += baseDirectory.value / "target" / "scala-3.3.1" /
+        //  "src_managed" / "main" / "com" / "reactific"
+      )
+  }
+
   def withScala3(p: Project): Project = {
     p.configure(withInfo)
       .settings(
@@ -117,6 +137,7 @@ object C {
         apiURL := Some(url("https://riddl.tech/apidoc/")),
         autoAPIMappings := true
       )
+      .configure(withWartRemover)
   }
 
   final val defaultPercentage: Int = 50

@@ -15,12 +15,12 @@ domain dokn is {
        "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
     )
     type LoadingMethod = any of { dock, tailgate, forklift, none }
-    type CompanyId = Id(Company.Company)
+    type CompanyId = Id(dokn.Company.Company)
     type DriverId = MobileNumber
-    type NoteId = Id(Note.Note)
-    type MediaId is Id(Media.Media)
-    type LocationId is Id(Location.Location)
-    type NoteList is reference to Note.Note*
+    type NoteId = Id(dokn.Note.Note)
+    type MediaId is Id(dokn.Media.Media)
+    type LocationId is Id(dokn.Location.Location)
+    type NoteList is reference to dokn.Note.Note*
 
     context Company is {
         connector CompanyEvents is {
@@ -132,20 +132,20 @@ domain dokn is {
             type AddDeliveryLocation is command  {
               geohash: Location, label: String
             }
-            type DeliveryLocationAdded is event  { }
+            type DeliveryLocationAdded is event  { ??? }
 
             type ChangeLocationName is command { newName: String }
             type LocationNameChanged is event { newName: String }
 
-            type ReportTicketReceived is command {}
-            type TicketReportedAtLocation is event {}
+            type ReportTicketReceived is command { ??? }
+            type TicketReportedAtLocation is event { ??? }
 
             type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
             type LocationAddressReceived is event { newAddress: dokn.Address }
 
-            type getLocationDetails is query  {}
+            type getLocationDetails is query  { ??? }
             type LocationDetails is result  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }

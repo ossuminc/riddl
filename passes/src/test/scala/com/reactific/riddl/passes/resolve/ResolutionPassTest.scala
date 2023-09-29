@@ -1,9 +1,8 @@
 package com.reactific.riddl.passes.resolve
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.{CommonOptions, Messages}
+import com.reactific.riddl.language.{At, CommonOptions, Messages}
 
 import java.nio.file.Path
 
@@ -53,7 +52,7 @@ class ResolutionPassTest extends ResolvingTest {
         val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolved) =>
-            resolved mustBe(target)
+            resolved mustBe (target)
           case None => fail(s"${pid} not resolved")
         }
       }
@@ -73,7 +72,7 @@ class ResolutionPassTest extends ResolvingTest {
         val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolvedDef) =>
-            resolvedDef mustBe(target)
+            resolvedDef mustBe (target)
           case None =>
             fail(s"${pid.format} not resolved")
         }
@@ -195,8 +194,8 @@ class ResolutionPassTest extends ResolvingTest {
         val pid = ATop.typ.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
         resolution.refMap.definitionOf[Type](pid, ATop) match {
-          case Some(resolved) => resolved mustBe(Top)
-          case None => fail(s"${pid} not resolved")
+          case Some(resolved) => resolved mustBe (Top)
+          case None           => fail(s"${pid} not resolved")
         }
       }
     }
@@ -227,7 +226,7 @@ class ResolutionPassTest extends ResolvingTest {
         """domain A {
           |  type T is { tp: A.TPrime } // Refers to T.TPrime
           |  type TPrime is { t: A.T } // Refers to A.T cyclically
-          |  command DoIt is {  }
+          |  command DoIt is { ??? }
           |  context C {
           |    entity E {
           |      record fields is {
@@ -245,9 +244,9 @@ class ResolutionPassTest extends ResolvingTest {
           |}
           |""".stripMargin
       parseAndResolve(RiddlParserInput(input)) { _ => succeed } { messages =>
-        println(messages.format)
-        messages.size mustBe 1
-        messages.head.format must include("Path resolution encountered a loop")
+        val errors = messages.justErrors
+        errors must be(empty)
+        fail(errors.format)
       }
     }
 
@@ -314,7 +313,7 @@ class ResolutionPassTest extends ResolvingTest {
       root.contents.head.contents.forall(_.kind == "Context")
       val in = resolve(root, CommonOptions())
       val messages = in.getMessages
-      val errors = messages.filter(_.kind >= Messages.Error)
+      val errors = messages.justErrors
       if errors.nonEmpty then fail(errors.format) else succeed
     }
     "resolve entity references" in {
@@ -355,8 +354,7 @@ class ResolutionPassTest extends ResolvingTest {
       parseAndResolve(input) { _ => succeed }
     }
     "resolve references in morph action" in {
-      val input = RiddlParserInput(
-        """domain Ignore is {
+      val input = RiddlParserInput("""domain Ignore is {
           |  context Ignore2 is {
           |    entity OfInterest is {
           |      command MorphIt is {}
@@ -374,7 +372,24 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin)
-      parseAndResolve(input)  { _ => succeed }
+      parseAndResolve(input) { _ => succeed }
+    }
+    "resolve a path identifier" in {
+      val rpi = RiddlParserInput(data = """domain d is {
+                                          |  context c is {
+                                          |    entity e is {
+                                          |      state s of record c.eState is {
+                                          |        handler h is {
+                                          |          on command c.foo { ??? }
+                                          |        }
+                                          |      }
+                                          |    }
+                                          |    record eState is { f: Integer }
+                                          |    command foo is { ??? }
+                                          |  }
+                                          |}
+                                          |""".stripMargin)
+      parseAndResolve(rpi)()()
     }
   }
 }

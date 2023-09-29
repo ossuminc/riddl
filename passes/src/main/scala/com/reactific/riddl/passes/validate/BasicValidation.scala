@@ -8,8 +8,7 @@ package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.{AST, Messages}
+import com.reactific.riddl.language.{AST, At, Messages}
 import com.reactific.riddl.passes.resolve.ResolutionOutput
 import com.reactific.riddl.passes.symbols.SymbolsOutput
 
@@ -36,7 +35,9 @@ trait BasicValidation {
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): Option[Definition] = {
-    resolution.refMap.definitionOf(pid, parents.head)
+    parents.headOption.flatMap[Definition] { (head: Definition) =>
+      resolution.refMap.definitionOf[Definition](pid, head)
+    }
   }
 
   @inline
@@ -60,16 +61,21 @@ trait BasicValidation {
     container: Definition,
     parents: Seq[Definition]
   ): Option[T] = {
-    if pid.value.isEmpty then {
+    if pid.value.isEmpty then
       val tc = classTag[T].runtimeClass
       val message =
         s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
       messages.addError(pid.loc, message)
       Option.empty[T]
-    } else {
-      val pars = if parents.head != container then container +: parents else parents
+    else
+      val pars = parents.headOption match
+        case Some(head: Definition) if head != container =>
+          container +: parents
+        case Some(other: Definition) =>
+          parents
+        case None =>
+          parents
       resolvePath[T](pid, pars)
-    }
   }
 
   def checkRef[T <: Definition: ClassTag](
@@ -115,7 +121,7 @@ trait BasicValidation {
         definition match {
           case Type(_, _, typ, _, _) =>
             typ match {
-              case AggregateUseCaseTypeExpression(_, mk, _) =>
+              case AggregateUseCaseTypeExpression(_, mk, _, _) =>
                 check(
                   mk == kind,
                   s"'${ref.identify} should be ${article(kind.kind)} type" +
@@ -163,12 +169,10 @@ trait BasicValidation {
           connector.flows
             .map(typeRef => AliasedTypeExpression(typeRef.loc, typeRef.pathId))
             .orElse(Option.empty[TypeExpression])
-        case Some(streamlet: Streamlet) if streamlet.outlets.size == 1 =>
-          resolvePath[Type](
-            streamlet.outlets.head.type_.pathId,
-            parents
-          )
-            .map(_.typ)
+        case Some(streamlet: Streamlet) =>
+          streamlet.outlets.headOption match
+            case None => Option.empty[TypeExpression]
+            case Some(head) => resolvePath[Type](head.type_.pathId, parents).map(_.typ)
         case Some(_) => Option.empty[TypeExpression]
       }
       candidate match {
@@ -209,19 +213,21 @@ trait BasicValidation {
 
   def checkOverloads(): this.type = {
     symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
-      this.checkSequence(defs) { defs2 =>
-        val first = defs2.head
-        if defs2.sizeIs == 2 then {
-          val last = defs2.last
-          messages.addStyle(
-            last.loc,
-            s"${last.identify} overloads ${first.identifyWithLoc}"
-          )
-        } else {
-          if defs2.sizeIs > 2 then {
-            val tail = defs2.tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
-            messages.addStyle(first.loc, s"${first.identify} overloads:\n  $tail")
-          }
+      this.checkSequence(defs) { defList =>
+        defList.toList match {
+          case Nil =>
+            // shouldn't happen
+            messages.addSevere(At.empty, "Empty list from Symbols.foreachOverloadedSymbol")
+          case head :: Nil =>
+            // shouldn't happen
+            messages.addSevere(At.empty, "Single entry list from Symbols.foreachOverloadedSymbol")
+          case head :: tail =>
+            tail match
+              case last :: Nil =>
+                messages.addStyle(last.loc, s"${last.identify} overloads ${head.identifyWithLoc}")
+              case _ =>
+                val tailStr: String = tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
+                messages.addStyle(head.loc, s"${head.identify} overloads:\n  $tailStr")
         }
       }
     }

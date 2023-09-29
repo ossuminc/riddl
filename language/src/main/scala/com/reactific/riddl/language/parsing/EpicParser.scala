@@ -10,6 +10,7 @@ import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
+import java.net.URL
 
 private[parsing] trait EpicParser {
   this: CommonParser with ReferenceParser =>
@@ -124,14 +125,13 @@ private[parsing] trait EpicParser {
     P(
       Keywords.shown ~ Readability.by ~ open ~
         httpUrl.rep(0, Punctuation.comma) ~ close
-    ).?.map { x => if x.isEmpty then Seq.empty[java.net.URL] else x.get }
+    ).?.map { (x: Option[Seq[java.net.URL]]) => x.getOrElse(Seq.empty[java.net.URL]) }
   }
 
   private def epicOptions[u: P]: P[Seq[EpicOption]] = {
     options[u, EpicOption](StringIn(Options.technology, Options.sync).!) {
       case (loc, Options.sync, _)          => EpicSynchronousOption(loc)
       case (loc, Options.technology, args) => EpicTechnologyOption(loc, args)
-      case (_, _, _)                       => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -185,6 +185,7 @@ private[parsing] trait EpicParser {
           )
         )
         val cases = mapTo[UseCase](groups.get(classOf[UseCase]))
+
         Epic(
           loc,
           id,

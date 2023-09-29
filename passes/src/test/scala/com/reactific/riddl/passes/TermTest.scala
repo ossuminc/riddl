@@ -7,8 +7,7 @@
 package com.reactific.riddl.passes
 
 import com.reactific.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term}
-import com.reactific.riddl.language.ParsingTest
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.{At, ParsingTest}
 class TermTest extends ParsingTest {
 
   "Term" should {

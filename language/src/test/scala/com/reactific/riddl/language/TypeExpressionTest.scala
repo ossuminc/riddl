@@ -10,8 +10,6 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
-
 /** Unit Tests For TypeExpressions */
 class TypeExpressionTest extends AnyWordSpec with Matchers {
 
@@ -330,7 +328,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       reference.isContainer mustBe false
     }
     "Support Messages" in {
-      AST.errorDescription(message) mustBe "Record of 27 fields"
+      AST.errorDescription(message) mustBe "Record of 27 fields and 0 methods"
       message.format mustBe
         "record { integer: Integer, abstract: Abstract, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +

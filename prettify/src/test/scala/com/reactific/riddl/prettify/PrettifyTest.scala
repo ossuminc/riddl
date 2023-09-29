@@ -67,7 +67,7 @@ class PrettifyTest extends RiddlFilesTestBase {
 
     "check mappings" in { processADirectory("testkit/src/test/input/mappings") }
     "check ranges" in { processADirectory("testkit/src/test/input/ranges") }
-    "check everything.riddl" in {
+      "check everything.riddl" in {
       processAFile("testkit/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in {

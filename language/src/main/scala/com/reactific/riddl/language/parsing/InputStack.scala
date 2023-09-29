@@ -26,6 +26,6 @@ case class InputStack(
 
   def current: RiddlParserInput = {
     require(inputs.nonEmpty, "No current input available")
-    inputs.head
+    inputs.headOption.getOrElse(RiddlParserInput.empty)
   }
 }

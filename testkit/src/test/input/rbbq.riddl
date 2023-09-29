@@ -92,7 +92,7 @@ domain ReactiveBBQ is {
       }
     }
 
-    adaptor PaymentAdapter from context Payment is {
+    adaptor PaymentAdapter from context ReactiveBBQ.Payment is {
       ???
     }
   }

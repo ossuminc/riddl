@@ -70,9 +70,11 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val options =
-      if outputDirOverride.nonEmpty then {
-        overrideOptions(originalOptions, outputDirOverride.get)
-      } else {originalOptions}
+      if outputDirOverride.nonEmpty then
+        val path = outputDirOverride.fold(Path.of(""))(identity)
+        overrideOptions(originalOptions, path)
+      else
+        originalOptions
 
     val messages = checkOptions(options)
 

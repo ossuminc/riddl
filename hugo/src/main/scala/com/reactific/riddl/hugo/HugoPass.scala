@@ -25,9 +25,11 @@ object HugoPass extends PassInfo {
   val name: String = "hugo"
   val geekDoc_version = "v0.40.1"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
-  val geekDoc_url = java.net.URI.create(
-    s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
-  ).toURL
+  val geekDoc_url = java.net.URI
+    .create(
+      s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
+    )
+    .toURL
 }
 
 case class HugoOutput(
@@ -50,7 +52,12 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     options.outputRoot.getFileName.toString.nonEmpty,
     "Output path is empty"
   )
-  makeDirectoryStructure(options.inputFile.get, state.logger, options, commonOptions)
+  options.inputFile match
+    case None =>
+      require(false, "inputFile option provides no path")
+    case Some(path: Path) =>
+      makeDirectoryStructure(path, state.logger, options, commonOptions)
+
   val root = input.root
 
   val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
@@ -66,9 +73,8 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
       case e: Enumerator => state.addToGlossary(e, stack)
       case ss: SagaStep  => state.addToGlossary(ss, stack)
       case t: Term       => state.addToGlossary(t, stack)
-      case  _: Inlet | _: Outlet | _: Author | _: OnMessageClause | _: OnOtherClause |
-         _: OnInitClause | _: OnTerminationClause |
-          _: Include[Definition] @unchecked | _: RootContainer =>
+      case _: Inlet | _: Outlet | _: Author | _: OnMessageClause | _: OnOtherClause | _: OnInitClause |
+          _: OnTerminationClause | _: Include[Definition] @unchecked | _: RootContainer =>
       // All these cases do not generate a file as their content contributes
       // to the content of their parent container
       case leaf: LeafDefinition =>
@@ -103,7 +109,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
               case Some(_) =>
                 mkd.emitState(s, Seq.empty[Field], stack)
               case _ =>
-                throw new IllegalStateException("State aggregate not resolved")
+                require(false, "State aggregate not resolved")
             }
           case h: Handler    => mkd.emitHandler(h, parents)
           case f: Function   => mkd.emitFunction(f, parents)
@@ -136,9 +142,8 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   override def result: HugoOutput = HugoOutput()
 
   private def deleteAll(directory: File): Boolean = {
-    val maybeFiles = Option(directory.listFiles)
-    if maybeFiles.nonEmpty then {
-      for file <- maybeFiles.get do { deleteAll(file) }
+    for file <- directory.listFiles do {
+      deleteAll(file)
     }
     directory.delete
   }
@@ -156,14 +161,10 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
             Tar.untar(zip_path, destDir)
             zip_path.toFile.delete()
           case _ =>
-            throw new IllegalArgumentException(
-              "Can only load a theme from .tar.gz or .zip file"
-            )
+            require(false, "Can only load a theme from .tar.gz or .zip file")
         }
       } else {
-        throw new IllegalStateException(
-          s"The downloaded theme is not a regular file: $zip_path"
-        )
+        require(false, s"The downloaded theme is not a regular file: $zip_path")
       }
     }
   }
@@ -171,7 +172,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   private def loadThemes(options: HugoCommand.Options): Unit = {
     for (name, url) <- options.themes if url.nonEmpty do {
       val destDir = options.themesRoot.resolve(name)
-      loadATheme(url.get, destDir)
+      loadATheme(url.getOrElse(java.net.URI.create("").toURL), destDir)
     }
   }
 

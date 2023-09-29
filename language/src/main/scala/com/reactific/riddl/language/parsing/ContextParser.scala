@@ -40,7 +40,6 @@ private[parsing] trait ContextParser {
       case (loc, Options.service, _)       => ServiceOption(loc)
       case (loc, Options.package_, args)   => ContextPackageOption(loc, args)
       case (loc, Options.technology, args) => ContextTechnologyOption(loc, args)
-      case (_, _, _)                       => throw new RuntimeException("Impossible case")
     }
   }
 

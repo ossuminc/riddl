@@ -82,8 +82,8 @@ class EntityValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'SomeType' was not resolved, in Field 'field', " +
-              "but should refer to a Type"
+            """Path 'SomeType' was not resolved, in Field 'field'
+              |and it should refer to a Type""".stripMargin
           )
           assertValidationMessage(
             msgs,

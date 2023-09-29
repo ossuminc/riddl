@@ -15,16 +15,14 @@ import java.nio.file.Files
 import java.nio.file.Path
 import scala.collection.mutable
 
-case class PrettifyState(
-  commonOptions: CommonOptions,
-  options: PrettifyCommand.Options)
-  extends TranslatingState[RiddlFileEmitter] {
+case class PrettifyState(commonOptions: CommonOptions, options: PrettifyCommand.Options)
+    extends TranslatingState[RiddlFileEmitter] {
 
   require(options.inputFile.nonEmpty, "No input file specified")
   require(options.outputDir.nonEmpty, "No output directory specified")
 
-  private val inPath: Path = options.inputFile.get
-  private val outPath: Path = options.outputDir.get
+  private val inPath: Path = options.inputFile.getOrElse(Path.of(""))
+  private val outPath: Path = options.outputDir.getOrElse(Path.of(""))
 
   def relativeToInPath(path: Path): Path = inPath.relativize(path)
 
@@ -44,13 +42,12 @@ case class PrettifyState(
       val content = filesAsString
       Files.writeString(firstFile.filePath, content, StandardCharsets.UTF_8)
       Seq(firstFile.filePath)
-    } else { for  emitter <- files  yield { emitter.emit() } }.toSeq
+    } else { for emitter <- files yield { emitter.emit() } }.toSeq
   }
 
   def filesAsString: String = {
     closeStack()
-    files.map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.asString}")
-      .mkString
+    files.map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.asString}").mkString
   }
 
   private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack
@@ -58,7 +55,7 @@ case class PrettifyState(
 
   private def closeStack(): Unit = { while fileStack.nonEmpty do popFile() }
 
-  def current: RiddlFileEmitter = fileStack.head
+  def current: RiddlFileEmitter = fileStack.headOption.getOrElse(RiddlFileEmitter(Path.of("")))
 
   private val firstFile: RiddlFileEmitter = {
     val file = RiddlFileEmitter(outPathFor(inPath))

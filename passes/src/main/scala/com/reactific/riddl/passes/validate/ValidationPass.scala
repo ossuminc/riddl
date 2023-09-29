@@ -55,8 +55,11 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     val parentsAsSeq: Seq[Definition] = parents.toSeq
     definition match {
       // TODO: generate some frequency statistics and use them to reorganize this list of cases, most frequent first
-      case f: Field =>
-        validateField(f, parentsAsSeq)
+      case f: AggregateDefinition =>
+        f match {
+          case f: Field  => validateField(f, parentsAsSeq)
+          case m: Method => validateMethod(m, parentsAsSeq)
+        }
       case t: Type =>
         validateType(t, parentsAsSeq)
       case e: Enumerator =>
@@ -116,6 +119,8 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateStory(s, parentsAsSeq)
       case a: Application =>
         validateApplication(a, parentsAsSeq)
+      case r: Replica =>
+        validateReplica(r, parentsAsSeq)
       case uc: UseCase =>
         validateUseCase(uc, parentsAsSeq)
       case grp: Group =>
@@ -131,6 +136,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     }
   }
 
+  @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
   def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, omc)
     if omc.msg.nonEmpty then {
@@ -155,12 +161,11 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         case _ =>
       }
     }
-    if omc.from.nonEmpty then {
-      checkRef(omc.from.get, omc, parents)
+    omc.from.foreach { (ref: Reference[Definition]) =>
+      checkRef[Definition](ref, omc, parents)
     }
     checkDescription(omc)
   }
-
 
   private def validateTerm(
     t: Term,
@@ -192,6 +197,13 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     }
     checkTypeExpression(f.typeEx, f, parents)
     checkDescription(f)
+  }
+  private def validateMethod(
+    m: Method,
+    parents: Seq[Definition]
+  ): Unit = {
+    // TODO: Write validateMethod
+    ()
   }
 
   private def validateInvariant(
@@ -254,6 +266,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDescription(ai)
   }
 
+  @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
   private def validateType(
     t: Type,
     parents: Seq[Definition]
@@ -441,7 +454,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       d.domains.isEmpty || d.domains.size > 2,
       "Singly nested domains do not add value",
       StyleWarning,
-      if d.domains.isEmpty then d.loc else d.domains.head.loc
+      d.loc
     )
     checkDescription(d)
   }
@@ -471,8 +484,8 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, s)
-    checkNonEmpty(s.doStatements,"Do Statements", s, MissingWarning)
-    checkNonEmpty(s.doStatements,"Revert Statements", s, MissingWarning)
+    checkNonEmpty(s.doStatements, "Do Statements", s, MissingWarning)
+    checkNonEmpty(s.doStatements, "Revert Statements", s, MissingWarning)
     check(
       s.doStatements.getClass == s.undoStatements.getClass,
       "The primary action and revert action must be the same shape",
@@ -489,6 +502,26 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkContainer(parents, c)
     checkOptions[ContextOption](c.options, c.loc)
     checkDescription(c)
+  }
+
+  private def validateReplica(
+    replica: Replica,
+    parents: Seq[Definition]
+  ): Unit = {
+    checkDefinition(parents, replica)
+    checkTypeExpression(replica.typeExp, replica, parents)
+    replica.typeExp match {
+      case Mapping(loc, from, to)                =>
+      case Sequence(loc, of)                     =>
+      case Set(loc, of)                          =>
+      case Optional(loc, typeExp)                =>
+      case ZeroOrMore(loc, typeExp)              =>
+      case OneOrMore(loc, typeExp)               =>
+      case SpecificRange(loc, typeExp, min, max) =>
+      case t: TypeExpression =>
+        messages.addError(t.loc, s"Type expression in Replica ${replica.identify} is not a replicable type")
+    }
+    checkDescription(replica)
   }
 
   private def validateStory(
@@ -580,9 +613,12 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
               )
             }
           case opt: VagueInteraction =>
-            check(opt.relationship.nonEmpty,
-              "Vague Interactions should have a non-empty description", Messages.MissingWarning, opt
-              .relationship.loc)
+            check(
+              opt.relationship.nonEmpty,
+              "Vague Interactions should have a non-empty description",
+              Messages.MissingWarning,
+              opt.relationship.loc
+            )
           case is: GenericInteraction =>
             checkPathRef[Definition](is.from.pathId, uc, parents)
             checkPathRef[Definition](is.to.pathId, uc, parents)

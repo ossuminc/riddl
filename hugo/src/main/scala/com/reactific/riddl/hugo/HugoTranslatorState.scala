@@ -28,13 +28,13 @@ import java.nio.file.Path
   * @param commonOptions
   *   The common options all commands use
   */
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class HugoTranslatorState(
   result: PassesResult,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions(),
   logger: Logger = SysLogger()
-)
-  extends TranslatingState[MarkdownWriter] {
+) extends TranslatingState[MarkdownWriter] {
 
   final val symbolTable: SymbolsOutput = result.symbols
   final val refMap: ReferenceMap = result.refMap
@@ -98,8 +98,7 @@ case class HugoTranslatorState(
     }
   }
 
-  /** Generate a string that is the file path portion of a url including the
-    * line number.
+  /** Generate a string that is the file path portion of a url including the line number.
     */
   def makeFilePath(definition: Definition): Option[String] = {
     definition.loc.source match {
@@ -109,14 +108,11 @@ case class HugoTranslatorState(
     }
   }
 
-  /** Generate a string that contains the name of a definition that is markdown
-    * linked to the definition in its source. For example, given sourceURL
-    * option of https://github.com/a/b and for an editPath option of
-    * src/main/riddl and for a Location that has Org/org.riddl at line 30, we
-    * would generate this URL:
-    * `https://github.com/a/b/blob/main/src/main/riddl/Org/org.riddl#L30` Note
-    * that that this works through recursive path identifiers to find the first
-    * type that is not a reference Note: this only works for github sources
+  /** Generate a string that contains the name of a definition that is markdown linked to the definition in its source.
+    * For example, given sourceURL option of https://github.com/a/b and for an editPath option of src/main/riddl and for
+    * a Location that has Org/org.riddl at line 30, we would generate this URL:
+    * `https://github.com/a/b/blob/main/src/main/riddl/Org/org.riddl#L30` Note that that this works through recursive
+    * path identifiers to find the first type that is not a reference Note: this only works for github sources
     * @param definition
     *   The definition for which we want the link
     * @return
@@ -126,12 +122,13 @@ case class HugoTranslatorState(
     definition: Definition
   ): String = {
     options.sourceURL match {
-      case Some(url) => options.viewPath match {
-          case Some(viewPath) => makeFilePath(definition) match {
+      case Some(url) =>
+        options.viewPath match {
+          case Some(viewPath) =>
+            makeFilePath(definition) match {
               case Some(filePath) =>
                 val lineNo = definition.loc.line
-                url.toExternalForm ++ "/" ++ Path.of(viewPath, filePath)
-                  .toString ++ s"#L$lineNo"
+                url.toExternalForm ++ "/" ++ Path.of(viewPath, filePath).toString ++ s"#L$lineNo"
               case _ => ""
             }
           case None => ""
@@ -149,20 +146,24 @@ case class HugoTranslatorState(
     val docLink = makeDocLink(definition, makeParents(parents))
     if parents.isEmpty then { s"[${definition.identify}]($docLink)" }
     else {
-      val parent = parents.head
-      val parentLink = makeDocLink(parent, makeParents(parents.tail))
-      s"[${definition.identify}]($docLink) in [${parent.identify}]($parentLink)"
+      parents.headOption match
+        case None =>
+          logger.error(s"No parents found for definition '${definition.identify}")
+          ""
+        case Some(parent: Definition) =>
+          val parentLink = makeDocLink(parent, makeParents(parents.drop(1)))
+          s"[${definition.identify}]($docLink) in [${parent.identify}]($parentLink)"
     }
   }
 
   def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
-      case _: OnMessageClause | _: OnInitClause | _: OnTerminationClause | _: OnOtherClause|
-           _: Inlet | _: Outlet => 
+      case _: OnMessageClause | _: OnInitClause | _: OnTerminationClause | _: OnOtherClause | _: Inlet | _: Outlet =>
         pars + "#" + definition.id.value.toLowerCase
-      case _: Field | _: Enumerator | _: Invariant | _: Author | _: SagaStep |
-          _: Include[Definition] @unchecked | _: RootContainer | _: Term => pars
+      case _: Field | _: Enumerator | _: Invariant | _: Author | _: SagaStep | _: Include[Definition] @unchecked |
+          _: RootContainer | _: Term =>
+        pars
       case _ =>
         if parents.isEmpty then pars + definition.id.value.toLowerCase
         else pars + "/" + definition.id.value.toLowerCase
@@ -181,7 +182,8 @@ case class HugoTranslatorState(
       case None => // nothing
     }
     mdw.h2("Domains")
-    val domains = root.contents.sortBy(_.id.value)
+    val domains = root.contents
+      .sortBy(_.id.value)
       .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
     mdw.list(domains)
     mdw.h2("Indices")
@@ -218,33 +220,48 @@ case class HugoTranslatorState(
     }
   }
 
-  def makeToDoList(root: RootContainer): Unit = {
-    if options.withTODOList then {
-      val finder = Finder(root)
-      val items: Seq[(String, String, String, String)] = for
-        (defn, pars) <- finder.findEmpty
-        item = defn.identify
-        authors = AST.findAuthors(defn, pars)
-        author =
-          if authors.isEmpty then { "Unspecified Author" }
-          else {
-            authors
-              .map { (ref: AuthorRef) => refMap.definitionOf[Author](ref
-                .pathId, pars.head) }
-              .filterNot(_.isEmpty).map(_.get)
-              .map(x => s"${x.name.s} &lt;${x.email.s}&gt;").mkString(", ")
-          }
-        parents = makeParents(pars)
-        path = parents.mkString(".")
-        link = makeDocLink(defn, parents)
-      yield { (item, author, path, link) }
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
+  private def mkAuthor(authors: Seq[AuthorRef], parents: Seq[Definition]): String = {
+    if authors.isEmpty then "Unspecified Author"
+    else
+      parents.headOption match {
+        case None => "Unspecified Author"
+        case Some(parent: Definition) =>
+          authors
+            .map { (ref: AuthorRef) =>
+              refMap.definitionOf[Author](ref.pathId, parent)
+            }
+            .filterNot(_.isEmpty)
+            .map(_.get)
+            .map(x => s"${x.name.s} &lt;${x.email.s}&gt;")
+            .mkString(", ")
+      }
+  }
 
-      val map = items.groupBy(_._2).view.mapValues(_.map {
-        case (item, _, path, link) => s"[$item In $path]($link)"
-      }).toMap
+  def makeToDoList(root: RootContainer): Unit = {
+    if options.withTODOList then
+      val finder: Finder = Finder(root)
+      val items: Seq[(String, String, String, String)] = {
+        for {
+          (defn: Definition, pars: Seq[Definition]) <- finder.findEmpty
+          item = defn.identify
+          authors = AST.findAuthors(defn, pars)
+          author = mkAuthor(authors, pars)
+          parents = makeParents(pars)
+          path = parents.mkString(".")
+          link = makeDocLink(defn, parents)
+        } yield (item, author, path, link)
+      }
+
+      val map = items
+        .groupBy(_._2)
+        .view
+        .mapValues(_.map { case (item, _, path, link) =>
+          s"[$item In $path]($link)"
+        })
+        .toMap
       val mdw = addFile(Seq.empty[String], "todolist.md")
       mdw.emitToDoList(toDoWeight, map)
-    }
   }
 
   def close(root: RootContainer): Seq[Path] = {

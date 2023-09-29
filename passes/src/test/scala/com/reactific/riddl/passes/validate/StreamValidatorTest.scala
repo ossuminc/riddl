@@ -18,6 +18,7 @@ class StreamValidatorTest extends ValidatingTest {
                     |} """.stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (domain, _, messages) =>
+          info(messages.format)
           domain.isEmpty mustBe false
           messages.isEmpty mustBe false
           messages.hasErrors mustBe true
@@ -96,7 +97,7 @@ class StreamValidatorTest extends ValidatingTest {
                 |  inlet in is type T
                 |  connector c1 {
                 |    options(persistent)
-                |    flows T from outlet a.out to inlet a.in
+                |    flows uno.T from outlet a.out to inlet a.in
                 |  }
                 | }
                 |} """.stripMargin
@@ -105,7 +106,7 @@ class StreamValidatorTest extends ValidatingTest {
           domain.isEmpty mustBe false
           messages.isEmpty mustBe false
           messages.hasErrors mustBe false
-          messages.filter(_.message contains "is not needed") mustNot be(empty)
+          messages.filter(_.message contains "is not needed since both ends") mustNot be(empty)
           messages.exists(
             _.message.startsWith("The persistence option on Connector 'c1'")
           ) mustBe true

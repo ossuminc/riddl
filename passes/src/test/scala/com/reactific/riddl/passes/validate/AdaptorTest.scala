@@ -50,11 +50,13 @@ class AdaptorTest extends ValidatingTest {
           | context Foo is {
           |  type ItWillHappen = command { abc: String described as "abc" } described as "?"
           |  command  LetsDoIt is { bcd: String described as "abc" } described as "?"
-          |  entity MyEntity is { inlet commands is command LetsDoIt }
-          |    connector only is {
-          |      from outlet Foo.PaymentAdapter.forMyEntity
-          |      to inlet MyEntity.commands
-          |    }
+          |  entity MyEntity is {
+          |    inlet commands is command LetsDoIt
+          |  }
+          |  connector only is {
+          |    from outlet Foo.PaymentAdapter.forMyEntity
+          |    to inlet Foo.MyEntity.commands
+          |  }
           |  adaptor PaymentAdapter to context Target is {
           |    outlet forMyEntity is command LetsDoIt
           |    handler sendAMessage is {
@@ -66,11 +68,9 @@ class AdaptorTest extends ValidatingTest {
           | } explained as "?"
           |} explained as "?"
           |""".stripMargin
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
-        if messages.isOnlyWarnings then
+      parseAndValidateDomain(input) { (_, _, messages) =>
+
           succeed
-        else
-          fail(messages.justErrors.format)
       }
     }
 

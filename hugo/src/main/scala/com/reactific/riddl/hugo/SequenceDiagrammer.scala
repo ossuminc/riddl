@@ -8,9 +8,10 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.utils.FileBuilder
 
+@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class SequenceDiagrammer(state: HugoTranslatorState, story: Epic, parents: Seq[Definition]) extends FileBuilder {
 
-  val participants: Map[Seq[String], Definition] = {
+  val participants: Map[Seq[String], Option[Definition]] = {
     (for
       cs <- story.cases
       interaction <- cs.contents
@@ -24,13 +25,17 @@ case class SequenceDiagrammer(state: HugoTranslatorState, story: Epic, parents: 
       .flatten
       .distinctBy(_.pathId.value)
       .map { (ref: Reference[Definition]) =>
-        state.refMap.definitionOf[Definition](ref.pathId, parents.head) match {
-          case Some(definition) => ref.pathId.value -> definition
+        parents.headOption match
           case None =>
-            throw new IllegalStateException(
-              s"Pre-validated PathId not found: ${ref.identify}"
-            )
-        }
+            require(false, s"Pre-validated PathId not found: ${ref.identify}")
+            Seq.empty[String] -> None
+          case Some(parent) =>
+            state.refMap.definitionOf[Definition](ref.pathId, parent) match {
+              case Some(dfntn) => ref.pathId.value -> Some(dfntn)
+              case None =>
+                require(false, s"Pre-validated PathId not found: ${ref.identify}")
+                Seq.empty[String] -> None
+            }
       }
   }.toMap
 
@@ -53,7 +58,7 @@ case class SequenceDiagrammer(state: HugoTranslatorState, story: Epic, parents: 
 
   sb.append("sequenceDiagram"); nl
   sb.append("  autonumber"); nl
-  val parts: Seq[Definition] = participants.values.toSeq.sortBy(_.kind)
+  val parts: Seq[Definition] = participants.values.toSeq.filter(_.nonEmpty).map(_.get).sortBy(_.kind)
   parts.foreach(x => makeParticipant(x))
   parts.foreach(x => makeLink(x))
 
@@ -62,11 +67,17 @@ case class SequenceDiagrammer(state: HugoTranslatorState, story: Epic, parents: 
     for ntrctn <- cse.contents do
       ntrctn match {
         case is: GenericInteraction =>
-          val from = participants(is.from.pathId.value)
-          val to = participants(is.to.pathId.value)
-          sb.append(s"    ${from.id.value}->>${to.id.value}: ${is.relationship}")
+          val from = participants(is.from.pathId.value) match {
+            case None => "<participant not found>"
+            case Some(f) => f.id.value
+          }
+          val to = participants(is.to.pathId.value) match {
+            case None => "<participant not found>"
+            case Some(t) => t.id.value
+          }
+          sb.append(s"    $from->>$to: ${is.relationship}")
           nl
-        case _: VagueInteraction      => // TODO: include vague interactions
+        case _: VagueInteraction       => // TODO: include vague interactions
         case _: SequentialInteractions => // TODO: include sequential groups
         case _: ParallelInteractions   => // TODO: include parallel groups
         case _: OptionalInteractions   => // TODO: include optional groups

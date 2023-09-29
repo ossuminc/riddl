@@ -6,7 +6,7 @@ import org.scalatest.matchers.must.Matchers
 import java.nio.file.Files
 import java.nio.file.Path
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.At
 
 /** Tests For RiddlFileEmitter */
 class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
@@ -87,7 +87,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
     "emit patterns" in {
       rfe.clear
       rfe.emitPattern(patt)
-      rfe.toString mustBe "Pattern(\"^stuff.*$\") "
+      rfe.toString mustBe "Pattern(\"^stuff.*$\")"
     }
 
     "emit type expressions" in {
@@ -101,7 +101,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear
       rfe.emitTypeExpression(Location(At.empty)).toString mustBe "Location"
       rfe.clear
-      rfe.emitTypeExpression(patt).toString mustBe "Pattern(\"^stuff.*$\") "
+      rfe.emitTypeExpression(patt).toString mustBe "Pattern(\"^stuff.*$\")"
       rfe.clear
       rfe.emitTypeExpression(Abstract(At.empty)).toString mustBe "Abstract"
       rfe.clear

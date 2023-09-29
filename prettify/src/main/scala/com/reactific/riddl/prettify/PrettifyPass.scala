@@ -21,38 +21,36 @@ import scala.annotation.unused
 object PrettifyPass extends PassInfo {
   val name: String = "prettify"
 
-  /** A function to translate between a definition and the keyword that
-   * introduces them.
-   *
-   * @param definition
-   * The definition to look up
-   * @return
-   * A string providing the definition keyword, if any. Enumerators and
-   * fields don't have their own keywords
-   */
+  /** A function to translate between a definition and the keyword that introduces them.
+    *
+    * @param definition
+    *   The definition to look up
+    * @return
+    *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
+    */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptor => Keywords.adaptor
-      case _: Context => Keywords.context
-      case _: Connector => Keywords.connector
-      case _: Domain => Keywords.domain
-      case _: Entity => Keywords.entity
-      case _: Enumerator => ""
-      case _: Field => ""
-      case _: Function => Keywords.function
-      case _: Handler => Keywords.handler
-      case _: Inlet => Keywords.inlet
-      case _: Invariant => Keywords.invariant
-      case _: Outlet => Keywords.outlet
-      case s: Streamlet => s.shape.keyword
+      case _: Adaptor       => Keywords.adaptor
+      case _: Context       => Keywords.context
+      case _: Connector     => Keywords.connector
+      case _: Domain        => Keywords.domain
+      case _: Entity        => Keywords.entity
+      case _: Enumerator    => ""
+      case _: Field         => ""
+      case _: Function      => Keywords.function
+      case _: Handler       => Keywords.handler
+      case _: Inlet         => Keywords.inlet
+      case _: Invariant     => Keywords.invariant
+      case _: Outlet        => Keywords.outlet
+      case s: Streamlet     => s.shape.keyword
       case _: RootContainer => "root"
-      case _: Saga => Keywords.saga
-      case _: SagaStep => Keywords.step
-      case _: State => Keywords.state
-      case _: Epic => Keywords.epic
-      case _: Term => Keywords.term
-      case _: Type => Keywords.`type`
-      case _ => "unknown"
+      case _: Saga          => Keywords.saga
+      case _: SagaStep      => Keywords.step
+      case _: State         => Keywords.state
+      case _: Epic          => Keywords.epic
+      case _: Term          => Keywords.term
+      case _: Type          => Keywords.`type`
+      case _                => "unknown"
     }
   }
 }
@@ -73,37 +71,55 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
 
   def postProcess(root: AST.RootContainer): Unit = ()
 
-  /**
-   * Generate the output of this Pass. This will only be called after all the calls
-   * to process have completed.
-   *
-   * @return an instance of the output type
-   */
+  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+    *
+    * @return
+    *   an instance of the output type
+    */
   override def result: PassOutput = PrettifyOutput(Messages.empty, state)
 
   def openContainer(container: Definition, parents: Seq[Definition]): Unit = {
     container match {
-      case epic: Epic => openEpic(epic)
-      case uc: UseCase => openUseCase(uc)
-      case domain: Domain => openDomain(domain)
-      case adaptor: Adaptor => openAdaptor(adaptor)
-      case typ: Type => state.current.emitType(typ)
+      case epic: Epic         => openEpic(epic)
+      case uc: UseCase        => openUseCase(uc)
+      case domain: Domain     => openDomain(domain)
+      case adaptor: Adaptor   => openAdaptor(adaptor)
+      case typ: Type          => state.current.emitType(typ)
       case function: Function => openFunction(function)
-      case st: State => openState(st)
-      case step: SagaStep => openSagaStep(step)
-      case include: Include[Definition]@unchecked =>
+      case st: State          => openState(st)
+      case step: SagaStep     => openSagaStep(step)
+      case include: Include[Definition] @unchecked =>
         openInclude(include)
       case streamlet: Streamlet => openStreamlet(streamlet)
-      case _: RootContainer => () // ignore
       case processor: Processor[_, _] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
       case handler: Handler =>
         state.withCurrent(_.openDef(handler))
       case saga: Saga =>
         state.withCurrent(_.openDef(saga))
+      case replica: Replica =>
+        state.withCurrent(_.openDef(replica))
+      case si: SequentialInteractions =>
+        state.withCurrent(_.openDef(si))
+      case pi: ParallelInteractions =>
+        state.withCurrent(_.openDef(pi))
+      case oi: OptionalInteractions =>
+        state.withCurrent(_.openDef(oi))
+      case group: Group =>
+        state.withCurrent(_.openDef(group))
+      case output: Output =>
+        state.withCurrent(_.openDef(output))
+      case input: Input =>
+        state.withCurrent(_.openDef(input))
+      case _: RootContainer => () // ignore
+      case _: Enumerator    => () // not a container
+      case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
+          _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
+          _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+        () // not  containers
+
     }
   }
-
 
   def processLeaf(
     definition: LeafDefinition,
@@ -116,10 +132,10 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
           _.openDef(invariant).closeDef(invariant, withBrace = false)
         )
       case conn: Connector => doConnector(conn)
-      case user: User => doUser(user)
-      case i: Interaction => doInteraction(i)
-      case _: Field =>
-      case _ => ()
+      case user: User      => doUser(user)
+      case i: Interaction  => doInteraction(i)
+      case _: Field        =>
+      case _               => ()
       // inlets and outlets handled by openProcessor
       /* require(
         !definition.isInstanceOf[Definition],
@@ -133,14 +149,14 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     parents: Seq[Definition]
   ): Unit = {
     container match {
-      case _: Type => () // openContainer did all of it
-      case epic: Epic => closeEpic(epic)
-      case uc: UseCase => closeUseCase(uc)
-      case st: State => state.withCurrent(_.closeDef(st))
+      case _: Type            => () // openContainer did all of it
+      case epic: Epic         => closeEpic(epic)
+      case uc: UseCase        => closeUseCase(uc)
+      case st: State          => state.withCurrent(_.closeDef(st))
       case _: OnMessageClause => closeOnClause()
-      case include: Include[Definition]@unchecked =>
+      case include: Include[Definition] @unchecked =>
         closeInclude(include)
-      case _: RootContainer => () // ignore
+      case _: RootContainer      => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
         // Plant, Streamlet, Function, SagaStep
@@ -152,24 +168,21 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
     domain: Domain
   ): Unit = {
     val s0: PrettifyState = state.withCurrent(_.openDef(domain))
-    domain.authorDefs.foldLeft[PrettifyState](s0) {
-      (st: PrettifyState, author) =>
-        val s1: PrettifyState = st.withCurrent(
-          _.addIndent(s"author is {\n").indent
-            .addIndent(s"name = ${author.name.format}\n")
-            .addIndent(s"email = ${author.email.format}\n")
-        )
-        val s2: PrettifyState = author.organization
-          .map[PrettifyState] { org =>
-            s1.withCurrent(_.addIndent(s"organization =${org.format}\n"))
-          }
-          .getOrElse(s1)
-        val s3: PrettifyState = author.title
-          .map(title =>
-            s2.withCurrent(_.addIndent(s"title = ${title.format}\n"))
-          )
-          .getOrElse(s2)
-        s3.withCurrent(_.outdent.addIndent("}\n"))
+    domain.authorDefs.foldLeft[PrettifyState](s0) { (st: PrettifyState, author) =>
+      val s1: PrettifyState = st.withCurrent(
+        _.addIndent(s"author is {\n").indent
+          .addIndent(s"name = ${author.name.format}\n")
+          .addIndent(s"email = ${author.email.format}\n")
+      )
+      val s2: PrettifyState = author.organization
+        .map[PrettifyState] { org =>
+          s1.withCurrent(_.addIndent(s"organization =${org.format}\n"))
+        }
+        .getOrElse(s1)
+      val s3: PrettifyState = author.title
+        .map(title => s2.withCurrent(_.addIndent(s"title = ${title.format}\n")))
+        .getOrElse(s2)
+      s3.withCurrent(_.outdent.addIndent("}\n"))
     }
   }
 
@@ -178,7 +191,7 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
       if epic.userStory.isEmpty then {
         st.openDef(epic, withBrace = false).add(" ??? ")
       } else {
-        val us = epic.userStory.get
+        val us = epic.userStory.getOrElse(UserStory())
         val user = us.user.pathId
         st.openDef(epic)
           .addIndent("user")
@@ -286,35 +299,28 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
         .addSpace()
         .add {
           val flows =
-            if conn.flows.nonEmpty then
-              s"flows ${conn.flows.get.format} "
+            if conn.flows.nonEmpty then s"flows ${conn.flows.get.format} "
             else ""
           val from =
-            if conn.from.nonEmpty then
-              s"from ${conn.from.get.format} "
+            if conn.from.nonEmpty then s"from ${conn.from.get.format} "
             else ""
           val to =
-            if conn.to.nonEmpty then
-              s"to ${conn.to.get.format}"
+            if conn.to.nonEmpty then s"to ${conn.to.get.format}"
             else ""
           flows + from + to
         }
-        .nl.addSpace()
+        .nl
+        .addSpace()
         .closeDef(conn)
     }
   }
-
 
   private def openFunction[TCD <: Definition](
     function: Function
   ): Unit = {
     state.withCurrent(_.openDef(function))
-    function.input.foreach(te =>
-      state.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl)
-    )
-    function.output.foreach(te =>
-      state.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl)
-    )
+    function.input.foreach(te => state.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl))
+    function.output.foreach(te => state.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl))
     state.withCurrent(_.addIndent("body ").emitCodeBlock(function.statements))
   }
 
@@ -370,6 +376,6 @@ case class PrettifyPass(input: PassInput, state: PrettifyState) extends Hierarch
   private def closeInclude[T <: Definition](
     @unused include: Include[T]
   ): Unit = {
-    if !state.options.singleFile then {state.popFile()}
+    if !state.options.singleFile then { state.popFile() }
   }
 }

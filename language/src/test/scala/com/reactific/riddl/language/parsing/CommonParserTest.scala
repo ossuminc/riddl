@@ -7,9 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ParsingTest
-import com.reactific.riddl.language.ast.At
-
+import com.reactific.riddl.language.{At, ParsingTest}
 /** Unit Tests For CommonParser */
 class CommonParserTest extends ParsingTest {
 

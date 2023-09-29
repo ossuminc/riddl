@@ -58,6 +58,7 @@ object PathUtils {
     } else { "" }
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.Var"))
   def compareDirectories(
     a: Path,
     b: Path

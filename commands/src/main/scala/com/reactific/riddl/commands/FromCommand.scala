@@ -65,7 +65,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val loadedCO =
-      CommandOptions.loadCommonOptions(options.inputFile.get) match {
+      CommandOptions.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match {
         case Right(newCO: CommonOptions) =>
           if commonOptions.verbose then {
             println(

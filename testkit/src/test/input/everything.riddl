@@ -12,7 +12,7 @@ domain Everything is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
     connector AChannel is {
-      flows type DoAThing from outlet Source.Commands to inlet Sink.Commands
+      flows type DoAThing from outlet APlant.Source.Commands to inlet APlant.Sink.Commands
     } explained as "A Channel"
   }
 
@@ -29,7 +29,7 @@ domain Everything is {
 
     inlet input is type DoAThing
     connector foo is {
-       from outlet APlant.Source.Commands to inlet full.input
+       from outlet Everything.APlant.Source.Commands to inlet full.input
     }
 
     // 8 pre-defined types, shown as re-names
@@ -64,7 +64,7 @@ domain Everything is {
     // Commands, Events, Queries and Results are defined in terms of some
     // type, previously defined. Commands yield events. Queries yield results.
 
-    command ACommand is {}
+    command ACommand is { ??? }
 
     // Entities are the main objects that contexts define. They can be
     // transient (memory only) or aggregate (they consume commands and queries)
@@ -73,7 +73,7 @@ domain Everything is {
 
       type somethingDate is Date
 
-      event Inebriated is {}
+      event Inebriated is { ??? }
 
       record fields is { field:  SomeType }
       state someState of Something.fields is {

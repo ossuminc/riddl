@@ -207,13 +207,13 @@ class RegressionTests extends ValidatingTest {
           |    }
           |  }
           |  context WarningsToDemonstrateClutter{
-          |    type Bar is {}
-          |      source UnusedWarningSource is {
-          |        outlet Unused is type Bar
-          |      }
-          |     source SecondUnusedWarningSource is {
-          |        outlet Unused is type Bar
-          |     }
+          |    type Bar is { ??? }
+          |    source UnusedWarningSource is {
+          |      outlet Unused is type Bar
+          |    }
+          |    source SecondUnusedWarningSource is {
+          |      outlet Unused is type Bar
+          |    }
           |  }
           |}
           |""".stripMargin

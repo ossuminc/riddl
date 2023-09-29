@@ -7,10 +7,9 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.language.{CommonOptions, ParsingTest}
+import com.reactific.riddl.language.{At, CommonOptions, ParsingTest}
 import com.reactific.riddl.passes.{Pass, PassesResult}
 import org.scalatest.Assertion
 
@@ -96,8 +95,8 @@ abstract class ValidatingTest extends ParsingTest {
         if shouldFailOnErrors then {
           fail(errors.format)
         } else {
-          val loc: At = (1,1,input)
-          validator(Domain(loc, Identifier(loc,"stand-in")), input, errors)
+          val loc: At = (1, 1, input)
+          validator(Domain(loc, Identifier(loc, "stand-in")), input, errors)
         }
       case Right((model: Domain, rpi)) =>
         val root = RootContainer(Seq(model), Seq(rpi))
@@ -144,8 +143,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (RootContainer, Messages) => Assertion = (_, msgs) =>
-      defaultFail(msgs)
+    validation: (RootContainer, Messages) => Assertion = (_, msgs) => defaultFail(msgs)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
@@ -178,9 +176,9 @@ abstract class ValidatingTest extends ParsingTest {
             val errors = messages.filter(_.kind.isError)
             val warnings = messages.filter(_.kind.isWarning)
             info(s"${errors.length} Errors:")
-            if errors.nonEmpty then {info(errors.format)}
+            if errors.nonEmpty then { info(errors.format) }
             info(s"${warnings.length} Warnings:")
-            if warnings.nonEmpty then {info(warnings.format)}
+            if warnings.nonEmpty then { info(warnings.format) }
             errors mustBe empty
             warnings mustBe empty
         }
@@ -202,9 +200,7 @@ abstract class ValidatingTest extends ParsingTest {
     expectedKind: KindOfMessage,
     content: String
   ): Assertion = {
-    assert(
-      msgs.exists(m => m.kind == expectedKind && m.message.contains(content)),
-      s"; expecting, but didn't find '$content', in:\n${msgs.format}"
-    )
+    val condition = msgs.exists(m => m.kind == expectedKind && m.message.contains(content))
+    assert(condition, s"; expecting, but didn't find '$content', in:\n${msgs.format}")
   }
 }
