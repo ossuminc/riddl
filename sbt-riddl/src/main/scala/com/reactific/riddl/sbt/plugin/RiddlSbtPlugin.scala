@@ -70,11 +70,13 @@ object RiddlSbtPlugin extends AutoPlugin {
   override val projectSettings: Seq[Setting[_]] = Seq(
     libraryDependencies ++= Seq(
       "com.reactific" % "riddlc_3" % V.riddl,
-      "com.reactific" % "riddl-testkit" % V.riddl % Test,
-      "org.scalactic" %% "scalactic" % V.scalatest,
-      "org.scalatest" %% "scalatest" % V.scalatest,
-      "org.scalacheck" %% "scalacheck" % V.scalacheck
+      "com.reactific" % "riddl-testkit_3" % V.riddl % Test,
+      "org.scalactic" % "scalactic_3" % V.scalatest % Test,
+      "org.scalatest" % "scalatest_3" % V.scalatest % Test,
+      "org.scalacheck" % "scalacheck_3" % V.scalacheck % Test
     ),
+    scalaVersion := "3.3.1",
+    Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
     riddlcPath := file("riddlc"),
     riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcOptions := Seq("--show-times", "--hide-warnings"),
