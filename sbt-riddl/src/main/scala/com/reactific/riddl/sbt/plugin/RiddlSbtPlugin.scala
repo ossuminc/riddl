@@ -62,7 +62,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcJvmHeapSize := 512,
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
-    commands ++= Seq(riddlcCommand, infoCommand),
+    // commands ++= Seq(riddlcCommand, infoCommand),
     runRiddlcTask := {
       val s: TaskStreams = streams.value
       val classPath = (Runtime / fullClasspath).value
@@ -106,6 +106,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     }.value
   )
 
+  /*
   // Allow riddlc to be run from inside an sbt shell
   private def riddlcCommand: Command = {
     Command.args(
@@ -132,9 +133,11 @@ object RiddlSbtPlugin extends AutoPlugin {
     name = "info",
     display = "prints out riddlc info"
   ) { (state, _) =>
+    import state._
     val s: TaskStreams = streams.value
-    val project = Project.extract(state)
-    val classPath = project.get(Runtime / fullClasspath).value
+    val extracted = Project.extract(state)
+      import extracted._
+    val classPath = currentRef.get(Runtime / fullClasspath).value
     val minimumVersion = project.get(riddlcMinVersion)
     val conf = riddlcConf.value.getAbsoluteFile.toString
     val options = riddlcOptions.value
@@ -145,7 +148,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
 
-
+*/
   /**
    * Convert the given command string to a release step action, preserving and invoking remaining commands
    * Note: This was copied from https://github.com/sbt/sbt-release/blob/663cfd426361484228a21a1244b2e6b0f7656bdf/src/main/scala/ReleasePlugin.scala#L99-L115
