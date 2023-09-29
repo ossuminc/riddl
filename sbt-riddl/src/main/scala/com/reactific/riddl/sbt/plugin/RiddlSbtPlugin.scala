@@ -8,8 +8,8 @@ package com.reactific.riddl.sbt.plugin
 
 import com.reactific.riddl.sbt.SbtRiddlPluginBuildInfo
 import com.reactific.riddl.sbt.plugin.RiddlSbtPlugin.V
-import sbt.{Def, *}
-import sbt.Keys.*
+import sbt._
+import sbt.Keys._
 import sbt.plugins.JvmPlugin
 
 import scala.language.postfixOps
@@ -25,59 +25,20 @@ object RiddlSbtPlugin extends AutoPlugin {
 
     lazy val riddlcConf = settingKey[File]("Path to the config file")
 
-    lazy val riddlcMem = settingKey[Int]("Number of megabytes for running riddlc jvm")
-
-    lazy val riddlcCommandPrefix = taskKey[String]("")
     lazy val riddlcOptions = settingKey[Seq[String]]("Options to pass to riddlc")
+
+    lazy val riddlcJvmHeapSize = settingKey[Int]("Number of megabytes of heap memory for running riddlc via jvm")
 
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")
     }
+
+    lazy val runRiddlcTask = taskKey[Int]("Runs riddlc compiler")
+    lazy val validateTask = taskKey[Int]("Runs riddlc validate command")
+    lazy val infoTask = taskKey[Int]("Runs the riddlc info command")
   }
 
   import autoImport.*
-
-  private def makeInvocation(state: State): Def.Initialize[sbt.Task[String]] = Def.taskDyn[String] {
-    val project = Project.extract(state)
-    Def.task[String] {
-      val fullClassPath = project.get(Runtime / fullClasspath).value.files
-      val classpath = fullClassPath.map(_.getAbsoluteFile.toString).mkString(";")
-      val java_home = System.getProperty("java.home")
-      val path_to_java = "/bin/java"
-      val cp_option = s"-cp '$classpath'"
-      val mem_option = s"-Xmx${riddlcMem.value}m"
-      val jre_options = s"$mem_option $cp_option"
-      val main = "com.reactific.riddl.RIDDLC$"
-      s"$java_home$path_to_java $jre_options $main "
-    }
-  }
-
-  // Allow riddlc to be run from inside an sbt shell
-  private def riddlcCommand = Command.args(
-    name = "riddlc",
-    display = "<options> <command> <args...> ; `riddlc help` for details"
-  ) { (state, args) =>
-    val project = Project.extract(state)
-    val minVersion = project.get(riddlcMinVersion)
-    val invocation = Def.task {
-      makeInvocation(state).value
-    }.value
-    runRiddlc(invocation, args, minVersion)
-    state
-  }
-
-  def infoCommand = Command.args(
-    name = "info",
-    display = "prints out riddlc info"
-  ) { (state, _) =>
-    val project = Project.extract(state)
-    val path = project.get(riddlcPath)
-    val minVersion = project.get(riddlcMinVersion)
-    val options = Seq("info")
-    runRiddlc(path, options, minVersion)
-    state
-
-  }
 
   object V {
     val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
@@ -96,43 +57,94 @@ object RiddlSbtPlugin extends AutoPlugin {
       "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
     ),
     Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
-    riddlcPath := file("riddlc"),
-  private val riddl_version = SbtRiddlPluginBuildInfo.version
-
-  override val projectSettings: Seq[Setting[_]] = Seq(
+    riddlcOptions := Seq("--show-times"),
     riddlcPath := None,
     riddlcConf := file("src/main/riddl/riddlc.conf"),
-    riddlcMem := 512,
-    riddlcOptions := Seq("--show-times", "--hide-warnings"),
+    riddlcJvmHeapSize := 512,
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
-    libraryDependencies := Seq(
-      "com.reactific" % "riddlc_3" % riddl_version,
-      "com.reactific" % "riddl-testkit_3" % riddl_version % Test
-    ),
-    compileTask := {
-      val execPath = riddlcPath.value
-      val conf = riddlcConf.value.getAbsoluteFile.toString
+    commands ++= Seq(riddlcCommand, infoCommand),
+    runRiddlcTask := {
+      val s: TaskStreams = streams.value
+      val classPath = (Runtime / fullClasspath).value
+      val minimumVersion = riddlcMinVersion.value
       val options = riddlcOptions.value
-      val version = riddlcMinVersion.value
-      val args = options ++ Seq("from", conf, "validate")
-      runRiddlc(execPath, args, version)
+      val heapSize = riddlcJvmHeapSize.value
+      val args = Seq.empty[String]
+      runRiddlc(s, classPath, heapSize, minimumVersion, options, args  )
+    },
+    validateTask := {
+      val s: TaskStreams = streams.value
+      val classPath = (Runtime / fullClasspath).value
+      val conf = riddlcConf.value.getAbsoluteFile.toString
+      val minimumVersion = riddlcMinVersion.value
+      val options = riddlcOptions.value
+      val heapSize = riddlcJvmHeapSize.value
+      val args = Seq("from", conf, "validate")
+      runRiddlc(s, classPath, heapSize, minimumVersion, options, args )
     },
     infoTask := {
-      val execPath = riddlcPath.value
-      val options = Seq("info")
-      val version = riddlcMinVersion.value
-      runRiddlc(execPath, options, version)
+      val s: TaskStreams = streams.value
+      val classPath = (Runtime / fullClasspath).value
+      val conf = riddlcConf.value.getAbsoluteFile.toString
+      val minimumVersion = riddlcMinVersion.value
+      val options = riddlcOptions.value
+      val heapSize = riddlcJvmHeapSize.value
+      val args = Seq("info")
+      runRiddlc(s, classPath, heapSize, minimumVersion, options, args )
     },
-    commands ++= Seq(riddlcCommand),
-    Compile / compile := Def.taskDyn {
+    Compile / compile := Def.task {
       val c = (Compile / compile).value
-      Def.task {
-        val command = s"riddlc from ${riddlcConf.value} validate"
-        val _ = runCommandAndRemaining(command)
-        c
-      }
+      val s: TaskStreams = streams.value
+      val classPath = (Runtime / fullClasspath).value
+      val minimumVersion = riddlcMinVersion.value
+      val conf = riddlcConf.value.getAbsoluteFile.toString
+      val heapSize = riddlcJvmHeapSize.value
+      val options = riddlcOptions.value
+      val args = Seq("from", conf, "validate")
+      runRiddlc(s, classPath, heapSize, minimumVersion, options, args)
+      c
     }.value
   )
+
+  // Allow riddlc to be run from inside an sbt shell
+  private def riddlcCommand: Command = {
+    Command.args(
+      name = "riddlc",
+      display = "<options> <command> <args...> ; `riddlc help` for details",
+      help = Help.empty
+    ) { (state, args) =>
+      Def.task {
+        val project = Project.extract(state)
+        val s: TaskStreams = project.get(streams).value
+        val classPath = project.get(Runtime / fullClasspath).value
+        val minimumVersion = project.get(riddlcMinVersion)
+        val conf: String = project.get(riddlcConf).getAbsolutePath
+        val options = riddlcOptions.value
+        val heapSize = riddlcJvmHeapSize.value
+        val args = options ++ Seq("from", conf, "validate")
+        runRiddlc(s, classPath, heapSize, minimumVersion, options, args)
+      }
+      state
+    }
+  }
+
+  def infoCommand = Command.args(
+    name = "info",
+    display = "prints out riddlc info"
+  ) { (state, _) =>
+    val s: TaskStreams = streams.value
+    val project = Project.extract(state)
+    val classPath = project.get(Runtime / fullClasspath).value
+    val minimumVersion = project.get(riddlcMinVersion)
+    val conf = riddlcConf.value.getAbsoluteFile.toString
+    val options = riddlcOptions.value
+    val heapSize = riddlcJvmHeapSize.value
+    val args = Seq("info")
+    runRiddlc(s, classPath, heapSize, minimumVersion, options, args)
+    state
+  }
+
+
 
   /**
    * Convert the given command string to a release step action, preserving and invoking remaining commands
@@ -176,11 +188,11 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   private def checkVersion(
-    invocation: String,
+    commandPrefix: String,
     minimumVersion: String
   ): Unit = {
     import scala.sys.process.*
-    val check = invocation + " version"
+    val check = commandPrefix + " version"
     println(s"Running: $check")
     val actualVersion = check.!!<.trim
     val minVersion = minimumVersion.trim
@@ -192,20 +204,35 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   private def runRiddlc(
-    invocation: String,
+    s: TaskStreams,
+    fullClassPath: Classpath,
+    heapSize: Int,
+    minimumVersion: String,
     options: Seq[String],
-    riddlc: sbt.File,
-    args: Seq[String],
-    minimumVersion: String
-  ): Unit = {
+    args: Seq[String]
+  ): Int = {
+    val invocation = makeRiddlcCommandPrefix(fullClassPath, heapSize, options)
     checkVersion(invocation, minimumVersion)
-    val command = invocation + " " + options.mkString(" ")
-    println(s"Running: $command")
-    checkVersion(riddlc, minimumVersion)
-    val command = riddlc.toString + " " + args.mkString(" ")
+    val command = invocation + args.mkString(" ", " ", "")
+    s.log.info(s"RIDDLC: $command")
     val logger = ProcessLogger(println(_))
-    println(s"RIDDLC: $command")
-    val rc = command.!(logger)
+    val rc: Int = command.!(logger)
     logger.out(s"RC=$rc")
+    rc
+  }
+
+  private def makeRiddlcCommandPrefix(
+    fullClassPath: Classpath,
+    jvmHeapSize: Int,
+    riddlc_options: Seq[String]
+  ): String = {
+    val classpath = fullClassPath.files.map(_.getAbsoluteFile.toString).mkString(";")
+    val java_home = System.getProperty("java.home")
+    val path_to_java = "/bin/java"
+    val cp_option = s"-cp '$classpath'"
+    val mem_option = s"-Xmx${jvmHeapSize}m"
+    val jre_options = s"$mem_option $cp_option"
+    val main = "com.reactific.riddl.RIDDLC$"
+    s"$java_home$path_to_java $jre_options $main $riddlc_options"
   }
 }
