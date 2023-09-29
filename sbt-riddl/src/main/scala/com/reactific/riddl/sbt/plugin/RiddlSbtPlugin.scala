@@ -62,20 +62,21 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   object V {
+    val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
     val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
     val scalatest = "3.2.17" // NOTE: Synchronize with Helpers.V.scalatest
     val riddl: String = SbtRiddlPluginBuildInfo.version
   }
 
   override val projectSettings: Seq[Setting[_]] = Seq(
+    scalaVersion := V.scala,
     libraryDependencies ++= Seq(
       "com.reactific" % "riddlc_3" % V.riddl,
       "com.reactific" % "riddl-testkit_3" % V.riddl % Test,
-      "org.scalactic" % "scalactic_3" % V.scalatest % Test,
-      "org.scalatest" % "scalatest_3" % V.scalatest % Test,
-      "org.scalacheck" % "scalacheck_3" % V.scalacheck % Test
+      "org.scalactic" %% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %% "scalatest" % V.scalatest % Test,
+      "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
     ),
-    scalaVersion := "3.3.1",
     Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
     riddlcPath := file("riddlc"),
     riddlcConf := file("src/main/riddl/riddlc.conf"),
