@@ -111,7 +111,7 @@ trait BasicValidation {
     ref: MessageRef,
     topDef: Definition,
     parents: Seq[Definition],
-    kind: AggregateUseCase
+    kinds: Seq[AggregateUseCase]
   ): this.type = {
     if ref.isEmpty then {
       messages.addError(ref.pathId.loc, s"${ref.identify} is empty")
@@ -123,8 +123,8 @@ trait BasicValidation {
             typ match {
               case AggregateUseCaseTypeExpression(_, mk, _, _) =>
                 check(
-                  mk == kind,
-                  s"'${ref.identify} should be ${article(kind.kind)} type" +
+                  kinds.contains(mk),
+                  s"'${ref.identify} should be one of these message types: ${kinds.mkString(",")}" +
                     s" but is ${article(mk.kind)} type instead",
                   Error,
                   ref.pathId.loc
@@ -132,13 +132,15 @@ trait BasicValidation {
               case te: TypeExpression =>
                 messages.addError(
                   ref.pathId.loc,
-                  s"'${ref.identify} should reference ${article(kind.kind)} but is a ${AST.errorDescription(te)} type instead"
+                  s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${AST
+                      .errorDescription(te)} type " +
+                    s"instead"
                 )
             }
           case _ =>
             messages.addError(
               ref.pathId.loc,
-              s"${ref.identify} was expected to be ${article(kind.kind)} type but is ${article(definition.kind)} instead"
+              s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead"
             )
         }
       }
@@ -171,7 +173,7 @@ trait BasicValidation {
             .orElse(Option.empty[TypeExpression])
         case Some(streamlet: Streamlet) =>
           streamlet.outlets.headOption match
-            case None => Option.empty[TypeExpression]
+            case None       => Option.empty[TypeExpression]
             case Some(head) => resolvePath[Type](head.type_.pathId, parents).map(_.typ)
         case Some(_) => Option.empty[TypeExpression]
       }

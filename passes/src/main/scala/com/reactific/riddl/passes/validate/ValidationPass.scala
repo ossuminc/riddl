@@ -140,7 +140,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, omc)
     if omc.msg.nonEmpty then {
-      checkMessageRef(omc.msg, omc, parents, omc.msg.messageKind)
+      checkMessageRef(omc.msg, omc, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
         case CommandCase =>
           val sends: Seq[SendStatement] = omc.statements
@@ -559,7 +559,8 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   ): Unit = {
     val parentsSeq = parents.toSeq
     checkDefinition(parentsSeq, in)
-    checkMessageRef(in.putIn, in, parentsSeq, CommandCase)
+    // FIXME: validate this at the epic/case level so the restriction occurs only when sent to the backend
+    checkMessageRef(in.putIn, in, parentsSeq, Seq(RecordCase, CommandCase, QueryCase))
     checkDescription(in)
   }
 
@@ -568,7 +569,9 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, out)
-    checkMessageRef(out.putOut, out, parents, ResultCase)
+    // FIXME: validate this at the epic/case level so the restriction occurs only when received from the backend
+    checkMessageRef(out.putOut, out, parents, Seq(RecordCase, EventCase, ResultCase))
+
     checkDescription(out)
   }
 

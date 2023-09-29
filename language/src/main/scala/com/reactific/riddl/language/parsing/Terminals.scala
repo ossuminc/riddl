@@ -240,6 +240,7 @@ object Terminals {
     final val TimeStamp = "TimeStamp"
     final val Unknown = "Unknown"
     final val URL = "URL"
+    final val UserId = "UserId"
     final val UUID = "UUID"
     final val Whole = "Whole"
   }

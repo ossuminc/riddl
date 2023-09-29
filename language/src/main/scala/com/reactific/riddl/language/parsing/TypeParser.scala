@@ -286,7 +286,8 @@ private[parsing] trait TypeParser extends CommonParser {
         Predefined.Location,
         Predefined.Nothing,
         Predefined.Number,
-        Predefined.UUID
+        Predefined.UUID,
+        Predefined.UserId
       ).! ~~ !CharPred(_.isLetterOrDigit)
     ).map {
       case (at, Predefined.Abstract) => AST.Abstract(at)
@@ -295,6 +296,7 @@ private[parsing] trait TypeParser extends CommonParser {
       case (at, Predefined.Natural)  => AST.Natural(at)
       case (at, Predefined.Number)   => AST.Number(at)
       case (at, Predefined.UUID)     => AST.UUID(at)
+      case (at, Predefined.UserId)   => AST.UserId(at)
       case (at, _) =>
         error("Unrecognized predefined type")
         AST.Abstract(at)

@@ -798,6 +798,19 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     override def isAssignmentCompatible(other: TypeExpression): Boolean = true
   }
 
+  case class UserId(loc: At) extends PredefinedType {
+    @inline def kind: String = Predefined.UserId
+
+    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || {
+        other match
+          case _: Strng => true
+          case _ => false
+      }
+    }
+  }
+
   /** A predefined type expression for boolean values (true / false)
     *
     * @param loc

@@ -39,7 +39,7 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
   "riddlc" should {
     "validate OffTheTop" in {
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
-      val config = "src/main/riddl/OffTheTop.conf"
+      val config = "design/src/main/riddl/OffTheTop.conf"
       validateLocalProject(cwd, config)
     }
     "validate Improving.app" in {
