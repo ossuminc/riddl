@@ -63,7 +63,7 @@ domain Everything by author Reid is {
     // Commands, Events, Queries and Results are defined in terms of some
     // type, previously defined. Commands yield events. Queries yield results.
 
-    command ACommand is {}
+    command ACommand is { ??? }
 
     // Entities are the main objects that contexts define. They can be
     // transient (memory only) or aggregate (they consume commands and queries)
@@ -76,7 +76,7 @@ domain Everything by author Reid is {
       }
       type somethingDate is Date
 
-      event Inebriated is {}
+      event Inebriated is { ??? }
 
       record someData is { field:  SomeType }
       state someState of Something.someData is {

@@ -31,8 +31,6 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
         case Right(result) =>
           result.outputOf[StatsOutput](StatsPass.name) match {
             case Some(stats) =>
-              println(s"Number of Definitions: ${stats.count}")
-              println(s"Number of Terms: ${stats.term_count}")
               println(s"Maximum Depth: ${stats.maximum_depth}")
               for (k, v) <- stats.categories do {
                 println(s"$k: $v")
@@ -59,4 +57,3 @@ class StatsCommand extends InputFileCommandPlugin("stats") {
     }
   }
 }
-

@@ -7,8 +7,7 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.Messages
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.{At, Messages}
 
 trait StreamingValidation extends TypeValidation {
 
@@ -40,35 +39,35 @@ trait StreamingValidation extends TypeValidation {
   private def checkConnectorPersistence(): Unit = {
     connectors.foreach { connector =>
       val connParents = symbols.parentsOf(connector)
-      val maybeConnContext = symbols.contextOf(connector)
-      require(maybeConnContext.nonEmpty, "Connector with no Context")
-      val pipeContext = maybeConnContext.get
-      val maybeToInlet = connector.to.flatMap(inlet => resolvePath[Inlet](inlet.pathId, connector +: connParents))
-      val maybeFromOutlet =
-        connector.from.flatMap(outlet => resolvePath[Outlet](outlet.pathId, connector +: connParents))
-      val maybeInletContext = maybeToInlet.flatMap(inlet => symbols.contextOf(inlet))
-      val maybeOutletContext = maybeFromOutlet.flatMap(outlet => symbols.contextOf(outlet))
-      val inletIsSameContext = maybeInletContext.nonEmpty &&
-        (pipeContext == maybeInletContext.get)
-      val outletIsSameContext = maybeOutletContext.nonEmpty &&
-        (pipeContext == maybeOutletContext.get)
+      symbols.contextOf(connector) match {
+        case None => require(false, "Connector with no Context")
+        case Some(pipeContext) =>
+          val maybeToInlet = connector.to.flatMap(inlet => resolvePath[Inlet](inlet.pathId, connector +: connParents))
+          val maybeFromOutlet =
+            connector.from.flatMap(outlet => resolvePath[Outlet](outlet.pathId, connector +: connParents))
+          val maybeInletContext = maybeToInlet.flatMap(inlet => symbols.contextOf(inlet))
+          val maybeOutletContext = maybeFromOutlet.flatMap(outlet => symbols.contextOf(outlet))
+          val inletIsSameContext = maybeInletContext.nonEmpty &&
+            (pipeContext == maybeInletContext.fold(Context.empty)(identity))
+          val outletIsSameContext = maybeOutletContext.nonEmpty &&
+            (pipeContext == maybeOutletContext.fold(Context.empty)(identity))
 
-      if connector.hasOption[ConnectorPersistentOption] then {
-        if outletIsSameContext && inletIsSameContext then {
-          val message =
-            s"The persistence option on ${connector.identify} is not " +
-              s"needed since both ends of the connector connect within the same " +
-              s"context"
-          messages.addWarning(connector.loc, message)
-        }
-      } else {
-        if !outletIsSameContext || !inletIsSameContext then {
-          val message =
-            s"The persistence option on ${connector.identify} should be " +
-              s"specified because an end of the connector is not connected " +
-              s"within the same context"
-          messages.addWarning(connector.loc, message)
-        }
+          if connector.hasOption[ConnectorPersistentOption] then {
+            if outletIsSameContext && inletIsSameContext then {
+              val message =
+                s"The persistence option on ${connector.identify} is not needed " +
+                  s"since both ends of the connector connect within the same context"
+              messages.addWarning(connector.loc, message)
+            }
+          } else {
+            if !outletIsSameContext || !inletIsSameContext then {
+              val message =
+                s"The persistence option on ${connector.identify} should be " +
+                  s"specified because an end of the connector is not connected " +
+                  s"within the same context"
+              messages.addWarning(connector.loc, message)
+            }
+          }
       }
     }
   }

@@ -316,13 +316,13 @@ class ParserTest extends ParsingTest {
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _))
+                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)), _
                     )
                   ),
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _))
+                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)), _
                     )
                   ),
                   _,

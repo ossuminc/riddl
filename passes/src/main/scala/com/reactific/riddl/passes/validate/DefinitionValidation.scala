@@ -7,8 +7,8 @@
 package com.reactific.riddl.passes.validate
 
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.At
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs
@@ -130,21 +130,21 @@ trait DefinitionValidation extends BasicValidation  {
         (value.isInstanceOf[Definition] && value.nonEmpty)
     }
     if description.isEmpty && shouldCheck then {
-      this.check(
+      check(
         predicate = false,
         s"$id should have a description",
         MissingWarning,
         value.loc
       )
-    } else if description.nonEmpty then {
-      val desc = description.get
-      this.check(
-        desc.nonEmpty,
-        s"For $id, description at ${desc.loc} is declared but empty",
-        MissingWarning,
-        desc.loc
-      )
-    }
+    } else if description.nonEmpty then
+      description.fold(this) { (desc: Description) =>
+          check(
+            desc.nonEmpty,
+            s"For $id, description at ${desc.loc} is declared but empty",
+            MissingWarning,
+            desc.loc
+          )
+      }
     this
   }
 

@@ -7,8 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
-import com.reactific.riddl.language.{AST, ParsingTestBase}
+import com.reactific.riddl.language.{AST, At, ParsingTestBase}
 
 import java.io.File
 import scala.io.Source

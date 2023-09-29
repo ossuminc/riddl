@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.language.ast
+package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
 
@@ -29,11 +29,12 @@ case class At(
     else { this.source.origin.compare(that.source.origin) }
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   override def equals(obj: Any): Boolean = {
     if obj.getClass != classOf[At] then { false }
     else {
       val that = obj.asInstanceOf[At]
-      if offset != that.offset then { false }
+      if this.offset != that.offset then { false }
       else { this.source.origin == that.source.origin }
     }
   }

@@ -213,7 +213,9 @@ class TypeParserTest extends ParsingTest {
               (2, 3, rip),
               Identifier((2, 3, rip), "key"),
               Number((2, 8, rip))
-            ),
+            )
+          ),
+          methods = Seq(
             Method(
               (3, 3, rip),
               Identifier((3, 3, rip), "calc"),

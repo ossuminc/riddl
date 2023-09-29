@@ -25,6 +25,7 @@ object Logger {
   case object Info extends Lvl
 }
 
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 trait Logger {
   import Logger.*
 

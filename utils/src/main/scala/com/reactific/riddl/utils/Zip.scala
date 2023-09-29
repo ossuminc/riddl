@@ -14,8 +14,6 @@ import scala.jdk.CollectionConverters.*
 
 object Zip {
 
-  def zip(inputFolder: Path, zipFile: Path): Unit = { ??? }
-
   def unzip(zipPath: Path, outputPath: Path): mutable.HashSet[Path] = {
     val set = mutable.HashSet.empty[Path]
     val zipFile = new ZipFile(zipPath.toFile)

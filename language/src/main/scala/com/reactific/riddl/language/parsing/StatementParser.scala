@@ -8,7 +8,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 

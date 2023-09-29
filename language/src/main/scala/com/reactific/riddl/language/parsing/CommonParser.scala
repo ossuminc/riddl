@@ -6,9 +6,9 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.parsing.Terminals.{Keywords, *}
+import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.At
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -17,6 +17,7 @@ import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
 
 /** Common Parsing Rules */
+@SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.Throw"))
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def author[u: P]: P[Author] = {

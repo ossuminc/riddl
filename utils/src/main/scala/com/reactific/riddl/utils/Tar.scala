@@ -17,39 +17,45 @@ object Tar {
 
   final val bufferSize: Int = 1024 * 1024 // 1 MB
 
+  @SuppressWarnings(Array("org.wartremover.warts.Var"))
   def untar(tarFile: Path, destDir: Path): Either[String, Int] = {
     val fname = tarFile.getFileName.toString
     val fi = Files.newInputStream(tarFile)
     val bis = new BufferedInputStream(fi, bufferSize)
 
-    val taris: TarArchiveInputStream = {
+    val taris: Option[TarArchiveInputStream] = {
       if fname.endsWith(".tar.gz") then {
         val gzis = new GzipCompressorInputStream(bis)
-        new TarArchiveInputStream(gzis)
-      } else if fname.endsWith(".tar") then { new TarArchiveInputStream(bis) }
+        Some(new TarArchiveInputStream(gzis))
+      } else if fname.endsWith(".tar") then
+        Some(new TarArchiveInputStream(bis))
       else {
-        return Left(s"Tar file name ${tarFile} must end in .tar.gz or .tar")
+        None
       }
     }
 
-    var counter = 0
-    var tae = taris.getNextTarEntry
-    while tae != null do {
-      if taris.canReadEntryData(tae) then {
-        val path = destDir.resolve(Path.of(tae.getName))
-        if tae.isDirectory then {
-          if !Files.isDirectory(path) then { Files.createDirectories(path) }
-        } else {
-          val parent = path.getParent
-          if !Files.isDirectory(parent) then { Files.createDirectories(parent) }
-          val o = Files.newOutputStream(path)
-          try { IOUtils.copy(taris, o) }
-          finally { o.close() }
-          counter += 1
+    taris match
+      case None =>
+        Left(s"Tar file name ${tarFile} must end in .tar.gz or .tar")
+      case Some(taris) =>
+        var counter = 0
+        var tae = taris.getNextTarEntry
+        while tae != null do {
+          if taris.canReadEntryData(tae) then {
+            val path = destDir.resolve(Path.of(tae.getName))
+            if tae.isDirectory then {
+              if !Files.isDirectory(path) then {Files.createDirectories(path)}
+            } else {
+              val parent = path.getParent
+              if !Files.isDirectory(parent) then {Files.createDirectories(parent)}
+              val o = Files.newOutputStream(path)
+              try {IOUtils.copy(taris, o)}
+              finally {o.close()}
+              counter += 1
+            }
+          }
+          tae = taris.getNextTarEntry
         }
-      }
-      tae = taris.getNextTarEntry
-    }
-    Right(counter)
+        Right(counter)
   }
 }

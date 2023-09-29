@@ -1,11 +1,21 @@
 # Put in sbt-test scripted checks in this file
 # See: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html for options
 
-# First, everything happens on compile so make it happen
+# Check for basic sanity with info output
+> checkInfoOutput
+
+# now try the compile command
 > compile
 
 # Try a simple riddlc command
 > riddlc info
 
-# Now do a more detailed check (see build.sbt)
-> checkInfoOutput
+# And we support a short form of that too
+> info
+
+# Compile the test code
+> Test/compile
+
+## Try running the test case
+> test
+

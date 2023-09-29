@@ -5,8 +5,7 @@
  */
 
 package com.reactific.riddl.passes.validate
-
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.At
 import com.reactific.riddl.language.parsing.{RiddlParserInput, SourceParserInput}
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec

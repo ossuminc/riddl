@@ -37,7 +37,7 @@ class AuthorTest extends ValidatingTest {
           errs mustNot be(empty)
           assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
           assertValidationMessage(errs, Messages.Error,
-            "Path 'Bar' was not resolved, in Domain 'foo', but should refer to an Author")
+            "Path 'Bar' was not resolved, in Domain 'foo'\nand it should refer to an Author")
       }
     }
     "referenced from Application" in {

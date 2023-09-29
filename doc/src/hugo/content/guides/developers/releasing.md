@@ -10,8 +10,11 @@ This is a "how to" guide on releasing the software.
 ## Build & Test
 Make sure everything tests correctly from a clean start. 
 ```shell
-> cd riddl # top level directory of repository 
-> sbt "clean ; test ; test ; test"
+% cd riddl # top level directory of repository 
+% sbt
+> ; clean ; test ; test ; test
+> project plugin
+> scripted  
 ...
 [info] All tests passed.
 ```

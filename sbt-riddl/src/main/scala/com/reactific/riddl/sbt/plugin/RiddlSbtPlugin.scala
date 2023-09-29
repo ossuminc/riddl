@@ -7,7 +7,8 @@
 package com.reactific.riddl.sbt.plugin
 
 import com.reactific.riddl.sbt.SbtRiddlPluginBuildInfo
-import sbt.*
+import com.reactific.riddl.sbt.plugin.RiddlSbtPlugin.V
+import sbt.{Def, *}
 import sbt.Keys.*
 import sbt.plugins.JvmPlugin
 
@@ -27,6 +28,8 @@ object RiddlSbtPlugin extends AutoPlugin {
     lazy val riddlcMem = settingKey[Int]("Number of megabytes for running riddlc jvm")
 
     lazy val riddlcCommandPrefix = taskKey[String]("")
+    lazy val riddlcOptions = settingKey[Seq[String]]("Options to pass to riddlc")
+
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")
     }
@@ -63,17 +66,63 @@ object RiddlSbtPlugin extends AutoPlugin {
     state
   }
 
+  def infoCommand = Command.args(
+    name = "info",
+    display = "prints out riddlc info"
+  ) { (state, _) =>
+    val project = Project.extract(state)
+    val path = project.get(riddlcPath)
+    val minVersion = project.get(riddlcMinVersion)
+    val options = Seq("info")
+    runRiddlc(path, options, minVersion)
+    state
+
+  }
+
+  object V {
+    val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
+    val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
+    val scalatest = "3.2.17" // NOTE: Synchronize with Helpers.V.scalatest
+    val riddl: String = SbtRiddlPluginBuildInfo.version
+  }
+
+  override def projectSettings: Seq[Setting[_]] = Seq(
+    scalaVersion := V.scala,
+    libraryDependencies ++= Seq(
+      "com.reactific" %% "riddlc" % V.riddl,
+      "com.reactific" %% "riddl-testkit" % V.riddl % Test,
+      "org.scalactic" %% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %% "scalatest" % V.scalatest % Test,
+      "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
+    ),
+    Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
+    riddlcPath := file("riddlc"),
   private val riddl_version = SbtRiddlPluginBuildInfo.version
 
   override val projectSettings: Seq[Setting[_]] = Seq(
     riddlcPath := None,
     riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcMem := 512,
+    riddlcOptions := Seq("--show-times", "--hide-warnings"),
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
     libraryDependencies := Seq(
       "com.reactific" % "riddlc_3" % riddl_version,
       "com.reactific" % "riddl-testkit_3" % riddl_version % Test
     ),
+    compileTask := {
+      val execPath = riddlcPath.value
+      val conf = riddlcConf.value.getAbsoluteFile.toString
+      val options = riddlcOptions.value
+      val version = riddlcMinVersion.value
+      val args = options ++ Seq("from", conf, "validate")
+      runRiddlc(execPath, args, version)
+    },
+    infoTask := {
+      val execPath = riddlcPath.value
+      val options = Seq("info")
+      val version = riddlcMinVersion.value
+      runRiddlc(execPath, options, version)
+    },
     commands ++= Seq(riddlcCommand),
     Compile / compile := Def.taskDyn {
       val c = (Compile / compile).value
@@ -145,12 +194,17 @@ object RiddlSbtPlugin extends AutoPlugin {
   private def runRiddlc(
     invocation: String,
     options: Seq[String],
+    riddlc: sbt.File,
+    args: Seq[String],
     minimumVersion: String
   ): Unit = {
     checkVersion(invocation, minimumVersion)
     val command = invocation + " " + options.mkString(" ")
     println(s"Running: $command")
+    checkVersion(riddlc, minimumVersion)
+    val command = riddlc.toString + " " + args.mkString(" ")
     val logger = ProcessLogger(println(_))
+    println(s"RIDDLC: $command")
     val rc = command.!(logger)
     logger.out(s"RC=$rc")
   }

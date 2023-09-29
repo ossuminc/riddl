@@ -32,10 +32,10 @@ object Timer {
    *   if `true`, then message is printed, otherwise not
    * @param f
    *   the code block to execute
-   *
    * @return
    *   The result of running `f`
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Any"))
   def time[T](
     stage: String,
     show: Boolean = true,

@@ -5,8 +5,6 @@
  */
 
 package com.reactific.riddl.language
-
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.AST.*
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers

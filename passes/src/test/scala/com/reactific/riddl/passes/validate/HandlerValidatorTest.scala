@@ -39,14 +39,14 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityCommand' was not resolved, in OnMessageClause " +
-              "'On command EntityCommand', but should refer to a Type"
+            """Path 'EntityCommand' was not resolved, in OnMessageClause 'On command EntityCommand'
+              |and it should refer to a Type""".stripMargin
           )
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityEvent' was not resolved, in OnMessageClause " +
-              "'On event EntityEvent', but should refer to a Type"
+            """Path 'EntityEvent' was not resolved, in OnMessageClause 'On event EntityEvent'
+              |and it should refer to a Type""".stripMargin
           )
       }
     }
@@ -74,8 +74,9 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityContext.Incoming' was not resolved, in OnMessageClause " +
-              "'On event EntityContext.Incoming', but should refer to a Type"
+            """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'On event EntityContext.Incoming' because
+              |definition 'Incoming' was not found inside 'Context 'EntityContext'''
+              |and it should refer to a Type""".stripMargin
           )
       }
     }

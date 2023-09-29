@@ -7,7 +7,7 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.stats.{StatsOutput, StatsPass}
+import com.reactific.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
@@ -142,6 +142,15 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     list(refs)
   }
 
+  private def listDesc(maybeDescription: Option[Description], isListItem: Boolean, indent: Int): Unit = {
+    maybeDescription match
+      case None => ()
+      case Some(description) =>
+        val ndnt = " ".repeat(indent)
+        val listItem = { if (isListItem) then "* " else "" }
+        sb.append(description.lines.map(line => s"$ndnt$listItem${line.s}\n"))
+  }
+
   def list[T](items: Seq[T]): this.type = {
     def emitPair(prefix: String, body: String): Unit = {
       if prefix.startsWith("[") && body.startsWith("(") then {
@@ -159,18 +168,13 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
             ) =>
           emitPair(prefix, description)
           sublist.foreach(s => sb.append(s"    * $s\n"))
-          if desc.nonEmpty then {
-            sb.append(desc.get.lines.map(line => s"  ${line.s}\n"))
-          }
         case (
               prefix: String,
               definition: String,
               description: Option[Description] @unchecked
             ) =>
           emitPair(prefix, definition)
-          if description.nonEmpty then {
-            sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
-          }
+          listDesc(description, true, 4)
         case (
               prefix: String,
               definition: String,
@@ -181,9 +185,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
             prefix,
             definition ++ " - " ++ briefly.map(_.s).getOrElse("{no brief}")
           )
-          if description.nonEmpty then {
-            sb.append(description.get.lines.map(line => s"    * ${line.s}\n"))
-          }
+          listDesc(description, true, 4)
         case (prefix: String, body: String) => emitPair(prefix, body)
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
@@ -419,6 +421,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
   def emitDescription(d: Option[Description], level: Int = 2): this.type = {
     if d.nonEmpty then {
       heading("Description", level)
@@ -457,24 +460,33 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    val resolved = state.refMap.definitionOf[Definition](pid, parents.head)
-    if resolved.isEmpty then { s"unresolved path: ${pid.format}" }
-    else {
-      val slink = state.makeSourceLink(resolved.head)
-      val link = state
-        .makeDocLink(resolved.head, state.makeParents(parents.tail))
-      s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
-    }
+    parents.headOption match
+      case None => ""
+      case Some(parent) =>
+        val resolved = state.refMap.definitionOf[Definition](pid, parent)
+        resolved match
+          case None => s"unresolved path: ${pid.format}"
+          case Some(res) =>
+            val slink = state.makeSourceLink(res)
+            resolved match
+              case None => s"unresolved path: ${pid.format}"
+              case Some(definition) =>
+                val pars = state.makeParents(parents.drop(1))
+                val link = state.makeDocLink(definition, pars)
+                s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
   }
 
   private def makeTypeName(
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): String = {
-    state.refMap.definitionOf[Definition](pid, parents.head) match {
-      case None       => s"unresolved path: ${pid.format}"
-      case Some(defn) => defn.id.format
-    }
+    parents.headOption match
+      case None => s"unresolved path: ${pid.format}"
+      case Some(parent) =>
+        state.refMap.definitionOf[Definition](pid, parent) match {
+          case None                   => s"unresolved path: ${pid.format}"
+          case Some(defn: Definition) => defn.id.format
+        }
   }
 
   private def makeTypeName(
@@ -634,18 +646,19 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
   def emitInputOutput(
     input: Option[Aggregation],
     output: Option[Aggregation]
   ): this.type = {
-    if input.nonEmpty then {
+    if input.nonEmpty then
       h4("Requires (Input)")
       emitFields(input.get.fields)
-    }
-    if output.nonEmpty then {
+    if output.nonEmpty then
       h4("Yields (Output)")
-      emitFields(output.get.fields)
-    }
+      output match
+        case None      =>
+        case Some(agg) => emitFields(agg.fields)
     this
   }
 
@@ -788,13 +801,15 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitTerms(application.terms)
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
   def emitEpic(epic: Epic, stack: Seq[Definition]): this.type = {
     containerHead(epic, "Epic")
     val parents = state.makeParents(stack)
     emitBriefly(epic, parents)
     if epic.userStory.nonEmpty then {
-      val userPid = epic.userStory.get.user.pathId
-      val maybeUser = state.refMap.definitionOf[User](userPid, stack.head)
+      val userPid = epic.userStory.getOrElse(UserStory()).user.pathId
+      val parent = stack.head
+      val maybeUser = state.refMap.definitionOf[User](userPid, parent)
       h2("User Story")
       maybeUser match {
         case None => p(s"Unresolvable User id: ${userPid.format}")
@@ -958,21 +973,24 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
         "Category" -> 'L',
         "count" -> 'R',
         "% of All" -> 'R',
-        "avg. maturity" -> 'R',
-        "tot. maturity" -> 'R',
-        "% complete" -> 'R',
-        "% document" -> 'R'
+        "% documented" -> 'R',
+        "number empty" -> 'R',
+        "avg completeness" -> 'R',
+        "avg complexity" -> 'R',
+        "avg containment" -> 'R'
       )
     )
+    val total_stats: KindStats = stats.categories.getOrElse("All", KindStats())
     stats.categories.foreach { case (key, s) =>
       emitTableRow(
         key,
         s.count.toString,
-        s.percentOfDefinitions.toString,
-        s.averageMaturity.toString,
-        s.totalMaturity.toString,
-        s.percentComplete.toString,
-        s.percentDocumented.toString
+        s.percent_of_all(total_stats.count).toString,
+        s.percent_documented.toString,
+        s.numEmpty.toString,
+        s.completeness.toString,
+        s.complexity.toString,
+        s.averageContainment.toString
       )
     }
     this

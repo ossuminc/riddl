@@ -211,12 +211,14 @@ object CommandOptions {
     }
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   val commandOptionsParser: OParser[Unit, CommandOptions] = {
     val plugins = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]]()
     val list =
       for plugin <- plugins yield { plugin.pluginName -> plugin.getOptions }
     val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
-    OParser.sequence(parsers.head, parsers.tail*)
+    require(parsers.nonEmpty, "No command line options parsers!")
+    OParser.sequence(parsers.head, parsers.drop(1)*)
   }
 
 }

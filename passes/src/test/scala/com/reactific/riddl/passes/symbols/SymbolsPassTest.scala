@@ -1,7 +1,8 @@
 package com.reactific.riddl.passes.symbols
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.language.{CommonOptions, ParsingTest}
+import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.reactific.riddl.language.{At, CommonOptions, ParsingTest}
 import com.reactific.riddl.passes.{Pass, PassInput}
 import org.scalatest.Assertion
 
@@ -10,15 +11,13 @@ import scala.reflect.ClassTag
 /** Unit Tests For SymbolsPassTest */
 class SymbolsPassTest extends ParsingTest {
 
-
   val st: SymbolsOutput = {
     val root = checkFile("everything", "everything.riddl")
     val input: PassInput = PassInput(root, CommonOptions())
     Pass.runSymbols(input)
   }
 
-
-  def assertRefWithParent[T <: Definition : ClassTag, P <: Definition : ClassTag](
+  def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
     names: Seq[String],
     parentName: String
   ): Assertion = {
@@ -34,8 +33,6 @@ class SymbolsPassTest extends ParsingTest {
   }
 
   "SymbolsPass" must {
-
-
     "capture all expected symbol references and parents" in {
       st.lookup[Domain](Seq("Everything")).headOption mustBe defined
 

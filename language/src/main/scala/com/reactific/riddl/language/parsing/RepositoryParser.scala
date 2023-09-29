@@ -25,7 +25,6 @@ private[parsing] trait RepositoryParser {
     options[u, RepositoryOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         RepositoryTechnologyOption(loc, args)
-      case _ => throw new RuntimeException("Impossible case")
     }
   }
 
@@ -36,7 +35,7 @@ private[parsing] trait RepositoryParser {
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
     P(
       typeDef | handler(StatementsSet.RepositoryStatements) |
-        function | term | repositoryInclude | inlet | outlet
+        function | term | repositoryInclude | inlet | outlet | constant 
     ).rep(0)
   }
 
@@ -46,11 +45,12 @@ private[parsing] trait RepositoryParser {
         repositoryOptions ~
         (undefined(Seq.empty[RepositoryDefinition]) | repositoryDefinitions) ~
         close ~ briefly ~ description
-    ).map { case (loc, id, authors, opts, defs, brief, desc) =>
+    ).map { case (loc, id, authors, options, defs, brief, description) =>
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
+      val constants = mapTo[Constant](groups.get(classOf[Constant]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
@@ -69,11 +69,12 @@ private[parsing] trait RepositoryParser {
         outlets,
         authors,
         functions,
+        constants,
         includes,
-        opts,
+        options,
         terms,
         brief,
-        desc
+        description
       )
     }
   }

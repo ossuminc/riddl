@@ -9,7 +9,6 @@ package com.reactific.riddl.language
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.reactific.riddl.language.Messages.*
-import com.reactific.riddl.language.ast.At
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.utils.{Logger, StringLogger}
 

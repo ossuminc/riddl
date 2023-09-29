@@ -27,6 +27,7 @@ object Plugin {
   def loadPluginsFrom[T <: PluginInterface: ClassTag](
     pluginsDir: Path = pluginsDir
   ): List[T] = {
+    @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
     val clazz = classTag[T].runtimeClass.asInstanceOf[Class[T]]
     loadSpecificPluginsFrom[T](clazz, pluginsDir)
   }

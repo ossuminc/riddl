@@ -19,7 +19,6 @@ private[parsing] trait ApplicationParser {
     options[u, ApplicationOption](StringIn(Options.technology).!) {
       case (loc, Options.technology, args) =>
         ApplicationTechnologyOption(loc, args)
-      case (_, _, _) => throw new RuntimeException("Impossible case")
     }
   }
 

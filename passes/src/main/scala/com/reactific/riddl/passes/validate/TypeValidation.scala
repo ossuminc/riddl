@@ -27,7 +27,13 @@ trait TypeValidation extends DefinitionValidation {
   }
 
   def areSameType(typ1: Option[Type], typ2: Option[Type]): Boolean = {
-    typ1.nonEmpty && typ2.nonEmpty && (typ1.get == typ2.get)
+    val result = for {
+      t1 <- typ1
+      t2 <- typ2
+    } yield {
+      t1 == t2
+    }
+    result.getOrElse(false)
   }
 
   def isAssignmentCompatible(
@@ -46,7 +52,7 @@ trait TypeValidation extends DefinitionValidation {
 
   private def checkPattern(p: Pattern): this.type = {
     try {
-      val compound = p.pattern.map(_.s).reduce(_ + _)
+      val compound = p.pattern.map(_.s).fold(""){case (a: String, b: String) => a + b }
       java.util.regex.Pattern.compile(compound)
     } catch {
       case x: PatternSyntaxException =>
@@ -194,7 +200,6 @@ trait TypeValidation extends DefinitionValidation {
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, defn, parents)
       case _: PredefinedType => () // nothing needed
-      case _: TypeRef        => () // handled elsewhere
       case x =>
         require(requirement = false, s"Failed to match definition $x")
     }

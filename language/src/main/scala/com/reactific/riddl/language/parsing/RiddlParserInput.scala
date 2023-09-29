@@ -5,8 +5,7 @@
  */
 
 package com.reactific.riddl.language.parsing
-
-import com.reactific.riddl.language.ast.At
+import com.reactific.riddl.language.At
 import fastparse.ParserInput
 import fastparse.internal.Util
 
