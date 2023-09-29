@@ -4,9 +4,8 @@ lazy val root = (project in file("."))
   .enablePlugins(RiddlSbtPlugin)
   .settings(
     version := "0.1",
-    scalaVersion := "2.12.18",
-
     riddlcOptions := Seq.empty[String],
+    riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcPath := file("/Users/reid/Code/reactific/riddl/riddlc/target/universal/stage/bin/riddlc"),
     TaskKey[String]("checkInfoOutput") := {
       val which_cmd = Process("/bin/zsh", Seq("-c", "which riddlc"))

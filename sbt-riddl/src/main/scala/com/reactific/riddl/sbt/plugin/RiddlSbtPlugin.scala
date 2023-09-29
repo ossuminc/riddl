@@ -7,7 +7,8 @@
 package com.reactific.riddl.sbt.plugin
 
 import com.reactific.riddl.sbt.SbtRiddlPluginBuildInfo
-import sbt.*
+import com.reactific.riddl.sbt.plugin.RiddlSbtPlugin.V
+import sbt.{Def, *}
 import sbt.Keys.*
 import sbt.plugins.JvmPlugin
 
@@ -68,11 +69,11 @@ object RiddlSbtPlugin extends AutoPlugin {
     val riddl: String = SbtRiddlPluginBuildInfo.version
   }
 
-  override val projectSettings: Seq[Setting[_]] = Seq(
+  override def projectSettings: Seq[Setting[_]] = Seq(
     scalaVersion := V.scala,
     libraryDependencies ++= Seq(
-      "com.reactific" % "riddlc_3" % V.riddl,
-      "com.reactific" % "riddl-testkit_3" % V.riddl % Test,
+      "com.reactific" %% "riddlc" % V.riddl,
+      "com.reactific" %% "riddl-testkit" % V.riddl % Test,
       "org.scalactic" %% "scalactic" % V.scalatest % Test,
       "org.scalatest" %% "scalatest" % V.scalatest % Test,
       "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
@@ -150,6 +151,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     checkVersion(riddlc, minimumVersion)
     val command = riddlc.toString + " " + args.mkString(" ")
     val logger = ProcessLogger(println(_))
+    println(s"RIDDLC: $command")
     val rc = command.!(logger)
     logger.out(s"RC=$rc")
   }

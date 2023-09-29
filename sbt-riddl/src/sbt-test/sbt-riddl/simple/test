@@ -5,13 +5,16 @@
 > checkInfoOutput
 
 # now try the compile command
-#> compile
+> compile
 
 # Try a simple riddlc command
 > riddlc info
 
 # And we support a short form of that too
 > info
+
+# Compile the test code
+> Test/compile
 
 ## Try running the test case
 > test
