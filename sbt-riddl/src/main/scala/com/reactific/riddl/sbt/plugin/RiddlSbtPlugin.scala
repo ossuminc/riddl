@@ -7,11 +7,13 @@
 package com.reactific.riddl.sbt.plugin
 
 import com.reactific.riddl.sbt.SbtRiddlPluginBuildInfo
-import com.reactific.riddl.sbt.plugin.RiddlSbtPlugin.V
-import sbt.{Def, *}
+import sbt.*
 import sbt.Keys.*
+import sbt.internal.util.ManagedLogger
 import sbt.plugins.JvmPlugin
 
+import java.io.File
+import java.nio.file.FileSystem
 import scala.language.postfixOps
 import scala.sys.process.*
 
@@ -21,7 +23,7 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   object autoImport {
 
-    lazy val riddlcPath = settingKey[File]("Path to `riddlc` compiler")
+    lazy val riddlcPath = settingKey[Option[File]]("Optional path to riddlc").withRank(KeyRanks.Invisible)
 
     lazy val riddlcConf = settingKey[File]("Path to the config file")
 
@@ -30,37 +32,11 @@ object RiddlSbtPlugin extends AutoPlugin {
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")
     }
+
+    lazy val findRiddlcTask = taskKey[File]("Find the riddlc program locally")
   }
 
   import autoImport.*
-
-  lazy val compileTask = taskKey[Unit]("A task to invoke riddlc compiler")
-  lazy val infoTask = taskKey[Unit]("A task to invoke riddlc info command")
-
-  // Allow riddlc to be run from inside an sbt shell
-  def riddlcCommand = Command.args(
-    name = "riddlc",
-    display = "<options> <command> <args...> ; `riddlc help` for details"
-  ) { (state, args) =>
-    val project = Project.extract(state)
-    val path = project.get(riddlcPath)
-    val minVersion = project.get(riddlcMinVersion)
-    runRiddlc(path, args, minVersion)
-    state
-  }
-
-  def infoCommand = Command.args(
-    name = "info",
-    display = "prints out riddlc info"
-  ) { (state, _) =>
-    val project = Project.extract(state)
-    val path = project.get(riddlcPath)
-    val minVersion = project.get(riddlcMinVersion)
-    val options = Seq("info")
-    runRiddlc(path, options, minVersion)
-    state
-
-  }
 
   object V {
     val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
@@ -69,7 +45,14 @@ object RiddlSbtPlugin extends AutoPlugin {
     val riddl: String = SbtRiddlPluginBuildInfo.version
   }
 
+  /*private def getLogger(project: Extracted, state: State): ManagedLogger = {
+    val (_, strms) = project.runTask(, state)
+    project.structure.streams(state).log
+    strms.log
+  }*/
+
   override def projectSettings: Seq[Setting[_]] = Seq(
+    // Global / excludeLintKeys ++= Seq(riddlcConf, riddlcOptions),
     scalaVersion := V.scala,
     libraryDependencies ++= Seq(
       "com.reactific" %% "riddlc" % V.riddl,
@@ -79,33 +62,96 @@ object RiddlSbtPlugin extends AutoPlugin {
       "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
     ),
     Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
-    riddlcPath := file("riddlc"),
+    riddlcPath := None,
+    riddlcOptions := Seq("--show-times"),
     riddlcConf := file("src/main/riddl/riddlc.conf"),
-    riddlcOptions := Seq("--show-times", "--hide-warnings"),
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
-    compileTask := {
-      val execPath = riddlcPath.value
-      val conf = riddlcConf.value.getAbsoluteFile.toString
-      val options = riddlcOptions.value
-      val version = riddlcMinVersion.value
-      val args = options ++ Seq("from", conf, "validate")
-      runRiddlc(execPath, args, version)
-    },
-    infoTask := {
-      val execPath = riddlcPath.value
-      val options = Seq("info")
-      val version = riddlcMinVersion.value
-      runRiddlc(execPath, options, version)
-    },
-    commands ++= Seq(riddlcCommand),
-    Compile / compile := Def.taskDyn {
-      val c = (Compile / compile).value
-      Def.task {
-        val _ = (Compile / compileTask).value
-        c
+    findRiddlcTask := {
+      val found: File = riddlcPath.value match {
+        case Some(path) =>
+          if (path.getAbsolutePath.endsWith("riddlc")) path else {
+            throw new IllegalStateException(s"Your riddlcPath setting is not the full path to the riddlc program ")
+          }
+        case None =>
+          val riddlc_path = System.getenv("RIDDLC_PATH")
+          if (riddlc_path.contains("riddlc")) {
+            new File(riddlc_path)
+          } else {
+            val user_path = System.getenv("PATH")
+            // FIXME: Won't work on Windoze, make it work
+            val parts = user_path.split(":")
+            val with_riddlc = parts.map { part: String =>
+              if (part.contains("riddlc")) part else part + "/riddlc"
+            }
+            with_riddlc.find { (potential: String) =>
+              Path(potential).exists
+            } match {
+              case Some(found) =>
+                new File(found)
+              case None =>
+                throw new IllegalStateException(
+                  "Can't find the 'riddlc' program in your path. Please install.\n" +
+                    parts.mkString("\n")
+                )
+            }
+          }
       }
-    }.value
+      if (!found.exists) {
+        throw new IllegalStateException(s"riddlc in PATH environment var, but executable not found: $found")
+      }
+      found
+    },
+    commands ++= Seq(riddlcCommand, infoCommand, hugoCommand, validateCommand, statsCommand)
   )
+
+  private def runRiddlcAction(state: State, args: Seq[String]): (State, Int) = {
+    val project = Project.extract(state)
+    val riddlcPath = project.runTask(findRiddlcTask, state)
+    val minimumVersion: String = project.get(riddlcMinVersion)
+    val options: Seq[String] = project.get(riddlcOptions)
+    val rc = runRiddlc(riddlcPath._2, minimumVersion, options, args)
+    state -> rc
+  }
+
+  // Allow riddlc to be run from inside an sbt shell
+  private def riddlcCommand: Command = {
+    Command.args(
+      name = "riddlc",
+      display = "<options> <command> <args...> ; `riddlc help` for details"
+    ) { (state: State, args: Seq[String]) =>
+      runRiddlcAction(state, args)._1
+    }
+  }
+
+  def infoCommand: Command = {
+    Command.command("info") { (state: State) =>
+      runRiddlcAction(state, Seq("info"))._1
+    }
+  }
+
+  def hugoCommand: Command = {
+    Command.command("hugo") { (state: State) =>
+      val project = Project.extract(state)
+      val conf = project.get(riddlcConf).getAbsoluteFile.toString
+      runRiddlcAction(state, Seq("from", conf, "hugo"))._1
+    }
+  }
+
+  def validateCommand: Command = {
+    Command.command("validate") { (state: State) =>
+      val project = Project.extract(state)
+      val conf = project.get(riddlcConf).getAbsoluteFile.toString
+      runRiddlcAction(state, Seq("from", conf, "validate"))._1
+    }
+  }
+
+  def statsCommand: Command = {
+    Command.command("stats") { (state: State) =>
+      val project = Project.extract(state)
+      val conf = project.get(riddlcConf).getAbsoluteFile.toString
+      runRiddlcAction(state, Seq("from", conf, "stats"))._1
+    }
+  }
 
   private def versionTriple(version: String): (Int, Int, Int) = {
     val trimmed = version.indexOf('-') match {
@@ -129,30 +175,33 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   private def checkVersion(
-    riddlc: sbt.File,
+    riddlcPath: File,
     minimumVersion: String
   ): Unit = {
     import scala.sys.process.*
-    val check = riddlc.toString + " version"
+    val check = riddlcPath.getAbsolutePath + " version"
     val actualVersion = check.!!<.trim
     val minVersion = minimumVersion.trim
     if (!versionSameOrLater(actualVersion, minVersion)) {
       throw new IllegalArgumentException(
         s"riddlc version $actualVersion is below minimum required: $minVersion"
       )
-    } else { println(s"riddlc version = $actualVersion") }
+    } // else { println(s"riddlc version = $actualVersion") }
   }
 
   private def runRiddlc(
-    riddlc: sbt.File,
-    args: Seq[String],
-    minimumVersion: String
-  ): Unit = {
-    checkVersion(riddlc, minimumVersion)
-    val command = riddlc.toString + " " + args.mkString(" ")
+    // streams: TaskStreams,
+    riddlcPath: File,
+    minimumVersion: String,
+    options: Seq[String],
+    args: Seq[String]
+  ): Int = {
+    checkVersion(riddlcPath, minimumVersion)
+    // streams.log.info(s"Running: riddlc ${args.mkString(" ")}\n")
+    // println(s"Running: riddlc ${args.mkString(" ")}\n")
+    // FIXME: use sbt I/O
     val logger = ProcessLogger(println(_))
-    println(s"RIDDLC: $command")
-    val rc = command.!(logger)
-    logger.out(s"RC=$rc")
+    val process = Process(riddlcPath.getAbsolutePath, options ++ args)
+    process.!(logger)
   }
 }

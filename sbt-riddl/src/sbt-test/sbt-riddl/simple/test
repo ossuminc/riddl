@@ -1,17 +1,17 @@
 # Put in sbt-test scripted checks in this file
 # See: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html for options
 
-# Check for basic sanity with info output
-> checkInfoOutput
+# See if the minimal info command works
+> info
 
-# now try the compile command
-> compile
-
-# Try a simple riddlc command
+# Try that with the riddlc command
 > riddlc info
 
-# And we support a short form of that too
-> info
+# now try the validate command
+> validate
+
+# now try the stats command
+> stats
 
 # Compile the test code
 > Test/compile
