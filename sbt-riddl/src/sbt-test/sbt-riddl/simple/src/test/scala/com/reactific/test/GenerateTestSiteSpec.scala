@@ -9,12 +9,10 @@ class GenerateTestSiteSpec extends RunCommandSpecBase {
     "validate RIDDL and generate Hugo" in {
       val command = Array(
         "--show-times",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
         "--verbose",
         "from",
         "src/main/riddl/riddl.conf",
-        "hugo"
+        "validate"
       )
       runWith(command)
     }
