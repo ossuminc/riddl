@@ -77,14 +77,8 @@ class EpicTest extends ValidatingTest {
           |
           |application Improving_app is {
           |  group OrganizationPage is {
-          |    input accept is {
-          |      acquires command
-          |        ImprovingApp.OrganizationContext.CreateOrganization
-          |    }
-          |    output show is {
-          |      presents result
-          |        ImprovingApp.OrganizationContext.OrganizationInfo
-          |    }
+          |    input accept acquires command ImprovingApp.OrganizationContext.CreateOrganization
+          |    output show presents result ImprovingApp.OrganizationContext.OrganizationInfo
           |  }
           |}
           |
@@ -119,12 +113,11 @@ class EpicTest extends ValidatingTest {
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
-          info ( errors.format )
+          info(errors.format)
           if errors.isEmpty then
             domain mustNot be(empty)
             domain.epics mustNot be(empty)
-          else
-            fail("Shouldn't be any errors")
+          else fail(errors.format)
       }
     }
     "handle parallel group" in {
@@ -152,14 +145,8 @@ class EpicTest extends ValidatingTest {
           |
           |application Improving_app is {
           |  group OrganizationPage is {
-          |    input accept is {
-          |      acquires command
-          |        ImprovingApp.OrganizationContext.CreateOrganization
-          |    }
-          |    output show is {
-          |      presents result
-          |        ImprovingApp.OrganizationContext.OrganizationInfo
-          |    }
+          |    input accept acquires command ImprovingApp.OrganizationContext.CreateOrganization
+          |    output show presents result ImprovingApp.OrganizationContext.OrganizationInfo
           |  }
           |}
           |
@@ -227,14 +214,8 @@ class EpicTest extends ValidatingTest {
           |
           |application Improving_app is {
           |  group OrganizationPage is {
-          |    input accept is {
-          |      acquires command
-          |        ImprovingApp.OrganizationContext.CreateOrganization
-          |    }
-          |    output show is {
-          |      presents result
-          |        ImprovingApp.OrganizationContext.OrganizationInfo
-          |    }
+          |    input accept acquires command ImprovingApp.OrganizationContext.CreateOrganization
+          |    output show presents result ImprovingApp.OrganizationContext.OrganizationInfo
           |  }
           |}
           |
@@ -270,7 +251,7 @@ class EpicTest extends ValidatingTest {
           else
             domain mustNot be(empty)
             domain.epics mustNot be(empty)
-            if msgs.nonEmpty then { }
+            if msgs.nonEmpty then {}
             msgs.hasErrors mustBe false
             succeed
       }

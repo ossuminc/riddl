@@ -25,53 +25,62 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def groupAliases[u: P]: P[Unit] = {
+  private def groupAliases[u: P]: P[String] = {
     P(
-      StringIn(Keywords.group, "page", "pange", "dialog", "popup", "frame", "column", "window", "section", "tab")
+      StringIn(Keywords.group, "page", "pane", "dialog", "popup", "frame", "column", "window", "section", "tab").!
     )
+  }
+
+  private def groupDefinitions[u:P]: P[Seq[GroupDefinition]] = {
+    P {
+      undefined(Seq.empty[GroupDefinition]) | (group | appOutput | appInput).rep(0)
+    }
   }
 
   private def group[u: P]: P[Group] = {
     P(
-      location ~ groupAliases ~/ identifier ~ is ~ open ~ types ~
-        (group | appOutput | appInput).rep(0) ~ close ~ briefly ~ description
-    ).map { case (loc, id, types, elements, brief, description) =>
-      Group(loc, id, types, elements, brief, description)
+      location ~ groupAliases ~ identifier ~/ is ~ open ~
+         groupDefinitions ~
+      close ~ briefly ~ description
+    ).map { case (loc, alias, id, elements, brief, description) =>
+      Group(loc, id, alias, elements, brief, description)
     }
   }
 
-  private def outputAliases[u: P]: P[Unit] = {
+  private def outputAliases[u: P]: P[String] = {
     P(
       StringIn(
         Keywords.output,
         "document",
         "list",
-        "table"
-      )
+        "table",
+        "graph",
+        "animation",
+        "picture"
+      ).!
     )
   }
 
   private def appOutput[u: P]: P[Output] = {
     P(
-      location ~ outputAliases ~/ identifier ~ is ~ open ~ types ~
-        Keywords.presents ~/ messageRef ~ close ~ briefly ~ description
-    ).map { case (loc, id, types, result, brief, description) =>
-      Output(loc, id, types, result, brief, description)
+      location ~ outputAliases ~/ identifier ~ Keywords.presents ~/
+        messageRef  ~ briefly ~ description
+    ).map { case (loc, alias, id, putOut, brief, description) =>
+      Output(loc, id, alias, putOut, brief, description)
     }
   }
 
-  private def inputAliases[u: P]: P[Unit] = {
+  private def inputAliases[u: P]: P[String] = {
     P(
-      StringIn(Keywords.input, "form", "textblock", "button", "picklist")
+      StringIn(Keywords.input, "form", "textblock", "button", "picklist").!
     )
   }
 
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~ is ~ open ~ types ~
-        Keywords.acquires ~ messageRef ~ close ~ briefly ~ description
-    ).map { case (loc, id, types, yields, brief, description) =>
-      Input(loc, id, types, yields, brief, description)
+      location ~ inputAliases ~/ identifier ~ is ~ Keywords.acquires ~ messageRef ~ briefly ~ description
+    ).map { case (loc, alias, id, putIn, brief, description) =>
+      Input(loc, id, alias,  putIn, brief, description)
     }
   }
 

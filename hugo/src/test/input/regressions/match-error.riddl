@@ -15,12 +15,10 @@ domain PersonalBanking is {
         result Title is { value: String }
         command Name is { value: String }
         group HomePage is {
-          output AccountDetailsPage is {
-            presents result Title
-          } described as "Show a blank page with a title"
-          input Two is {
-            acquires command Name
-          } described as "Show a blank page with a title, collect a Name"
+          output AccountDetailsPage  presents result Title
+            described as "Show a blank page with a title"
+          input Two acquires command Name
+            described as "Show a blank page with a title, collect a Name"
         }
     } described as "A very simple app for testing"
   } briefly "The user interface for the Personal Banking Application"
