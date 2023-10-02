@@ -41,12 +41,15 @@ TBD
 
 ## Quickly Building On Your Computer
 To use `riddlc` locally and be able to update it with new changes, use this approach:
-* `git clone` the latest content and change directory to that cloned repository
-* Put the `.../riddl/riddlc/target/universal/stage/bin` directory in your PATH 
-  variable
-* Run `sbt stage` to build the program
-* To update, run `git pull` from the `riddl` cloned repository directory and
-  rerun the `sbt stage` command to rebuild. 
+* `git clone https://github.com/reactific/riddl.git`
+* Change the directory to that cloned repository
+* Put the full path to `riddl/riddlc/target/universal/stage/bin` directory in your
+  PATH variable
+* Build the entire package with `sbt compile`
+* Chane directory to the `riddlc` sub-project
+* Run `sbt stage` to build the program into the `riddlc/target/universal/stage/bin` directory
+* To update, run `git pull` from the `riddl` cloned repository and rerun the `sbt stage`
+  command in the `riddlc` sub-project  to rebuild. 
 
 This allows you to both make local changes and pull in changes from others to
 keep your local copy of `riddlc` up to date. 
@@ -56,23 +59,23 @@ To get the most recent options, run `riddlc help`. That command will give you
 the syntax for doing various things with the riddl compiler (`riddlc`)
 
 ## Version / Info
-The `riddlc` compiler has two command, `info` and `version` that just print
-out information and the version number, respectively, and then exit. 
+The `riddlc` compiler has two commands, `info` and `version` that just print
+out information about the build, and the version number, respectively, and then exit. 
 
-### Contributing
+## Contributing
 _Contributions are very welcome!_
 
-If you see an issue that you'd like to see fixed, or want us to consider a
-change, the best way to make it happen is to help out by submitting a 
+If you see an issue that you'd like to see fixed or want us to consider a
+change, the best way to make it happen is to help by submitting a 
 pull request implementing it. We welcome contributions from all, even if
-you are not yet familiar with RIDDL. We will endeavour to guide you 
+you are unfamiliar with RIDDL. We will endeavor to guide you 
 through the process once you've submitted your PR. 
 
-Please refer to the CONTRIBUTING.md file for more details about the workflow, 
-and general hints on how to prepare your pull request. You can also ask for
-clarifications or guidance in GitHub issues directly
+Please refer to the CONTRIBUTING.md file for more details about the workflow 
+and general hints on preparing your pull request. You can also ask for
+clarifications or guidance on GitHub issues directly.
 
-The RIDDL family of repositories are owned by Ossum, Inc. and they require
+The RIDDL family of repositories is owned by Ossum, Inc., and they require
 the use of a 
 [CLA (Contributor License Agreement)](https://cla-assistant.io/reactific/riddl).
 You can sign at that link or be prompted to do so when you submit your first
