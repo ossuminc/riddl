@@ -806,7 +806,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
       super.isAssignmentCompatible(other) || {
         other match
           case _: Strng => true
-          case _ => false
+          case _        => false
       }
     }
   }
@@ -1522,20 +1522,19 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   sealed trait AdaptorDefinition extends Definition
 
-  /** Base trait of any definition that is in the content of an Application
-    */
+  /** Base trait of any definition that is in the content of an Application */
   sealed trait ApplicationDefinition extends Definition
 
-  /** Base trait of any definition that is in the content of a context
-    */
+  /** Base trait of any definition that is in the content of an Application's group */
+  sealed trait GroupDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a context */
   sealed trait ContextDefinition extends Definition
 
-  /** Base trait of any definition that is in the content of a domain
-    */
+  /** Base trait of any definition that is in the content of a domain */
   sealed trait DomainDefinition extends Definition
 
-  /** Base trait of any definition that is in the content of an entity.
-    */
+  /** Base trait of any definition that is in the content of an entity. */
   sealed trait EntityDefinition extends Definition
 
   /** Base trait of definitions that are part of a Handler Definition */
@@ -3305,19 +3304,14 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     def format: String = s"${Keywords.epic} ${pathId.format}"
   }
 
-  /** Sealed trait for all UI elements that derive from it
-    */
-  sealed trait UIElement extends ApplicationDefinition
-
-  /** A group of UIElement that can be treated as a whole. For example, a form, a button group, etc.
+  /** A group of GroupDefinition that can be treated as a whole. For example,
+   * a form, a button group, etc.
     * @param loc
     *   The location of the group
     * @param id
     *   The unique identifier of the group
-    * @param types
-    *   Type definitions to define types shared by more than one UIElement
     * @param elements
-    *   The list of UIElements
+    *   The list of GroupDefinition
     * @param brief
     *   A brief description of the group
     * @param description
@@ -3326,19 +3320,17 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   case class Group(
     loc: At,
     id: Identifier,
-    types: Seq[Type] = Seq.empty[Type],
-    elements: Seq[UIElement] = Seq.empty[UIElement],
+    alias: String,
+    elements: Seq[GroupDefinition] = Seq.empty[GroupDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends UIElement {
+  ) extends ApplicationDefinition with GroupDefinition  {
     override def kind: String = "Group"
 
-    override lazy val contents: Seq[ApplicationDefinition] = {
-      types ++ elements
-    }
+    override lazy val contents: Seq[GroupDefinition] = { elements }
 
     /** Format the node to a string */
-    override def format: String = ""
+    override def format: String = "group $id"
   }
 
   /** A Reference to a Group
@@ -3357,8 +3349,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   Location of the view in the source
     * @param id
     *   unique identifier oof the view
-    * @param types
-    *   any type definitions the view needs
     * @param putOut
     *   A result reference for the data too be presented
     * @param brief
@@ -3369,17 +3359,15 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   case class Output(
     loc: At,
     id: Identifier,
-    types: Seq[Type],
+    alias: String,
     putOut: MessageRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends UIElement {
+  ) extends LeafDefinition with GroupDefinition {
     override def kind: String = "Output"
 
-    override lazy val contents: Seq[ApplicationDefinition] = types
-
     /** Format the node to a string */
-    override def format: String = ""
+    override def format: String = s"${if id.isEmpty then "inoutputput" else id.format} presents ${putOut.format}"
   }
 
   /** A reference to an View using a path identifier
@@ -3399,8 +3387,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   Location of the Give
     * @param id
     *   Name of the give
-    * @param types
-    *   type definitions needed for the Give
     * @param putIn
     *   a Type reference of the type given by the user
     * @param brief
@@ -3411,17 +3397,15 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   case class Input(
     loc: At,
     id: Identifier,
-    types: Seq[Type],
+    alias: String,
     putIn: MessageRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends UIElement {
+  ) extends LeafDefinition with GroupDefinition {
     override def kind: String = "Input"
 
-    override lazy val contents: Seq[Definition] = types
-
     /** Format the node to a string */
-    override def format: String = ""
+    override def format: String = s"${if id.isEmpty then "input" else id.format} acquires ${putIn.format}"
   }
 
   /** A reference to an Input using a path identifier

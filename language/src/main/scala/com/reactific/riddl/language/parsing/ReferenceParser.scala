@@ -165,6 +165,11 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (InputRef.apply _).tupled(tpl))
   }
 
+  def groupRef[u:P]: P[GroupRef] = {
+    P(location ~ Keywords.group ~ pathIdentifier)
+      .map(tpl => (GroupRef.apply _).tupled(tpl))
+  }
+
   def authorRefs[u: P]: P[Seq[AuthorRef]] = {
     P(location ~ by ~ Keywords.author ~ pathIdentifier)
       .map(tpl => (AuthorRef.apply _).tupled(tpl))
@@ -174,16 +179,16 @@ private[parsing] trait ReferenceParser extends CommonParser {
   def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
     P(
       adaptorRef | applicationRef | contextRef | entityRef | projectorRef |
-        repositoryRef | streamletRef 
+        repositoryRef | streamletRef
     )
   }
-  
+
   def arbitraryInteractionRef[u:P]: P[Reference[Definition]] = {
-    P( processorRef | sagaRef | inputRef | outputRef )
+    P( processorRef | sagaRef | inputRef | outputRef | groupRef )
   }
 
 
   def anyInteractionRef[u: P]: P[Reference[Definition]] = {
-    arbitraryInteractionRef | userRef 
+    arbitraryInteractionRef | userRef
   }
 }
