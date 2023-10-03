@@ -116,7 +116,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       case d: Domain =>
         validateDomain(d, parentsAsSeq)
       case s: Epic =>
-        validateStory(s, parentsAsSeq)
+        validateEpic(s, parentsAsSeq)
       case a: Application =>
         validateApplication(a, parentsAsSeq)
       case r: Replica =>
@@ -524,7 +524,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDescription(replica)
   }
 
-  private def validateStory(
+  private def validateEpic(
     s: Epic,
     parents: Seq[Definition]
   ): Unit = {
@@ -560,7 +560,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     val parentsSeq = parents.toSeq
     checkDefinition(parentsSeq, in)
     // FIXME: validate this at the epic/case level so the restriction occurs only when sent to the backend
-    checkMessageRef(in.putIn, in, parentsSeq, Seq(RecordCase, CommandCase, QueryCase))
+    checkTypeRef(in.putIn, in, parentsSeq)
     checkDescription(in)
   }
 
@@ -570,8 +570,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   ): Unit = {
     checkDefinition(parents, out)
     // FIXME: validate this at the epic/case level so the restriction occurs only when received from the backend
-    checkMessageRef(out.putOut, out, parents, Seq(RecordCase, EventCase, ResultCase))
-
+    checkTypeRef(out.putOut, out, parents)
     checkDescription(out)
   }
 
@@ -646,6 +645,68 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDescription(uc)
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
+  private def validateArbitraryInteraction(
+    origin: Option[Definition],
+    destination: Option[Definition],
+    parents: Seq[Definition]
+  ): Unit = {
+    val maybeMessage: Option[Message] = origin match {
+      case Some(o) if o.isVital =>
+        destination match {
+          case Some(d) if d.isAppRelated =>
+            d match {
+              case output @ Output(loc, alias, id, putOut, _, _, _) =>
+                checkTypeRef(putOut, parents.head, parents.tail) match {
+                  case Some(Type(_,_,typEx,_,_))  if typEx.isContainer =>
+                    typEx match {
+                      case ate: AggregateUseCaseTypeExpression if  ate.usecase == EventCase || ate.usecase == ResultCase =>
+                          None // events and results are permitted
+                      case ty: TypeExpression => // everything else is not
+                        Some(
+                          error(s"${output.identify} showing ${putOut.format} of type ${ty.format} is invalid "+
+                            s" because ${o.identify} is a vital definition which can only send Events and Results", loc
+                          )
+                        )
+                    }
+                  case _ => None //
+                }
+              case _ => None
+            }
+          case _ => None
+        }
+      case Some(o) if o.isAppRelated =>
+        destination match {
+          case Some(d) if d.isVital =>
+            o match {
+              case input @ Input(loc, alias, id, putIn, _, _, _) =>
+                checkTypeRef(putIn, parents.head, parents.tail) match {
+                  case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
+                    typEx match {
+                      case ate: AggregateUseCaseTypeExpression if ate.usecase == CommandCase || ate.usecase == QueryCase =>
+                        None // commands and queries are permitted
+                      case ty: TypeExpression => // everything else is not
+                        Some(
+                          error(s"${input.identify} sending ${putIn.format} of type ${ty.format} is invalid "+
+                            s" because ${d.identify} is a vital definition which can only receive Commands and Queries")
+                        )
+                    }
+                  case _ => None
+                }
+              case _ => None
+            }
+          case _ => None
+        }
+      case _ => None
+    }
+    maybeMessage match {
+      case Some(m: Message) =>
+        messages.add(m)
+      case None => ()
+    }
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, interaction)
     interaction match {
@@ -656,6 +717,9 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       case ArbitraryInteraction(_, _, from, _, to, _, _) =>
         checkRef[Definition](from, interaction, parents)
         checkRef[Definition](to, interaction, parents)
+        val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
+        val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
+        validateArbitraryInteraction(origin, destination, parents)
       case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _) =>
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
