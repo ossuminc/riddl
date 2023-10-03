@@ -21,8 +21,7 @@ import scala.reflect.{ClassTag, classTag}
 object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Options with ast.Types with ast.Statements
 
   ///////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
-  /** The root trait of all things RIDDL AST. Every node in the tree is a RiddlNode.
-    */
+  /** The root trait of all things RIDDL AST. Every node in the tree is a RiddlNode. */
   sealed trait RiddlNode {
 
     /** Format the node to a string */
@@ -117,7 +116,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
   }
   object Description {
-    lazy val empty = new Description {
+    lazy val empty: Description = new Description {
       val loc: At = At.empty
       val lines = Seq.empty[LiteralString]
       def format: String = ""
@@ -204,6 +203,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
     def isVital: Boolean = false
 
+    def isAppRelated: Boolean = false
+
     @SuppressWarnings(Array("org.wartremover.warts.asInstanceOf"))
     def asVital[OPT <: OptionValue, DEF <: Definition]: VitalDefinition[OPT, DEF] =
       require(this.isVital, "Not a vital definition")
@@ -265,22 +266,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     }
   }
 
-  /** Base trait of any definition that is in the content of a function.
-    */
-  sealed trait FunctionDefinition extends Definition
-
-  /** Base trait of definitions that are part of a Saga Definition */
-  sealed trait SagaDefinition extends Definition
-
-  /** Base trait of definitions that are part of a Saga Definition */
-  sealed trait StateDefinition extends Definition
-
-  /** Base trait of any definition that occurs in the body of a projector */
-  sealed trait ProjectorDefinition extends Definition
-
-  /** Base trait of definitions in a UseCase, typically interactions */
-  sealed trait UseCaseDefinition extends Definition
-
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
   def findAuthors(
     defn: Definition,
@@ -296,7 +281,97 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     }
   }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
+
+  /** Base trait of any definition that is in the content of an adaptor */
+  sealed trait AdaptorDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an Application */
+  sealed trait ApplicationDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a Group */
+  sealed trait GroupDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an Output */
+  sealed trait OutputDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an Input */
+  sealed trait InputDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a context */
+  sealed trait ContextDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a domain */
+  sealed trait DomainDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an entity */
+  sealed trait EntityDefinition extends Definition
+
+  /** Base trait of definitions that are part of a Handler Definition */
+  sealed trait HandlerDefinition extends Definition
+
+  /** Base trait of definitions that are part of an On Clause Definition */
+  sealed trait OnClauseDefinition extends Definition
+
+  /** Base trait of definitions defined in a processor */
+  sealed trait ProcessorDefinition
+      extends Definition
+      with AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with EntityDefinition
+      with ProjectorDefinition
+      with RepositoryDefinition
+      with StreamletDefinition
+      with SagaDefinition
+
+  /** Base trait of definitions defined in a repository */
+  sealed trait RepositoryDefinition extends Definition
+
+  /** Base trait of definitions defined at root scope */
+  sealed trait RootDefinition extends Definition
+
+  /** Base trait of definitions define within a Streamlet */
+  sealed trait StreamletDefinition extends Definition
+
+  /** Base trait of definitions that are in the body of a Story definition */
+  sealed trait EpicDefinition extends Definition
+
+  sealed trait VitalDefinitionDefinition
+      extends AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with DomainDefinition
+      with EntityDefinition
+      with FunctionDefinition
+      with StreamletDefinition
+      with ProjectorDefinition
+      with RepositoryDefinition
+      with SagaDefinition
+      with EpicDefinition
+
+  /** Base trait of definitions that can accept a message directly via a reference
+    * @tparam T
+    *   The kind of reference needed
+    */
+  sealed trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
+
+  /** Base trait of any definition that is in the content of a function. */
+  sealed trait FunctionDefinition extends Definition
+
+  /** Base trait of definitions that are part of a Saga Definition */
+  sealed trait SagaDefinition extends Definition
+
+  /** Base trait of definitions that are part of a Saga Definition */
+  sealed trait StateDefinition extends Definition
+
+  /** Base trait of any definition that occurs in the body of a projector */
+  sealed trait ProjectorDefinition extends Definition
+
+  /** Base trait of definitions in a UseCase, typically interactions */
+  sealed trait UseCaseDefinition extends Definition
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
   // We need "Expression" sealed trait from Expression.scala but it
   // depends on TypeExpression.scala so we make Expression derive from
@@ -1046,7 +1121,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false
   }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////// OPTIONS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////// OPTIONS
 
   /** Base trait for option values for any option of a definition.
     */
@@ -1094,7 +1169,10 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
   sealed abstract class AdaptorOption(val name: String) extends OptionValue
 
-  case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
+  case class AdaptorTechnologyOption(
+    loc: At,
+    override val args: Seq[LiteralString]
+  ) extends AdaptorOption("technology")
 
   //////////////////////////////////////////////////////////////////// HANDLER
 
@@ -1102,21 +1180,21 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
   case class PartialHandlerOption(loc: At) extends HandlerOption("partial")
 
-  /////////////////////////////////////////////////////////////////// PROJECTION
+  //////////////////////////////////////////////////////////////////// PROJECTOR
 
   sealed abstract class ProjectorOption(val name: String) extends OptionValue
 
   case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends ProjectorOption("technology")
 
-  /////////////////////////////////////////////////////////////////// PROJECTION
+  /////////////////////////////////////////////////////////////////// REPOSITORY
 
   sealed abstract class RepositoryOption(val name: String) extends OptionValue
 
   case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends RepositoryOption("technology")
 
-  //////////////////////////////////////////////////////////////////// ENTITY
+  /////////////////////////////////////////////////////////////////////// ENTITY
 
   /** Base trait of any value used in the definition of an entity
     */
@@ -1404,12 +1482,12 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
 
-  /** A statement that replys in a handler to a query
+  /** A statement that replies in a handler to a query
     *
     * @param loc
     *   The location in the source of the publish action
-    * @param value
-    *   The value to be returned
+    * @param message
+    *   The message to be returned
     */
   case class ReplyStatement(
     loc: At,
@@ -1515,76 +1593,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     def format: String = "scall ${func.format}"
 
   }
-
-  ///////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
-
-  /** Base trait of any definition that is in the content of an adaptor
-    */
-  sealed trait AdaptorDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an Application */
-  sealed trait ApplicationDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an Application's group */
-  sealed trait GroupDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a context */
-  sealed trait ContextDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of a domain */
-  sealed trait DomainDefinition extends Definition
-
-  /** Base trait of any definition that is in the content of an entity. */
-  sealed trait EntityDefinition extends Definition
-
-  /** Base trait of definitions that are part of a Handler Definition */
-  sealed trait HandlerDefinition extends Definition
-
-  /** Base trait of definitions that are part of an On Clause Definition */
-  sealed trait OnClauseDefinition extends Definition
-
-  /** Base trait of definitions defined in a processor */
-  sealed trait ProcessorDefinition
-      extends Definition
-      with AdaptorDefinition
-      with ApplicationDefinition
-      with ContextDefinition
-      with EntityDefinition
-      with ProjectorDefinition
-      with RepositoryDefinition
-      with StreamletDefinition
-      with SagaDefinition
-
-  /** Base trait of definitions defined in a repository */
-  sealed trait RepositoryDefinition extends Definition
-
-  /** Base trait of definitions defined at root scope */
-  sealed trait RootDefinition extends Definition
-
-  /** Base trait of definitions define within a Streamlet */
-  sealed trait StreamletDefinition extends Definition
-
-  /** Base trait of definitions that are in the body of a Story definition */
-  sealed trait EpicDefinition extends Definition
-
-  sealed trait VitalDefinitionDefinition
-      extends AdaptorDefinition
-      with ApplicationDefinition
-      with ContextDefinition
-      with DomainDefinition
-      with EntityDefinition
-      with FunctionDefinition
-      with StreamletDefinition
-      with ProjectorDefinition
-      with RepositoryDefinition
-      with SagaDefinition
-      with EpicDefinition
-
-  /** Base trait of definitions that can accept a message directly via a reference
-    * @tparam T
-    *   The kind of reference needed
-    */
-  sealed trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
 
   /** A term definition for the glossary */
   case class Term(
@@ -1742,10 +1750,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
   /** The root of the containment hierarchy, corresponding roughly to a level about a file.
     *
-    * @param domains
-    *   The sequence of domains contained by this root container
-    * @param authors
-    *   The sequence of authors defined at root scope
+    * @param contents
+    *   The sequence top level definitions contained by this root container
     * @param inputs
     *   The inputs for this root scope
     */
@@ -2012,8 +2018,20 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   An optional type expression that names and types the fields of the input of the function
     * @param output
     *   An optional type expression that names and types the fields of the output of the function
-    * @param examples
-    *   The set of examples that define the behavior of the function.
+    * @param types
+    *   The set of type definitions for use in the function
+    * @param functions
+    *   The set of function definitions for use in the function
+    * @param statements
+    *   The set of statements that define the behavior of this function
+    * @param authors
+    *   References to the authors that helped write this function
+    * @param includes
+    *   Inclusion of other files to complete this function definition
+    * @param options
+    *   The options for this function that might affect how it behaves
+    * @param terms
+    *   The definition of glossary terms related to this function
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2064,8 +2082,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   The location of the invariant definition
     * @param id
     *   The name of the invariant
-    * @param expression
-    *   The conditional expression that must always be true.
+    * @param condition
+    *   The string representation of the condition that ought to be true
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2125,8 +2143,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param examples
-    *   A set of examples that define the behavior when a message doesn't match
+    * @param statements
+    *   A set of statements that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2156,8 +2174,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   A reference to the message type that is handled
     * @param from
     *   Optional message generating
-    * @param examples
-    *   A set of examples that define the behavior when the [[msg]] is received.
+    * @param statements
+    *   A set of statements that define the behavior when the [[msg]] is received.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2188,8 +2206,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param examples
-    *   A set of examples that define the behavior when a message doesn't match
+    * @param statements
+    *   A set of statements that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -3272,8 +3290,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     cases: Seq[UseCase] = Seq.empty[UseCase],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
-    includes: Seq[Include[EpicDefinition]] = Seq
-      .empty[Include[EpicDefinition]],
+    includes: Seq[Include[EpicDefinition]] = Seq.empty[Include[EpicDefinition]],
     options: Seq[EpicOption] = Seq.empty[EpicOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -3291,7 +3308,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     final val kind: String = "Epic"
 
     override def format: String = s"${Keywords.epic} ${id.format}"
-
   }
 
   /** A reference to a Story definintion.
@@ -3304,8 +3320,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     def format: String = s"${Keywords.epic} ${pathId.format}"
   }
 
-  /** A group of GroupDefinition that can be treated as a whole. For example,
-   * a form, a button group, etc.
+  /** A group of GroupDefinition that can be treated as a whole. For example, a form, a button group, etc.
     * @param loc
     *   The location of the group
     * @param id
@@ -3319,18 +3334,20 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   case class Group(
     loc: At,
-    id: Identifier,
     alias: String,
+    id: Identifier,
     elements: Seq[GroupDefinition] = Seq.empty[GroupDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends ApplicationDefinition with GroupDefinition  {
+  ) extends ApplicationDefinition
+      with GroupDefinition {
     override def kind: String = "Group"
+    override def isAppRelated: Boolean = true
 
     override lazy val contents: Seq[GroupDefinition] = { elements }
 
     /** Format the node to a string */
-    override def format: String = "group $id"
+    override def format: String = s"group ${id.value}"
   }
 
   /** A Reference to a Group
@@ -3351,6 +3368,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   unique identifier oof the view
     * @param putOut
     *   A result reference for the data too be presented
+    * @param outputs
+    *   Any contained outputs
     * @param brief
     *   A brief description of the view
     * @param description
@@ -3358,13 +3377,19 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   case class Output(
     loc: At,
-    id: Identifier,
     alias: String,
-    putOut: MessageRef,
+    id: Identifier,
+    putOut: TypeRef,
+    outputs: Seq[OutputDefinition] = Seq.empty[OutputDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition with GroupDefinition {
+  ) extends ApplicationDefinition
+      with OutputDefinition
+      with GroupDefinition {
     override def kind: String = "Output"
+    override def isAppRelated: Boolean = true
+
+    override lazy val contents: Seq[OutputDefinition] = outputs
 
     /** Format the node to a string */
     override def format: String = s"${if id.isEmpty then "inoutputput" else id.format} presents ${putOut.format}"
@@ -3396,13 +3421,19 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   case class Input(
     loc: At,
-    id: Identifier,
     alias: String,
-    putIn: MessageRef,
+    id: Identifier,
+    putIn: TypeRef,
+    inputs: Seq[InputDefinition] = Seq.empty[InputDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition with GroupDefinition {
+  ) extends ApplicationDefinition
+      with GroupDefinition
+      with InputDefinition {
     override def kind: String = "Input"
+    override def isAppRelated: Boolean = true
+
+    override lazy val contents: Seq[Definition] = inputs
 
     /** Format the node to a string */
     override def format: String = s"${if id.isEmpty then "input" else id.format} acquires ${putIn.format}"
@@ -3467,7 +3498,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   ) extends Processor[ApplicationOption, ApplicationDefinition]
       with DomainDefinition {
     override def kind: String = "Application"
-
+    override def isAppRelated: Boolean = true
     override lazy val contents: Seq[ApplicationDefinition] = {
       super.contents ++ types ++ groups ++ terms ++ includes
     }

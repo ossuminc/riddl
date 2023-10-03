@@ -7,7 +7,7 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import Terminals.*
+import Terminals.{Keywords, *}
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 
@@ -43,7 +43,7 @@ private[parsing] trait ApplicationParser {
          groupDefinitions ~
       close ~ briefly ~ description
     ).map { case (loc, alias, id, elements, brief, description) =>
-      Group(loc, id, alias, elements, brief, description)
+      Group(loc, alias, id, elements, brief, description)
     }
   }
 
@@ -61,12 +61,25 @@ private[parsing] trait ApplicationParser {
     )
   }
 
+  private def presentationAliases[u: P]: P[Unit] = {
+    StringIn(Keywords.presents, "shows", "displays", "writes", "emits")
+  }
+
+  private def outputDefinitions[u: P]: P[Seq[OutputDefinition]] = {
+    P(
+      is ~ open ~ appOutput.rep(1) ~ close
+    ).?.map {
+      case Some(definitions) => definitions
+      case None              => Seq.empty[OutputDefinition]
+    }
+  }
+
   private def appOutput[u: P]: P[Output] = {
     P(
-      location ~ outputAliases ~/ identifier ~ Keywords.presents ~/
-        messageRef  ~ briefly ~ description
-    ).map { case (loc, alias, id, putOut, brief, description) =>
-      Output(loc, id, alias, putOut, brief, description)
+      location ~ outputAliases ~/ identifier ~ presentationAliases ~/ typeRef ~
+        outputDefinitions ~ briefly ~ description
+    ).map { case (loc, alias, id, putOut, outputs, brief, description) =>
+      Output(loc, alias, id, putOut, outputs, brief, description)
     }
   }
 
@@ -76,11 +89,27 @@ private[parsing] trait ApplicationParser {
     )
   }
 
+  private def inputDefinitions[uP: P]: P[Seq[InputDefinition]] = {
+    P(
+      is ~ open ~
+        (undefined(Seq.empty[InputDefinition]) | appInput.rep(1))
+        ~ close
+    ).?.map {
+      case Some(definitions) => definitions
+      case None              => Seq.empty[InputDefinition]
+    }
+  }
+
+  private def acquisitionAliases[u: P]: P[Unit] = {
+    StringIn(Keywords.acquires, "reads", "takes", "accepts", "admits")
+  }
+
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~ is ~ Keywords.acquires ~ messageRef ~ briefly ~ description
-    ).map { case (loc, alias, id, putIn, brief, description) =>
-      Input(loc, id, alias,  putIn, brief, description)
+      location ~ inputAliases ~/ identifier ~ acquisitionAliases ~ typeRef ~
+        inputDefinitions ~ briefly ~ description
+    ).map { case (loc, alias, id, putIn, inputs, brief, description) =>
+      Input(loc, alias, id, putIn, inputs, brief, description)
     }
   }
 

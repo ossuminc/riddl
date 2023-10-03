@@ -107,6 +107,14 @@ trait BasicValidation {
     }
   }
 
+  def checkTypeRef(
+    ref: TypeRef,
+    topDef: Definition,
+    parents: Seq[Definition]
+  ): Option[Type] = {
+    checkRef[Type](ref, topDef, parents)
+  }
+
   def checkMessageRef(
     ref: MessageRef,
     topDef: Definition,
