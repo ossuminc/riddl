@@ -226,4 +226,31 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def term[u: P]: P[Term] = {
     P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl => (Term.apply _).tupled(tpl))
   }
+
+  def groupAliases[u: P]: P[String] = {
+    P(
+      StringIn(Keywords.group, "page", "pane", "dialog", "popup", "frame", "column", "window", "section", "tab").!
+    )
+  }
+
+  def inputAliases[u: P]: P[String] = {
+    P(
+      StringIn(Keywords.input, "form", "text", "button", "picklist", "select").!
+    )
+  }
+
+  def outputAliases[u: P]: P[String] = {
+    P(
+      StringIn(
+        Keywords.output,
+        "document",
+        "list",
+        "table",
+        "graph",
+        "animation",
+        "picture"
+      ).!
+    )
+  }
+
 }

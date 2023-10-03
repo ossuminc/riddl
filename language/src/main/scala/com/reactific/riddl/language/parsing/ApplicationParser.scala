@@ -17,7 +17,8 @@ private[parsing] trait ApplicationParser {
     with ReferenceParser
     with HandlerParser
     with StatementParser
-    with TypeParser =>
+    with TypeParser
+    with CommonParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
@@ -25,13 +26,7 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def groupAliases[u: P]: P[String] = {
-    P(
-      StringIn(Keywords.group, "page", "pane", "dialog", "popup", "frame", "column", "window", "section", "tab").!
-    )
-  }
-
-  private def groupDefinitions[u:P]: P[Seq[GroupDefinition]] = {
+  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] = {
     P {
       undefined(Seq.empty[GroupDefinition]) | (group | appOutput | appInput).rep(0)
     }
@@ -40,25 +35,11 @@ private[parsing] trait ApplicationParser {
   private def group[u: P]: P[Group] = {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
-         groupDefinitions ~
-      close ~ briefly ~ description
+        groupDefinitions ~
+        close ~ briefly ~ description
     ).map { case (loc, alias, id, elements, brief, description) =>
       Group(loc, alias, id, elements, brief, description)
     }
-  }
-
-  private def outputAliases[u: P]: P[String] = {
-    P(
-      StringIn(
-        Keywords.output,
-        "document",
-        "list",
-        "table",
-        "graph",
-        "animation",
-        "picture"
-      ).!
-    )
   }
 
   private def presentationAliases[u: P]: P[Unit] = {
@@ -81,12 +62,6 @@ private[parsing] trait ApplicationParser {
     ).map { case (loc, alias, id, putOut, outputs, brief, description) =>
       Output(loc, alias, id, putOut, outputs, brief, description)
     }
-  }
-
-  private def inputAliases[u: P]: P[String] = {
-    P(
-      StringIn(Keywords.input, "form", "textblock", "button", "picklist").!
-    )
   }
 
   private def inputDefinitions[uP: P]: P[Seq[InputDefinition]] = {

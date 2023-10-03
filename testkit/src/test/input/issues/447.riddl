@@ -1,0 +1,21 @@
+domain example is {
+  context TenantControl {
+    command CreateTenant { name: String }
+    event TenantCreated { name: String, result: String }
+  }
+  record Create { name: String }
+  user Admin is "fickle"
+  application App is {
+    page NewTenantPage {
+      input NameEntry acquires record example.Create
+      button Create acquires record example.Create
+    }
+  }
+  epic check_for_wrong_types_to_and_from_vitals {
+    case UserCreatesANewCompany {
+      user Admin wants to "create a new tenant" so that "the tenant can do stuff"
+      step from user Admin "presses" button App.NewTenantPage.Create,
+      step from button App.NewTenantPage.Create "sends" to context TenantControl
+    }
+  }
+}

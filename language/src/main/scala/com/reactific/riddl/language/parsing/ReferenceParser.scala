@@ -156,18 +156,18 @@ private[parsing] trait ReferenceParser extends CommonParser {
   }
 
   def outputRef[u: P]: P[OutputRef] = {
-    P(location ~ Keywords.output ~ pathIdentifier)
-      .map(tpl => (OutputRef.apply _).tupled(tpl))
+    P(location ~ outputAliases ~ pathIdentifier)
+      .map { case (loc, _, pid) => OutputRef(loc, pid) }
   }
 
   def inputRef[u: P]: P[InputRef] = {
-    P(location ~ Keywords.input ~ pathIdentifier)
-      .map(tpl => (InputRef.apply _).tupled(tpl))
+    P(location ~ inputAliases ~ pathIdentifier)
+      .map { case (loc, _, pid) => InputRef(loc, pid) }
   }
 
-  def groupRef[u:P]: P[GroupRef] = {
-    P(location ~ Keywords.group ~ pathIdentifier)
-      .map(tpl => (GroupRef.apply _).tupled(tpl))
+  def groupRef[u: P]: P[GroupRef] = {
+    P(location ~ groupAliases ~ pathIdentifier)
+      .map { case (loc, _, pid) => GroupRef(loc, pid) }
   }
 
   def authorRefs[u: P]: P[Seq[AuthorRef]] = {
@@ -183,10 +183,9 @@ private[parsing] trait ReferenceParser extends CommonParser {
     )
   }
 
-  def arbitraryInteractionRef[u:P]: P[Reference[Definition]] = {
-    P( processorRef | sagaRef | inputRef | outputRef | groupRef )
+  def arbitraryInteractionRef[u: P]: P[Reference[Definition]] = {
+    P(processorRef | sagaRef | inputRef | outputRef | groupRef)
   }
-
 
   def anyInteractionRef[u: P]: P[Reference[Definition]] = {
     arbitraryInteractionRef | userRef

@@ -96,5 +96,13 @@ class ReportedIssuesTest extends ValidatingTest {
           succeed
       }
     }
+    "447" in {
+      checkOne("447.riddl") {
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(result) =>
+          succeed
+      }
+    }
   }
 }
