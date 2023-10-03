@@ -49,7 +49,7 @@ lazy val utils = project
   .in(file("utils"))
   .configure(C.mavenPublish)
   .configure(C.withScala3)
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(70))
   .enablePlugins(BuildInfoPlugin)
   .configure(
     C.withBuildInfo("https://riddl.tech", "Ossum Inc.", "com.reactific.riddl.utils", "RiddlBuildInfo", 2019))
@@ -61,7 +61,7 @@ lazy val utils = project
 val Language: Configuration = config("language")
 lazy val language: Project = project
   .in(file("language"))
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(65))
   .configure(C.mavenPublish)
   .configure(C.withScala3)
   .settings(
@@ -74,7 +74,7 @@ lazy val language: Project = project
 val Passes = config("passes")
 lazy val passes = project
   .in(file("passes"))
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(30))
   .configure(C.mavenPublish)
   .configure(C.withScala3)
   .settings(
@@ -89,7 +89,7 @@ val Commands = config("commands")
 lazy val commands: Project = project
   .in(file("commands"))
   .configure(C.withScala3)
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(50))
   .configure(C.mavenPublish)
   .settings(
     name := "riddl-commands",
@@ -112,7 +112,7 @@ lazy val testkit: Project = project
 val StatsTrans = config("stats")
 lazy val stats: Project = project
   .in(file("stats"))
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(50))
   .configure(C.withScala3)
   .configure(C.mavenPublish)
   .settings(name := "riddl-stats", libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
@@ -121,7 +121,7 @@ lazy val stats: Project = project
 val Prettify = config("prettify")
 lazy val prettify = project
   .in(file("prettify"))
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(65))
   .configure(C.withScala3)
   .configure(C.mavenPublish)
   .settings(name := "riddl-prettify", libraryDependencies ++= Dep.testing)
@@ -131,7 +131,7 @@ lazy val prettify = project
 val HugoTrans = config("hugo")
 lazy val hugo: Project = project
   .in(file("hugo"))
-  .configure(C.withCoverage(0))
+  .configure(C.withCoverage(50))
   .configure(C.withScala3)
   .configure(C.mavenPublish)
   .settings(

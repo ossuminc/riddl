@@ -32,6 +32,12 @@ jobs:
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
 
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-coverage-report
+        path: target/scala-2.12/scoverage-report
+
     - name: Cleanup Before Caching
       shell: bash
       run: |
