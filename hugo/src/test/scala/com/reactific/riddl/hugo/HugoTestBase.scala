@@ -4,8 +4,7 @@ import com.reactific.riddl.hugo.HugoTranslatorState
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.AST.RootContainer
-import com.reactific.riddl.language.parsing.TopLevelParser
-import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.language.parsing.{RiddlParserInput, StringParserInput, TopLevelParser}
 import com.reactific.riddl.passes.symbols.SymbolsPass
 import com.reactific.riddl.passes.{Pass, PassInput, PassesResult}
 import com.reactific.riddl.passes.validate.ValidatingTest
@@ -15,7 +14,7 @@ import org.scalatest.Assertion
 class HugoTestBase extends ValidatingTest {
 
   def runHugoOn(input: String): Either[Messages, (PassesResult, RootContainer, RiddlParserInput)] = {
-    val rpi = RiddlParserInput(input)
+    val rpi = StringParserInput(input, "hugo Test")
     val logger = SysLogger()
     val commonOptions = CommonOptions.noMinorWarnings
     val options = HugoCommand.Options()

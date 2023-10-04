@@ -101,8 +101,8 @@ private case class EmptyParserInput() extends RiddlParserInput {
 
 case class StringParserInput(
   data: String,
-  origin: String = At.defaultSourceName)
-    extends RiddlParserInput {
+  origin: String = At.defaultSourceName
+) extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
   override def isEmpty: Boolean = data.isEmpty
 }
@@ -143,8 +143,7 @@ case class URLParserInput(url: URL) extends RiddlParserInput {
   def origin: String = url.toString
 }
 
-case class SourceParserInput(source: Source, origin: String)
-    extends RiddlParserInput {
+case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
 
   lazy val data: String =
     try { source.mkString }

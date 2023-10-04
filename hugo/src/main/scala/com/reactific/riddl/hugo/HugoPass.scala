@@ -53,15 +53,12 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     options.outputRoot.getFileName.toString.nonEmpty,
     "Output path is empty"
   )
-  options.inputFile match
-    case None =>
-      require(false, "inputFile option provides no path")
-    case Some(path: Path) =>
-      makeDirectoryStructure(path, state.logger, options, commonOptions)
+  if options.inputFile.nonEmpty then
+    makeDirectoryStructure(options.inputFile, state.logger, options, commonOptions)
 
-  val root = input.root
+  val root: RootContainer = input.root
 
-  val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
+  private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
   writeConfigToml(options, maybeAuthor)
 
   val name: String = HugoPass.name
@@ -178,25 +175,29 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   }
 
   private def loadStaticAssets(
-    inputPath: Path,
+    inputPath: Option[Path],
     log: Logger,
     options: HugoCommand.Options
   ): Unit = {
-    val inputRoot: Path = inputPath.toAbsolutePath
-    val sourceDir: Path = inputRoot.getParent.resolve("static")
+    inputPath match {
+      case Some(path) =>
+        val inputRoot: Path = path.toAbsolutePath
+        val sourceDir: Path = inputRoot.getParent.resolve("static")
 
-    val targetDir = options.staticRoot
-    if Files.exists(sourceDir) && Files.isDirectory(sourceDir) then {
-      val img = sourceDir
-        .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
-        .toAbsolutePath
-      Files.createDirectories(img.getParent)
-      if !Files.exists(img) then {
-        copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
-      }
-      // copy source to target using Files Class
-      val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
-      Files.walkFileTree(sourceDir, visitor)
+        val targetDir = options.staticRoot
+        if Files.exists(sourceDir) && Files.isDirectory(sourceDir) then {
+          val img = sourceDir
+            .resolve(options.siteLogoPath.getOrElse("images/logo.png"))
+            .toAbsolutePath
+          Files.createDirectories(img.getParent)
+          if !Files.exists(img) then {
+            copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
+          }
+          // copy source to target using Files Class
+          val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
+          Files.walkFileTree(sourceDir, visitor)
+        }
+      case None => ()
     }
   }
 
@@ -234,7 +235,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   }
 
   private def makeDirectoryStructure(
-    inputPath: Path,
+    inputPath: Option[Path],
     log: Logger,
     options: HugoCommand.Options,
     commonOptions: CommonOptions

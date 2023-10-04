@@ -131,14 +131,15 @@ class MarkdownWriterTest extends HugoTestBase {
         """domain substitutions {
           |  context referenced is { ??? }
           |} described as {
-          | | This substitutions domain contains context referenced
+          | | This substitutions domain contains context substitutions.referenced
           | | which maps to https://www.merriam-webster.com/
+          |}
           |""".stripMargin
       val (passesResult: PassesResult, root: RootContainer, mdw: MarkdownWriter) = makeMDWFor(input)
       val domain = root.domains.head
       val context = domain.contexts.head
-      mdw.emitDescription(domain.description, 0)
-      println(mdw.toLines)
+      mdw.emitDescription(domain.description, domain, 0)
+      println(mdw.toLines.mkString("\n"))
       succeed
     }
   }
