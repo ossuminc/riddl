@@ -12,6 +12,7 @@ import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
 import scala.annotation.unused
+import com.reactific.riddl.language.parsing.Terminals
 
 case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends TextFileWriter {
 
@@ -421,17 +422,41 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
-  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
-    if d.nonEmpty then {
-      heading("Description", level)
-      val description = d.get.lines.map(_.s)
-      description.foreach(p)
+  private val keywords = Terminals.definition_keywords.map(s => s + "|")
+  private val pathIdRegex = s"(?<kind>$keywords) (?<path>\\w+(\\.\\w+)*)".r
+  private def substituteIn(lineToReplace: String): String = {
+    pathIdRegex.findAllMatchIn(lineToReplace).toSeq.reverse.foldLeft(lineToReplace) { case (line, rMatch) =>
+      val kind = rMatch.group("kind")
+      val pathId = rMatch.group("path")
+      state.refMap.definitionOf[Definition](pathId) match {
+        case Some(definition) =>
+          val docLink = state.makeDocLink(definition)
+          val substitution = s"($kind $pathId)[$docLink]"
+          line.substring(0, rMatch.start) + substitution + line.substring(rMatch.end)
+        case None =>
+          line
+      }
     }
-    this
   }
 
-  def emitOptions[OT <: OptionValue](
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
+  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
+    d match {
+      case None => this
+      case Some(desc) =>
+        heading("Description", level)
+        val substitutedDescription: Seq[String] = for {
+          line <- desc.lines.map(_.s)
+          newLine = substituteIn(line)
+        } yield {
+          newLine
+        }
+        substitutedDescription.foreach(p)
+        this
+    }
+  }
+
+  private def emitOptions[OT <: OptionValue](
     options: Seq[OT],
     level: Int = 2
   ): this.type = {
@@ -439,7 +464,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitDefDoc(
+  private def emitDefDoc(
     definition: Definition,
     parents: Seq[String],
     level: Int = 2
@@ -448,7 +473,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitDescription(definition.description, level)
   }
 
-  def emitShortDefDoc(
+  private def emitShortDefDoc(
     definition: Definition
   ): this.type = {
     definition.brief.foreach(b => p(italic(b.s)))

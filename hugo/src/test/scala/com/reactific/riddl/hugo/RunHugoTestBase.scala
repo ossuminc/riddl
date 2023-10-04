@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.translator.hugo
+package com.reactific.riddl.hugo
 
 /** Unit Tests For RunHugoTestBase */
 import org.scalatest.*

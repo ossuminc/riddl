@@ -4,21 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.translator.hugo
+package com.reactific.riddl.hugo
 
-import com.reactific.riddl.hugo.GlossaryEntry
-import com.reactific.riddl.hugo.HugoCommand
-import com.reactific.riddl.hugo.HugoTranslatorState
-import com.reactific.riddl.hugo.MarkdownWriter
+import com.reactific.riddl.hugo.{GlossaryEntry, HugoCommand, HugoOutput, HugoTranslatorState, MarkdownWriter}
 import com.reactific.riddl.language.CommonOptions
-import com.reactific.riddl.passes.PassesResult
-import com.reactific.riddl.testkit.ParsingTest
+import com.reactific.riddl.language.AST.RootContainer
+import com.reactific.riddl.language.parsing.RiddlParserInput
+import com.reactific.riddl.passes.{Pass, PassInput, PassesResult}
+import com.reactific.riddl.passes.validate.ValidatingTest
 
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.file.Path
 
-class MarkdownWriterTest extends ParsingTest {
+class MarkdownWriterTest extends HugoTestBase {
 
   "MarkdownWriterTest" must {
     "emit a domain" in {
@@ -126,6 +125,21 @@ class MarkdownWriterTest extends ParsingTest {
           || [`two`](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "GitHub Link") | [Term](https://riddl.tech/concepts/term/) | The second term |
           |""".stripMargin
       output mustBe expected
+    }
+    "substitute PathId references" in {
+      val input: String =
+        """domain substitutions {
+          |  context referenced is { ??? }
+          |} described as {
+          | | This substitutions domain contains context referenced
+          | | which maps to https://www.merriam-webster.com/
+          |""".stripMargin
+      val (passesResult: PassesResult, root: RootContainer, mdw: MarkdownWriter) = makeMDWFor(input)
+      val domain = root.domains.head
+      val context = domain.contexts.head
+      mdw.emitDescription(domain.description, 0)
+      println(mdw.toLines)
+      succeed
     }
   }
 }

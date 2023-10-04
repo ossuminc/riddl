@@ -33,7 +33,8 @@ object HugoPass extends PassInfo {
 }
 
 case class HugoOutput(
-  messages: Messages = Messages.empty
+  messages: Messages = Messages.empty,
+  state: HugoTranslatorState
 ) extends PassOutput
 
 case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(input) {
@@ -139,7 +140,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     state.close(root)
   }
 
-  override def result: HugoOutput = HugoOutput()
+  override def result: HugoOutput = HugoOutput(state = state)
 
   private def deleteAll(directory: File): Boolean = {
     for file <- directory.listFiles do {

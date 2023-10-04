@@ -57,6 +57,22 @@ object HugoCommand {
 
     def configFile: Path = outputRoot.resolve("config.toml")
   }
+
+  def getPasses(
+    log: Logger,
+    commonOptions: CommonOptions,
+    options: Options
+  ): PassesCreator = {
+    standardPasses ++ Seq(
+      { (input: PassInput) => StatsPass(input) },
+      { (input: PassInput) =>
+        val result = PassesResult(input)
+        val state = HugoTranslatorState(result, options, commonOptions, log)
+        HugoPass(input, state)
+      }
+    )
+  }
+
 }
 
 class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
@@ -251,14 +267,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
-    standardPasses ++ Seq(
-      { (input: PassInput) => StatsPass(input) },
-      { (input: PassInput) =>
-        val result = PassesResult(input)
-        val state = HugoTranslatorState(result, options, commonOptions, log)
-        HugoPass(input, state)
-      }
-    )
+    HugoCommand.getPasses(log, commonOptions, options)
   }
 
   override def replaceInputFile(
