@@ -272,7 +272,7 @@ object Pass {
     runPass[ValidationOutput](input, ValidationPass(input))
   }
 
-  private def runPass[OUT <: PassOutput](input: PassInput, pass: Pass): OUT = {
+  def runPass[OUT <: PassOutput](input: PassInput, pass: Pass): OUT = {
     Pass.runOnePass(input, pass).asInstanceOf[OUT]
   }
 

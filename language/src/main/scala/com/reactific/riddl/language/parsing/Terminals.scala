@@ -212,6 +212,44 @@ object Terminals {
     final val yields = "yields"
   }
 
+  final val definition_keywords: Seq[String] = Seq(
+    Keywords.adaptor,
+    Keywords.application,
+    Keywords.author,
+    Keywords.case_,
+    Keywords.command,
+    Keywords.connector,
+    Keywords.const,
+    Keywords.context,
+    Keywords.entity,
+    Keywords.epic,
+    Keywords.field,
+    Keywords.flow,
+    Keywords.function,
+    Keywords.group,
+    Keywords.handler,
+    Keywords.inlet,
+    Keywords.input,
+    Keywords.invariant,
+    Keywords.outlet,
+    Keywords.output,
+    Keywords.pipe,
+    Keywords.projector,
+    Keywords.query,
+    Keywords.replica,
+    Keywords.reply,
+    Keywords.repository,
+    Keywords.record,
+    Keywords.result,
+    Keywords.saga,
+    Keywords.sink,
+    Keywords.source,
+    Keywords.state,
+    Keywords.streamlet,
+    Keywords.term,
+    Keywords.user
+  )
+
   object Predefined {
     final val Abstract = "Abstract"
     final val Boolean = "Boolean"

@@ -132,6 +132,40 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
+  def parseValidateAndThen[T](
+    rpi: RiddlParserInput,
+    options: CommonOptions = CommonOptions(),
+    shouldFailOnErrors: Boolean = true
+  )(
+    andThen: (PassesResult, RootContainer, RiddlParserInput, Messages) => T
+  ): T = {
+    TopLevelParser.parse(rpi) match {
+      case Left(errors) =>
+        fail(errors.format)
+      case Right(root) =>
+        Pass(root, options, shouldFailOnErrors) match {
+          case Left(errors) =>
+            fail(errors.format)
+          case Right(passesResult: PassesResult) =>
+            andThen(passesResult, root, rpi, passesResult.messages)
+        }
+    }
+  }
+
+  def parseAndThenValidate(
+    rpi: RiddlParserInput,
+    commonOptions: CommonOptions = CommonOptions(),
+    shouldFailOnErrors: Boolean = true
+  )(
+    validation: (PassesResult, RootContainer, RiddlParserInput, Messages) => Assertion
+  ): Assertion = {
+    parseValidateAndThen[Assertion](rpi,commonOptions, shouldFailOnErrors) {
+      (passesResult: PassesResult, root: RootContainer, rpi: RiddlParserInput, messages: Messages) =>
+        passesResult.root.inputs mustNot be(empty)
+        validation(passesResult, root, rpi, messages)
+    }
+  }
+
   private def defaultFail(msgs: Messages): Assertion = {
     fail(msgs.map(_.format).mkString("\n"))
   }

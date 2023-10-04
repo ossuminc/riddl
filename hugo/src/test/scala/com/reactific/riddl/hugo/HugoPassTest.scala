@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.translator.hugo
+package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.CommandOptions
 import com.reactific.riddl.commands.CommandPlugin

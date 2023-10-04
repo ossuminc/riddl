@@ -1,4 +1,5 @@
-package com.reactific.riddl.translator.hugo
+package com.reactific.riddl.hugo
+
 import com.reactific.riddl.testkit.RunCommandSpecBase
 
 class HugoCommandTest extends RunCommandSpecBase {
