@@ -422,32 +422,47 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
-  private val keywords = Terminals.definition_keywords.map(s => s + "|")
-  private val pathIdRegex = s"(?<kind>$keywords) (?<path>\\w+(\\.\\w+)*)".r
-  private def substituteIn(lineToReplace: String): String = {
-    pathIdRegex.findAllMatchIn(lineToReplace).toSeq.reverse.foldLeft(lineToReplace) { case (line, rMatch) =>
-      val kind = rMatch.group("kind")
-      val pathId = rMatch.group("path")
+  // This substitutions domain contains context referenced
+
+  private val keywords: String = Terminals.definition_keywords.mkString("(", "|", ")")
+  private val pathIdRegex = s" ($keywords) (\\w+(\\.\\w+)*)".r
+  private def substituteIn(lineToReplace: String, parents: Seq[Definition]): String = {
+
+    val matches = pathIdRegex.findAllMatchIn(lineToReplace).toSeq.reverse
+    matches.foldLeft(lineToReplace) { case (line, rMatch) =>
+      val kind = rMatch.group(1)
+      val pathId = rMatch.group(3)
+
+      def doSub(line: String, definition: Definition, isAmbiguous: Boolean = false): String = {
+        val docLink = state.makeDocLink(definition)
+        val substitution =
+          if isAmbiguous then s"($kind $pathId (ambiguous))[$docLink]"
+          else s" ($kind $pathId)[$docLink]"
+        line.substring(0, rMatch.start) + substitution + line.substring(rMatch.end)
+      }
+
       state.refMap.definitionOf[Definition](pathId) match {
-        case Some(definition) =>
-          val docLink = state.makeDocLink(definition)
-          val substitution = s"($kind $pathId)[$docLink]"
-          line.substring(0, rMatch.start) + substitution + line.substring(rMatch.end)
+        case Some(definition) => doSub(line, definition)
         case None =>
-          line
+          val names = pathId.split('.').toSeq
+          state.symbolTable.lookupSymbol[Definition](names) match
+            case Nil => line
+            case ::((head, _), Nil) => doSub(line, head)
+            case ::((head, _), next) => doSub(line, head, isAmbiguous = true)
       }
     }
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
-  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
+  def emitDescription(d: Option[Description], forDefinition: Definition, level: Int = 2): this.type = {
     d match {
       case None => this
       case Some(desc) =>
         heading("Description", level)
+        val parents = forDefinition +: state.symbolTable.parentsOf(forDefinition)
         val substitutedDescription: Seq[String] = for {
           line <- desc.lines.map(_.s)
-          newLine = substituteIn(line)
+          newLine = substituteIn(line, parents)
         } yield {
           newLine
         }
@@ -470,7 +485,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     level: Int = 2
   ): this.type = {
     emitBriefly(definition, parents, level)
-    emitDescription(definition.description, level)
+    emitDescription(definition.description, definition, level)
   }
 
   private def emitShortDefDoc(
@@ -743,7 +758,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       invariants.foreach { invariant =>
         h3(invariant.id.format)
         list(invariant.condition.map(_.format).toSeq)
-        emitDescription(invariant.description, 4)
+        emitDescription(invariant.description, invariant, 4)
       }
     }
     this
@@ -857,7 +872,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitMermaidDiagram(lines)
     emitUsage(epic)
     emitTerms(epic.terms)
-    emitDescription(epic.description)
+    emitDescription(epic.description, epic)
   }
 
   def emitUseCase(uc: UseCase, parents: Seq[Definition]): this.type = {
