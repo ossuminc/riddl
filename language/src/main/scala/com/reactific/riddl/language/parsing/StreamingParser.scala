@@ -127,13 +127,14 @@ private[parsing] trait StreamingParser {
         streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
         close ~ briefly ~ description
     )./.map { case (loc, id, authors, options, definitions, brief, description) =>
+      val shape = keywordToKind(keyword, loc)
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val shape = keywordToKind(keyword, loc)
+      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val types = mapTo[Type](groups.get(classOf[Type]))
       val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[StreamletDefinition]](groups.get(classOf[Include[StreamletDefinition]]))
@@ -146,6 +147,7 @@ private[parsing] trait StreamingParser {
         handlers,
         functions,
         constants,
+        invariants,
         types,
         includes,
         authors,

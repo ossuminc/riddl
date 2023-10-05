@@ -12,17 +12,17 @@ case class CommonOptions(
   verbose: Boolean = false,
   dryRun: Boolean = false,
   quiet: Boolean = false,
-  // FIXME: Add this and its reader, etc: showInfoMessages: Boolean = true,
-  // TODO: Add a "maxParallelParsing" option to limit parallel included file parsing (not implemented yet)
   showWarnings: Boolean = true,
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
   showUsageWarnings: Boolean = true,
+  showInfoMessages: Boolean = true,
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
   sortMessagesByLocation: Boolean = false,
   groupMessagesByKind: Boolean = true,
-  noANSIMessages: Boolean = false
+  noANSIMessages: Boolean = false,
+  maxParallelParsing: Int = 4
 )
 
 object CommonOptions {

@@ -252,5 +252,4 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
       ).!
     )
   }
-
 }

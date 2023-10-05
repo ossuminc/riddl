@@ -19,11 +19,12 @@ private[parsing] trait AdaptorParser {
     with StreamingParser
     with StatementParser
     with ReferenceParser
-    with TypeParser =>
+    with TypeParser
+    with CommonParser =>
 
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
-    options[u, AdaptorOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) => AdaptorTechnologyOption(loc, args)
+    options[u, AdaptorOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
+      AdaptorTechnologyOption(loc, args)
     }
   }
 
@@ -34,12 +35,11 @@ private[parsing] trait AdaptorParser {
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
     P(
       (handler(StatementsSet.AdaptorStatements) | function | inlet |
-        outlet | adaptorInclude | term | constant
-      )./.rep(1)
+        outlet | adaptorInclude | term | constant)./.rep(1)
     )
   }
 
-  private def adaptorBody[u:P]: P[Seq[AdaptorDefinition]] = {
+  private def adaptorBody[u: P]: P[Seq[AdaptorDefinition]] = {
     undefined(Seq.empty[AdaptorDefinition])./ | adaptorDefinitions./
   }
 
@@ -62,12 +62,12 @@ private[parsing] trait AdaptorParser {
       case (
             loc,
             id,
-            authorRefs,
-            dir,
-            cref,
+            authors,
+            direction,
+            context,
             options,
             defs,
-            briefly,
+            brief,
             description
           ) =>
         val groups = defs.groupBy(_.getClass)
@@ -83,22 +83,24 @@ private[parsing] trait AdaptorParser {
         val types = mapTo[Type](groups.get(classOf[Outlet]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val constants = mapTo[Constant](groups.get(classOf[Constant]))
+        val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         Adaptor(
           loc,
           id,
-          dir,
-          cref,
+          direction,
+          context,
           handlers,
           inlets,
           outlets,
           types,
           constants,
           functions,
+          invariants,
           includes,
-          authorRefs,
+          authors,
           options,
           terms,
-          briefly,
+          brief,
           description
         )
     }

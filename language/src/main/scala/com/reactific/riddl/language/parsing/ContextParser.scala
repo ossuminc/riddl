@@ -72,10 +72,11 @@ private[parsing] trait ContextParser {
     P(
       location ~ Keywords.context ~/ identifier ~ authorRefs ~ is ~ open ~
         contextOptions ~ contextBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, authorRefs, options, definitions, briefly, desc) =>
+    ).map { case (loc, id, authors, options, definitions, brief, description) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
+      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
       val entities = mapTo[Entity](groups.get(classOf[Entity]))
       val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
@@ -106,6 +107,7 @@ private[parsing] trait ContextParser {
         streamlets,
         functions,
         terms,
+        invariants,
         includes,
         handlers,
         projectors,
@@ -114,9 +116,9 @@ private[parsing] trait ContextParser {
         outlets,
         connections,
         replicas,
-        authorRefs,
-        briefly,
-        desc
+        authors,
+        brief,
+        description
       )
     }
   }

@@ -53,8 +53,7 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
     options.outputRoot.getFileName.toString.nonEmpty,
     "Output path is empty"
   )
-  if options.inputFile.nonEmpty then
-    makeDirectoryStructure(options.inputFile, state.logger, options, commonOptions)
+  if options.inputFile.nonEmpty then makeDirectoryStructure(options.inputFile, state.logger, options, commonOptions)
 
   val root: RootContainer = input.root
 
@@ -66,29 +65,32 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
     definition match {
-      case f: Field      => state.addToGlossary(f, stack)
-      case i: Invariant  => state.addToGlossary(i, stack)
-      case e: Enumerator => state.addToGlossary(e, stack)
-      case ss: SagaStep  => state.addToGlossary(ss, stack)
-      case t: Term       => state.addToGlossary(t, stack)
-      case _: Inlet | _: Outlet | _: Author | _: OnMessageClause | _: OnOtherClause | _: OnInitClause |
-          _: OnTerminationClause | _: Include[Definition] @unchecked | _: RootContainer =>
+      case f: Field       => state.addToGlossary(f, stack)
+      case m: Method      => state.addToGlossary(m, stack)
+      case i: Invariant   => state.addToGlossary(i, stack)
+      case e: Enumerator  => state.addToGlossary(e, stack)
+      case a: Author      => state.addToGlossary(a, stack)
+      case ss: SagaStep   => state.addToGlossary(ss, stack)
+      case c: Constant    => state.addToGlossary(c, stack)
+      case t: Term        => state.addToGlossary(t, stack)
+      case i: Interaction => state.addToGlossary(i, stack)
+      case _: OnMessageClause | _: OnOtherClause | _: OnInitClause | _: OnTerminationClause |
+          _: Include[Definition] @unchecked =>
       // All these cases do not generate a file as their content contributes
-      // to the content of their parent container
-      case leaf: LeafDefinition =>
-        // These are leaf nodes, they get their own file or other special
-        // handling.
-        leaf match {
-          // handled by definition that contains the term
-          case c: Connector =>
-            val (mkd, parents) = setUpLeaf(leaf, state, stack)
-            mkd.emitConnection(c, parents)
-            state.addToGlossary(c, stack)
-          case sa: User       => state.addToGlossary(sa, stack)
-          case i: Interaction => state.addToGlossary(i, stack)
-          case unknown =>
-            require(requirement = false, s"Failed to handle Leaf: $unknown")
-        }
+      // to the content of their parent container so we don't do anything here
+      case c: Connector =>
+        val (mkd, parents) = setUpLeaf(c, state, stack)
+        mkd.emitConnector(c, parents)
+        state.addToGlossary(c, stack)
+      case u: User =>
+        val (mkd, parents) = setUpLeaf(u, state, stack)
+        mkd.emitUser(u, parents)
+        state.addToGlossary(u, stack)
+      case r: Replica =>
+        val (mkd, parents) = setUpLeaf(r, state, stack)
+        val parStrings = state.makeParents(stack)
+        mkd.emitReplica(r, stack, parStrings)
+        state.addToGlossary(r, stack)
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.
@@ -106,28 +108,28 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
                 mkd.emitState(s, typ.fields, stack)
               case Some(_) =>
                 mkd.emitState(s, Seq.empty[Field], stack)
-              case _ =>
-                require(false, "State aggregate not resolved")
+              case None =>
+                mkd.emitState(s, Seq.empty[Field], stack)
             }
-          case h: Handler    => mkd.emitHandler(h, parents)
+          case h: Handler => mkd.emitHandler(h, parents)
+          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause =>
+          // These are all handled in emitHandler
           case f: Function   => mkd.emitFunction(f, parents)
           case e: Entity     => mkd.emitEntity(e, parents)
           case c: Context    => mkd.emitContext(c, stack)
           case d: Domain     => mkd.emitDomain(d, parents)
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
-          case p: Projector  => mkd.emitProjection(p, parents)
-          case _: Repository => // TODO: mkd.emitRepository(r, parents)
+          case p: Projector  => mkd.emitProjector(p, parents)
+          case r: Repository => mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
-          case s: Epic       => mkd.emitEpic(s, stack)
+          case e: Epic       => mkd.emitEpic(e, stack)
           case uc: UseCase   => mkd.emitUseCase(uc, stack)
-          case unknown =>
-            require(
-              requirement = false,
-              s"Failed to handle Definition: $unknown"
-            )
-            state
-
+          case _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
+              _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
+              _: Include[Definition] @unchecked =>
+          // All these are handled above in the outer match statement, and within their
+          // respective containers
         }
         state.addToGlossary(container, stack)
     }

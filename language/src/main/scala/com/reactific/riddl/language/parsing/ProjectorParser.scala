@@ -64,7 +64,7 @@ private[parsing] trait ProjectorParser {
             authors,
             options,
             definitions,
-            briefly,
+            brief,
             description
           ) =>
         val groups = definitions.groupBy(_.getClass)
@@ -72,15 +72,15 @@ private[parsing] trait ProjectorParser {
         val handlers = mapTo[Handler](groups.get(classOf[Handler]))
         val functions = mapTo[Function](groups.get(classOf[Function]))
         val constants = mapTo[Constant](groups.get(classOf[Constant]))
+        val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
         val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-        val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+        val terms = mapTo[Term](groups.get(classOf[Term]))
         val includes = mapTo[Include[ProjectorDefinition]](
           groups.get(
             classOf[Include[ProjectorDefinition]]
           )
         )
-        val terms = mapTo[Term](groups.get(classOf[Term]))
         Projector(
           loc,
           id,
@@ -95,7 +95,7 @@ private[parsing] trait ProjectorParser {
           functions,
           invariants,
           terms,
-          briefly,
+          brief,
           description
         )
     }

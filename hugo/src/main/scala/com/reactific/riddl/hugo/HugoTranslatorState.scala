@@ -8,6 +8,7 @@ package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.TranslatingState
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.Messages.Accumulator
 import com.reactific.riddl.language.{AST, CommonOptions}
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.passes.PassesResult
@@ -38,8 +39,8 @@ case class HugoTranslatorState(
 
   final val symbolTable: SymbolsOutput = result.symbols
   final val refMap: ReferenceMap = result.refMap
-
   final val root: RootContainer = result.root // base class compliance
+  final val messages: Accumulator = Accumulator(commonOptions)
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>

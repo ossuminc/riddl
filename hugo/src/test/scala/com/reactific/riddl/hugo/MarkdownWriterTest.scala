@@ -76,6 +76,10 @@ class MarkdownWriterTest extends HugoTestBase {
               |
               |## *Uses Nothing*
               |
+              |## *Author*
+              |* _Name_: Reid Spencer
+              |* _Email_: reid@reactific.com
+              |
               |## *Textual Domain Index*
               |{{< toc-tree >}}
               |""".stripMargin

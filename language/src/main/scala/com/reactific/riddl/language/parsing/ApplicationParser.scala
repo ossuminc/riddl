@@ -116,10 +116,11 @@ private[parsing] trait ApplicationParser {
       location ~ Keywords.application ~/ identifier ~ authorRefs ~ is ~ open ~
         (emptyApplication | (applicationOptions ~ applicationDefinitions)) ~
         close ~ briefly ~ description
-    ).map { case (loc, id, authorRefs, (options, content), brief, desc) =>
+    ).map { case (loc, id, authors, (options, content), brief, description) =>
       val groups = content.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
+      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val grps = mapTo[Group](groups.get(classOf[Group]))
       val handlers = mapTo[Handler](groups.get(classOf[Group]))
       val functions = mapTo[Function](groups.get(classOf[Function]))
@@ -138,16 +139,17 @@ private[parsing] trait ApplicationParser {
         options,
         types,
         constants,
+        invariants,
         grps,
         handlers,
         inlets,
         outlets,
         functions,
-        authorRefs,
+        authors,
         terms,
         includes,
         brief,
-        desc
+        description
       )
 
     }
