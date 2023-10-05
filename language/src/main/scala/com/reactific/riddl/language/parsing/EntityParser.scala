@@ -91,7 +91,7 @@ private[parsing] trait EntityParser {
 
   private def entityBody[u: P]: P[Seq[EntityDefinition]] = {
     P(
-      undefined(Seq.empty[EntityDefinition])./ | entityDefinitions./ 
+      undefined(Seq.empty[EntityDefinition])./ | entityDefinitions./
     )
   }
 
@@ -99,7 +99,7 @@ private[parsing] trait EntityParser {
     P(
       location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
         entityOptions ~ entityBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, authorRefs, options, entityDefs, briefly, desc) =>
+    ).map { case (loc, id, authors, options, entityDefs, brief, description) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -109,12 +109,12 @@ private[parsing] trait EntityParser {
       val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
       val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
       val includes = mapTo[Include[EntityDefinition]](
         groups.get(
           classOf[Include[EntityDefinition]]
         )
       )
-      val terms = mapTo[Term](groups.get(classOf[Term]))
       Entity(
         loc,
         id,
@@ -128,10 +128,10 @@ private[parsing] trait EntityParser {
         inlets,
         outlets,
         includes,
-        authorRefs,
+        authors,
         terms,
-        briefly,
-        desc
+        brief,
+        description
       )
     }
   }

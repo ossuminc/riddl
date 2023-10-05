@@ -297,20 +297,22 @@ object Messages {
 
     def add(msg: Message): this.type = {
       msg.kind match {
+        case Warning => 
+          if commonOptions.showWarnings then
+            msgs.append(msg)
         case StyleWarning =>
-          if commonOptions.showStyleWarnings then {
+          if commonOptions.showStyleWarnings && commonOptions.showWarnings then
             msgs.append(msg)
-          }
         case MissingWarning =>
-          if commonOptions.showMissingWarnings then {
+          if commonOptions.showMissingWarnings && commonOptions.showWarnings then
             msgs.append(msg)
-          }
         case UsageWarning =>
-          if commonOptions.showUsageWarnings then {
+          if commonOptions.showUsageWarnings && commonOptions.showWarnings then
             msgs.append(msg)
-          }
-        // FIXME: filter out Info messages if commonOptions.showInfoMssages is false
-        case _ => msgs.append(msg)
+        case Info =>
+          if commonOptions.showInfoMessages then
+            msgs.append(msg)
+        case Error | SevereError => msgs.append(msg)
       }
       this
     }

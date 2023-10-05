@@ -12,9 +12,7 @@ class ReportedIssuesTest extends ValidatingTest {
 
   val options: CommonOptions = CommonOptions(
     showTimes = true,
-    showWarnings = false,
-    showMissingWarnings = false,
-    showStyleWarnings = false
+    showWarnings = false
   )
 
   def checkOne(fileName: String)(checkResult: Either[Messages.Messages, PassesResult] => Assertion): Assertion = {
@@ -26,12 +24,7 @@ class ReportedIssuesTest extends ValidatingTest {
   def doOne(fileName: String): Assertion = {
     parseAndValidateFile(
       Path.of(dir, fileName).toFile,
-      CommonOptions(
-        showTimes = true,
-        showWarnings = false,
-        showMissingWarnings = false,
-        showStyleWarnings = false
-      )
+      options
     )
     succeed
   }
@@ -48,7 +41,7 @@ class ReportedIssuesTest extends ValidatingTest {
           f contains ("Path 'FooExamplexxxx.garbage' was not resolved")
           f contains ("Path 'Examplexxxx.Foo' was not resolved,")
           val usage = messages.justUsage
-          usage.length must be(5)
+          usage.length must be(0)
           val u = usage.map(_.format)
           u contains ("Entity 'FooEntity' is unused")
           u contains ("Entity 'OtherEntity' is unused:")
@@ -59,12 +52,13 @@ class ReportedIssuesTest extends ValidatingTest {
           succeed
         case Right(result) =>
           val messages = result.messages
-          val errors = messages.filter(_.kind.isError)
+          val errors = messages.justErrors
           if errors.isEmpty then
             info(messages.format)
-            fail("Errors were expected")
-          else errors mustBe empty
-          fail("Expected errors")
+            fail("Expected 3 errors")
+          else
+            errors mustBe empty
+            fail("Expected 3 errors")
       }
     }
     "435" in {

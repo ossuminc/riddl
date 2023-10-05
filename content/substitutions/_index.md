@@ -19,10 +19,10 @@ geekdocFilePath: no-such-file
  This substitutions domain contains (context substitutions.referenced)[/substitutions/referenced]
  which maps to https://www.merriam-webster.com/
 
-## *Types*
-
 ## *Contexts*
 * [referenced](referenced)
+
+## *Types*
 
 ## *Used By None*
 

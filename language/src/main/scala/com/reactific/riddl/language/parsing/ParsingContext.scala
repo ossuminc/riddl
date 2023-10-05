@@ -68,16 +68,16 @@ trait ParsingContext {
   def doInclude[T <: Definition](
     str: LiteralString
   )(rule: P[?] => P[Seq[T]]): Include[T] = {
+    // TODO: implement parallel parsing at include points and use the
+    // TODO: commonOption.maxParallelParsing to limit parallelism
     val source = if str.s.startsWith("http") then {
       val url = java.net.URI(str.s).toURL
       push(url)
       str.s
     } else {
       val name = {
-        if str.s.endsWith(".riddl") then
-          str.s
-        else
-          str.s + ".riddl"
+        if str.s.endsWith(".riddl") then str.s
+        else str.s + ".riddl"
       }
       val path = current.root.toPath.resolve(name)
       push(path)

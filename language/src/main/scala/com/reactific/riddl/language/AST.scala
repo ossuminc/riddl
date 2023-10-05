@@ -1737,14 +1737,12 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   sealed trait Processor[OPT <: OptionValue, DEF <: Definition] extends VitalDefinition[OPT, DEF] with WithTypes {
 
-    def handlers: Seq[Handler]
-
-    def functions: Seq[Function]
-
+    def types: Seq[Type]
     def constants: Seq[Constant]
-
+    def functions: Seq[Function]
+    def invariants: Seq[Invariant]
+    def handlers: Seq[Handler]
     def inlets: Seq[Inlet]
-
     def outlets: Seq[Outlet]
   }
 
@@ -2096,8 +2094,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
-      with EntityDefinition
-      with ProjectorDefinition
+      with ProcessorDefinition
       with StateDefinition {
     override def isEmpty: Boolean = condition.isEmpty
 
@@ -2424,6 +2421,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
     functions: Seq[Function] = Seq.empty[Function],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include[AdaptorDefinition]] = Seq
       .empty[Include[AdaptorDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
@@ -2483,6 +2481,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     functions: Seq[Function] = Seq.empty[Function],
     constants: Seq[Constant] = Seq.empty[Constant],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include[RepositoryDefinition]] = Seq
       .empty[Include[RepositoryDefinition]],
     options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
@@ -2541,8 +2540,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     id: Identifier,
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[ProjectorOption] = Seq.empty[ProjectorOption],
-    includes: Seq[Include[ProjectorDefinition]] = Seq
-      .empty[Include[ProjectorDefinition]],
+    includes: Seq[Include[ProjectorDefinition]] = Seq.empty[Include[ProjectorDefinition]],
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
     inlets: Seq[Inlet] = Seq.empty[Inlet],
@@ -2630,6 +2628,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
     functions: Seq[Function] = Seq.empty[Function],
     terms: Seq[Term] = Seq.empty[Term],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     includes: Seq[Include[ContextDefinition]] = Seq.empty[Include[ContextDefinition]],
     handlers: Seq[Handler] = Seq.empty[Handler],
     projectors: Seq[Projector] = Seq.empty[Projector],
@@ -2823,6 +2822,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     handlers: Seq[Handler] = Seq.empty[Handler],
     functions: Seq[Function] = Seq.empty[Function],
     constants: Seq[Constant] = Seq.empty[Constant],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     types: Seq[Type] = Seq.empty[Type],
     includes: Seq[Include[StreamletDefinition]] = Seq
       .empty[Include[StreamletDefinition]],
@@ -3485,6 +3485,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     types: Seq[Type] = Seq.empty[Type],
     constants: Seq[Constant] = Seq.empty[Constant],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
     groups: Seq[Group] = Seq.empty[Group],
     handlers: Seq[Handler] = Seq.empty[Handler],
     inlets: Seq[Inlet] = Seq.empty[Inlet],

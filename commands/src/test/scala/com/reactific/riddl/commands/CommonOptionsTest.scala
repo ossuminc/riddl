@@ -12,15 +12,17 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.nio.file.Path
 
 class CommonOptionsTest extends AnyWordSpec with Matchers {
-  "RiddlOptions" should {
+  "CommonOptions" should {
     "handle --suppress-warnings options" in {
       val args = Array("--suppress-warnings")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
-        case Some(options) =>
-          options.showWarnings mustBe false
-          options.showStyleWarnings mustBe false
-          options.showMissingWarnings mustBe false
+        case Some(config) =>
+          config.showWarnings mustBe false
+          config.showStyleWarnings mustBe false
+          config.showMissingWarnings mustBe false
+          config.showUsageWarnings mustBe false
+          config.showInfoMessages mustBe true
         case None => fail("Failed to parse options")
       }
     }
@@ -33,6 +35,8 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
           config.showWarnings mustBe true
           config.showStyleWarnings mustBe false
           config.showMissingWarnings mustBe true
+          config.showUsageWarnings mustBe true
+          config.showInfoMessages mustBe true
         case None => fail("Failed to parse options")
       }
     }
@@ -45,9 +49,110 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
           config.showWarnings mustBe true
           config.showStyleWarnings mustBe true
           config.showMissingWarnings mustBe false
+          config.showUsageWarnings mustBe true
+          config.showInfoMessages mustBe true
         case None => fail("Failed to parse options")
       }
     }
+
+    "handle --suppress-usage-warnings options" in {
+      val args = Array("--suppress-usage-warnings")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe true
+          config.showStyleWarnings mustBe true
+          config.showMissingWarnings mustBe true
+          config.showUsageWarnings mustBe false
+          config.showInfoMessages mustBe true
+        case None => fail("Failed to parse options")
+      }
+    }
+
+    "handle --suppress-info-messages options" in {
+      val args = Array("--suppress-info-messages")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe true
+          config.showStyleWarnings mustBe true
+          config.showMissingWarnings mustBe true
+          config.showUsageWarnings mustBe true
+          config.showInfoMessages mustBe false
+        case None => fail("Failed to parse options")
+      }
+    }
+
+    "handle --hide-warnings options" in {
+      val args = Array("--hide-warnings")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe false
+          config.showStyleWarnings mustBe false
+          config.showMissingWarnings mustBe false
+          config.showUsageWarnings mustBe false
+          config.showInfoMessages mustBe true
+        case None => fail("Failed to parse options")
+      }
+    }
+
+    "handle --hide-style-warnings options" in {
+      val args = Array("--hide-style-warnings")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe true
+          config.showStyleWarnings mustBe false
+          config.showMissingWarnings mustBe true
+          config.showUsageWarnings mustBe true
+          config.showInfoMessages mustBe true
+        case None => fail("Failed to parse options")
+      }
+    }
+
+    "handle --hide-missing-warnings options" in {
+      val args = Array("--hide-missing-warnings")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe true
+          config.showStyleWarnings mustBe true
+          config.showMissingWarnings mustBe false
+          config.showUsageWarnings mustBe true
+          config.showInfoMessages mustBe true
+        case None => fail("Failed to parse options")
+      }
+    }
+
+    "handle --hide-usage-warnings options" in {
+      val args = Array("--hide-usage-warnings")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe true
+          config.showStyleWarnings mustBe true
+          config.showMissingWarnings mustBe true
+          config.showUsageWarnings mustBe false
+          config.showInfoMessages mustBe true
+        case None => fail("Failed to parse options")
+      }
+    }
+  
+    "handle --hide-info-messages options" in {
+      val args = Array("--hide-info-messages")
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
+      common match {
+        case Some(config) =>
+          config.showWarnings mustBe true
+          config.showStyleWarnings mustBe true
+          config.showMissingWarnings mustBe true
+          config.showUsageWarnings mustBe true
+          config.showInfoMessages mustBe false
+        case None => fail("Failed to parse options")
+      }
+    }
+
 
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")

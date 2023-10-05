@@ -66,29 +66,57 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(noANSIMessages = true))
         .text("Do not print messages with ANSI formatting"),
-      opt [Unit] ('w', name = "suppress-warnings")
-          .optional()
-          .action((_, c) =>
-            c.copy(
-              showWarnings = false,
-              showMissingWarnings = false,
-              showStyleWarnings = false,
-              showUsageWarnings = false
-            )
-          )
-          .text("Suppress all warning messages so only errors are shown"),
+      opt[Unit]('w', name = "suppress-warnings")
+        .optional()
+        .action((_, c) =>
+          c.copy(
+            showWarnings = false,
+            showMissingWarnings = false,
+            showStyleWarnings = false,
+            showUsageWarnings = false
+          ))
+        .text("Suppress all warning messages so only errors are shown"),
       opt[Unit]('m', name = "suppress-missing-warnings")
         .optional()
         .action((_, c) => c.copy(showMissingWarnings = false))
-        .text("Show warnings about things that are missing"),
+        .text("Suppress warnings about things that are missing"),
       opt[Unit]('s', name = "suppress-style-warnings")
         .optional()
         .action((_, c) => c.copy(showStyleWarnings = false))
-        .text("Show warnings about questionable input style. "),
-      opt[Unit]('u', name = "suppress-unused-warnings")
+        .text("Suppress warnings about questionable input style. "),
+      opt[Unit]('u', name = "suppress-usage-warnings")
         .optional()
         .action((_, c) => c.copy(showUsageWarnings = false))
-        .text("Show warnings about questionable input style. "),
+        .text("Suppress warnings about usage of definitions. "),
+      opt[Unit](name = "suppress-info-messages")
+        .optional()
+        .action((_, c) => c.copy(showInfoMessages = false))
+        .text("Suppress information output"),
+      opt[Unit]('w', name = "hide-warnings")
+        .optional()
+        .action((_, c) =>
+          c.copy(
+            showWarnings = false,
+            showMissingWarnings = false,
+            showStyleWarnings = false,
+            showUsageWarnings = false
+          )),
+      opt[Unit]('m', name = "hide-missing-warnings")
+        .optional()
+        .action((_, c) => c.copy(showMissingWarnings = false))
+        .text("Hide warnings about things that are missing"),
+      opt[Unit]('s', name = "hide-style-warnings")
+        .optional()
+        .action((_, c) => c.copy(showStyleWarnings = false))
+        .text("Hide warnings about questionable input style. "),
+      opt[Unit]('u', name = "hide-usage-warnings")
+        .optional()
+        .action((_, c) => c.copy(showUsageWarnings = false))
+        .text("Hide warnings about usage of definitions. "),
+      opt[Unit](name = "hide-info-messages")
+        .optional()
+        .action((_, c) => c.copy(showInfoMessages = false))
+        .text("Hide information output"),
       opt[File]('P', name = "plugins-dir")
         .optional()
         .action((file, c) => c.copy(pluginsDir = Some(file.toPath)))
@@ -98,6 +126,12 @@ object CommonOptionsHelper {
         .action((_, c) => c.copy(sortMessagesByLocation = true))
         .text(
           "Print all messages sorted by the file name and line number in which they occur."
+        ),
+      opt[Int]('x', name = "max-parallel-processing")
+        .optional()
+        .action((v,c) => c.copy(maxParallelParsing = v))
+        .text(
+          "Controls the maximum number of include files that will be parsed in parallel"
         )
     )
   }

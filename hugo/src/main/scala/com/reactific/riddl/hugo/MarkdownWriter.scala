@@ -578,7 +578,16 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     }
   }
 
-  def emitTypeExpression(
+  private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition], level: Int = 3): this.type = {
+    val data = agg.contents.map { (f: AggregateDefinition) =>
+      val pars = f +: parents
+      (f.id.format, resolveTypeExpression(f.typeEx, pars))
+    }
+    list(data)
+    this
+  }
+
+  private def emitTypeExpression(
     typeEx: TypeExpression,
     parents: Seq[Definition],
     headLevel: Int = 2
@@ -601,18 +610,10 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
         list(data)
       case agg: Aggregation =>
         heading("Aggregation Of", headLevel)
-        val data = agg.fields.map { (f: Field) =>
-          val pars = f +: parents
-          (f.id.format, resolveTypeExpression(f.typeEx, pars))
-        }
-        list("Fields", data, headLevel + 1)
+        emitAggregateMembers(agg, parents, headLevel + 1)
       case mt: AggregateUseCaseTypeExpression =>
-        h2(s"${mt.usecase.format} Of")
-        val data = mt.fields.map { (f: Field) =>
-          val pars = f +: parents
-          (f.id.format, resolveTypeExpression(f.typeEx, pars))
-        }
-        list("Fields", data, headLevel + 1)
+        heading(s"${mt.usecase.format} Of", headLevel)
+        emitAggregateMembers(mt, parents, headLevel + 1)
       case map: Mapping =>
         heading("Mapping Of", headLevel)
         val from = resolveTypeExpression(map.from, parents)
@@ -662,6 +663,33 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
+  def emitVitalDefinitionTail[OV <: OptionValue,DEF <: Definition](vd: VitalDefinition[OV,DEF]): this.type = {
+    emitOptions(vd.options)
+    emitTerms(vd.terms)
+    emitUsage(vd)
+    if vd.authors.nonEmpty then
+      toc("Authors", vd.authors.map(_.format))
+    this
+  }
+
+  def emitProcessorToc[OV <: OptionValue, DEF <: Definition](processor: Processor[OV,DEF]): this.type = {
+    if processor.types.nonEmpty then
+      emitTypesToc(processor)
+    if processor.constants.nonEmpty then
+      toc("Constants", mkTocSeq(processor.constants))
+    if processor.functions.nonEmpty then
+      toc("Functions", mkTocSeq(processor.functions))
+    if processor.invariants.nonEmpty then
+      toc("Invariants", mkTocSeq(processor.invariants))
+    if processor.handlers.nonEmpty then
+      toc("Handlers", mkTocSeq(processor.handlers))
+    if processor.inlets.nonEmpty then
+      toc("Inlets", mkTocSeq(processor.inlets))
+    if processor.outlets.nonEmpty then
+      toc("Outlets", mkTocSeq(processor.outlets))
+    emitVitalDefinitionTail[OV, DEF](processor)
+  }
+
   def emitAuthorInfo(authors: Seq[Author], level: Int = 2): this.type = {
     for a <- authors do {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
@@ -676,12 +704,13 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     containerHead(domain, "Domain")
     emitDefDoc(domain, parents)
     toc("Subdomains", mkTocSeq(domain.domains))
-    emitTypesToc(domain)
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Applications", mkTocSeq(domain.applications))
     toc("Epics", mkTocSeq(domain.epics))
+    emitTypesToc(domain)
     emitUsage(domain)
     emitTerms(domain.terms)
+    emitAuthorInfo(domain.authorDefs)
     emitIndex("Domain", domain, parents)
     this
   }
@@ -726,15 +755,13 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitContextMap(context, stack)
     emitOptions(context.options)
     emitTypesToc(context)
-    toc("Functions", mkTocSeq(context.functions))
-    toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Entities", mkTocSeq(context.entities))
+    toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Sagas", mkTocSeq(context.sagas))
-    // TODO: generate a diagram for the processors and pipes
     toc("Streamlets", mkTocSeq(context.streamlets))
     list("Connections", mkTocSeq(context.connections))
-    emitUsage(context)
-    emitTerms(context.terms)
+    emitProcessorToc(context)
+    // TODO: generate a diagram for the processors and pipes
     emitIndex("Context", context, parents)
     this
   }
@@ -776,7 +803,6 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       }
       emitShortDefDoc(clause)
       codeBlock("Statements", clause.statements, 4)
-      // emitExamples(clause.examples, 4)
     }
     emitUsage(handler)
     this
@@ -875,6 +901,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitDescription(epic.description, epic)
   }
 
+  def emitUser(u: User, parents: Seq[String]): this.type = {
+    leafHead(u, weight = 20)
+    p(s"${u.identify} is a ${u.is_a.s}.")
+    emitDefDoc(u, parents)
+  }
+
   def emitUseCase(uc: UseCase, parents: Seq[Definition]): this.type = {
     leafHead(uc, weight = 20)
     val parList = state.makeParents(parents)
@@ -882,7 +914,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     // TODO: Finish emitting a UseCase page
   }
 
-  def emitConnection(conn: Connector, parents: Seq[String]): this.type = {
+  def emitConnector(conn: Connector, parents: Seq[String]): this.type = {
     leafHead(conn, weight = 20)
     emitDefDoc(conn, parents)
     if conn.from.nonEmpty && conn.to.nonEmpty then {
@@ -918,27 +950,41 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitIndex("Processor", proc, parList)
   }
 
-  def emitProjection(
-    projection: Projector,
+  def emitProjector(
+    projector: Projector,
     parents: Seq[String]
   ): this.type = {
-    containerHead(projection, "Projector")
-    emitDefDoc(projection, parents)
-    if projection.types.nonEmpty then {
-      emitTypesToc(projection)
-    }
-    listOf("Handlers", projection.handlers)
-    emitUsage(projection)
-    emitTerms(projection.terms)
+    containerHead(projector, "Projector")
+    emitDefDoc(projector, parents)
+    emitProcessorToc[ProjectorOption,ProjectorDefinition](projector)
+    emitIndex("Projector", projector, parents)
+  }
+
+  def emitRepository(
+    repository: Repository,
+    parents: Seq[String]
+  ): this.type = {
+    containerHead(repository, "Repository")
+    emitDefDoc(repository, parents)
+    emitProcessorToc[RepositoryOption,RepositoryDefinition](repository )
+    emitIndex("Repository", repository, parents)
+  }
+
+  def emitReplica(
+    replica: Replica,
+    parents: Seq[Definition],
+    parStrings: Seq[String]
+  ): this.type = {
+    containerHead(replica, "Replica")
+    emitTypeExpression(replica.typeExp, parents, 3)
+    emitDefDoc(replica, parStrings)
   }
 
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)
     p(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
-    toc("Handlers", mkTocSeq(adaptor.handlers))
-    emitUsage(adaptor)
-    emitTerms(adaptor.terms)
+    emitProcessorToc[AdaptorOption,AdaptorDefinition](adaptor)
     emitIndex("Adaptor", adaptor, parents)
   }
 
