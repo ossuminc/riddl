@@ -7,7 +7,7 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.TranslatingState
-import com.reactific.riddl.diagrams.mermaid.MermaidDiagramsPlugin
+import com.reactific.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, SequenceDiagramSupport}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Accumulator
 import com.reactific.riddl.language.{AST, CommonOptions}
@@ -32,12 +32,12 @@ import java.nio.file.Path
   */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class HugoTranslatorState(
-  result: PassesResult,
+  passesResult: PassesResult,
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions(),
   logger: Logger = SysLogger()
-) extends TranslatingState[MarkdownWriter] {
-
+) extends TranslatingState[MarkdownWriter] with SequenceDiagramSupport {
+  val  result: PassesResult = passesResult
   final val symbolTable: SymbolsOutput = result.symbols
   final val refMap: ReferenceMap = result.refMap
   final val root: RootContainer = result.root // base class compliance
@@ -142,6 +142,8 @@ case class HugoTranslatorState(
     val parents = makeParents(symbolTable.parentsOf(definition))
     makeDocLink(definition, parents)
   }
+
+  def makeLinkFor(definition: Definition): String = makeDocLink(definition)
 
   def makeDocAndParentsLinks(definition: Definition): String = {
     val parents = symbolTable.parentsOf(definition)

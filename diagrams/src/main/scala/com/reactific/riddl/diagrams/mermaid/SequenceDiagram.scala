@@ -36,14 +36,22 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
 
   final val indent_per_level = 4
 
-  def generate: String = {
+  def generate: Seq[String] = {
     sb.append("sequenceDiagram"); nl
     sb.append(s"${ndnt()}autonumber"); nl
     val parts: Seq[Definition] = actors.values.toSeq.sortBy(_.kind)
     makeParticipants(parts)
     generateInteractions(useCase.contents, indent_per_level)
     nl
-    sb.toString()
+    sb.toString().split('\n').toSeq
+  }
+
+  def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
+    a._2 match
+      case _: User if b._2.isInstanceOf[User]       => a._1 < b._1
+      case _: User                                  => true
+      case _: Definition if b._2.isInstanceOf[User] => false
+      case _: Definition                            => a._1 < b._1
   }
 
   private val actors: Map[String, Definition] = {
@@ -64,6 +72,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       .filterNot(_._1.isEmpty)
       .map(x => x._1 -> x._2.getOrElse(RootContainer.empty))
       .distinctBy(_._1) // reduce to the distinct ones
+      .sortWith(actorsFirst)
       .toMap
   }
 
