@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.hugo
+package com.reactific.riddl.diagrams.mermaid
 
 import com.reactific.riddl.language.AST
 import com.reactific.riddl.language.AST.*
@@ -27,13 +27,17 @@ class MermaidDiagramsPlugin {
 
   def getTechnology(definition: Definition): String = {
     val maybeStrings: Option[Seq[String]] = definition match {
-      case d: Domain => d.getOptionValue[DomainTechnologyOption]
+      case d: Domain =>
+        d.getOptionValue[DomainTechnologyOption]
           .map(list => list.map(_.s))
-      case c: Context => c.getOptionValue[ContextTechnologyOption]
+      case c: Context =>
+        c.getOptionValue[ContextTechnologyOption]
           .map(list => list.map(_.s))
-      case e: Entity => e.getOptionValue[EntityTechnologyOption]
+      case e: Entity =>
+        e.getOptionValue[EntityTechnologyOption]
           .map(list => list.map(_.s))
-      case p: Projector => p.getOptionValue[ProjectorTechnologyOption]
+      case p: Projector =>
+        p.getOptionValue[ProjectorTechnologyOption]
           .map(list => list.map(_.s))
       case _ => Option.empty[Seq[String]]
     }
@@ -45,7 +49,8 @@ class MermaidDiagramsPlugin {
       definition match {
         case r: RootContainer => r.contents
         case d: Domain        => d.domains ++ d.includes
-        case i: Include[Definition] @unchecked => i.contents
+        case i: Include[Definition] @unchecked =>
+          i.contents
             .filter(_.isInstanceOf[Domain])
         case _ => Seq.empty[Definition]
       }

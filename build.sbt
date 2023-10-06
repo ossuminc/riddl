@@ -51,11 +51,10 @@ lazy val utils = project
   .configure(C.withScala3)
   .configure(C.withCoverage(70))
   .enablePlugins(BuildInfoPlugin)
-  .configure(
-    C.withBuildInfo("https://riddl.tech", "Ossum Inc.", "com.reactific.riddl.utils", "RiddlBuildInfo", 2019))
+  .configure(C.withBuildInfo("https://riddl.tech", "Ossum Inc.", "com.reactific.riddl.utils", "RiddlBuildInfo", 2019))
   .settings(
     name := "riddl-utils",
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
 val Language: Configuration = config("language")
@@ -118,6 +117,15 @@ lazy val stats: Project = project
   .settings(name := "riddl-stats", libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
   .dependsOn(commands % "compile->compile;test->test", testkit % "test->compile")
 
+val DiagramsTrans = config("diagrams")
+lazy val diagrams: Project = project
+  .in(file("diagrams"))
+  .configure(C.withCoverage(50))
+  .configure(C.withScala3)
+  .configure(C.mavenPublish)
+  .settings(name := "riddl-diagrams", libraryDependencies ++= Dep.testing)
+  .dependsOn(language, passes, testkit % "compile->test")
+
 val Prettify = config("prettify")
 lazy val prettify = project
   .in(file("prettify"))
@@ -142,7 +150,7 @@ lazy val hugo: Project = project
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(passes % "compile->compile;test->test", commands, testkit % "test->compile", stats)
+  .dependsOn(passes % "compile->compile;test->test", commands, diagrams, testkit % "test->compile", stats)
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),

@@ -3125,7 +3125,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   sealed trait GenericInteraction extends Interaction with LeafDefinition {
     def from: Reference[Definition]
 
-    def relationship: RiddlNode
+    def relationship: LiteralString
 
     def to: Reference[Definition]
   }

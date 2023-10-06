@@ -115,8 +115,7 @@ object C {
     p.enablePlugins(WartRemover)
       .settings(
         Compile / compile / wartremoverWarnings := Warts.unsafe.filter {
-          case Wart.DefaultArguments | Wart.Any | Wart.IsInstanceOf | // would like to get rid of this
-              Wart.AsInstanceOf // would like to get rid of this
+          case Wart.DefaultArguments | Wart.Any | Wart.IsInstanceOf | Wart.AsInstanceOf // would like to get rid of this
               =>
             false
           case _ => true
