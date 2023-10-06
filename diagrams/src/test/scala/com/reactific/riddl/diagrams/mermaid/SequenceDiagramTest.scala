@@ -42,7 +42,7 @@ class SequenceDiagramTest extends ValidatingTest {
           val useCase = epic.cases.head
           val sd = SequenceDiagram(new SDS(result), useCase)
           val diagram = sd.generate
-          println(diagram)
+          println(diagram.mkString("\n"))
           diagram mustNot be(empty)
       }
     }
