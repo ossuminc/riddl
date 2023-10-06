@@ -5,7 +5,7 @@
  */
 
 package com.reactific.riddl.hugo
-
+import com.reactific.riddl.diagrams.mermaid.SequenceDiagram
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.reactific.riddl.utils.TextFileWriter
@@ -893,9 +893,9 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     list("Visualizations", epic.shownBy.map(u => s"($u)[$u]"))
     listOf("Use Cases", epic.cases)
     h2("Sequence Diagram")
-    val diagram = SequenceDiagrammer(state, epic, stack)
-    val lines = diagram.toLines
-    emitMermaidDiagram(lines)
+    // FIXME: val diagram = SequenceDiagram(state, epic,)
+    // FIXME: val lines = diagram.toLines
+    // FIXME: emitMermaidDiagram(lines)
     emitUsage(epic)
     emitTerms(epic.terms)
     emitDescription(epic.description, epic)
@@ -911,7 +911,8 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     leafHead(uc, weight = 20)
     val parList = state.makeParents(parents)
     emitDefDoc(uc, parList)
-    // TODO: Finish emitting a UseCase page
+    // TODO: Emit a sequence diagram for the steps
+
   }
 
   def emitConnector(conn: Connector, parents: Seq[String]): this.type = {

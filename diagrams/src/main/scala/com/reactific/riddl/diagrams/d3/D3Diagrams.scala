@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.hugo
+package com.reactific.riddl.diagrams.d3
 
 import com.reactific.riddl.utils.PathUtils
 
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 
 object D3Diagrams {
 

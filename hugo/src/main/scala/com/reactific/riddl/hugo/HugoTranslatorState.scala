@@ -7,6 +7,7 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.TranslatingState
+import com.reactific.riddl.diagrams.mermaid.MermaidDiagramsPlugin
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Accumulator
 import com.reactific.riddl.language.{AST, CommonOptions}
