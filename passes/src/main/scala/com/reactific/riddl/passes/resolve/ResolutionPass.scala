@@ -200,7 +200,6 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   }
 
   private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
-    // TODO: Finish implementation of resolutions for statements
     statement match {
       case ss: SetStatement =>
         resolveARef[Field](ss.field, parents)
@@ -221,11 +220,11 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
         resolveARef[Function](func, parents)
       case ReplyStatement(loc, message) =>
         resolveARef[Type](message, parents)
-      case _: ArbitraryStatement  => ()
-      case _: ErrorStatement      => ()
-      case _: ReturnStatement     => ()
-      case _: IfThenElseStatement => ()
-      case _: StopStatement       => ()
+      case _: ArbitraryStatement  => () // no references
+      case _: ErrorStatement      => () // no references
+      case _: ReturnStatement     => () // no references
+      case _: IfThenElseStatement => () // no references
+      case _: StopStatement       => () // no references
     }
   }
 
