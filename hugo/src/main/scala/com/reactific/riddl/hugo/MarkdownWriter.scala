@@ -77,7 +77,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     tbd(definition)
   }
 
-  def heading(heading: String, level: Int = 2): this.type = {
+  private def heading(heading: String, level: Int = 2): this.type = {
     level match {
       case 1 => h1(heading)
       case 2 => h2(heading)
@@ -89,7 +89,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     }
   }
 
-  def h1(heading: String): this.type = {
+  private def h1(heading: String): this.type = {
     sb.append(s"\n# ${bold(heading)}\n")
     this
   }
@@ -99,22 +99,22 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def h3(heading: String): this.type = {
+  private def h3(heading: String): this.type = {
     sb.append(s"\n### ${italic(heading)}\n")
     this
   }
 
-  def h4(heading: String): this.type = {
+  private def h4(heading: String): this.type = {
     sb.append(s"\n#### $heading\n")
     this
   }
 
-  def h5(heading: String): this.type = {
+  private def h5(heading: String): this.type = {
     sb.append(s"\n##### $heading\n")
     this
   }
 
-  def h6(heading: String): this.type = {
+  private def h6(heading: String): this.type = {
     sb.append(s"\n###### $heading\n")
     this
   }
@@ -131,7 +131,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
 
   private def mono(phrase: String): String = { s"`$phrase`" }
 
-  def listOf[T <: Definition](
+  private def listOf[T <: Definition](
     kind: String,
     items: Seq[T],
     level: Int = 2
@@ -148,7 +148,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       case None => ()
       case Some(description) =>
         val ndnt = " ".repeat(indent)
-        val listItem = { if (isListItem) then "* " else "" }
+        val listItem = { if isListItem then "* " else "" }
         sb.append(description.lines.map(line => s"$ndnt$listItem${line.s}\n"))
   }
 
@@ -165,7 +165,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
               prefix: String,
               description: String,
               sublist: Seq[String] @unchecked,
-              desc: Option[Description] @unchecked
+              _: Option[Description] @unchecked
             ) =>
           emitPair(prefix, description)
           sublist.foreach(s => sb.append(s"    * $s\n"))
@@ -207,7 +207,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def codeBlock(headline: String, items: Seq[Statement], level: Int = 2): this.type = {
+  private def codeBlock(headline: String, items: Seq[Statement], level: Int = 2): this.type = {
     if items.nonEmpty then {
       heading(headline, level)
       sb.append("```\\n")
@@ -249,7 +249,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     } else { this }
   }
 
-  def makeERDRelationship(
+  private def makeERDRelationship(
     from: String,
     to: Field,
     parents: Seq[Definition]
@@ -274,7 +274,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     } else { typeName }
   }
 
-  def emitERD(
+  private def emitERD(
     name: String,
     fields: Seq[Field],
     parents: Seq[Definition]
@@ -313,7 +313,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     )
   }
 
-  def emitUsage(definition: Definition): this.type = {
+  private def emitUsage(definition: Definition): this.type = {
     state.result.usage.getUsers(definition) match {
       case users: Seq[Definition] if users.nonEmpty =>
         listOf("Used By", users)
@@ -355,7 +355,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     p("{{< toc-tree >}}")
   }
 
-  def emitC4ContainerDiagram(
+  private def emitC4ContainerDiagram(
     defntn: Context,
     parents: Seq[Definition]
   ): this.type = {
@@ -389,7 +389,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitMermaidDiagram(lines)
   }
 
-  def emitTerms(terms: Seq[Term]): this.type = {
+  private def emitTerms(terms: Seq[Term]): this.type = {
     list(
       "Terms",
       terms.map(t => (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description))
@@ -397,13 +397,13 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitFields(fields: Seq[Field]): this.type = {
+  private def emitFields(fields: Seq[Field]): this.type = {
     list(fields.map { field =>
       (field.id.format, field.typeEx.format, field.brief, field.description)
     })
   }
 
-  def emitBriefly(
+  private def emitBriefly(
     d: Definition,
     parents: Seq[String],
     @unused level: Int = 2
@@ -426,8 +426,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
 
   private val keywords: String = Terminals.definition_keywords.mkString("(", "|", ")")
   private val pathIdRegex = s" ($keywords) (\\w+(\\.\\w+)*)".r
-  private def substituteIn(lineToReplace: String, parents: Seq[Definition]): String = {
-
+  private def substituteIn(lineToReplace: String): String = {
     val matches = pathIdRegex.findAllMatchIn(lineToReplace).toSeq.reverse
     matches.foldLeft(lineToReplace) { case (line, rMatch) =>
       val kind = rMatch.group(1)
@@ -446,23 +445,22 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
         case None =>
           val names = pathId.split('.').toSeq
           state.symbolTable.lookupSymbol[Definition](names) match
-            case Nil => line
-            case ::((head, _), Nil) => doSub(line, head)
-            case ::((head, _), next) => doSub(line, head, isAmbiguous = true)
+            case Nil                => line
+            case ::((head, _), Nil) => doSub(line, definition = head)
+            case ::((head, _), _)   => doSub(line, definition = head, isAmbiguous = true)
       }
     }
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
-  def emitDescription(d: Option[Description], forDefinition: Definition, level: Int = 2): this.type = {
+  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
     d match {
       case None => this
       case Some(desc) =>
         heading("Description", level)
-        val parents = forDefinition +: state.symbolTable.parentsOf(forDefinition)
         val substitutedDescription: Seq[String] = for {
           line <- desc.lines.map(_.s)
-          newLine = substituteIn(line, parents)
+          newLine = substituteIn(line)
         } yield {
           newLine
         }
@@ -485,7 +483,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     level: Int = 2
   ): this.type = {
     emitBriefly(definition, parents, level)
-    emitDescription(definition.description, definition, level)
+    emitDescription(definition.description, level)
   }
 
   private def emitShortDefDoc(
@@ -578,7 +576,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     }
   }
 
-  private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition], level: Int = 3): this.type = {
+  private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
     val data = agg.contents.map { (f: AggregateDefinition) =>
       val pars = f +: parents
       (f.id.format, resolveTypeExpression(f.typeEx, pars))
@@ -610,10 +608,10 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
         list(data)
       case agg: Aggregation =>
         heading("Aggregation Of", headLevel)
-        emitAggregateMembers(agg, parents, headLevel + 1)
+        emitAggregateMembers(agg, parents)
       case mt: AggregateUseCaseTypeExpression =>
         heading(s"${mt.usecase.format} Of", headLevel)
-        emitAggregateMembers(mt, parents, headLevel + 1)
+        emitAggregateMembers(mt, parents)
       case map: Mapping =>
         heading("Mapping Of", headLevel)
         val from = resolveTypeExpression(map.from, parents)
@@ -648,7 +646,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitUsage(typ)
   }
 
-  def emitTypesToc(definition: WithTypes): this.type = {
+  private def emitTypesToc(definition: WithTypes): this.type = {
     val groups = definition.types
       .groupBy { typ =>
         typ.typ match {
@@ -663,34 +661,26 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitVitalDefinitionTail[OV <: OptionValue,DEF <: Definition](vd: VitalDefinition[OV,DEF]): this.type = {
+  private def emitVitalDefinitionTail[OV <: OptionValue, DEF <: Definition](vd: VitalDefinition[OV, DEF]): this.type = {
     emitOptions(vd.options)
     emitTerms(vd.terms)
     emitUsage(vd)
-    if vd.authors.nonEmpty then
-      toc("Authors", vd.authors.map(_.format))
+    if vd.authors.nonEmpty then toc("Authors", vd.authors.map(_.format))
     this
   }
 
-  def emitProcessorToc[OV <: OptionValue, DEF <: Definition](processor: Processor[OV,DEF]): this.type = {
-    if processor.types.nonEmpty then
-      emitTypesToc(processor)
-    if processor.constants.nonEmpty then
-      toc("Constants", mkTocSeq(processor.constants))
-    if processor.functions.nonEmpty then
-      toc("Functions", mkTocSeq(processor.functions))
-    if processor.invariants.nonEmpty then
-      toc("Invariants", mkTocSeq(processor.invariants))
-    if processor.handlers.nonEmpty then
-      toc("Handlers", mkTocSeq(processor.handlers))
-    if processor.inlets.nonEmpty then
-      toc("Inlets", mkTocSeq(processor.inlets))
-    if processor.outlets.nonEmpty then
-      toc("Outlets", mkTocSeq(processor.outlets))
+  private def emitProcessorToc[OV <: OptionValue, DEF <: Definition](processor: Processor[OV, DEF]): this.type = {
+    if processor.types.nonEmpty then emitTypesToc(processor)
+    if processor.constants.nonEmpty then toc("Constants", mkTocSeq(processor.constants))
+    if processor.functions.nonEmpty then toc("Functions", mkTocSeq(processor.functions))
+    if processor.invariants.nonEmpty then toc("Invariants", mkTocSeq(processor.invariants))
+    if processor.handlers.nonEmpty then toc("Handlers", mkTocSeq(processor.handlers))
+    if processor.inlets.nonEmpty then toc("Inlets", mkTocSeq(processor.inlets))
+    if processor.outlets.nonEmpty then toc("Outlets", mkTocSeq(processor.outlets))
     emitVitalDefinitionTail[OV, DEF](processor)
   }
 
-  def emitAuthorInfo(authors: Seq[Author], level: Int = 2): this.type = {
+  private def emitAuthorInfo(authors: Seq[Author], level: Int = 2): this.type = {
     for a <- authors do {
       val items = Seq("Name" -> a.name.s, "Email" -> a.email.s) ++
         a.organization.fold(Seq.empty[(String, String)])(ls => Seq("Organization" -> ls.s)) ++
@@ -716,7 +706,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
-  def emitInputOutput(
+  private def emitInputOutput(
     input: Option[Aggregation],
     output: Option[Aggregation]
   ): this.type = {
@@ -737,13 +727,13 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitDefDoc(function, parents)
     emitTypesToc(function)
     emitInputOutput(function.input, function.output)
-    codeBlock("Statements", function.statements, 2)
+    codeBlock("Statements", function.statements)
     emitUsage(function)
     emitTerms(function.terms)
     this
   }
 
-  def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
+  private def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
     h2("Context Map")
     emitC4ContainerDiagram(focus, parents)
   }
@@ -779,13 +769,13 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitUsage(state)
   }
 
-  def emitInvariants(invariants: Seq[Invariant]): this.type = {
+  private def emitInvariants(invariants: Seq[Invariant]): this.type = {
     if invariants.nonEmpty then {
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
         list(invariant.condition.map(_.format).toSeq)
-        emitDescription(invariant.description, invariant, 4)
+        emitDescription(invariant.description, level = 4)
       }
     }
     this
@@ -808,7 +798,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitFiniteStateMachine(
+  private def emitFiniteStateMachine(
     @unused entity: Entity
   ): this.type = { this }
 
@@ -830,7 +820,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitIndex("Entity", entity, parents)
   }
 
-  def emitSagaSteps(actions: Seq[SagaStep]): this.type = {
+  private def emitSagaSteps(actions: Seq[SagaStep]): this.type = {
     h2("Saga Actions")
     actions.foreach { step =>
       h3(step.identify)
@@ -894,7 +884,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     toc("Use Cases", mkTocSeq(epic.cases))
     emitUsage(epic)
     emitTerms(epic.terms)
-    emitDescription(epic.description, epic)
+    emitDescription(epic.description)
   }
 
   def emitUser(u: User, parents: Seq[String]): this.type = {
@@ -911,7 +901,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     val sd = SequenceDiagram(state, uc)
     val lines = sd.generate
     emitMermaidDiagram(lines)
- }
+  }
 
   def emitConnector(conn: Connector, parents: Seq[String]): this.type = {
     leafHead(conn, weight = 20)
@@ -955,7 +945,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   ): this.type = {
     containerHead(projector, "Projector")
     emitDefDoc(projector, parents)
-    emitProcessorToc[ProjectorOption,ProjectorDefinition](projector)
+    emitProcessorToc[ProjectorOption, ProjectorDefinition](projector)
     emitIndex("Projector", projector, parents)
   }
 
@@ -965,7 +955,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   ): this.type = {
     containerHead(repository, "Repository")
     emitDefDoc(repository, parents)
-    emitProcessorToc[RepositoryOption,RepositoryDefinition](repository )
+    emitProcessorToc[RepositoryOption, RepositoryDefinition](repository)
     emitIndex("Repository", repository, parents)
   }
 
@@ -983,11 +973,11 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)
     p(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
-    emitProcessorToc[AdaptorOption,AdaptorDefinition](adaptor)
+    emitProcessorToc[AdaptorOption, AdaptorDefinition](adaptor)
     emitIndex("Adaptor", adaptor, parents)
   }
 
-  def emitTableHead(columnTitles: Seq[(String, Char)]): this.type = {
+  private def emitTableHead(columnTitles: Seq[(String, Char)]): this.type = {
     sb.append(columnTitles.map(_._1).mkString("| ", " | ", " |\n"))
     val dashes = columnTitles.map { case (s, c) =>
       c match {
@@ -1000,18 +990,18 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitTableRow(firstCol: String, remainingCols: String*): this.type = {
+  private def emitTableRow(firstCol: String, remainingCols: String*): this.type = {
     val row = firstCol +: remainingCols
     sb.append(row.mkString("| ", " | ", " |\n"))
     this
   }
 
-  def makeIconLink(id: String, title: String, link: String): String = {
+  private def makeIconLink(id: String, title: String, link: String): String = {
     if link.nonEmpty then { s"[{{< icon \"$id\" >}}]($link \"$title\")" }
     else { "" }
   }
 
-  def emitTermRow(term: GlossaryEntry): Unit = {
+  private def emitTermRow(term: GlossaryEntry): Unit = {
     val slink = makeIconLink("gdoc_github", "GitHub Link", term.sourceLink)
     val trm = s"[${mono(term.term)}](${term.link})$slink"
     val typ =
@@ -1045,7 +1035,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
 
   }
 
-  def emitStatistics(weight: Int, root: RootContainer): this.type = {
+  def emitStatistics(weight: Int): this.type = {
     fileHead(
       "Model Statistics",
       weight,

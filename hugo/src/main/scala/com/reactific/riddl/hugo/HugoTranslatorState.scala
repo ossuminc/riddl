@@ -213,7 +213,7 @@ case class HugoTranslatorState(
   def makeStatistics(): Unit = {
     if options.withStatistics then {
       val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
-      mdw.emitStatistics(statsWeight, result.root)
+      mdw.emitStatistics(statsWeight)
     }
   }
 
