@@ -33,11 +33,9 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 /** Test Setup for running a command on the riddl-examples repos.
   *
-  * This testkit helper allows you to create a test that runs a command on all
-  * the examples in the riddl-examples repo. It will download the riddl-examples
-  * repo, unzip it, and run the command on each example. The command is run in a
-  * temporary directory, and the output is compared to the expected output in
-  * the example.
+  * This testkit helper allows you to create a test that runs a command on all the examples in the riddl-examples repo.
+  * It will download the riddl-examples repo, unzip it, and run the command on each example. The command is run in a
+  * temporary directory, and the output is compared to the expected output in the example.
   *
   * @tparam OPT
   *   The class for the Options of the command
@@ -48,11 +46,13 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   */
 abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlugin[OPT]](
   val commandName: String
-)  extends AnyWordSpec with Matchers with BeforeAndAfterAll {
+) extends AnyWordSpec
+    with Matchers
+    with BeforeAndAfterAll {
 
   val examplesRepo: String =
     "https://github.com/reactific/riddl-examples/archive/refs/heads/main.zip"
-  val examplesURL: URL =  java.net.URI.create(examplesRepo).toURL
+  val examplesURL: URL = java.net.URI.create(examplesRepo).toURL
   val tmpDir: Path = Files.createTempDirectory("riddl-examples")
   val examplesPath: Path = Path.of(s"riddl-examples-main/src/riddl")
   val srcDir: Path = tmpDir.resolve(examplesPath)
@@ -77,7 +77,9 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     zip_path.toFile.delete()
   }
 
-  override def afterAll(): Unit = { FileUtils.forceDeleteOnExit(tmpDir.toFile) }
+  override def afterAll(): Unit = {
+    FileUtils.forceDeleteOnExit(tmpDir.toFile)
+  }
 
   private final val suffix = "conf"
 
@@ -87,7 +89,9 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     f: (String, Path) => T
   ): Seq[Either[(String, Messages), T]] = {
     val configs = FileUtils
-      .iterateFiles(srcDir.toFile, Array[String](suffix), true).asScala.toSeq
+      .iterateFiles(srcDir.toFile, Array[String](suffix), true)
+      .asScala
+      .toSeq
     for
       config <- configs
       name = config.getName.dropRight(suffix.length + 1)
@@ -110,30 +114,38 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   def forAFolder[T](
     folderName: String
-  )(f: (String, Path) => T
-  ): Either[Messages, T] = FileUtils.iterateFilesAndDirs(
-    srcDir.toFile,
-    DirectoryFileFilter.DIRECTORY,
-    new NotFileFilter(TrueFileFilter.INSTANCE)
-  ).asScala.toSeq
+  )(f: (String, Path) => T): Either[Messages, T] = FileUtils
+    .iterateFilesAndDirs(
+      srcDir.toFile,
+      DirectoryFileFilter.DIRECTORY,
+      new NotFileFilter(TrueFileFilter.INSTANCE)
+    )
+    .asScala
+    .toSeq
     .find(file => file.isDirectory && file.getName == "riddl") match {
     case Some(riddlDir) =>
-      riddlDir.listFiles.toSeq.filter(file => file.isDirectory)
+      riddlDir.listFiles.toSeq
+        .filter(file => file.isDirectory)
         .find(_.getName.endsWith(folderName)) match {
         case Some(folder) =>
           println(folder.listFiles.toSeq)
           folder.listFiles.toSeq.find(_.getName.endsWith(".conf")) match {
-            case Some(config) => CommandPlugin
-                .loadCandidateCommands(config.toPath).flatMap { cmds =>
+            case Some(config) =>
+              CommandPlugin
+                .loadCandidateCommands(config.toPath)
+                .flatMap { cmds =>
                   if cmds.contains(commandName) then {
                     Right(f(folderName, config.toPath))
                   } else {
                     Left(errors(s"Command $commandName not found in $config"))
                   }
                 }
-            case None => Left(errors(
-                s"No config file found in RIDDL-examples folder $folderName"
-              ))
+            case None =>
+              Left(
+                errors(
+                  s"No config file found in RIDDL-examples folder $folderName"
+                )
+              )
           }
         case None =>
           Left(errors(s"RIDDL-examples folder $folderName not found"))
@@ -164,7 +176,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
           onFailure(commandName, name, path, messages, outputDir) -> name
       }
     }
-    for  result <- results  do {
+    for result <- results do {
       result match {
         case Right(_) => // do nothing
         case Left((name, messages)) =>
