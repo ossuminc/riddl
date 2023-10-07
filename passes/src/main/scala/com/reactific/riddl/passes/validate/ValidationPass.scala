@@ -54,7 +54,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     val parentsAsSeq: Seq[Definition] = parents.toSeq
     definition match {
-      // TODO: generate some frequency statistics and use them to reorganize this list of cases, most frequent first
       case f: AggregateDefinition =>
         f match {
           case f: Field  => validateField(f, parentsAsSeq)
@@ -70,7 +69,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateTerm(t, parentsAsSeq)
       case sa: User =>
         validateUser(sa, parentsAsSeq)
-      // TODO: Add statement validation to OnClauses
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
       case oic: OnInitClause =>
@@ -202,8 +200,26 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     m: Method,
     parents: Seq[Definition]
   ): Unit = {
-    // TODO: Write validateMethod
-    ()
+    checkDefinition(parents, m)
+    if m.id.value.matches("^[^a-z].*") then
+      messages.add(
+        Message(
+          m.id.loc,
+          "Method names should begin with a lower case letter",
+          StyleWarning
+        )
+      )
+    checkTypeExpression(m.typeEx, m, parents)
+    for arg <- m.args do
+      checkTypeExpression(arg.value, m, parents)
+      if arg.key.matches("^[^a-z].*") then
+        messages.add(
+          Messages.style(
+            "Method argument names should begin with a lower case letter",
+            m.id.loc
+          )
+        )
+    checkDescription(m)
   }
 
   private def validateInvariant(
@@ -559,7 +575,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   ): Unit = {
     val parentsSeq = parents.toSeq
     checkDefinition(parentsSeq, in)
-    // FIXME: validate this at the epic/case level so the restriction occurs only when sent to the backend
     checkTypeRef(in.putIn, in, parentsSeq)
     checkDescription(in)
   }
@@ -569,7 +584,6 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, out)
-    // FIXME: validate this at the epic/case level so the restriction occurs only when received from the backend
     checkTypeRef(out.putOut, out, parents)
     checkDescription(out)
   }
@@ -594,53 +608,49 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   ): Unit = {
     checkDefinition(parents, uc)
     if uc.contents.nonEmpty then {
-      uc.contents.foreach { step =>
-        step match {
-          case seq: SequentialInteractions =>
-            if seq.contents.isEmpty then {
-              messages.addMissing(seq.loc, "Sequential interactions should not be empty")
-            }
-          case par: ParallelInteractions =>
-            if par.contents.isEmpty then {
-              messages.addMissing(
-                par.loc,
-                "Parallel interaction should not be empty"
-              )
-            }
-          case opt: OptionalInteractions =>
-            if opt.contents.isEmpty then {
-              messages.addMissing(
-                opt.loc,
-                "Optional interaction should not be empty"
-              )
-            }
-          case opt: VagueInteraction =>
-            check(
-              opt.relationship.nonEmpty,
-              "Vague Interactions should have a non-empty description",
-              Messages.MissingWarning,
-              opt.relationship.loc
+      uc.contents.foreach {
+        case seq: SequentialInteractions =>
+          if seq.contents.isEmpty then {
+            messages.addMissing(seq.loc, "Sequential interactions should not be empty")
+          }
+        case par: ParallelInteractions =>
+          if par.contents.isEmpty then {
+            messages.addMissing(
+              par.loc,
+              "Parallel interaction should not be empty"
             )
-          case is: GenericInteraction =>
-            checkPathRef[Definition](is.from.pathId, uc, parents)
-            checkPathRef[Definition](is.to.pathId, uc, parents)
-            if is.relationship.isEmpty then {
-              messages.addMissing(
-                step.loc,
-                s"Interactions must have a non-empty relationship"
-              )
-            }
-        }
+          }
+        case opt: OptionalInteractions =>
+          if opt.contents.isEmpty then {
+            messages.addMissing(
+              opt.loc,
+              "Optional interaction should not be empty"
+            )
+          }
+        case opt: VagueInteraction =>
+          check(
+            opt.relationship.nonEmpty,
+            "Vague Interactions should have a non-empty description",
+            Messages.MissingWarning,
+            opt.relationship.loc
+          )
+        case step @ (is: GenericInteraction) =>
+          checkPathRef[Definition](is.from.pathId, uc, parents)
+          checkPathRef[Definition](is.to.pathId, uc, parents)
+          if is.relationship.isEmpty then {
+            messages.addMissing(
+              step.loc,
+              s"Interactions must have a non-empty relationship"
+            )
+          }
       }
     }
     if uc.nonEmpty then {
       if uc.contents.isEmpty then
-        (
-          messages.addMissing(
-            uc.loc,
-            s"${uc.identify} doesn't define any interactions"
-          )
-      )
+        messages.addMissing(
+          uc.loc,
+          s"${uc.identify} doesn't define any interactions"
+        )
     }
     checkDescription(uc)
   }
@@ -658,14 +668,17 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
             d match {
               case output @ Output(loc, alias, id, putOut, _, _, _) =>
                 checkTypeRef(putOut, parents.head, parents.tail) match {
-                  case Some(Type(_,_,typEx,_,_))  if typEx.isContainer =>
+                  case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
                     typEx match {
-                      case ate: AggregateUseCaseTypeExpression if  ate.usecase == EventCase || ate.usecase == ResultCase =>
-                          None // events and results are permitted
+                      case ate: AggregateUseCaseTypeExpression
+                          if ate.usecase == EventCase || ate.usecase == ResultCase =>
+                        None // events and results are permitted
                       case ty: TypeExpression => // everything else is not
                         Some(
-                          error(s"${output.identify} showing ${putOut.format} of type ${ty.format} is invalid "+
-                            s" because ${o.identify} is a vital definition which can only send Events and Results", loc
+                          error(
+                            s"${output.identify} showing ${putOut.format} of type ${ty.format} is invalid " +
+                              s" because ${o.identify} is a vital definition which can only send Events and Results",
+                            loc
                           )
                         )
                     }
@@ -683,12 +696,15 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
                 checkTypeRef(putIn, parents.head, parents.tail) match {
                   case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
                     typEx match {
-                      case ate: AggregateUseCaseTypeExpression if ate.usecase == CommandCase || ate.usecase == QueryCase =>
+                      case ate: AggregateUseCaseTypeExpression
+                          if ate.usecase == CommandCase || ate.usecase == QueryCase =>
                         None // commands and queries are permitted
                       case ty: TypeExpression => // everything else is not
                         Some(
-                          error(s"${input.identify} sending ${putIn.format} of type ${ty.format} is invalid "+
-                            s" because ${d.identify} is a vital definition which can only receive Commands and Queries")
+                          error(
+                            s"${input.identify} sending ${putIn.format} of type ${ty.format} is invalid " +
+                              s" because ${d.identify} is a vital definition which can only receive Commands and Queries"
+                          )
                         )
                     }
                   case _ => None
@@ -709,8 +725,10 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, interaction)
+    checkDescription(interaction)
     interaction match {
-      case SelfInteraction(_, _, from, _, _, _) => checkRef[Definition](from, interaction, parents)
+      case SelfInteraction(_, _, from, _, _, _) =>
+        checkRef[Definition](from, interaction, parents)
       case TakeInputInteraction(_, _, user: UserRef, _, inputRef: InputRef, _, _) =>
         checkRef[User](user, interaction, parents)
         checkRef[Input](inputRef, interaction, parents)
@@ -723,11 +741,11 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _) =>
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
-      case _ => ()
-      // These are all just containers of other interactions, not needing further validation
-      // OptionalInteractions, ParallelInteractions, SequentialInteractions
+      case _: VagueInteraction =>
+        // Nothing else to validate
+      case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>
+        // These are all just containers of other interactions, not needing further validation
     }
-    checkDescription(interaction)
   }
 
 }
