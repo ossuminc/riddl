@@ -17,9 +17,9 @@ import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
 
 class HugoPassTest
-  extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
-    commandName = "hugo"
-  ) {
+    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
+      commandName = "hugo"
+    ) {
 
   "HugoTranslator" should {
     "handle all example sources" in {
@@ -27,7 +27,13 @@ class HugoPassTest
     }
   }
 
-  override def validate(name: String): Boolean = name == "ReactiveBBQ"
+  val passing_test_cases = Seq(
+    "ToDoodles",
+    "FooBar",
+    "ReactiveBBQ.conf",
+    "dokn"
+  )
+  override def validate(name: String): Boolean = passing_test_cases.contains(name)
 
   override def onSuccess(
     commandName: String,
@@ -69,7 +75,8 @@ class HugoPassTest
         } else { info("hugo issued warnings:\n  " + output.mkString("\n  ")) }
         succeed
 
-      case rc: Int => fail(
+      case rc: Int =>
+        fail(
           s"hugo run failed with rc=$rc:\n  " ++
             output.mkString("\n ", "\n  ", "\n") ++
             s"tmpDir=$tmpDir\ncwd=$cwdFile\ncommand=$command\n"
