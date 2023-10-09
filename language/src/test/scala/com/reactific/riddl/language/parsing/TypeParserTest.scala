@@ -271,6 +271,9 @@ class TypeParserTest extends ParsingTest {
         checkDefinition[Type, Type](rip, expected, identity)
       }
     }
+    "allow use case aggregate renaming" in {
+      pending // TODO: write me
+    }
     "allow mappings between two types" in {
       val rip = RiddlParserInput("type m1 = mapping from String to Number")
       val expected = Type(

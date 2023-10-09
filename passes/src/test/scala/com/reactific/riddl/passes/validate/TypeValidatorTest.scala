@@ -37,6 +37,7 @@ class TypeValidatorTest extends ValidatingTest {
           |  type ZeroOrMore is many optional Bar
           |  type Optional is optional Bar
           |  type Aggregate is {a: Bar, b: Foo}
+          |  result AggregateResult is Aggregate
           |  type Alternation is one of { Bar or Foo }
           |  type Order is Id(Bar)
           |}

@@ -8,6 +8,7 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.{AST, At}
+import com.reactific.riddl.language.Messages
 import fastparse.*
 import fastparse.ScalaWhitespace.*
 import Terminals.*
@@ -221,15 +222,16 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
     P(
-      location ~ (
-        StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural
-      ).! ~~ !CharPred(_.isLetterOrDigit)) | rangeType
+      location ~ (StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural).! ~~ !CharPred(
+        _.isLetterOrDigit
+      )) | rangeType
     ).map {
-      case (at, Predefined.Boolean)  => AST.Bool(at)
-      case (at, Predefined.Integer)  => AST.Integer(at)
-      case (at, Predefined.Natural)  => AST.Natural(at)
-      case (at, Predefined.Whole)    => AST.Whole(at)
-      case (at, _: String) => assert(true)  // shouldn't happen
+      case (at, Predefined.Boolean) => AST.Bool(at)
+      case (at, Predefined.Integer) => AST.Integer(at)
+      case (at, Predefined.Natural) => AST.Natural(at)
+      case (at, Predefined.Whole)   => AST.Whole(at)
+      case (at, _: String) =>
+        assert(true) // shouldn't happen
         AST.Integer(at)
       case range: RangeType => range
     }
@@ -361,7 +363,17 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
-    P(location ~ maybe(Keywords.`type`) ~ pathIdentifier)./.map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
+    P(
+      location ~
+        StringIn(
+          Keywords.command,
+          Keywords.event,
+          Keywords.query,
+          Keywords.result,
+          Keywords.record,
+          Keywords.`type`
+        ).? ~ pathIdentifier
+    )./.map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
   }
 
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
@@ -380,12 +392,12 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map(tpl => (Field.apply _).tupled(tpl))
   }
 
-  def arguments[u:P]: P[Seq[MethodArgument]] = {
+  def arguments[u: P]: P[Seq[MethodArgument]] = {
     P(
       (
         location ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression
       ).map(tpl => (MethodArgument.apply _).tupled(tpl))
-    ).rep(min=0, Punctuation.comma)
+    ).rep(min = 0, Punctuation.comma)
   }
 
   def method[u: P]: P[Method] = {
@@ -395,8 +407,7 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map(tpl => (Method.apply _).tupled(tpl))
   }
 
-
-  def aggregateDefinitions[u:P]: P[Seq[AggregateDefinition]] = {
+  def aggregateDefinitions[u: P]: P[Seq[AggregateDefinition]] = {
     P(
       undefined(Seq.empty[AggregateDefinition]) |
         (field | method).rep(min = 1, Punctuation.comma)
@@ -404,12 +415,11 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   def aggregation[u: P]: P[Aggregation] = {
-    P(location ~ open ~ aggregateDefinitions ~ close).map {
-      case (loc, contents) =>
-        val groups = contents.groupBy(_.getClass)
-        val fields = mapTo[Field](groups.get(classOf[Field]))
-        val methods = mapTo[Method](groups.get(classOf[Method]))
-        Aggregation(loc, fields, methods)
+    P(location ~ open ~ aggregateDefinitions ~ close).map { case (loc, contents) =>
+      val groups = contents.groupBy(_.getClass)
+      val fields = mapTo[Field](groups.get(classOf[Field]))
+      val methods = mapTo[Method](groups.get(classOf[Method]))
+      Aggregation(loc, fields, methods)
     }
   }
 
@@ -535,11 +545,20 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
-      location ~ aggregateUseCase ~/ identifier ~ is ~ aggregation ~ briefly ~
+      location ~ aggregateUseCase ~/ identifier ~ is ~ (aliasedTypeExpression | aggregation) ~ briefly ~
         description
-    ).map { case (loc, useCase, id, agg, b, d) =>
-      val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
-      Type(loc, id, mt, b, d)
+    ).map { case (loc, useCase, id, ateOrAgg, b, d) =>
+      ateOrAgg match {
+        case agg: Aggregation =>
+          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
+          Type(loc, id, mt, b, d)
+        case ate: AliasedTypeExpression =>
+          Type(loc, id, ate, b, d)
+        case _ =>
+          require(false, "Oops! Impossible case")
+          // Type just to satisfy compiler because it doesn't know require(false...) will throw
+          Type(loc, id, Nothing(loc), b, d)
+      }
     }
   }
 
