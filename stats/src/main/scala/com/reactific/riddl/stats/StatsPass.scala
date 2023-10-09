@@ -82,6 +82,32 @@ case class StatsPass(input: PassInput) extends CollectingPass[DefinitionStats](i
   private val kind_stats: mutable.HashMap[String, KindStats] = mutable.HashMap.empty
   private var total_stats: Option[KindStats] = None
 
+  private def computeNumStatements(definition: Definition): Long = {
+    def handlerStatements(handlers: Seq[Handler]): Long = {
+      val sizes : Seq[Long] = for {
+        handler <- handlers
+        clause <- handler.clauses
+      } yield {
+        clause.statements.size.toLong
+      }
+      sizes.foldLeft(0L)( (a,b) => a+b )
+    }
+
+    definition.contents
+      .filter(_.isVital)
+      .map { (vd: Definition) =>
+        vd match {
+          case p: Processor[_, _] => handlerStatements(p.handlers)
+          case s: Saga            =>
+            s.sagaSteps.map(step => step.doStatements.size.toLong + step.undoStatements.size).sum[Long]
+          case f: Function        => f.statements.size.toLong
+          case _: Epic            => 0L
+          case _: Domain          => 0L
+          case _: Definition      => 0L // Non Vital, ignore
+        }
+      }.sum[Long]
+  }
+
   protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): DefinitionStats = {
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
 
@@ -105,21 +131,7 @@ case class StatsPass(input: PassInput) extends CollectingPass[DefinitionStats](i
       numAuthors = authors,
       numTerms = terms,
       numIncludes = includes,
-      numStatements = definition.contents
-        .filter(_.isVital)
-        .map { (vd: Definition) =>
-          vd match {
-            case p: Processor[_, _] => p.handlers.flatMap(_.clauses.map(_.statements.size)).sum[Int]
-            case e: Epic            => 0
-            case f: Function        => f.statements.size
-            case d: Domain          => 0
-            case s: Saga       => s.sagaSteps.map(step => step.doStatements.size + step.undoStatements.size).sum[Int]
-            case _: Definition =>
-              // Non Vital, ignore
-              0
-          }
-        }
-        .sum[Int]
+      numStatements = computeNumStatements(definition)
     )
   }
 

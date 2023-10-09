@@ -160,8 +160,12 @@ object CommandPlugin {
     log: Logger
   ): Int = {
     result match {
-      case Right(_) =>
-        if commonOptions.quiet then { System.out.println(log.summary) }
+      case Right(passesResult: PassesResult) =>
+        if commonOptions.quiet then {
+          System.out.println(log.summary)
+        } else {
+          Messages.logMessages(passesResult.messages, log, commonOptions)
+        }
         0
       case Left(messages) =>
         if commonOptions.quiet then { highestSeverity(messages) + 1 }
@@ -173,19 +177,16 @@ object CommandPlugin {
     remaining: Array[String],
     commonOptions: CommonOptions
   ): Int = {
-    val log: Logger = 
-      if commonOptions.quiet then 
-        StringLogger()
-      else
-        SysLogger()
+    val log: Logger =
+      if commonOptions.quiet then StringLogger()
+      else SysLogger()
 
     if remaining.isEmpty then {
       log.error("No command argument was provided")
       1
     } else {
       val name = remaining.head
-      if commonOptions.dryRun then
-        log.info(s"Would have executed: ${remaining.mkString(" ")}")
+      if commonOptions.dryRun then log.info(s"Would have executed: ${remaining.mkString(" ")}")
 
       val result = CommandPlugin
         .runCommandWithArgs(name, remaining, log, commonOptions)

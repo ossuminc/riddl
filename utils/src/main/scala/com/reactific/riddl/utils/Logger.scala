@@ -15,8 +15,7 @@ import scala.io.AnsiColor.*
 
 object Logger {
   sealed trait Lvl {
-    override def toString: String = this.getClass.getSimpleName.dropRight(1)
-      .toLowerCase
+    override def toString: String = this.getClass.getSimpleName.dropRight(1).toLowerCase
   }
 
   case object Severe extends Lvl
@@ -87,12 +86,6 @@ trait Logger {
 case class SysLogger(override val withHighlighting: Boolean = true) extends Logger {
   override def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
-    val prefix = level match {
-      case Logger.Severe  => s"${RED_B}${BLACK}"
-      case Logger.Error   => s"${RED}"
-      case Logger.Warning => s"${YELLOW}"
-      case Logger.Info    => s"${BLUE}"
-    }
     System.out.println(highlight(level, s))
   }
 }
@@ -108,8 +101,7 @@ case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: 
   override def toString: String = stringBuilder.toString()
 }
 
-/** A Logger which captures logged lines into an in-memory buffer, useful for
-  * testing purposes.
+/** A Logger which captures logged lines into an in-memory buffer, useful for testing purposes.
   */
 case class InMemoryLogger(override val withHighlighting: Boolean = false) extends Logger {
   case class Line(level: Logger.Lvl, msg: String)

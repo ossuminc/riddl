@@ -43,9 +43,10 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
       validateLocalProject(cwd, config)
     }
     "validate Improving.app" in {
-      val cwd = "/Users/reid/Code/improving.app/riddl"
-      val config = "src/main/riddl/ImprovingApp.conf"
-      validateLocalProject(cwd, config)
+      //val cwd = "/Users/reid/Code/improving.app/riddl"
+      //val config = "src/main/riddl/ImprovingApp.conf"
+      //validateLocalProject(cwd, config)
+      pending
     }
   }
 }

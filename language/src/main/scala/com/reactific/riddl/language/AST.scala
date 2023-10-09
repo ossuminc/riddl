@@ -448,6 +448,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   /** Base of an enumeration for the four kinds of message types */
   sealed trait AggregateUseCase {
     @inline def kind: String
+    override def toString: String = kind
     def format: String = kind
   }
 
@@ -469,6 +470,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   /** An enumerator value for result types */
   case object ResultCase extends AggregateUseCase {
     @inline def kind: String = "Result"
+
   }
 
   case object RecordCase extends AggregateUseCase {
@@ -1401,7 +1403,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   case class EpicTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("technology")
 
   case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
-
 
   /** A term definition for the glossary */
   case class Term(
