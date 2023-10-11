@@ -5,7 +5,7 @@
  */
 
 package com.reactific.riddl.hugo
-import com.reactific.riddl.diagrams.mermaid.SequenceDiagram
+import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, SequenceDiagram}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.reactific.riddl.utils.TextFileWriter
@@ -247,51 +247,6 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       lines.foreach(p)
       p("```")
     } else { this }
-  }
-
-  private def makeERDRelationship(
-    from: String,
-    to: Field,
-    parents: Seq[Definition]
-  ): String = {
-    val typeName = makeTypeName(to.typeEx, parents)
-    if typeName.nonEmpty then {
-      to.typeEx match {
-        case _: OneOrMore =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--|{ " + typeName + " : references" }
-        case _: ZeroOrMore =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--o{ " + typeName + " : references" }
-        case _: Optional =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--o| " + typeName + " : references" }
-        case _: AliasedTypeExpression | _: EntityReferenceTypeExpression | _: UniqueId =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--|| " + typeName + " : references" }
-        case _ => ""
-      }
-    } else { typeName }
-  }
-
-  private def emitERD(
-    name: String,
-    fields: Seq[Field],
-    parents: Seq[Definition]
-  ): this.type = {
-    h2("Entity Relationships")
-
-    val typ: Seq[String] = s"$name {" +: fields.map { f =>
-      val typeName = makeTypeName(f.typeEx, parents)
-      val fieldName = f.id.format.replace(" ", "-")
-      val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
-      s"  $typeName $fieldName $comment"
-    } :+ "}"
-    val relationships: Seq[String] = fields
-      .map(makeERDRelationship(name, _, parents))
-      .filter(_.nonEmpty)
-    val lines = Seq("erDiagram") ++ typ ++ relationships
-    emitMermaidDiagram(lines)
   }
 
   private case class Level(name: String, href: String, children: Seq[Level]) {
@@ -767,6 +722,18 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     h2("Fields")
     emitFields(fields)
     emitUsage(state)
+  }
+
+  private def emitERD(
+    name: String,
+    fields: Seq[Field],
+    parents: Seq[Definition]
+  ): this.type = {
+    h2("Entity Relationships")
+    val erd = EntityRelationshipDiagram(state.passesResult)
+    val lines = erd.generate(name, fields, parents)
+    emitMermaidDiagram(lines)
+    this
   }
 
   private def emitInvariants(invariants: Seq[Invariant]): this.type = {
